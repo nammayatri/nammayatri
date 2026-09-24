@@ -14,7 +14,6 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
-import Beckn.ACL.Common (getTagV2')
 import Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -98,7 +97,7 @@ getVehicleServiceTierAirConditioned provider item = do
   let vehicleServiceTierAirConditioned = do
         fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
         fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
-        getTagV2' Tag.VEHICLE_INFO Tag.IS_AIR_CONDITIONED (fulfillment.fulfillmentTags)
+        Utils.getTag Tag.IS_AIR_CONDITIONED (fulfillment.fulfillmentTags)
   return $ castToDouble vehicleServiceTierAirConditioned
   where
     castToDouble :: Maybe Text -> Maybe Double
@@ -111,7 +110,7 @@ getIsAirConditioned provider item = do
   let vehicleServiceTierAirConditioned = do
         fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
         fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
-        getTagV2' Tag.VEHICLE_INFO Tag.IS_AIR_CONDITIONED_VEHICLE (fulfillment.fulfillmentTags)
+        Utils.getTag Tag.IS_AIR_CONDITIONED_VEHICLE (fulfillment.fulfillmentTags)
   case vehicleServiceTierAirConditioned of
     Nothing -> return Nothing
     Just airConditioned -> return $ (readMaybe (T.unpack airConditioned) :: Maybe Bool)
@@ -121,7 +120,7 @@ getDriverCancellationNotAllowed provider item = do
   let mbTagValue = do
         fulfillmentId <- item.itemFulfillmentIds >>= listToMaybe
         fulfillment <- provider.providerFulfillments >>= find (\fulf -> fulf.fulfillmentId == Just fulfillmentId)
-        getTagV2' Tag.VEHICLE_INFO Tag.DRIVER_CANCELLATION_NOT_ALLOWED (fulfillment.fulfillmentTags)
+        Utils.getTag Tag.DRIVER_CANCELLATION_NOT_ALLOWED (fulfillment.fulfillmentTags)
   return $ mbTagValue >>= (readMaybe . T.unpack)
 
 getEstimatedFare :: MonadFlow m => Spec.Item -> Currency -> m Price
@@ -221,58 +220,58 @@ buildTollChargesInfo item currency = do
 
 getTollCharges :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getTollCharges tagGroup currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.TOLL_CHARGES tagGroup
+  tagValue <- Utils.getTag Tag.TOLL_CHARGES tagGroup
   tollCharges <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency tollCharges
 
 getBookingDeposit :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getBookingDeposit tagGroup currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.BOOKING_DEPOSIT tagGroup
+  tagValue <- Utils.getTag Tag.BOOKING_DEPOSIT tagGroup
   bookingDeposit <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency bookingDeposit
 
 getTollNames :: Spec.Item -> Maybe [Text]
 getTollNames item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TOLL_NAMES item.itemTags
+  tagValueStr <- Utils.getTag Tag.TOLL_NAMES item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
   return parsedTagValue
 
 getestimatedPickupDuration :: Spec.Item -> Maybe Seconds
 getestimatedPickupDuration item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags
+  tagValueStr <- Utils.getTag Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
   return parsedTagValue
 
 getSmartTipSuggestion :: Spec.Item -> Maybe HighPrecMoney
 getSmartTipSuggestion item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.SMART_TIP_SUGGESTION item.itemTags
+  tagValueStr <- Utils.getTag Tag.SMART_TIP_SUGGESTION item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
   return parsedTagValue
 
 getNegativeFareSuggestion :: Spec.Item -> Maybe HighPrecMoney
 getNegativeFareSuggestion item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.NEGATIVE_FARE_SUGGESTION item.itemTags
+  tagValueStr <- Utils.getTag Tag.NEGATIVE_FARE_SUGGESTION item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe HighPrecMoney
   return parsedTagValue
 
 getQAR :: Spec.Item -> Maybe Double
 getQAR item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.QAR item.itemTags
+  tagValueStr <- Utils.getTag Tag.QAR item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Double
   return parsedTagValue
 
 getTipOptions :: Spec.Item -> Maybe [Int]
 getTipOptions item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.TIP_OPTIONS item.itemTags
+  tagValueStr <- Utils.getTag Tag.TIP_OPTIONS item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe [Int]
   return parsedTagValue
 
 getSmartTipReason :: Spec.Item -> Maybe Text
-getSmartTipReason item = Utils.getTagV2 Tag.INFO Tag.SMART_TIP_REASON item.itemTags
+getSmartTipReason item = Utils.getTag Tag.SMART_TIP_REASON item.itemTags
 
 getVehicleIconUrl :: Spec.Item -> Maybe BaseUrl
 getVehicleIconUrl item = do
-  tagValueStr <- Utils.getTagV2 Tag.VEHICLE_INFO Tag.VEHICLE_ICON_URL item.itemTags
+  tagValueStr <- Utils.getTag Tag.VEHICLE_ICON_URL item.itemTags
   parseBaseUrl tagValueStr
 
 buildNightShiftInfo :: Spec.Item -> Currency -> Maybe OnSearch.NightShiftInfo
@@ -290,24 +289,24 @@ buildNightShiftInfo item currency = do
 
 getNightShiftCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getNightShiftCharge tagGroup currency = do
-  let tagValueProgressive = Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_CHARGE_MULTIPLIER tagGroup
-  tagValue <- tagValueProgressive <|> Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_CHARGE tagGroup
+  let tagValueProgressive = Utils.getTag Tag.NIGHT_CHARGE_MULTIPLIER tagGroup
+  tagValue <- tagValueProgressive <|> Utils.getTag Tag.NIGHT_SHIFT_CHARGE tagGroup
   nightShiftCharge <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency nightShiftCharge
 
 getOldNightShiftCharge :: Maybe [Spec.TagGroup] -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_CHARGE tagGroups
+  tagValue <- Utils.getTag Tag.NIGHT_SHIFT_CHARGE tagGroups
   DecimalValue.valueFromString tagValue
 
 getNightShiftStart :: Maybe [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftStart tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_START_TIME tagGroups
+  tagValue <- Utils.getTag Tag.NIGHT_SHIFT_START_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
 getNightShiftEnd :: Maybe [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.NIGHT_SHIFT_END_TIME tagGroups
+  tagValue <- Utils.getTag Tag.NIGHT_SHIFT_END_TIME tagGroups
   readMaybe $ T.unpack tagValue
 
 buildBusinessDiscountInfo :: Spec.Item -> Currency -> Maybe OnSearch.BusinessDiscountInfo
@@ -334,87 +333,87 @@ buildPersonalDiscountInfo item currency = do
 
 getBusinessDiscount :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getBusinessDiscount tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.INFO Tag.BUSINESS_DISCOUNT tagGroups
+  tagValue <- Utils.getTag Tag.BUSINESS_DISCOUNT tagGroups
   businessDiscount <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency businessDiscount
 
 getPersonalDiscount :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPersonalDiscount tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.INFO Tag.PERSONAL_DISCOUNT tagGroups
+  tagValue <- Utils.getTag Tag.PERSONAL_DISCOUNT tagGroups
   personalDiscount <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency personalDiscount
 
 getBusinessDiscountPercentage :: Maybe [Spec.TagGroup] -> Maybe Double
 getBusinessDiscountPercentage tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.BUSINESS_DISCOUNT_PERCENTAGE tagGroups
+  tagValue <- Utils.getTag Tag.BUSINESS_DISCOUNT_PERCENTAGE tagGroups
   readMaybe tagValue :: Maybe Double
 
 getPersonalDiscountPercentage :: Maybe [Spec.TagGroup] -> Maybe Double
 getPersonalDiscountPercentage tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PERSONAL_DISCOUNT_PERCENTAGE tagGroups
+  tagValue <- Utils.getTag Tag.PERSONAL_DISCOUNT_PERCENTAGE tagGroups
   readMaybe tagValue :: Maybe Double
 
 getBaseFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getBaseFare tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.MIN_FARE tagGroups
+  tagValue <- Utils.getTag Tag.MIN_FARE tagGroups
   baseFare <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency baseFare
 
 getPerHourCharge :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPerHourCharge tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_CHARGE tagGroups
+  tagValue <- Utils.getTag Tag.PER_HOUR_CHARGE tagGroups
   perHourCharge <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perHourCharge
 
 getPerExtraMinRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPerExtraMinRate tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_MINUTE_CHARGE tagGroups
+  tagValue <- Utils.getTag Tag.PER_MINUTE_CHARGE tagGroups
   perExtraMinRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perExtraMinRate
 
 getPerExtraKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPerExtraKmRate tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.UNPLANNED_PER_KM_CHARGE tagGroups
+  tagValue <- Utils.getTag Tag.UNPLANNED_PER_KM_CHARGE tagGroups
   perExtraKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency perExtraKmRate
 
 getIncludedKmPerHr :: Maybe [Spec.TagGroup] -> Maybe Kilometers
 getIncludedKmPerHr tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_HOUR_DISTANCE_KM tagGroups
+  tagValue <- Utils.getTag Tag.PER_HOUR_DISTANCE_KM tagGroups
   includedKmPerHr <- DecimalValue.valueFromString tagValue
   Just . Kilometers $ roundToIntegral includedKmPerHr
 
 getPlannedPerKmRate :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPlannedPerKmRate tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE tagGroups
+  tagValue <- Utils.getTag Tag.PLANNED_PER_KM_CHARGE tagGroups
   plannedPerKmRate <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency plannedPerKmRate
 
 getPlannedPerKmRateRoundTrip :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getPlannedPerKmRateRoundTrip tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PLANNED_PER_KM_CHARGE_ROUND_TRIP tagGroups
+  tagValue <- Utils.getTag Tag.PLANNED_PER_KM_CHARGE_ROUND_TRIP tagGroups
   plannedPerKmRateRoundTrip <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency plannedPerKmRateRoundTrip
 
 getPerDayMaxHourAllowance :: Maybe [Spec.TagGroup] -> Maybe Hours
 getPerDayMaxHourAllowance tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_HOUR_ALLOWANCE tagGroups
+  tagValue <- Utils.getTag Tag.PER_DAY_MAX_HOUR_ALLOWANCE tagGroups
   readMaybe $ T.unpack tagValue
 
 getPerDayMaxAllowanceInMins :: Maybe [Spec.TagGroup] -> Maybe Minutes
 getPerDayMaxAllowanceInMins tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.PER_DAY_MAX_ALLOWANCE_IN_MINS tagGroups
+  tagValue <- Utils.getTag Tag.PER_DAY_MAX_ALLOWANCE_IN_MINS tagGroups
   readMaybe $ T.unpack tagValue
 
 getDeadKilometerFare :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 getDeadKilometerFare tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.DEAD_KILOMETER_FARE tagGroups
+  tagValue <- Utils.getTag Tag.DEAD_KILOMETER_FARE tagGroups
   deadKmFare <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency deadKmFare
 
 buildWaitingChargeInfo' :: Maybe [Spec.TagGroup] -> Currency -> Maybe Price
 buildWaitingChargeInfo' tagGroups currency = do
-  tagValue <- Utils.getTagV2 Tag.FARE_POLICY Tag.WAITING_CHARGE_PER_MIN tagGroups
+  tagValue <- Utils.getTag Tag.WAITING_CHARGE_PER_MIN tagGroups
   waitingChargeValue <- DecimalValue.valueFromString tagValue
   Just $ decimalValueToPrice currency waitingChargeValue
 
@@ -474,32 +473,32 @@ makeLatLong provider vehicleVariant location = do
 
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item =
-  return $ Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG item.itemTags
+  return $ Utils.getTag Tag.SPECIAL_LOCATION_TAG item.itemTags
 
 getPickupArea :: Spec.Item -> Maybe Text
-getPickupArea item = Utils.getTagV2 Tag.INFO Tag.PICKUP_AREA item.itemTags
+getPickupArea item = Utils.getTag Tag.PICKUP_AREA item.itemTags
 
 getPickupNavigationInstruction :: Spec.Item -> Maybe Text
-getPickupNavigationInstruction item = Utils.getTagV2 Tag.INFO Tag.PICKUP_NAVIGATION_INSTRUCTION item.itemTags
+getPickupNavigationInstruction item = Utils.getTag Tag.PICKUP_NAVIGATION_INSTRUCTION item.itemTags
 
 getSpecialLocationName :: Spec.Item -> Maybe Text
-getSpecialLocationName item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_NAME item.itemTags
+getSpecialLocationName item = Utils.getTag Tag.SPECIAL_LOCATION_NAME item.itemTags
 
 getspecialLocationSupportNumber :: Spec.Item -> Maybe Text
-getspecialLocationSupportNumber item = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_SUPPORT_NUMBER item.itemTags
+getspecialLocationSupportNumber item = Utils.getTag Tag.SPECIAL_LOCATION_SUPPORT_NUMBER item.itemTags
 
 getFareSettlementType :: Spec.Item -> Maybe SL.FareSettlementType
-getFareSettlementType item = Utils.getTagV2 Tag.INFO Tag.FARE_SETTLEMENT_TYPE item.itemTags >>= readMaybe
+getFareSettlementType item = Utils.getTag Tag.FARE_SETTLEMENT_TYPE item.itemTags >>= readMaybe
 
 getIsCustomerPrefferedSearchRoute :: Spec.Item -> Maybe Bool
 getIsCustomerPrefferedSearchRoute item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE item.itemTags
+  tagValueStr <- Utils.getTag Tag.IS_CUSTOMER_PREFFERED_SEARCH_ROUTE item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
   return parsedTagValue
 
 getIsBlockedRoute :: Spec.Item -> Maybe Bool
 getIsBlockedRoute item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.IS_BLOCKED_SEARCH_ROUTE item.itemTags
+  tagValueStr <- Utils.getTag Tag.IS_BLOCKED_SEARCH_ROUTE item.itemTags
   parsedTagValue <- readMaybe tagValueStr :: Maybe Bool
   return parsedTagValue
 

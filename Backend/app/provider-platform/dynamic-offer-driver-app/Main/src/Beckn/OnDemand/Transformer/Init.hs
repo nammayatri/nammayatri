@@ -63,13 +63,13 @@ buildDInitReq subscriber req isValueAddNP = do
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
 getDeliveryDetails tagGroups = do
-  initiatedAs <- Utils.getTagV2 Tag.DELIVERY Tag.INITIATED_AS tagGroups
-  senderName <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_NAME tagGroups
-  senderPhone <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_NUMBER tagGroups
-  senderLocIns <- Utils.getTagV2 Tag.DELIVERY Tag.SENDER_LOCATION_INSTRUCTIONS tagGroups
-  receiverName <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_NAME tagGroups
-  receiverPhone <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_NUMBER tagGroups
-  receiverLocIns <- Utils.getTagV2 Tag.DELIVERY Tag.RECEIVER_LOCATION_INSTRUCTIONS tagGroups
+  initiatedAs <- Utils.getTag Tag.INITIATED_AS tagGroups
+  senderName <- Utils.getTag Tag.SENDER_NAME tagGroups
+  senderPhone <- Utils.getTag Tag.SENDER_NUMBER tagGroups
+  senderLocIns <- Utils.getTag Tag.SENDER_LOCATION_INSTRUCTIONS tagGroups
+  receiverName <- Utils.getTag Tag.RECEIVER_NAME tagGroups
+  receiverPhone <- Utils.getTag Tag.RECEIVER_NUMBER tagGroups
+  receiverLocIns <- Utils.getTag Tag.RECEIVER_LOCATION_INSTRUCTIONS tagGroups
   let (senderInstructions, senderAddressExtra) = splitInstructions senderLocIns
       (receiverInstructions, receiverAddressExtra) = splitInstructions receiverLocIns
       initiatedAsEnum = fromMaybe (Trip.DeliveryParty Trip.Sender) (readMaybe @(Trip.TripParty) $ T.unpack initiatedAs)
@@ -125,7 +125,7 @@ getDeliveryDetails tagGroups = do
 
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =
-  let tagValue = Utils.getTagV2 Tag.FORWARD_BATCHING_REQUEST_INFO Tag.IS_FORWARD_BATCH_ENABLED tagGroups
+  let tagValue = Utils.getTag Tag.IS_FORWARD_BATCH_ENABLED tagGroups
    in case tagValue of
         Just "True" -> True
         Just "False" -> False
@@ -133,16 +133,16 @@ getAdvancedBookingEnabled tagGroups =
 
 getIsInsured :: Maybe [Spec.TagGroup] -> (Maybe Bool, Maybe Text)
 getIsInsured tagGroups =
-  let tagValue = Utils.getTagV2 Tag.INSURANCE_INFO Tag.IS_INSURED tagGroups
-      insuredAmount = Utils.getTagV2 Tag.INSURANCE_INFO Tag.INSURED_AMOUNT tagGroups
+  let tagValue = Utils.getTag Tag.IS_INSURED tagGroups
+      insuredAmount = Utils.getTag Tag.INSURED_AMOUNT tagGroups
    in case tagValue of
         Just "True" -> (Just True, insuredAmount)
         Just "False" -> (Just False, Nothing)
         _ -> (Nothing, Nothing)
 
 getDisplayBookingId :: Maybe [Spec.TagGroup] -> Maybe Text
-getDisplayBookingId = Utils.getTagV2 Tag.BOOKING_INFO Tag.DISPLAY_BOOKING_ID
+getDisplayBookingId = Utils.getTag Tag.DISPLAY_BOOKING_ID
 
 getOfferDiscountAmount :: Maybe [Spec.TagGroup] -> Maybe Kernel.Types.Common.HighPrecMoney
 getOfferDiscountAmount tagGroups =
-  Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT tagGroups >>= readMaybe . T.unpack
+  Utils.getTag Tag.DISCOUNT_AMOUNT tagGroups >>= readMaybe . T.unpack

@@ -348,7 +348,7 @@ osAddressFromTag mbTags roleTag = osAddressFromLocationAddressTag <$> locationAd
 
 locationAddressTagFromFulfillment :: Maybe [Spec.TagGroup] -> Tags.BecknTag -> Maybe Spec.LocationAddressTag
 locationAddressTagFromFulfillment mbTags roleTag = do
-  raw <- Utils.getTagV2 Tags.LOCATION_ADDRESS roleTag mbTags
+  raw <- Utils.getTag roleTag mbTags
   decodeFromText raw
 
 osAddressFromLocationAddressTag :: Spec.LocationAddressTag -> OS.Address
@@ -1411,25 +1411,25 @@ mkForwardBatchTagGroupV2 previousRideDropLocation' =
 getShouldFavouriteDriver :: Spec.Rating -> Maybe Bool
 getShouldFavouriteDriver req = do
   let tagGroups = req.ratingTag
-      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.SHOULD_FAVOURITE_DRIVER tagGroups
+      tagValue = Utils.getTag Tags.SHOULD_FAVOURITE_DRIVER tagGroups
    in readMaybe . T.unpack =<< tagValue
 
 getRiderPhoneNumber :: Spec.Rating -> Maybe Text
 getRiderPhoneNumber req = do
   let tagGroups = req.ratingTag
-      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_PHONE_NUMBER tagGroups
+      tagValue = Utils.getTag Tags.RIDER_PHONE_NUMBER tagGroups
    in tagValue
 
 getFilePath :: Spec.Rating -> Maybe Text
 getFilePath req = do
   let tagGroups = req.ratingTag
-      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.MEDIA_FILE_PATH tagGroups
+      tagValue = Utils.getTag Tags.MEDIA_FILE_PATH tagGroups
    in tagValue
 
 getRiderName :: Spec.Rating -> Maybe Text
 getRiderName req = do
   let tagGroups = req.ratingTag
-      tagValue = Utils.getTagV2 Tags.RATING_TAGS Tags.RIDER_NAME tagGroups
+      tagValue = Utils.getTag Tags.RIDER_NAME tagGroups
    in tagValue
 
 getCancellationReason :: Spec.CancelReq -> Maybe Text

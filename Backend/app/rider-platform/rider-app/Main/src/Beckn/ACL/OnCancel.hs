@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.Utils as BecknV2Utils
 import Data.Maybe (listToMaybe)
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -77,8 +78,8 @@ bookingCancelledEvent order = do
       effectiveTax = mbCancellationTax <&> \taxAmount -> PriceAPIEntity taxAmount currency
       fareBreakups = maybe [] (mapMaybe ACLCommon.mkDFareBreakup) (order.orderQuote >>= (.quotationBreakup))
       -- Cancellation-consequence handoff from the BPP consequence matrix (absent on old BPPs)
-      mbCollectionMode = ACLCommon.getTagV2' Tag.CANCELLATION_CONSEQUENCE Tag.CANCELLATION_COLLECTION_MODE order.orderTags
-      mbCustomerNotificationKey = ACLCommon.getTagV2' Tag.CANCELLATION_CONSEQUENCE Tag.CUSTOMER_CANCELLATION_NOTIFICATION_KEY order.orderTags
+      mbCollectionMode = BecknV2Utils.getTag Tag.CANCELLATION_COLLECTION_MODE order.orderTags
+      mbCustomerNotificationKey = BecknV2Utils.getTag Tag.CUSTOMER_CANCELLATION_NOTIFICATION_KEY order.orderTags
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,

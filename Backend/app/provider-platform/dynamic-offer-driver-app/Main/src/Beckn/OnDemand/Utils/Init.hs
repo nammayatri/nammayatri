@@ -81,7 +81,7 @@ getPaymentInstrumentFromTags mTags = do
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.ESTIMATIONS Tag.MAX_ESTIMATED_DISTANCE (Just tagGroups)
+  tagValue <- Utils.getTag Tag.MAX_ESTIMATED_DISTANCE (Just tagGroups)
   maxEstimatedDistance <- readMaybe $ T.unpack tagValue
   Just $ HighPrecMeters maxEstimatedDistance
 

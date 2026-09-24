@@ -126,7 +126,7 @@ data BecknTagGroup
   | DISABILITY_DWARFISM -- dwarfism
   | DISABILITY_ACID_ATTACK -- acid attack survivor
   | DISABILITY_MULTIPLE_DIS -- multiple disabilities
-  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON, Bounded, Enum)
 
 instance CompleteTagGroup BecknTagGroup where
   getFullTagGroup tagGroup tags = Spec.TagGroup (Just $ getTagGroupDescriptor tagGroup) (Just $ getTagGroupDisplay tagGroup) (if null tags then Nothing else Just tags)
@@ -616,7 +616,7 @@ data BecknTag
   | ASSIGNED_SERVICE_TIER_NAME -- GENERAL_INFO: merchant-configured display name (e.g. "Sedan")
   | PICKUP_ADDRESS
   | DROP_ADDRESS
-  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, Bounded, Enum)
 
 instance CompleteTag BecknTag where
   type TagGroupF BecknTag = BecknTagGroup

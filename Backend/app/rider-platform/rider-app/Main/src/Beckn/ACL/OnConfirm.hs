@@ -20,6 +20,7 @@ import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.Utils as BecknV2Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
@@ -67,14 +68,14 @@ buildOnConfirmReqV2 req isValueAddNP = do
           orderTagGroups = order.orderTags
           bppInvoiceProviderInfo =
             DOnConfirm.BPPInvoiceProviderInfo
-              { issuedById = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_ID orderTagGroups,
-                issuedByName = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_NAME orderTagGroups,
-                issuedByAddress = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_ADDRESS orderTagGroups,
-                supplierName = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_NAME orderTagGroups,
-                supplierAddress = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_ADDRESS orderTagGroups,
-                supplierGSTIN = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_GSTIN orderTagGroups,
-                supplierTaxNo = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_TAX_NO orderTagGroups,
-                supplierId = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_ID orderTagGroups
+              { issuedById = BecknV2Utils.getTag Tag.ISSUED_BY_ID orderTagGroups,
+                issuedByName = BecknV2Utils.getTag Tag.ISSUED_BY_NAME orderTagGroups,
+                issuedByAddress = BecknV2Utils.getTag Tag.ISSUED_BY_ADDRESS orderTagGroups,
+                supplierName = BecknV2Utils.getTag Tag.SUPPLIER_NAME orderTagGroups,
+                supplierAddress = BecknV2Utils.getTag Tag.SUPPLIER_ADDRESS orderTagGroups,
+                supplierGSTIN = BecknV2Utils.getTag Tag.SUPPLIER_GSTIN orderTagGroups,
+                supplierTaxNo = BecknV2Utils.getTag Tag.SUPPLIER_TAX_NO orderTagGroups,
+                supplierId = BecknV2Utils.getTag Tag.SUPPLIER_ID orderTagGroups
               }
 
       let isDriverDetailsPresent = fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & isJust
@@ -86,19 +87,19 @@ buildOnConfirmReqV2 req isValueAddNP = do
               tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
               driverImage = agentPerson >>= (.personImage) >>= (.imageUrl)
               driverMobileCountryCode = Just "+91" -- TODO: check how to get countrycode via ONDC
-              driverRating :: Maybe Centesimal = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.RATING tagGroups
-              driverRegisteredAt :: Maybe UTCTime = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.REGISTERED_AT tagGroups
-              isDriverBirthDay = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
-              isFreeRide = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
-              previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.FORWARD_BATCHING_REQUEST_INFO Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
-              vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
-              driverAlternatePhoneNumber :: Maybe Text = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ALTERNATE_NUMBER tagGroups
-              isAlreadyFav = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
-              favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
-              driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
-              isSafetyPlus' = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_SAFETY_PLUS tagGroups
-              isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< getTagV2' Tag.GENERAL_INFO Tag.IS_TIER_UPGRADE tagGroupsFullfillment)
-              assignedServiceTierName = getTagV2' Tag.GENERAL_INFO Tag.ASSIGNED_SERVICE_TIER_NAME tagGroupsFullfillment
+              driverRating :: Maybe Centesimal = readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.RATING tagGroups
+              driverRegisteredAt :: Maybe UTCTime = readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.REGISTERED_AT tagGroups
+              isDriverBirthDay = isJust $ BecknV2Utils.getTag Tag.IS_DRIVER_BIRTHDAY tagGroups
+              isFreeRide = isJust $ BecknV2Utils.getTag Tag.IS_FREE_RIDE tagGroups
+              previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
+              vehicleAge :: Maybe Months = readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.VEHICLE_AGE tagGroupsFullfillment
+              driverAlternatePhoneNumber :: Maybe Text = BecknV2Utils.getTag Tag.DRIVER_ALTERNATE_NUMBER tagGroups
+              isAlreadyFav = isJust $ BecknV2Utils.getTag Tag.IS_ALREADY_FAVOURITE tagGroups
+              favCount :: Maybe Int = readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.FAVOURITE_COUNT tagGroups
+              driverAccountId = BecknV2Utils.getTag Tag.DRIVER_ACCOUNT_ID tagGroups
+              isSafetyPlus' = isJust $ BecknV2Utils.getTag Tag.IS_SAFETY_PLUS tagGroups
+              isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.IS_TIER_UPGRADE tagGroupsFullfillment)
+              assignedServiceTierName = BecknV2Utils.getTag Tag.ASSIGNED_SERVICE_TIER_NAME tagGroupsFullfillment
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right

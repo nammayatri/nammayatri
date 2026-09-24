@@ -98,7 +98,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
   let billingCategory = getBillingCategoryTag item.itemTags
   let serviceTierType = Utils.getServiceTierType item
   vehicleVariant <- mbVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicleCategory:-" <> show vehicle.vehicleCategory <> ",vehicleVariant:-" <> show vehicle.vehicleVariant)
-  let specialLocationTag = Utils.getTagV2 Tag.INFO Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
+  let specialLocationTag = Utils.getTag Tag.SPECIAL_LOCATION_TAG =<< (Just item.itemTags)
   case parsedData order of
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
@@ -185,7 +185,7 @@ buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp onSelectTtl = do
 
 getDriverRatingV2 :: Maybe [Spec.TagGroup] -> Maybe Centesimal
 getDriverRatingV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.AGENT_INFO Tag.RATING tagGroups
+  tagValue <- Utils.getTag Tag.RATING tagGroups
   driverRating <- readMaybe $ T.unpack tagValue
   Just $ Centesimal driverRating
 
@@ -196,29 +196,29 @@ getQuoteValidTill contextTime time = do
 
 getPickupDurationV2 :: Maybe [Spec.TagGroup] -> Maybe Int
 getPickupDurationV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
+  tagValue <- Utils.getTag Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
   readMaybe $ T.unpack tagValue
 
 getIsUpgradedToCab :: Maybe [Spec.TagGroup] -> Maybe Bool
 getIsUpgradedToCab tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.UPGRADE_TO_CAB tagGroups
+  tagValue <- Utils.getTag Tag.UPGRADE_TO_CAB tagGroups
   readMaybe $ T.unpack tagValue
 
 getDistanceToNearestDriverV2 :: Maybe [Spec.TagGroup] -> Maybe Meters
 getDistanceToNearestDriverV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
+  tagValue <- Utils.getTag Tag.DISTANCE_TO_NEAREST_DRIVER_METER tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 
 getIsSafetyPlusV2 :: Maybe [Spec.TagGroup] -> Maybe Bool
 getIsSafetyPlusV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.IS_SAFETY_PLUS tagGroups
+  tagValue <- Utils.getTag Tag.IS_SAFETY_PLUS tagGroups
   isSafetyPlus <- readMaybe $ T.unpack tagValue
   Just $ isSafetyPlus
 
 getBillingCategoryTag :: Maybe [Spec.TagGroup] -> SLT.BillingCategory
 getBillingCategoryTag tagGroups = do
-  let tagValue = Utils.getTagV2 Tag.BILLING_CATEGORY_INFO Tag.BILLING_CATEGORY tagGroups
+  let tagValue = Utils.getTag Tag.BILLING_CATEGORY tagGroups
   case T.toLower $ fromMaybe "" tagValue of
     "personal" -> SLT.PERSONAL
     "business" -> SLT.BUSINESS

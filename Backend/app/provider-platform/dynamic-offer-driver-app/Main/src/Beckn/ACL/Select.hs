@@ -126,33 +126,33 @@ buildSelectReqV2 subscriber req = do
 
 getBookAnyEstimates :: Maybe [Spec.TagGroup] -> Maybe [Text]
 getBookAnyEstimates tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.ESTIMATIONS Tag.OTHER_SELECT_ESTIMATES tagGroups
+  tagValue <- Utils.getTag Tag.OTHER_SELECT_ESTIMATES tagGroups
   readMaybe $ T.unpack tagValue
 
 getCustomerExtraFeeV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
 getCustomerExtraFeeV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.CUSTOMER_TIP tagGroups
+  tagValue <- Utils.getTag Tag.CUSTOMER_TIP tagGroups
   highPrecMoneyFromText tagValue
 
 getNegativeFareAdjustmentV2 :: Maybe [Spec.TagGroup] -> Maybe HighPrecMoney
 getNegativeFareAdjustmentV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.CUSTOMER_TIP_INFO Tag.NEGATIVE_FARE_ADJUSTMENT tagGroups
+  tagValue <- Utils.getTag Tag.NEGATIVE_FARE_ADJUSTMENT tagGroups
   highPrecMoneyFromText tagValue
 
 getAutoAssignEnabledV2 :: Maybe [Spec.TagGroup] -> Bool
 getAutoAssignEnabledV2 tagGroups =
-  let tagValue = Utils.getTagV2 Tag.AUTO_ASSIGN_ENABLED Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
+  let tagValue = Utils.getTag Tag.IS_AUTO_ASSIGN_ENABLED tagGroups
    in case tagValue of
         Just "True" -> True
         Just "False" -> False
         _ -> False
 
 readTag :: Read a => Tag.BecknTag -> Maybe [Spec.TagGroup] -> Maybe a
-readTag tag tagGroups = readMaybe . T.unpack =<< Utils.getTagV2 Tag.CUSTOMER_INFO tag tagGroups
+readTag tag tagGroups = readMaybe . T.unpack =<< Utils.getTag tag tagGroups
 
 buildDisableDisabilityTag :: Maybe [Spec.TagGroup] -> Maybe Bool
 buildDisableDisabilityTag tagGroups = do
-  let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_DISABILITY_DISABLE tagGroups
+  let tagValue = Utils.getTag Tag.CUSTOMER_DISABILITY_DISABLE tagGroups
    in case tagValue of
         Just "True" -> Just True
         Just "False" -> Just False
@@ -160,7 +160,7 @@ buildDisableDisabilityTag tagGroups = do
 
 buildPetRideTag :: Maybe [Spec.TagGroup] -> Maybe Bool
 buildPetRideTag tagGroups = do
-  let tagValue = Utils.getTagV2 Tag.PET_ORDER_INFO Tag.IS_PET_RIDE tagGroups
+  let tagValue = Utils.getTag Tag.IS_PET_RIDE tagGroups
    in case tagValue of
         Just "True" -> Just True
         Just "False" -> Just False
@@ -168,7 +168,7 @@ buildPetRideTag tagGroups = do
 
 buildBillingCategoryTag :: Maybe [Spec.TagGroup] -> SLT.BillingCategory
 buildBillingCategoryTag tagGroups = do
-  let tagValue = Utils.getTagV2 Tag.BILLING_CATEGORY_INFO Tag.BILLING_CATEGORY tagGroups
+  let tagValue = Utils.getTag Tag.BILLING_CATEGORY tagGroups
    in case T.toLower $ fromMaybe "" tagValue of
         "personal" -> SLT.PERSONAL
         "business" -> SLT.BUSINESS
@@ -176,15 +176,15 @@ buildBillingCategoryTag tagGroups = do
 
 buildEmailDomainTag :: Maybe [Spec.TagGroup] -> Maybe Text
 buildEmailDomainTag tagGroups =
-  Utils.getTagV2 Tag.EMAIL_DOMAIN_INFO Tag.EMAIL_DOMAIN tagGroups
+  Utils.getTag Tag.EMAIL_DOMAIN tagGroups
 
 buildBusinessEmailDomainTag :: Maybe [Spec.TagGroup] -> Maybe Text
 buildBusinessEmailDomainTag tagGroups =
-  Utils.getTagV2 Tag.EMAIL_DOMAIN_INFO Tag.BUSINESS_EMAIL_DOMAIN tagGroups
+  Utils.getTag Tag.BUSINESS_EMAIL_DOMAIN tagGroups
 
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =
-  let tagValue = Utils.getTagV2 Tag.FORWARD_BATCHING_REQUEST_INFO Tag.IS_FORWARD_BATCH_ENABLED tagGroups
+  let tagValue = Utils.getTag Tag.IS_FORWARD_BATCH_ENABLED tagGroups
    in case tagValue of
         Just "True" -> True
         Just "False" -> False
@@ -192,7 +192,7 @@ getAdvancedBookingEnabled tagGroups =
 
 getPeferSafetyPlus :: Maybe [Spec.TagGroup] -> Bool
 getPeferSafetyPlus tagGroups =
-  let tagValue = Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.PREFER_SAFETY_PLUS tagGroups
+  let tagValue = Utils.getTag Tag.PREFER_SAFETY_PLUS tagGroups
    in case tagValue of
         Just "True" -> True
         Just "False" -> False
@@ -200,7 +200,7 @@ getPeferSafetyPlus tagGroups =
 
 getDriverPreference :: Maybe [Spec.TagGroup] -> UTCTime -> Maybe [Text]
 getDriverPreference tagGroups now = do
-  tagValue <- Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.DRIVER_PREFERENCE tagGroups
+  tagValue <- Utils.getTag Tag.DRIVER_PREFERENCE tagGroups
   (_, parsedValue, _) <- YUtils.parseTag (LYT.TagNameValueExpiry $ "driverPreference#" <> tagValue) now
   let prefs = case parsedValue of
         LYT.TextValue t -> filter (not . T.null) [T.strip t]
@@ -210,11 +210,11 @@ getDriverPreference tagGroups now = do
 
 getDeviceIdInfo :: Maybe [Spec.TagGroup] -> (Bool, Maybe Bool)
 getDeviceIdInfo tagGroups = do
-  let isMultipleDeviceIdExist = case Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.DEVICE_ID_FLAG tagGroups of
+  let isMultipleDeviceIdExist = case Utils.getTag Tag.DEVICE_ID_FLAG tagGroups of
         Just "True" -> Just True
         Just "False" -> Just False
         _ -> Nothing
-  let toUpdateDeviceIdInfo = case Utils.getTagV2 Tag.DEVICE_ID_INFO Tag.TO_UPDATE_DEVICE_ID tagGroups of
+  let toUpdateDeviceIdInfo = case Utils.getTag Tag.TO_UPDATE_DEVICE_ID tagGroups of
         Just "True" -> True
         Just "False" -> False
         _ -> False
@@ -244,8 +244,8 @@ getEstimateId Nothing item = item.itemId
 getParcelDetails :: Maybe [Spec.TagGroup] -> (Maybe Text, Maybe Int)
 getParcelDetails tagGroups = (parcelType, parcelQuantity)
   where
-    parcelType = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_TYPE tagGroups
-    parcelQuantity = Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_QUANTITY tagGroups >>= \pq -> readMaybe @Int $ T.unpack pq
+    parcelType = Utils.getTag Tag.PARCEL_TYPE tagGroups
+    parcelQuantity = Utils.getTag Tag.PARCEL_QUANTITY tagGroups >>= \pq -> readMaybe @Int $ T.unpack pq
 
 -- | Parse customer's proposed fare from the quote breakup in the select message.
 --   Checks CUSTOMER_SELECTED_FARE first, then falls back to BUYER_ADDITIONAL_AMOUNT

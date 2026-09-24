@@ -121,7 +121,7 @@ parseEvent merchantId reqMsg context = do
             }
 
     parseChangeServiceTierEvent bookingId _fulfillment = do
-      let mbNewServiceTier = Utils.getTagV2 Tag.CHANGE_SERVICE_TIER_DETAILS Tag.NEW_VEHICLE_SERVICE_TIER reqMsg.updateReqMessageOrder.orderTags
+      let mbNewServiceTier = Utils.getTag Tag.NEW_VEHICLE_SERVICE_TIER reqMsg.updateReqMessageOrder.orderTags
       newServiceTierText <- mbNewServiceTier & fromMaybeM (InvalidRequest "new_vehicle_service_tier tag not found in CHANGE_SERVICE_TIER event")
       newServiceTier <- (Kernel.Prelude.readMaybe . toString $ newServiceTierText) & fromMaybeM (InvalidRequest $ "Invalid service tier: " <> newServiceTierText)
       item <- reqMsg.updateReqMessageOrder.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found in CHANGE_SERVICE_TIER event")
@@ -135,7 +135,7 @@ parseEvent merchantId reqMsg context = do
             }
 
     parseAddBaggageEvent bookingId = do
-      let mbLuggageText = Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.NUMBER_OF_LUGGAGE reqMsg.updateReqMessageOrder.orderTags
+      let mbLuggageText = Utils.getTag Tag.NUMBER_OF_LUGGAGE reqMsg.updateReqMessageOrder.orderTags
       luggageText <- mbLuggageText & fromMaybeM (InvalidRequest "number_of_luggage tag not found in ADD_BAGGAGE event")
       numberOfLuggages <- (Kernel.Prelude.readMaybe . toString $ luggageText) & fromMaybeM (InvalidRequest $ "Invalid number_of_luggage: " <> luggageText)
       pure $
@@ -156,7 +156,7 @@ mkPaymentMethodInfo :: (MonadFlow m) => Spec.Payment -> m DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Spec.Payment {..} = do
   collectedBy <- Common.castPaymentCollector (fromMaybe "" paymentCollectedBy)
   paymentType' <- Common.castPaymentType (fromMaybe "" paymentType)
-  let paymentInstrument' = case Utils.getTagV2 Tag.SETTLEMENT_TERMS Tag.PAYMENT_INSTRUMENT paymentTags of
+  let paymentInstrument' = case Utils.getTagV2Compat Tag.BPP_TERMS Tag.PAYMENT_INSTRUMENT paymentTags of
         Just "Cash" -> DMPM.Cash
         Just _ -> DMPM.UPI
         Nothing -> DMPM.Cash

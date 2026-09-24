@@ -63,6 +63,11 @@ import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 -- search/init/confirm.
 verifyIncomingStaticTerms :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DBapMetadata.BapMetadata -> Domain.Domain -> Maybe [Spec.TagGroup] -> m ()
 verifyIncomingStaticTerms bapSubscriberId domain tagGroups =
+  -- Deliberately BAP_TERMS-only (the group MSIL uses), NOT the derived group:
+  -- nammayatri's own BAP files STATIC_TERMS under SETTLEMENT_TERMS/BPP_TERMS
+  -- with a hardcoded example-URL placeholder when no real terms are configured
+  -- (BecknV2.OnDemand.Utils.Payment.mkSettlementTagGroup), so falling back to
+  -- those groups would store and echo back placeholder URLs as the BAP's terms.
   case Utils.getTagV2 Tag.BAP_TERMS Tag.STATIC_TERMS tagGroups of
     Nothing -> pure ()
     Just rawUrl -> do

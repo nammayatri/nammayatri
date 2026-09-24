@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
+import qualified BecknV2.Utils as BecknV2Utils
 import qualified Data.Text as T
 import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.OnInit as DOnInit
@@ -104,7 +105,7 @@ buildOnInitReqV2 req = do
       payments <- mbPayments
       payment <- listToMaybe payments
       paymentTags <- payment.paymentTags
-      commissionText <- ACL.getTagV2' Tags.SETTLEMENT_DETAILS Tags.COMMISSION (Just paymentTags)
+      commissionText <- BecknV2Utils.getTag Tags.COMMISSION (Just paymentTags)
       Common.highPrecMoneyFromText commissionText
 
     extractTextTagFromPaymentTags :: Tags.BecknTag -> Maybe [Spec.Payment] -> Maybe Text
@@ -112,7 +113,7 @@ buildOnInitReqV2 req = do
       payments <- mbPayments
       payment <- listToMaybe payments
       paymentTags <- payment.paymentTags
-      ACL.getTagV2' Tags.SETTLEMENT_DETAILS tagName (Just paymentTags)
+      BecknV2Utils.getTag tagName (Just paymentTags)
 
     extractHighPrecTagFromPaymentTags :: Tags.BecknTag -> Maybe [Spec.Payment] -> Maybe Common.HighPrecMoney
     extractHighPrecTagFromPaymentTags tagName mbPayments =

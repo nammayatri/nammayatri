@@ -67,9 +67,9 @@ buildConfirmReqV2 req isValueAddNP = do
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) (Utils.parseAddressWithTag fulfillment.fulfillmentTags Tag.DROP_ADDRESS)
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
       orderTags = req.confirmReqMessage.confirmReqMessageOrder.orderTags
-      customerDiscountAmount = (Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT orderTags) >>= (readMaybe . T.unpack) <&> HighPrecMoney
+      customerDiscountAmount = (Utils.getTag Tag.DISCOUNT_AMOUNT orderTags) >>= (readMaybe . T.unpack) <&> HighPrecMoney
       bookingDepositSecured :: Maybe HighPrecMoney
-      bookingDepositSecured = readMaybe . T.unpack =<< Utils.getTagV2 Tag.BOOKING_DEPOSIT_INFO Tag.BOOKING_DEPOSIT_HELD orderTags
+      bookingDepositSecured = readMaybe . T.unpack =<< Utils.getTag Tag.BOOKING_DEPOSIT_HELD orderTags
   return $
     DConfirm.DConfirmReq
       { ..
@@ -79,28 +79,28 @@ getNightSafetyCheckTag :: Bool -> Maybe [Spec.TagGroup] -> Bool
 getNightSafetyCheckTag isValueAddNP = maybe isValueAddNP getTagValue
   where
     getTagValue tagGroups =
-      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.NIGHT_SAFETY_CHECK (Just tagGroups)
+      let tagValue = Utils.getTag Tag.NIGHT_SAFETY_CHECK (Just tagGroups)
        in fromMaybe isValueAddNP (readMaybe . T.unpack =<< tagValue)
 
 getEnableFrequentLocationUpdatesTag :: Maybe [Spec.TagGroup] -> Bool
 getEnableFrequentLocationUpdatesTag = maybe False getTagValue
   where
     getTagValue tagGroups =
-      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_FREQUENT_LOCATION_UPDATES (Just tagGroups)
+      let tagValue = Utils.getTag Tag.ENABLE_FREQUENT_LOCATION_UPDATES (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)
 
 getEnableOtpLessRideTag :: Maybe [Spec.TagGroup] -> Bool
 getEnableOtpLessRideTag = maybe False getTagValue
   where
     getTagValue tagGroups =
-      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
+      let tagValue = Utils.getTag Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)
 
 getConsentToShareMobileNumberTag :: Bool -> Maybe [Spec.TagGroup] -> Maybe Bool
 getConsentToShareMobileNumberTag isValueAddNP tagGroups
   | not isValueAddNP = Nothing
   | otherwise =
-    case Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CONSENT_TO_SHARE_MOBILE_NUMBER tagGroups of
+    case Utils.getTag Tag.CONSENT_TO_SHARE_MOBILE_NUMBER tagGroups of
       Nothing -> Nothing
       Just "True" -> Just True
       Just "False" -> Just False
@@ -109,11 +109,11 @@ getConsentToShareMobileNumberTag isValueAddNP tagGroups
 getDriverPreferenceTag :: Maybe [Spec.TagGroup] -> Maybe [Text]
 getDriverPreferenceTag Nothing = Nothing
 getDriverPreferenceTag (Just tagGroups) = do
-  tagValue <- Utils.getTagV2 Tag.SAFETY_PLUS_INFO Tag.DRIVER_PREFERENCE (Just tagGroups)
+  tagValue <- Utils.getTag Tag.DRIVER_PREFERENCE (Just tagGroups)
   let prefs = filter (not . T.null) $ T.strip <$> T.splitOn "&" tagValue
   if null prefs then Nothing else Just prefs
 
 getCustomerLanguageTag :: Maybe [Spec.TagGroup] -> Maybe Maps.Language
 getCustomerLanguageTag tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
+  tagValue <- Utils.getTag Tag.CUSTOMER_LANGUAGE tagGroups
   readMaybe . T.unpack $ tagValue

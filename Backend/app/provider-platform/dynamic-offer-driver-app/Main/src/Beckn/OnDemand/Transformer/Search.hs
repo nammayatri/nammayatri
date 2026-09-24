@@ -209,7 +209,7 @@ getIsReserveRide req = do
   intent <- req.searchReqMessageIntent
   fulfillment <- intent.intentFulfillment
   tags <- fulfillment.fulfillmentTags
-  readMaybe . T.unpack =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_RIDE_TAG (Just tags)
+  readMaybe . T.unpack =<< Utils.getTag Tags.RESERVED_RIDE_TAG (Just tags)
 
 getReserveRideEstimate :: Spec.SearchReqMessage -> Maybe Bool -> Maybe DBppEstimate.BppEstimate
 getReserveRideEstimate req isReserveRide = do
@@ -218,7 +218,7 @@ getReserveRideEstimate req isReserveRide = do
       intent <- req.searchReqMessageIntent
       fulfillment <- intent.intentFulfillment
       tags <- fulfillment.fulfillmentTags
-      decodeFromText =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_PRICING_TAG (Just tags)
+      decodeFromText =<< Utils.getTag Tags.RESERVED_PRICING_TAG (Just tags)
     else Nothing
 
 getPhoneNumberFromTag :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Maybe Text -> m (Maybe Text)
@@ -237,14 +237,14 @@ getFromSpecialLocationId req = do
   intent <- req.searchReqMessageIntent
   fulfillment <- intent.intentFulfillment
   tags <- fulfillment.fulfillmentTags
-  Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.FROM_SPECIAL_LOCATION_ID (Just tags)
+  Utils.getTag Tags.FROM_SPECIAL_LOCATION_ID (Just tags)
 
 getToSpecialLocationId :: Spec.SearchReqMessage -> Maybe Text
 getToSpecialLocationId req = do
   intent <- req.searchReqMessageIntent
   fulfillment <- intent.intentFulfillment
   tags <- fulfillment.fulfillmentTags
-  Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.TO_SPECIAL_LOCATION_ID (Just tags)
+  Utils.getTag Tags.TO_SPECIAL_LOCATION_ID (Just tags)
 
 nonEmptyAreaCode :: Maybe T.Text -> Maybe T.Text
 nonEmptyAreaCode = \case

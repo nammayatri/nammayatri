@@ -22,6 +22,16 @@ import Data.Time.Format.ISO8601
 import EulerHS.Prelude
 import Text.Regex.Posix ((=~))
 
+-- | Read a tag, deriving its group from the same 'getTagGroup' mapping the
+-- write side ('buildTagGroups') uses. Prefer this over 'getTagV2': naming the
+-- group by hand at read sites is how reads silently miss tags the writer filed
+-- under a different group. Use 'getTagV2' only when the wire group is
+-- intentionally different from our mapping (external-NP interop, version
+-- compat via 'getTagV2Compat', or the DISABILITY_* groups where 'getTagGroup'
+-- is a placeholder default).
+getTag :: BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
+getTag tagCode = getTagV2 (getTagGroup tagCode) tagCode
+
 getTagV2 :: BecknTagGroup -> BecknTag -> Maybe [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode mbTagGroups = do
   case mbTagGroups of

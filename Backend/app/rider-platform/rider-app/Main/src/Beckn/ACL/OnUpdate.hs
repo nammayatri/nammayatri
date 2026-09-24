@@ -131,7 +131,7 @@ parseNewMessageEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in NewMessage Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in NewMessage Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in NewMessage Event.")
-  message <- Utils.getTagV2 Tag.DRIVER_NEW_MESSAGE Tag.MESSAGE (Just tagGroups) & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
+  message <- Utils.getTag Tag.MESSAGE (Just tagGroups) & fromMaybeM (InvalidRequest "driver_new_message tag is not present in NewMessage Event.")
   return $
     DOnUpdate.OUNewMessageReq $
       DOnUpdate.NewMessageReq
@@ -147,7 +147,7 @@ parseEstimateRepetitionEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in EstimateRepetition Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in EstimateRepetition Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in EstimateRepetition Event.")
-  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
+  cancellationSource <- Utils.getTag Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
   return $
     DOnUpdate.OUEstimateRepetitionReq
       DOnUpdate.EstimateRepetitionReq
@@ -164,7 +164,7 @@ parseQuoteRepetitionEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in QuoteRepetition Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in QuoteRepetition Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in QuoteRepetition Event.")
-  cancellationSource <- Utils.getTagV2 Tag.PREVIOUS_CANCELLATION_REASONS Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in QuoteRepetition Event.")
+  cancellationSource <- Utils.getTag Tag.CANCELLATION_REASON (Just tagGroups) & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in QuoteRepetition Event.")
   return $
     DOnUpdate.OUQuoteRepetitionReq
       DOnUpdate.QuoteRepetitionReq
@@ -180,7 +180,7 @@ parseSafetyAlertEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in SafetyAlert Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in SafetyAlert Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
-  safetyReasonCode <- Utils.getTagV2 Tag.SAFETY_ALERT Tag.SAFETY_REASON_CODE (Just tagGroups) & fromMaybeM (InvalidRequest "deviation tag is not present in SafetyAlert Event.")
+  safetyReasonCode <- Utils.getTag Tag.SAFETY_REASON_CODE (Just tagGroups) & fromMaybeM (InvalidRequest "deviation tag is not present in SafetyAlert Event.")
   return $
     DOnUpdate.OUSafetyAlertReq
       DOnUpdate.SafetyAlertReq
@@ -206,8 +206,8 @@ parseEditDestinationSoftUpdate transactionId order messageId = do
   bppBookingId <- Id <$> (order.orderId & fromMaybeM (InvalidRequest "order_id is not present in Soft Update Event."))
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
-      currentPoint = Common.getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
-  newEstimatedDistance :: HighPrecMeters <- Utils.getTagV2 Tag.UPDATE_DETAILS Tag.UPDATED_ESTIMATED_DISTANCE tagGroups >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "updated_estimated_distance tag is not present in Soft Update Event.")
+      currentPoint = Common.getLocationFromTagV2 personTagsGroup Tag.CURRENT_LOCATION_LAT Tag.CURRENT_LOCATION_LON
+  newEstimatedDistance :: HighPrecMeters <- Utils.getTag Tag.UPDATED_ESTIMATED_DISTANCE tagGroups >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "updated_estimated_distance tag is not present in Soft Update Event.")
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "Quote breakup is not present in Soft Update Event.")
   fare :: DecimalValue.DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= DecimalValue.valueFromString & fromMaybeM (InvalidRequest "quote.price.value is not present in Soft Update Event.")
   currency :: Currency <- order.orderQuote >>= (.quotationPrice) >>= (.priceCurrency) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "quote.price.currency is not present in Soft Update Event.")
@@ -240,7 +240,7 @@ parseDriverReachedDestinationEvent order = do
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
   destinationReachedTime :: UTCTime <-
-    Utils.getTagV2 Tag.DRIVER_REACHED_DESTINATION_INFO Tag.DRIVER_REACHED_DESTINATION (Just tagGroups)
+    Utils.getTag Tag.DRIVER_REACHED_DESTINATION (Just tagGroups)
       >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "DRIVER_REACHED_DESTINATION tag is not present in DestinationReached Event.")
   return $
     DOnUpdate.OUDestinationReachedReq $
@@ -254,10 +254,10 @@ parseEstimatedEndTimeRangeUpdatedEvent order = do
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
   estimatedEndTimeRangeStart :: UTCTime <-
-    Utils.getTagV2 Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_START (Just tagGroups)
+    Utils.getTag Tag.ESTIMATED_END_TIME_RANGE_START (Just tagGroups)
       >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "ESTIMATED_END_TIME_RANGE_START tag is not present in EstimatedEndTimeRangeUpdated Event.")
   estimatedEndTimeRangeEnd :: UTCTime <-
-    Utils.getTagV2 Tag.ESTIMATED_END_TIME_RANGE Tag.ESTIMATED_END_TIME_RANGE_END (Just tagGroups)
+    Utils.getTag Tag.ESTIMATED_END_TIME_RANGE_END (Just tagGroups)
       >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "ESTIMATED_END_TIME_RANGE_END tag is not present in EstimatedEndTimeRangeUpdated Event.")
   return $
     DOnUpdate.OUEstimatedEndTimeRangeReq $
@@ -271,7 +271,7 @@ parseParcelImageUploaded order = do
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in DestinationReached Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in DestinationReached Event.")
   isParcelImageUploaded :: Bool <-
-    Utils.getTagV2 Tag.DELIVERY Tag.PARCEL_IMAGE_UPLOADED (Just tagGroups)
+    Utils.getTag Tag.PARCEL_IMAGE_UPLOADED (Just tagGroups)
       >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "PARCEL_IMAGE_UPLOADED tag is not present in ParcelImage Event.")
   return $
     DOnUpdate.OUParcelImageFileUploadReq $
@@ -281,7 +281,7 @@ parseChangeServiceTierEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdat
 parseChangeServiceTierEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in ChangeServiceTier Event.")
   newServiceTierText <-
-    Utils.getTagV2 Tag.CHANGE_SERVICE_TIER_DETAILS Tag.NEW_VEHICLE_SERVICE_TIER order.orderTags
+    Utils.getTag Tag.NEW_VEHICLE_SERVICE_TIER order.orderTags
       & fromMaybeM (InvalidRequest "new_vehicle_service_tier tag is not present in ChangeServiceTier Event.")
   newServiceTier <- readMaybe (T.unpack newServiceTierText) & fromMaybeM (InvalidRequest $ "Invalid service tier: " <> newServiceTierText)
   let newEstimatedFare = order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack
@@ -301,7 +301,7 @@ parseAddBaggageEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpd
 parseAddBaggageEvent transactionId order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in AddBaggage Event.")
   luggageText <-
-    Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.NUMBER_OF_LUGGAGE order.orderTags
+    Utils.getTag Tag.NUMBER_OF_LUGGAGE order.orderTags
       & fromMaybeM (InvalidRequest "number_of_luggage tag is not present in AddBaggage Event.")
   numberOfLuggages <- readMaybe (T.unpack luggageText) & fromMaybeM (InvalidRequest $ "Invalid number_of_luggage: " <> luggageText)
   let newEstimatedFare = order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack

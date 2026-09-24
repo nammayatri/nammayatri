@@ -362,3 +362,19 @@ spec = describe "BecknV2.Utils" $ do
     it "reads from SEARCH_REQUEST_INFO group" $ do
       let tagGroups = Just [mkTestTagGroup "SEARCH_REQUEST_INFO" [("IS_METER_RIDE_SEARCH", Just "True")]]
       getTagV2 SEARCH_REQUEST_INFO IS_METER_RIDE_SEARCH tagGroups `shouldBe` Just "True"
+
+  -- ================================================================
+  -- write -> read roundtrip over every tag
+  -- ================================================================
+
+  -- Writers derive the wire group from 'getTagGroup' (via 'buildTagGroups');
+  -- until 'getTag' existed, readers restated the group by hand, and a wrong
+  -- group silently read Nothing (driver RATING, IS_SAFETY_PLUS and
+  -- STATIC_TERMS were all lost in production this way). This roundtrip pins
+  -- read and write to the same mapping for every tag, so that bug class
+  -- cannot reappear.
+  describe "getTag/buildTagGroups roundtrip (all tags)" $
+    forM_ [minBound .. maxBound :: BecknTag] $ \tag ->
+      it ("roundtrips " <> show tag) $
+        getTag tag (buildTagGroups [(tag, Just "roundtrip-value")])
+          `shouldBe` Just "roundtrip-value"
