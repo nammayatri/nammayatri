@@ -493,21 +493,23 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
       let bookingId = Id bookingIdText :: Id DRB.Booking
       ranToCompletion <- Redis.whenWithLockRedisAndReturnValue (bookingDepositFulfilLockKey bookingIdText) 60 $ do
         booking <- QRideB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingIdText)
-        if booking.status `elem` DRB.terminalBookingStatus
-          then do
-            alreadyCredited <- BookingDeposit.hasCreditForOrder order.id.getId
-            if alreadyCredited
-              then do
-                logInfo $ "Booking fee paid for terminal booking " <> bookingIdText <> "; wallet credit already landed, keeping it"
-                pure False
+        row <-
+          (find (\r -> r.paymentServiceType == DOrder.BookingDeposit) <$> QBookingPayment.findAllByOrderId order.id)
+            >>= fromMaybeM (InternalError $ "BookingDeposit order " <> order.id.getId <> " has no booking_payment row")
+        wasCredited <- BookingDeposit.hasCreditForOrder order.id.getId
+        heldBefore <- not . null <$> BookingDeposit.findHolds booking.id
+        unless wasCredited $ do
+          BookingDeposit.creditRiderBalance booking.riderId booking.merchantId booking.merchantOperatingCityId order.amount order.id.getId
+          setAttemptStatus order.id DBP.SUCCESS
+        if booking.status `elem` DRB.terminalBookingStatus || (heldBefore && not wasCredited)
+          then
+            if wasCredited
+              then pure False -- already handled when the booking ended (captured or refunded)
               else do
-                logInfo $ "Booking fee paid for terminal booking " <> bookingIdText <> "; auto-refunding " <> show order.amount <> " to source"
-                void $ SPayment.initiateRefundWithPaymentStatusRespSync booking.riderId order.id
-                setAttemptStatus order.id DBP.REFUND_INITIATED
+                logInfo $ "Booking fee order " <> order.id.getId <> " paid for " <> (if heldBefore then "an already-held deposit" else "a terminal booking") <> " on " <> bookingIdText <> "; refunding " <> show order.amount <> " out of the wallet"
+                BookingDeposit.withdrawDepositOrder booking row
                 pure True
           else do
-            BookingDeposit.creditRiderBalance booking.riderId booking.merchantId booking.merchantOperatingCityId order.amount order.id.getId
-            setAttemptStatus order.id DBP.SUCCESS
             alreadyTriggered <- Redis.get @Text (BookingDeposit.bookingDepositFulfilTriggeredKey bookingIdText)
             if alreadyTriggered == Just "1"
               then pure False
@@ -517,7 +519,6 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
                   then do
                     logError $ "Booking " <> bookingIdText <> " went terminal mid-fulfilment after its wallet credit landed; refunding to source"
                     BookingDeposit.refundBookingDeposit bookingNow
-                    setAttemptStatus order.id DBP.REFUND_INITIATED
                     pure True
                   else do
                     secured <- case booking.bookingDepositAmount of
@@ -548,7 +549,7 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
     setAttemptStatus oid st = do
       rows <- QBookingPayment.findAllByOrderId oid
       forM_ rows $ \row ->
-        when (row.status /= st) $ QBookingPayment.updateStatusById st row.id
+        when (row.status /= st && row.status `notElem` [DBP.REFUNDED, DBP.REFUND_FAILED]) $ QBookingPayment.updateStatusById st row.id
 
 -- | Reconcile a deposit payment our side never recorded, without deciding the ride's fate.
 --   A PENDING attempt means "we never learned the outcome", not "unpaid": the capture/refund
@@ -556,8 +557,10 @@ bookingDepositOrderStatusHandler suppressConfirm orderId _merchantId paymentStat
 --   nothing (prepareDepositRefundLedger filters PENDING out) and capture settles nothing
 --   (settleHolds_ finds no holds), billing the rider the full fee. Delegates to
 --   bookingDepositOrderStatusHandler with the confirm suppressed, so its own fresh booking read
---   picks the correct arm: live -> credit and hold, terminal -> refund to source. No-op unless
---   the latest attempt is PENDING. Mirrors the precondition FRFS establishes in FRFSCancel.
+--   picks the correct arm: live -> credit and hold, terminal -> refund to source.
+--   Checks every PENDING or FAILED attempt, newest first: a superseded order marked FAILED by a
+--   re-mint may still have been paid at the gateway with its webhook lost. Mirrors the
+--   precondition FRFS establishes in FRFSCancel.
 reconcileDepositPayment ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -581,14 +584,13 @@ reconcileDepositPayment ::
   DRB.Booking ->
   m ()
 reconcileDepositPayment booking = do
-  mbAttempt <- QBookingPayment.findLatestByBookingIdAndServiceType booking.id DOrder.BookingDeposit
-  whenJust mbAttempt $ \attempt ->
-    when (attempt.status == DBP.PENDING) $ do
-      mbOrder <- QOrder.findById attempt.paymentOrderId
-      whenJust mbOrder $ \paymentOrder -> do
-        let fulfillmentHandler resp = bookingDepositOrderStatusHandler True paymentOrder.id booking.merchantId resp
-        void . withTryCatch "reconcileDepositPayment" $
-          SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder
+  attempts <- filter (\a -> a.status `elem` [DBP.PENDING, DBP.FAILED]) <$> QBookingPayment.findAllByBookingIdAndServiceType booking.id DOrder.BookingDeposit
+  forM_ attempts $ \attempt -> do
+    mbOrder <- QOrder.findById attempt.paymentOrderId
+    whenJust mbOrder $ \paymentOrder -> do
+      let fulfillmentHandler resp = bookingDepositOrderStatusHandler True paymentOrder.id booking.merchantId resp
+      void . withTryCatch "reconcileDepositPayment" $
+        SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder
 
 -- | Resume the withheld Beckn confirm for a booking whose fee is already secured. Idempotent
 --   and safe from any trigger -- on_init's covered branch, the payment-intent poll -- because

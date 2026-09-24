@@ -234,6 +234,9 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               (DPayment.FulfillmentRefundPending, domainEntityId, _) -> do
                 paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
                 return $ mkPaymentStatusResp paymentStatusRespWithRefund (Just DPayment.FulfillmentRefundPending) domainEntityId
+              (DPayment.FulfillmentPending, domainEntityId, _)
+                | paymentService == DOrder.BookingDeposit ->
+                  return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentPending) domainEntityId
               -- If Payment Charged after the Order Validity, then initiate the Refund for the Customer
               (DPayment.FulfillmentPending, domainEntityId, _) -> do
                 now <- getCurrentTime
@@ -611,9 +614,13 @@ refundStatusHandler paymentOrder paymentServiceType = do
                 when (req.status == DRefundRequest.APPROVED && refund.status `elem` [Payment.REFUND_SUCCESS, Payment.REFUND_FAILURE, Payment.REFUND_CANCELED]) $ do
                   BookingDepositLedger.resolveDepositRefundLegs req.personId paymentOrder.id refund.status
                   QRefundRequest.updateRefundStatus (refundStatusToRequestStatus refund.status) req.id
-      rows <- QBookingPayment.findAllByOrderId paymentOrder.id
-      forM_ rows $ \row ->
-        when (row.status /= newStatus) $ QBookingPayment.updateStatusById newStatus row.id
+      -- A superseded attempt (refund_request now points at a newer refundsId) must not overwrite
+      -- the booking_payment status set by the current attempt.
+      let isCurrentAttempt = null depositReqs || any (\r -> r.refundsId == Just refund.id) depositReqs
+      when isCurrentAttempt $ do
+        rows <- QBookingPayment.findAllByOrderId paymentOrder.id
+        forM_ rows $ \row ->
+          when (row.status /= newStatus) $ QBookingPayment.updateStatusById newStatus row.id
 
 initiateRefundWithPaymentStatusRespSync ::
   ( EsqDBFlow m r,
