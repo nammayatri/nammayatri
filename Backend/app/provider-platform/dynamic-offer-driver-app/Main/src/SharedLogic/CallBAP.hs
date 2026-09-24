@@ -901,8 +901,8 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
         if isOndcScheduledRideSupportEnabled
           then rideStartedMsgV2' {Spec.onStatusReqMessage = fixMsg <$> Spec.onStatusReqMessage rideStartedMsgV2'}
           else rideStartedMsgV2'
-  void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
   fork "FleetEngine: trip enroute to dropoff on ride started" $ FleetEngine.notifyRideStarted booking ride
+  void $ callOnStatusV2 rideStartedMsgV2 retryConfig merchant.id
 
 sendRideEstimatedEndTimeRangeUpdateToBAP ::
   ( CacheFlow m r,
@@ -1031,8 +1031,8 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
         if isOndcScheduledRideSupportEnabled
           then rideCompletedMsgV2' {Spec.onUpdateReqMessage = fixMsg <$> Spec.onUpdateReqMessage rideCompletedMsgV2'}
           else rideCompletedMsgV2'
-  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
   fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
+  void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -1063,9 +1063,9 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellat
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {cancellationReasonCode, ..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing
-  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
   whenJust mbRide $ \cancelledRide ->
     fork "FleetEngine: cancel trip on booking cancelled" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId cancelledRide.id
+  void $ callOnCancelV2 bookingCancelledMsgV2 retryConfig transporter.id
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -1204,10 +1204,10 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   -- the same event on two APIs.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+  fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
   if isOndcScheduledRideSupportEnabled
     then void $ callOnStatusV2 (MSILOnStatus.msilOnStatusMessageBuild driverArrivedMsgV2) retryConfig merchant.id
     else void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig merchant.id
-  fork "FleetEngine: arrived at pickup on driver arrival" $ FleetEngine.notifyDriverArrived booking ride
 
 sendPhoneCallRequestUpdateToBAP ::
   ( CacheFlow m r,
