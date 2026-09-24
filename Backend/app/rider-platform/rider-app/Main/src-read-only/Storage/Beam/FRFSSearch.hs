@@ -18,6 +18,7 @@ data FRFSSearchT f = FRFSSearchT
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
+    enforcePassOverride :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fromStationAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStationId :: B.C f Kernel.Prelude.Text,
     fromStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

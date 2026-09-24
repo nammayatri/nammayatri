@@ -23,6 +23,7 @@ data FRFSSearch = FRFSSearch
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
+    enforcePassOverride :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fromStationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStationCode :: Kernel.Prelude.Text,
     fromStationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -220,6 +220,7 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.destinationStopCode destinationStopCode,
       Se.Set Beam.endDate endDate,
       Se.Set Beam.isDashboard isDashboard,
+      Se.Set Beam.maxOverrideableFare maxOverrideableFare,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
