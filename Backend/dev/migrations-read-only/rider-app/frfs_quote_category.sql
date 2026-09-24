@@ -242,3 +242,8 @@ CREATE INDEX CONCURRENTLY frfs_quote_category_idx_quote_id ON atlas_app.frfs_quo
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

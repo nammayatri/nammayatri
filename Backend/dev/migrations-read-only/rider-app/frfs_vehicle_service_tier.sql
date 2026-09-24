@@ -46,3 +46,8 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_time_a
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_days_ahead integer ;
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_count integer ;
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_reschedule_allowed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN pay_on_board boolean  default false;

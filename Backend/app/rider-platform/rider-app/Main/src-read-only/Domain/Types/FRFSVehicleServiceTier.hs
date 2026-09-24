@@ -29,6 +29,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     maxRescheduleTimeAfterStart :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    payOnBoard :: Kernel.Prelude.Bool,
     providerCode :: Kernel.Prelude.Text,
     shortName :: Kernel.Prelude.Text,
     trainType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

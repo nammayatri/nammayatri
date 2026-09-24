@@ -1338,6 +1338,13 @@ FRFSVehicleServiceTier:
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity
     trainType: Maybe Text
+    payOnBoard: Bool
+  beamType:
+    payOnBoard: Maybe Bool
+  toTType:
+    payOnBoard: Kernel.Prelude.Just|I
+  fromTType:
+    payOnBoard: fromMaybe False payOnBoard|E
   constraints:
     id: PrimaryKey
   cachedQueries:
@@ -1381,6 +1388,8 @@ FRFSVehicleServiceTier:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, integratedBppConfigId]
+  default:
+    payOnBoard: "false"
 
 RouteTripMapping:
   tableName: route_trip_mapping

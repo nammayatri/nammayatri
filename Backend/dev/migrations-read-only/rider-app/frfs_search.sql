@@ -181,3 +181,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN has_applicable_pass boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
