@@ -40,7 +40,8 @@ instance JT.JourneyLeg WalkLegRequest m where
             mode = DTrip.Walk,
             fleetNo = Nothing,
             serviceTierType = Nothing,
-            merchantOperatingCityId = req.journeyLeg.merchantOperatingCityId
+            merchantOperatingCityId = req.journeyLeg.merchantOperatingCityId,
+            sharedCab = Nothing
           }
   getState _ = throwError (InternalError "Not supported")
 

@@ -87,6 +87,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
+import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -268,7 +269,8 @@ data JourneyLegStateData = JourneyLegStateData
     mode :: DTrip.MultimodalTravelMode,
     fleetNo :: Maybe Text,
     serviceTierType :: Maybe Spec.ServiceTierType,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    sharedCab :: Maybe SharedCabLeg.SharedCabLegStatus
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

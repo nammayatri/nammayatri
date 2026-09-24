@@ -229,7 +229,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             mode = DTrip.Taxi,
             fleetNo = Nothing,
             serviceTierType = Nothing,
-            merchantOperatingCityId = req.journeyLeg.merchantOperatingCityId
+            merchantOperatingCityId = req.journeyLeg.merchantOperatingCityId,
+            sharedCab = Nothing
           }
   getState _ = throwError (InternalError "Not Supported")
 

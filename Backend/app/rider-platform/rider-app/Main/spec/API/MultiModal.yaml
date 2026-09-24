@@ -54,6 +54,7 @@ imports:
   CumulativeOfferResp: SharedLogic.Offer
   BusStopETA: Storage.CachedQueries.Merchant.MultiModalBus
   WaybillStatus: SharedLogic.External.Nandi.Types
+  SharedCabLegStatus: SharedLogic.SharedCab.LegState
 
 module: MultimodalConfirm
 
@@ -114,6 +115,7 @@ types:
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
     fleetNo: Maybe Text
+    sharedCab: Maybe SharedCabLegStatus
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus

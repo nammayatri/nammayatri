@@ -18,6 +18,7 @@ import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
@@ -46,6 +47,7 @@ import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.JourneyLeg.Common.FRFSJourneyUtils as Reexport
+import qualified Lib.JourneyLeg.Types as JLTypes
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
@@ -57,6 +59,9 @@ import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
+import qualified SharedLogic.SharedCab.Session as SharedCabSession
+import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -72,6 +77,58 @@ import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
+isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
+isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB
+
+-- | `07` §3 shared-cab block; skips bus live tracking, which knows nothing of shared cabs.
+-- Positions and ETAs wait on the LTS read (7.2), driver details on the session (B6).
+getSharedCabLegState ::
+  (Redis.HedisFlow m r, MonadFlow m) =>
+  UTCTime ->
+  [APITypes.RiderLocationReq] ->
+  DJourneyLeg.JourneyLeg ->
+  DTrip.MultimodalTravelMode ->
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  JLTypes.JourneyLegStatus ->
+  JMStateTypes.JourneyBookingStatus ->
+  [(Int, JMStateTypes.TrackingStatus, UTCTime)] ->
+  m JT.JourneyLegState
+getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses = do
+  mbSession <- maybe (pure Nothing) SharedCabSession.getSession booking.vehicleNumber
+  cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
+  let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
+      (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
+      mkSharedCab st =
+        SharedCabLeg.SharedCabLegStatus
+          { state = st,
+            vehicleNumber = booking.vehicleNumber,
+            vehicleModel = Nothing,
+            driverName = Nothing,
+            driverPhotoUrl = Nothing,
+            etaToBoardStopSec = Nothing,
+            etaToDropStopSec = Nothing,
+            cabsComing
+          }
+  pure $
+    JT.Single
+      JT.JourneyLegStateData
+        { status = oldStatus,
+          bookingStatus,
+          trackingStatus,
+          trackingStatusLastUpdatedAt,
+          userPosition = (.latLong) <$> listToMaybe riderLastPoints,
+          vehiclePositions = [],
+          legOrder = journeyLeg.sequenceNumber,
+          subLegOrder = 1,
+          mode,
+          fleetNo = journeyLeg.finalBoardedBusNumber,
+          serviceTierType = Just Spec.SHARED_CAB,
+          merchantOperatingCityId = booking.merchantOperatingCityId,
+          sharedCab = mkSharedCab <$> SharedCabLeg.deriveSharedCabState bookingStatus booking.vehicleNumber hasLiveSession
+        }
+  where
+    mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
+
 -- getState and other functions from the original file...
 
 getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig, "cloudType" ::: Maybe CloudType], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r, Metrics.HasBAPMetrics m r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> Maybe Text -> m JT.JourneyLegState
@@ -85,6 +142,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
       (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
       case mode of
+        _ | isSharedCabBooking booking -> getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
@@ -120,7 +178,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     mode,
                     fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
                     serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
-                    merchantOperatingCityId = booking.merchantOperatingCityId
+                    merchantOperatingCityId = booking.merchantOperatingCityId,
+                    sharedCab = Nothing
                   }
           mbQuote <- QFRFSQuote.findById booking.quoteId
           validBuses <-
@@ -176,7 +235,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       mode,
                       fleetNo = Nothing,
                       serviceTierType = Nothing,
-                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId
+                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                      sharedCab = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -219,7 +279,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     mode,
                     fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
                     serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
-                    merchantOperatingCityId = journeyLeg.merchantOperatingCityId
+                    merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                    sharedCab = Nothing
                   }
 
           vehiclePositionsToReturn <-
@@ -259,7 +320,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       mode,
                       fleetNo = Nothing,
                       serviceTierType = Nothing,
-                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId
+                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                      sharedCab = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
