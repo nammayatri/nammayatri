@@ -628,6 +628,7 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab.Plate
       SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
