@@ -311,7 +311,7 @@ stripePayoutWebhookHandler ::
   RawByteString ->
   FlowHandler AckResponse
 stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
-  withFlowHandlerAPI . Payout.stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payout.stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
 
 stripeTestPayoutWebhookHandler ::
   ShortId DM.Merchant ->
@@ -321,7 +321,7 @@ stripeTestPayoutWebhookHandler ::
   RawByteString ->
   FlowHandler AckResponse
 stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
-  withFlowHandlerAPI . Payout.stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
+  withFlowHandlerAPI . ActorInfo.withRequestIdActorInfo . Payout.stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
 
 stripeAccountWebhookHandler ::
   ShortId DM.Merchant ->

@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -40,19 +41,19 @@ upsertSeatLayout a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/SEAT_LAYOUT/UPSERT_SEAT_LAYOUT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.AppManagement.SeatLayout.upsertSeatLayout a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.SeatLayout.upsertSeatLayout a4 a3 a1
     )
 
 listSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [Domain.Types.SeatLayout.SeatLayout])
-listSeatLayout a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.SeatLayout.listSeatLayout a5 a4 a2 a1
+listSeatLayout a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.SeatLayout.listSeatLayout a5 a4 a2 a1
 
 getSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> Environment.FlowHandler API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutDetailResp)
-getSeatLayout a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.SeatLayout.getSeatLayout a4 a3 a1
+getSeatLayout a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.SeatLayout.getSeatLayout a4 a3 a1
 
 deleteSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteSeatLayout a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/SEAT_LAYOUT/DELETE_SEAT_LAYOUT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.SeatLayout.deleteSeatLayout a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.SeatLayout.deleteSeatLayout a4 a3 a1
     )

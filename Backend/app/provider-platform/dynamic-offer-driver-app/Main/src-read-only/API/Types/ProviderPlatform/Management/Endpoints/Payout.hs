@@ -74,7 +74,7 @@ data UpdateScheduledPayoutConfigReq = UpdateScheduledPayoutConfigReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("payout" :> (GetPayoutPayoutHistoryHelper :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutOrder :<|> GetPayoutPayoutHelper :<|> PostPayoutPayoutRetryHelper :<|> PostPayoutPayoutCancelHelper :<|> PostPayoutPayoutCashHelper :<|> PostPayoutPayoutVpaDeleteHelper :<|> PostPayoutPayoutVpaUpdateHelper :<|> PostPayoutPayoutVpaRefundRegistrationHelper :<|> PostPayoutPayoutScheduledPayoutConfigUpsert))
+type API = ("payout" :> (GetPayoutPayoutHistoryHelper :<|> GetPayoutPayoutReferralHistoryHelper :<|> GetPayoutPayoutOrderHelper :<|> GetPayoutPayoutHelper :<|> PostPayoutPayoutRetryHelper :<|> PostPayoutPayoutCancelHelper :<|> PostPayoutPayoutCashHelper :<|> PostPayoutPayoutVpaDeleteHelper :<|> PostPayoutPayoutVpaUpdateHelper :<|> PostPayoutPayoutVpaRefundRegistrationHelper :<|> PostPayoutPayoutScheduledPayoutConfigUpsertHelper))
 
 type GetPayoutPayoutHistory =
   ( "payout" :> "history" :> QueryParam "driverId" Kernel.Prelude.Text :> QueryParam "driverPhoneNo" Kernel.Prelude.Text
@@ -146,7 +146,46 @@ type GetPayoutPayoutReferralHistory =
            PayoutReferralHistoryRes
   )
 
+type GetPayoutPayoutReferralHistoryHelper =
+  ( "payout" :> "referral" :> "history" :> QueryParam "areActivatedRidesOnly" Kernel.Prelude.Bool
+      :> QueryParam
+           "customerPhoneNo"
+           Kernel.Prelude.Text
+      :> QueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam
+           "driverPhoneCountryCode"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "driverPhoneNo"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> QueryParam
+           "requestorId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           PayoutReferralHistoryRes
+  )
+
 type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutOrderResp)
+
+type GetPayoutPayoutOrderHelper =
+  ( "payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Lib.Payment.API.Payout.Types.PayoutOrderResp
+  )
 
 type GetPayoutPayout = ("payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutRequestResp)
 
@@ -251,10 +290,18 @@ type PostPayoutPayoutScheduledPayoutConfigUpsert =
            Kernel.Types.APISuccess.APISuccess
   )
 
+type PostPayoutPayoutScheduledPayoutConfigUpsertHelper =
+  ( "payout" :> "scheduledPayoutConfig" :> "upsert" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           UpdateScheduledPayoutConfigReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 data PayoutAPIs = PayoutAPIs
   { getPayoutPayoutHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutHistoryRes,
-    getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
-    getPayoutPayoutOrder :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp,
+    getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
+    getPayoutPayoutOrder :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp,
     getPayoutPayout :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutRequestResp,
     postPayoutPayoutRetry :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
     postPayoutPayoutCancel :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.PayoutCancelReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
@@ -262,7 +309,7 @@ data PayoutAPIs = PayoutAPIs
     postPayoutPayoutVpaDelete :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.DeleteVpaReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
     postPayoutPayoutVpaUpdate :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.UpdateVpaReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
     postPayoutPayoutVpaRefundRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.RefundRegAmountReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
-    postPayoutPayoutScheduledPayoutConfigUpsert :: UpdateScheduledPayoutConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPayoutPayoutScheduledPayoutConfigUpsert :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> UpdateScheduledPayoutConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)

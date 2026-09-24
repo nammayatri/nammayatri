@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -50,7 +51,7 @@ getDriverGetSafetySettings ::
     Kernel.Types.Id.Id Domain.Types.Person.Person ->
     Environment.FlowHandler API.Types.UI.DriverSafetySettings.GetDriverSafetySettingsRes
   )
-getDriverGetSafetySettings a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverSafetySettings.getDriverGetSafetySettings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDriverGetSafetySettings a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverSafetySettings.getDriverGetSafetySettings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 putDriverUpdateSafetySettings ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -60,4 +61,4 @@ putDriverUpdateSafetySettings ::
     API.Types.UI.DriverSafetySettings.UpdateDriverSafetySettingsReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-putDriverUpdateSafetySettings a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverSafetySettings.putDriverUpdateSafetySettings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+putDriverUpdateSafetySettings a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverSafetySettings.putDriverUpdateSafetySettings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

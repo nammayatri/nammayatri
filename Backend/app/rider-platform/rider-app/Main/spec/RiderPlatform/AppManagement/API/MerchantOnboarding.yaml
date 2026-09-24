@@ -1,4 +1,4 @@
-imports:
+imports: #
   APISuccess: Kernel.Types.APISuccess
   MerchantOnboarding: Domain.Types.MerchantOnboarding
   MerchantOnboardingAPI: Domain.Types.MerchantOnboarding
@@ -22,6 +22,13 @@ importPackageOverrides:
 
 module: MerchantOnboarding
 apiPrefix: ""
+# requestorId/requestorRole applied for each api by default
+# for overwrite helperApiExtra/helperApi can be specified for each api separately
+default:
+  helperApiExtra:
+    query:
+      - requestorId: Text
+      - requestorRole: RequestorRole
 
 apis:
   - GET: # OnboardingInfoAPI
@@ -30,9 +37,6 @@ apis:
       auth: ApiAuthV2
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         onboardingType: Text
       response:
@@ -43,9 +47,6 @@ apis:
       auth: ApiAuthV2
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         onboardingType: Text
       response:
@@ -56,9 +57,6 @@ apis:
       auth: ApiAuthV2
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       response:
         type: "[MerchantOnboarding]"
   - POST: # MerchantOnboardingStepSubmit
@@ -71,9 +69,6 @@ apis:
         type: Value
       response:
         type: "MerchantOnboardingAPI"
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: # MerchantOnboardingStepUpdatePayload
@@ -86,9 +81,6 @@ apis:
         type: Value
       response:
         type: "APISuccess"
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: # MerchantOnboardingStepReject
@@ -101,9 +93,6 @@ apis:
         type: Value
       response:
         type: "APISuccess"
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: # MerchantOnboardingStepApprove
@@ -116,9 +105,6 @@ apis:
         type: Value
       response:
         type: ApproveResponse
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         stepId: Text
   - POST: #MerchantOnboardingStepUploadFile
@@ -131,9 +117,6 @@ apis:
       appServerHandler: custom
       response:
         type: UploadFileResponse
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         stepId: Text
         payloadKey: Text
@@ -147,9 +130,6 @@ apis:
         type: Value
       response:
         type: "APISuccess"
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         onboardingId: Text
   - GET: #MerchantOnboadingListAll
@@ -159,8 +139,6 @@ apis:
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
       query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
         - status: OnboardingStatus
         - onboardingType: OnboardingType
         - limit: Int
@@ -173,9 +151,6 @@ apis:
       auth: ApiAuthV2
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         onboardingId: Text
       response:
@@ -186,9 +161,6 @@ apis:
       auth: ApiAuthV2
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         onboardingId: Text
         fileId: Text
@@ -200,9 +172,6 @@ apis:
       auth: ApiAuthV2
       # requestorId and requestorRole come from the session, not the client.
       appServerHandler: custom
-      query:
-        - requestorId: Text
-        - requestorRole: RequestorRole
       params:
         onboardingId: Text
       response:

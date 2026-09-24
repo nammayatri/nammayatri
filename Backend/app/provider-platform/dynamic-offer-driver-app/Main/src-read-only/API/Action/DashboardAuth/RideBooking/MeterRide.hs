@@ -18,6 +18,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -29,4 +30,4 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getMeterRidePrice merchantId city
 
 getMeterRidePrice :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.FlowHandler API.Types.UI.PriceBreakup.MeterRidePriceRes)
-getMeterRidePrice a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.MeterRide.getMeterRidePrice a3 a2 a1
+getMeterRidePrice a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.RideBooking.MeterRide.getMeterRidePrice a3 a2 a1

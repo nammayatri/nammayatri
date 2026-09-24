@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -42,7 +43,7 @@ handler :: Environment.FlowServer API
 handler = postSocialLogin :<|> postSocialUpdateProfile
 
 postSocialLogin :: (API.Types.UI.SocialLogin.SocialLoginReq -> Environment.FlowHandler API.Types.UI.SocialLogin.SocialLoginRes)
-postSocialLogin a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocialLogin a1
+postSocialLogin a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SocialLogin.postSocialLogin a1
 
 postSocialUpdateProfile ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -52,4 +53,4 @@ postSocialUpdateProfile ::
     API.Types.UI.SocialLogin.SocialUpdateProfileReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSocialUpdateProfile a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SocialLogin.postSocialUpdateProfile (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSocialUpdateProfile a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SocialLogin.postSocialUpdateProfile (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

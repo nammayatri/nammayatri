@@ -18,6 +18,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -80,21 +81,21 @@ postSpecialZoneQueueTriggerNotify a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueTriggerNotify a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueTriggerNotify a4 a3 a1
     )
 
 getSpecialZoneQueueTriggerNotifyStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyStatusRes)
-getSpecialZoneQueueTriggerNotifyStatus a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueTriggerNotifyStatus a3 a2
+getSpecialZoneQueueTriggerNotifyStatus a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueTriggerNotifyStatus a3 a2
 
 getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.SpecialZoneQueueStatsRes)
-getSpecialZoneQueueQueueStats a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueQueueStats a4 a3 a1
+getSpecialZoneQueueQueueStats a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueQueueStats a4 a3 a1
 
 postSpecialZoneQueueManualQueueAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.SpecialZoneQueue.ManualQueueAddReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSpecialZoneQueueManualQueueAdd a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_ADD" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueManualQueueAdd a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueManualQueueAdd a4 a3 a1
     )
 
 postSpecialZoneQueueManualQueueRemove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.SpecialZoneQueue.ManualQueueRemoveReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -102,11 +103,11 @@ postSpecialZoneQueueManualQueueRemove a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_REMOVE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueManualQueueRemove a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.postSpecialZoneQueueManualQueueRemove a4 a3 a1
     )
 
 getSpecialZoneQueueDriverQueuePosition :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueuePositionRes)
-getSpecialZoneQueueDriverQueuePosition a6 a5 _a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueuePosition a6 a5 a3 a2 a1
+getSpecialZoneQueueDriverQueuePosition a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueuePosition a6 a5 a3 a2 a1
 
 getSpecialZoneQueueDriverQueueHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueHistoryRes)
-getSpecialZoneQueueDriverQueueHistory a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueHistory a4 a3 a1
+getSpecialZoneQueueDriverQueueHistory a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueHistory a4 a3 a1

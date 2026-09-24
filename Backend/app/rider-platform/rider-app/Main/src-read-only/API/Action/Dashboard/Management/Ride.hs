@@ -22,6 +22,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.Ride.API)
@@ -52,7 +53,7 @@ postRideSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postRideSyncMultiple a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.postRideSyncMultiple a3 a2 a1
 
 postRidePayoutOfferSync :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
-postRidePayoutOfferSync a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.postRidePayoutOfferSync a4 a3 a2 a1
+postRidePayoutOfferSync a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.Ride.postRidePayoutOfferSync a4 a3 a2 a1
 
 postRideCancelMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRideCancelMultiple a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.postRideCancelMultiple a3 a2 a1

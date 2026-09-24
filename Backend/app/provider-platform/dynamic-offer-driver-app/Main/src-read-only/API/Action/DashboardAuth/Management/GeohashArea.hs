@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -49,14 +50,14 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getGeohashAreaList merchantId city :<|> postGeohashAreaUpsert merchantId city :<|> postGeohashAreaUpsertCsv merchantId city
 
 getGeohashAreaList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler [Dashboard.Common.GeohashArea.GeohashAreaItem])
-getGeohashAreaList a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.GeohashArea.getGeohashAreaList a3 a2
+getGeohashAreaList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.GeohashArea.getGeohashAreaList a3 a2
 
 postGeohashAreaUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postGeohashAreaUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/GEOHASH_AREA/POST_GEOHASH_AREA_UPSERT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.GeohashArea.postGeohashAreaUpsert a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.GeohashArea.postGeohashAreaUpsert a4 a3 a1
     )
 
 postGeohashAreaUpsertCsv :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.GeohashArea.GeohashAreaCsvReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -64,5 +65,5 @@ postGeohashAreaUpsertCsv a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/GEOHASH_AREA/POST_GEOHASH_AREA_UPSERT_CSV" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.GeohashArea.postGeohashAreaUpsertCsv a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.GeohashArea.postGeohashAreaUpsertCsv a4 a3 a1
     )

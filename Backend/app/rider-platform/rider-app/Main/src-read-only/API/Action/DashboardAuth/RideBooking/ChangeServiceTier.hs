@@ -21,6 +21,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -44,12 +45,12 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getChangeServiceTierQuotes merchantId city :<|> postChangeServiceTierConfirm merchantId city
 
 getChangeServiceTierQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Domain.Action.UI.Quote.GetQuotesRes)
-getChangeServiceTierQuotes a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.RideBooking.ChangeServiceTier.getChangeServiceTierQuotes a5 a4 a2 a1
+getChangeServiceTierQuotes a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.ChangeServiceTier.getChangeServiceTierQuotes a5 a4 a2 a1
 
 postChangeServiceTierConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.RideBooking.ChangeServiceTier.ChangeServiceTierConfirmReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postChangeServiceTierConfirm a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/CHANGE_SERVICE_TIER/POST_CHANGE_SERVICE_TIER_CONFIRM" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.RideBooking.ChangeServiceTier.postChangeServiceTierConfirm a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.ChangeServiceTier.postChangeServiceTierConfirm a6 a5 a3 a2 a1
     )

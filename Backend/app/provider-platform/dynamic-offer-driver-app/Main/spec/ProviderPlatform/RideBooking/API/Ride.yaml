@@ -15,18 +15,10 @@ apis:
         type: StartRideReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{rideId}/start
-            auth: ApiAuthV2
-            params:
-              rideId: Id Ride
-            query:
-              - requestorId: Text
-            request:
-              type: StartRideReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - POST: # RideEndAPI
       endpoint: /{rideId}/end
       auth: ApiAuthV2
@@ -36,18 +28,10 @@ apis:
         type: EndRideReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{rideId}/end
-            auth: ApiAuthV2
-            params:
-              rideId: (Id Ride)
-            query:
-              - requestorId: Text
-            request:
-              type: EndRideReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - GET: # CurrentActiveRideAPI
       endpoint: /{vehicleNumber}/currentActiveRide
       auth: ApiAuthV2
@@ -64,18 +48,10 @@ apis:
         type: CancelRideReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{rideId}/cancel
-            auth: ApiAuthV2
-            params:
-              rideId: Id Ride
-            query:
-              - requestorId: Text
-            request:
-              type: CancelRideReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - POST: # BookingWithVehicleNumberAndPhoneAPI
       endpoint: /booking/withVehicleNumberAndPhone
       auth: ApiAuthV2
@@ -83,16 +59,10 @@ apis:
         type: BookingWithVehicleAndPhoneReq
       response:
         type: BookingWithVehicleAndPhoneRes
-      helperApi:
-        - POST:
-            endpoint: /booking/withVehicleNumberAndPhone
-            auth: ApiAuthV2
-            query:
-              - requestorId: Text
-            request:
-              type: BookingWithVehicleAndPhoneReq
-            response:
-              type: BookingWithVehicleAndPhoneRes
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
 types:
   StartRideReq:

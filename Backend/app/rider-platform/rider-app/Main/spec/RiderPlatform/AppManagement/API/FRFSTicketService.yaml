@@ -1,4 +1,4 @@
-imports:
+imports: #
   Person: Domain.Types.Person
   FRFSConfigAPIRes: API.Types.UI.FRFSTicketService
   AutocompleteRes: API.Types.UI.FRFSTicketService
@@ -168,25 +168,15 @@ apis:
         customerId: Id Person
         quoteId: Id FRFSQuote
       query:
-        isMockPayment: Bool
+        - isMockPayment: Bool
       request:
         type: FRFSQuoteConfirmReq
       response:
         type: FRFSTicketBookingStatusAPIRes
-      helperApi:
-        - POST:
-            endpoint: /customer/{customerId}/frfs/quote/v2/{quoteId}/confirm
-            auth: ApiAuthV2
-            params:
-              customerId: Id Person
-              quoteId: Id FRFSQuote
-            query:
-              - isMockPayment: Bool
-              - requestorId: Text
-            request:
-              type: FRFSQuoteConfirmReq
-            response:
-              type: FRFSTicketBookingStatusAPIRes
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - GET:
       endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
@@ -196,17 +186,10 @@ apis:
         bookingId: Id FRFSTicketBooking
       response:
         type: FRFSTicketBookingStatusAPIRes
-      helperApi:
-        - GET:
-            endpoint: /customer/{customerId}/frfs/booking/{bookingId}/status
-            auth: ApiAuthV2
-            params:
-              customerId: Id Person
-              bookingId: Id FRFSTicketBooking
-            query:
-              - requestorId: Text
-            response:
-              type: FRFSTicketBookingStatusAPIRes
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
   - GET:
       endpoint: /customer/{customerId}/frfs/booking/{bookingId}/paymentAttempts

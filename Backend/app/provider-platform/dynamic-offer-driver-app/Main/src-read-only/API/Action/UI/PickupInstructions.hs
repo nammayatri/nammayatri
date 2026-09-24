@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "pickupInstructions" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> Get '[JSON] API.Types.UI.PickupInstructions.PickupInstructionResp)
@@ -36,4 +37,4 @@ getPickupInstructions ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler API.Types.UI.PickupInstructions.PickupInstructionResp
   )
-getPickupInstructions a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.getPickupInstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPickupInstructions a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PickupInstructions.getPickupInstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

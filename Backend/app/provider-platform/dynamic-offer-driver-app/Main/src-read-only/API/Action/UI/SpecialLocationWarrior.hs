@@ -22,6 +22,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -63,7 +64,7 @@ getSpecialLocationListCategory ::
     Data.Text.Text ->
     Environment.FlowHandler [Lib.Queries.SpecialLocation.SpecialLocationWarrior]
   )
-getSpecialLocationListCategory a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocationWarrior.getSpecialLocationListCategory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSpecialLocationListCategory a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SpecialLocationWarrior.getSpecialLocationListCategory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getGetInfoSpecialLocWarrior ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -73,7 +74,7 @@ getGetInfoSpecialLocWarrior ::
     Kernel.Types.Id.Id Domain.Types.Person.Person ->
     Environment.FlowHandler API.Types.UI.SpecialLocationWarrior.SpecialLocWarriorInfoRes
   )
-getGetInfoSpecialLocWarrior a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocationWarrior.getGetInfoSpecialLocWarrior (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getGetInfoSpecialLocWarrior a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.SpecialLocationWarrior.getGetInfoSpecialLocWarrior (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postUpdateInfoSpecialLocWarrior ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -84,4 +85,4 @@ postUpdateInfoSpecialLocWarrior ::
     API.Types.UI.SpecialLocationWarrior.SpecialLocWarriorInfoReq ->
     Environment.FlowHandler API.Types.UI.SpecialLocationWarrior.SpecialLocWarriorInfoRes
   )
-postUpdateInfoSpecialLocWarrior a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocationWarrior.postUpdateInfoSpecialLocWarrior (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postUpdateInfoSpecialLocWarrior a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.SpecialLocationWarrior.postUpdateInfoSpecialLocWarrior (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

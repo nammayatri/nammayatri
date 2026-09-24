@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -46,7 +47,7 @@ postDriverSubscriptionSendSms a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_SUBSCRIPTION/POST_DRIVER_SUBSCRIPTION_SEND_SMS" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.AppManagement.DriverSubscription.postDriverSubscriptionSendSms a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.DriverSubscription.postDriverSubscriptionSendSms a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a1
     )
 
 postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Dashboard.Common.ServiceNames -> API.Types.Dashboard.AppManagement.DriverSubscription.SubscriptionDriverFeesAndInvoicesToUpdate -> Environment.FlowHandler API.Types.Dashboard.AppManagement.DriverSubscription.SubscriptionDriverFeesAndInvoicesToUpdate)
@@ -54,5 +55,5 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_SUBSCRIPTION/POST_DRIVER_SUBSCRIPTION_UPDATE_DRIVER_FEE_AND_INVOICE_INFO" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.AppManagement.DriverSubscription.postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.DriverSubscription.postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo a6 a5 a3 a2 a1
     )

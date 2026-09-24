@@ -15,6 +15,7 @@ import qualified Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -39,7 +40,7 @@ handler :: Environment.FlowServer API
 handler = postCorporateBookingStatement :<|> postCorporateInvoiceData
 
 postCorporateBookingStatement :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.PartnerBookingStatement.BookingStatementReq -> Environment.FlowHandler API.Types.UI.PartnerBookingStatement.BookingStatementRes)
-postCorporateBookingStatement a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PartnerBookingStatement.postCorporateBookingStatement a2 a1
+postCorporateBookingStatement a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.PartnerBookingStatement.postCorporateBookingStatement a2 a1
 
 postCorporateInvoiceData :: (Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.PartnerBookingStatement.InvoiceDataReq -> Environment.FlowHandler API.Types.UI.PartnerBookingStatement.InvoiceDataRes)
-postCorporateInvoiceData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PartnerBookingStatement.postCorporateInvoiceData a2 a1
+postCorporateInvoiceData a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.PartnerBookingStatement.postCorporateInvoiceData a2 a1
