@@ -33,6 +33,13 @@ tests =
           testCase "ticket CANCELLED -> CANCELLED" $ derive (JMState.FRFSTicket DFRFSTicket.CANCELLED) Nothing False @?= Just CANCELLED,
           testCase "booking CANCELLED -> CANCELLED" $ derive (JMState.FRFSBooking DFRFSBooking.CANCELLED) Nothing False @?= Just CANCELLED,
           testCase "not yet confirmed -> no block" $ derive (JMState.FRFSBooking DFRFSBooking.NEW) Nothing False @?= Nothing
+        ],
+      testGroup
+        "I got down: which tickets go USED"
+        [ testCase "waiting ticket" $ isDroppable DFRFSTicket.ACTIVE @?= True,
+          testCase "boarded ticket" $ isDroppable DFRFSTicket.INPROGRESS @?= True,
+          testCase "cancelled ticket stays cancelled" $ isDroppable DFRFSTicket.CANCELLED @?= False,
+          testCase "used ticket untouched" $ isDroppable DFRFSTicket.USED @?= False
         ]
     ]
   where

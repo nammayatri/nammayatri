@@ -80,6 +80,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSRouteDetails
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
@@ -140,6 +141,7 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -1411,6 +1413,7 @@ postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStat
 
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
+  when (newStatus == JL.Completed) $ dropSharedCabRider journeyLeg
   markLegStatus (Just newStatus) Nothing journeyLeg (Just subLegOrder) now
 
   -- refetch updated legs and journey
@@ -1444,6 +1447,7 @@ postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder
 
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
+  when (trackingStatus == JMState.Finished) $ dropSharedCabRider journeyLeg
   markLegStatus Nothing (Just trackingStatus) journeyLeg (Just subLegOrder) trackingStatusUpdateTime
 
   -- refetch updated legs and journey
@@ -1499,6 +1503,7 @@ postMultimodalComplete ::
 postMultimodalComplete (_, _) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
+  mapM_ dropSharedCabRider legs
   updatedLegStatus <- JM.markJourneyComplete journey legs
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
@@ -1515,7 +1520,9 @@ postMultimodalOrderSoftCancel (_, _) journeyId legOrder = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
   checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  JM.softCancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+  mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
+  withSharedCabCancelGuard mbLegBooking $
+    JM.softCancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
 
 getMultimodalOrderCancelStatus ::
@@ -1553,9 +1560,25 @@ postMultimodalOrderCancel (_, _) journeyId legOrder = do
   mbLegBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
   whenJust mbLegBooking FRFSUtils.checkCancellationQuota
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
-  JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
+  withSharedCabCancelGuard mbLegBooking $ do
+    cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
+    JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
+
+-- | R7: a shared-cab leg can't be cancelled once boarded; the check and the cancel share the booking lock.
+withSharedCabCancelGuard :: Maybe DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow () -> Environment.Flow ()
+withSharedCabCancelGuard mbBooking cancelAction = case mbBooking of
+  Just booking
+    | SharedCabBooking.isSharedCabBooking booking ->
+      SharedCabBooking.withBookingLock booking.id $ SharedCabBooking.ensureCancellable booking >> cancelAction
+  _ -> cancelAction
+
+-- | "I got down" and journey complete end a shared-cab ticket (USED) before the leg is marked finished.
+dropSharedCabRider :: DJourneyLeg.JourneyLeg -> Environment.Flow ()
+dropSharedCabRider journeyLeg = do
+  mbBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
+  whenJust mbBooking $ \booking ->
+    when (SharedCabBooking.isSharedCabBooking booking) $ SharedCabBooking.markDropped booking
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

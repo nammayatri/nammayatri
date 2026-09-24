@@ -59,6 +59,7 @@ import SharedLogic.FRFSConfirm
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
@@ -76,9 +77,6 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
-
-isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
-isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB
 
 -- | `07` §3 shared-cab block; skips bus live tracking, which knows nothing of shared cabs.
 -- Positions and ETAs wait on the LTS read (7.2), driver details on the session (B6).
@@ -142,7 +140,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
       (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
       case mode of
-        _ | isSharedCabBooking booking -> getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses
+        _ | SharedCabBooking.isSharedCabBooking booking -> getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)

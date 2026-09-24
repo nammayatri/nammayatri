@@ -629,6 +629,7 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.LegState
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.Session
