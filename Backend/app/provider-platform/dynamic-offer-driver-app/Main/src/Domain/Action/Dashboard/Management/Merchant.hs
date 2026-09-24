@@ -5453,7 +5453,7 @@ getMerchantMerchantMessageCatalog ::
   Flow Common.MerchantMessageCatalogResp
 getMerchantMerchantMessageCatalog _merchantShortId _opCity catalogType = do
   let values = case catalogType of
-        Common.KEY -> map show [minBound .. maxBound :: DMM.MessageKey]
+        Common.KEY -> map show DMM.knownMessageKeys
         Common.CHANNEL -> map show [minBound .. maxBound :: DMM.MediaChannel]
         Common.DOMAIN -> map show [minBound .. maxBound :: DMM.MessageDomain]
   pure $ Common.MerchantMessageCatalogResp {values}
@@ -5493,7 +5493,8 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
                 templateName = req.templateName,
                 vehicleCategory = req.vehicleCategory,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                mediaUrl = Nothing
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey req.vehicleCategory

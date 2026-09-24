@@ -23,7 +23,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     message :: Kernel.Prelude.Text,
-    messageKey :: Domain.Types.MerchantMessage.MessageKey,
+    messageKey :: Domain.Types.Extra.MerchantMessage.MessageKey,
     messageType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     senderHeader :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateId :: Kernel.Prelude.Text,
@@ -32,45 +32,6 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   deriving (Generic)
 
 data MediaChannel = SMS | WHATSAPP | OVERLAY | ALERT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
-
-data MessageKey
-  = INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER
-  | SET_AS_RIDE_EMERGENCY_NUMBER
-  | SET_AS_DEFAULT_EMERGENCY_NUMBER
-  | SEND_OTP
-  | SEND_BOOKING_OTP
-  | SEND_BOOKING_OTP_RENTAL
-  | SEND_BOOKING_OTP_INTERCITY
-  | SEND_RIDE_END_OTP
-  | SEND_SOS_ALERT
-  | MARK_RIDE_AS_SAFE
-  | FOLLOW_RIDE
-  | ADDED_AS_EMERGENCY_CONTACT
-  | TICKET_BOOKING_CANCELLED
-  | POST_RIDE_SOS
-  | SMS_DELIVERY_DETAILS_SENDER
-  | SMS_DELIVERY_DETAILS_RECEIVER
-  | POST_DELIVERY_SENDER
-  | PRE_PICKUP_DELIVERY_RECEIVER
-  | SEND_SCHEDULED_RIDE_DETAILS
-  | SCHEDULED_RIDE_OTP
-  | WHATSAPP_CALL_BOOKING_FLOW_DETAILS_MESSAGE
-  | WHATSAPP_CALL_BOOKING_REALLOCATED_RIDE_DETAILS_MESSAGE
-  | WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
-  | METRO_TICKET_BOOKING_CANCELLED
-  | METRO_TICKET_BOOKED
-  | TICKET_MERCHANT_AGREEMENT_TEMPLATE
-  | TICKET_MERCHANT_SNLTR_TEMPLATE
-  | PARTNER_ORG_FRFS_TICKET_CANCEL_OTP
-  | PASS_PURCHASED_MESSAGE
-  | SPECIAL_ZONE_BOOKING_INVOICE
-  | SEND_TOTP
-  | SPECIAL_ZONE_BOOKING_INVOICE_TITLE
-  | WHATSAPP_REWARD_UNLOCK
-  | WHATSAPP_BUS_TRIP_STARTED
-  | WHATSAPP_SHUTTLE_BOOKING_CONFIRMED
-  | WHATSAPP_FRFS_TRIP_DETAILS_UPDATED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 type MerchantMessage = MerchantMessageD 'Safe
 
@@ -83,5 +44,3 @@ instance FromJSON (MerchantMessageD 'Safe)
 instance ToJSON (MerchantMessageD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaChannel)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)

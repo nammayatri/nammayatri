@@ -6,6 +6,7 @@ module Storage.Queries.MerchantMessage where
 
 import qualified Data.Aeson
 import qualified Data.Default.Class
+import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
@@ -28,7 +29,7 @@ createMany = traverse_ create
 
 deleteByMerchantOpCityIdAndMessageKeyVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ())
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m ())
 deleteByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
   deleteWithKV
     [ Se.And
@@ -45,7 +46,7 @@ findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam
 
 findByMerchantOpCityIdAndMessageKeyVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.MerchantMessage.MessageKey -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
 findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey vehicleCategory = do
   findOneWithKV
     [ Se.And

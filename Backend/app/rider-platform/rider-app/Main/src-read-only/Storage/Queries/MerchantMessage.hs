@@ -4,6 +4,7 @@
 
 module Storage.Queries.MerchantMessage where
 
+import qualified Domain.Types.Extra.MerchantMessage
 import qualified Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -25,7 +26,7 @@ createMany = traverse_ create
 
 deleteByMerchantOperatingCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> m ())
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.MerchantMessage.MessageKey -> m ())
 deleteByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey = do
   deleteWithKV
     [ Se.And
@@ -52,7 +53,7 @@ findByMerchantOpCityIdAndTemplateId merchantOperatingCityId templateId = do
 
 findByMerchantOperatingCityIdAndMessageKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.MerchantMessage.MessageKey -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.MerchantMessage.MessageKey -> m (Maybe Domain.Types.MerchantMessage.MerchantMessage))
 findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey = do
   findOneWithKV
     [ Se.And
