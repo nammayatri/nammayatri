@@ -20,8 +20,8 @@ import qualified Storage.Beam.FRFSTicketBooking as Beam
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -208,7 +208,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.toStopIdx = toStopIdx,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
+        Beam.currency = ((Kernel.Prelude.Just . (.currency))) totalPrice,
         Beam.price = (.amount) totalPrice,
         Beam.tripId = tripId,
         Beam.validTill = validTill,

@@ -120,14 +120,14 @@ data FRFSTicketBooking = FRFSTicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data OverrideType = PassOverride | OtherOverride deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data OverrideType = PassOverride | OtherOverride deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''OverrideType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''OverrideType))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''OverrideType)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''OverrideType))
