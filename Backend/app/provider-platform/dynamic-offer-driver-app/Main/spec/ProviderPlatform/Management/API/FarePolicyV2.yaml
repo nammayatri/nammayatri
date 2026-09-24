@@ -91,7 +91,7 @@ apis:
         type: FPV2CreateProductRes
       migrate:
         capability: system-config.fare_policy.write
-  - POST: # update combo attributes in place (enabled / disableRecompute / timeBounds)
+  - POST: # update combo attributes in place (enabled / disableRecompute / disableDownwardRecompute / timeBounds)
       endpoint: /product/{fareProductId}/update
       auth: ApiAuthV2
       params:
@@ -385,6 +385,7 @@ types:
     - searchSource: FPV2SearchSource
     - enabled: Bool
     - disableRecompute: Maybe Bool
+    - disableDownwardRecompute: Maybe Bool
     - summary: FPV2PolicySummary
   FPV2ProductListRes:
     - fareProducts: "[FPV2ProductListItem]"
@@ -453,6 +454,7 @@ types:
     - searchSource: FPV2SearchSource
     - enabled: Bool
     - disableRecompute: Maybe Bool
+    - disableDownwardRecompute: Maybe Bool
     - sourceFarePolicyId: Maybe (Id FarePolicy)
     - policy: Maybe FPV2Policy
     - derive: "'HideSecrets"
@@ -462,6 +464,7 @@ types:
   FPV2UpdateProductReq:
     - enabled: Maybe Bool
     - disableRecompute: Maybe Bool
+    - disableDownwardRecompute: Maybe Bool
     - timeBounds: Maybe TimeBound
     # legacy data binds one policy to many combos; True forks this combo onto
     # its own deep copy of the policy so later edits stop affecting the others
