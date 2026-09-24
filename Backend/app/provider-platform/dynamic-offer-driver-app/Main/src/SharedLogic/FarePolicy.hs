@@ -336,7 +336,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
             if (mbVehicleServiceTierItem >>= (.driverCancellationNotAllowed)) == Just True && farePolicy.driverCancellationNotAllowed /= Just False
               then Just True
               else Nothing
-      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed}
+      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed, FarePolicyD.disableDownwardRecompute = fareProduct.disableDownwardRecompute}
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
           if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)

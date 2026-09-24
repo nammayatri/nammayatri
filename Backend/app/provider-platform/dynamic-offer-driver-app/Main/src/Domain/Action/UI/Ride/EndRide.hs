@@ -932,6 +932,11 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   if farePolicy.disableRecompute == Just True
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
+      -- Fare can go up but never below the estimate: charge at least the estimated distance and duration
+      let (chargeableDistance, chargeableDuration) =
+            if farePolicy.disableDownwardRecompute == Just True
+              then (max recalcDistance oldDistance, (max <$> finalDuration <*> booking.estimatedDuration) <|> finalDuration)
+              else (recalcDistance, finalDuration)
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
       -- Recompute congestion charge at end ride if config enabled
@@ -946,8 +951,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
                 booking.fromLocGeohash
                 booking.toLocGeohash
                 booking.vehicleServiceTier
-                (Just recalcDistance)
-                finalDuration
+                (Just chargeableDistance)
+                chargeableDuration
                 thresholdConfig.qarCalRadiusInKm
                 (FarePolicy.mkDropQARConfig thresholdConfig (Just . getCoordinates =<< booking.toLocation))
                 booking.specialLocationName
@@ -990,14 +995,14 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               computationPhase = Fare.FCRecompute,
               mbCapConfig = farePolicy.fareRecomputeCapConfig,
               mbEstimateFareParams = Just booking.fareParams,
-              actualDistance = Just recalcDistance,
+              actualDistance = Just chargeableDistance,
               estimatedDistance = Just oldDistance,
               rideTime = booking.startTime,
               returnTime = booking.returnTime,
               roundTrip = fromMaybe False booking.roundTrip,
               waitingTime = fmap (destinationWaitingTime +) $ if isNothing ride.driverArrivalTime then Nothing else fmap (max 0) (secondsToMinutesCeil . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> (liftA2 max ride.driverArrivalTime (Just booking.startTime)))),
               stopWaitingTimes = stopsInfo <&> (\stopInfo -> max 0 (secondsToMinutesCeil $ roundToIntegral (diffUTCTime (fromMaybe stopInfo.waitingTimeStart stopInfo.waitingTimeEnd) stopInfo.waitingTimeStart))),
-              actualRideDuration = finalDuration,
+              actualRideDuration = chargeableDuration,
               estimatedRideDuration = booking.estimatedDuration,
               estimatedRideStaticDuration = booking.estimatedStaticDuration,
               driverSelectedFare = booking.fareParams.driverSelectedFare,
@@ -1026,7 +1031,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               isParkingFeeExempt = rcParkingFeeExempt
             }
       finalFare <- checkRecomputedFareCeiling booking fareParams
-      let distanceDiff = recalcDistance - oldDistance
+      let distanceDiff = chargeableDistance - oldDistance
           fareDiff = finalFare - estimatedFare
       logTagInfo "Fare recalculation" $
         "Fare difference: "
@@ -1034,7 +1039,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric merchantId fareDiff distanceDiff
-      return (recalcDistance, finalFare, Just fareParams)
+      return (chargeableDistance, finalFare, Just fareParams)
 
 checkRecomputedFareCeiling :: (Log m, Monad m) => SRB.Booking -> FareParameters -> m HighPrecMoney
 checkRecomputedFareCeiling booking fareParams = do

@@ -16,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FareProduct = FareProduct
   { area :: Lib.Types.SpecialLocation.Area,
+    disableDownwardRecompute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableRecompute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
     farePolicyId :: Kernel.Types.Id.Id Domain.Types.FarePolicy.FarePolicy,

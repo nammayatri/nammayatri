@@ -171,6 +171,7 @@ getFarePolicyV2List merchantShortId opCity mbTripCategory mbArea mbServiceTier m
                   searchSource = toApiSearchSource fp.searchSource,
                   enabled = fp.enabled,
                   disableRecompute = fp.disableRecompute,
+                  disableDownwardRecompute = fp.disableDownwardRecompute,
                   summary = mkSummary policy
                 }
 
@@ -528,7 +529,8 @@ postFarePolicyV2ProductCreate merchantShortId opCity req = do
             timeBounds = req.timeBounds,
             searchSource = fromApiSearchSource req.searchSource,
             enabled = req.enabled,
-            disableRecompute = req.disableRecompute
+            disableRecompute = req.disableRecompute,
+            disableDownwardRecompute = req.disableDownwardRecompute
           }
   before <- activeCoverage merchantOpCity.id
   CQFProduct.create fareProduct
@@ -588,6 +590,7 @@ postFarePolicyV2ProductUpdate merchantShortId opCity reqFareProductId req = do
         fareProduct
           { DFareProduct.enabled = fromMaybe fareProduct.enabled req.enabled,
             DFareProduct.disableRecompute = req.disableRecompute <|> fareProduct.disableRecompute,
+            DFareProduct.disableDownwardRecompute = req.disableDownwardRecompute <|> fareProduct.disableDownwardRecompute,
             DFareProduct.timeBounds = fromMaybe fareProduct.timeBounds req.timeBounds,
             DFareProduct.farePolicyId = fromMaybe fareProduct.farePolicyId mbDetachedPolicyId
           }
