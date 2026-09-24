@@ -1,6 +1,7 @@
 module SharedLogic.FRFSReschedule where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Time as Time
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
@@ -69,6 +70,9 @@ validateRescheduleEligibility oldBooking newTripId newFromCode newToCode newRout
   serviceTierType <-
     FRFSUtils.getServiceTierTypeFromRouteStationsJson oldBooking.routeStationsJson
       & fromMaybeM (InvalidRequest "Cannot determine service tier for this booking, reschedule not supported")
+  -- A shared cab has no trip to move to; its cab comes from allocation, not a schedule.
+  when (serviceTierType == Spec.SHARED_CAB) $
+    throwError $ InvalidRequest "Reschedule is not supported for shared cab bookings"
   vst <-
     QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType oldBooking.merchantOperatingCityId integratedBppConfig.id
       >>= fromMaybeM (InvalidRequest "Reschedule is not enabled for this route/vehicle/service tier")

@@ -444,6 +444,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       -- actual bus departure rather than the booking creation time. Bus-only: metro/subway
       -- have no waybill schedule and leave firstTripId Nothing, so they fall back to `now`.
       mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
+      let isSpotBookingPath = isSpotBooking' == Just True || (mbJourneyLeg >>= (.finalBoardedBusNumberSource)) == Just DJL.UserSpotBooked
       -- Only for a pass booking, where the departure decides which day the pass window is checked
       -- against. Non-pass bookings keep the original `now`. Also rejects a departure that is not in
       -- the future: journey_leg.fromDepartureTime comes from a timetable lookup, and where there is
@@ -549,7 +550,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 holdId = mbHoldCtxForAll <&> (\(h, _, _) -> h),
                 tripId = firstTripId,
                 isSpotBooking = isSpotBooking',
-                vehicleNumber = quote'.vehicleNumber <|> mbVehicleNumber,
+                vehicleNumber = FRFSUtils.birthVehicleNumber mbServiceTierType isSpotBookingPath (quote'.vehicleNumber <|> mbVehicleNumber),
                 vehicleTripId = Nothing,
                 waybillNo = firstTripId <&> (fst . JourneyUtils.getWaybillNoAndTripNoFromTripId),
                 parentBookingId = (.oldBookingId) <$> mbRescheduleCtx,
