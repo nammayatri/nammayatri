@@ -28,7 +28,7 @@ type API = ("notification" :> (GetNotificationNotificationListHelper :<|> PostNo
 type GetNotificationNotificationList =
   ( "notification" :> "list" :> QueryParam "mbLimit" Kernel.Prelude.Int :> QueryParam "mbOffset" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp
   )
 
@@ -37,21 +37,21 @@ type GetNotificationNotificationListHelper =
       :> QueryParam
            "mbOffset"
            Kernel.Prelude.Int
-      :> Get ('[JSON]) DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp
+      :> Get '[JSON] DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp
   )
 
-type PostNotificationNotificationRespond = ("notification" :> "respond" :> ReqBody ('[JSON]) RespondReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostNotificationNotificationRespond = ("notification" :> "respond" :> ReqBody '[JSON] RespondReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostNotificationNotificationRespondHelper =
-  ( "notification" :> Capture "topic" Kernel.Prelude.Text :> "respond" :> ReqBody ('[JSON]) RespondReq
+  ( "notification" :> Capture "topic" Kernel.Prelude.Text :> "respond" :> ReqBody '[JSON] RespondReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data NotificationAPIs = NotificationAPIs
-  { getNotificationNotificationList :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp),
-    postNotificationNotificationRespond :: (Kernel.Prelude.Text -> RespondReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getNotificationNotificationList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient DashboardAlert.Domain.Action.Dashboard.List.NotificationListResp,
+    postNotificationNotificationRespond :: Kernel.Prelude.Text -> RespondReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkNotificationAPIs :: (Client EulerHS.Types.EulerClient API -> NotificationAPIs)
@@ -65,4 +65,4 @@ data NotificationUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''NotificationUserActionType)])
+$(Data.Singletons.TH.genSingletons [''NotificationUserActionType])

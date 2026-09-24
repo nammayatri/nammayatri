@@ -320,16 +320,16 @@ type PostMerchantConfigOperatingCityWhiteList =
   )
 
 type PostMerchantConfigAllowedDestinationStates =
-  ( "config" :> "allowedDestinationStates" :> ReqBody ('[JSON]) Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq
+  ( "config" :> "allowedDestinationStates" :> ReqBody '[JSON] Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 type GetMerchantConfigAllowedDestinationStates =
   ( "config" :> "allowedDestinationStates" :> MandatoryQueryParam "stateName" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Dashboard.Common.Merchant.AllowedDestinationStatesResp
   )
 
@@ -404,8 +404,8 @@ data MerchantAPIs = MerchantAPIs
     postMerchantTicketConfigUpsert :: (Data.ByteString.Lazy.ByteString, UpsertTicketConfigReq) -> EulerHS.Types.EulerClient UpsertTicketConfigResp,
     postMerchantSchedulerTrigger :: SchedulerTriggerReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigOperatingCityWhiteList :: Dashboard.Common.Merchant.WhiteListOperatingCityReq -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.WhiteListOperatingCityRes,
-    postMerchantConfigAllowedDestinationStates :: (Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMerchantConfigAllowedDestinationStates :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.AllowedDestinationStatesResp),
+    postMerchantConfigAllowedDestinationStates :: Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMerchantConfigAllowedDestinationStates :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.AllowedDestinationStatesResp,
     postMerchantConfigMerchantCreate :: Dashboard.Common.Merchant.CreateMerchantOperatingCityReqT -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.CreateMerchantOperatingCityRes,
     getMerchantRiderConfigEstimatesOrder :: EulerHS.Types.EulerClient RiderConfigEstimatesOrderRes,
     postMerchantRiderConfigEstimatesOrderUpdate :: UpdateRiderConfigEstimatesOrderReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

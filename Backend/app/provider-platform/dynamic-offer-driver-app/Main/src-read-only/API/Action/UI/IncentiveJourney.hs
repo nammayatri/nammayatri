@@ -30,7 +30,7 @@ type API =
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.IncentiveJourney.IncentiveJourneyListRes
       :<|> TokenAuth
       :> "incentive"
@@ -46,7 +46,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.IncentiveJourney.IncentiveJourneyHistoryRes
   )
 
@@ -58,10 +58,10 @@ getIncentiveJourneyList ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.IncentiveJourney.IncentiveJourneyListRes
   )
 getIncentiveJourneyList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.IncentiveJourney.getIncentiveJourneyList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
@@ -71,9 +71,9 @@ getIncentiveJourneyHistory ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.IncentiveJourney.IncentiveJourneyHistoryRes
   )
 getIncentiveJourneyHistory a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.IncentiveJourney.getIncentiveJourneyHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

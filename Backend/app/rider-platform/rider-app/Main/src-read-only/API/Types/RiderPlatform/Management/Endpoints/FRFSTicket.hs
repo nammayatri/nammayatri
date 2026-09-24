@@ -153,7 +153,7 @@ type GetFRFSTicketFrfsRoutes =
            "offset"
            Kernel.Prelude.Int
       :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
-      :> Get ('[JSON]) [FRFSDashboardRouteAPI]
+      :> Get '[JSON] [FRFSDashboardRouteAPI]
   )
 
 type GetFRFSTicketFrfsRouteFareList =
@@ -163,7 +163,7 @@ type GetFRFSTicketFrfsRouteFareList =
            (Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig)
       :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            FRFSRouteFareAPI
   )
 
@@ -179,7 +179,7 @@ type PutFRFSTicketFrfsRouteFareUpsert =
            Kernel.ServantMultipart.Tmp
            UpsertRouteFareReq
       :> Put
-           ('[JSON])
+           '[JSON]
            UpsertRouteFareResp
   )
 
@@ -190,7 +190,7 @@ type GetFRFSTicketFrfsRouteStations =
            Kernel.Prelude.Int
       :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           ('[JSON])
+           '[JSON]
            [FRFSStationAPI]
   )
 
@@ -200,33 +200,32 @@ type GetFRFSTicketFrfsGtfs =
            "platformType"
            Dashboard.Common.PlatformType
       :> MandatoryQueryParam "vehicleType" BecknV2.FRFS.Enums.VehicleCategory
-      :> Get ('[JSON]) FRFSGtfsRes
+      :> Get '[JSON] FRFSGtfsRes
   )
 
-type PostFRFSTicketFrfsStatusUpdate = ("frfs" :> "statusUpdate" :> ReqBody ('[JSON]) FRFSStatusUpdateReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostFRFSTicketFrfsStatusUpdate = ("frfs" :> "statusUpdate" :> ReqBody '[JSON] FRFSStatusUpdateReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostFRFSTicketFrfsStatusUpdateHelper =
-  ( "frfs" :> "statusUpdate" :> QueryParam "requestorId" Data.Text.Text :> ReqBody ('[JSON]) FRFSStatusUpdateReq
+  ( "frfs" :> "statusUpdate" :> QueryParam "requestorId" Data.Text.Text :> ReqBody '[JSON] FRFSStatusUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data FRFSTicketAPIs = FRFSTicketAPIs
-  { getFRFSTicketFrfsRoutes :: (Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSDashboardRouteAPI]),
-    getFRFSTicketFrfsRouteFareList :: (Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSRouteFareAPI),
+  { getFRFSTicketFrfsRoutes :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSDashboardRouteAPI],
+    getFRFSTicketFrfsRouteFareList :: Data.Text.Text -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSRouteFareAPI,
     putFRFSTicketFrfsRouteFareUpsert ::
-      ( Data.Text.Text ->
-        Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig ->
-        BecknV2.FRFS.Enums.VehicleCategory ->
-        ( Data.ByteString.Lazy.ByteString,
-          UpsertRouteFareReq
-        ) ->
-        EulerHS.Types.EulerClient UpsertRouteFareResp
-      ),
-    getFRFSTicketFrfsRouteStations :: (Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSStationAPI]),
-    getFRFSTicketFrfsGtfs :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig) -> Kernel.Prelude.Maybe (Dashboard.Common.PlatformType) -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSGtfsRes),
-    postFRFSTicketFrfsStatusUpdate :: (Kernel.Prelude.Maybe (Data.Text.Text) -> FRFSStatusUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+      Data.Text.Text ->
+      Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig ->
+      BecknV2.FRFS.Enums.VehicleCategory ->
+      ( Data.ByteString.Lazy.ByteString,
+        UpsertRouteFareReq
+      ) ->
+      EulerHS.Types.EulerClient UpsertRouteFareResp,
+    getFRFSTicketFrfsRouteStations :: Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient [FRFSStationAPI],
+    getFRFSTicketFrfsGtfs :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig) -> Kernel.Prelude.Maybe Dashboard.Common.PlatformType -> BecknV2.FRFS.Enums.VehicleCategory -> EulerHS.Types.EulerClient FRFSGtfsRes,
+    postFRFSTicketFrfsStatusUpdate :: Kernel.Prelude.Maybe Data.Text.Text -> FRFSStatusUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkFRFSTicketAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSTicketAPIs)
@@ -244,4 +243,4 @@ data FRFSTicketUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''FRFSTicketUserActionType)])
+$(Data.Singletons.TH.genSingletons [''FRFSTicketUserActionType])

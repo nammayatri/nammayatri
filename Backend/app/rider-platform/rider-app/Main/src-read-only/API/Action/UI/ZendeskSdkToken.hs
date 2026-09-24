@@ -16,7 +16,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = ("profile" :> "zendeskSdkToken" :> ReqBody ('[JSON]) API.Types.UI.ZendeskSdkToken.ZendeskJwtReq :> Post ('[JSON]) API.Types.UI.ZendeskSdkToken.ZendeskJwtResp)
+type API = ("profile" :> "zendeskSdkToken" :> ReqBody '[JSON] API.Types.UI.ZendeskSdkToken.ZendeskJwtReq :> Post '[JSON] API.Types.UI.ZendeskSdkToken.ZendeskJwtResp)
 
 handler :: Environment.FlowServer API
 handler = postProfileZendeskSdkToken

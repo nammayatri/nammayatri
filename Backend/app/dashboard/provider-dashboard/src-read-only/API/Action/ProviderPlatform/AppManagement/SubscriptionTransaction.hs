@@ -32,11 +32,11 @@ handler merchantId city = getSubscriptionTransactionSubscriptionTransactions mer
 
 type GetSubscriptionTransactionSubscriptionTransactions =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION_TRANSACTION) / ('API.Types.Dashboard.AppManagement.SubscriptionTransaction.GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION_TRANSACTION / 'API.Types.Dashboard.AppManagement.SubscriptionTransaction.GET_SUBSCRIPTION_TRANSACTION_SUBSCRIPTION_TRANSACTIONS)
       :> API.Types.Dashboard.AppManagement.SubscriptionTransaction.GetSubscriptionTransactionSubscriptionTransactions
   )
 
-getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus) -> Kernel.Prelude.Maybe (Data.Time.UTCTime) -> Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
+getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
 getSubscriptionTransactionSubscriptionTransactions merchantShortId opCity apiTokenInfo fromDate limit maxAmount minAmount offset status toDate = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.SubscriptionTransaction.getSubscriptionTransactionSubscriptionTransactions merchantShortId opCity apiTokenInfo fromDate limit maxAmount minAmount offset status toDate

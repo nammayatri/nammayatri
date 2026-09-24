@@ -5,7 +5,6 @@ imports:
   NotifyEventResp: Domain.Action.UI.Frontend
 
 importPackageOverrides:
-  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Action.UI.Frontend: "rider-app"
 
@@ -22,8 +21,6 @@ apis:
         - checkForActiveBooking: Bool
       response:
         type: GetPersonFlowStatusRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS FLOW_STATUS
   - POST:  # NotifyEventAPI
       endpoint:  /notifyEvent/{customerId}
       auditRequestBody: false
@@ -34,8 +31,5 @@ apis:
         type: NotifyEventReq
       response:
         type: NotifyEventResp
-      migrate:
-        endpoint: FlowStatusAPI NotifyEventEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS NOTIFYEVENT
 
 types: {}

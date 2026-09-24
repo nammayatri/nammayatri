@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllByRequesteeId ::
   (DashboardAlert.Storage.BeamFlow.BeamFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id DashboardAlert.Domain.Types.Common.Person -> m ([DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id DashboardAlert.Domain.Types.Common.Person -> m [DashboardAlert.Domain.Types.DashboardAlert.DashboardAlert])
 findAllByRequesteeId limit offset requesteeId = do findAllWithOptionsKV [Se.Is Beam.requesteeId $ Se.Eq (Kernel.Types.Id.getId requesteeId)] (Se.Desc Beam.createdAt) limit offset
 
 updateStatusWithReason ::

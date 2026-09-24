@@ -29,17 +29,17 @@ handler merchantId city = postDriverSubscriptionSendSms merchantId city :<|> pos
 
 type PostDriverSubscriptionSendSms =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DRIVER_SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.DriverSubscription.POST_DRIVER_SUBSCRIPTION_SEND_SMS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DRIVER_SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.DriverSubscription.POST_DRIVER_SUBSCRIPTION_SEND_SMS)
       :> API.Types.Dashboard.AppManagement.DriverSubscription.PostDriverSubscriptionSendSms
   )
 
 type PostDriverSubscriptionUpdateDriverFeeAndInvoiceInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.DRIVER_SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.DriverSubscription.POST_DRIVER_SUBSCRIPTION_UPDATE_DRIVER_FEE_AND_INVOICE_INFO))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.DRIVER_SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.DriverSubscription.POST_DRIVER_SUBSCRIPTION_UPDATE_DRIVER_FEE_AND_INVOICE_INFO)
       :> API.Types.Dashboard.AppManagement.DriverSubscription.PostDriverSubscriptionUpdateDriverFeeAndInvoiceInfo
   )
 

@@ -24,13 +24,13 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "rewards" :> Get ('[JSON]) [API.Types.UI.Rewards.RewardUnlockSummary] :<|> TokenAuth :> "rewards"
+  ( TokenAuth :> "rewards" :> Get '[JSON] [API.Types.UI.Rewards.RewardUnlockSummary] :<|> TokenAuth :> "rewards"
       :> Capture
            "unlockId"
            (Kernel.Types.Id.Id Domain.Types.RewardUnlock.RewardUnlock)
       :> "claim"
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Rewards.ClaimCouponResp
       :<|> TokenAuth
       :> "rewards"
@@ -39,7 +39,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.RewardUnlock.RewardUnlock)
       :> "redeemed"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

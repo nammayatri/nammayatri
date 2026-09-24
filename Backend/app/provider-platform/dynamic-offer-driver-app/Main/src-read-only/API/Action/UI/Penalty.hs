@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "penalty" :> "check" :> ReqBody ('[JSON]) API.Types.UI.Penalty.PenaltyCheckReq :> Post ('[JSON]) API.Types.UI.Penalty.PenaltyCheckRes)
+type API = (TokenAuth :> "penalty" :> "check" :> ReqBody '[JSON] API.Types.UI.Penalty.PenaltyCheckReq :> Post '[JSON] API.Types.UI.Penalty.PenaltyCheckRes)
 
 handler :: Environment.FlowServer API
 handler = postPenaltyCheck

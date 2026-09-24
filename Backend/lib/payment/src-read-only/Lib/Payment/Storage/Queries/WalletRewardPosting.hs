@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByWalletId ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonWallet.PersonWallet -> m ([Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting]))
+  (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PersonWallet.PersonWallet -> m [Lib.Payment.Domain.Types.WalletRewardPosting.WalletRewardPosting])
 findAllByWalletId walletId = do findAllWithKV [Se.Is Beam.walletId $ Se.Eq (Kernel.Types.Id.getId walletId)]
 
 findByWalletIdAndStatus ::

@@ -31,17 +31,17 @@ handler merchantId city = getChangeServiceTierQuotes merchantId city :<|> postCh
 
 type GetChangeServiceTierQuotes =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.CHANGE_SERVICE_TIER) / ('API.Types.Dashboard.RideBooking.ChangeServiceTier.GET_CHANGE_SERVICE_TIER_QUOTES))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.CHANGE_SERVICE_TIER / 'API.Types.Dashboard.RideBooking.ChangeServiceTier.GET_CHANGE_SERVICE_TIER_QUOTES)
       :> API.Types.Dashboard.RideBooking.ChangeServiceTier.GetChangeServiceTierQuotes
   )
 
 type PostChangeServiceTierConfirm =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.CHANGE_SERVICE_TIER) / ('API.Types.Dashboard.RideBooking.ChangeServiceTier.POST_CHANGE_SERVICE_TIER_CONFIRM))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.CHANGE_SERVICE_TIER / 'API.Types.Dashboard.RideBooking.ChangeServiceTier.POST_CHANGE_SERVICE_TIER_CONFIRM)
       :> API.Types.Dashboard.RideBooking.ChangeServiceTier.PostChangeServiceTierConfirm
   )
 

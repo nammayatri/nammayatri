@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "tag" :> "update" :> ReqBody ('[JSON]) API.Types.UI.DriverTag.DriverTagUpdateReq :> Post ('[JSON]) API.Types.UI.DriverTag.DriverTagRes)
+type API = (TokenAuth :> "driver" :> "tag" :> "update" :> ReqBody '[JSON] API.Types.UI.DriverTag.DriverTagUpdateReq :> Post '[JSON] API.Types.UI.DriverTag.DriverTagRes)
 
 handler :: Environment.FlowServer API
 handler = postDriverTagUpdate

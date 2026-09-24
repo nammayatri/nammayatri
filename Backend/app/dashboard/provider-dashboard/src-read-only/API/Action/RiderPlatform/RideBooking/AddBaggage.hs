@@ -30,9 +30,9 @@ handler merchantId city = postAddBaggageConfirm merchantId city
 
 type PostAddBaggageConfirm =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.ADD_BAGGAGE) / ('API.Types.Dashboard.RideBooking.AddBaggage.POST_ADD_BAGGAGE_CONFIRM))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.ADD_BAGGAGE / 'API.Types.Dashboard.RideBooking.AddBaggage.POST_ADD_BAGGAGE_CONFIRM)
       :> API.Types.Dashboard.RideBooking.AddBaggage.PostAddBaggageConfirm
   )
 

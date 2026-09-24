@@ -27,9 +27,9 @@ handler merchantId city = postSearchTryRecentSearchTries merchantId city
 
 type PostSearchTryRecentSearchTries =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.SEARCH_TRY) / ('API.Types.RiderPlatform.Management.SearchTry.POST_SEARCH_TRY_RECENT_SEARCH_TRIES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.SEARCH_TRY / 'API.Types.RiderPlatform.Management.SearchTry.POST_SEARCH_TRY_RECENT_SEARCH_TRIES)
       :> API.Types.RiderPlatform.Management.SearchTry.PostSearchTryRecentSearchTries
   )
 

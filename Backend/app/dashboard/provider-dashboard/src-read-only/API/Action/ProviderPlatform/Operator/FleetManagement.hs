@@ -30,61 +30,61 @@ handler merchantId city = getFleetManagementFleets merchantId city :<|> postFlee
 
 type GetFleetManagementFleets =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.GET_FLEET_MANAGEMENT_FLEETS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.GET_FLEET_MANAGEMENT_FLEETS)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.GetFleetManagementFleets
   )
 
 type PostFleetManagementFleetCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_CREATE)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetCreate
   )
 
 type PostFleetManagementFleetRegister =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_REGISTER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_REGISTER)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetRegister
   )
 
 type PostFleetManagementFleetLinkSendOtp =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_LINK_SEND_OTP))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_LINK_SEND_OTP)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetLinkSendOtp
   )
 
 type PostFleetManagementFleetLinkVerifyOtp =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_LINK_VERIFY_OTP))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_LINK_VERIFY_OTP)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetLinkVerifyOtp
   )
 
 type PostFleetManagementFleetUnlink =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_UNLINK))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_UNLINK)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetUnlink
   )
 
 type PostFleetManagementFleetMemberAssociationCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_OPERATOR) / ('API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT) / ('API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_MEMBER_ASSOCIATION_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_OPERATOR / 'API.Types.ProviderPlatform.Operator.FLEET_MANAGEMENT / 'API.Types.ProviderPlatform.Operator.FleetManagement.POST_FLEET_MANAGEMENT_FLEET_MEMBER_ASSOCIATION_CREATE)
       :> API.Types.ProviderPlatform.Operator.FleetManagement.PostFleetManagementFleetMemberAssociationCreate
   )
 
-getFleetManagementFleets :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.FleetManagement.FleetInfoRes)
+getFleetManagementFleets :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Operator.FleetManagement.FleetInfoRes)
 getFleetManagementFleets merchantShortId opCity apiTokenInfo isActive verified enabled limit offset mbSearchString = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Operator.FleetManagement.getFleetManagementFleets merchantShortId opCity apiTokenInfo isActive verified enabled limit offset mbSearchString
 
 postFleetManagementFleetCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetOwnerLoginReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

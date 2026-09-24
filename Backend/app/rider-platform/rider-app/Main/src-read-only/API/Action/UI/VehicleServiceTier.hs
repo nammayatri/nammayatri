@@ -21,7 +21,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "vehicleServiceTiers" :> Get ('[JSON]) [API.Types.UI.VehicleServiceTier.VehicleServiceTierAPIEntity])
+type API = (TokenAuth :> "vehicleServiceTiers" :> Get '[JSON] [API.Types.UI.VehicleServiceTier.VehicleServiceTierAPIEntity])
 
 handler :: Environment.FlowServer API
 handler = getVehicleServiceTiers

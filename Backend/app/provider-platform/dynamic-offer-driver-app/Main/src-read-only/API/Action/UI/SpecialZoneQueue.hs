@@ -27,7 +27,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "specialZoneQueue" :> "request"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
       :<|> TokenAuth
       :> "specialZoneQueue"
@@ -37,10 +37,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest)
       :> "respond"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRespondReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "specialZoneQueue"
@@ -50,7 +50,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest)
       :> "cancel"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

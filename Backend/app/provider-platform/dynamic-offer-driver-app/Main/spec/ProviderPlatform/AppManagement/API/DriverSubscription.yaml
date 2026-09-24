@@ -35,9 +35,6 @@ apis:
               type: SendSmsReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI SendMessageToDriverViaDashboardEndPoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS SEND_DASHBOARD_MESSAGE
   - POST: # UpdateSubscriptionDriverFeeAndInvoiceAPI
       endpoint: /{driverId}/update/driverFeeAndInvoiceInfo/{serviceName}
       auth: ApiAuthV2
@@ -48,9 +45,6 @@ apis:
         type: SubscriptionDriverFeesAndInvoicesToUpdate
       response:
         type: SubscriptionDriverFeesAndInvoicesToUpdate
-      migrate:
-        endpoint: DriverAPI UpdateSubscriptionDriverFeeAndInvoiceEndpoint
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_SUBSCRIPTION_DRIVER_FEE_AND_INVOICE_UPDATE
 types:
   SubscriptionDriverFeesAndInvoicesToUpdate:
     - driverFees: Maybe [DriverFeeInfoToUpdate]

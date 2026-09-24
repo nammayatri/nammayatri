@@ -25,7 +25,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "rideBooking" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.Booking.Booking) :> "cancellationChargesWaiveOff"
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.CancellationChargesWaiveOff.CancellationChargesWaiveOffRes
   )
 

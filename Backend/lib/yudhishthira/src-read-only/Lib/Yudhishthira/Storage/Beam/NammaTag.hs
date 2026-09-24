@@ -14,20 +14,20 @@ import qualified Lib.Yudhishthira.Types.NammaTag
 import Tools.Beam.UtilsTH
 
 data NammaTagT f = NammaTagT
-  { actionEngine :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    category :: (B.C f Kernel.Prelude.Text),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    chakra :: (B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra)),
-    tagType :: (B.C f Lib.Yudhishthira.Types.NammaTag.TagType),
-    name :: (B.C f Kernel.Prelude.Text),
-    rangeEnd :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    rangeStart :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    tags :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    llmContext :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    ruleEngine :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    validity :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Hours)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { actionEngine :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    category :: B.C f Kernel.Prelude.Text,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    chakra :: B.C f (Kernel.Prelude.Maybe Lib.Yudhishthira.Types.Chakra),
+    tagType :: B.C f Lib.Yudhishthira.Types.NammaTag.TagType,
+    name :: B.C f Kernel.Prelude.Text,
+    rangeEnd :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    rangeStart :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    tags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    llmContext :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ruleEngine :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    validity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Hours),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -37,6 +37,6 @@ instance B.Table NammaTagT where
 
 type NammaTag = NammaTagT Identity
 
-$(enableKVPG (''NammaTagT) [('name)] [])
+$(enableKVPG ''NammaTagT ['name] [])
 
-$(mkTableInstancesGenericSchema (''NammaTagT) "namma_tag")
+$(mkTableInstancesGenericSchema ''NammaTagT "namma_tag")

@@ -30,9 +30,9 @@ handler merchantId city = getQuoteResult merchantId city
 
 type GetQuoteResult =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.QUOTE) / ('API.Types.Dashboard.RideBooking.Quote.GET_QUOTE_RESULT))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.QUOTE / 'API.Types.Dashboard.RideBooking.Quote.GET_QUOTE_RESULT)
       :> API.Types.Dashboard.RideBooking.Quote.GetQuoteResult
   )
 

@@ -28,17 +28,17 @@ handler merchantId city = postFrfsFleetOperatorCurrentOperation merchantId city 
 
 type PostFrfsFleetOperatorCurrentOperation =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.FRFS_FLEET_OPERATOR) / ('API.Types.Dashboard.AppManagement.FrfsFleetOperator.POST_FRFS_FLEET_OPERATOR_CURRENT_OPERATION))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.FRFS_FLEET_OPERATOR / 'API.Types.Dashboard.AppManagement.FrfsFleetOperator.POST_FRFS_FLEET_OPERATOR_CURRENT_OPERATION)
       :> API.Types.Dashboard.AppManagement.FrfsFleetOperator.PostFrfsFleetOperatorCurrentOperation
   )
 
 type PostFrfsFleetOperatorTripAction =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.FRFS_FLEET_OPERATOR) / ('API.Types.Dashboard.AppManagement.FrfsFleetOperator.POST_FRFS_FLEET_OPERATOR_TRIP_ACTION))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.FRFS_FLEET_OPERATOR / 'API.Types.Dashboard.AppManagement.FrfsFleetOperator.POST_FRFS_FLEET_OPERATOR_TRIP_ACTION)
       :> API.Types.Dashboard.AppManagement.FrfsFleetOperator.PostFrfsFleetOperatorTripAction
   )
 

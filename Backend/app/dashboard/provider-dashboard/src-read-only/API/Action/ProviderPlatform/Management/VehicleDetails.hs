@@ -27,9 +27,9 @@ handler merchantId city = getVehicleDetailsVehicleModels merchantId city
 
 type GetVehicleDetailsVehicleModels =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.VEHICLE_DETAILS) / ('API.Types.ProviderPlatform.Management.VehicleDetails.GET_VEHICLE_DETAILS_VEHICLE_MODELS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.VEHICLE_DETAILS / 'API.Types.ProviderPlatform.Management.VehicleDetails.GET_VEHICLE_DETAILS_VEHICLE_MODELS)
       :> API.Types.ProviderPlatform.Management.VehicleDetails.GetVehicleDetailsVehicleModels
   )
 

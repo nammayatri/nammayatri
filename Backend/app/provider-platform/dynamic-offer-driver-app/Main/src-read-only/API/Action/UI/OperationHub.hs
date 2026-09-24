@@ -26,12 +26,12 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "operation" :> "getAllHubs" :> Get ('[JSON]) [Domain.Types.OperationHub.OperationHub] :<|> TokenAuth :> "operation" :> "createRequest"
+  ( TokenAuth :> "operation" :> "getAllHubs" :> Get '[JSON] [Domain.Types.OperationHub.OperationHub] :<|> TokenAuth :> "operation" :> "createRequest"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.OperationHub.DriverOperationHubRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "operation"
@@ -61,7 +61,7 @@ type API =
            "mbDriverId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.OperationHub.OperationHubRequestsResp
   )
 
@@ -92,13 +92,13 @@ getOperationGetRequests ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Domain.Types.OperationHubRequests.RequestStatus) ->
-    Kernel.Prelude.Maybe (Domain.Types.OperationHubRequests.RequestType) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Domain.Types.OperationHubRequests.RequestStatus ->
+    Kernel.Prelude.Maybe Domain.Types.OperationHubRequests.RequestType ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
     Environment.FlowHandler API.Types.UI.OperationHub.OperationHubRequestsResp
   )
