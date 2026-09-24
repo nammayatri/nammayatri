@@ -20,6 +20,7 @@ import qualified FileManagementUnitTests
 import qualified RewardsCouponPoolTests
 import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
+import qualified SharedCabBlacklistTests
 import Test.Tasty (defaultMain, testGroup)
 import Prelude
 
@@ -47,5 +48,9 @@ main = do
           [ RewardsEvaluatorTests.tests,
             RewardsCouponTemplatedTests.tests,
             RewardsCouponPoolTests.tests
+          ],
+        testGroup
+          "SharedCab Unit Tests"
+          [ SharedCabBlacklistTests.tests
           ]
       ]
