@@ -29,49 +29,49 @@ handler merchantId city = postOfferCreate merchantId city :<|> postOfferUpdate m
 
 type PostOfferCreate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.OFFER) / ('API.Types.RiderPlatform.Management.Offer.POST_OFFER_CREATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.OFFER / 'API.Types.RiderPlatform.Management.Offer.POST_OFFER_CREATE)
       :> API.Types.RiderPlatform.Management.Offer.PostOfferCreate
   )
 
 type PostOfferUpdate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.OFFER) / ('API.Types.RiderPlatform.Management.Offer.POST_OFFER_UPDATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.OFFER / 'API.Types.RiderPlatform.Management.Offer.POST_OFFER_UPDATE)
       :> API.Types.RiderPlatform.Management.Offer.PostOfferUpdate
   )
 
 type GetOfferList =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.OFFER) / ('API.Types.RiderPlatform.Management.Offer.GET_OFFER_LIST))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.OFFER / 'API.Types.RiderPlatform.Management.Offer.GET_OFFER_LIST)
       :> API.Types.RiderPlatform.Management.Offer.GetOfferList
   )
 
 type PostOfferToggle =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.OFFER) / ('API.Types.RiderPlatform.Management.Offer.POST_OFFER_TOGGLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.OFFER / 'API.Types.RiderPlatform.Management.Offer.POST_OFFER_TOGGLE)
       :> API.Types.RiderPlatform.Management.Offer.PostOfferToggle
   )
 
 type PostOfferValidateEligibility =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.OFFER) / ('API.Types.RiderPlatform.Management.Offer.POST_OFFER_VALIDATE_ELIGIBILITY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.OFFER / 'API.Types.RiderPlatform.Management.Offer.POST_OFFER_VALIDATE_ELIGIBILITY)
       :> API.Types.RiderPlatform.Management.Offer.PostOfferValidateEligibility
   )
 
 type GetOfferEligibilitySchema =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.OFFER) / ('API.Types.RiderPlatform.Management.Offer.GET_OFFER_ELIGIBILITY_SCHEMA))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.OFFER / 'API.Types.RiderPlatform.Management.Offer.GET_OFFER_ELIGIBILITY_SCHEMA)
       :> API.Types.RiderPlatform.Management.Offer.GetOfferEligibilitySchema
   )
 

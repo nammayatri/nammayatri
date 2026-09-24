@@ -95,7 +95,7 @@ type GetInvoiceInvoice =
       :> MandatoryQueryParam
            "to"
            Kernel.Prelude.UTCTime
-      :> Get ('[JSON]) [InvoiceRes]
+      :> Get '[JSON] [InvoiceRes]
   )
 
 type GetInvoiceFinanceList =
@@ -115,16 +115,16 @@ type GetInvoiceFinanceList =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            FinanceInvoiceListRes
   )
 
-type GetInvoiceFinancePdf = ("finance" :> "pdf" :> MandatoryQueryParam "invoiceId" Data.Text.Text :> Get ('[JSON]) FinanceInvoicePdfRes)
+type GetInvoiceFinancePdf = ("finance" :> "pdf" :> MandatoryQueryParam "invoiceId" Data.Text.Text :> Get '[JSON] FinanceInvoicePdfRes)
 
 data InvoiceAPIs = InvoiceAPIs
-  { getInvoiceInvoice :: (Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes]),
-    getInvoiceFinanceList :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> EulerHS.Types.EulerClient FinanceInvoiceListRes),
-    getInvoiceFinancePdf :: (Data.Text.Text -> EulerHS.Types.EulerClient FinanceInvoicePdfRes)
+  { getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes],
+    getInvoiceFinanceList :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient FinanceInvoiceListRes,
+    getInvoiceFinancePdf :: Data.Text.Text -> EulerHS.Types.EulerClient FinanceInvoicePdfRes
   }
 
 mkInvoiceAPIs :: (Client EulerHS.Types.EulerClient API -> InvoiceAPIs)
@@ -139,4 +139,4 @@ data InvoiceUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''InvoiceUserActionType)])
+$(Data.Singletons.TH.genSingletons [''InvoiceUserActionType])

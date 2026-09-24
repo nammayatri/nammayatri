@@ -38,8 +38,6 @@ apis:
         - phone: Text
       response:
         type: "[DriverOutstandingBalanceResp]"
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS BALANCE_DUE
   - POST: # EnableDriverAPI
       endpoint: /{driverId}/enable
       auth: ApiAuthV2
@@ -47,10 +45,6 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
-      migrate:
-        endpoint: DriverAPI EnableDriverEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ENABLE
   - POST: # DriverCashCollectionAPI
       endpoint: /{driverId}/collectCash
       appServerHandler: custom
@@ -73,10 +67,6 @@ apis:
               type: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI CollectCashEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH
   - POST: # DriverCashCollectionAPIV2
       endpoint: /{driverId}/v2/collectCash/{serviceName}
       auth: ApiAuthV2
@@ -99,10 +89,6 @@ apis:
               - vendorId: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI CollectCashEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS COLLECT_CASH_V2
   - POST: # DriverCashExemptionAPI
       endpoint: /{driverId}/exemptCash
       appServerHandler: custom
@@ -121,10 +107,6 @@ apis:
               type: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI ExemptCashEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH
   - POST: # DriverCashExemptionAPIV2
       endpoint: /{driverId}/v2/exemptCash/{serviceName}
       auth: ApiAuthV2
@@ -143,10 +125,6 @@ apis:
               serviceName: ServiceNames
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI ExemptCashEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_CASH_V2
   - GET: # DriverInfoAPI
       endpoint: /info
       appServerHandler: custom
@@ -162,8 +140,6 @@ apis:
         - walletId: Text
       response:
         type: DriverInfoRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS INFO
       helperApi:
         - GET:
             endpoint: /info/{fleetOwnerId}/{mbFleet}
@@ -198,10 +174,6 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
-      migrate:
-        endpoint: DriverAPI UnlinkVehicleEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS UNLINK_VEHICLE
   - POST: # EndRCAssociationAPI
       endpoint: /{driverId}/endRCAssociation
       auth: ApiAuthV2
@@ -209,10 +181,6 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
-      migrate:
-        endpoint: DriverAPI EndRCAssociationEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS END_RC_ASSOCIATION
   - POST: # DeleteAadhaarAPI
       endpoint: /{driverId}/deleteAadhaar
       auth: ApiAuthV2
@@ -237,10 +205,6 @@ apis:
       response:
         type: APISuccess
       validation: API.Types.ProviderPlatform.validateAddVehicleReq
-      migrate:
-        endpoint: DriverAPI AddVehicleEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS ADD_VEHICLE
   - POST: # SetRCStatusAPI
       endpoint: /{driverId}/setRCStatus
       auth: ApiAuthV2
@@ -250,10 +214,6 @@ apis:
         type: RCStatusReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: DriverAPI SetRCStatusEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS SET_RC_STATUS
   - POST:
       endpoint: /{driverId}/exemptDriverFee/{serviceName}
       auth: ApiAuthV2
@@ -276,8 +236,6 @@ apis:
               serviceName: ServiceNames
             response:
               type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP DRIVERS EXEMPT_DRIVER_FEE
 
 types:
   DriverOutstandingBalanceResp:

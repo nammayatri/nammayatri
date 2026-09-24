@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "metrics" :> "increment" :> ReqBody ('[JSON]) API.Types.UI.Metrics.MetricCounterReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type API = (TokenAuth :> "metrics" :> "increment" :> ReqBody '[JSON] API.Types.UI.Metrics.MetricCounterReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 handler :: Environment.FlowServer API
 handler = postMetricsIncrement

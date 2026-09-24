@@ -25,7 +25,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "bookingDeposit" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.Booking.Booking) :> "status"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.BookingDeposit.BookingDepositStatusResp
       :<|> TokenAuth
       :> "bookingDeposit"
@@ -37,7 +37,7 @@ type API =
            "isMockPayment"
            Kernel.Prelude.Bool
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.BookingDeposit.BookingDepositPaymentResp
       :<|> TokenAuth
       :> "bookingDeposit"
@@ -46,7 +46,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Booking.Booking)
       :> "refund"
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.BookingDeposit.BookingDepositStatusResp
   )
 
@@ -67,7 +67,7 @@ postBookingDepositPaymentIntent ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.BookingDeposit.BookingDepositPaymentResp
   )
 postBookingDepositPaymentIntent a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BookingDeposit.postBookingDepositPaymentIntent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

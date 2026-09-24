@@ -29,9 +29,9 @@ handler merchantId city = getPayoutPayoutOrder merchantId city
 
 type GetPayoutPayoutOrder =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.PAYOUT) / ('API.Types.RiderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_ORDER))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.PAYOUT / 'API.Types.RiderPlatform.Management.Payout.GET_PAYOUT_PAYOUT_ORDER)
       :> API.Types.RiderPlatform.Management.Payout.GetPayoutPayoutOrder
   )
 

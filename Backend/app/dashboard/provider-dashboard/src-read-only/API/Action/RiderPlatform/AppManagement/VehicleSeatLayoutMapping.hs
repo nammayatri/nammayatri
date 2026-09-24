@@ -30,29 +30,29 @@ handler merchantId city = listVehicleSeatLayoutMapping merchantId city :<|> upse
 
 type ListVehicleSeatLayoutMapping =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.VEHICLE_SEAT_LAYOUT_MAPPING) / ('API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.LIST_VEHICLE_SEAT_LAYOUT_MAPPING))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.VEHICLE_SEAT_LAYOUT_MAPPING / 'API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.LIST_VEHICLE_SEAT_LAYOUT_MAPPING)
       :> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.ListVehicleSeatLayoutMapping
   )
 
 type UpsertVehicleSeatLayoutMapping =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.VEHICLE_SEAT_LAYOUT_MAPPING) / ('API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.UPSERT_VEHICLE_SEAT_LAYOUT_MAPPING))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.VEHICLE_SEAT_LAYOUT_MAPPING / 'API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.UPSERT_VEHICLE_SEAT_LAYOUT_MAPPING)
       :> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.UpsertVehicleSeatLayoutMapping
   )
 
 type DeleteVehicleSeatLayoutMapping =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.VEHICLE_SEAT_LAYOUT_MAPPING) / ('API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.DELETE_VEHICLE_SEAT_LAYOUT_MAPPING))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.VEHICLE_SEAT_LAYOUT_MAPPING / 'API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.DELETE_VEHICLE_SEAT_LAYOUT_MAPPING)
       :> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.DeleteVehicleSeatLayoutMapping
   )
 
-listVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Data.Text.Text -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingItem])
+listVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Text.Text -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingItem])
 listVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo limit offset gtfsId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.VehicleSeatLayoutMapping.listVehicleSeatLayoutMapping merchantShortId opCity apiTokenInfo limit offset gtfsId
 
 upsertVehicleSeatLayoutMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.VehicleSeatLayoutMappingUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

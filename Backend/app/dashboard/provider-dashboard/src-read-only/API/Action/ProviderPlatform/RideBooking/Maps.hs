@@ -29,17 +29,17 @@ handler merchantId city = postMapsAutoComplete merchantId city :<|> postMapsGetP
 
 type PostMapsAutoComplete =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_AUTO_COMPLETE)
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsAutoComplete
   )
 
 type PostMapsGetPlaceName =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MAPS) / ('API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MAPS / 'API.Types.Dashboard.RideBooking.Maps.POST_MAPS_GET_PLACE_NAME)
       :> API.Types.Dashboard.RideBooking.Maps.PostMapsGetPlaceName
   )
 

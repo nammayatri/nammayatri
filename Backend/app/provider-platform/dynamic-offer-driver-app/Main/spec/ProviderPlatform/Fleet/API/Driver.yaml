@@ -50,8 +50,6 @@ apis:
         fleetMemberId: Text
       response:
         type: FleetOwnerListRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_LIST
 
   - GET:
       endpoint: /fleetOwner/list
@@ -85,8 +83,6 @@ apis:
         fleetMemberId: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS
 
   - POST:
       endpoint: /fleet/v2/access/select
@@ -100,8 +96,6 @@ apis:
         fleetMemberId: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS_SELECT
 
   - POST:
       endpoint: /fleet/v2/access/multiOwnerId/select
@@ -135,8 +129,6 @@ apis:
               type: CreateVehiclesReq
             response:
               type: APISuccessWithUnprocessedEntities
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLES
 
   - POST:
       endpoint: addRidePayoutAccountNumber
@@ -159,8 +151,6 @@ apis:
         type: AddVehicleReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_VEHICLE_FLEET
       validation: API.Types.ProviderPlatform.Fleet.Driver.validateAddVehicleReq
       helperApi:
         - POST:
@@ -195,8 +185,6 @@ apis:
         - mbOffset: Int
       response:
         type: DriverRequestRespT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_REQUESTS
       # helperApi:
       #   - GET:
       #       endpoint: /fleet/driverRequests/{fleetOwnerId}
@@ -225,8 +213,6 @@ apis:
         type: RequestRespondReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET RESPOND_DRIVER_REQUEST
       helperApi:
         - POST:
             endpoint: /fleet/{fleetOwnerId}/driverRequest/respond
@@ -248,8 +234,6 @@ apis:
         type: RegisterRCReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_RC_FLEET_WITHOUT_DRIVER
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/fleet/addRC/withoutDriver
@@ -278,8 +262,6 @@ apis:
         - isRcActive: Bool
       response:
         type: ListVehicleResT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_VEHICLE_FOR_FLEET
       # helperApi:
       #   - GET:
       #       endpoint: /{fleetOwnerId}/fleet/getAllVehicle
@@ -316,8 +298,6 @@ apis:
         - fleetDriverAssociationConsent: Bool
       response:
         type: FleetListDriverResT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_DRIVERS_FOR_FLEET
       # helperApi:
       #   - GET:
       #       endpoint: /{fleetOwnerId}/fleet/getAllDriver
@@ -347,8 +327,6 @@ apis:
         - mbMemberPersonId: Text
       response:
         type: FleetBadgeResT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_ALL_BADGES_FOR_FLEET
       # helperApi:
       #   - GET:
       #       endpoint: /{fleetOwnerId}/fleet/getAllBadge
@@ -375,8 +353,6 @@ apis:
         vehicleNo: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_UNLINK_VEHICLE
       helperApi:
         - POST:
             endpoint: /{requestorId}/{driverId}/{vehicleNo}/fleet/unlink
@@ -400,8 +376,6 @@ apis:
         vehicleNo: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_VEHICLE
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/{vehicleNo}/fleet/remove/vehicle
@@ -449,8 +423,6 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_REMOVE_DRIVER
       helperApi:
         - POST:
             endpoint: /{requestorId}/{driverId}/fleet/remove/driver
@@ -473,8 +445,6 @@ apis:
         - to: UTCTime
       response:
         type: FleetTotalEarningResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_TOTAL_EARNING
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/totalEarning
@@ -499,8 +469,6 @@ apis:
         - to: UTCTime
       response:
         type: FleetEarningListRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_VEHICLE_EARNING
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/vehicleEarning
@@ -531,8 +499,6 @@ apis:
         - sortOn: SortOn
       response:
         type: FleetEarningListRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_DRIVER_EARNING
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/driverEarning
@@ -565,8 +531,6 @@ apis:
         - searchByTicketPlaceId: Bool
       response:
         type: FleetBookingsInformationResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_BOOKINGS_INFORMATION
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/bookings
@@ -598,8 +562,6 @@ apis:
         - bookingId: Text
       response:
         type: FleetBookingAssignmentsResponse
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_ASSIGNMENTS_INFORMATION
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/assignments
@@ -632,8 +594,6 @@ apis:
         - to: UTCTime
       response:
         type: DrivertoVehicleAssociationRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_VEHICLE_ASSOCIATION
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/getFleetDriverVehicleAssociation
@@ -720,8 +680,6 @@ apis:
         - pickLatestDoc: Bool
       response:
         type: DrivertoVehicleAssociationResT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_DRIVER_ASSOCIATION
       # helperApi:
       #   - GET:
       #       endpoint: /{fleetOwnerId}/fleet/getFleetDriverAssociation
@@ -767,8 +725,6 @@ apis:
         - pickLatestDoc: Bool
       response:
         type: DrivertoVehicleAssociationResT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_VEHICLE_ASSOCIATION
       # helperApi:
       #   - GET:
       #       endpoint: /{fleetOwnerId}/fleet/getFleetVehicleAssociation
@@ -844,10 +800,6 @@ apis:
               type: RCStatusReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI SetVehicleDriverRcStatusForFleetEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
 
   - POST: # UpdateFleetOwnerInfoAPI
       endpoint: /{driverId}/updateFleetOwnerInfo
@@ -871,10 +823,6 @@ apis:
               type: UpdateFleetOwnerInfoReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: DriverAPI UpdateFleetOwnerEndPoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET UPDATE_FLEET_OWNER_INFO
 
   - GET: # GetFleetOwnerInfoAPI
       endpoint: /{driverId}/fleetOwnerInfo
@@ -883,8 +831,6 @@ apis:
         driverId: Id Driver
       response:
         type: FleetOwnerInfoRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO
   - GET:
       endpoint: /fleetOperatorInfo
       appServerHandler: custom
@@ -908,8 +854,6 @@ apis:
         type: AuthReq
       response:
         type: AuthRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET SEND_FLEET_JOINING_OTP
       helperApi:
         - POST:
             endpoint: /{fleetOwnerName}/fleet/driver/sendJoiningOtp
@@ -935,8 +879,6 @@ apis:
         type: VerifyFleetJoiningOtpReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET VERIFY_FLEET_JOINING_OTP
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/fleet/driver/verifyJoiningOtp
@@ -964,8 +906,6 @@ apis:
         - offset: Int
       response:
         type: RouteAPIResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_ROUTES_API
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/routes
@@ -991,8 +931,6 @@ apis:
         fleetOwnerId: Text
       response:
         type: RouteAPIResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_POSSIBLE_ROUTES_API
       helperApi:
         - GET:
             endpoint: /{fleetOwnerId}/fleet/possibleRoutes
@@ -1014,8 +952,6 @@ apis:
         - fleetOwnerId: Text
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_PLANNER_API
       helperApi:
         - POST:
             endpoint: /{fleetOwnerId}/fleet/tripPlanner
@@ -1043,8 +979,6 @@ apis:
         - mbMemberPersonId: Text
       response:
         type: TripTransactionRespT
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET WMB_TRIP_TRANSACTIONS_API
       # helperApi:
       #   - GET:
       #       endpoint: /{fleetOwnerId}/fleet/trip/transactions/{driverId}
@@ -1082,8 +1016,6 @@ apis:
               type: CreateDriversReq
             response:
               type: AddDriversResp
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVERS
 
   - POST: # Add Driver Bus Route Bulk Mapping
       endpoint: /fleet/addDriverBusRouteMapping
@@ -1103,8 +1035,6 @@ apis:
               type: CreateDriverBusRouteMappingReq
             response:
               type: APISuccessWithUnprocessedEntities
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET ADD_DRIVER_BUS_ROUTE_MAPPING
 
   - POST: # LinkRCWithDriverForFleetAPI
       endpoint: /fleet/linkRCWithDriver
@@ -1116,8 +1046,6 @@ apis:
         type: LinkRCWithDriverForFleetReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LINK_RC_WITH_DRIVER
       helperApi:
         - POST:
             endpoint: /fleet/linkRCWithDriver/{fleetOwnerId}

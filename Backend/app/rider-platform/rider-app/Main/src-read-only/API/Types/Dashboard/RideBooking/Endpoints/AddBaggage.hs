@@ -29,11 +29,11 @@ type PostAddBaggageConfirm =
            "customerId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> "confirm"
-      :> ReqBody ('[JSON]) AddBaggageConfirmReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> ReqBody '[JSON] AddBaggageConfirmReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-newtype AddBaggageAPIs = AddBaggageAPIs {postAddBaggageConfirm :: (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> AddBaggageConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype AddBaggageAPIs = AddBaggageAPIs {postAddBaggageConfirm :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> AddBaggageConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkAddBaggageAPIs :: (Client EulerHS.Types.EulerClient API -> AddBaggageAPIs)
 mkAddBaggageAPIs addBaggageClient = (AddBaggageAPIs {..})
@@ -46,10 +46,10 @@ data AddBaggageUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON AddBaggageUserActionType where
-  toJSON (POST_ADD_BAGGAGE_CONFIRM) = Data.Aeson.String "POST_ADD_BAGGAGE_CONFIRM"
+  toJSON POST_ADD_BAGGAGE_CONFIRM = Data.Aeson.String "POST_ADD_BAGGAGE_CONFIRM"
 
 instance FromJSON AddBaggageUserActionType where
   parseJSON (Data.Aeson.String "POST_ADD_BAGGAGE_CONFIRM") = pure POST_ADD_BAGGAGE_CONFIRM
   parseJSON _ = fail "POST_ADD_BAGGAGE_CONFIRM expected"
 
-$(Data.Singletons.TH.genSingletons [(''AddBaggageUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AddBaggageUserActionType])

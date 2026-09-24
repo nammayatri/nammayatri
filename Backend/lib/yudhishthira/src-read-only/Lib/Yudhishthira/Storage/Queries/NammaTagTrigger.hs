@@ -25,7 +25,7 @@ createMany = traverse_ create
 deleteAllByTagName :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ())
 deleteAllByTagName tagName = do deleteWithKV [Se.Is Beam.tagName $ Se.Eq tagName]
 
-findAllByEvent :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.ApplicationEvent -> m ([Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger]))
+findAllByEvent :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Yudhishthira.Types.ApplicationEvent -> m [Lib.Yudhishthira.Types.NammaTagTrigger.NammaTagTrigger])
 findAllByEvent event = do findAllWithKV [Se.Is Beam.event $ Se.Eq event]
 
 findByPrimaryKey ::

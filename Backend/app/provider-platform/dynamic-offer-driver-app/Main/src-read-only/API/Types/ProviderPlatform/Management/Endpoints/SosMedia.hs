@@ -28,9 +28,9 @@ data GetSosMediaResponse = GetSosMediaResponse
 
 type API = GetSosMediaSosMedia
 
-type GetSosMediaSosMedia = ("sos" :> "media" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> Get ('[JSON]) [GetSosMediaResponse])
+type GetSosMediaSosMedia = ("sos" :> "media" :> Capture "personId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> Get '[JSON] [GetSosMediaResponse])
 
-newtype SosMediaAPIs = SosMediaAPIs {getSosMediaSosMedia :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [GetSosMediaResponse])}
+newtype SosMediaAPIs = SosMediaAPIs {getSosMediaSosMedia :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [GetSosMediaResponse]}
 
 mkSosMediaAPIs :: (Client EulerHS.Types.EulerClient API -> SosMediaAPIs)
 mkSosMediaAPIs sosMediaClient = (SosMediaAPIs {..})
@@ -43,10 +43,10 @@ data SosMediaUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON SosMediaUserActionType where
-  toJSON (GET_SOS_MEDIA_SOS_MEDIA) = Data.Aeson.String "GET_SOS_MEDIA_SOS_MEDIA"
+  toJSON GET_SOS_MEDIA_SOS_MEDIA = Data.Aeson.String "GET_SOS_MEDIA_SOS_MEDIA"
 
 instance FromJSON SosMediaUserActionType where
   parseJSON (Data.Aeson.String "GET_SOS_MEDIA_SOS_MEDIA") = pure GET_SOS_MEDIA_SOS_MEDIA
   parseJSON _ = fail "GET_SOS_MEDIA_SOS_MEDIA expected"
 
-$(Data.Singletons.TH.genSingletons [(''SosMediaUserActionType)])
+$(Data.Singletons.TH.genSingletons [''SosMediaUserActionType])

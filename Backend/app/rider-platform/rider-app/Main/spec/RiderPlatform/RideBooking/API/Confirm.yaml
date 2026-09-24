@@ -6,7 +6,6 @@ imports:
   PaymentInstrument: Domain.Types.Extra.MerchantPaymentMethod
 
 importPackageOverrides:
-  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Types.Quote: "rider-app"
   API.UI.Confirm: "rider-app"
@@ -42,8 +41,5 @@ apis:
             auth: ApiAuthV2
             response:
               type: ConfirmRes
-      migrate:
-        endpoint: ConfirmAPI ConfirmEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS CONFIRM
 
 types: {}

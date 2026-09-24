@@ -29,11 +29,11 @@ handler merchantId city = getFRFSAlertsFrfsLiveMetrics merchantId city
 
 type GetFRFSAlertsFrfsLiveMetrics =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.FRFS_ALERTS) / ('API.Types.RiderPlatform.Management.FRFSAlerts.GET_FRFS_ALERTS_FRFS_LIVE_METRICS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.FRFS_ALERTS / 'API.Types.RiderPlatform.Management.FRFSAlerts.GET_FRFS_ALERTS_FRFS_LIVE_METRICS)
       :> API.Types.RiderPlatform.Management.FRFSAlerts.GetFRFSAlertsFrfsLiveMetrics
   )
 
-getFRFSAlertsFrfsLiveMetrics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSAlerts.LiveMetricsResponse)
+getFRFSAlertsFrfsLiveMetrics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSAlerts.LiveMetricsResponse)
 getFRFSAlertsFrfsLiveMetrics merchantShortId opCity apiTokenInfo from to modes = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.FRFSAlerts.getFRFSAlertsFrfsLiveMetrics merchantShortId opCity apiTokenInfo from to modes

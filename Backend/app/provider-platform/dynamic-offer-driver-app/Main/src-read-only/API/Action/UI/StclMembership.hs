@@ -25,30 +25,30 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "submitApplication" :> ReqBody ('[JSON]) API.Types.UI.StclMembership.MembershipApplicationReq
+  ( TokenAuth :> "submitApplication" :> ReqBody '[JSON] API.Types.UI.StclMembership.MembershipApplicationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Interface.Types.CreateOrderResp
       :<|> TokenAuth
       :> "buyAdditionalShares"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.StclMembership.TopUpSharesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Interface.Types.CreateOrderResp
       :<|> TokenAuth
       :> "updateApplication"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.StclMembership.UpdateMembershipApplicationReq
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "membership"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.StclMembership.MembershipDetailsResp
   )
 

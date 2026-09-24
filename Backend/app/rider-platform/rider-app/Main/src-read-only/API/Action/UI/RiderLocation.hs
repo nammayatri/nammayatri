@@ -21,7 +21,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "identifyNearByBus" :> ReqBody ('[JSON]) API.Types.UI.RiderLocation.RiderLocationRequest :> Post ('[JSON]) API.Types.UI.RiderLocation.RiderLocationResponse)
+type API = (TokenAuth :> "identifyNearByBus" :> ReqBody '[JSON] API.Types.UI.RiderLocation.RiderLocationRequest :> Post '[JSON] API.Types.UI.RiderLocation.RiderLocationResponse)
 
 handler :: Environment.FlowServer API
 handler = postIdentifyNearByBus

@@ -30,48 +30,48 @@ handler merchantId city = postRideStart merchantId city :<|> postRideEnd merchan
 
 type PostRideStart =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.RIDE) / ('API.Types.Dashboard.RideBooking.Ride.POST_RIDE_START))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.RIDE / 'API.Types.Dashboard.RideBooking.Ride.POST_RIDE_START)
       :> API.Types.Dashboard.RideBooking.Ride.PostRideStart
   )
 
 type PostRideEnd =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.RIDE) / ('API.Types.Dashboard.RideBooking.Ride.POST_RIDE_END))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.RIDE / 'API.Types.Dashboard.RideBooking.Ride.POST_RIDE_END)
       :> API.Types.Dashboard.RideBooking.Ride.PostRideEnd
   )
 
 type GetRideCurrentActiveRide =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.RIDE) / ('API.Types.Dashboard.RideBooking.Ride.GET_RIDE_CURRENT_ACTIVE_RIDE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.RIDE / 'API.Types.Dashboard.RideBooking.Ride.GET_RIDE_CURRENT_ACTIVE_RIDE)
       :> API.Types.Dashboard.RideBooking.Ride.GetRideCurrentActiveRide
   )
 
 type PostRideCancel =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.RIDE) / ('API.Types.Dashboard.RideBooking.Ride.POST_RIDE_CANCEL))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.RIDE / 'API.Types.Dashboard.RideBooking.Ride.POST_RIDE_CANCEL)
       :> API.Types.Dashboard.RideBooking.Ride.PostRideCancel
   )
 
 type PostRideBookingWithVehicleNumberAndPhone =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP)
-      ('DSL)
-      (('PROVIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.RIDE) / ('API.Types.Dashboard.RideBooking.Ride.POST_RIDE_BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE))
+      'DRIVER_OFFER_BPP
+      'DSL
+      ('PROVIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.RIDE / 'API.Types.Dashboard.RideBooking.Ride.POST_RIDE_BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE)
       :> API.Types.Dashboard.RideBooking.Ride.PostRideBookingWithVehicleNumberAndPhone
   )
 
 postRideStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.Dashboard.RideBooking.Ride.StartRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRideStart merchantShortId opCity apiTokenInfo rideId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Ride.postRideStart merchantShortId opCity apiTokenInfo rideId req
 
-postRideEnd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> (Kernel.Types.Id.Id Dashboard.Common.Ride) -> API.Types.Dashboard.RideBooking.Ride.EndRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRideEnd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.Dashboard.RideBooking.Ride.EndRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRideEnd merchantShortId opCity apiTokenInfo rideId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.RideBooking.Ride.postRideEnd merchantShortId opCity apiTokenInfo rideId req
 
 getRideCurrentActiveRide :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler (Kernel.Types.Id.Id Dashboard.Common.Ride))

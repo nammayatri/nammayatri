@@ -29,17 +29,17 @@ handler merchantId city = getEntityInfoList merchantId city :<|> postEntityInfoU
 
 type GetEntityInfoList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.ENTITY_INFO) / ('API.Types.ProviderPlatform.Management.EntityInfo.GET_ENTITY_INFO_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.ENTITY_INFO / 'API.Types.ProviderPlatform.Management.EntityInfo.GET_ENTITY_INFO_LIST)
       :> API.Types.ProviderPlatform.Management.EntityInfo.GetEntityInfoList
   )
 
 type PostEntityInfoUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.ENTITY_INFO) / ('API.Types.ProviderPlatform.Management.EntityInfo.POST_ENTITY_INFO_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.ENTITY_INFO / 'API.Types.ProviderPlatform.Management.EntityInfo.POST_ENTITY_INFO_UPDATE)
       :> API.Types.ProviderPlatform.Management.EntityInfo.PostEntityInfoUpdate
   )
 

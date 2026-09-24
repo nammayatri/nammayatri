@@ -6,7 +6,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   HighPrecMeters: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
-  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  InvoiceType: Domain.Types.Invoice
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   Value: Data.Aeson
 

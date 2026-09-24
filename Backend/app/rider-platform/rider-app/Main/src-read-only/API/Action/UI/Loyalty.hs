@@ -22,9 +22,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "wallet" :> "loyaltyInfo" :> Post ('[JSON]) API.Types.UI.Loyalty.LoyaltyInfoResp :<|> TokenAuth :> "rider" :> "monthlyExpense"
+  ( TokenAuth :> "wallet" :> "loyaltyInfo" :> Post '[JSON] API.Types.UI.Loyalty.LoyaltyInfoResp :<|> TokenAuth :> "rider" :> "monthlyExpense"
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Loyalty.MonthlyExpenseResp
   )
 

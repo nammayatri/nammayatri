@@ -31,9 +31,9 @@ handler merchantId city = postCancelBooking merchantId city
 
 type PostCancelBooking =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.CANCEL) / ('API.Types.Dashboard.RideBooking.Cancel.POST_CANCEL_BOOKING))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.CANCEL / 'API.Types.Dashboard.RideBooking.Cancel.POST_CANCEL_BOOKING)
       :> API.Types.Dashboard.RideBooking.Cancel.PostCancelBooking
   )
 

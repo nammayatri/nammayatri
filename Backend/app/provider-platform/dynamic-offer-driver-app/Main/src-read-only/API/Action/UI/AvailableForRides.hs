@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "availableForRides" :> "activate" :> Post ('[JSON]) API.Types.UI.AvailableForRides.AvailableForRidesRes)
+type API = (TokenAuth :> "driver" :> "availableForRides" :> "activate" :> Post '[JSON] API.Types.UI.AvailableForRides.AvailableForRidesRes)
 
 handler :: Environment.FlowServer API
 handler = postDriverAvailableForRidesActivate

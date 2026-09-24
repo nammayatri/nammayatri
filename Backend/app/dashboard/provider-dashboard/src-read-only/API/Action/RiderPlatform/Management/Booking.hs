@@ -28,17 +28,17 @@ handler merchantId city = postBookingCancelAllStuck merchantId city :<|> postBoo
 
 type PostBookingCancelAllStuck =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.BOOKING) / ('API.Types.RiderPlatform.Management.Booking.POST_BOOKING_CANCEL_ALL_STUCK))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.BOOKING / 'API.Types.RiderPlatform.Management.Booking.POST_BOOKING_CANCEL_ALL_STUCK)
       :> API.Types.RiderPlatform.Management.Booking.PostBookingCancelAllStuck
   )
 
 type PostBookingSyncMultiple =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.BOOKING) / ('API.Types.RiderPlatform.Management.Booking.POST_BOOKING_SYNC_MULTIPLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.BOOKING / 'API.Types.RiderPlatform.Management.Booking.POST_BOOKING_SYNC_MULTIPLE)
       :> API.Types.RiderPlatform.Management.Booking.PostBookingSyncMultiple
   )
 

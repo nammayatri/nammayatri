@@ -217,17 +217,17 @@ type PostMerchantConfigOperatingCityWhiteList =
 
 type PostMerchantConfigAllowedDestinationStates =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MERCHANT) / ('API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES)
       :> API.Types.RiderPlatform.Management.Merchant.PostMerchantConfigAllowedDestinationStates
   )
 
 type GetMerchantConfigAllowedDestinationStates =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MERCHANT) / ('API.Types.RiderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MERCHANT / 'API.Types.RiderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES)
       :> API.Types.RiderPlatform.Management.Merchant.GetMerchantConfigAllowedDestinationStates
   )
 

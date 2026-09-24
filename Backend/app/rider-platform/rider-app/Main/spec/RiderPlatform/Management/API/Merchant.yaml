@@ -59,17 +59,11 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.RiderPlatform.Merchant.validateMerchantUpdateReq
-      migrate:
-        endpoint: MerchantAPI MerchantUpdateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_UPDATE
   - GET: # ServiceUsageConfigAPI
       endpoint: /serviceUsageConfig
       auth: ApiAuthV2
       response:
         type: ServiceUsageConfigRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SERVICE_USAGE_CONFIG
   - POST: # MapsServiceConfigUpdateAPI
       endpoint: /serviceConfig/maps/update
       auth: ApiAuthV2
@@ -77,10 +71,6 @@ apis:
         type: MapsServiceConfigUpdateReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: MerchantAPI MapsServiceConfigUpdateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_CONFIG_UPDATE
   - POST: # MapsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/maps/update
       auth: ApiAuthV2
@@ -89,10 +79,6 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.Common.Merchant.validateMapsServiceUsageConfigUpdateReq
-      migrate:
-        endpoint: MerchantAPI MapsServiceConfigUsageUpdateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MAPS_SERVICE_USAGE_CONFIG_UPDATE
   - POST: # SmsServiceConfigUpdateAPI
       endpoint: /serviceConfig/sms/update
       auth: ApiAuthV2
@@ -100,10 +86,6 @@ apis:
         type: SmsServiceConfigUpdateReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: MerchantAPI SmsServiceConfigUpdateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_CONFIG_UPDATE
   - POST: # SmsServiceUsageConfigUpdateAPI
       endpoint: /serviceUsageConfig/sms/update
       auth: ApiAuthV2
@@ -112,10 +94,6 @@ apis:
       response:
         type: APISuccess
       validation: Dashboard.Common.Merchant.validateSmsServiceUsageConfigUpdateReq
-      migrate:
-        endpoint: MerchantAPI SmsServiceConfigUsageUpdateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT SMS_SERVICE_USAGE_CONFIG_UPDATE
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       appServerHandler: custom
@@ -133,10 +111,6 @@ apis:
               type: CreateMerchantOperatingCityReqT
             response:
               type: CreateMerchantOperatingCityRes
-      migrate:
-        endpoint: MerchantAPI CreateMerchantOperatingCityEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
   - POST: # UpsertSpecialLocationCsvAPI
       endpoint: /config/specialLocation/upsert/
       auth: ApiAuthV2
@@ -144,10 +118,6 @@ apis:
         type: UpsertSpecialLocationCsvReq
       response:
         type: APISuccessWithUnprocessedEntities
-      migrate:
-        endpoint: MerchantAPI UpsertSpecialLocationCsvEndpoint
-        endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_CSV
   - GET: # GetMerchantConfigSpecialLocationList
       endpoint: /config/specialLocation/list
       auth: ApiAuthV2
@@ -195,10 +165,6 @@ apis:
               type: UpsertSpecialLocationReqT
             response:
               type: APISuccess
-      migrate:
-        endpoint: MerchantAPI UpsertSpecialLocationEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION
   - DELETE: # DeleteSpecialLocationAPI
       endpoint: /specialLocation/{specialLocationId}/delete
       params:
@@ -206,10 +172,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      migrate:
-        endpoint: MerchantAPI DeleteSpecialLocationEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION
   - POST: # UpsertSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/upsert
       appServerHandler: custom
@@ -231,10 +193,6 @@ apis:
               type: UpsertSpecialLocationGateReqT
             response:
               type: APISuccess
-      migrate:
-        endpoint: MerchantAPI UpsertSpecialLocationGateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_SPECIAL_LOCATION_GATE
   - DELETE: # DeleteSpecialLocationGateAPI
       endpoint: /specialLocation/{specialLocationId}/gates/delete/{gateName}
       params:
@@ -243,10 +201,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      migrate:
-        endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
   - POST: # UpsertTollCsvAPI
       endpoint: /config/toll/upsert/
       auth: ApiAuthV2
@@ -254,7 +208,6 @@ apis:
         type: UpsertTollCsvReq
       response:
         type: APISuccessWithUnprocessedEntities
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_TOLL_CSV
   - GET: # GetMerchantConfigTollList
       endpoint: /config/toll/list
       auth: ApiAuthV2
@@ -263,7 +216,6 @@ apis:
         - offset: Int
       response:
         type: TollListResp
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT GET_TOLL_LIST
   - POST: # UpsertTollAPI
       endpoint: /toll/upsert
       query:
@@ -273,7 +225,6 @@ apis:
         type: UpsertTollReq
       response:
         type: APISuccess
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_TOLL
   - DELETE: # DeleteTollAPI
       endpoint: /toll/{tollId}/delete
       params:
@@ -281,7 +232,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_TOLL
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -291,10 +241,6 @@ apis:
       response:
         type: APISuccess
       auth: ApiAuthV2
-      migrate:
-        endpoint: MerchantAPI ToggleConfigPriorityEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT TOGGLE_CONFIG_PRIORITY
   - POST: # UpsertTicketPlaceAPI
       endpoint: /ticket/config/upsert/
       auth: ApiAuthV2
@@ -302,10 +248,6 @@ apis:
         type: UpsertTicketConfigReq
       response:
         type: UpsertTicketConfigResp
-      migrate:
-        endpoint: MerchantAPI UpsertTicketConfigEndpoint
-        endpointV2:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_FARE_TICKET_CONFIG
   - POST: # SchedulerTriggerAPI
       endpoint: /scheduler/trigger
       auth: ApiAuthV2
@@ -320,7 +262,6 @@ apis:
         type: WhiteListOperatingCityReq
       response:
         type: WhiteListOperatingCityRes
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
   - POST: # UpsertAllowedDestinationStatesAPI
       endpoint: /config/allowedDestinationStates
       auth: ApiAuthV2
@@ -356,7 +297,6 @@ apis:
               type: CreateMerchantOperatingCityReqT
             response:
               type: CreateMerchantOperatingCityRes
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
   - GET: # GetRiderConfigEstimatesOrderAPI
       endpoint: /riderConfig/estimatesOrder
       auth: ApiAuthV2
@@ -381,7 +321,6 @@ apis:
       auth: ApiAuthV2
       response:
         type: RiderMerchantMessageCatalogResp
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT GET_RIDER_MERCHANT_MESSAGE_CATALOG
   - POST: # RiderMerchantMessageUpsertAPI
       endpoint: /merchantMessage/upsert
       auth: ApiAuthV2
@@ -389,7 +328,6 @@ apis:
         type: UpsertRiderMerchantMessageReq
       response:
         type: APISuccess
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_RIDER_MERCHANT_MESSAGE
   - DELETE: # RiderMerchantMessageDeleteAPI
       endpoint: /merchantMessage/{messageKey}
       auth: ApiAuthV2
@@ -397,7 +335,6 @@ apis:
         messageKey: Text
       response:
         type: APISuccess
-      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_RIDER_MERCHANT_MESSAGE
 
   - POST:
       endpoint: /cloud/update

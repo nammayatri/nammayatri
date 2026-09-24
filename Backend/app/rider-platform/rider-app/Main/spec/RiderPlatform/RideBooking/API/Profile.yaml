@@ -4,7 +4,6 @@ imports:
   UpdateProfileReq: Domain.Action.UI.Profile
 
 importPackageOverrides:
-  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Action.UI.Profile: "rider-app"
 
@@ -18,8 +17,6 @@ apis:
         customerId: Id Person
       response:
         type: ProfileRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS PERSONDETAIL
   - POST:  # CustomerUpdateProfileAPI
       endpoint:  /update/{customerId}
       auditRequestBody: false
@@ -30,8 +27,5 @@ apis:
         type: UpdateProfileReq
       response:
         type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS UPDATEPERSON
-        endpoint: ProfileAPI UpdatePersonEndPoint
 
 types: {}

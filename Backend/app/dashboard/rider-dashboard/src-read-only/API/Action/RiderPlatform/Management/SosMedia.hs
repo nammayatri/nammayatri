@@ -28,9 +28,9 @@ handler merchantId city = getSosMediaSosMedia merchantId city
 
 type GetSosMediaSosMedia =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.SOS_MEDIA) / ('API.Types.RiderPlatform.Management.SosMedia.GET_SOS_MEDIA_SOS_MEDIA))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.SOS_MEDIA / 'API.Types.RiderPlatform.Management.SosMedia.GET_SOS_MEDIA_SOS_MEDIA)
       :> API.Types.RiderPlatform.Management.SosMedia.GetSosMediaSosMedia
   )
 

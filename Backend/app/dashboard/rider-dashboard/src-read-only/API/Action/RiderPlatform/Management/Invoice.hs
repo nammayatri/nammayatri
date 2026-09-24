@@ -31,32 +31,32 @@ handler merchantId city = getInvoiceInvoice merchantId city :<|> getInvoiceFinan
 
 type GetInvoiceInvoice =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.INVOICE) / ('API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_INVOICE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.INVOICE / 'API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_INVOICE)
       :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceInvoice
   )
 
 type GetInvoiceFinanceList =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.INVOICE) / ('API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_FINANCE_LIST))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.INVOICE / 'API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_FINANCE_LIST)
       :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceFinanceList
   )
 
 type GetInvoiceFinancePdf =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.INVOICE) / ('API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_FINANCE_PDF))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.INVOICE / 'API.Types.RiderPlatform.Management.Invoice.GET_INVOICE_FINANCE_PDF)
       :> API.Types.RiderPlatform.Management.Invoice.GetInvoiceFinancePdf
   )
 
 getInvoiceInvoice :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Invoice.InvoiceRes])
 getInvoiceInvoice merchantShortId opCity apiTokenInfo from phoneNumber to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Invoice.getInvoiceInvoice merchantShortId opCity apiTokenInfo from phoneNumber to
 
-getInvoiceFinanceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoiceType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoiceListRes)
+getInvoiceFinanceList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoiceListRes)
 getInvoiceFinanceList merchantShortId opCity apiTokenInfo from invoiceId invoiceNumber invoiceType limit offset status to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.Management.Invoice.getInvoiceFinanceList merchantShortId opCity apiTokenInfo from invoiceId invoiceNumber invoiceType limit offset status to
 
 getInvoiceFinancePdf :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Data.Text.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Invoice.FinanceInvoicePdfRes)

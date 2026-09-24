@@ -28,25 +28,25 @@ handler merchantId city = postDomainDiscountConfigCreate merchantId city :<|> ge
 
 type PostDomainDiscountConfigCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.DOMAIN_DISCOUNT_CONFIG) / ('API.Types.ProviderPlatform.Management.DomainDiscountConfig.POST_DOMAIN_DISCOUNT_CONFIG_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DOMAIN_DISCOUNT_CONFIG / 'API.Types.ProviderPlatform.Management.DomainDiscountConfig.POST_DOMAIN_DISCOUNT_CONFIG_CREATE)
       :> API.Types.ProviderPlatform.Management.DomainDiscountConfig.PostDomainDiscountConfigCreate
   )
 
 type GetDomainDiscountConfigList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.DOMAIN_DISCOUNT_CONFIG) / ('API.Types.ProviderPlatform.Management.DomainDiscountConfig.GET_DOMAIN_DISCOUNT_CONFIG_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DOMAIN_DISCOUNT_CONFIG / 'API.Types.ProviderPlatform.Management.DomainDiscountConfig.GET_DOMAIN_DISCOUNT_CONFIG_LIST)
       :> API.Types.ProviderPlatform.Management.DomainDiscountConfig.GetDomainDiscountConfigList
   )
 
 type DeleteDomainDiscountConfigDelete =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.DOMAIN_DISCOUNT_CONFIG) / ('API.Types.ProviderPlatform.Management.DomainDiscountConfig.DELETE_DOMAIN_DISCOUNT_CONFIG_DELETE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DOMAIN_DISCOUNT_CONFIG / 'API.Types.ProviderPlatform.Management.DomainDiscountConfig.DELETE_DOMAIN_DISCOUNT_CONFIG_DELETE)
       :> API.Types.ProviderPlatform.Management.DomainDiscountConfig.DeleteDomainDiscountConfigDelete
   )
 

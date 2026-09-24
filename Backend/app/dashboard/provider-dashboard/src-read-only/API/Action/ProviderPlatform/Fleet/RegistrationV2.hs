@@ -35,41 +35,41 @@ type PostRegistrationV2VerifyOtp = API.Types.ProviderPlatform.Fleet.Registration
 
 type PostRegistrationV2Register =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER)
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2Register
   )
 
 type PostRegistrationV2RegisterBankAccountLink =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK)
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2RegisterBankAccountLink
   )
 
 type GetRegistrationV2RegisterBankAccountStatus =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_STATUS)
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.GetRegistrationV2RegisterBankAccountStatus
   )
 
 type PutRegistrationV2ProfileLanguage =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.PUT_REGISTRATION_V2_PROFILE_LANGUAGE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.PUT_REGISTRATION_V2_PROFILE_LANGUAGE)
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PutRegistrationV2ProfileLanguage
   )
 
 type GetRegistrationV2ProfileLanguage =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_PROFILE_LANGUAGE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.GET_REGISTRATION_V2_PROFILE_LANGUAGE)
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.GetRegistrationV2ProfileLanguage
   )
 
@@ -82,10 +82,10 @@ postRegistrationV2VerifyOtp merchantShortId opCity req = withFlowHandlerAPI' $ D
 postRegistrationV2Register :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerRegisterReqV2 -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRegistrationV2Register merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.postRegistrationV2Register merchantShortId opCity apiTokenInfo req
 
-postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.PaymentMode.PaymentMode) -> Kernel.Prelude.Maybe (Domain.Types.InitiatedBy.InitiatedBy) -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)
+postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.PaymentMode.PaymentMode -> Kernel.Prelude.Maybe Domain.Types.InitiatedBy.InitiatedBy -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountLinkResp)
 postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId paymentMode initiatedBy = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.postRegistrationV2RegisterBankAccountLink merchantShortId opCity apiTokenInfo fleetOwnerId paymentMode initiatedBy
 
-getRegistrationV2RegisterBankAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountResp)
+getRegistrationV2RegisterBankAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountResp)
 getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId forceRefresh = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.RegistrationV2.getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId forceRefresh
 
 putRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerUpdateLanguageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

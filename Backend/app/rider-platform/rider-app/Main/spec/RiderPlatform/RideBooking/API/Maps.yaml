@@ -8,7 +8,6 @@ imports:
   GetPlaceNameResp: Domain.Action.UI.Maps
 
 importPackageOverrides:
-  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   Domain.Action.UI.Maps: "rider-app"
 
@@ -25,9 +24,6 @@ apis:
         type: AutoCompleteReq
       response:
         type: AutoCompleteResp
-      migrate:
-        endpoint: MapsAPI AutoCompleteEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS AUTOCOMPLETE
   - POST:  # RideGetPlaceDetailsAPI
       endpoint: /getPlaceDetails/{customerId}
       auditRequestBody: false
@@ -38,9 +34,6 @@ apis:
         type: GetPlaceDetailsReq
       response:
         type: GetPlaceDetailsResp
-      migrate:
-        endpoint: MapsAPI GetPlaceDetailsEndPoints
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS PLACEDETAIL
   - POST:  # RideGetPlaceNameAPI
       endpoint: /getPlaceName/{customerId}
       auditRequestBody: false
@@ -51,8 +44,5 @@ apis:
         type: GetPlaceNameReq
       response:
         type: GetPlaceNameResp
-      migrate:
-        endpoint: MapsAPI GetPlaceNameEndPoint
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS PLACENAME
 
 types: {}
