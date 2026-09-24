@@ -1,0 +1,1 @@
+alter table atlas_driver_offer_bpp.search_request_for_driver add column if not exists has_applicable_preferences boolean;
