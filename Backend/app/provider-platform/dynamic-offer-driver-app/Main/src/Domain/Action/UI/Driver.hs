@@ -1623,6 +1623,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.EV_HATCHBACK -> [DVST.EV_HATCHBACK, DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
               DV.EV_SEDAN -> [DVST.EV_SEDAN, DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               DV.EV_SUV -> [DVST.EV_SUV, DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              DV.SHARED_CAB -> [DVST.SHARED_CAB]
       QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-

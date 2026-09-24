@@ -244,6 +244,7 @@ castVariant Variant.PINK_AUTO = (show Enums.AUTO_RICKSHAW, "PINK_AUTO")
 castVariant Variant.EV_HATCHBACK = (show Enums.CAB, "EV_HATCHBACK")
 castVariant Variant.EV_SEDAN = (show Enums.CAB, "EV_SEDAN")
 castVariant Variant.EV_SUV = (show Enums.CAB, "EV_SUV")
+castVariant Variant.SHARED_CAB = (show Enums.CAB, "SHARED_CAB")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational

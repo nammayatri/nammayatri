@@ -126,6 +126,7 @@ getVolunteerBooking merchantShortId opCity otpCode = do
     convertVehicleVariant DVST.EV_SEDAN = Common.EV_SEDAN
     convertVehicleVariant DVST.EV_SUV = Common.EV_SUV
     convertVehicleVariant DVST.INSTANT_AUTO = Common.AUTO_RICKSHAW
+    convertVehicleVariant DVST.SHARED_CAB = Common.SHARED_CAB
 
     buildBookingLocation Domain.Location {..} =
       Common.Location
