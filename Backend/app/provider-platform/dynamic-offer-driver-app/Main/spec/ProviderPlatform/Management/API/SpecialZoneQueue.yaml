@@ -1,4 +1,5 @@
-imports: {}
+imports:
+  Driver: Dashboard.Common
 
 module: SpecialZoneQueue
 
@@ -58,6 +59,21 @@ apis:
         driverId: Text
       response:
         type: DriverQueueHistoryRes
+
+  - GET:
+      endpoint: /driverQueueRequests
+      auth: ApiAuthV2
+      mandatoryQuery:
+        driverId: Id Driver
+      query:
+        - from: UTCTime
+        - to: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: DriverQueueRequestsRes
+      migrate:
+        capability: city-operations.airport_queue.read
 
 types:
   TriggerSpecialZoneQueueNotifyReq:
@@ -151,3 +167,46 @@ types:
     - trackingState: Maybe QueueTrackingState
     - currentRank: Maybe Int
     - events: "[QueueHistoryEvent]"
+
+  QueueRequestStatus:
+    - enum: "Active, Accepted, Completed, Expired"
+
+  QueueRequestResponse:
+    - enum: "Accept, Reject, Ignored, NoShow, Cancelled"
+
+  QueueRequestTriggerSource:
+    - enum: "App, Dashboard"
+
+  DriverQueueRequestInfo:
+    - requestId: Text
+    - driverId: Id Driver
+    - gateId: Text
+    - gateName: Text
+    - specialLocationId: Text
+    - specialLocationName: Text
+    - vehicleType: Text
+    - status: QueueRequestStatus
+    - response: Maybe QueueRequestResponse
+    - triggerSource: Maybe QueueRequestTriggerSource
+    - triggerRequestId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - validTill: UTCTime
+    - arrivalDeadlineTime: Maybe UTCTime
+
+  DriverQueueRequestsSummary:
+    - total: Int
+    - accepted: Int
+    - rejected: Int
+    - ignored: Int
+    - noShow: Int
+    - cancelled: Int
+    - noResponse: Int
+
+  DriverQueueRequestsRes:
+    - fromTime: UTCTime
+    - toTime: UTCTime
+    - totalCount: Int
+    - truncated: Bool
+    - summary: DriverQueueRequestsSummary
+    - requests: "[DriverQueueRequestInfo]"

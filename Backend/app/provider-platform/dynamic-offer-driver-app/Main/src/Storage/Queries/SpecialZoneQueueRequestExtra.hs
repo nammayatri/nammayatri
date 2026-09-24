@@ -104,6 +104,25 @@ findAllByGateIdStatusAndVehicleType createdAtFrom gateId status vehicleType =
     ]
     Nothing
 
+findAllByDriverIdAndTimeRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Int ->
+  m [Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest]
+findAllByDriverIdAndTimeRange driverId from to fetchLimit =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
+          Se.Is Beam.createdAt $ Se.LessThanOrEq to
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just fetchLimit)
+    Nothing
+
 -- | Find the most recent pickup-zone request for a driver where response=Accept,
 -- regardless of its current status. This catches requests that have already
 -- transitioned past Accepted (e.g., Expired after the arrival check) so the
