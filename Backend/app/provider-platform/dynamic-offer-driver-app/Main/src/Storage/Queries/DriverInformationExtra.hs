@@ -638,6 +638,22 @@ updateSharedCabSessionActive sharedCabSessionActive driverId = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.sharedCabSessionActive = LTSSync.Set sharedCabSessionActive}
 
+-- | Drivers in a city whose shared-cab session flag is stuck/likely-live
+--   True. Read side of the 4.2B reconciler sweep: the job walks this list and
+--   asks the rider-app for the live session; only the reconciler (and explicit
+--   session end) is allowed to flip the flag back to False.
+findAllSharedCabActiveDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Int -> Maybe Int -> m [DriverInformation]
+findAllSharedCabActiveDrivers merchantOpCityId mbLimit mbOffset = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+          Se.Is BeamDI.sharedCabSessionActive (Se.Eq True)
+        ]
+    ]
+    (Se.Asc BeamDI.driverId)
+    mbLimit
+    mbOffset
+
 updateOnRideAndLatestScheduledBookingAndPickup ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->

@@ -837,6 +837,7 @@ types:
     - negativeFareAdjustmentMinDistanceMeters: Maybe Int
     - negativeFareAdjustmentMaxAmount: Maybe Int
     - driverCoolOffPeriod: Maybe Seconds
+    - sharedCabReconcilerEnabled: Maybe Bool
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -887,6 +888,7 @@ types:
     - negativeFareAdjustmentMinDistanceMeters: Maybe (OptionalValue Int)
     - negativeFareAdjustmentMaxAmount: Maybe (OptionalValue Int)
     - driverCoolOffPeriod: Maybe (OptionalValue Seconds)
+    - sharedCabReconcilerEnabled: Maybe (OptionalValue Bool)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type
@@ -1230,7 +1232,7 @@ types:
     - jobData: Text
     - derive: "'HideSecrets"
   JobName:
-    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger"
+    - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation, CongestionChargeCalculation, ReconciliationTrigger, ScheduledBatchPayoutTrigger, IffcoTokioInsuranceTrigger, AggregatedCommissionInvoiceCreationTrigger, RetryAutopayCollectionTrigger, SharedCabReconcilerTrigger"
   UpdateOnboardingVehicleVariantMappingReq:
     - file: FilePath
     - vehicleCategory: Text

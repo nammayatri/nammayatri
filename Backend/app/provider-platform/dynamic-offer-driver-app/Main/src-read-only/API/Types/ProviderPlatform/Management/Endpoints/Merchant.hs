@@ -512,6 +512,7 @@ data JobName
   | IffcoTokioInsuranceTrigger
   | AggregatedCommissionInvoiceCreationTrigger
   | RetryAutopayCollectionTrigger
+  | SharedCabReconcilerTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -554,6 +555,7 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverCoolOffPeriod :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    sharedCabReconcilerEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -607,7 +609,8 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     negativeFareAdjustmentCongestionThreshold :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Double),
     negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int),
     negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int),
-    driverCoolOffPeriod :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds)
+    driverCoolOffPeriod :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
+    sharedCabReconcilerEnabled :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Bool)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

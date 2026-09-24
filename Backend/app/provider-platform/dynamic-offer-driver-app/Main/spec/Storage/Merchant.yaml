@@ -1533,6 +1533,7 @@ TransporterConfig:
     enableOndcScheduledRideSupport: Maybe Bool # City-level gate for the MSIL-style Quote-based (static/scheduled) /select capability
     negotiationFareMinTolerancePct: Maybe Double # Lower bound tolerance (as a fraction) around the estimated fare for accepting a negotiated fare in /select
     negotiationFareMaxTolerancePct: Maybe Double # Upper bound tolerance (as a fraction) around the estimated fare for accepting a negotiated fare in /select
+    sharedCabReconcilerEnabled: Maybe Bool # Per-city gate for the shared-cab reconciler job (Allocator). Nothing/false = job skips this city (fail-closed).
 
   beamType:
     currency: Maybe Currency
@@ -1958,6 +1959,7 @@ TransporterConfig:
     enableOndcScheduledRideSupport: boolean
     negotiationFareMinTolerancePct: double precision
     negotiationFareMaxTolerancePct: double precision
+    sharedCabReconcilerEnabled: boolean
 
   default:
     mediaFileUrlPattern: |-
@@ -2153,6 +2155,7 @@ TransporterConfig:
     enableOndcScheduledRideSupport: "false"
     negotiationFareMinTolerancePct: "0.1"
     negotiationFareMaxTolerancePct: "0.1"
+    sharedCabReconcilerEnabled: "false"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:
@@ -2222,6 +2225,7 @@ TransporterConfig:
         - driverSearchBlacklistDurationSeconds
         - metricsDistanceBucketsKm
         - driverCoolOffPeriod
+        - sharedCabReconcilerEnabled
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

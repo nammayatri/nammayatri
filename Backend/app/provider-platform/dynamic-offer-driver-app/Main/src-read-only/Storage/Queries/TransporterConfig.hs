@@ -99,6 +99,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.driverSearchBlacklistDurationSeconds driverSearchBlacklistDurationSeconds,
       Se.Set Beam.metricsDistanceBucketsKm metricsDistanceBucketsKm,
       Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
+      Se.Set Beam.sharedCabReconcilerEnabled sharedCabReconcilerEnabled,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -414,6 +415,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.sendMembershipIdInProfile sendMembershipIdInProfile,
       Se.Set Beam.sendSmsOnEnablement sendSmsOnEnablement,
       Se.Set Beam.separateDriverVehicleEnablement separateDriverVehicleEnablement,
+      Se.Set Beam.sharedCabReconcilerEnabled sharedCabReconcilerEnabled,
       Se.Set Beam.snapToRoadConfidenceThreshold snapToRoadConfidenceThreshold,
       Se.Set Beam.specialDrivers specialDrivers,
       Se.Set Beam.specialLocationTags specialLocationTags,

@@ -198,7 +198,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SharedCabReconcilerJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
@@ -446,6 +446,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                enableScheduleReallocation = maybe config.enableScheduleReallocation (.value) req.enableScheduleReallocation,
                disableListScheduledBookingAPI = maybe config.disableListScheduledBookingAPI (.value) req.disableListScheduledBookingAPI,
                driverCoolOffPeriod = maybe config.driverCoolOffPeriod (.value) req.driverCoolOffPeriod,
+               sharedCabReconcilerEnabled = maybe config.sharedCabReconcilerEnabled (.value) req.sharedCabReconcilerEnabled,
                scheduledRideConfig =
                  DTC.ScheduledRideConfig
                    { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,
@@ -574,6 +575,15 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
               merchantOpCityId <- CQMOC.getMerchantOpCityId jobData.merchantOperatingCityId merchant Nothing
               createJobIn @_ @'RetryAutopayCollection (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: RetryAutopayCollectionJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.SharedCabReconcilerTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe SharedCabReconcilerJobData
+          case jobData' of
+            Just jobData -> do
+              merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
+              merchantOpCityId <- CQMOC.getMerchantOpCityId (Just jobData.merchantOperatingCityId) merchant Nothing
+              createJobIn @_ @'SharedCabReconciler (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: SharedCabReconcilerJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

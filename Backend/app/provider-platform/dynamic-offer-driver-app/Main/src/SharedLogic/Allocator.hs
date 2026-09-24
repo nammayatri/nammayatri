@@ -111,6 +111,7 @@ data AllocatorJobType
   | SAPPGSettlementDispatch
   | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
+  | SharedCabReconciler
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -175,6 +176,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSAPPGSettlementDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPPGSettlementDispatch jobData
   restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
+  restoreAnyJobInfo SSharedCabReconciler jobData = AnyJobInfo <$> restoreJobInfo SSharedCabReconciler jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -668,6 +670,23 @@ data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
 instance JobInfoProcessor 'ConnectAccountChargeDeduction
 
 type instance JobContent 'ConnectAccountChargeDeduction = ConnectAccountChargeDeductionJobData
+
+-- | Periodic shared-cab "stuck flag" reconciler (NY shared-cab-prime, task
+--   4.2B). One job per (merchant, city); the handler walks the city's drivers
+--   with driver_information.shared_cab_session_active = True, asks the
+--   rider-app BAP for the live session, and flips the flag to False when the
+--   session is gone. Re-enqueues itself at a fixed interval; gated per city
+--   by TransporterConfig.sharedCabReconcilerEnabled (Nothing/false = skip,
+--   fail-closed).
+data SharedCabReconcilerJobData = SharedCabReconcilerJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SharedCabReconciler
+
+type instance JobContent 'SharedCabReconciler = SharedCabReconcilerJobData
 
 data SettlementReportIngestionJobData = SettlementReportIngestionJobData
   { merchantId :: Id DM.Merchant,

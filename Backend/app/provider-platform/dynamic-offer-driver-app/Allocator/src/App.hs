@@ -78,6 +78,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearc
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch (runSAPRideRevenueDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion (runSettlementReportIngestionJob)
+import SharedLogic.Allocator.Jobs.SharedCab.Reconciler (runSharedCabReconcilerJob)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival (checkPickupZoneArrival)
 import SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify (triggerSpecialZoneNotify)
 import SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase (expireSubscriptionPurchase)
@@ -194,6 +195,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env triggerIffcoTokioInsuranceForOnRideDrivers
           & putJobHandlerInListWrapper flowRt env runAggregatedCommissionInvoiceCreationJob
           & putJobHandlerInListWrapper flowRt env sendConnectAccountCharge
+          & putJobHandlerInListWrapper flowRt env runSharedCabReconcilerJob
     }
 
 runDriverOfferAllocator ::
