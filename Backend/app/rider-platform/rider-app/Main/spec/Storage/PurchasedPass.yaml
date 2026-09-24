@@ -160,6 +160,7 @@ PurchasedPassPayment:
     activatedAt: Maybe UTCTime
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
+    maxOverrideableFare: Maybe HighPrecMoney
     overrideBenefitConfigJson: Maybe Value
 
   beamType:

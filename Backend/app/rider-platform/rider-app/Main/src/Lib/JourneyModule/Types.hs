@@ -1468,6 +1468,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
       else pure []
   overridePasses <-
     if integratedBPPConfig.passOverrideApplicable /= Just True
+      || not (integratedBPPConfig.autoOverridePassForFRFS /= Just False || frfsSearch.enforcePassOverride == Just True)
       then pure []
       else do
         now' <- getCurrentTime
@@ -1476,13 +1477,11 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         -- legs. An epoch tripTime yields a 1970 tripDay, and filterCandidatesForLeg then rejects
         -- every pass on the startDate/endDate window -- the leg silently offers no passes at all.
         let tripTime = maybe now' (\departure -> if departure > now' then departure else now') journeyLeg.fromDepartureTime
-        let resolveStations = Just <$> FRFSPassOverride.resolveLegStations integratedBPPConfig frfsSearch.fromStationCode frfsSearch.toStationCode
         case mbPassCandidates of
           Just candidates -> do
             tripDay <- FRFSPassOverride.localTripDay person tripTime
-            mbLegStations <- FRFSPassOverride.legStationsFor candidates resolveStations
-            pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay mbLegStations
-          Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass resolveStations
+            pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay
+          Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass
   -- The UNFILTERED candidates, deliberately -- not overridePasses. toCandidate keeps every
   -- override-applicable term whatever state it is in; filterCandidatesForLeg is what narrows to
   -- usable-right-now, and taking that narrowed list is what made an exhausted pass read as a

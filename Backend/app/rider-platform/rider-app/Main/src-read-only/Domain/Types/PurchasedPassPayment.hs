@@ -31,6 +31,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     isDashboard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    maxOverrideableFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,

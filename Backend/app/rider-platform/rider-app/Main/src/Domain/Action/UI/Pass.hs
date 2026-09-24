@@ -320,10 +320,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
         void $
           FRFSPassOverride.overrideConfigForPurchase pass (Just priced.numberOfTrips)
             >>= fromMaybeM (InvalidRequest $ "Pass benefit config is invalid, passId=" <> passId.getId)
-        integratedBPPConfig <- passIntegratedBPPConfig pass
-        (sourceStation, destinationStation) <- FRFSPassOverride.resolveLegStations integratedBPPConfig routeSelection.sourceStopCode routeSelection.destinationStopCode
-        let resolvedSelection = PassAPI.PassCalculatePriceReq {sourceStopCode = sourceStation, destinationStopCode = destinationStation, numberOfTrips = routeSelection.numberOfTrips}
-        pure $ Just (resolvedSelection, priced)
+        pure $ Just (routeSelection, priced)
 
   -- Purchase eligibility is enforced here, not only surfaced as a flag on the
   -- listing: a pass restricted to a customer tag (say, a discounted test price)
@@ -507,6 +504,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             overrideBenefitConfigJson = mbOverrideBenefitConfig,
             sourceStopCode = (\(selection, _) -> selection.sourceStopCode) <$> mbDynamicPurchase,
             destinationStopCode = (\(selection, _) -> selection.destinationStopCode) <$> mbDynamicPurchase,
+            maxOverrideableFare = (\(_, priced) -> priced.referenceFare) <$> mbDynamicPurchase,
             clientSdkVersion = person.clientSdkVersion,
             createdAt = now,
             updatedAt = now

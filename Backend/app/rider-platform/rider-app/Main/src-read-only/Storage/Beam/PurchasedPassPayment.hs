@@ -27,6 +27,7 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     endDate :: (B.C f Data.Time.Calendar.Day),
     id :: (B.C f Kernel.Prelude.Text),
     isDashboard :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    maxOverrideableFare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     orderId :: (B.C f Kernel.Prelude.Text),

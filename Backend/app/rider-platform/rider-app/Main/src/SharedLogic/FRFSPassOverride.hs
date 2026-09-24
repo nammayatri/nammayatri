@@ -9,11 +9,6 @@ module SharedLogic.FRFSPassOverride
     PassTicketBenefitConfig (..),
     entryBenefit,
     entryPricing,
-    resolveLegStations,
-    legStationsFor,
-    paymentLegStations,
-    bookingLegStations,
-    coversLegStations,
     dynamicPricingFromPass,
     applyPricingSaving,
     ApplicablePass (..),
@@ -87,8 +82,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -119,8 +112,7 @@ data OverrideBenefit = OverrideBenefit
     unlimitedTripCount :: Maybe Bool,
     maximumTripCount :: Maybe Int,
     maxTicketQuantityPerOverride :: Maybe Int,
-    enforceSourceDestinationCheck :: Maybe Bool,
-    allowRoundTrip :: Maybe Bool
+    enforceMaxFare :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -293,8 +285,8 @@ validateEntry :: OverrideBenefitEntry -> Either Text OverrideBenefitEntry
 validateEntry entry = case entry of
   TicketBenefit benefit -> entry <$ validateBenefit True benefit
   PassTicketBenefit config
-    | config.benefit.enforceSourceDestinationCheck /= Just True ->
-      Left "a PassTicketBenefit must set enforce_source_destination_check, or it would cover every route"
+    | config.benefit.enforceMaxFare /= Just True ->
+      Left "a PassTicketBenefit must set enforce_max_fare, or it would cover every fare"
     | otherwise -> entry <$ (validateDynamicPricing config.pricing >> validateBenefit False config.benefit)
 
 validateBenefit :: Bool -> OverrideBenefit -> Either Text OverrideBenefit
@@ -427,51 +419,8 @@ remainingTrips payment benefit
 allowanceFor :: DPPP.PurchasedPassPayment -> OverrideBenefit -> Int
 allowanceFor payment benefit = fromMaybe (fromMaybe 0 benefit.maximumTripCount) payment.availableTripCount
 
-stationCodeForStop :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, CacheFlow m r, EsqDBFlow m r) => DIBC.IntegratedBPPConfig -> Text -> m Text
-stationCodeForStop integratedBPPConfig stopCode =
-  OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig <&> \mbStation ->
-    fromMaybe stopCode (mbStation >>= (.parentStopCode))
-
-resolveLegStations :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, CacheFlow m r, EsqDBFlow m r) => DIBC.IntegratedBPPConfig -> Text -> Text -> m (Text, Text)
-resolveLegStations integratedBPPConfig fromCode toCode =
-  (,) <$> stationCodeForStop integratedBPPConfig fromCode <*> stationCodeForStop integratedBPPConfig toCode
-
-paymentLegStations :: (CacheFlow m r, EsqDBFlow m r) => Id DPPP.PurchasedPassPayment -> m (Maybe (Text, Text)) -> m (Maybe (Text, Text))
-paymentLegStations paymentId resolve = do
-  mbCandidate <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= maybe (pure Nothing) toCandidate
-  legStationsFor (maybeToList mbCandidate) resolve
-
-enforcesStops :: PassCandidate -> Bool
-enforcesStops candidate = candidate.benefit.enforceSourceDestinationCheck == Just True
-
-legStationsFor :: (MonadFlow m, Log m) => [PassCandidate] -> m (Maybe (Text, Text)) -> m (Maybe (Text, Text))
-legStationsFor candidates resolve
-  | not (any enforcesStops candidates) = pure Nothing
-  | otherwise =
-    withTryCatch "FRFSPassOverride:legStationsFor" resolve >>= \case
-      Right stations -> pure stations
-      Left err -> do
-        logError $ "FRFSPassOverride: could not resolve leg stations, passes that enforce them will not apply error=" <> show err
-        pure Nothing
-
-bookingLegStations :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe (Text, Text))
-bookingLegStations booking = do
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigById booking.integratedBppConfigId
-  Just <$> resolveLegStations integratedBPPConfig booking.fromStationCode booking.toStationCode
-
-coversLegStations :: DPPP.PurchasedPassPayment -> OverrideBenefit -> Maybe (Text, Text) -> Bool
-coversLegStations payment benefit mbLegStations
-  | benefit.enforceSourceDestinationCheck /= Just True = True
-  | otherwise = fromMaybe False $ do
-    (legFrom, legTo) <- mbLegStations
-    source <- payment.sourceStopCode
-    destination <- payment.destinationStopCode
-    let onwards = legFrom == source && legTo == destination
-        backwards = benefit.allowRoundTrip == Just True && legFrom == destination && legTo == source
-    pure (onwards || backwards)
-
-filterCandidatesForLeg :: [PassCandidate] -> Spec.VehicleCategory -> T.Day -> Maybe (Text, Text) -> [ApplicablePass]
-filterCandidatesForLeg candidates vehicleType tripDay mbLegStations =
+filterCandidatesForLeg :: [PassCandidate] -> Spec.VehicleCategory -> T.Day -> [ApplicablePass]
+filterCandidatesForLeg candidates vehicleType tripDay =
   [ ApplicablePass
       { purchasedPassPayment = candidate.payment,
         pass = candidate.pass,
@@ -483,8 +432,7 @@ filterCandidatesForLeg candidates vehicleType tripDay mbLegStations =
       candidate.pass.vehicleType == vehicleType,
       candidate.payment.startDate <= tripDay,
       candidate.payment.endDate >= tripDay,
-      not (maybe False (<= 0) candidate.availableTripCount),
-      coversLegStations candidate.payment candidate.benefit mbLegStations
+      not (maybe False (<= 0) candidate.availableTripCount)
   ]
 
 getFRFSOverrideApplicablePassesByPersonId ::
@@ -494,15 +442,13 @@ getFRFSOverrideApplicablePassesByPersonId ::
   Spec.VehicleCategory ->
   UTCTime ->
   Maybe Bool ->
-  m (Maybe (Text, Text)) ->
   m [ApplicablePass]
-getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime mbClientHasPasses resolveStations
+getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime mbClientHasPasses
   | integratedBPPConfig.passOverrideApplicable /= Just True = pure []
   | otherwise = do
     tripDay <- localTripDay person tripTime
     candidates <- loadPassCandidates person mbClientHasPasses tripDay
-    mbLegStations <- legStationsFor candidates resolveStations
-    pure $ filterCandidatesForLeg candidates vehicleType tripDay mbLegStations
+    pure $ filterCandidatesForLeg candidates vehicleType tripDay
 
 localTripDay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> UTCTime -> m T.Day
 localTripDay person tripTime = do
@@ -514,14 +460,13 @@ toApplicablePass ::
   (CacheFlow m r, EsqDBFlow m r) =>
   Spec.VehicleCategory ->
   T.Day ->
-  Maybe (Text, Text) ->
   DPPP.PurchasedPassPayment ->
   m (Maybe ApplicablePass)
-toApplicablePass vehicleType tripDay mbLegStations payment = do
+toApplicablePass vehicleType tripDay payment = do
   mbCandidate <- toCandidate payment
   pure $ case mbCandidate of
     Nothing -> Nothing
-    Just candidate -> listToMaybe (filterCandidatesForLeg [candidate] vehicleType tripDay mbLegStations)
+    Just candidate -> listToMaybe (filterCandidatesForLeg [candidate] vehicleType tripDay)
 
 isUnlimitedPass :: (Log m, MonadFlow m) => DPass.Pass -> m Bool
 isUnlimitedPass pass
@@ -563,6 +508,7 @@ passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnit
       }
     | applicablePass <- applicablePasses,
       coversTier applicablePass,
+      withinMaxFare applicablePass,
       coversQuantity applicablePass,
       hasTripsForQuantity applicablePass,
       let overriddenTotal = totalWith (applyOverrideBenefit applicablePass.benefit),
@@ -580,6 +526,9 @@ passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnit
       maybe False (`elem` applicablePass.pass.applicableVehicleServiceTiers) mbServiceTier
     coversQuantity applicablePass =
       withinQuantityCap totalQuantity applicablePass.benefit.maxTicketQuantityPerOverride
+    withinMaxFare applicablePass
+      | applicablePass.benefit.enforceMaxFare /= Just True = True
+      | otherwise = maybe False (adultUnitPrice.amount <=) applicablePass.purchasedPassPayment.maxOverrideableFare
     -- Each ticket costs a trip, so offering a 2-trip pass on a 3-ticket quote would only get as
     -- far as confirm, where the spend fails and the booking dies.
     hasTripsForQuantity applicablePass =
@@ -1054,10 +1003,9 @@ resolvePassOverride ::
   Maybe Spec.ServiceTierType ->
   Price ->
   [(Price, Int)] ->
-  Maybe (Text, Text) ->
   Id DPPP.PurchasedPassPayment ->
   m (Maybe (ApplicablePass, PassOption))
-resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTier adultUnitPrice priceItems mbLegStations paymentId
+resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTier adultUnitPrice priceItems paymentId
   | integratedBPPConfig.passOverrideApplicable /= Just True = pure Nothing
   | otherwise = do
     tripDay <- localTripDay person tripTime
@@ -1066,7 +1014,7 @@ resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTie
       Just payment
         | payment.personId == person.id
             && payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked] ->
-          toApplicablePass vehicleType tripDay mbLegStations payment
+          toApplicablePass vehicleType tripDay payment
       _ -> pure Nothing
     case mbApplicablePass of
       Nothing -> do
@@ -1210,8 +1158,7 @@ passLegsNotCoverable person bookings = do
               perLeg <-
                 forM legs $ \booking -> do
                   tripDay <- localTripDay person (fromMaybe booking.createdAt booking.startTime)
-                  mbLegStations <- legStationsFor [candidate] (bookingLegStations booking)
-                  let applicable = not (null (filterCandidatesForLeg [candidate] booking.vehicleType tripDay mbLegStations))
+                  let applicable = not (null (filterCandidatesForLeg [candidate] booking.vehicleType tripDay))
                   quantity <- ticketQuantityForBooking booking
                   pure (booking, applicable, quantity)
               let inapplicable = [booking.id | (booking, applicable, _) <- perLeg, not applicable]
@@ -1245,10 +1192,8 @@ spendTripForBooking person booking = case booking.overrideAppliedEntityId of
       Nothing -> do
         logError $ "FRFSPassOverride:spendTripForBooking ticket issued but pass is missing or not the rider's, NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
         pure $ TripPassUnusable "pass missing or not the rider's"
-      Just payment -> do
-        mbCandidate <- toCandidate payment
-        mbLegStations <- legStationsFor (maybeToList mbCandidate) (bookingLegStations booking)
-        toApplicablePass booking.vehicleType tripDay mbLegStations payment >>= \case
+      Just payment ->
+        toApplicablePass booking.vehicleType tripDay payment >>= \case
           Nothing -> do
             toCandidate payment >>= \case
               Nothing -> do
@@ -1259,11 +1204,6 @@ spendTripForBooking person booking = case booking.overrideAppliedEntityId of
                       | maybe False (<= 0) candidate.availableTripCount = "no trips left"
                       | candidate.payment.endDate < tripDay = "term ended"
                       | candidate.payment.startDate > tripDay = "term has not started"
-                      | not (coversLegStations candidate.payment candidate.benefit mbLegStations) =
-                        "booking runs " <> show mbLegStations <> ", pass was bought for "
-                          <> show (candidate.payment.sourceStopCode, candidate.payment.destinationStopCode)
-                          <> " roundTrip="
-                          <> show (candidate.benefit.allowRoundTrip == Just True)
                       | otherwise = "pass is for " <> show candidate.pass.vehicleType <> ", booking is " <> show booking.vehicleType
                 logError $ "FRFSPassOverride:spendTripForBooking pass cannot cover this booking (" <> why <> "), NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
                 pure TripPassExhausted
