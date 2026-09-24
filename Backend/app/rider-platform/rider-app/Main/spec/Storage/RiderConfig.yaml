@@ -70,6 +70,8 @@ RiderConfig:
       vehicleNo: Text
       notificationTitle: Text
       notificationMessage: Text
+    BetterPointWalkDistanceSource:
+      enum: "STRAIGHT_LINE,MAPS"
     ExternalSOSFlow:
       enum: "ERSS,GJ112,Trinity"
     ExternalSOSTriggerSource:
@@ -334,6 +336,10 @@ RiderConfig:
     # With it off an unnamed point keeps the customer's own address, which is a short walk
     # away -- a worse name, not a wrong place.
     betterPointResolvePlaceNameOnSelect: Maybe Bool
+    # How the walk to a suggested pickup/drop is measured. STRAIGHT_LINE (the default) is free
+    # but blind to dividers and one-ways; MAPS asks the provider set in
+    # MerchantServiceUsageConfig.getBetterPointWalkDistance for the walking distance.
+    betterPointWalkDistanceSource: Maybe BetterPointWalkDistanceSource
     # Categories sent regardless of the rider's own NOTIFICATION_PREFERENCE
     # (isNotificationCategoryAllowed in Tools/Notifications.hs checks this first, before
     # the rider's own opt-in list) -- for notifications that drive in-app behaviour

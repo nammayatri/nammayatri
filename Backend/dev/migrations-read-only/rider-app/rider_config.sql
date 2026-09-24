@@ -903,3 +903,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_adjacent_geo_hash_place_nam
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_legal_compliance_documents boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_go_online_policy_blocker boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_distance_source text ;

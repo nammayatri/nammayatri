@@ -363,6 +363,7 @@ MerchantServiceUsageConfig:
     createdAt: UTCTime
     getMultiModalService: MultiModalService
     getMultimodalWalkDistance: MapsService
+    getBetterPointWalkDistance: MapsService
     insuranceService: InsuranceService
     eventTrackingProviders: "[EventTrackingService]"
     eventTrackingOverrides: "Maybe (Map Text [EventTrackingService])"
@@ -372,6 +373,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: Maybe MapsService
     getMultiModalService: Maybe MultiModalService
     getMultimodalWalkDistance: Maybe MapsService
+    getBetterPointWalkDistance: Maybe MapsService
     getInstructionRoute: Maybe MapsService
     insuranceService: Maybe InsuranceService
     createRefunds: Maybe PaymentService
@@ -386,6 +388,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
     getMultimodalWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
+    getBetterPointWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getInstructionRoute: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     insuranceService: fromMaybe (Kernel.External.Insurance.Types.Acko) insuranceService|E
     createRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
@@ -399,6 +402,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
     getMultiModalService: Kernel.Prelude.Just|I
     getMultimodalWalkDistance: Kernel.Prelude.Just|I
+    getBetterPointWalkDistance: Kernel.Prelude.Just|I
     getInstructionRoute: Kernel.Prelude.Just|I
     insuranceService: Kernel.Prelude.Just|I
     createRefunds: Kernel.Prelude.Just|I
@@ -476,6 +480,7 @@ MerchantServiceUsageConfig:
     getInstructionRoute: "'OSRM'"
     getMultiModalService: "'OTPTransit'"
     getMultimodalWalkDistance: "'OSRM'"
+    getBetterPointWalkDistance: "'OSRM'"
     insuranceService: "'Acko'"
 
 MerchantPaymentMethod:
