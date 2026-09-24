@@ -122,7 +122,9 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     commissionCharges :: Maybe HighPrecMoney,
     isPaymentOnline :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
-    isScheduled :: Bool
+    isScheduled :: Bool,
+    -- Only present when at least one of the driver's own preferences applied to this request.
+    preferenceMatchScore :: Maybe Double
   }
   deriving (Generic, ToSchema, Show)
 
@@ -184,6 +186,10 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           -- customerCancellationDuesWithCurrency = PriceAPIEntity nearbyReq.customerCancellationDues nearbyReq.currency,
           tripCategory = searchTry.tripCategory,
           isScheduled = searchTry.isScheduled,
+          preferenceMatchScore =
+            if fromMaybe False nearbyReq.hasApplicablePreferences
+              then nearbyReq.preferenceMatchScore
+              else Nothing,
           duration = searchRequest.estimatedDuration,
           pickupZone = nearbyReq.pickupZone,
           driverPickUpCharges = roundToIntegral <$> driverPickUpCharges,
