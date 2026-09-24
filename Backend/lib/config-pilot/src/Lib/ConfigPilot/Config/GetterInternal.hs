@@ -28,6 +28,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra as CADLE
 import Lib.Yudhishthira.Tools.DynamicLogicGroup (chooseWithGroups)
+import qualified Lib.Yudhishthira.Tools.TimeBoundRollout as LYTB
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
@@ -77,7 +78,10 @@ selectActiveElementVersions logicDomain merchantOpCityId = do
 
     getActiveRolloutVersionsWithToss = do
       allActiveRollouts <- CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
-      let nonBaseRollouts = filter (\r -> r.isBaseVersion /= Just True) allActiveRollouts
+      -- Narrow the experiment rollouts to the current time window.
+      nonBaseRollouts <-
+        LYTB.filterByActiveTimeBound merchantOpCityId logicDomain $
+          filter (\r -> r.isBaseVersion /= Just True) allActiveRollouts
       -- Group-aware selection of the experiment (non-base) rollout: honors a
       -- per-transaction experiment-group decision (TxnIdKey) shared with the
       -- legacy Tools.DynamicLogic path. Falls back to a plain toss when no txn/group.
