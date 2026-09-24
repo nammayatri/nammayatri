@@ -1766,6 +1766,12 @@ getServiceTierTypeFromRouteStationsJson mbJson = do
   vst <- firstRoute.vehicleServiceTier
   Just vst._type
 
+-- | trip_id is a bus key ("<waybillNo>-<tripNo>") that the client sends; a shared cab never has one, and every
+-- trip_id-keyed path (schedule fetch, seat holds, waybill fan-out, manifest) must stay a no-op for it.
+tripIdForServiceTier :: Maybe Spec.ServiceTierType -> Maybe Text -> Maybe Text
+tripIdForServiceTier (Just Spec.SHARED_CAB) _ = Nothing
+tripIdForServiceTier _ mbTripId = mbTripId
+
 riderSpendKey :: Id DP.Person -> Text
 riderSpendKey personId = "rider:spend:" <> personId.getId
 
