@@ -17,6 +17,7 @@ import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.VehicleSeatLayoutMapping
+import qualified Domain.Types.VehicleTrip
 import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -115,6 +116,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleTripId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip),
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     waybillNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,

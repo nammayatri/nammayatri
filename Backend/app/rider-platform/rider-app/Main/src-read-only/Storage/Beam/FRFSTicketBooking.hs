@@ -111,6 +111,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     tripId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     validTill :: (B.C f Kernel.Prelude.UTCTime),
     vehicleNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    vehicleTripId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
     waybillNo :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),

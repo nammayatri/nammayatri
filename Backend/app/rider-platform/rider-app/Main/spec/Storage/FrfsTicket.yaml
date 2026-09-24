@@ -51,6 +51,7 @@ imports:
   SeatLayout: Domain.Types.SeatLayout
   Seat: Domain.Types.Seat
   SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
+  VehicleTrip: Domain.Types.VehicleTrip
 
 FRFSSearch:
   tableName: frfs_search
@@ -477,6 +478,7 @@ FRFSTicketBooking:
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
+    vehicleTripId: Maybe (Id VehicleTrip)
 
   default:
     customerCancelled: "false"
@@ -651,6 +653,19 @@ FRFSTicketBooking:
     updateOndcOnInitReceivedById:
       kvFunction: updateOneWithKV
       params: [ondcOnInitReceived, ondcOnInitReceivedAt, updatedAt]
+      where: id
+    # Compare-and-set: Se.Eq on a Maybe column is IS NULL / =, i.e. IS NOT DISTINCT FROM.
+    # Returns (): the caller must read back (findOneWithDb) and wins iff vehicleNumber == its new value.
+    updateAllocatedVehicle:
+      kvFunction: updateOneWithKV
+      params: [vehicleNumber]
+      where:
+        and:
+          - id
+          - vehicleNumber: expectedVehicleNumber
+    updateVehicleTripId:
+      kvFunction: updateOneWithKV
+      params: [vehicleTripId]
       where: id
 
   extraIndexes:
