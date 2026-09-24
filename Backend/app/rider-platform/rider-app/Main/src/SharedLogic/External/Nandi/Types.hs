@@ -1278,6 +1278,31 @@ data UpdateWaybillStatusReq = UpdateWaybillStatusReq
 instance HideSecrets UpdateWaybillStatusReq where
   hideSecrets = identity
 
+-- | Recurrence config for a schedule trip. Deliberately carries no vehicle/crew/device --
+-- generation derives those from the most recent actual waybill on that schedule trip instead.
+data ScheduleTripRepeatConfig = ScheduleTripRepeatConfig
+  { schedule_trip_id :: Text,
+    repeat_status :: Text,
+    valid_from :: Maybe Day,
+    valid_until :: Maybe Day,
+    recurrence_days :: [Int]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets ScheduleTripRepeatConfig where
+  hideSecrets = identity
+
+data SetScheduleTripRepeatReq = SetScheduleTripRepeatReq
+  { repeat_status :: Text,
+    valid_from :: Maybe Day,
+    valid_until :: Maybe Day,
+    recurrence_days :: [Int]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets SetScheduleTripRepeatReq where
+  hideSecrets = identity
+
 data UpdateWaybillFleetReq = UpdateWaybillFleetReq
   { waybill_id :: Value,
     fleet_no :: Text

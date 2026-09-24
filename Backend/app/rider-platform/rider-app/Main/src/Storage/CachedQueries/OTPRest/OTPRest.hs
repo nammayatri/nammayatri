@@ -6,6 +6,7 @@ import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy)
 import Data.Text (splitOn)
 import qualified Data.Text as T
+import qualified Data.Time as DT
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -44,16 +45,37 @@ getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRoute
       logError $ "Route not found in OTPRest: " <> show routeId
       pure Nothing
 
+-- | How many days ahead riders see upcoming duties on this route, when configured. `Nothing`
+-- (the default, matching behaviour from before this bound existed) means no limit -- correct
+-- for almost every operator, since only one whose gtfs_id is in GIMS's
+-- REPEATER_AUTOMATION_ENABLED_GTFS_IDS can ever have a far-future repeater-generated `upcoming`
+-- waybill to worry about. Enabling that automation for an operator must come with explicitly
+-- setting this on their config too -- it is not a blanket code-level default.
+getCheckAheadDaysSchedule :: ProviderConfig -> Maybe Int
+getCheckAheadDaysSchedule = \case
+  DIRECT c -> c.checkAheadDaysSchedule
+  ONDC c -> c.checkAheadDaysSchedule
+  _ -> Nothing
+
+-- | Today in IST -- coarse enough for a day-level schedule-visibility bound, matching the
+-- hardcoded-offset approach Tools.InvoicePDF.hs already uses for the same reason (no need to pull
+-- in a merchant/city config fetch just to know what day it is).
+todayIST :: (MonadFlow m) => m DT.Day
+todayIST = DT.utctDay . DT.addUTCTime (60 * 330) <$> getCurrentTime
+
 getRouteBusSchedule ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
   Maybe Text ->
   IntegratedBPPConfig ->
   m BusScheduleDetails
-getRouteBusSchedule routeId mbVehicleNumber integratedBPPConfig = IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber] 180 $ do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  schedules <- Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber
-  pure schedules
+getRouteBusSchedule routeId mbVehicleNumber integratedBPPConfig = do
+  today <- todayIST
+  let mbMaxDutyDate = (\days -> DT.addDays (toInteger days) today) <$> getCheckAheadDaysSchedule integratedBPPConfig.providerConfig
+  IM.withInMemCache ["getRouteBusSchedule", integratedBPPConfig.id.getId, routeId, fromMaybe "" mbVehicleNumber, maybe "unbounded" show mbMaxDutyDate] 180 $ do
+    baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+    schedules <- Flow.getRouteBusSchedule baseUrl integratedBPPConfig.feedKey routeId mbVehicleNumber mbMaxDutyDate
+    pure schedules
 
 getBusTripSchedule ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>

@@ -22,6 +22,8 @@ module Domain.Action.RiderPlatform.AppManagement.TransitOperator
     transitOperatorGetTabletIds,
     transitOperatorGetOperators,
     transitOperatorUpdateWaybillStatus,
+    transitOperatorGetScheduleTripRepeat,
+    transitOperatorSetScheduleTripRepeat,
     transitOperatorUpdateWaybillFleet,
     transitOperatorUpdateWaybillDetails,
     transitOperatorUpdateWaybillTablet,
@@ -283,3 +285,14 @@ transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 transitOperatorQueryVehicle merchantShortId opCity apiTokenInfo fleetNo tagNumber vehicleNo vehicleCategory = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorQueryVehicle) fleetNo tagNumber vehicleNo vehicleCategory
+
+transitOperatorGetScheduleTripRepeat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig)
+transitOperatorGetScheduleTripRepeat merchantShortId opCity apiTokenInfo scheduleTripId vehicleCategory = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorGetScheduleTripRepeat) scheduleTripId vehicleCategory
+
+transitOperatorSetScheduleTripRepeat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.SetScheduleTripRepeatReq -> Environment.Flow SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig)
+transitOperatorSetScheduleTripRepeat merchantShortId opCity apiTokenInfo scheduleTripId vehicleCategory req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorSetScheduleTripRepeat) scheduleTripId vehicleCategory req)

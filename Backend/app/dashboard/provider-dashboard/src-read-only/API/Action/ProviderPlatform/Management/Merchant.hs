@@ -7,12 +7,12 @@ module API.Action.ProviderPlatform.Management.Merchant
   )
 where
 
-import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.ProviderPlatform.Management.Merchant
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
@@ -436,17 +436,17 @@ type PostMerchantConfigOperatingCityWhiteList =
 
 type PostMerchantConfigAllowedDestinationStates =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MERCHANT) / ('API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES)
       :> API.Types.ProviderPlatform.Management.Merchant.PostMerchantConfigAllowedDestinationStates
   )
 
 type GetMerchantConfigAllowedDestinationStates =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MERCHANT) / ('API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MERCHANT / 'API.Types.ProviderPlatform.Management.Merchant.GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES)
       :> API.Types.ProviderPlatform.Management.Merchant.GetMerchantConfigAllowedDestinationStates
   )
 

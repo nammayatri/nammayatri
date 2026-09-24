@@ -32,6 +32,8 @@ imports:
   ReprocessResult: SharedLogic.External.Nandi.Types
   RouteStopMappingExport: SharedLogic.External.Nandi.Types
   VehicleUpsertRequest: SharedLogic.External.Nandi.Types
+  ScheduleTripRepeatConfig: SharedLogic.External.Nandi.Types
+  SetScheduleTripRepeatReq: SharedLogic.External.Nandi.Types
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
   APISuccess: Kernel.Types.APISuccess
@@ -466,6 +468,34 @@ apis:
         vehicleId: Text
       response:
         type: RowsAffectedResp
+
+  - GET:
+      endpoint: /scheduleTrip/{scheduleTripId}/repeat
+      name: TransitOperatorGetScheduleTripRepeat
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      params:
+        scheduleTripId: Text
+      response:
+        type: ScheduleTripRepeatConfig
+
+  - POST:
+      endpoint: /scheduleTrip/{scheduleTripId}/repeat
+      name: TransitOperatorSetScheduleTripRepeat
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      params:
+        scheduleTripId: Text
+      request:
+        type: SetScheduleTripRepeatReq
+      response:
+        type: ScheduleTripRepeatConfig
 
 types:
   DeviceVehicleMappingListRes:
