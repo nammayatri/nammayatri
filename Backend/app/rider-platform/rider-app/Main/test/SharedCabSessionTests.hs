@@ -77,5 +77,18 @@ tests =
               @?= (RouteSetMoves ["R1"] [], Right (RouteSetMoves [] ["R1"])),
       testCase "a new session on a reused plate outranks the old version" $
         version (newSession (OpenSessionReq "d2" "ml 05-a 1234" (Id "m") (Id "moc") (Id "ibc") AC 4 "R1") (Id "trip3") t0 (Just active))
-          @?= 4
+          @?= 4,
+      testCase "return route runs the same ends reversed" $
+        returnRouteOf "SC-A-F" feed @?= Just "SC-A-R",
+      testCase "a route sharing only one end is not the return" $
+        returnRouteOf "SC-B-F" feed @?= Nothing,
+      testCase "unknown route has no return" $
+        returnRouteOf "SC-X" feed @?= Nothing
     ]
+  where
+    feed =
+      [ ("SC-A-F", ["IEWDUH", "POLO", "MAWLAI"]),
+        ("SC-A-R", ["MAWLAI", "POLO", "IEWDUH"]),
+        ("SC-B-F", ["IEWDUH", "JAIAW"]),
+        ("SC-B-X", ["JAIAW", "LAITUMKHRAH"])
+      ]
