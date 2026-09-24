@@ -5,6 +5,13 @@ imports:
   UTCTime: Kernel.Prelude
   APISuccess: Kernel.Types.APISuccess
   HighPrecMeters: Kernel.Types.Common
+  Summary: Dashboard.Common
+  Value: Data.Aeson
+  InvoiceStatus: Lib.Finance.Domain.Types.Invoice
+  InvoiceType: Domain.Types.Invoice
+
+importPackageOverrides:
+  Domain.Types.Invoice: "beckn-spec"
 
 module: Invoice
 types:
@@ -26,6 +33,55 @@ types:
     title: Text
     price: Text
 
+  # Rider-side (BAP) finance_invoice register; field names mirror the BPP
+  # FinanceManagement InvoiceListItem so the dashboard can render both alike.
+  FinanceInvoiceListRes:
+    totalItems: Int
+    summary: Summary
+    invoices: "[FinanceInvoiceListItem]"
+
+  FinanceInvoiceListItem:
+    invoiceId: Text
+    invoiceNumber: Text
+    invoiceType: InvoiceType
+    invoiceDate: UTCTime
+    invoiceStatus: InvoiceStatus
+    counterpartyType: Text
+    counterpartyId: Text
+    taxableValue: Maybe HighPrecMoney
+    gstRate: Maybe Double
+    gstAmount: Maybe HighPrecMoney
+    cgstAmount: Maybe HighPrecMoney
+    sgstAmount: Maybe HighPrecMoney
+    igstAmount: Maybe HighPrecMoney
+    totalInvoiceValue: HighPrecMoney
+    irn: Maybe Text
+    qrCode: Maybe Text
+    rideId: Maybe Text
+    supplierName: Maybe Text
+    supplierAddress: Maybe Text
+    supplierGstin: Maybe Text
+    supplierTaxNo: Maybe Text
+    supplierId: Maybe Text
+    merchantGstin: Maybe Text
+    issuedToName: Maybe Text
+    issuedToAddress: Maybe Text
+    issuedByName: Maybe Text
+    issuedByAddress: Maybe Text
+    gstinOfParty: Maybe Text
+    sacCode: Maybe Text
+    paymentMethod: Maybe Text
+    taxableValueOfServiceSupplied: Maybe HighPrecMoney
+    lineItems: Value
+    generatedAt: UTCTime
+    taxRate: Maybe Double
+    issuedToTaxNo: Maybe Text
+    issuedByTaxNo: Maybe Text
+
+  FinanceInvoicePdfRes:
+    pdfBase64: Text
+    invoiceNumber: Text
+
 apis:
   # GET /invoice
   - GET:
@@ -39,3 +95,31 @@ apis:
         type: "[InvoiceRes]"
       migrate:
         userActionType: ApiAuth APP_BACKEND CUSTOMERS INVOICE
+  # GET /invoice/finance/list (module prefix adds /invoice)
+  - GET:
+      endpoint: /finance/list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+        invoiceId: Text
+        invoiceNumber: Text
+        from: UTCTime
+        to: UTCTime
+        invoiceType: InvoiceType
+        status: InvoiceStatus
+      response:
+        type: FinanceInvoiceListRes
+      migrate:
+        capability: finance.report.read
+
+  # GET /invoice/finance/pdf
+  - GET:
+      endpoint: /finance/pdf
+      auth: ApiAuthV2
+      mandatoryQuery:
+        invoiceId: Text
+      response:
+        type: FinanceInvoicePdfRes
+      migrate:
+        capability: finance.report.read

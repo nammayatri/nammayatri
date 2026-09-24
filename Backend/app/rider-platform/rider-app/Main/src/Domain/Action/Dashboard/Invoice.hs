@@ -1,23 +1,35 @@
 module Domain.Action.Dashboard.Invoice
   ( getInvoiceInvoice,
+    getInvoiceFinanceList,
+    getInvoiceFinancePdf,
   )
 where
 
 import qualified "this" API.Types.RiderPlatform.Management.Invoice as Common
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Dashboard.Common
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addGregorianMonthsClip, fromGregorian, toGregorian)
+import qualified Domain.Action.UI.FinanceInvoice as UIFinanceInvoice
+import qualified "beckn-spec" Domain.Types.Invoice as DInvoice
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
+import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
 import qualified Storage.Clickhouse.Location as CHL
@@ -124,3 +136,116 @@ makeMonthlyBatchRanges start end
         firstOfNextMonth = UTCTime (addGregorianMonthsClip 1 (fromGregorian y m 1)) 0
         next = min end firstOfNextMonth
      in (start, next) : makeMonthlyBatchRanges next end
+
+-- | Rider-side (BAP) finance invoice register. Always scoped to RIDER invoices
+-- of the given city; invoiceId / invoiceNumber are exact lookups that bypass
+-- the other filters (mirrors the BPP FinanceManagement invoice list).
+getInvoiceFinanceList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DInvoice.InvoiceType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe FInvoice.InvoiceStatus ->
+  Maybe UTCTime ->
+  Flow Common.FinanceInvoiceListRes
+getInvoiceFinanceList merchantShortId opCity mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
+  merchantOpCityId <- getMerchantOpCityId merchantShortId opCity
+  let limit = min 100 . max 0 $ fromMaybe 20 mbLimit
+      offset = max 0 $ fromMaybe 0 mbOffset
+      inCity inv = inv.merchantOperatingCityId == merchantOpCityId && inv.issuedToType == DInvoice.RIDER
+  invoicesAll <- case (mbInvoiceId, mbInvoiceNumber) of
+    (Just invoiceId, _) -> filter inCity . maybeToList <$> QFinanceInvoice.findById (Id invoiceId)
+    (Nothing, Just invoiceNumber) -> filter inCity . maybeToList <$> QFinanceInvoice.findByNumber invoiceNumber
+    (Nothing, Nothing) ->
+      QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+        merchantOpCityId
+        mbFrom
+        mbTo
+        mbInvoiceType
+        mbStatus
+        Nothing
+        Nothing
+        (Just DInvoice.RIDER)
+        []
+        (if isJust mbStatus then [] else [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid])
+        (Just limit)
+        (Just offset)
+  -- Default (no status filter): hide Voided/Cancelled, same as the BPP register.
+  let invoices = case mbStatus of
+        Just _ -> invoicesAll
+        Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FInvoice.Voided, FInvoice.Cancelled]) invoicesAll
+  items <- mapM buildFinanceInvoiceItem invoices
+  let totalItems = Kernel.Prelude.length items
+  pure $
+    Common.FinanceInvoiceListRes
+      { totalItems,
+        summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems},
+        invoices = items
+      }
+  where
+    buildFinanceInvoiceItem :: FInvoice.Invoice -> Flow Common.FinanceInvoiceListItem
+    buildFinanceInvoiceItem invoice = do
+      mbTaxTxn <- listToMaybe <$> QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
+      mbPaymentMethod <- case invoice.entityReferenceId of
+        Just orderId -> do
+          txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+          pure $ listToMaybe txns >>= (.paymentMethod)
+        Nothing -> pure Nothing
+      pure $
+        Common.FinanceInvoiceListItem
+          { invoiceId = invoice.id.getId,
+            invoiceNumber = invoice.invoiceNumber,
+            invoiceType = invoice.invoiceType,
+            invoiceDate = invoice.issuedAt,
+            invoiceStatus = invoice.status,
+            counterpartyType = show invoice.issuedToType,
+            counterpartyId = invoice.issuedToId,
+            taxableValue = (.taxableValue) <$> mbTaxTxn,
+            gstRate = (.gstRate) <$> mbTaxTxn,
+            gstAmount = (.totalGstAmount) <$> mbTaxTxn,
+            cgstAmount = (.cgstAmount) <$> mbTaxTxn,
+            sgstAmount = (.sgstAmount) <$> mbTaxTxn,
+            igstAmount = (.igstAmount) <$> mbTaxTxn,
+            totalInvoiceValue = invoice.totalAmount,
+            irn = invoice.irn,
+            qrCode = invoice.signedQRCode,
+            rideId = invoice.referenceId,
+            supplierName = invoice.supplierName,
+            supplierAddress = invoice.supplierAddress,
+            supplierGstin = invoice.supplierGSTIN,
+            supplierTaxNo = invoice.supplierTaxNo,
+            supplierId = invoice.supplierId,
+            merchantGstin = invoice.merchantGstin,
+            issuedToName = invoice.issuedToName,
+            issuedToAddress = invoice.issuedToAddress,
+            issuedByName = invoice.issuedByName,
+            issuedByAddress = invoice.issuedByAddress,
+            gstinOfParty = mbTaxTxn >>= (.gstinOfParty),
+            sacCode = mbTaxTxn >>= (.sacCode),
+            paymentMethod = mbPaymentMethod,
+            taxableValueOfServiceSupplied = Just invoice.subtotal,
+            lineItems = invoice.lineItems,
+            generatedAt = invoice.createdAt,
+            taxRate = mbTaxTxn >>= (.taxRate),
+            issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),
+            issuedByTaxNo = mbTaxTxn >>= (.issuedByTaxNo)
+          }
+
+getInvoiceFinancePdf :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.FinanceInvoicePdfRes
+getInvoiceFinancePdf merchantShortId opCity invoiceId = do
+  merchantOpCityId <- getMerchantOpCityId merchantShortId opCity
+  invoice <- QFinanceInvoice.findById (Id invoiceId) >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> invoiceId)
+  unless (invoice.merchantOperatingCityId == merchantOpCityId) $
+    throwError $ InvalidRequest "Invoice does not belong to this city"
+  (pdfBase64, invoiceNumber) <- UIFinanceInvoice.renderFinanceInvoicePdf merchantOpCityId ENGLISH [invoice]
+  pure $ Common.FinanceInvoicePdfRes {pdfBase64, invoiceNumber}
+
+getMerchantOpCityId :: ShortId DM.Merchant -> Context.City -> Flow Text
+getMerchantOpCityId merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  pure merchantOpCity.id.getId
