@@ -50,6 +50,7 @@ VehicleTrip:
 
   # Partial unique index on vehicle_number (live statuses) and the CHECKs are raw SQL in
   # dev/ddl-migrations/rider-app/1575-vehicle-trip-constraints.sql: namma-dsl can't express them.
+  # Those only hold because vehicle_trip is in kv_configs.disableForKV (1576), so *WithKV calls hit Postgres directly.
   extraIndexes:
     - columns: [driverId, startedAt]
 
