@@ -190,6 +190,7 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
+    , finance-kernel
     , http-types
     , lib-dashboard
     , mobility-core

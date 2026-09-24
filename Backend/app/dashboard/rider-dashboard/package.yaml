@@ -129,6 +129,7 @@ library:
     - shared-services
     - special-zone-a
     - payment
+    - finance-kernel
 
 executables:
   rider-dashboard-exe:

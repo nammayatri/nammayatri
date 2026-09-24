@@ -1,4 +1,4 @@
-module Domain.Action.UI.FinanceInvoice (getFinanceInvoicePdf) where
+module Domain.Action.UI.FinanceInvoice (getFinanceInvoicePdf, renderFinanceInvoicePdf) where
 
 import qualified API.Types.UI.FinanceInvoice as API
 import qualified Data.Time as DT
@@ -44,7 +44,6 @@ getFinanceInvoicePdf ::
 getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
 
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo
@@ -83,8 +82,15 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
-  let lang = fromMaybe ENGLISH person.language
-      tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
+  (pdfBase64, invoiceNumber) <- renderFinanceInvoicePdf person.merchantOperatingCityId.getId (fromMaybe ENGLISH person.language) invoices
+  pure $ API.FinanceInvoicePdfResp {pdfBase64, invoiceNumber}
+
+-- | Render the first (newest) renderable invoice to a base64 PDF. Returns
+-- (pdfBase64, invoiceNumber). Callers own the access checks on @invoices@.
+renderFinanceInvoicePdf :: Text -> Language -> [FInvoice.Invoice] -> Flow (Text, Text)
+renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing
+  let tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
       tmplLogoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl
       -- AggregatedCommission isn't rendered for riders — these BPP-side fields aren't on RiderConfig.
       tmplSellerTradeName = Nothing :: Maybe Text
@@ -139,12 +145,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         _ -> Nothing
   html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) mbInvType lang tz ctx
   pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
-
-  pure $
-    API.FinanceInvoicePdfResp
-      { pdfBase64 = pdfBase64,
-        invoiceNumber = chosenInv.invoiceNumber
-      }
+  pure (pdfBase64, chosenInv.invoiceNumber)
 
 fetchInvoicesByRideId :: Text -> Id DP.Person -> Maybe InvoiceType -> Flow [FInvoice.Invoice]
 fetchInvoicesByRideId rideId personId mbInvoiceType = do
