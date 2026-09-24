@@ -423,7 +423,7 @@ getInfo searchId journeyLeg journeyLegs mbPassCandidates = do
 search :: (JT.SearchRequestFlow m r c, HasMasterCloudForwarder r) => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> Maybe Text -> Maybe Spec.ServiceTierType -> (Text -> m ()) -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Bool -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbHasPasses = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency <&> (.name)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency >>= (.gtfsId)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   frfsSearchReq <- buildFRFSSearchReq frfsRouteDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare

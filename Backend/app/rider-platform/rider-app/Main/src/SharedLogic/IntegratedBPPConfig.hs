@@ -85,8 +85,8 @@ findIntegratedBPPConfigFromAgency ::
   Enums.VehicleCategory ->
   PlatformType ->
   m IntegratedBPPConfig
-findIntegratedBPPConfigFromAgency agencyName merchantOperatingCityId vehicleCategory platformType =
-  findMaybeIntegratedBPPConfigFromAgency agencyName merchantOperatingCityId vehicleCategory platformType
+findIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
+  findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType
     >>= fromMaybeM IntegratedBPPConfigNotFound
 
 findAllIntegratedBPPConfig ::
