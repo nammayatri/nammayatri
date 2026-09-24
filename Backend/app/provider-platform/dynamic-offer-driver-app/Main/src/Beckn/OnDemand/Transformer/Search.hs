@@ -23,7 +23,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.Utils as Utils
 import qualified Control.Monad.Catch as C
-import qualified Data.HashMap.Strict as H
+-- import qualified Data.HashMap.Strict as H
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search
@@ -50,14 +50,16 @@ buildSearchReq messageId subscriber = buildSearchReqRaw messageId subscriber.sub
 -- Same as buildSearchReq but takes (bapId, bapUri) directly instead of a full
 -- Subscriber. Used by the internal sync_search endpoint where there's no
 -- BECKN signature middleware to populate a Subscriber.
-buildSearchReqRaw :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], EncFlow m r) => Data.Text.Text -> Data.Text.Text -> BaseUrl -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> BaseUrl -> m Domain.Action.Beckn.Search.DSearchReq
-buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualBapUri = do
-  cloudType_ <- asks (.cloudType)
-  bapHostRedirectMap <- asks (.bapHostRedirectMap)
+buildSearchReqRaw :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Data.Text.Text -> Data.Text.Text -> BaseUrl -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> BaseUrl -> m Domain.Action.Beckn.Search.DSearchReq
+buildSearchReqRaw messageId bapSubscriberId _bapSubscriberUrl req context actualBapUri = do
+  -- cloudType_ <- asks (.cloudType)
+  -- bapHostRedirectMap <- asks (.bapHostRedirectMap)
   -- If driver's cloud is in bapHostRedirectMap, use actualBapUri (from request); else use subscriber URL.
-  let newBapUri_ = case cloudType_ of
-        Just c | H.member (T.pack (show c)) bapHostRedirectMap -> actualBapUri
-        _ -> bapSubscriberUrl
+  -- //// Removed to make sure everytime BAP uri is used from context, not from registry.
+  --  let newBapUri_ = case cloudType_ of
+  --       Just c | H.member (T.pack (show c)) bapHostRedirectMap -> actualBapUri
+  --       _ -> bapSubscriberUrl
+  let newBapUri_ = actualBapUri
   now <- Kernel.Types.Common.getCurrentTime
   let bapId_ = bapSubscriberId
       bapUri_ = newBapUri_
