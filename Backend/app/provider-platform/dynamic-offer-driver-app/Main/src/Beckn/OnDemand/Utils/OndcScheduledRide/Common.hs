@@ -25,6 +25,8 @@ module Beckn.OnDemand.Utils.OndcScheduledRide.Common
     overrideOrderBreakupTitles,
     overrideOrderFulfillmentId,
     fixItemCompliance,
+    soleOrderItem,
+    extractAddOns,
     overrideOrderItemCompliance,
     overrideOrderStopAuthorizationStatus,
     applyOndcScheduledRideAssignedOrderOverrides,
@@ -44,6 +46,7 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.BapMetadata as DBapMetadata
 import qualified Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RideRoute as RI
 import qualified Kernel.External.Maps.Google.PolyLinePoints as PolyLine
@@ -51,13 +54,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Ride (searchRequestKey)
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import Tools.Error
 
 -- | Append a tag group to an existing (possibly absent) tag-group list,
 -- if there is one to add.
@@ -172,13 +172,13 @@ patchOrderRouteInfo transactionId order = do
 -- | Extract BAP_TERMS.STATIC_TERMS off an incoming wire message's tag list,
 -- parse it as a URL, and -- if it parsed and differs from what's on record --
 -- store it on that BAP's BapMetadata row. Never throws.
-verifyIncomingStaticTerms :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DBapMetadata.BapMetadata -> Domain.Domain -> Maybe [Spec.TagGroup] -> m ()
-verifyIncomingStaticTerms bapSubscriberId domain tagGroups =
+verifyIncomingStaticTerms :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DBapMetadata.BapMetadata -> Domain.Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe DBapMetadata.BapMetadata -> Maybe [Spec.TagGroup] -> m (Maybe DBapMetadata.BapMetadata)
+verifyIncomingStaticTerms bapSubscriberId domain merchantId merchantOpCityId mbBapMetadata tagGroups =
   case Utils.getTagV2 Tag.BAP_TERMS Tag.STATIC_TERMS tagGroups of
-    Nothing -> pure ()
+    Nothing -> pure mbBapMetadata
     Just rawUrl -> do
       result <- liftIO $ E.try @E.SomeException $ parseBaseUrl rawUrl
-      either (const (pure ())) (CQBapMetaData.updateStaticTermsUrlIfChanged bapSubscriberId (show domain)) result
+      either (const (pure mbBapMetadata)) (CQBapMetaData.updateStaticTermsUrlIfChanged bapSubscriberId (show domain) merchantId merchantOpCityId mbBapMetadata) result
 
 boolTagValue :: Bool -> Text
 boolTagValue True = "true"
@@ -361,6 +361,19 @@ overrideOrderFulfillmentId quoteId order =
     patchFulfillment fulfillment = fulfillment {Spec.fulfillmentId = Just quoteId}
     patchItem item = item {Spec.itemFulfillmentIds = Just [quoteId]}
 
+-- Items --------------------------------------------------------
+
+-- | The order's only item, if it has exactly one: every ONDC scheduled-ride wire message this
+-- pilot reads carries a single item, and anything else is not something we can attribute.
+soleOrderItem :: Maybe [Spec.Item] -> Maybe Spec.Item
+soleOrderItem = \case
+  Just [item] -> Just item
+  _ -> Nothing
+
+-- | The add-ons echoed on the wire item (item.add_ons) -- a BAP can select more than one add-on on the same item.
+extractAddOns :: Maybe [Spec.Item] -> [Spec.AddOn]
+extractAddOns mbItems = fromMaybe [] $ soleOrderItem mbItems >>= (.itemAddOns)
+
 -- ItemCompliance --------------------------------------------------------
 
 -- Restricts an item's descriptor.code to RIDE/RENTAL and its tags to a fixed allow-list, shared by every ONDC-scheduled-ride transformer that patches items (order.items or catalog.providers[*].items).
@@ -431,6 +444,8 @@ applyOndcScheduledRideAssignedOrderOverrides isScheduled quoteId isRideStarted a
 -- Fetches the pilot gate and applies applyOndcScheduledRideAssignedOrderOverrides only when enabled, replacing the fetch+check+apply every on_update/on_status push needing this override used to duplicate.
 applyOndcScheduledRideOrderOverridesIfEnabled ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  Id DBapMetadata.BapMetadata ->
+  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Bool ->
   Text ->
@@ -438,9 +453,9 @@ applyOndcScheduledRideOrderOverridesIfEnabled ::
   [DAddOnConfig.AddOnData] ->
   Maybe Spec.ConfirmReqMessage ->
   m (Maybe Spec.ConfirmReqMessage)
-applyOndcScheduledRideOrderOverridesIfEnabled merchantOperatingCityId isScheduled quoteId isRideStarted addOnData mbMsg = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+applyOndcScheduledRideOrderOverridesIfEnabled bapSubscriberId merchantId merchantOperatingCityId isScheduled quoteId isRideStarted addOnData mbMsg = do
+  mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity bapSubscriberId Domain.MOBILITY merchantId merchantOperatingCityId
+  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
   if isOndcScheduledRideSupportEnabled
     then traverse patchMsg mbMsg
     else pure mbMsg

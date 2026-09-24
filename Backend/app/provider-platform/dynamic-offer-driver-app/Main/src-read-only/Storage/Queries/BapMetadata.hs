@@ -6,6 +6,8 @@ module Storage.Queries.BapMetadata where
 
 import qualified Data.Text
 import qualified Domain.Types.BapMetadata
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -22,22 +24,37 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BapMetadata.BapMetadata] -> m ())
 createMany = traverse_ create
 
-findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
-findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-findBySubscriberIdAndDomain ::
+findBySubscriberIdDomainMerchantAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> Kernel.Prelude.Maybe Data.Text.Text -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
-findBySubscriberIdAndDomain id domain = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.domain $ Se.Eq domain]]
+  (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> Data.Text.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
+findBySubscriberIdDomainMerchantAndCity id domain merchantId merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
 
-findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
-findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+findByPrimaryKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Data.Text.Text -> Kernel.Types.Id.Id Domain.Types.BapMetadata.BapMetadata -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.BapMetadata.BapMetadata))
+findByPrimaryKey domain id merchantId merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BapMetadata.BapMetadata -> m ())
 updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.domain domain,
+    [ Se.Set Beam.enableOndcScheduledRideSupport enableOndcScheduledRideSupport,
       Se.Set Beam.logoUrl (Kernel.Prelude.fmap showBaseUrl logoUrl),
       Se.Set Beam.name name,
       Se.Set Beam.offlineContract offlineContract,
@@ -47,21 +64,47 @@ updateByPrimaryKey (Domain.Types.BapMetadata.BapMetadata {..}) = do
       Se.Set Beam.supportUrl (Kernel.Prelude.fmap showBaseUrl supportUrl),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
+    [ Se.And
+        [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
 
 instance FromTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   fromTType' (Beam.BapMetadataT {..}) = do
     logoUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) logoUrl
     staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
     supportUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) supportUrl
-    pure $ Just Domain.Types.BapMetadata.BapMetadata {domain = domain, id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, offlineContract = offlineContract, staticTermsUrl = staticTermsUrl', supportEmail = supportEmail, supportPhone = supportPhone, supportUrl = supportUrl', createdAt = createdAt, updatedAt = updatedAt}
+    pure $
+      Just
+        Domain.Types.BapMetadata.BapMetadata
+          { domain = domain,
+            enableOndcScheduledRideSupport = enableOndcScheduledRideSupport,
+            id = Kernel.Types.Id.Id id,
+            logoUrl = logoUrl',
+            merchantId = Kernel.Types.Id.Id <$> merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
+            name = name,
+            offlineContract = offlineContract,
+            staticTermsUrl = staticTermsUrl',
+            supportEmail = supportEmail,
+            supportPhone = supportPhone,
+            supportUrl = supportUrl',
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
 instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   toTType' (Domain.Types.BapMetadata.BapMetadata {..}) = do
     Beam.BapMetadataT
       { Beam.domain = domain,
+        Beam.enableOndcScheduledRideSupport = enableOndcScheduledRideSupport,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.logoUrl = Kernel.Prelude.fmap showBaseUrl logoUrl,
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.name = name,
         Beam.offlineContract = offlineContract,
         Beam.staticTermsUrl = Kernel.Prelude.fmap showBaseUrl staticTermsUrl,

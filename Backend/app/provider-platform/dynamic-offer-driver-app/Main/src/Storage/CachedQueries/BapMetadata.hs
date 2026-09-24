@@ -14,6 +14,8 @@
 module Storage.CachedQueries.BapMetadata where
 
 import Domain.Types.BapMetadata
+import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context as Context
@@ -23,49 +25,50 @@ import qualified Storage.Queries.BapMetadata as Queries
 
 type Domain = Text
 
-createIfNotPresent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => BapMetadata -> Id BapMetadata -> Domain -> m ()
-createIfNotPresent bapMetadata subscriberId domain = do
-  maybeBapMetadata <- findBySubscriberIdAndDomain' subscriberId domain
+createIfNotPresent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => BapMetadata -> Id BapMetadata -> Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+createIfNotPresent bapMetadata subscriberId domain merchantId merchantOpCityId = do
+  maybeBapMetadata <- findBySubscriberIdDomainMerchantAndCity' subscriberId domain merchantId merchantOpCityId
   whenNothing maybeBapMetadata $ do
     void $ Queries.create bapMetadata
-    void $ cacheBapMetadata subscriberId domain bapMetadata
+    void $ cacheBapMetadata subscriberId domain merchantId merchantOpCityId bapMetadata
   where
     whenNothing m = when (isNothing m)
 
-findBySubscriberIdAndDomain :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id BapMetadata -> Context.Domain -> m (Maybe BapMetadata)
-findBySubscriberIdAndDomain subscriberId domain = do
+findBySubscriberIdDomainMerchantAndCity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id BapMetadata -> Context.Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m (Maybe BapMetadata)
+findBySubscriberIdDomainMerchantAndCity subscriberId domain merchantId merchantOpCityId = do
   let domainText = show domain
-  findBySubscriberIdAndDomain' subscriberId domainText
+  findBySubscriberIdDomainMerchantAndCity' subscriberId domainText merchantId merchantOpCityId
 
-findBySubscriberIdAndDomain' :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id BapMetadata -> Domain -> m (Maybe BapMetadata)
-findBySubscriberIdAndDomain' subscriberId domain =
-  Hedis.safeGet (makeSubscriberIdKey subscriberId domain) >>= \case
+findBySubscriberIdDomainMerchantAndCity' :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id BapMetadata -> Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m (Maybe BapMetadata)
+findBySubscriberIdDomainMerchantAndCity' subscriberId domain merchantId merchantOpCityId =
+  Hedis.safeGet (makeSubscriberIdKey subscriberId domain merchantId merchantOpCityId) >>= \case
     Just a -> return $ Just a
-    Nothing -> flip whenJust (cacheBapMetadata subscriberId domain) /=<< Queries.findBySubscriberIdAndDomain subscriberId (Just domain)
+    Nothing -> flip whenJust (cacheBapMetadata subscriberId domain merchantId merchantOpCityId) /=<< Queries.findBySubscriberIdDomainMerchantAndCity subscriberId domain (Just merchantId) (Just merchantOpCityId)
 
 -- | ONDC scheduled-ride pilot: store the BAP's own declared BAP_TERMS.STATIC_TERMS URL (parsed at
 -- /search, /init, /confirm) against its BapMetadata row. Update-only, no
--- insert -- if no row exists yet for this subscriber+domain (e.g. this is the
+-- insert -- if no row exists yet for this subscriber+domain+merchant+city (e.g. this is the
 -- very first request ever seen from a brand-new BAP, before Layer 1's own
 -- createIfNotPresent has had a chance to run), this is a deliberate no-op: it
 -- doesn't fabricate a row with placeholder name/logo data, it just waits for
 -- the next request from the same BAP, by which point Layer 1 will have
 -- created the row properly.
-updateStaticTermsUrlIfChanged :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id BapMetadata -> Domain -> BaseUrl -> m ()
-updateStaticTermsUrlIfChanged subscriberId domain newStaticTermsUrl = do
-  mbExisting <- findBySubscriberIdAndDomain' subscriberId domain
+updateStaticTermsUrlIfChanged :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id BapMetadata -> Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe BapMetadata -> BaseUrl -> m (Maybe BapMetadata)
+updateStaticTermsUrlIfChanged subscriberId domain merchantId merchantOpCityId mbExisting newStaticTermsUrl =
   case mbExisting of
     Just existing | existing.staticTermsUrl /= Just newStaticTermsUrl -> do
       let updated = existing {staticTermsUrl = Just newStaticTermsUrl}
       Queries.updateByPrimaryKey updated
-      cacheBapMetadata subscriberId domain updated
-    _ -> pure ()
+      cacheBapMetadata subscriberId domain merchantId merchantOpCityId updated
+      pure $ Just updated
+    _ -> pure mbExisting
 
-cacheBapMetadata :: (CacheFlow m r) => Id BapMetadata -> Domain -> BapMetadata -> m ()
-cacheBapMetadata subscriberId domain bapMetadata = do
+cacheBapMetadata :: (CacheFlow m r) => Id BapMetadata -> Domain -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> BapMetadata -> m ()
+cacheBapMetadata subscriberId domain merchantId merchantOpCityId bapMetadata = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeSubscriberIdKey subscriberId domain
+  let idKey = makeSubscriberIdKey subscriberId domain merchantId merchantOpCityId
   Hedis.setExp idKey bapMetadata expTime
 
-makeSubscriberIdKey :: Id BapMetadata -> Text -> Text
-makeSubscriberIdKey subscriberId domain = "CachedQueries:BapMetadata:" <> domain <> ":sid-" <> subscriberId.getId
+makeSubscriberIdKey :: Id BapMetadata -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text
+makeSubscriberIdKey subscriberId domain merchantId merchantOpCityId =
+  "CachedQueries:BapMetadata:" <> domain <> ":sid-" <> subscriberId.getId <> ":mid-" <> merchantId.getId <> ":mocid-" <> merchantOpCityId.getId

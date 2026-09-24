@@ -35,12 +35,10 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Tools.ActorInfo as ActorInfo
-import Tools.Error
 import TransactionLogs.PushLogs
 
 type API =
@@ -76,8 +74,8 @@ status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerB
       onStatusReq' <- ACL.buildOnStatusReqV2 dStatusRes.transporter dStatusRes.booking dStatusRes.info (Just msgId)
       -- ONDC scheduled-ride pilot: single call, see
       -- Beckn.OnDemand.Transformer.OndcScheduledRide.OnStatus.ondcScheduledRideStatusReqBuild.
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = dStatusRes.booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist dStatusRes.booking.merchantOperatingCityId.getId)
-      let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id dStatusRes.booking.bapId) Domain.MOBILITY dStatusRes.booking.providerId dStatusRes.booking.merchantOperatingCityId
+      let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
       onStatusReq <-
         if isOndcScheduledRideSupportEnabled
           then OSROnStatus.ondcScheduledRideStatusReqBuild dStatusRes onStatusReq'
