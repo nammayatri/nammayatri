@@ -7,12 +7,12 @@ module API.Action.ProviderPlatform.Management.Merchant
   )
 where
 
-import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.ProviderPlatform.Management.Merchant
+import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)

@@ -7,11 +7,11 @@ module API.Action.RiderPlatform.Management.Merchant
   )
 where
 
-import "rider-app" Domain.Types.AccessMatrix
 import qualified API.Types.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.Merchant
 import qualified Dashboard.Common.Merchant
 import qualified Domain.Action.RiderPlatform.Management.Merchant
+import "rider-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
