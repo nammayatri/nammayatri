@@ -629,6 +629,7 @@ library
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab.LegState
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
@@ -2134,6 +2135,7 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      SharedCabLegStateTests
       SharedCabPlateTests
       SharedCabSessionTests
       Paths_rider_app

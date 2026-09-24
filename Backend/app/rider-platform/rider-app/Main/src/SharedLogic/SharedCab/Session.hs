@@ -5,6 +5,7 @@ module SharedLogic.SharedCab.Session
     pause,
     resume,
     getSession,
+    activeSessionsOnRoute,
     setWalkupCount,
   )
 where
@@ -43,6 +44,12 @@ readSession = Redis.safeGet . sessionKey
 
 getSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 getSession = Redis.withMasterRedis . readSession . canonicalisePlate
+
+-- | Each member is re-read: a route set can outlive a session that has since paused or ended.
+activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m [Session]
+activeSessionsOnRoute route = Redis.withMasterRedis $ do
+  plates <- Redis.sMembers (routeKey route)
+  filter ((== ACTIVE) . (.status)) . catMaybes <$> mapM readSession plates
 
 liftSession :: MonadFlow m => Either SharedCabSessionError a -> m a
 liftSession = either throwError pure

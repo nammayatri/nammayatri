@@ -86,6 +86,8 @@ import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Offer as SOffer
 import SharedLogic.Search
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
+import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -108,15 +110,27 @@ import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
 filterTransitRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
-filterTransitRoutes riderConfig routes = do
-  if riderConfig.enableBusFiltering == Just True
-    then filterM filterBusRoutes routes
-    else return routes
+filterTransitRoutes riderConfig routes = filterM keepRoute routes
   where
-    filterBusRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => MultiModalRoute -> m Bool
-    filterBusRoutes route = do
-      let legs = route.legs
-          busLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) legs
+    keepRoute route = do
+      let busModeLegs = filter (\leg -> leg.mode == MultiModalTypes.Bus) route.legs
+      cabsComing <- allM hasCabComing (filter isSharedCabLeg busModeLegs)
+      if cabsComing && riderConfig.enableBusFiltering == Just True
+        then filterBusRoutes (filter (not . isSharedCabLeg) busModeLegs)
+        else return cabsComing
+
+    isSharedCabLeg :: MultiModalLeg -> Bool
+    isSharedCabLeg leg = maybe False isSharedCabAgency (leg.agency >>= (.gtfsId))
+
+    -- A shared-cab itinerary is shown only while a cab is running its route (07 B2, decision 9).
+    -- TODO(7.2): also require the cab not to have passed the board stop (LTS upcoming stops).
+    hasCabComing :: (Hedis.HedisFlow m r, MonadFlow m) => MultiModalLeg -> m Bool
+    hasCabComing leg =
+      maybe (return False) (fmap (not . null) . SharedCabSession.activeSessionsOnRoute . gtfsIdtoDomainCode) $
+        listToMaybe leg.routeDetails >>= (.gtfsId)
+
+    filterBusRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => [MultiModalLeg] -> m Bool
+    filterBusRoutes busLegs = do
       if null busLegs
         then return True
         else do
