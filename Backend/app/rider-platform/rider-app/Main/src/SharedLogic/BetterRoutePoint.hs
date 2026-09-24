@@ -34,6 +34,7 @@ module SharedLogic.BetterRoutePoint
     BetterRoute (..),
     BetterRoutePlan (..),
     findBetterRoutePoints,
+    restateWalks,
     betterRouteForCustomPoints,
   )
 where
@@ -111,7 +112,11 @@ data BetterRoute = BetterRoute
 -- that ranked lower, is a deliberate choice they have to make first.
 data BetterRoutePlan = BetterRoutePlan
   { best :: BetterRoute,
-    alternatives :: [BetterRoute]
+    alternatives :: [BetterRoute],
+    -- | The walk caps this ride was scanned against, kept so 'restateWalks' can hold a
+    -- measured walk to the same limit.
+    maxWalkAtPickup :: Meters,
+    maxWalkAtDrop :: Meters
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -232,7 +237,9 @@ findBetterRoutePoints cfg pickup dropPoint pts mbRouteDistance mbRouteDuration =
   pure
     BetterRoutePlan
       { best,
-        alternatives = rankRoutes cfg (drop 1 ranked <> maybeToList mbBoth)
+        alternatives = rankRoutes cfg (drop 1 ranked <> maybeToList mbBoth),
+        maxWalkAtPickup = toMeters effMaxWalkAtPickup,
+        maxWalkAtDrop = toMeters effMaxWalkAtDrop
       }
   where
     minSavingFloorD = fromIntegral $ getMeters cfg.minRideDistanceSaving
@@ -266,6 +273,34 @@ findBetterRoutePoints cfg pickup dropPoint pts mbRouteDistance mbRouteDuration =
                     else case inner of
                       Just best | candidateNetBenefit cfg best >= candidateNetBenefit cfg candidate -> inner
                       _ -> Just candidate
+
+-- | Restates a plan's walks as measured by a maps provider, then re-applies the walk tests
+-- the scan passed on straight-line walks. A walk is never shorter than the straight line,
+-- so the scan only ever over-offers: this drops the ends that fail and re-ranks the rest.
+-- 'Nothing' when no single-sided shape survives, since only one of those may be the default.
+restateWalks ::
+  BetterPointConfig ->
+  -- | Measured walk to the suggested pickup, when the plan moves the pickup
+  Maybe Meters ->
+  -- | Measured walk from the suggested drop, when the plan moves the drop
+  Maybe Meters ->
+  BetterRoutePlan ->
+  Maybe BetterRoutePlan
+restateWalks cfg mbPickupWalk mbDropWalk plan = do
+  let restated = rankRoutes cfg $ mapMaybe restate (plan.best : plan.alternatives)
+  best <- find ((/= BOTH) . (.kind)) restated
+  pure plan {best, alternatives = filter (/= best) restated}
+  where
+    restate route = do
+      betterPickup <- traverse (restatePoint plan.maxWalkAtPickup mbPickupWalk) route.betterPickup
+      betterDrop <- traverse (restatePoint plan.maxWalkAtDrop mbDropWalk) route.betterDrop
+      pure route {betterPickup, betterDrop}
+
+    restatePoint maxWalk mbWalk betterPoint = do
+      let walkDistance = fromMaybe betterPoint.walkDistance mbWalk
+      guard (walkDistance <= maxWalk)
+      guard (maybe True (> walkDistance) betterPoint.rideDistanceSaved)
+      pure betterPoint {walkDistance}
 
 -- | Builds the route for endpoints the customer picked themselves — an alternative they
 -- tapped, or a marker they nudged — rather than ones this module proposed. The

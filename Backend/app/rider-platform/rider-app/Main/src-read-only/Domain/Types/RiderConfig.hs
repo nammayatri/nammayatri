@@ -39,6 +39,7 @@ data RiderConfig = RiderConfig
     betterPointMinSavingPctOfRide :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     betterPointResolvePlaceNameOnSelect :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     betterPointWalkAversion :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    betterPointWalkDistanceSource :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BetterPointWalkDistanceSource,
     blockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     boardingBusPingMaxAgeSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     boardingMatchRadiusInMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -239,6 +240,8 @@ data RiderConfig = RiderConfig
   }
   deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
+data BetterPointWalkDistanceSource = STRAIGHT_LINE | MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data BusTrackingConfig = BusTrackingConfig
@@ -294,6 +297,8 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BetterPointWalkDistanceSource)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
 
