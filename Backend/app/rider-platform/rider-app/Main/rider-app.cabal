@@ -1396,6 +1396,7 @@ library
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
       Domain.Types.VehicleSeatLayoutMapping
+      Domain.Types.VehicleTrip
       Domain.Types.VendorSplitDetails
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
@@ -1570,6 +1571,7 @@ library
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VehicleSeatLayoutMapping
+      Storage.Beam.VehicleTrip
       Storage.Beam.VendorSplitDetails
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.AssetRelease
@@ -1829,6 +1831,7 @@ library
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VehicleSeatLayoutMapping
+      Storage.Queries.VehicleTrip
       Storage.Queries.VendorSplitDetails
       Storage.Queries.WhiteListOrg
   other-modules:

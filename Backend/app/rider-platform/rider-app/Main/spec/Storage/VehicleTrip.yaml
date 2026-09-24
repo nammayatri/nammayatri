@@ -1,0 +1,108 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  ServiceTierType: BecknV2.FRFS.Enums
+
+VehicleTrip:
+  tableName: vehicle_trip
+
+  fields:
+    id: Id VehicleTrip
+    serviceTierType: ServiceTierType
+    driverId: Text
+    vehicleNumber: Text
+    capacity: Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    integratedBppConfigId: Id IntegratedBPPConfig
+    routeCode: Text
+    status: VehicleTripStatus
+    startedAt: UTCTime
+    movingAt: Maybe UTCTime
+    reachedEndAt: Maybe UTCTime
+    endedAt: Maybe UTCTime
+    endReason: Maybe VehicleTripEndReason
+    offlineBoardings: Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    VehicleTripStatus:
+      enum: "ACTIVE, PAUSED, COMPLETED, ABANDONED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    VehicleTripEndReason:
+      enum: "END_ROUTE, RETURN, ROUTE_CHANGED, END_FOR_NOW, SESSION_TIMEOUT, OPS_FORCED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripEndReason>
+
+  sqlType:
+    serviceTierType: text
+    status: text
+    endReason: text
+
+  constraints:
+    id: PrimaryKey
+
+  # Partial unique index on vehicle_number (live statuses) and the CHECKs are raw SQL in
+  # dev/ddl-migrations/rider-app/1575-vehicle-trip-constraints.sql: namma-dsl can't express them.
+  extraIndexes:
+    - columns: [driverId, startedAt]
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findActiveByVehicleNumber:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - vehicleNumber
+          - in:
+            - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
+
+    closeTrip:
+      kvFunction: updateOneWithKV
+      params: [status, endReason, endedAt]
+      where: id
+
+    updateMovingAt:
+      kvFunction: updateOneWithKV
+      params: [movingAt]
+      where: id
+
+    updateReachedEndAt:
+      kvFunction: updateOneWithKV
+      params: [reachedEndAt]
+      where: id
+
+    updateOfflineBoardings:
+      kvFunction: updateOneWithKV
+      params: [offlineBoardings]
+      where: id
+
+    findAllByDriverIdAndStartedAtRange:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - driverId
+          - gte:
+            - startedAt: from
+          - lte:
+            - startedAt: to
+      orderBy:
+        field: startedAt
+        order: asc
+
+  default:
+    offlineBoardings: "0"
+    createdAt: "CURRENT_TIMESTAMP"
+    updatedAt: "CURRENT_TIMESTAMP"
+
+  extraOperations:
+    - GENERATE_INDEXES
