@@ -25,7 +25,7 @@ module SharedLogic.SharedCab.SessionState
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType)
-import Data.Aeson (FromJSON (..), Options (..), ToJSON (..), defaultOptions, genericParseJSON, genericToJSON)
+import Data.Aeson (Options (..), defaultOptions)
 import qualified Data.Char as Char
 import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 import qualified Data.Text as T
