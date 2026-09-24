@@ -303,7 +303,10 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     -- pickup radius, pet mode, ...) that this specific search satisfies. See
     -- `preferenceMatchScore` below -- adding a new preference dimension never requires
     -- touching this field or its callers, only appending one more PreferenceCheck.
-    preferenceMatchScore :: Double
+    preferenceMatchScore :: Double,
+    -- Whether any preference dimension applied to this driver/search. The score above is 1.0
+    -- when none applies (right for ranking), so display code must gate on this flag.
+    hasApplicablePreferences :: Bool
   }
   deriving (Generic, Show, ToJSON)
 
@@ -329,7 +332,8 @@ instance Default DriverPoolWithActualDistResult where
         poolingLogicVersion = Nothing,
         searchReqDriverStatsCounters = Nothing,
         idleTimeSeconds = Nothing,
-        preferenceMatchScore = 1.0
+        preferenceMatchScore = 1.0,
+        hasApplicablePreferences = False
       }
 
 -- | One preference dimension's outcome for a single driver/ride pairing.
@@ -392,7 +396,7 @@ instance FromJSON DriverPoolResult where
   parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "isPetModeEnabled" (A.Bool False)
 
 instance FromJSON DriverPoolWithActualDistResult where
-  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "preferenceMatchScore" (A.Number 1.0)
+  parseJSON = A.genericParseJSON A.defaultOptions . withJsonDefault "hasApplicablePreferences" (A.Bool False) . withJsonDefault "preferenceMatchScore" (A.Number 1.0)
 
 instance HasCoordinates DriverPoolWithActualDistResult where
   getCoordinates r = getCoordinates r.driverPoolResult

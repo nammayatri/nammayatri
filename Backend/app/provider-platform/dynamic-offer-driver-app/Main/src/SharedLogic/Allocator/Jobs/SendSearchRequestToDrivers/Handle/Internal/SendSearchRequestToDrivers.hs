@@ -488,6 +488,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             parcelQuantity = searchReq.parcelQuantity,
             driverTagScore = dpwRes.score,
             preferenceMatchScore = Just dpwRes.preferenceMatchScore,
+            hasApplicablePreferences = Just dpwRes.hasApplicablePreferences,
             conditionalCharges = additionalChargesEligiblFor,
             isSafetyPlus = Just isEligibleForSafetyPlusCharge,
             coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,

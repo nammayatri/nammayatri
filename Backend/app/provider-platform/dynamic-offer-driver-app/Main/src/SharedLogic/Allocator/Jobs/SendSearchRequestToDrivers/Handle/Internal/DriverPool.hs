@@ -287,10 +287,12 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
       map
         ( \driver ->
             let personId = cast driver.driverPoolResult.driverId
+                preferenceChecks = mkDriverPreferenceChecks searchReq driver
              in driver
                   { searchReqDriverStatsCounters = Map.lookup personId countersMap,
                     idleTimeSeconds = Map.lookup personId idleMap,
-                    preferenceMatchScore = computePreferenceMatchScore (mkDriverPreferenceChecks searchReq driver)
+                    preferenceMatchScore = computePreferenceMatchScore preferenceChecks,
+                    hasApplicablePreferences = any (.isApplicable) preferenceChecks
                   }
         )
         onlyNewDriversWithCustomerInfo
