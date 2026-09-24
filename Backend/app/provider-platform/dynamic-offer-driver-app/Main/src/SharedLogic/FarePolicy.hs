@@ -377,6 +377,9 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
   let params =
         SFC.CalculateFareParametersParams
           { farePolicy = fullFarePolicy,
+            computationPhase = SFC.FCEstimate,
+            mbCapConfig = Nothing,
+            mbEstimateFareParams = Nothing,
             actualDistance = mbDistance,
             rideTime = now, ----------assumption as this logic should work only for one way book now trips
             returnTime = Nothing,

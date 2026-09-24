@@ -312,10 +312,9 @@ processEndRideFinance ::
   TransporterConfig ->
   m ()
 processEndRideFinance merchant ride booking newFareParams driverId driverInfo thresholdConfig = do
-  -- Compute fare components
-  let totalFare = fromMaybe 0 ride.fare
+  let walletFinanceEnabled = settlementWalletFinanceEnabled merchant thresholdConfig
+      totalFare = fromMaybe 0 ride.fare
       baseFare = FC.netRideFare newFareParams totalFare
-      isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False thresholdConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       -- When wallet isolation is enabled, scope all prepaid ops to the ride's vehicle category.
       mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (Variant.castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
@@ -341,7 +340,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     _ -> pure ()
 
   -- 2. Wallet Flow
-  when (isPrepaidSubscriptionAndWalletEnabled || thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
+  when walletFinanceEnabled $ do
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
@@ -478,6 +477,7 @@ createDriverWalletTransaction ::
     CacheFlow m r,
     EncFlow m r,
     Finance.HasActorInfo m r,
+    BeamFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r
   ) =>
@@ -540,7 +540,12 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               vatAbsorbed = rawTaxAmount - postTax
            in (postTax, max 0 (rawBaseFare - customerDiscountAmount), vatAbsorbed)
 
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+  let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+      (holdCounterparty, holdOwnerId) = case ride.fleetOwnerId of
+        Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
+        Nothing -> (counterpartyDriver, ride.driverId.getId)
+  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverOrFleetPersonId.getId) 10 10 $ do
+    voidWalletHoldByReference holdCounterparty holdOwnerId booking.id.getId "Ride completed - replaced by actual deductions"
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       resolvedIsOnline <-
@@ -555,8 +560,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       -- Persist the computed ledger write mode on the booking for reconciliation
       QRB.updateLedgerWriteMode booking.id (Just resolvedIsOnline)
       pure resolvedIsOnline
-
-    let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
 
     let panLinkTdsEnabled = panAadhaarLinkTdsEnabled transporterConfig.taxConfig
         configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
@@ -934,9 +937,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           case paymentChargeResult of
             Left err -> fromEitherM (\e -> InternalError ("Failed to post PG payment charge: " <> show e)) (Left err)
             Right _ -> pure ()
-
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 makeDriverLeaderBoardKey :: LConfig.LeaderBoardType -> Bool -> Id DMOC.MerchantOperatingCity -> Day -> Day -> Text
 makeDriverLeaderBoardKey leaderBoardType isCached merchantOpCityId fromDate toDate =

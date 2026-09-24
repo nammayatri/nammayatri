@@ -193,7 +193,7 @@ types:
     - perDistanceUnitMultiplier: Maybe Double
     - fixed: Maybe HighPrecMoney
   FPV2FareChargeComponent:
-    - enum: "RideFare, WaitingCharge, ServiceChargeComponent, TollChargesComponent, CongestionChargeComponent, ParkingChargeComponent, PetChargeComponent, PriorityChargeComponent, NightShiftChargeComponent, InsuranceChargeComponent, StopChargeComponent, LuggageChargeComponent, PlatformFeeComponent, CustomerCancellationChargeComponent, CustomerExtraFeeComponent, DeadKmFareComponent, ExtraKmFareComponent, RideDurationFareComponent, TimeBasedFareComponent, DistBasedFareComponent, TimeFareComponent, DistanceFareComponent, PickupChargeComponent, ExtraDistanceFareComponent, ExtraTimeFareComponent, StateEntryPermitChargesComponent, AmbulanceDistBasedFareComponent, RideVatComponent, TollVatComponent"
+    - enum: "RideFare, WaitingCharge, ServiceChargeComponent, TollChargesComponent, CongestionChargeComponent, ParkingChargeComponent, PetChargeComponent, PriorityChargeComponent, NightShiftChargeComponent, InsuranceChargeComponent, StopChargeComponent, LuggageChargeComponent, PlatformFeeComponent, CustomerCancellationChargeComponent, CustomerExtraFeeComponent, DeadKmFareComponent, ExtraKmFareComponent, RideDurationFareComponent, TimeBasedFareComponent, DistBasedFareComponent, TimeFareComponent, DistanceFareComponent, PickupChargeComponent, ExtraDistanceFareComponent, ExtraTimeFareComponent, StateEntryPermitChargesComponent, AmbulanceDistBasedFareComponent, RideVatComponent, TollVatComponent, DriverAllowanceComponent, AirportConvenienceFeeComponent, ReturnFeeChargeComponent, BoothChargeComponent, RideExtraTimeFareComponent"
   FPV2FareChargeConfig:
     - value: Text
     - appliesOn: "[FPV2FareChargeComponent]"

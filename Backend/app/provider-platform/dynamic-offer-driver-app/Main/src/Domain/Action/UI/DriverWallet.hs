@@ -158,9 +158,13 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
       eligibility <- case mbWalletAcc of
         Nothing -> pure emptyWalletPayoutEligibility
         Just walletAcc -> getPayoutEligibilityData counterparty ownerId walletAcc.id currentBalance cutoff now
-      let (additions, deductions, netEarningsBalance) =
+      dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
+      offerHoldBalance <- getWalletOfferHoldTotal ownerId
+      let holdBalance = dbHoldBalance + offerHoldBalance
+          (additions, deductions, netEarningsBalance) =
             aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
-          redeemableBalance = eligibility.redeemableBalance
+          -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
+          redeemableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
       pure $
         DriverWallet.WalletSummaryResponse
@@ -168,6 +172,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
             redeemableBalance,
             nonRedeemableBalance = eligibility.nonRedeemableBalance,
             processingPayoutBalance = eligibility.processingPayoutBalance,
+            holdBalance = Just holdBalance,
             netEarningsBalance,
             payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig redeemableBalance,
             additions,
@@ -182,6 +187,7 @@ emptyWalletSummary =
       redeemableBalance = 0,
       nonRedeemableBalance = 0,
       processingPayoutBalance = 0,
+      holdBalance = Just 0,
       netEarningsBalance = 0,
       payoutConfig =
         DriverWallet.WalletPayoutConfig

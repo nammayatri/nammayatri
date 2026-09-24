@@ -288,7 +288,7 @@ prepareReplace merchantOpCity transporterConfig farePolicyId apiPolicy = do
       diff,
       do
         mbCancellationId <- upsertInlineCancellation merchantOpCity old.cancellationFarePolicyId apiPolicy.cancellationFarePolicy now
-        newPolicy <- fromApiPolicy (ExistingPolicyCtx old.id old.currency old.distanceUnit old.merchantId old.merchantOperatingCityId old.createdAt) mbCancellationId now apiPolicy
+        newPolicy <- fromApiPolicy (ExistingPolicyCtx old.id old.currency old.distanceUnit old.merchantId old.merchantOperatingCityId old.createdAt old.fareRecomputeCapConfig) mbCancellationId now apiPolicy
         CQFP.delete old.id
         CQFP.create newPolicy
         writeAmbulanceSlabs newPolicy
@@ -393,6 +393,9 @@ postFarePolicyV2Preview merchantShortId opCity req = do
     let params =
           SFC.CalculateFareParametersParams
             { farePolicy = fullFarePolicy,
+              computationPhase = SFC.FCEstimate,
+              mbCapConfig = Nothing,
+              mbEstimateFareParams = Nothing,
               actualDistance = Just trip.distance,
               rideTime = fromMaybe now trip.rideTime,
               returnTime = Nothing,
@@ -1086,14 +1089,14 @@ toApiDetails = \case
         }
 
 data PolicyCtx
-  = ExistingPolicyCtx (Id FarePolicyD.FarePolicy) Currency DistanceUnit (Maybe (Id DM.Merchant)) (Maybe (Id DMOC.MerchantOperatingCity)) UTCTime
+  = ExistingPolicyCtx (Id FarePolicyD.FarePolicy) Currency DistanceUnit (Maybe (Id DM.Merchant)) (Maybe (Id DMOC.MerchantOperatingCity)) UTCTime (Maybe FarePolicyD.FareRecomputeCapConfig)
   | NewPolicyCtx (Id FarePolicyD.FarePolicy) Currency DistanceUnit (Id DM.Merchant) (Id DMOC.MerchantOperatingCity)
 
 fromApiPolicy :: PolicyCtx -> Maybe (Id DCFP.CancellationFarePolicy) -> UTCTime -> Common.FPV2Policy -> Flow FarePolicyD.FarePolicy
 fromApiPolicy ctx mbCancellationId now p = do
-  let (policyId, currency, distanceUnit, mbMerchantId, mbMocId, createdAt) = case ctx of
-        ExistingPolicyCtx i c d m moc created -> (i, c, d, m, moc, created)
-        NewPolicyCtx i c d m moc -> (i, c, d, Just m, Just moc, now)
+  let (policyId, currency, distanceUnit, mbMerchantId, mbMocId, createdAt, mbCapConfig) = case ctx of
+        ExistingPolicyCtx i c d m moc created cap -> (i, c, d, m, moc, created, cap)
+        NewPolicyCtx i c d m moc -> (i, c, d, Just m, Just moc, now, Nothing)
   details <- fromApiDetails currency distanceUnit p.farePolicyDetails
   bounds <- forM p.driverExtraFeeBounds $ \bs -> do
     ne <- fromMaybeM (InvalidRequest "driverExtraFeeBounds must not be an empty list") (NE.nonEmpty bs)
@@ -1157,7 +1160,8 @@ fromApiPolicy ctx mbCancellationId now p = do
                   }
             )
             (fromMaybe [] p.conditionalCharges),
-        driverCancellationNotAllowed = p.driverCancellationNotAllowed
+        driverCancellationNotAllowed = p.driverCancellationNotAllowed,
+        fareRecomputeCapConfig = mbCapConfig
       }
 
 fromApiDetails :: Currency -> DistanceUnit -> Common.FPV2FarePolicyDetails -> Flow FarePolicyD.FarePolicyDetails
@@ -1450,6 +1454,11 @@ toApiChargeComponent = \case
   FarePolicyD.AmbulanceDistBasedFareComponent -> Common.AmbulanceDistBasedFareComponent
   FarePolicyD.RideVatComponent -> Common.RideVatComponent
   FarePolicyD.TollVatComponent -> Common.TollVatComponent
+  FarePolicyD.DriverAllowanceComponent -> Common.DriverAllowanceComponent
+  FarePolicyD.AirportConvenienceFeeComponent -> Common.AirportConvenienceFeeComponent
+  FarePolicyD.ReturnFeeChargeComponent -> Common.ReturnFeeChargeComponent
+  FarePolicyD.BoothChargeComponent -> Common.BoothChargeComponent
+  FarePolicyD.RideExtraTimeFareComponent -> Common.RideExtraTimeFareComponent
 
 fromApiChargeComponent :: Common.FPV2FareChargeComponent -> FarePolicyD.FareChargeComponent
 fromApiChargeComponent = \case
@@ -1482,3 +1491,8 @@ fromApiChargeComponent = \case
   Common.AmbulanceDistBasedFareComponent -> FarePolicyD.AmbulanceDistBasedFareComponent
   Common.RideVatComponent -> FarePolicyD.RideVatComponent
   Common.TollVatComponent -> FarePolicyD.TollVatComponent
+  Common.DriverAllowanceComponent -> FarePolicyD.DriverAllowanceComponent
+  Common.AirportConvenienceFeeComponent -> FarePolicyD.AirportConvenienceFeeComponent
+  Common.ReturnFeeChargeComponent -> FarePolicyD.ReturnFeeChargeComponent
+  Common.BoothChargeComponent -> FarePolicyD.BoothChargeComponent
+  Common.RideExtraTimeFareComponent -> FarePolicyD.RideExtraTimeFareComponent

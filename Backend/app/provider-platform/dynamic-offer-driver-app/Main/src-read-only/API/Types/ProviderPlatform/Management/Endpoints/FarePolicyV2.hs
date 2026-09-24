@@ -206,6 +206,11 @@ data FPV2FareChargeComponent
   | AmbulanceDistBasedFareComponent
   | RideVatComponent
   | TollVatComponent
+  | DriverAllowanceComponent
+  | AirportConvenienceFeeComponent
+  | ReturnFeeChargeComponent
+  | BoothChargeComponent
+  | RideExtraTimeFareComponent
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

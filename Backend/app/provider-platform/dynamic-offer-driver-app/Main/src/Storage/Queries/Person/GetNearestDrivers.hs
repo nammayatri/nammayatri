@@ -9,7 +9,6 @@ module Storage.Queries.Person.GetNearestDrivers
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
-    estimateDeductionsFromConfig,
   )
 where
 
@@ -17,6 +16,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Database.Redis as Hedis
 import Domain.Types
@@ -106,6 +106,10 @@ data NearestDriversReq = NearestDriversReq
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     rideFare :: Maybe HighPrecMoney,
+    -- | 'bufferedFare' per service tier -- the cap config lives on FarePolicy,
+    -- which resolves per tier, so one tier's ceiling must never be applied to
+    -- another tier's drivers.
+    bufferedFareByTier :: Map.Map ServiceTierType HighPrecMoney,
     govtCharges :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     parkingCharge :: Maybe HighPrecMoney,
@@ -113,6 +117,8 @@ data NearestDriversReq = NearestDriversReq
     minWalletAmountForScheduledRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     taxConfig :: DTC.TaxConfig,
+    driverWalletConfig :: DTC.DriverWalletConfig,
+    mbSearchTryId :: Maybe Text,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
@@ -123,8 +129,7 @@ data NearestDriversReq = NearestDriversReq
     applyParallelRequestFilter :: Bool,
     maxParallelSearchRequests :: Int,
     airportEntryFee :: Maybe HighPrecMoney,
-    isAirportRequest :: Bool,
-    searchTryId :: Maybe Text
+    isAirportRequest :: Bool
   }
 
 -- | A driver location candidate sorted by straight-line distance, with the
@@ -149,7 +154,7 @@ fetchSortedLTSCandidates ::
 fetchSortedLTSCandidates NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
-  driverLocsRaw <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant)) searchTryId
+  driverLocsRaw <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant)) mbSearchTryId
   let afterExclude = if null excludeDriverIds then driverLocsRaw else filter (\dl -> dl.driverId `notElem` excludeDriverIds) driverLocsRaw
       prevSet = prevAttemptedDriverIds
       mkCandidate dl =
@@ -400,21 +405,32 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
               Nothing -> pure mempty
             filterM (passesPrepaidGates mbFareRequirement mbCreditsValidAt purchasesByOwner) results
       else pure results
-  let cashRequirement =
-        case minWalletAmountForCashRides of
-          Just minAmt
-            | isPrepaidEnabled && shouldCheckCashWallet paymentInstrument ->
-              Just (minAmt + estimateDeductionsFromConfig taxConfig rideFare govtCharges tollCharges parkingCharge)
-          _ -> Nothing
+
+  let cashCheckApplies = cashWalletCheckEnabled driverWalletConfig && shouldCheckCashWallet paymentInstrument
+      mkCashRequirement r =
+        minWalletAmountForCashRides <&> \minAmt ->
+          minAmt + estimateOfferDeductions taxConfig rideFare (Map.lookup r.serviceTier bufferedFareByTier) govtCharges tollCharges parkingCharge
       airportRequirement = case airportEntryFee of
         Just fee | fee > 0 -> Just fee
         _ -> Nothing
-      -- Scheduled-ride minimum wallet balance, folded into this pass so the candidate list is
-      -- filtered once (combined with the cash/airport gates) rather than in a second traversal.
       applyScheduledGate = isScheduled && not scheduledOpenToAll
-  if isNothing cashRequirement && isNothing airportRequirement && not applyScheduledGate
+      anyGateApplies = cashCheckApplies || isJust airportRequirement || applyScheduledGate
+  if not anyGateApplies
     then pure afterPrepaid
-    else filterM (passesLiabilityGates cashRequirement airportRequirement applyScheduledGate) afterPrepaid
+    else do
+      let cashAccounts = [(cp, oid) | cashCheckApplies, r <- afterPrepaid, let (cp, oid, _) = resolveOwnerAndThreshold r]
+          airportAccounts = [(counterpartyDriver, r.driverId.getId) | isJust airportRequirement, r <- afterPrepaid]
+          accountsNeeded = DL.nub (cashAccounts <> airportAccounts)
+      accountBalances <-
+        fmap Map.fromList $
+          mapM
+            ( \account@(counterpartyType, ownerId) -> do
+                mbBalance <- getWalletAvailableBalanceByOwner counterpartyType ownerId
+                otherOfferHolds <- getWalletOfferHoldTotalExcluding ownerId mbSearchTryId
+                pure (account, (mbBalance, otherOfferHolds))
+            )
+            accountsNeeded
+      filterM (\r -> passesLiabilityGates accountBalances (if cashCheckApplies then mkCashRequirement r else Nothing) airportRequirement applyScheduledGate r) afterPrepaid
   where
     resolveOwnerAndThreshold r = case r.fleetOwnerId of
       Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
@@ -429,53 +445,38 @@ filterByWalletBalance NearestDriversReq {..} isPrepaidEnabled results = do
         Nothing -> pure True
         Just fare -> do
           mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
-          pure $ maybe False (>= (fare + threshold)) mbBalance
+          otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
+          let bufferedFare = fromMaybe fare (Map.lookup r.serviceTier bufferedFareByTier)
+          pure $ maybe False (\b -> b - otherPrepaidOfferHolds >= bufferedFare + threshold) mbBalance
       if not balanceOk
         then pure False
         else pure $ maybe True (prepaidCreditsValidAtIn purchasesByOwner ownerId ownerType mbVehicleCategory) mbCreditsValidAt
 
-    checkBalance (counterpartyType, ownerId) required = do
-      mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
-      pure $ maybe False (>= required) mbBalance
+    checkAccountGates accountBalances (counterpartyType, ownerId) applyZeroBalanceGate mbRequired =
+      case Map.lookup (counterpartyType, ownerId) accountBalances of
+        Nothing -> False
+        Just (mbBalance, otherOfferHolds) ->
+          case mbBalance of
+            Nothing -> False
+            Just b ->
+              let available = b - otherOfferHolds
+               in (not applyZeroBalanceGate || available > 0) && maybe True (available >=) mbRequired
 
-    passesLiabilityGates cashReq airportReq applyScheduledGate r = do
-      -- Scheduled-ride wallet gate first (short-circuits the cash/airport balance fetches on failure).
+    checkBalance accountBalances account required = checkAccountGates accountBalances account False (Just required)
+
+    passesLiabilityGates accountBalances cashReq airportReq applyScheduledGate r = do
       scheduledOk <-
         if applyScheduledGate
           then hasMinWalletBalance counterpartyDriver minWalletAmountForScheduledRides r.driverId.getId
           else pure True
-      if not scheduledOk
-        then pure False
-        else do
-          let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
-              cashAccount = (cashCp, cashOwner)
-              airportAccount = (counterpartyDriver, r.driverId.getId)
-          case (cashReq, airportReq) of
-            (Nothing, Nothing) -> pure True
-            (Just c, Nothing) -> checkBalance cashAccount c
-            (Nothing, Just a) -> checkBalance airportAccount a
+      let (cashCp, cashOwner, _) = resolveOwnerAndThreshold r
+          cashAccount = (cashCp, cashOwner)
+          airportAccount = (counterpartyDriver, r.driverId.getId)
+          liabilityOk = case (cashReq, airportReq) of
+            (Nothing, Nothing) -> True
+            (Just c, Nothing) -> checkAccountGates accountBalances cashAccount True (Just c)
+            (Nothing, Just a) -> checkBalance accountBalances airportAccount a
             (Just c, Just a)
-              | cashAccount == airportAccount -> checkBalance cashAccount (max c a)
-              | otherwise -> do
-                cashOk <- checkBalance cashAccount c
-                if cashOk then checkBalance airportAccount a else pure False
-
-shouldCheckCashWallet :: Maybe MP.PaymentInstrument -> Bool
-shouldCheckCashWallet = \case
-  Nothing -> True
-  Just MP.Cash -> True
-  Just MP.BoothOnline -> True
-  _ -> False
-
--- | Estimate deductions (govtCharges + TDS) from fare components.
-estimateDeductionsFromConfig :: DTC.TaxConfig -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney
-estimateDeductionsFromConfig taxConfig rideFare govtCharges_ tollCharges_ parkingCharge_ =
-  case rideFare of
-    Nothing -> 0
-    Just totalFare ->
-      let gstAmount = fromMaybe 0 govtCharges_
-          tollAmount = fromMaybe 0 tollCharges_
-          parkingAmount = fromMaybe 0 parkingCharge_
-          baseFare = totalFare - gstAmount - tollAmount - parkingAmount
-          tdsRate = Just taxConfig.invalidPanTdsRate.rate
-       in gstAmount + estimateWalletDeductions tdsRate baseFare
+              | cashAccount == airportAccount -> checkAccountGates accountBalances cashAccount True (Just (max c a))
+              | otherwise -> checkAccountGates accountBalances cashAccount True (Just c) && checkBalance accountBalances airportAccount a
+      pure $ scheduledOk && liabilityOk

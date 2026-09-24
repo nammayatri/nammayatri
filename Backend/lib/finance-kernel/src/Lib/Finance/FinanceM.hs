@@ -49,6 +49,7 @@ module Lib.Finance.FinanceM
     transferInProcessing,
     adjustment,
     transferPending,
+    transferPendingWithEntryType,
     transferAllowZero,
     transferWithoutAttribution,
     getEntryIds,
@@ -739,7 +740,20 @@ transferPending ::
   HighPrecMoney ->
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transferPending fromRole toRole amount refType = do
+transferPending = transferPendingWithEntryType LE.Expense Nothing
+
+-- | 'transferPending' with the entry type and metadata exposed — wallet holds
+--   write Revenue-typed PENDING entries, while the plain helper writes Expense.
+transferPendingWithEntryType ::
+  (BeamFlow.BeamFlow m r, HasActorInfo m r) =>
+  LE.EntryType ->
+  Maybe LE.LedgerEntryMetadata ->
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferPendingWithEntryType entryType metadata fromRole toRole amount refType = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -753,13 +767,13 @@ transferPending fromRole toRole amount refType = do
                 concernedIndividualId = ctx.concernedIndividualId,
                 amount = amount,
                 currency = ctx.currency,
-                entryType = LE.Expense,
+                entryType = entryType,
                 status = LE.PENDING,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
                 entityReferenceId = ctx.entityReferenceId,
                 entityReferenceType = ctx.entityReferenceType,
-                metadata = Nothing,
+                metadata = metadata,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
                 settlementStatus = Nothing

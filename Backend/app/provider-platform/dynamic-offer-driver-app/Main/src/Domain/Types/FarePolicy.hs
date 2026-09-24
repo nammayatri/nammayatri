@@ -26,6 +26,7 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
 import Data.Aeson.Types
+import qualified Data.List as DL
 import Data.List.NonEmpty
 import Data.Text as Text
 import qualified Domain.Types as DTC
@@ -95,6 +96,7 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     rideExtraTimeChargeGracePeriod :: Maybe Seconds,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
+    fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     vatChargeConfig :: Maybe FareChargeConfig,
@@ -198,7 +200,13 @@ data FareChargeComponent
   | -- VAT components
     RideVatComponent
   | TollVatComponent
-  deriving stock (Show, Eq, Ord, Enum, Bounded, Generic)
+  | -- Components not covered by any of the above (added for per-component fare-recompute capping)
+    DriverAllowanceComponent
+  | AirportConvenienceFeeComponent
+  | ReturnFeeChargeComponent
+  | BoothChargeComponent
+  | RideExtraTimeFareComponent
+  deriving stock (Show, Read, Eq, Ord, Enum, Bounded, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 -- | Configuration for a charge (VAT, commission, or toll tax)
@@ -219,6 +227,93 @@ data FareChargeConfig = FareChargeConfig
   deriving stock (Show, Eq, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+data CapStrategy
+  = PercentCap PercentCapCfg
+  | FixedCap FixedCapCfg
+  | Frozen
+  | Derived
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data PercentCapCfg = PercentCapCfg
+  { percent :: Double,
+    minCapAmount :: Maybe HighPrecMoney,
+    maxCapAmount :: Maybe HighPrecMoney
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+newtype FixedCapCfg = FixedCapCfg
+  { amount :: HighPrecMoney
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data FareRecomputeCap = FareRecomputeCap
+  { strategy :: CapStrategy,
+    appliesOn :: [FareChargeComponent]
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+newtype FareRecomputeCapConfig = FareRecomputeCapConfig
+  { caps :: [FareRecomputeCap]
+  }
+  deriving stock (Show, Read, Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+-- | The configured strategy for a component, if any rule in the config applies to it.
+lookupCapStrategy :: FareRecomputeCapConfig -> FareChargeComponent -> Maybe CapStrategy
+lookupCapStrategy capConfig component =
+  strategy <$> KP.find (\cap -> component `KP.elem` cap.appliesOn) capConfig.caps
+
+validateFareRecomputeCapConfig :: FareRecomputeCapConfig -> Either Text ()
+validateFareRecomputeCapConfig capConfig = do
+  KP.mapM_ validateCap capConfig.caps
+  validateNoOverlap (KP.concatMap (.appliesOn) capConfig.caps)
+  where
+    validateCap cap = case cap.strategy of
+      PercentCap cfg -> do
+        KP.when (cfg.percent < 0) $ Left $ "Fare recompute cap: percent must be >= 0, got " <> KP.show cfg.percent
+        KP.when (cfg.percent > 100) $ Left $ "Fare recompute cap: percent must be <= 100, got " <> KP.show cfg.percent
+        validateNonNegative "minCapAmount" cfg.minCapAmount
+        validateNonNegative "maxCapAmount" cfg.maxCapAmount
+        case (cfg.minCapAmount, cfg.maxCapAmount) of
+          (Just minAmt, Just maxAmt) ->
+            KP.when (minAmt > maxAmt) $
+              Left $ "Fare recompute cap: minCapAmount (" <> KP.show minAmt <> ") must not exceed maxCapAmount (" <> KP.show maxAmt <> ")"
+          _ -> Right ()
+      FixedCap cfg -> validateNonNegative "amount" (Just cfg.amount)
+      Frozen -> Right ()
+      Derived -> Right ()
+
+    validateNonNegative label = KP.maybe (Right ()) $ \amt ->
+      KP.when (amt < 0) $ Left $ "Fare recompute cap: " <> label <> " must be >= 0, got " <> KP.show amt
+
+    -- Components appearing under more than one cap rule are ambiguous: 'lookupCapStrategy'
+    -- would silently pick whichever rule comes first in the list, ignoring the rest.
+    validateNoOverlap allComponents =
+      let duplicates = DL.nub (KP.filter (\c -> KP.length (KP.filter (== c) allComponents) > 1) allComponents)
+       in KP.unless (KP.null duplicates) $
+            Left $ "Fare recompute cap: component(s) appear in more than one cap rule (ambiguous -- first match wins): " <> KP.show duplicates
+
+-- | How much a component's estimate may grow under its configured strategy.
+-- See 'CapStrategy' for what each constructor means.
+capAllowance :: CapStrategy -> HighPrecMoney -> HighPrecMoney
+capAllowance capStrategy estimate = case capStrategy of
+  Frozen -> 0
+  Derived -> 0
+  FixedCap cfg -> cfg.amount
+  PercentCap cfg ->
+    let rawAllowance = estimate * realToFrac cfg.percent / 100
+        flooredAllowance = maybe rawAllowance (`max` rawAllowance) cfg.minCapAmount
+     in maybe flooredAllowance (`min` flooredAllowance) cfg.maxCapAmount
+
+capByStrategy :: Maybe CapStrategy -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
+capByStrategy Nothing _ recomputedValue = recomputedValue -- unconfigured: pass through, unbounded
+capByStrategy (Just capStrategy) estimate recomputedValue =
+  min recomputedValue (estimate + capAllowance capStrategy estimate)
+
 data CongestionChargeMultiplier
   = BaseFareAndExtraDistanceFare Centesimal
   | ExtraDistanceFare Centesimal
@@ -235,6 +330,7 @@ data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
 $(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
+$(mkBeamInstancesForJSON ''FareRecomputeCapConfig)
 $(mkBeamInstancesForEnum ''PlatformFeeMethods)
 
 data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
@@ -266,6 +362,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     rideExtraTimeChargeGracePeriod :: Maybe Seconds,
     congestionChargeMultiplier :: Maybe CongestionChargeMultiplier,
+    fareRecomputeCapConfig :: Maybe FareRecomputeCapConfig,
     congestionChargePerMin :: Maybe Double,
     dpVersion :: Maybe Text,
     mbSupplyDemandRatioToLoc :: Maybe Double,

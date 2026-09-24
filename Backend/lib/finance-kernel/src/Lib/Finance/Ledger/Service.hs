@@ -34,6 +34,7 @@ module Lib.Finance.Ledger.Service
     getEntriesByEntityReference,
     getEntriesByReferenceAndToAccount,
     getEntriesByReferenceAndFromAccount,
+    getEntriesByFromAccountStatusAndReferenceType,
     getEntriesByAccount,
     getLatestEntryByAccount,
     getEntriesBetween,
@@ -569,6 +570,14 @@ getEntriesByReferenceAndFromAccount ::
   Id Account ->
   m [LedgerEntry]
 getEntriesByReferenceAndFromAccount = QLedger.findByReferenceAndFromAccount
+
+getEntriesByFromAccountStatusAndReferenceType ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  EntryStatus ->
+  Text -> -- Reference type
+  m [LedgerEntry]
+getEntriesByFromAccountStatusAndReferenceType = QLedger.findByFromAccountAndStatusAndReferenceType
 
 -- | Get all entries for an account
 getEntriesByAccount ::

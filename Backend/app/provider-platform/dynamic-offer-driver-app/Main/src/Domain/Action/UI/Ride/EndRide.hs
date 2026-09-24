@@ -987,6 +987,9 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
         calculateFareParameters
           Fare.CalculateFareParametersParams
             { farePolicy = farePolicy',
+              computationPhase = Fare.FCRecompute,
+              mbCapConfig = farePolicy.fareRecomputeCapConfig,
+              mbEstimateFareParams = Just booking.fareParams,
               actualDistance = Just recalcDistance,
               estimatedDistance = Just oldDistance,
               rideTime = booking.startTime,
@@ -1022,8 +1025,8 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               fareSettlementType = booking.fareSettlementType,
               isParkingFeeExempt = rcParkingFeeExempt
             }
-      let finalFare = Fare.fareSum fareParams Nothing
-          distanceDiff = recalcDistance - oldDistance
+      finalFare <- checkRecomputedFareCeiling booking fareParams
+      let distanceDiff = recalcDistance - oldDistance
           fareDiff = finalFare - estimatedFare
       logTagInfo "Fare recalculation" $
         "Fare difference: "
@@ -1032,6 +1035,15 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
           <> show distanceDiff
       putDiffMetric merchantId fareDiff distanceDiff
       return (recalcDistance, finalFare, Just fareParams)
+
+checkRecomputedFareCeiling :: (Log m, Monad m) => SRB.Booking -> FareParameters -> m HighPrecMoney
+checkRecomputedFareCeiling booking fareParams = do
+  let finalFare = Fare.fareSum fareParams Nothing
+  whenJust booking.fareParams.bufferedFare $ \ceiling' ->
+    when (finalFare > ceiling') $
+      logTagError "Fare recompute cap BREACH" $
+        "Recomputed fare " <> show finalFare <> " above buffered ceiling " <> show ceiling' <> " for booking " <> booking.id.getId <> " -- a component without a configured cap strategy grew past its estimate; the fare policy needs a cap for it."
+  pure finalFare
 
 isPickupDropOutsideOfThreshold :: (MonadThrow m, Log m, MonadTime m, MonadGuid m) => SRB.Booking -> DRide.Ride -> LatLong -> DTConf.TransporterConfig -> m Bool
 isPickupDropOutsideOfThreshold booking ride tripEndPoint thresholdConfig = do

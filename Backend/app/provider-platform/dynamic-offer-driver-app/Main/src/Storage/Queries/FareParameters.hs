@@ -227,7 +227,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 parkingChargeTaxExclusive = parkingChargeTaxExclusive,
                 parkingChargeTax = parkingChargeTax,
                 fareSettlementType = fareSettlementType,
-                negotiatedFareDelta = negotiatedFareDelta
+                negotiatedFareDelta = negotiatedFareDelta,
+                bufferedFare = bufferedFare
               }
       Nothing -> return Nothing
 
@@ -306,5 +307,6 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.tdsProcessedAt = tdsProcessedAt,
         BeamFP.driverCancellationNotAllowed = driverCancellationNotAllowed,
         BeamFP.fareSettlementType = fareSettlementType,
-        BeamFP.negotiatedFareDelta = negotiatedFareDelta
+        BeamFP.negotiatedFareDelta = negotiatedFareDelta,
+        BeamFP.bufferedFare = bufferedFare
       }
