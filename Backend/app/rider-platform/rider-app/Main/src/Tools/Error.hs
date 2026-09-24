@@ -1465,6 +1465,7 @@ data SharedCabSessionError
   | SessionNotPaused
   | SessionVersionMismatch
   | InvalidWalkupCount
+  | NoReturnRoute
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SharedCabSessionError
@@ -1477,6 +1478,7 @@ instance IsBaseError SharedCabSessionError where
     SessionNotPaused -> Just "Shared-cab session is not paused."
     SessionVersionMismatch -> Just "Shared-cab session changed; refresh and retry."
     InvalidWalkupCount -> Just "Walk-up count must be between 0 and the vehicle capacity."
+    NoReturnRoute -> Just "This route has no return route."
 
 instance IsHTTPError SharedCabSessionError where
   toErrorCode = \case
@@ -1486,6 +1488,7 @@ instance IsHTTPError SharedCabSessionError where
     SessionNotPaused -> "SHARED_CAB_SESSION_NOT_PAUSED"
     SessionVersionMismatch -> "SHARED_CAB_SESSION_VERSION_MISMATCH"
     InvalidWalkupCount -> "SHARED_CAB_INVALID_WALKUP_COUNT"
+    NoReturnRoute -> "SHARED_CAB_NO_RETURN_ROUTE"
   toHttpCode = \case
     SessionHeldByAnotherDriver -> E409
     SessionNotFound -> E404
@@ -1493,5 +1496,6 @@ instance IsHTTPError SharedCabSessionError where
     SessionNotPaused -> E400
     SessionVersionMismatch -> E409
     InvalidWalkupCount -> E400
+    NoReturnRoute -> E400
 
 instance IsAPIError SharedCabSessionError

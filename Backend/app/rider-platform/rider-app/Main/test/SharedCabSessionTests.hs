@@ -78,17 +78,10 @@ tests =
       testCase "a new session on a reused plate outranks the old version" $
         version (newSession (OpenSessionReq "d2" "ml 05-a 1234" (Id "m") (Id "moc") (Id "ibc") AC 4 "R1") (Id "trip3") t0 (Just active))
           @?= 4,
-      testCase "return route runs the same ends reversed" $
-        returnRouteOf "SC-A-F" feed @?= Just "SC-A-R",
-      testCase "a route sharing only one end is not the return" $
-        returnRouteOf "SC-B-F" feed @?= Nothing,
-      testCase "unknown route has no return" $
-        returnRouteOf "SC-X" feed @?= Nothing
+      testCase "forward route returns on its reverse" $
+        returnRouteOf "SC-MAWLAI-F" @?= Right "SC-MAWLAI-R",
+      testCase "reverse route returns on its forward" $
+        returnRouteOf "SC-MAWLAI-R" @?= Right "SC-MAWLAI-F",
+      testCase "a route without a direction suffix has no return" $
+        returnRouteOf "SC-MAWLAI" @?= Left NoReturnRoute
     ]
-  where
-    feed =
-      [ ("SC-A-F", ["IEWDUH", "POLO", "MAWLAI"]),
-        ("SC-A-R", ["MAWLAI", "POLO", "IEWDUH"]),
-        ("SC-B-F", ["IEWDUH", "JAIAW"]),
-        ("SC-B-X", ["JAIAW", "LAITUMKHRAH"])
-      ]

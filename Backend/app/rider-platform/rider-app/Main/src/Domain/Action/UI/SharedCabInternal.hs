@@ -116,13 +116,7 @@ postSharedCabRouteEnd :: Maybe Text -> API.EndRouteReq -> Environment.Flow (Mayb
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
-    API.RETURN -> do
-      current <- ownSession req.driverId req.vehicleNumber
-      routes <- getIntegratedBppConfig current.integratedBppConfigId >>= feedRoutes
-      returnRoute <-
-        fromMaybeM (InvalidRequest $ "No return route for " <> current.routeCode) $
-          returnRouteOf current.routeCode [(route.code, map (.stopCode) stops) | (route, stops) <- routes]
-      Just <$> (Session.endRoute req.driverId req.vehicleNumber (StartReturn returnRoute) >>= mkSessionResp)
+    API.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber StartReturn >>= mkSessionResp)
     API.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
     API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber EndForNow
 

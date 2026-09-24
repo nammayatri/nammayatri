@@ -28,6 +28,7 @@ import BecknV2.FRFS.Enums (ServiceTierType)
 import Data.Aeson (FromJSON (..), Options (..), ToJSON (..), defaultOptions, genericParseJSON, genericToJSON)
 import qualified Data.Char as Char
 import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
+import qualified Data.Text as T
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -95,7 +96,7 @@ data OpenSessionReq = OpenSessionReq
   }
   deriving (Show, Eq, Generic)
 
-data EndRouteAction = StartReturn Text | EndRoute | EndForNow
+data EndRouteAction = StartReturn | EndRoute | EndForNow
   deriving (Show, Eq)
 
 data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session
@@ -178,7 +179,7 @@ setWalkup expectedVersion count s
 
 endActionReason :: EndRouteAction -> DVT.VehicleTripEndReason
 endActionReason = \case
-  StartReturn _ -> DVT.RETURN
+  StartReturn -> DVT.RETURN
   EndRoute -> DVT.END_ROUTE
   EndForNow -> DVT.END_FOR_NOW
 
@@ -224,9 +225,9 @@ tripFor s now =
       updatedAt = now
     }
 
--- | The route that runs the given one end to end in reverse; routes are modelled one per direction.
-returnRouteOf :: Text -> [(Text, [Text])] -> Maybe Text
-returnRouteOf current routes = do
-  stops <- lookup current routes
-  (firstStop, lastStop) <- (,) <$> listToMaybe stops <*> lastMay stops
-  fst <$> find (\(code, s) -> code /= current && listToMaybe s == Just lastStop && lastMay s == Just firstStop) routes
+-- | Routes are one per direction, named SC-<CORRIDOR>-F / SC-<CORRIDOR>-R by the feed generator.
+returnRouteOf :: Text -> Either SharedCabSessionError Text
+returnRouteOf code
+  | Just corridor <- T.stripSuffix "-F" code = Right (corridor <> "-R")
+  | Just corridor <- T.stripSuffix "-R" code = Right (corridor <> "-F")
+  | otherwise = Left NoReturnRoute
