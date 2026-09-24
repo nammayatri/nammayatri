@@ -852,3 +852,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds 
 ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN route_cache_max_duration_deviation integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_adjacent_geo_hash_place_name_lookup boolean ;

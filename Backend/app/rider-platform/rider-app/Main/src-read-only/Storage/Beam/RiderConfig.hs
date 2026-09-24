@@ -74,6 +74,7 @@ data RiderConfigT f = RiderConfigT
     emailBusinessVerificationConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailBusinessVerificationConfig),
     emailMagicLinkConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailMagicLinkConfig),
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableAdjacentGeoHashPlaceNameLookup :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableAutoJourneyRefund :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBetterRoutePointSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBoardingProximityCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
