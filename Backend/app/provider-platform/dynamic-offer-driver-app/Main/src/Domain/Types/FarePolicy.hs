@@ -291,6 +291,7 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     cgst :: Maybe HighPrecMoney,
     platformFeeChargesBy :: PlatformFeeMethods,
     disableRecompute :: Maybe Bool,
+    disableDownwardRecompute :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
@@ -362,6 +363,7 @@ farePolicyToFullFarePolicy merchantId' vehicleServiceTier tripCategory cancellat
       mbArea = Nothing,
       fareSettlementType = Nothing,
       parkingFeeExemptionEnabled = Nothing,
+      disableDownwardRecompute = Nothing,
       ..
     }
 
