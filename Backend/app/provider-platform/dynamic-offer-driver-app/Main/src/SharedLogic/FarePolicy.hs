@@ -58,6 +58,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DynamicPricing
 import qualified SharedLogic.FareCalculator as SFC
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MetricsLabels as SML

@@ -1,0 +1,228 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FareParameters: Domain.Types.FareParameters
+  FareParametersDetails: Domain.Types.Extra.FareParameters
+  FareParametersType: Domain.Types.Extra.FareParameters
+  CardCharge: Domain.Types.Extra.FareParameters
+  CustomerGateFeeItem: Domain.Types.Extra.FareParameters
+  ConditionalCharges: Domain.Types.ConditionalCharges
+  PlatformFeeMethods: Domain.Types.FarePolicy
+  FareSettlementType: Lib.Types.SpecialLocation
+  Value: Data.Aeson
+
+FareParameters:
+  tableName: fare_parameters
+
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
+
+  fields:
+    id: Id FareParameters
+    baseFare: HighPrecMoney
+    driverSelectedFare: Maybe HighPrecMoney
+    customerExtraFee: Maybe HighPrecMoney
+    negativeFareAdjustment: Maybe HighPrecMoney
+    serviceCharge: Maybe HighPrecMoney
+    parkingCharge: Maybe HighPrecMoney
+    stopCharges: Maybe HighPrecMoney
+    govtCharges: Maybe HighPrecMoney
+    waitingCharge: Maybe HighPrecMoney
+    rideExtraTimeFare: Maybe HighPrecMoney
+    nightShiftCharge: Maybe HighPrecMoney
+    nightShiftRateIfApplies: Maybe Double
+    fareParametersDetails: FareParametersDetails
+    customerCancellationDues: Maybe HighPrecMoney
+    tollCharges: Maybe HighPrecMoney
+    congestionCharge: Maybe HighPrecMoney
+    petCharges: Maybe HighPrecMoney
+    driverAllowance: Maybe HighPrecMoney
+    airportConvenienceFee: Maybe HighPrecMoney
+    businessDiscount: Maybe HighPrecMoney
+    personalDiscount: Maybe HighPrecMoney
+    shouldApplyBusinessDiscount: Bool
+    shouldApplyPersonalDiscount: Bool
+    priorityCharges: Maybe HighPrecMoney
+    congestionChargeViaDp: Maybe HighPrecMoney
+    insuranceCharge: Maybe HighPrecMoney
+    cardCharge: Maybe CardCharge
+    luggageCharge: Maybe HighPrecMoney
+    returnFeeCharge: Maybe HighPrecMoney
+    boothCharge: Maybe HighPrecMoney
+    schedulingCharge: Maybe HighPrecMoney
+    platformFee: Maybe HighPrecMoney
+    sgst: Maybe HighPrecMoney
+    cgst: Maybe HighPrecMoney
+    tdsAmount: Maybe HighPrecMoney
+    tdsRate: Maybe Double
+    tdsProcessedAt: Maybe UTCTime
+    platformFeeChargesBy: PlatformFeeMethods
+    currency: Currency
+    updatedAt: UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    conditionalCharges: "[ConditionalCharges]"
+    customerGateFeeItems: "[CustomerGateFeeItem]"
+    paymentProcessingFee: Maybe HighPrecMoney
+    paymentProcessingFeeVat: Maybe HighPrecMoney
+    isVatTaxType: Maybe Bool
+    driverCancellationNotAllowed: Maybe Bool
+    discountApplicableRideFareTaxExclusive: Maybe HighPrecMoney
+    discountApplicableRideFareTax: Maybe HighPrecMoney
+    nonDiscountApplicableRideFareTaxExclusive: Maybe HighPrecMoney
+    nonDiscountApplicableRideFareTax: Maybe HighPrecMoney
+    tollFareTaxExclusive: Maybe HighPrecMoney
+    tollFareTax: Maybe HighPrecMoney
+    cancellationFeeTaxExclusive: Maybe HighPrecMoney
+    cancellationTax: Maybe HighPrecMoney
+    parkingChargeTaxExclusive: Maybe HighPrecMoney
+    parkingChargeTax: Maybe HighPrecMoney
+    fareSettlementType: Maybe FareSettlementType
+    negotiatedFareDelta: Maybe HighPrecMoney
+    commission: Maybe HighPrecMoney
+
+  excludedFields:
+    - createdAt
+
+  beamFields:
+    # Dual Money/HighPrecMoney columns
+    baseFare:
+      baseFare: Money
+      baseFareAmount: Maybe HighPrecMoney
+    driverSelectedFare:
+      driverSelectedFare: Maybe Money
+      driverSelectedFareAmount: Maybe HighPrecMoney
+    customerExtraFee:
+      customerExtraFee: Maybe Money
+      customerExtraFeeAmount: Maybe HighPrecMoney
+    negativeFareAdjustment:
+      negativeFareAdjustment: Maybe Money
+      negativeFareAdjustmentAmount: Maybe HighPrecMoney
+    serviceCharge:
+      serviceCharge: Maybe Money
+      serviceChargeAmount: Maybe HighPrecMoney
+    govtCharges:
+      govtCharges: Maybe Money
+      govtChargesAmount: Maybe HighPrecMoney
+    waitingCharge:
+      waitingCharge: Maybe Money
+      waitingChargeAmount: Maybe HighPrecMoney
+    rideExtraTimeFare:
+      rideExtraTimeFare: Maybe Money
+      rideExtraTimeFareAmount: Maybe HighPrecMoney
+    nightShiftCharge:
+      nightShiftCharge: Maybe Money
+      nightShiftChargeAmount: Maybe HighPrecMoney
+    congestionCharge:
+      congestionCharge: Maybe Money
+      congestionChargeAmount: Maybe HighPrecMoney
+    # Domain-only field → beam discriminator
+    fareParametersDetails:
+      fareParametersType: FareParametersType
+    # Composite → 2 beam columns
+    cardCharge:
+      cardChargeOnFare: Maybe HighPrecMoney
+      fixedCardCharge: Maybe HighPrecMoney
+    # List → JSON Value
+    conditionalCharges:
+      conditionalCharges: Maybe Value
+    customerGateFeeItems:
+      customerGateFeeItems: Maybe Value
+    # Beam type differs from domain type
+    currency:
+      currency: Maybe Currency
+    updatedAt:
+      updatedAt: Maybe UTCTime
+    platformFeeChargesBy:
+      platformFeeChargesBy: Maybe PlatformFeeMethods
+    shouldApplyBusinessDiscount:
+      shouldApplyBusinessDiscount: Maybe Bool
+    shouldApplyPersonalDiscount:
+      shouldApplyPersonalDiscount: Maybe Bool
+    # Name mismatch: domain tollFareTax → beam tollVat
+    tollFareTax:
+      tollVat: Maybe HighPrecMoney
+
+  intermediateTransformers:
+    fromTType:
+      - mFareParametersDetails: Storage.Queries.Transformers.FareParameters.fetchFareParametersDetails fareParametersType id|EM
+      - now: Kernel.Types.Common.getCurrentTime|EM
+
+  fromTType:
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
+    driverSelectedFare: Kernel.Types.Common.mkAmountWithDefault driverSelectedFareAmount <$> driverSelectedFare|E
+    customerExtraFee: Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee|E
+    negativeFareAdjustment: Kernel.Types.Common.mkAmountWithDefault negativeFareAdjustmentAmount <$> negativeFareAdjustment|E
+    serviceCharge: Kernel.Types.Common.mkAmountWithDefault serviceChargeAmount <$> serviceCharge|E
+    govtCharges: Kernel.Types.Common.mkAmountWithDefault govtChargesAmount <$> govtCharges|E
+    waitingCharge: Kernel.Types.Common.mkAmountWithDefault waitingChargeAmount <$> waitingCharge|E
+    rideExtraTimeFare: Kernel.Types.Common.mkAmountWithDefault rideExtraTimeFareAmount <$> rideExtraTimeFare|E
+    nightShiftCharge: Kernel.Types.Common.mkAmountWithDefault nightShiftChargeAmount <$> nightShiftCharge|E
+    congestionCharge: Kernel.Types.Common.mkAmountWithDefault congestionChargeAmount <$> congestionCharge|E
+    fareParametersDetails: Storage.Queries.Transformers.FareParameters.fromMaybeFareParametersDetails mFareParametersDetails|E
+    cardCharge: Storage.Queries.Transformers.FareParameters.mkCardCharge cardChargeOnFare fixedCardCharge|E
+    conditionalCharges: Storage.Queries.Transformers.FareParameters.decodeConditionalCharges conditionalCharges|E
+    customerGateFeeItems: Storage.Queries.Transformers.FareParameters.decodeCustomerGateFeeItems customerGateFeeItems|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    updatedAt: Kernel.Prelude.fromMaybe now updatedAt|E
+    platformFeeChargesBy: Kernel.Prelude.fromMaybe Domain.Types.FarePolicy.Subscription|I
+    shouldApplyBusinessDiscount: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    shouldApplyPersonalDiscount: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
+    tollFareTax: tollVat|E
+    commission: Kernel.Prelude.Nothing|E
+
+  toTType:
+    baseFare: Kernel.Prelude.roundToIntegral|I
+    baseFareAmount: Kernel.Prelude.Just|I
+    driverSelectedFare: Kernel.Prelude.roundToIntegral <$> driverSelectedFare|E
+    driverSelectedFareAmount: driverSelectedFare|E
+    customerExtraFee: Kernel.Prelude.roundToIntegral <$> customerExtraFee|E
+    customerExtraFeeAmount: customerExtraFee|E
+    negativeFareAdjustment: Kernel.Prelude.roundToIntegral <$> negativeFareAdjustment|E
+    negativeFareAdjustmentAmount: negativeFareAdjustment|E
+    serviceCharge: Kernel.Prelude.roundToIntegral <$> serviceCharge|E
+    serviceChargeAmount: serviceCharge|E
+    govtCharges: Kernel.Prelude.roundToIntegral <$> govtCharges|E
+    govtChargesAmount: govtCharges|E
+    waitingCharge: Kernel.Prelude.roundToIntegral <$> waitingCharge|E
+    waitingChargeAmount: waitingCharge|E
+    rideExtraTimeFare: Kernel.Prelude.roundToIntegral <$> rideExtraTimeFare|E
+    rideExtraTimeFareAmount: rideExtraTimeFare|E
+    nightShiftCharge: Kernel.Prelude.roundToIntegral <$> nightShiftCharge|E
+    nightShiftChargeAmount: nightShiftCharge|E
+    congestionCharge: Kernel.Prelude.roundToIntegral <$> congestionCharge|E
+    congestionChargeAmount: congestionCharge|E
+    fareParametersType: Storage.Queries.Transformers.FareParameters.mkFareParametersType fareParametersDetails|E
+    cardChargeOnFare: cardCharge Kernel.Prelude.>>= (.onFare)|E
+    fixedCardCharge: cardCharge Kernel.Prelude.>>= (.fixed)|E
+    conditionalCharges: Kernel.Prelude.Just $ Data.Aeson.toJSON conditionalCharges|E
+    customerGateFeeItems: Kernel.Prelude.Just $ Data.Aeson.toJSON customerGateFeeItems|E
+    currency: Kernel.Prelude.Just|I
+    updatedAt: Kernel.Prelude.Just|I
+    platformFeeChargesBy: Kernel.Prelude.Just|I
+    shouldApplyBusinessDiscount: Kernel.Prelude.Just|I
+    shouldApplyPersonalDiscount: Kernel.Prelude.Just|I
+    tollVat: tollFareTax|E
+    commission: Kernel.Prelude.Nothing|E
+
+  constraints:
+    id: PrimaryKey
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllIn:
+      kvFunction: findAllWithKV
+      where:
+        in: [id]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

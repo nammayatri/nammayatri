@@ -1,0 +1,81 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+
+FarePolicyDriverExtraFeeBounds:
+  tableName: fare_policy_driver_extra_fee_bounds
+
+  fields:
+    id: Maybe Int
+    farePolicyId: Text
+    startDistance: Meters
+    distanceUnit: DistanceUnit
+    stepFee: HighPrecMoney
+    defaultStepFee: HighPrecMoney
+    minFee: HighPrecMoney
+    maxFee: HighPrecMoney
+
+  beamFields:
+    stepFee:
+      stepFee: Money
+      stepFeeAmount: Maybe HighPrecMoney
+    defaultStepFee:
+      defaultStepFee: Money
+      defaultStepFeeAmount: Maybe HighPrecMoney
+    minFee:
+      minFee: Money
+      minFeeAmount: Maybe HighPrecMoney
+    maxFee:
+      maxFee: Money
+      maxFeeAmount: Maybe HighPrecMoney
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    stepFee: Kernel.Types.Common.mkAmountWithDefault stepFeeAmount stepFee|E
+    defaultStepFee: Kernel.Types.Common.mkAmountWithDefault defaultStepFeeAmount defaultStepFee|E
+    minFee: Kernel.Types.Common.mkAmountWithDefault minFeeAmount minFee|E
+    maxFee: Kernel.Types.Common.mkAmountWithDefault maxFeeAmount maxFee|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    stepFee: Kernel.Prelude.roundToIntegral|I
+    stepFeeAmount: Kernel.Prelude.Just|I
+    defaultStepFee: Kernel.Prelude.roundToIntegral|I
+    defaultStepFeeAmount: Kernel.Prelude.Just|I
+    minFee: Kernel.Prelude.roundToIntegral|I
+    minFeeAmount: Kernel.Prelude.Just|I
+    maxFee: Kernel.Prelude.roundToIntegral|I
+    maxFeeAmount: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    id: PrimaryKey
+    farePolicyId: "!SecondaryKey"
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: startDistance
+        order: asc
+
+    deleteAllByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -1,0 +1,228 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Storage.Queries.FarePolicyExtra where
+
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as DPM
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as BL
+import Data.List.NonEmpty
+import qualified Domain.Types.ConditionalCharges as DTAC
+import Domain.Types.FarePolicy as Domain
+import Kernel.Beam.Functions
+import Kernel.External.Encryption
+import Kernel.Prelude hiding (toList)
+import Kernel.Types.Common
+import Kernel.Types.Error
+import Kernel.Types.Id as KTI
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Sequelize as Se
+import SharedLogic.FarePolicy.Conversions
+import qualified Storage.Beam.FarePolicy as BeamFP
+import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as BeamFPAD
+import qualified Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab as BeamFPSS
+import qualified Storage.Beam.FarePolicyProgressiveDetails as BeamFPPD
+import qualified Storage.Queries.ConditionalCharges as QueriesAdditionalCharges
+import qualified Storage.Queries.FarePolicyAmbulanceDetailsSlab as QueriesFPAD
+import qualified Storage.Queries.FarePolicyDriverExtraFeeBounds as QueriesDEFB
+import qualified Storage.Queries.FarePolicyInterCityDetails as QueriesFPICD
+import qualified Storage.Queries.FarePolicyProgressiveDetails as QueriesFPPD
+import qualified Storage.Queries.FarePolicyRentalDetails as QueriesFPRD
+import qualified Storage.Queries.FarePolicySlabsDetailsSlab as QueriesFPSDS
+import Storage.Queries.OrphanInstances.FarePolicy
+import qualified Storage.Queries.Transformers.FarePolicy as TF
+
+update' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
+update' farePolicy = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamFP.nightShiftStart $ (.nightShiftStart) <$> farePolicy.nightShiftBounds,
+      Se.Set BeamFP.nightShiftEnd $ (.nightShiftEnd) <$> farePolicy.nightShiftBounds,
+      Se.Set BeamFP.maxAllowedTripDistance $ (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.serviceCharge $ roundToIntegral <$> farePolicy.serviceCharge,
+      Se.Set BeamFP.tollCharges $ farePolicy.tollCharges,
+      Se.Set BeamFP.petCharges $ farePolicy.petCharges,
+      Se.Set BeamFP.driverAllowance $ farePolicy.driverAllowance,
+      Se.Set BeamFP.airportConvenienceFee $ farePolicy.airportConvenienceFee,
+      Se.Set BeamFP.businessDiscountPercentage $ farePolicy.businessDiscountPercentage,
+      Se.Set BeamFP.personalDiscountPercentage $ farePolicy.personalDiscountPercentage,
+      Se.Set BeamFP.priorityCharges $ farePolicy.priorityCharges,
+      Se.Set BeamFP.vatChargeConfig $ TF.encodeChargeConfig <$> farePolicy.vatChargeConfig,
+      Se.Set BeamFP.commissionChargeConfig $ TF.encodeChargeConfig <$> farePolicy.commissionChargeConfig,
+      Se.Set BeamFP.cancellationCommissionChargeConfig $ TF.encodeChargeConfig <$> farePolicy.cancellationCommissionChargeConfig,
+      Se.Set BeamFP.tollTaxChargeConfig $ TF.encodeChargeConfig <$> farePolicy.tollTaxChargeConfig,
+      Se.Set BeamFP.pickupBufferInSecsForNightShiftCal $ farePolicy.pickupBufferInSecsForNightShiftCal,
+      Se.Set BeamFP.serviceChargeAmount $ farePolicy.serviceCharge,
+      Se.Set BeamFP.currency $ Just farePolicy.currency,
+      Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
+      Se.Set BeamFP.rideExtraTimeChargeGracePeriod $ farePolicy.rideExtraTimeChargeGracePeriod,
+      Se.Set BeamFP.congestionCharge $ farePolicy.congestionChargeMultiplier,
+      Se.Set BeamFP.description $ farePolicy.description,
+      Se.Set BeamFP.updatedAt now
+    ]
+    [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
+
+  case farePolicy.farePolicyDetails of
+    ProgressiveDetails fPPD ->
+      updateOneWithKV
+        [ Se.Set BeamFPPD.baseFare $ roundToIntegral fPPD.baseFare,
+          Se.Set BeamFPPD.baseFareAmount $ Just fPPD.baseFare,
+          Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
+          Se.Set BeamFPPD.deadKmFare $ roundToIntegral fPPD.deadKmFare,
+          Se.Set BeamFPPD.deadKmFareAmount $ Just fPPD.deadKmFare,
+          Se.Set BeamFPPD.currency $ Just fPPD.currency,
+          Se.Set BeamFPPD.waitingCharge $ (.waitingCharge) <$> fPPD.waitingChargeInfo,
+          Se.Set BeamFPPD.freeWatingTime $ (.freeWaitingTime) <$> fPPD.waitingChargeInfo,
+          Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
+        ]
+        [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
+    SlabsDetails (FPSlabsDetails _slabs) -> pure ()
+    RentalDetails _ -> pure ()
+    InterCityDetails _ -> pure ()
+    AmbulanceDetails _ -> pure ()
+
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
+create farePolicy = do
+  case farePolicy.driverExtraFeeBounds of
+    Just driverExtraFeeBounds -> mapM_ (\defb -> QueriesDEFB.create (farePolicy.id, defb)) (toList driverExtraFeeBounds)
+    Nothing -> pure ()
+  case farePolicy.farePolicyDetails of
+    ProgressiveDetails fPPD ->
+      QueriesFPPD.create (farePolicy.id, fPPD)
+    SlabsDetails fPSD ->
+      mapM_ (\fps -> QueriesFPSDS.create (farePolicy.id, fps)) (toList fPSD.slabs)
+    AmbulanceDetails _ -> pure ()
+    RentalDetails fPRD -> do
+      QueriesFPRD.create (farePolicy.id, fPRD)
+    InterCityDetails fPICD ->
+      QueriesFPICD.create (farePolicy.id, fPICD)
+  createWithKV farePolicy
+
+delete :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> m ()
+delete farePolicyId = do
+  QueriesDEFB.deleteAll' farePolicyId
+  QueriesFPPD.delete farePolicyId
+  QueriesFPRD.delete farePolicyId
+  QueriesFPICD.delete farePolicyId
+  QueriesFPSDS.deleteAll' farePolicyId
+  QueriesFPAD.delete farePolicyId
+  deleteWithKV [Se.Is BeamFP.id $ Se.Eq (getId farePolicyId)]
+
+data FarePolicyHandler m = FarePolicyHandler
+  { findAllDriverExtraFeeBounds :: m [FullDriverExtraFeeBounds],
+    findProgressiveDetails :: m (Maybe FullFarePolicyProgressiveDetails),
+    findAllSlabDetailsSlabs :: m [BeamFPSS.FullFarePolicySlabsDetailsSlab],
+    findRentalDetails :: m (Maybe FullFarePolicyRentalDetails),
+    findInterCityDetails :: m (Maybe FullFarePolicyInterCityDetails),
+    findAllAmbulanceDetailsSlabs :: m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab],
+    findAllAdditionalCharges :: m [DTAC.ConditionalCharges]
+  }
+
+mkBeamFarePolicyHandler ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  BeamFP.FarePolicy ->
+  FarePolicyHandler m
+mkBeamFarePolicyHandler BeamFP.FarePolicyT {..} =
+  FarePolicyHandler
+    { findAllDriverExtraFeeBounds = QueriesDEFB.findAll' (Id id),
+      findProgressiveDetails = QueriesFPPD.findById' (Id id),
+      findAllSlabDetailsSlabs = QueriesFPSDS.findAll' (Id id),
+      findRentalDetails = QueriesFPRD.findById' (Id id),
+      findInterCityDetails = QueriesFPICD.findById' (Id id),
+      findAllAmbulanceDetailsSlabs = QueriesFPAD.findById' (Id id),
+      findAllAdditionalCharges = QueriesAdditionalCharges.findAllByFp id
+    }
+
+fromTTypeFarePolicy ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  FarePolicyHandler m ->
+  BeamFP.FarePolicy ->
+  m (Maybe Domain.FarePolicy)
+fromTTypeFarePolicy handler BeamFP.FarePolicyT {vatChargeConfig = beamVatChargeConfig, commissionChargeConfig = beamCommissionChargeConfig, cancellationCommissionChargeConfig = beamCancellationCommissionChargeConfig, tollTaxChargeConfig = beamTollTaxChargeConfig, ..} = do
+  fullDEFB <- handler.findAllDriverExtraFeeBounds
+  let fDEFB = snd <$> fullDEFB
+  mFarePolicyDetails <-
+    case farePolicyType of
+      Progressive -> do
+        mFPPD <- handler.findProgressiveDetails
+        case mFPPD of
+          Just (_, fPPD) -> return $ Just (ProgressiveDetails fPPD)
+          Nothing -> return Nothing
+      Slabs -> do
+        fullSlabs <- handler.findAllSlabDetailsSlabs
+        let slabs = snd <$> fullSlabs
+        case nonEmpty slabs of
+          Just nESlabs -> return $ Just (SlabsDetails (FPSlabsDetails nESlabs))
+          Nothing -> return Nothing
+      Rental -> do
+        mFPRD <- handler.findRentalDetails
+        case mFPRD of
+          Just (_, fPRD) -> return $ Just (RentalDetails fPRD)
+          Nothing -> return Nothing
+      InterCity -> do
+        mFPICD <- handler.findInterCityDetails
+        case mFPICD of
+          Just (_, fPICD) -> return $ Just (InterCityDetails fPICD)
+          Nothing -> return Nothing
+      Ambulance -> do
+        fullAmbulanceSlabs <- handler.findAllAmbulanceDetailsSlabs
+        let slabs = snd <$> fullAmbulanceSlabs
+        case nonEmpty slabs of
+          Just nESlabs -> return $ Just (AmbulanceDetails (FPAmbulanceDetails nESlabs))
+          Nothing -> return Nothing
+  conditionalCharges <- handler.findAllAdditionalCharges
+  case mFarePolicyDetails of
+    Just farePolicyDetails -> do
+      return $
+        Just
+          Domain.FarePolicy
+            { id = Id id,
+              serviceCharge = mkAmountWithDefault serviceChargeAmount <$> serviceCharge,
+              parkingCharge = parkingCharge,
+              perStopCharge = perStopCharge,
+              tollCharges = tollCharges,
+              petCharges = petCharges,
+              driverAllowance = driverAllowance,
+              airportConvenienceFee = airportConvenienceFee,
+              priorityCharges = priorityCharges,
+              pickupBufferInSecsForNightShiftCal = pickupBufferInSecsForNightShiftCal,
+              tipOptions = tipOptions,
+              currency = fromMaybe INR currency,
+              distanceUnit = fromMaybe Meter distanceUnit,
+              nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
+              allowedTripDistanceBounds =
+                ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
+                  AllowedTripDistanceBounds
+                    { minAllowedTripDistance = minAllowedTripDistance',
+                      maxAllowedTripDistance = maxAllowedTripDistance',
+                      distanceUnit = fromMaybe Meter distanceUnit
+                    },
+              driverExtraFeeBounds = nonEmpty fDEFB,
+              farePolicyDetails,
+              perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
+              rideExtraTimeChargeGracePeriod = rideExtraTimeChargeGracePeriod,
+              additionalCongestionCharge = 0,
+              congestionChargeMultiplier = congestionCharge,
+              perDistanceUnitInsuranceCharge = perDistanceUnitInsuranceCharge,
+              cardCharge =
+                Just $
+                  CardCharge
+                    { perDistanceUnitMultiplier = cardChargePerDistanceUnitMultiplier,
+                      fixed = fixedCardCharge
+                    },
+              vatChargeConfig = TF.decodeChargeConfig beamVatChargeConfig,
+              commissionChargeConfig = TF.decodeChargeConfig beamCommissionChargeConfig,
+              cancellationCommissionChargeConfig = TF.decodeChargeConfig beamCancellationCommissionChargeConfig,
+              tollTaxChargeConfig = TF.decodeChargeConfig beamTollTaxChargeConfig,
+              description = description,
+              cancellationFarePolicyId = Id <$> cancellationFarePolicyId,
+              platformFeeChargesBy = fromMaybe Subscription platformFeeChargesBy,
+              createdAt = createdAt,
+              updatedAt = updatedAt,
+              merchantId = Id <$> merchantId,
+              merchantOperatingCityId = Id <$> merchantOperatingCityId,
+              conditionalCharges = conditionalCharges,
+              ..
+            }
+    Nothing -> return Nothing

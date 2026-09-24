@@ -1,0 +1,84 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Minutes: Kernel.Types.Common
+  WaitingCharge: Domain.Types.FarePolicy.Common
+  WaitingChargeInfo: Domain.Types.FarePolicy.Common
+  NightShiftCharge: Domain.Types.FarePolicy.Common
+  PlatformFeeCharge: Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+  PlatformFeeInfo: Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+
+FarePolicySlabsDetailsSlab:
+  tableName: fare_policy_slabs_details_slab
+
+  fields:
+    id: Maybe Int
+    farePolicyId: Text
+    startDistance: Meters
+    distanceUnit: DistanceUnit
+    baseFare: HighPrecMoney
+    currency: Currency
+    waitingChargeInfo: Maybe WaitingChargeInfo
+    platformFeeInfo: Maybe PlatformFeeInfo
+    nightShiftCharge: Maybe NightShiftCharge
+
+  beamFields:
+    baseFare:
+      baseFare: Money
+      baseFareAmount: Maybe HighPrecMoney
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+    currency:
+      currency: Maybe Currency
+    waitingChargeInfo:
+      waitingCharge: Maybe WaitingCharge
+      freeWatingTime: Maybe Minutes
+    platformFeeInfo:
+      platformFeeCharge: Maybe PlatformFeeCharge
+      platformFeeCgst: Maybe Double
+      platformFeeSgst: Maybe Double
+
+  fromTType:
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    waitingChargeInfo: "((,) <$> waitingCharge <*> freeWatingTime) <&> (\\(wc, ft) -> Domain.Types.FarePolicy.Common.WaitingChargeInfo {waitingCharge = wc, freeWaitingTime = ft})|E"
+    platformFeeInfo: "((,,) <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst) <&> (\\(pfc, cg, sg) -> Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab.PlatformFeeInfo {platformFeeCharge = pfc, cgst = cg, sgst = sg})|E"
+
+  toTType:
+    baseFare: Kernel.Prelude.roundToIntegral|I
+    baseFareAmount: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+    waitingCharge: (.waitingCharge) <$> waitingChargeInfo|E
+    freeWatingTime: (.freeWaitingTime) <$> waitingChargeInfo|E
+    platformFeeCharge: (.platformFeeCharge) <$> platformFeeInfo|E
+    platformFeeCgst: (.cgst) <$> platformFeeInfo|E
+    platformFeeSgst: (.sgst) <$> platformFeeInfo|E
+
+  constraints:
+    id: PrimaryKey
+    farePolicyId: "!SecondaryKey"
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: startDistance
+        order: asc
+
+    deleteAllByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

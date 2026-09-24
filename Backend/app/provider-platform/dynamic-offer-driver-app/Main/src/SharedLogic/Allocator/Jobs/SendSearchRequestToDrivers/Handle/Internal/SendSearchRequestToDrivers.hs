@@ -42,7 +42,6 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.ConditionalCharges as DCC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.EmptyDynamicParam
-import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -88,6 +87,7 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
+import qualified SharedLogic.FarePolicy.Conversions as DFP
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)

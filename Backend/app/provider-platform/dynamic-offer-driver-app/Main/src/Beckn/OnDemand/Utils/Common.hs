@@ -857,7 +857,7 @@ tfQuotationPrice estimatedFare currency =
 mkQuotationBreakup :: IsValueAddNP -> DFParams.FareParameters -> Maybe [Spec.QuotationBreakupInner]
 mkQuotationBreakup isValueAddNP fareParams =
   let fareParameters = mkFareParamsBreakups isValueAddNP mkPrice mkQuotationBreakupInner fareParams
-   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams) fareParameters -- TODO: Remove after roll out
+   in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams.fareParametersDetails) fareParameters -- TODO: Remove after roll out
   where
     mkPrice :: HighPrecMoney -> Maybe Spec.Price
     mkPrice money =

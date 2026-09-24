@@ -21,15 +21,18 @@ import Kernel.Beam.Functions as KBF
 import Kernel.Prelude
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
-import Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection ()
+import qualified Storage.Beam.FarePolicyProgressiveDetailsPerExtraKmRateSection as BeamFPPDP
+import Storage.Queries.FarePolicyProgressiveDetailsPerExtraKmRateSection ()
+import qualified Storage.Queries.FarePolicyProgressiveDetailsPerExtraKmRateSectionExtra as Extra
 import Utils.Common.CacUtils
 
-findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
+findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [Extra.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findFarePolicyProgressiveDetailsPerExtraKmRateSectionFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection]) <- getConfigListFromCac context tenant toss FarePolicyProgressiveDetailsPerExtraKmRateSection (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)
   catMaybes <$> config
 
-instance FromCacType BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
-  fromCacType = fromTType'
+instance FromCacType BeamFPPDP.FarePolicyProgressiveDetailsPerExtraKmRateSection Extra.FullFarePolicyProgressiveDetailsPerExtraKmRateSection where
+  fromCacType beam = do
+    result <- fromTType' beam
+    pure $ Extra.toFullType <$> result

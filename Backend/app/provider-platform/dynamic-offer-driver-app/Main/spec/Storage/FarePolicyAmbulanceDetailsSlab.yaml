@@ -1,0 +1,77 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Minutes: Kernel.Types.Common
+  Months: Kernel.Types.Common
+  WaitingCharge: Domain.Types.FarePolicy.Common
+  WaitingChargeInfo: Domain.Types.FarePolicy.Common
+  NightShiftCharge: Domain.Types.FarePolicy.Common
+  PlatformFeeCharge: Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+  PlatformFeeInfo: Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+  FPAmbulanceDetailsSlab: Domain.Types.FarePolicy.FarePolicyAmbulanceDetails
+
+FarePolicyAmbulanceDetailsSlab:
+  tableName: fare_policy_ambulance_details_slab
+
+  fields:
+    id: Int
+    farePolicyId: Text
+    baseFare: HighPrecMoney
+    baseDistance: Meters
+    perKmRate: HighPrecMoney
+    currency: Currency
+    vehicleAge: Months
+    waitingChargeInfo: Maybe WaitingChargeInfo
+    platformFeeInfo: Maybe PlatformFeeInfo
+    nightShiftCharge: Maybe NightShiftCharge
+
+  beamFields:
+    waitingChargeInfo:
+      waitingCharge: Maybe WaitingCharge
+      freeWaitingTime: Maybe Minutes
+    platformFeeInfo:
+      platformFeeCharge: Maybe PlatformFeeCharge
+      platformFeeCgst: Maybe Double
+      platformFeeSgst: Maybe Double
+
+  fromTType:
+    waitingChargeInfo: "((,) <$> waitingCharge <*> freeWaitingTime) <&> (\\(wc, ft) -> Domain.Types.FarePolicy.Common.WaitingChargeInfo {waitingCharge = wc, freeWaitingTime = ft})|E"
+    platformFeeInfo: "((,,) <$> platformFeeCharge <*> platformFeeCgst <*> platformFeeSgst) <&> (\\(pfc, cg, sg) -> Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab.PlatformFeeInfo {platformFeeCharge = pfc, cgst = cg, sgst = sg})|E"
+
+  toTType:
+    waitingCharge: (.waitingCharge) <$> waitingChargeInfo|E
+    freeWaitingTime: (.freeWaitingTime) <$> waitingChargeInfo|E
+    platformFeeCharge: (.platformFeeCharge) <$> platformFeeInfo|E
+    platformFeeCgst: (.cgst) <$> platformFeeInfo|E
+    platformFeeSgst: (.sgst) <$> platformFeeInfo|E
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    id: PrimaryKey
+    farePolicyId: "!SecondaryKey"
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: vehicleAge
+        order: asc
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

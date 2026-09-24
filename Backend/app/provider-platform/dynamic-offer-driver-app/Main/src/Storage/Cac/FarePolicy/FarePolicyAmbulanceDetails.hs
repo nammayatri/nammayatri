@@ -16,15 +16,18 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab as BeamFPAD
-import Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab ()
+import qualified Storage.Beam.FarePolicyAmbulanceDetailsSlab as BeamFPAD
+import Storage.Queries.FarePolicyAmbulanceDetailsSlab ()
+import qualified Storage.Queries.FarePolicyAmbulanceDetailsSlabExtra as Extra
 import Utils.Common.CacUtils
 
-getFarePolicyAmbulanceDetailsSlabFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m [BeamFPAD.FullFarePolicyAmbulanceDetailsSlab]
+getFarePolicyAmbulanceDetailsSlabFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m [Extra.FullFarePolicyAmbulanceDetailsSlab]
 getFarePolicyAmbulanceDetailsSlabFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPAD.FarePolicyAmbulanceDetailsSlab]) <- getConfigListFromCac context tenant toss FarePolicyAmbulanceDetailsSlab (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)
   catMaybes <$> config
 
-instance FromCacType BeamFPAD.FarePolicyAmbulanceDetailsSlab BeamFPAD.FullFarePolicyAmbulanceDetailsSlab where
-  fromCacType = fromTType'
+instance FromCacType BeamFPAD.FarePolicyAmbulanceDetailsSlab Extra.FullFarePolicyAmbulanceDetailsSlab where
+  fromCacType beam = do
+    result <- fromTType' beam
+    pure $ Extra.toFullType <$> result

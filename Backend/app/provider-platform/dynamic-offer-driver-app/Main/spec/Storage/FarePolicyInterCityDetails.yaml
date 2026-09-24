@@ -1,0 +1,68 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Minutes: Kernel.Types.Common
+  Hours: Kernel.Types.Common
+  WaitingCharge: Domain.Types.FarePolicy.Common
+  NightShiftCharge: Domain.Types.FarePolicy.Common
+  WaitingChargeInfo: Domain.Types.FarePolicy.Common
+
+FarePolicyInterCityDetails:
+  tableName: fare_policy_inter_city_details
+
+  fields:
+    farePolicyId: Text
+    baseFare: HighPrecMoney
+    perHourCharge: HighPrecMoney
+    perKmRateOneWay: HighPrecMoney
+    perKmRateRoundTrip: HighPrecMoney
+    perExtraKmRate: HighPrecMoney
+    perExtraMinRate: HighPrecMoney
+    kmPerPlannedExtraHour: Kilometers
+    deadKmFare: HighPrecMoney
+    perDayMaxHourAllowance: Hours
+    perDayMaxAllowanceInMins: Maybe Minutes
+    defaultWaitTimeAtDestination: Minutes
+    currency: Currency
+    stateEntryPermitCharges: Maybe HighPrecMoney
+    nightShiftCharge: Maybe NightShiftCharge
+    waitingChargeInfo: Maybe WaitingChargeInfo
+
+  beamFields:
+    waitingChargeInfo:
+      waitingCharge: Maybe WaitingCharge
+      freeWatingTime: Maybe Minutes
+
+  fromTType:
+    waitingChargeInfo: "((,) <$> waitingCharge <*> freeWatingTime) <&> (\\(wc, ft) -> Domain.Types.FarePolicy.Common.WaitingChargeInfo {waitingCharge = wc, freeWaitingTime = ft})|E"
+
+  toTType:
+    waitingCharge: (.waitingCharge) <$> waitingChargeInfo|E
+    freeWatingTime: (.freeWaitingTime) <$> waitingChargeInfo|E
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findByFarePolicyId:
+      kvFunction: findOneWithKV
+      where: farePolicyId
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -1,0 +1,52 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+
+FarePolicyProgressiveDetailsPerExtraKmRateSection:
+  tableName: fare_policy_progressive_details_per_extra_km_rate_section
+
+  fields:
+    farePolicyId: Text
+    startDistance: Meters
+    distanceUnit: DistanceUnit
+    baseFareDepreciation: HighPrecMoney
+    perExtraKmRate: HighPrecMoney
+
+  beamType:
+    distanceUnit: Maybe DistanceUnit
+    baseFareDepreciation: Maybe HighPrecMoney
+
+  fromTType:
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    baseFareDepreciation: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    distanceUnit: Kernel.Prelude.Just|I
+    baseFareDepreciation: Kernel.Prelude.Just|I
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  beamInstance:
+    - MakeTableInstances
+
+
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: startDistance
+        order: asc
+
+    deleteAllByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

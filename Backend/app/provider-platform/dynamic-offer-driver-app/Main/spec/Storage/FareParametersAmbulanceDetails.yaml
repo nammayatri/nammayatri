@@ -1,0 +1,31 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+
+FareParametersAmbulanceDetails:
+  tableName: fare_parameters_ambulance_details
+
+  fields:
+    fareParametersId: Text
+    platformFee: Maybe HighPrecMoney
+    sgst: Maybe HighPrecMoney
+    cgst: Maybe HighPrecMoney
+    currency: Currency
+    distBasedFare: HighPrecMoney
+
+  constraints:
+    fareParametersId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+
+  queries:
+    findByFareParametersId:
+      kvFunction: findOneWithKV
+      where: fareParametersId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

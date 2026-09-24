@@ -78,6 +78,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.FareCalculator as SFC
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.Cac.FarePolicy as CQFP
@@ -89,7 +90,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.ConditionalCharges as QCC
 import qualified Storage.Queries.FareAlertSubscription as QFAS
-import qualified Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab as QFPAD
+import qualified Storage.Queries.FarePolicyAmbulanceDetailsSlab as QFPAD
 import qualified Storage.Queries.FarePolicyChangeRequest as QFPCR
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.FareProductExtra as QFareProductExtra
@@ -1156,7 +1157,8 @@ fromApiPolicy ctx mbCancellationId now p = do
                   }
             )
             (fromMaybe [] p.conditionalCharges),
-        driverCancellationNotAllowed = p.driverCancellationNotAllowed
+        driverCancellationNotAllowed = p.driverCancellationNotAllowed,
+        govtCharges = Nothing
       }
 
 fromApiDetails :: Currency -> DistanceUnit -> Common.FPV2FarePolicyDetails -> Flow FarePolicyD.FarePolicyDetails

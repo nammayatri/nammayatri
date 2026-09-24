@@ -1,0 +1,93 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Minutes: Kernel.Types.Common
+  WaitingCharge: Domain.Types.FarePolicy.Common
+  NightShiftCharge: Domain.Types.FarePolicy.Common
+  WaitingChargeInfo: Domain.Types.FarePolicy.Common
+  PickupCharges: Domain.Types.FarePolicy.Common
+  PerMinRateDurationBasis: Domain.Types.FarePolicy.FarePolicyProgressiveDetails
+
+FarePolicyProgressiveDetails:
+  tableName: fare_policy_progressive_details
+
+  fields:
+    farePolicyId: Text
+    baseDistance: Meters
+    distanceUnit: DistanceUnit
+    baseFare: HighPrecMoney
+    deadKmFare: HighPrecMoney
+    pickupCharges: PickupCharges
+    currency: Currency
+    waitingChargeInfo: Maybe WaitingChargeInfo
+    nightShiftCharge: Maybe NightShiftCharge
+    perMinRateDurationBasis: Maybe PerMinRateDurationBasis
+
+  beamFields:
+    baseFare:
+      baseFare: Money
+      baseFareAmount: Maybe HighPrecMoney
+    deadKmFare:
+      deadKmFare: Money
+      deadKmFareAmount: Maybe HighPrecMoney
+    pickupCharges:
+      pickupChargesMin: Maybe Money
+      pickupChargesMax: Maybe Money
+      pickupChargesMinAmount: Maybe HighPrecMoney
+      pickupChargesMaxAmount: Maybe HighPrecMoney
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+    currency:
+      currency: Maybe Currency
+    waitingChargeInfo:
+      waitingCharge: Maybe WaitingCharge
+      freeWatingTime: Maybe Minutes
+
+  fromTType:
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
+    deadKmFare: Kernel.Types.Common.mkAmountWithDefault deadKmFareAmount deadKmFare|E
+    pickupCharges: Storage.Queries.Transformers.FarePolicyProgressiveDetails.mkPickupCharges pickupChargesMin pickupChargesMax pickupChargesMinAmount pickupChargesMaxAmount deadKmFare deadKmFareAmount|E
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    waitingChargeInfo: "((,) <$> waitingCharge <*> freeWatingTime) <&> (\\(wc, ft) -> Domain.Types.FarePolicy.Common.WaitingChargeInfo {waitingCharge = wc, freeWaitingTime = ft})|E"
+
+  toTType:
+    baseFare: Kernel.Prelude.roundToIntegral|I
+    baseFareAmount: Kernel.Prelude.Just|I
+    deadKmFare: Kernel.Prelude.roundToIntegral|I
+    deadKmFareAmount: Kernel.Prelude.Just|I
+    pickupChargesMin: Kernel.Prelude.Just $ Kernel.Prelude.roundToIntegral ((.pickupChargesMin) pickupCharges)|E
+    pickupChargesMax: Kernel.Prelude.Just $ Kernel.Prelude.roundToIntegral ((.pickupChargesMax) pickupCharges)|E
+    pickupChargesMinAmount: Kernel.Prelude.Just ((.pickupChargesMin) pickupCharges)|E
+    pickupChargesMaxAmount: Kernel.Prelude.Just ((.pickupChargesMax) pickupCharges)|E
+    distanceUnit: Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+    waitingCharge: (.waitingCharge) <$> waitingChargeInfo|E
+    freeWatingTime: (.freeWaitingTime) <$> waitingChargeInfo|E
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findByFarePolicyId:
+      kvFunction: findOneWithKV
+      where: farePolicyId
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

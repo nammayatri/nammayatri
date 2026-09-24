@@ -16,15 +16,18 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
-import qualified Storage.Beam.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as BeamFPRDPS
-import Storage.Queries.FarePolicy.FarePolicyInterCityDetailsPricingSlabs ()
+import qualified Storage.Beam.FarePolicyInterCityDetailsPricingSlabs as BeamFPRDPS
+import Storage.Queries.FarePolicyInterCityDetailsPricingSlabs ()
+import qualified Storage.Queries.FarePolicyInterCityDetailsPricingSlabsExtra as Extra
 import Utils.Common.CacUtils
 
-findFarePolicyInterCityDetailsPricingSlabsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [BeamFPRDPS.FullFarePolicyInterCityDetailsPricingSlabs]
+findFarePolicyInterCityDetailsPricingSlabsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id DFP.FarePolicy -> Int -> m [Extra.FullFarePolicyInterCityDetailsPricingSlabs]
 findFarePolicyInterCityDetailsPricingSlabsFromCAC context tenant id toss = do
   res :: (Maybe [BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs]) <- getConfigListFromCac context tenant toss FarePolicyInterCityDetailsPricingSlabs (Text.unpack id.getId)
   let config = mapM fromCacType (fromMaybe [] res)
   catMaybes <$> config
 
-instance FromCacType BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs BeamFPRDPS.FullFarePolicyInterCityDetailsPricingSlabs where
-  fromCacType = fromTType'
+instance FromCacType BeamFPRDPS.FarePolicyInterCityDetailsPricingSlabs Extra.FullFarePolicyInterCityDetailsPricingSlabs where
+  fromCacType beam = do
+    result <- fromTType' beam
+    pure $ Extra.toFullType <$> result

@@ -1,0 +1,182 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  CancellationFarePolicy: Domain.Types.CancellationFarePolicy
+  ConditionalCharges: Domain.Types.ConditionalCharges
+  FarePolicy: Domain.Types.FarePolicy
+  FarePolicyType: Domain.Types.Extra.FarePolicy
+  FarePolicyDetailsD: Domain.Types.Extra.FarePolicy
+  ReturnFee: Domain.Types.Extra.FarePolicy
+  BoothCharge: Domain.Types.Extra.FarePolicy
+  SchedulingCharge: Domain.Types.Extra.FarePolicy
+  CongestionChargeMultiplier: Domain.Types.Extra.FarePolicy
+  PlatformFeeMethods: Domain.Types.Extra.FarePolicy
+  CardCharge: Domain.Types.Extra.FarePolicy
+  FareChargeConfig: Domain.Types.Extra.FarePolicy
+  AllowedTripDistanceBounds: Domain.Types.Extra.FarePolicy
+  DriverExtraFeeBounds: Domain.Types.FarePolicy.DriverExtraFeeBounds
+  NonEmpty: Data.List.NonEmpty
+  NightShiftBounds: "API.Types.ProviderPlatform.Management.Merchant"
+  TimeOfDay: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+
+FarePolicy:
+  tableName: fare_policy
+
+  derives: "Generic,Show,ToSchema,'UsageSafety"
+
+  fields:
+    id: Id FarePolicy
+    serviceCharge: Maybe HighPrecMoney
+    parkingCharge: Maybe HighPrecMoney
+    perStopCharge: Maybe HighPrecMoney
+    perLuggageCharge: Maybe HighPrecMoney
+    returnFee: Maybe ReturnFee
+    boothCharges: Maybe BoothCharge
+    schedulingCharge: Maybe SchedulingCharge
+    currency: Currency
+    nightShiftBounds: Maybe NightShiftBounds
+    allowedTripDistanceBounds: Maybe AllowedTripDistanceBounds
+    distanceUnit: DistanceUnit
+    tollCharges: Maybe HighPrecMoney
+    petCharges: Maybe HighPrecMoney
+    driverAllowance: Maybe HighPrecMoney
+    airportConvenienceFee: Maybe HighPrecMoney
+    businessDiscountPercentage: Maybe Double
+    personalDiscountPercentage: Maybe Double
+    priorityCharges: Maybe HighPrecMoney
+    pickupBufferInSecsForNightShiftCal: Maybe Seconds
+    tipOptions: Maybe [Int]
+    additionalCongestionCharge: HighPrecMoney
+    perMinuteRideExtraTimeCharge: Maybe HighPrecMoney
+    rideExtraTimeChargeGracePeriod: Maybe Seconds
+    congestionChargeMultiplier: Maybe CongestionChargeMultiplier
+    perDistanceUnitInsuranceCharge: Maybe HighPrecMoney
+    cardCharge: Maybe CardCharge
+    vatChargeConfig: Maybe FareChargeConfig
+    commissionChargeConfig: Maybe FareChargeConfig
+    cancellationCommissionChargeConfig: Maybe FareChargeConfig
+    tollTaxChargeConfig: Maybe FareChargeConfig
+    farePolicyDetails: FarePolicyDetailsD s
+    cancellationFarePolicyId: Maybe (Id CancellationFarePolicy)
+    description: Maybe Text
+    platformFee: Maybe HighPrecMoney
+    sgst: Maybe HighPrecMoney
+    cgst: Maybe HighPrecMoney
+    platformFeeChargesBy: PlatformFeeMethods
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    driverExtraFeeBounds: "Maybe (NonEmpty DriverExtraFeeBounds)"
+    conditionalCharges: "[ConditionalCharges]"
+    driverCancellationNotAllowed: Maybe Bool
+    govtCharges: Maybe Double
+
+  beamFields:
+    # Dual Money/HighPrecMoney
+    serviceCharge:
+      serviceCharge: Maybe Money
+      serviceChargeAmount: Maybe HighPrecMoney
+    # Composite → 2 beam columns
+    nightShiftBounds:
+      nightShiftStart: Maybe TimeOfDay
+      nightShiftEnd: Maybe TimeOfDay
+    allowedTripDistanceBounds:
+      maxAllowedTripDistance: Maybe Meters
+      minAllowedTripDistance: Maybe Meters
+    cardCharge:
+      cardChargePerDistanceUnitMultiplier: Maybe Double
+      fixedCardCharge: Maybe HighPrecMoney
+    # JSON-encoded Text columns
+    vatChargeConfig:
+      vatChargeConfig: Maybe Text
+    commissionChargeConfig:
+      commissionChargeConfig: Maybe Text
+    cancellationCommissionChargeConfig:
+      cancellationCommissionChargeConfig: Maybe Text
+    tollTaxChargeConfig:
+      tollTaxChargeConfig: Maybe Text
+    # Name mismatch
+    congestionChargeMultiplier:
+      congestionCharge: Maybe CongestionChargeMultiplier
+    # Beam type differs
+    currency:
+      currency: Maybe Currency
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+    platformFeeChargesBy:
+      platformFeeChargesBy: Maybe PlatformFeeMethods
+    # Domain-only fields (not in beam)
+    farePolicyDetails:
+      farePolicyType: FarePolicyType
+    driverExtraFeeBounds: {}
+    conditionalCharges: {}
+    additionalCongestionCharge: {}
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  intermediateTransformers:
+    fromTType:
+      - mFarePolicyDetails: Storage.Queries.Transformers.FarePolicy.fetchFarePolicyDetails farePolicyType id|EM
+      - driverExtraFeeBoundsList: Storage.Queries.Transformers.FarePolicy.fetchDriverExtraFeeBounds id|EM
+      - conditionalChargesList: Storage.Queries.Transformers.FarePolicy.fetchConditionalCharges id|EM
+
+  fromTType:
+    serviceCharge: Kernel.Types.Common.mkAmountWithDefault serviceChargeAmount <$> serviceCharge|E
+    nightShiftBounds: Storage.Queries.Transformers.FarePolicy.mkNightShiftBounds nightShiftStart nightShiftEnd|E
+    allowedTripDistanceBounds: Storage.Queries.Transformers.FarePolicy.mkAllowedTripDistanceBoundsFromBeam minAllowedTripDistance maxAllowedTripDistance distanceUnit|E
+    cardCharge: Storage.Queries.Transformers.FarePolicy.mkCardCharge cardChargePerDistanceUnitMultiplier fixedCardCharge|E
+    vatChargeConfig: Storage.Queries.Transformers.FarePolicy.decodeChargeConfig vatChargeConfig|E
+    commissionChargeConfig: Storage.Queries.Transformers.FarePolicy.decodeChargeConfig commissionChargeConfig|E
+    cancellationCommissionChargeConfig: Storage.Queries.Transformers.FarePolicy.decodeChargeConfig cancellationCommissionChargeConfig|E
+    tollTaxChargeConfig: Storage.Queries.Transformers.FarePolicy.decodeChargeConfig tollTaxChargeConfig|E
+    congestionChargeMultiplier: congestionCharge|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+    platformFeeChargesBy: Kernel.Prelude.fromMaybe Domain.Types.Extra.FarePolicy.Subscription|I
+    farePolicyDetails: Storage.Queries.Transformers.FarePolicy.fromMaybeFarePolicyDetails mFarePolicyDetails|E
+    driverExtraFeeBounds: Data.List.NonEmpty.nonEmpty driverExtraFeeBoundsList|E
+    conditionalCharges: conditionalChargesList|E
+    additionalCongestionCharge: 0|E
+    govtCharges: Kernel.Prelude.Nothing|E
+
+  toTType:
+    serviceCharge: Kernel.Prelude.roundToIntegral <$> serviceCharge|E
+    serviceChargeAmount: serviceCharge|E
+    nightShiftStart: (.nightShiftStart) <$> nightShiftBounds|E
+    nightShiftEnd: (.nightShiftEnd) <$> nightShiftBounds|E
+    maxAllowedTripDistance: (.maxAllowedTripDistance) <$> allowedTripDistanceBounds|E
+    minAllowedTripDistance: (.minAllowedTripDistance) <$> allowedTripDistanceBounds|E
+    cardChargePerDistanceUnitMultiplier: cardCharge Kernel.Prelude.>>= (.perDistanceUnitMultiplier)|E
+    fixedCardCharge: cardCharge Kernel.Prelude.>>= (.fixed)|E
+    vatChargeConfig: Storage.Queries.Transformers.FarePolicy.encodeChargeConfig <$> vatChargeConfig|E
+    commissionChargeConfig: Storage.Queries.Transformers.FarePolicy.encodeChargeConfig <$> commissionChargeConfig|E
+    cancellationCommissionChargeConfig: Storage.Queries.Transformers.FarePolicy.encodeChargeConfig <$> cancellationCommissionChargeConfig|E
+    tollTaxChargeConfig: Storage.Queries.Transformers.FarePolicy.encodeChargeConfig <$> tollTaxChargeConfig|E
+    congestionCharge: congestionChargeMultiplier|E
+    currency: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+    platformFeeChargesBy: Kernel.Prelude.Just|I
+    farePolicyType: Storage.Queries.Transformers.FarePolicy.mkFarePolicyType farePolicyDetails|E
+    govtCharges: Kernel.Prelude.Nothing|E
+
+  constraints:
+    id: PrimaryKey
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - EXTRA_DOMAIN_TYPE_FILE

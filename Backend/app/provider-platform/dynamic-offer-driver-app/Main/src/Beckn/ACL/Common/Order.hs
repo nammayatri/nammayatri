@@ -49,7 +49,6 @@ import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.FareParameters as DFParams
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OnUpdate as OU
@@ -63,6 +62,7 @@ import Kernel.Types.Common
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.FareCalculator as Fare
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Tools.Error
 import qualified Tools.Utils as Tools
@@ -226,7 +226,7 @@ buildRideCompletedQuote isValueAddNP ride fareParams = do
           }
       breakup =
         Fare.mkFareParamsBreakups isValueAddNP (Breakup.BreakupItemPrice currency . DecimalValue.DecimalValue . getHighPrecMoney) Breakup.BreakupItem fareParams
-          & filter (ACLCommon.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
+          & filter (ACLCommon.filterRequiredBreakups $ DFParams.getFareParametersType fareParams.fareParametersDetails) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote
       { price,

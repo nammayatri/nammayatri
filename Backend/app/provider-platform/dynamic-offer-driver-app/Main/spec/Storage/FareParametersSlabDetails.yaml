@@ -1,0 +1,39 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+
+FareParametersSlabDetails:
+  tableName: fare_parameters_slab_details
+
+  fields:
+    fareParametersId: Text
+    platformFee: Maybe HighPrecMoney
+    sgst: Maybe HighPrecMoney
+    cgst: Maybe HighPrecMoney
+    currency: Currency
+
+  beamType:
+    currency: Maybe Currency
+
+  fromTType:
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    fareParametersId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+
+  queries:
+    findByFareParametersId:
+      kvFunction: findOneWithKV
+      where: fareParametersId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

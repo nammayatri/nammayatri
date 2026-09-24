@@ -91,6 +91,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import SharedLogic.FarePolicy.Conversions
 import qualified SharedLogic.Finance.Prepaid as SFPrepaid
 import qualified SharedLogic.Finance.Wallet as SFWallet
 import qualified SharedLogic.Merchant as SMerchant

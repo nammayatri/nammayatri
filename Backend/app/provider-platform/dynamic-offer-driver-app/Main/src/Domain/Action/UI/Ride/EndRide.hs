@@ -51,7 +51,6 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
-import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -105,6 +104,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified SharedLogic.FarePolicy.Conversions as DFP
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import qualified SharedLogic.IncentiveJourney as SLJourney
 import qualified SharedLogic.MerchantPaymentMethod as DMPM

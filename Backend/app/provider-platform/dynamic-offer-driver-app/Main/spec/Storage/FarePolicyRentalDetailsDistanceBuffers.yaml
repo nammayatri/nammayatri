@@ -1,0 +1,40 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Seconds: Kernel.Utils.Time
+
+FarePolicyRentalDetailsDistanceBuffers:
+  tableName: fare_policy_rental_details_distance_buffers
+
+  fields:
+    farePolicyId: Text
+    rideDuration: Seconds
+    bufferKms: Int
+    bufferMeters: Int
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  beamInstance:
+    - MakeTableInstances
+
+
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: rideDuration
+        order: asc
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

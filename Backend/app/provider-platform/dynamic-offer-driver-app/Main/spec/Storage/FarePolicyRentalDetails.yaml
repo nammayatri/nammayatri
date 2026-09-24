@@ -1,0 +1,98 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Minutes: Kernel.Types.Common
+  WaitingCharge: Domain.Types.FarePolicy.Common
+  NightShiftCharge: Domain.Types.FarePolicy.Common
+  WaitingChargeInfo: Domain.Types.FarePolicy.Common
+
+FarePolicyRentalDetails:
+  tableName: fare_policy_rental_details
+
+  fields:
+    farePolicyId: Text
+    baseFare: HighPrecMoney
+    perHourCharge: HighPrecMoney
+    perExtraMinRate: HighPrecMoney
+    perExtraKmRate: HighPrecMoney
+    nightShiftCharge: Maybe NightShiftCharge
+    deadKmFare: HighPrecMoney
+    includedKmPerHr: Kilometers
+    plannedPerKmRate: HighPrecMoney
+    currency: Currency
+    maxAdditionalKmsLimit: Kilometers
+    totalAdditionalKmsLimit: Kilometers
+    waitingChargeInfo: Maybe WaitingChargeInfo
+
+  beamFields:
+    baseFare:
+      baseFare: Money
+      baseFareAmount: Maybe HighPrecMoney
+    perHourCharge:
+      perHourCharge: Money
+      perHourChargeAmount: Maybe HighPrecMoney
+    perExtraMinRate:
+      perExtraMinRate: Money
+      perExtraMinRateAmount: Maybe HighPrecMoney
+    perExtraKmRate:
+      perExtraKmRate: Money
+      perExtraKmRateAmount: Maybe HighPrecMoney
+    plannedPerKmRate:
+      plannedPerKmRate: Money
+      plannedPerKmRateAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
+    waitingChargeInfo:
+      freeWaitingTime: Maybe Minutes
+      waitingCharge: Maybe WaitingCharge
+
+  fromTType:
+    baseFare: Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare|E
+    perHourCharge: Kernel.Types.Common.mkAmountWithDefault perHourChargeAmount perHourCharge|E
+    perExtraMinRate: Kernel.Types.Common.mkAmountWithDefault perExtraMinRateAmount perExtraMinRate|E
+    perExtraKmRate: Kernel.Types.Common.mkAmountWithDefault perExtraKmRateAmount perExtraKmRate|E
+    plannedPerKmRate: Kernel.Types.Common.mkAmountWithDefault plannedPerKmRateAmount plannedPerKmRate|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    waitingChargeInfo: "((,) <$> waitingCharge <*> freeWaitingTime) <&> (\\(wc, ft) -> Domain.Types.FarePolicy.Common.WaitingChargeInfo {waitingCharge = wc, freeWaitingTime = ft})|E"
+
+  toTType:
+    baseFare: Kernel.Prelude.roundToIntegral|I
+    baseFareAmount: Kernel.Prelude.Just|I
+    perHourCharge: Kernel.Prelude.roundToIntegral|I
+    perHourChargeAmount: Kernel.Prelude.Just|I
+    perExtraMinRate: Kernel.Prelude.roundToIntegral|I
+    perExtraMinRateAmount: Kernel.Prelude.Just|I
+    perExtraKmRate: Kernel.Prelude.roundToIntegral|I
+    perExtraKmRateAmount: Kernel.Prelude.Just|I
+    plannedPerKmRate: Kernel.Prelude.roundToIntegral|I
+    plannedPerKmRateAmount: Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+    freeWaitingTime: (.freeWaitingTime) <$> waitingChargeInfo|E
+    waitingCharge: (.waitingCharge) <$> waitingChargeInfo|E
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findByFarePolicyId:
+      kvFunction: findOneWithKV
+      where: farePolicyId
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

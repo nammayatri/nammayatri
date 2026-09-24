@@ -497,6 +497,8 @@ library
       Domain.Types.Extra.DriverFee
       Domain.Types.Extra.DriverHomeLocation
       Domain.Types.Extra.DriverPlan
+      Domain.Types.Extra.FareParameters
+      Domain.Types.Extra.FarePolicy
       Domain.Types.Extra.IdfyVerification
       Domain.Types.Extra.Location
       Domain.Types.Extra.MerchantClientConfig
@@ -509,8 +511,6 @@ library
       Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
       Domain.Types.Extra.WalletTransaction
-      Domain.Types.FareParameters
-      Domain.Types.FarePolicy
       Domain.Types.FarePolicy.Common
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyAmbulanceDetails
@@ -674,6 +674,7 @@ library
       SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
+      SharedLogic.FarePolicy.Conversions
       SharedLogic.FareProduct
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.GstBreakdown
@@ -757,13 +758,6 @@ library
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Common
       Storage.Beam.DashboardAlert
-      Storage.Beam.FareParameters
-      Storage.Beam.FareParameters.FareParametersAmbulanceDetails
-      Storage.Beam.FareParameters.FareParametersInterCityDetails
-      Storage.Beam.FareParameters.FareParametersProgressiveDetails
-      Storage.Beam.FareParameters.FareParametersRentalDetails
-      Storage.Beam.FareParameters.FareParametersSlabDetails
-      Storage.Beam.FarePolicy
       Storage.Beam.FarePolicy.DriverExtraFeeBounds
       Storage.Beam.FarePolicy.FarePolicyAmbulanceDetailsSlab
       Storage.Beam.FarePolicy.FarePolicyInterCityDetails
@@ -962,13 +956,13 @@ library
       Storage.Queries.DriverUdyamExtra
       Storage.Queries.EntityInfoExtra
       Storage.Queries.ExophoneExtra
-      Storage.Queries.FareParameters
-      Storage.Queries.FareParameters.FareParametersAmbulanceDetails
-      Storage.Queries.FareParameters.FareParametersInterCityDetails
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
-      Storage.Queries.FareParameters.FareParametersRentalDetails
-      Storage.Queries.FareParameters.FareParametersSlabDetails
-      Storage.Queries.FarePolicy
+      Storage.Queries.FareParametersAmbulanceDetailsExtra
+      Storage.Queries.FareParametersExtra
+      Storage.Queries.FareParametersInterCityDetailsExtra
+      Storage.Queries.FareParametersProgressiveDetailsExtra
+      Storage.Queries.FareParametersRentalDetailsExtra
+      Storage.Queries.FareParametersSlabDetailsExtra
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyAmbulanceDetailsSlab
       Storage.Queries.FarePolicy.FarePolicyInterCityDetails
@@ -980,6 +974,17 @@ library
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsPricingSlabs
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+      Storage.Queries.FarePolicyAmbulanceDetailsSlabExtra
+      Storage.Queries.FarePolicyDriverExtraFeeBoundsExtra
+      Storage.Queries.FarePolicyExtra
+      Storage.Queries.FarePolicyInterCityDetailsExtra
+      Storage.Queries.FarePolicyInterCityDetailsPricingSlabsExtra
+      Storage.Queries.FarePolicyProgressiveDetailsExtra
+      Storage.Queries.FarePolicyProgressiveDetailsPerExtraKmRateSectionExtra
+      Storage.Queries.FarePolicyRentalDetailsDistanceBuffersExtra
+      Storage.Queries.FarePolicyRentalDetailsExtra
+      Storage.Queries.FarePolicyRentalDetailsPricingSlabsExtra
+      Storage.Queries.FarePolicySlabsDetailsSlabExtra
       Storage.Queries.FareProductExtra
       Storage.Queries.FeedbackBadgeExtra
       Storage.Queries.FeedbackExtra
@@ -1067,6 +1072,9 @@ library
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FareParameters
+      Storage.Queries.Transformers.FarePolicy
+      Storage.Queries.Transformers.FarePolicyProgressiveDetails
       Storage.Queries.Transformers.FleetOperatorDailyStats
       Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
@@ -1594,7 +1602,24 @@ library
       Domain.Types.Exophone
       Domain.Types.Faq
       Domain.Types.FareAlertSubscription
+      Domain.Types.FareParameters
+      Domain.Types.FareParametersAmbulanceDetails
+      Domain.Types.FareParametersInterCityDetails
+      Domain.Types.FareParametersProgressiveDetails
+      Domain.Types.FareParametersRentalDetails
+      Domain.Types.FareParametersSlabDetails
+      Domain.Types.FarePolicy
+      Domain.Types.FarePolicyAmbulanceDetailsSlab
       Domain.Types.FarePolicyChangeRequest
+      Domain.Types.FarePolicyDriverExtraFeeBounds
+      Domain.Types.FarePolicyInterCityDetails
+      Domain.Types.FarePolicyInterCityDetailsPricingSlabs
+      Domain.Types.FarePolicyProgressiveDetails
+      Domain.Types.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Domain.Types.FarePolicyRentalDetails
+      Domain.Types.FarePolicyRentalDetailsDistanceBuffers
+      Domain.Types.FarePolicyRentalDetailsPricingSlabs
+      Domain.Types.FarePolicySlabsDetailsSlab
       Domain.Types.FareProduct
       Domain.Types.Feedback
       Domain.Types.FeedbackBadge
@@ -1790,7 +1815,24 @@ library
       Storage.Beam.Exophone
       Storage.Beam.Faq
       Storage.Beam.FareAlertSubscription
+      Storage.Beam.FareParameters
+      Storage.Beam.FareParametersAmbulanceDetails
+      Storage.Beam.FareParametersInterCityDetails
+      Storage.Beam.FareParametersProgressiveDetails
+      Storage.Beam.FareParametersRentalDetails
+      Storage.Beam.FareParametersSlabDetails
+      Storage.Beam.FarePolicy
+      Storage.Beam.FarePolicyAmbulanceDetailsSlab
       Storage.Beam.FarePolicyChangeRequest
+      Storage.Beam.FarePolicyDriverExtraFeeBounds
+      Storage.Beam.FarePolicyInterCityDetails
+      Storage.Beam.FarePolicyInterCityDetailsPricingSlabs
+      Storage.Beam.FarePolicyProgressiveDetails
+      Storage.Beam.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Beam.FarePolicyRentalDetails
+      Storage.Beam.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Beam.FarePolicyRentalDetailsPricingSlabs
+      Storage.Beam.FarePolicySlabsDetailsSlab
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
       Storage.Beam.FeedbackBadge
@@ -1991,7 +2033,24 @@ library
       Storage.Queries.Exophone
       Storage.Queries.Faq
       Storage.Queries.FareAlertSubscription
+      Storage.Queries.FareParameters
+      Storage.Queries.FareParametersAmbulanceDetails
+      Storage.Queries.FareParametersInterCityDetails
+      Storage.Queries.FareParametersProgressiveDetails
+      Storage.Queries.FareParametersRentalDetails
+      Storage.Queries.FareParametersSlabDetails
+      Storage.Queries.FarePolicy
+      Storage.Queries.FarePolicyAmbulanceDetailsSlab
       Storage.Queries.FarePolicyChangeRequest
+      Storage.Queries.FarePolicyDriverExtraFeeBounds
+      Storage.Queries.FarePolicyInterCityDetails
+      Storage.Queries.FarePolicyInterCityDetailsPricingSlabs
+      Storage.Queries.FarePolicyProgressiveDetails
+      Storage.Queries.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Queries.FarePolicyRentalDetails
+      Storage.Queries.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Queries.FarePolicyRentalDetailsPricingSlabs
+      Storage.Queries.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
       Storage.Queries.FeedbackBadge
@@ -2091,6 +2150,23 @@ library
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.DriverStats
       Storage.Queries.OrphanInstances.Exophone
+      Storage.Queries.OrphanInstances.FareParameters
+      Storage.Queries.OrphanInstances.FareParametersAmbulanceDetails
+      Storage.Queries.OrphanInstances.FareParametersInterCityDetails
+      Storage.Queries.OrphanInstances.FareParametersProgressiveDetails
+      Storage.Queries.OrphanInstances.FareParametersRentalDetails
+      Storage.Queries.OrphanInstances.FareParametersSlabDetails
+      Storage.Queries.OrphanInstances.FarePolicy
+      Storage.Queries.OrphanInstances.FarePolicyAmbulanceDetailsSlab
+      Storage.Queries.OrphanInstances.FarePolicyDriverExtraFeeBounds
+      Storage.Queries.OrphanInstances.FarePolicyInterCityDetails
+      Storage.Queries.OrphanInstances.FarePolicyInterCityDetailsPricingSlabs
+      Storage.Queries.OrphanInstances.FarePolicyProgressiveDetails
+      Storage.Queries.OrphanInstances.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Queries.OrphanInstances.FarePolicyRentalDetails
+      Storage.Queries.OrphanInstances.FarePolicyRentalDetailsDistanceBuffers
+      Storage.Queries.OrphanInstances.FarePolicyRentalDetailsPricingSlabs
+      Storage.Queries.OrphanInstances.FarePolicySlabsDetailsSlab
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
       Storage.Queries.OrphanInstances.FeedbackBadge

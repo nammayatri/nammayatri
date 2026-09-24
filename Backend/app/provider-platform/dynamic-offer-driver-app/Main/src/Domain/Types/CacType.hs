@@ -34,7 +34,7 @@ checkParseCommon (key, value) = do
         "farePolicyRentalDetailsPricingSlabs" -> checkParse (Proxy @[FPRDPS.FarePolicyRentalDetailsPricingSlabs]) tableColumn value
         "farePolicyInterCityDetailsPricingSlabs" -> checkParse (Proxy @[FPICDPS.FarePolicyInterCityDetailsPricingSlabs]) tableColumn value
         "farePolicySlabsDetailsSlab" -> checkParse (Proxy @[FPSS.FarePolicySlabsDetailsSlab]) tableColumn value
-        "driverExtraFeeBounds" -> checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
+        "driverExtraFeeBounds" -> checkParse (Proxy @DEFB.FarePolicyDriverExtraFeeBoundsT) tableColumn value
         "farePolicyProgressiveDetails" -> checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value
         "farePolicyRentalDetails" -> checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
         "farePolicy" -> checkParse (Proxy @FP.FarePolicyT) tableColumn value

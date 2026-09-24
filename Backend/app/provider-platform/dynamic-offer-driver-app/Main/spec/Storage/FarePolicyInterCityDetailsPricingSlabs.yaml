@@ -1,0 +1,44 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  FPInterCityDetailsPricingSlabs: Domain.Types.FarePolicy.FarePolicyInterCityDetailsPricingSlabs
+
+FarePolicyInterCityDetailsPricingSlabs:
+  tableName: fare_policy_inter_city_details_pricing_slabs
+
+  fields:
+    farePolicyId: Text
+    timePercentage: Int
+    distancePercentage: Int
+    farePercentage: Int
+    includeActualTimePercentage: Bool
+    includeActualDistPercentage: Bool
+
+  constraints:
+    farePolicyId: PrimaryKey
+    timePercentage: PrimaryKey
+    distancePercentage: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  beamInstance:
+    - MakeTableInstances
+
+
+  queries:
+    findAllByFarePolicyId:
+      kvFunction: findAllWithOptionsKV
+      where: farePolicyId
+      orderBy:
+        field: distancePercentage
+        order: asc
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

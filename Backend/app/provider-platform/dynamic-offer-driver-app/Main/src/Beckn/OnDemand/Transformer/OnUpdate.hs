@@ -31,7 +31,6 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.OnUpdate as OU
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -40,6 +39,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import SharedLogic.Beckn.Common
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.FareParameters as QFP

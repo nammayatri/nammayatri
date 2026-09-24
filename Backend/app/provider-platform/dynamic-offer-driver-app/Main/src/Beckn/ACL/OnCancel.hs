@@ -34,7 +34,6 @@ import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnCancel as Reexport
 import qualified Domain.Types.OnCancel as OC
@@ -51,6 +50,7 @@ import Kernel.Utils.Common hiding (mkPrice)
 import qualified Kernel.Utils.Common as Common (mkPrice)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD

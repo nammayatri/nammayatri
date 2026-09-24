@@ -12,11 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
+module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
+  ( module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab,
+    module ReExport,
+  )
+where
 
 import Data.Aeson as DA
 import Domain.Types.Common
-import Domain.Types.FarePolicy.Common as DFPC
+import Domain.Types.FarePolicy.Common as ReExport (NightShiftCharge (..), WaitingCharge (..), WaitingChargeInfo (..))
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
@@ -25,9 +29,9 @@ data FPSlabsDetailsSlabD (s :: UsageSafety) = FPSlabsDetailsSlab
   { startDistance :: Meters,
     distanceUnit :: DistanceUnit,
     baseFare :: HighPrecMoney,
-    waitingChargeInfo :: Maybe DFPC.WaitingChargeInfo,
+    waitingChargeInfo :: Maybe WaitingChargeInfo,
     platformFeeInfo :: Maybe PlatformFeeInfo,
-    nightShiftCharge :: Maybe DFPC.NightShiftCharge,
+    nightShiftCharge :: Maybe NightShiftCharge,
     currency :: Currency
   }
   deriving (Generic, Show, Eq, ToSchema)

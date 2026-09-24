@@ -1,0 +1,71 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+
+FareParametersRentalDetails:
+  tableName: fare_parameters_rental_details
+
+  fields:
+    fareParametersId: Text
+    timeBasedFare: HighPrecMoney
+    distBasedFare: HighPrecMoney
+    deadKmFare: HighPrecMoney
+    extraDistance: Meters
+    extraDuration: Seconds
+    currency: Currency
+    distanceUnit: DistanceUnit
+
+  beamFields:
+    timeBasedFare:
+      timeBasedFare: Money
+      timeBasedFareAmount: Maybe HighPrecMoney
+    distBasedFare:
+      distBasedFare: Money
+      distBasedFareAmount: Maybe HighPrecMoney
+    deadKmFare:
+      deadKmFare: Maybe HighPrecMoney
+    extraDistance:
+      extraDistance: Maybe Meters
+    extraDuration:
+      extraDuration: Maybe Seconds
+    currency:
+      currency: Maybe Currency
+    distanceUnit:
+      distanceUnit: Maybe DistanceUnit
+
+  fromTType:
+    timeBasedFare: Kernel.Types.Common.mkAmountWithDefault timeBasedFareAmount timeBasedFare|E
+    distBasedFare: Kernel.Types.Common.mkAmountWithDefault distBasedFareAmount distBasedFare|E
+    deadKmFare: Kernel.Prelude.fromMaybe 0 deadKmFare|E
+    extraDistance: Kernel.Prelude.fromMaybe 0|I
+    extraDuration: Kernel.Prelude.fromMaybe 0|I
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+    distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter|I
+
+  toTType:
+    timeBasedFare: Kernel.Prelude.roundToIntegral|I
+    timeBasedFareAmount: Kernel.Prelude.Just|I
+    distBasedFare: Kernel.Prelude.roundToIntegral|I
+    distBasedFareAmount: Kernel.Prelude.Just|I
+    deadKmFare: Kernel.Prelude.Just|I
+    extraDistance: Kernel.Prelude.Just|I
+    extraDuration: Kernel.Prelude.Just|I
+    currency: Kernel.Prelude.Just|I
+    distanceUnit: Kernel.Prelude.Just|I
+
+  constraints:
+    fareParametersId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+
+  queries:
+    findByFareParametersId:
+      kvFunction: findOneWithKV
+      where: fareParametersId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

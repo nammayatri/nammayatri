@@ -86,6 +86,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.FarePolicy.Conversions (FullFarePolicy)
 import Storage.Beam.SpecialZone ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
@@ -715,7 +716,8 @@ calculateFareParametersHandler params = do
             parkingChargeTaxExclusive = Nothing,
             parkingChargeTax = Nothing,
             fareSettlementType = params.fareSettlementType,
-            negotiatedFareDelta = Nothing
+            negotiatedFareDelta = Nothing,
+            commission = Nothing
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)
   logTagInfo "FareCalculator" $ "Fare parameters calculated: " +|| fareParams ||+ ""
