@@ -1,65 +1,129 @@
 imports:
   UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
-  VehicleTrip: Domain.Types.VehicleTrip
   ServiceTierType: BecknV2.FRFS.Enums
   SessionStatus: SharedLogic.SharedCab.SessionState
   PauseReason: SharedLogic.SharedCab.SessionState
+  SessionMovement: SharedLogic.SharedCab.SessionState
+  SelectRouteMode: SharedLogic.SharedCab.SessionState
 
 module: SharedCabInternal
 
+# Responses are the driver-app /sharedCab/* contract verbatim (driver-app proxies them unchanged);
+# requests add the driver/vehicle identity driver-app resolves from its token.
 types:
-  SharedCabRouteResp:
+  SharedCabRoute:
     code: Text
-    shortName: Text
-    longName: Text
-    distanceMeters: Double
+    name: Text
+    direction: Text
+    fromStop: Text
+    toStop: Text
+    distanceKm: Maybe Double
+    isStandRoute: Bool
 
-  SharedCabSelectReq:
-    driverId: Text
-    vehicleNumber: Text
-    integratedBppConfigId: Id IntegratedBPPConfig
+  SharedCabRoutesResp:
+    routes: "[SharedCabRoute]"
+
+  SessionRoute:
+    code: Text
+    name: Text
+    direction: Text
+    nextStops: "[Text]"
+
+  RiderStatus:
+    enum: "AT_STOP, MINUTES_AWAY"
+
+  BoardingRider:
+    bookingId: Text
+    firstName: Text
+    seats: Int
+    dropStop: Text
+    fare: HighPrecMoney
+    riderStatus: RiderStatus
+    minutesAway: Maybe Int
+    expiresAt: Maybe UTCTime
+
+  AlightingRider:
+    bookingId: Text
+    firstName: Text
+    seats: Int
+
+  RidersAtStop:
+    stopName: Text
+    boarding: "[BoardingRider]"
+    alighting: "[AlightingRider]"
+
+  DemandAtStop:
+    stopName: Text
+    waiting: Int
+    searching: Int
+    windowMin: Int
+
+  LowDemandAlternative:
     routeCode: Text
-    serviceTierType: ServiceTierType
-    capacity: Maybe Int
-    walkupCount: Maybe Int
+    name: Text
+    riders: Int
+    windowMin: Int
+    distanceKm: Double
 
-  SharedCabDriverReq:
-    driverId: Text
-    vehicleNumber: Text
+  LowDemandCard:
+    alternatives: "[LowDemandAlternative]"
 
-  SharedCabSeatsReq:
-    driverId: Text
-    vehicleNumber: Text
-    walkupCount: Int
-    version: Int
+  OffRoute:
+    nearestRoutes: "[SharedCabRoute]"
 
-  SharedCabChangeRouteReq:
-    driverId: Text
-    vehicleNumber: Text
-    routeCode: Text
-
-  SharedCabEndNext:
-    enum: "RETURN, CHANGE, END"
-
-  SharedCabEndReq:
-    driverId: Text
-    vehicleNumber: Text
-    next: SharedCabEndNext
-    routeCode: Maybe Text
-
-  SharedCabSessionResp:
-    vehicleNumber: Text
-    routeCode: Text
-    queuedRouteCode: Maybe Text
+  SharedCabSession:
+    route: SessionRoute
+    queuedRoute: Maybe SessionRoute
     status: SessionStatus
     pauseReason: Maybe PauseReason
+    movement: SessionMovement
     capacity: Int
     walkupCount: Int
     available: Int
     version: Int
-    startedAt: UTCTime
-    vehicleTripId: Id VehicleTrip
+    ridersByStop: "[RidersAtStop]"
+    demandAhead: "[DemandAtStop]"
+    lowDemandCard: Maybe LowDemandCard
+    offRoute: Maybe OffRoute
+
+  AffectedRider:
+    bookingId: Text
+    firstName: Text
+    dropStop: Text
+
+  SelectRouteResp:
+    session: Maybe SharedCabSession
+    affectedRiders: Maybe [AffectedRider]
+
+  SelectRouteReq:
+    driverId: Text
+    vehicleNumber: Text
+    integratedBppConfigId: Id IntegratedBPPConfig
+    serviceTierType: ServiceTierType
+    capacity: Maybe Int
+    routeCode: Text
+    walkupCount: Int
+    mode: Maybe SelectRouteMode
+
+  SeatsReq:
+    driverId: Text
+    vehicleNumber: Text
+    walkupCount: Int
+    version: Int
+
+  EndRouteNext:
+    enum: "RETURN, CHANGE, END"
+
+  EndRouteReq:
+    driverId: Text
+    vehicleNumber: Text
+    next: EndRouteNext
+
+  SharedCabDriverReq:
+    driverId: Text
+    vehicleNumber: Text
 
 apis:
   - GET:
@@ -72,16 +136,16 @@ apis:
         lat: Double
         lon: Double
       response:
-        type: "[API.Types.UI.SharedCabInternal.SharedCabRouteResp]"
+        type: SharedCabRoutesResp
   - POST:
       endpoint: /sharedCab/route/select
       auth: NoAuth
       headers:
         token: Text
       request:
-        type: SharedCabSelectReq
+        type: SelectRouteReq
       response:
-        type: SharedCabSessionResp
+        type: SelectRouteResp
   - GET:
       endpoint: /sharedCab/session
       auth: NoAuth
@@ -91,34 +155,25 @@ apis:
         driverId: Text
         vehicleNumber: Text
       response:
-        type: SharedCabSessionResp
+        type: SharedCabSession
   - POST:
       endpoint: /sharedCab/seats
       auth: NoAuth
       headers:
         token: Text
       request:
-        type: SharedCabSeatsReq
+        type: SeatsReq
       response:
-        type: SharedCabSessionResp
-  - POST:
-      endpoint: /sharedCab/route/change
-      auth: NoAuth
-      headers:
-        token: Text
-      request:
-        type: SharedCabChangeRouteReq
-      response:
-        type: SharedCabSessionResp
+        type: SharedCabSession
   - POST:
       endpoint: /sharedCab/route/end
       auth: NoAuth
       headers:
         token: Text
       request:
-        type: SharedCabEndReq
+        type: EndRouteReq
       response:
-        type: SharedCabSessionResp
+        type: "(Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabSession)"
   - POST:
       endpoint: /sharedCab/resume
       auth: NoAuth
@@ -127,4 +182,4 @@ apis:
       request:
         type: SharedCabDriverReq
       response:
-        type: SharedCabSessionResp
+        type: SharedCabSession

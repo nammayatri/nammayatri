@@ -1,6 +1,8 @@
 module SharedLogic.SharedCab.SessionState
   ( SessionStatus (..),
     PauseReason (..),
+    SessionMovement (..),
+    SelectRouteMode (..),
     Session (..),
     OpenSessionReq (..),
     EndRouteAction (..),
@@ -18,10 +20,14 @@ module SharedLogic.SharedCab.SessionState
     closedTripStatus,
     routeSetMoves,
     tripFor,
+    returnRouteOf,
   )
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType)
+import Data.Aeson (FromJSON (..), Options (..), ToJSON (..), defaultOptions, genericParseJSON, genericToJSON)
+import qualified Data.Char as Char
+import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -36,6 +42,26 @@ data SessionStatus = ACTIVE | PAUSED | ENDED
 
 data PauseReason = NO_LOCATION | DRIVER_OFFLINE | ABSENT | OFF_ROUTE
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Encodes as {"tag": "MOVING"} or {"tag": "AT_STOP", "stopName", "sinceMin"} (aeson's default tagged object).
+data SessionMovement = MOVING | AT_STOP {stopName :: Text, sinceMin :: Int}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | How a route change treats riders on board; JSON "afterLastDrop" | "force".
+data SelectRouteMode = AfterLastDrop | Force
+  deriving (Show, Eq, Generic)
+
+selectRouteModeOptions :: Options
+selectRouteModeOptions = defaultOptions {constructorTagModifier = \case c : cs -> Char.toLower c : cs; [] -> []}
+
+instance ToJSON SelectRouteMode where
+  toJSON = genericToJSON selectRouteModeOptions
+
+instance FromJSON SelectRouteMode where
+  parseJSON = genericParseJSON selectRouteModeOptions
+
+instance ToSchema SelectRouteMode where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions selectRouteModeOptions
 
 data Session = Session
   { driverId :: Text,
@@ -69,8 +95,7 @@ data OpenSessionReq = OpenSessionReq
   }
   deriving (Show, Eq, Generic)
 
--- | `StartReturn Nothing` runs the same route code back: the feed models both directions as one route (direction_id 0/1).
-data EndRouteAction = StartReturn (Maybe Text) | EndRoute | EndForNow
+data EndRouteAction = StartReturn Text | EndRoute | EndForNow
   deriving (Show, Eq)
 
 data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session
@@ -198,3 +223,10 @@ tripFor s now =
       createdAt = now,
       updatedAt = now
     }
+
+-- | The route that runs the given one end to end in reverse; routes are modelled one per direction.
+returnRouteOf :: Text -> [(Text, [Text])] -> Maybe Text
+returnRouteOf current routes = do
+  stops <- lookup current routes
+  (firstStop, lastStop) <- (,) <$> listToMaybe stops <*> lastMay stops
+  fst <$> find (\(code, s) -> code /= current && listToMaybe s == Just lastStop && lastMay s == Just firstStop) routes

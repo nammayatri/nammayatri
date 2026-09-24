@@ -3,7 +3,6 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabRouteSelect,
     getSharedCabSession,
     postSharedCabSeats,
-    postSharedCabRouteChange,
     postSharedCabRouteEnd,
     postSharedCabResume,
   )
@@ -11,6 +10,9 @@ where
 
 import qualified API.Types.UI.SharedCabInternal as API
 import Data.List (sortOn)
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Route as DRoute
+import qualified Domain.Types.RouteStopMapping as DRSM
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
@@ -33,29 +35,46 @@ checkToken mbToken = do
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
--- | Every route of the feed, nearest stop first; demand ranking joins once allocation exists.
-getSharedCabRoutes :: Text -> Double -> Double -> Maybe Text -> Environment.Flow [API.SharedCabRouteResp]
+getIntegratedBppConfig :: Id DIBC.IntegratedBPPConfig -> Environment.Flow DIBC.IntegratedBPPConfig
+getIntegratedBppConfig ibcId = CQIBC.findById ibcId >>= fromMaybeM IntegratedBPPConfigNotFound
+
+routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
+routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
+
+feedRoutes :: DIBC.IntegratedBPPConfig -> Environment.Flow [(DRoute.Route, [DRSM.RouteStopMapping])]
+feedRoutes integratedBppConfig = do
+  routes <- OTPRest.getRoutesByGtfsId integratedBppConfig
+  forM routes $ \route -> (route,) <$> routeStops integratedBppConfig route.code
+
+-- | Routes are one per direction, so a route's direction is where it ends.
+routeDirection :: [DRSM.RouteStopMapping] -> Text
+routeDirection = maybe "" (.stopName) . listToMaybe . reverse
+
+-- | Every route of the feed, nearest stop first; demand ranking and stand pinning join later.
+getSharedCabRoutes :: Text -> Double -> Double -> Maybe Text -> Environment.Flow API.SharedCabRoutesResp
 getSharedCabRoutes ibcId driverLat driverLon mbToken = do
   checkToken mbToken
-  integratedBppConfig <- CQIBC.findById (Id ibcId) >>= fromMaybeM IntegratedBPPConfigNotFound
-  routes <- OTPRest.getRoutesByGtfsId integratedBppConfig
-  resps <- forM routes $ \route -> do
-    stops <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
-    let points = route.endPoint : map (.stopPoint) stops
-        distanceFrom = distanceBetweenInMeters (LatLong driverLat driverLon)
-    pure
-      API.SharedCabRouteResp
-        { code = route.code,
-          shortName = route.shortName,
-          longName = route.longName,
-          distanceMeters = realToFrac . foldl' min (distanceFrom route.startPoint) $ map distanceFrom points
-        }
-  pure $ sortOn (.distanceMeters) resps
+  routes <- getIntegratedBppConfig (Id ibcId) >>= feedRoutes
+  let distanceFrom = distanceBetweenInMeters (LatLong driverLat driverLon)
+      distanceKm route stops =
+        realToFrac . (/ 1000) . foldl' min (distanceFrom route.startPoint) $ map distanceFrom (route.endPoint : map (.stopPoint) stops)
+      toResp (route, stops) =
+        API.SharedCabRoute
+          { code = route.code,
+            name = route.longName,
+            direction = routeDirection stops,
+            fromStop = maybe "" (.stopName) (listToMaybe stops),
+            toStop = routeDirection stops,
+            distanceKm = Just (distanceKm route stops),
+            isStandRoute = False
+          }
+  pure API.SharedCabRoutesResp {routes = sortOn (.distanceKm) (map toResp routes)}
 
-postSharedCabRouteSelect :: Maybe Text -> API.SharedCabSelectReq -> Environment.Flow API.SharedCabSessionResp
+-- | `mode` only matters once riders can be on board; until allocation ships a change always applies.
+postSharedCabRouteSelect :: Maybe Text -> API.SelectRouteReq -> Environment.Flow API.SelectRouteResp
 postSharedCabRouteSelect mbToken req = do
   checkToken mbToken
-  integratedBppConfig <- CQIBC.findById req.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
+  integratedBppConfig <- getIntegratedBppConfig req.integratedBppConfigId
   session <-
     Session.selectRoute
       OpenSessionReq
@@ -68,54 +87,78 @@ postSharedCabRouteSelect mbToken req = do
           capacity = fromMaybe defaultCapacity req.capacity,
           routeCode = req.routeCode
         }
-  mkSessionResp <$> case req.walkupCount of
-    Just count | count /= session.walkupCount -> Session.setWalkupCount req.driverId req.vehicleNumber session.version count
-    _ -> pure session
+  session' <-
+    if req.walkupCount == session.walkupCount
+      then pure session
+      else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount
+  resp <- mkSessionResp session'
+  pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
 
-getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow API.SharedCabSessionResp
+ownSession :: Text -> Text -> Environment.Flow Session
+ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
+
+getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow API.SharedCabSession
 getSharedCabSession driver plate mbToken = do
   checkToken mbToken
-  session <- Session.getSession plate
-  either throwError (pure . mkSessionResp) $ ownedSession driver session
+  ownSession driver plate >>= mkSessionResp
 
-postSharedCabSeats :: Maybe Text -> API.SharedCabSeatsReq -> Environment.Flow API.SharedCabSessionResp
+postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow API.SharedCabSession
 postSharedCabSeats mbToken req = do
   checkToken mbToken
-  mkSessionResp <$> Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount
+  Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= mkSessionResp
 
-postSharedCabRouteChange :: Maybe Text -> API.SharedCabChangeRouteReq -> Environment.Flow API.SharedCabSessionResp
-postSharedCabRouteChange mbToken req = do
-  checkToken mbToken
-  mkSessionResp <$> Session.changeRoute req.driverId req.vehicleNumber req.routeCode
-
-postSharedCabRouteEnd :: Maybe Text -> API.SharedCabEndReq -> Environment.Flow API.SharedCabSessionResp
+-- | CHANGE leaves the session as is: the driver picks the next route with route/select, which closes this run.
+postSharedCabRouteEnd :: Maybe Text -> API.EndRouteReq -> Environment.Flow (Maybe API.SharedCabSession)
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
-  mkSessionResp <$> case req.next of
-    API.RETURN -> Session.endRoute req.driverId req.vehicleNumber (StartReturn req.routeCode)
-    API.CHANGE -> do
-      newRoute <- fromMaybeM (InvalidRequest "routeCode is required to change route") req.routeCode
-      Session.changeRoute req.driverId req.vehicleNumber newRoute
-    API.END -> Session.endRoute req.driverId req.vehicleNumber EndForNow
+  case req.next of
+    API.RETURN -> do
+      current <- ownSession req.driverId req.vehicleNumber
+      routes <- getIntegratedBppConfig current.integratedBppConfigId >>= feedRoutes
+      returnRoute <-
+        fromMaybeM (InvalidRequest $ "No return route for " <> current.routeCode) $
+          returnRouteOf current.routeCode [(route.code, map (.stopCode) stops) | (route, stops) <- routes]
+      Just <$> (Session.endRoute req.driverId req.vehicleNumber (StartReturn returnRoute) >>= mkSessionResp)
+    API.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
+    API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber EndForNow
 
-postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow API.SharedCabSessionResp
+postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow API.SharedCabSession
 postSharedCabResume mbToken req = do
   checkToken mbToken
-  mkSessionResp <$> Session.resume req.driverId req.vehicleNumber
+  Session.resume req.driverId req.vehicleNumber >>= mkSessionResp
 
--- | `available` counts walk-ups only until allocation adds seats held by bookings.
-mkSessionResp :: Session -> API.SharedCabSessionResp
-mkSessionResp s =
-  API.SharedCabSessionResp
-    { vehicleNumber = s.vehicleNumber,
-      routeCode = s.routeCode,
-      queuedRouteCode = s.queuedRouteCode,
-      status = s.status,
-      pauseReason = s.pauseReason,
-      capacity = s.capacity,
-      walkupCount = s.walkupCount,
-      available = s.capacity - s.walkupCount,
-      version = s.version,
-      startedAt = s.startedAt,
-      vehicleTripId = s.vehicleTripId
-    }
+sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow API.SessionRoute
+sessionRoute integratedBppConfig code = do
+  mbRoute <- OTPRest.getRouteByRouteId integratedBppConfig code
+  stops <- routeStops integratedBppConfig code
+  pure
+    API.SessionRoute
+      { code,
+        name = maybe code (.longName) mbRoute,
+        direction = routeDirection stops,
+        nextStops = map (.stopName) stops
+      }
+
+-- | Until the tick and allocation land: movement is MOVING, next stops are the whole route,
+-- riders/demand are empty and `available` counts walk-ups only.
+mkSessionResp :: Session -> Environment.Flow API.SharedCabSession
+mkSessionResp s = do
+  integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
+  route <- sessionRoute integratedBppConfig s.routeCode
+  queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
+  pure
+    API.SharedCabSession
+      { route,
+        queuedRoute,
+        status = s.status,
+        pauseReason = s.pauseReason,
+        movement = MOVING,
+        capacity = s.capacity,
+        walkupCount = s.walkupCount,
+        available = s.capacity - s.walkupCount,
+        version = s.version,
+        ridersByStop = [],
+        demandAhead = [],
+        lowDemandCard = Nothing,
+        offRoute = Nothing
+      }
