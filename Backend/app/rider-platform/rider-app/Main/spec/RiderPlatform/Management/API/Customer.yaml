@@ -25,8 +25,6 @@ apis:
         - personId: Id Customer
       response:
         type: CustomerListRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_LIST
   - DELETE:
       endpoint:  /{customerId}/delete
       auth: ApiAuthV2
@@ -34,9 +32,6 @@ apis:
         customerId: Id Customer
       response:
         type: APISuccess
-      migrate:
-        endpoint: CustomerAPI DeleteCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_DELETE
   - POST:
       endpoint:  /{customerId}/block
       auth: ApiAuthV2
@@ -57,9 +52,6 @@ apis:
               type: BlockCustomerReq
             response:
               type: APISuccess
-      migrate:
-        endpoint: CustomerAPI BlockCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_BLOCK
   - POST:
       endpoint:  /{customerId}/unblock
       auth: ApiAuthV2
@@ -76,9 +68,6 @@ apis:
               dashboardUserName: Text
             response:
               type: APISuccess
-      migrate:
-        endpoint: CustomerAPI UnblockCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_UNBLOCK
   - GET:
       endpoint:  /{customerId}/info
       auth: ApiAuthV2
@@ -86,8 +75,6 @@ apis:
         customerId: Id Customer
       response:
         type: CustomerInfoRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_INFO
   - GET:
       name: GetCustomerCancellationDuesDetails
       endpoint:  /{customerId}/getCancellationDuesDetails
@@ -96,8 +83,6 @@ apis:
         customerId: Id Customer
       response:
         type: CancellationDuesDetailsRes
-      migrate:
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_DETAILS
   - POST:
       endpoint: /{customerId}/updateSafetyCenterBlocking
       auth: ApiAuthV2
@@ -107,9 +92,6 @@ apis:
         type: UpdateSafetyCenterBlockingReq
       response:
         type: APISuccess
-      migrate:
-        endpoint: CustomerAPI UpdateSafetyCenterBlockingCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS UPDATE_SAFETY_CENTER
   - POST:
       endpoint: /personNumbers
       auth: ApiAuthV2
@@ -117,9 +99,6 @@ apis:
         type: PersonIdsReq
       response:
         type: "[PersonRes]"
-      migrate:
-        endpoint: CustomerAPI PersonNumbersCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS PERSON_NUMBERS
   - POST:
       endpoint: /personId
       auth: ApiAuthV2
@@ -127,9 +106,6 @@ apis:
         type: PersonMobileNoReq
       response:
         type: "[PersonRes]"
-      migrate:
-        endpoint: CustomerAPI PersonIdCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS FETCH_PERSON_ID
   - POST:
       endpoint: /{customerId}/updatePaymentMode
       auth: ApiAuthV2

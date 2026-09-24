@@ -27,17 +27,17 @@ handler merchantId city = postPassettoEncrypt merchantId city :<|> postPassettoD
 
 type PostPassettoEncrypt =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASSETTO) / ('API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_ENCRYPT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASSETTO / 'API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_ENCRYPT)
       :> API.Types.Dashboard.AppManagement.Passetto.PostPassettoEncrypt
   )
 
 type PostPassettoDecrypt =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASSETTO) / ('API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_DECRYPT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASSETTO / 'API.Types.Dashboard.AppManagement.Passetto.POST_PASSETTO_DECRYPT)
       :> API.Types.Dashboard.AppManagement.Passetto.PostPassettoDecrypt
   )
 

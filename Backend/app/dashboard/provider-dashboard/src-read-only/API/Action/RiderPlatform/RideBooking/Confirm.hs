@@ -33,11 +33,11 @@ handler merchantId city = postConfirmRideSearchQuotes merchantId city
 
 type PostConfirmRideSearchQuotes =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.CONFIRM) / ('API.Types.Dashboard.RideBooking.Confirm.POST_CONFIRM_RIDE_SEARCH_QUOTES))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.CONFIRM / 'API.Types.Dashboard.RideBooking.Confirm.POST_CONFIRM_RIDE_SEARCH_QUOTES)
       :> API.Types.Dashboard.RideBooking.Confirm.PostConfirmRideSearchQuotes
   )
 
-postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe (Kernel.External.Payment.Interface.PaymentMethodId) -> Kernel.Prelude.Maybe (Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler API.UI.Confirm.ConfirmRes)
+postConfirmRideSearchQuotes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Quote.Quote -> Kernel.Prelude.Maybe Kernel.External.Payment.Interface.PaymentMethodId -> Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentInstrument -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.UI.Confirm.ConfirmRes)
 postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId paymentInstrument isAdvancedBookingEnabled = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Confirm.postConfirmRideSearchQuotes merchantShortId opCity apiTokenInfo customerId quoteId paymentMethodId paymentInstrument isAdvancedBookingEnabled

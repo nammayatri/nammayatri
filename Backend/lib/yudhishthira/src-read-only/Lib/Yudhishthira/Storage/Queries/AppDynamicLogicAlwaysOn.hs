@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findByMerchantOpCityAndDomain ::
   (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m ([Lib.Yudhishthira.Types.AppDynamicLogicAlwaysOn.AppDynamicLogicAlwaysOn]))
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.AppDynamicLogicAlwaysOn.AppDynamicLogicAlwaysOn])
 findByMerchantOpCityAndDomain merchantOperatingCityId domain = do
   findAllWithKV
     [ Se.And

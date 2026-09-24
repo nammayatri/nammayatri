@@ -12,26 +12,26 @@ import qualified Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest
 import Tools.Beam.UtilsTH
 
 data FinanceTdsReimbursementRequestT f = FinanceTdsReimbursementRequestT
-  { adminCheckerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    adminCheckerName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    adminMakerId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    adminMakerName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    assessmentYear :: (B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear),
-    certAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    certNumber :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    documentId :: (B.C f Kernel.Prelude.Text),
-    fleetOwnerId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    quarter :: (B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.Quarter),
-    rejectionReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    status :: (B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequestStatus),
-    tanNumber :: (B.C f Kernel.Prelude.Text),
-    tdsRate :: (B.C f Kernel.Prelude.Double),
-    tdsSection :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { adminCheckerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    adminCheckerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    adminMakerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    adminMakerName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    assessmentYear :: B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.AssessmentYear,
+    certAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    certNumber :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    documentId :: B.C f Kernel.Prelude.Text,
+    fleetOwnerId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    quarter :: B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.Quarter,
+    rejectionReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    status :: B.C f Lib.Finance.Domain.Types.FinanceTdsReimbursementRequest.FinanceTdsReimbursementRequestStatus,
+    tanNumber :: B.C f Kernel.Prelude.Text,
+    tdsRate :: B.C f Kernel.Prelude.Double,
+    tdsSection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +41,6 @@ instance B.Table FinanceTdsReimbursementRequestT where
 
 type FinanceTdsReimbursementRequest = FinanceTdsReimbursementRequestT Identity
 
-$(enableKVPG (''FinanceTdsReimbursementRequestT) [('id)] [[('fleetOwnerId)]])
+$(enableKVPG ''FinanceTdsReimbursementRequestT ['id] [['fleetOwnerId]])
 
-$(mkTableInstancesGenericSchema (''FinanceTdsReimbursementRequestT) "finance_tds_reimbursement_request")
+$(mkTableInstancesGenericSchema ''FinanceTdsReimbursementRequestT "finance_tds_reimbursement_request")

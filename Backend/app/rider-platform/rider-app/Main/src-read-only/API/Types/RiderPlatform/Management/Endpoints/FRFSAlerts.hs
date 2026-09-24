@@ -40,11 +40,11 @@ type API = ("fRFSAlerts" :> GetFRFSAlertsFrfsLiveMetrics)
 type GetFRFSAlertsFrfsLiveMetrics =
   ( "frfs" :> "liveMetrics" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime :> QueryParam "modes" Data.Text.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            LiveMetricsResponse
   )
 
-newtype FRFSAlertsAPIs = FRFSAlertsAPIs {getFRFSAlertsFrfsLiveMetrics :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Data.Text.Text) -> EulerHS.Types.EulerClient LiveMetricsResponse)}
+newtype FRFSAlertsAPIs = FRFSAlertsAPIs {getFRFSAlertsFrfsLiveMetrics :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Data.Text.Text -> EulerHS.Types.EulerClient LiveMetricsResponse}
 
 mkFRFSAlertsAPIs :: (Client EulerHS.Types.EulerClient API -> FRFSAlertsAPIs)
 mkFRFSAlertsAPIs fRFSAlertsClient = (FRFSAlertsAPIs {..})
@@ -57,10 +57,10 @@ data FRFSAlertsUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON FRFSAlertsUserActionType where
-  toJSON (GET_FRFS_ALERTS_FRFS_LIVE_METRICS) = Data.Aeson.String "GET_FRFS_ALERTS_FRFS_LIVE_METRICS"
+  toJSON GET_FRFS_ALERTS_FRFS_LIVE_METRICS = Data.Aeson.String "GET_FRFS_ALERTS_FRFS_LIVE_METRICS"
 
 instance FromJSON FRFSAlertsUserActionType where
   parseJSON (Data.Aeson.String "GET_FRFS_ALERTS_FRFS_LIVE_METRICS") = pure GET_FRFS_ALERTS_FRFS_LIVE_METRICS
   parseJSON _ = fail "GET_FRFS_ALERTS_FRFS_LIVE_METRICS expected"
 
-$(Data.Singletons.TH.genSingletons [(''FRFSAlertsUserActionType)])
+$(Data.Singletons.TH.genSingletons [''FRFSAlertsUserActionType])

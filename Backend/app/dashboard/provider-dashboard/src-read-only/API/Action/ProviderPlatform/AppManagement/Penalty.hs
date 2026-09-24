@@ -29,9 +29,9 @@ handler merchantId city = postPenaltyTriggerJobCancellationPenaltyServiceName me
 
 type PostPenaltyTriggerJobCancellationPenaltyServiceName =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PENALTY) / ('API.Types.Dashboard.AppManagement.Penalty.POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PENALTY / 'API.Types.Dashboard.AppManagement.Penalty.POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME)
       :> API.Types.Dashboard.AppManagement.Penalty.PostPenaltyTriggerJobCancellationPenaltyServiceName
   )
 

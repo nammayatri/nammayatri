@@ -29,41 +29,41 @@ handler merchantId city = postOverlayCreate merchantId city :<|> postOverlayDele
 
 type PostOverlayCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.OVERLAY) / ('API.Types.Dashboard.AppManagement.Overlay.POST_OVERLAY_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.OVERLAY / 'API.Types.Dashboard.AppManagement.Overlay.POST_OVERLAY_CREATE)
       :> API.Types.Dashboard.AppManagement.Overlay.PostOverlayCreate
   )
 
 type PostOverlayDelete =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.OVERLAY) / ('API.Types.Dashboard.AppManagement.Overlay.POST_OVERLAY_DELETE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.OVERLAY / 'API.Types.Dashboard.AppManagement.Overlay.POST_OVERLAY_DELETE)
       :> API.Types.Dashboard.AppManagement.Overlay.PostOverlayDelete
   )
 
 type GetOverlayList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.OVERLAY) / ('API.Types.Dashboard.AppManagement.Overlay.GET_OVERLAY_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.OVERLAY / 'API.Types.Dashboard.AppManagement.Overlay.GET_OVERLAY_LIST)
       :> API.Types.Dashboard.AppManagement.Overlay.GetOverlayList
   )
 
 type GetOverlayInfo =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.OVERLAY) / ('API.Types.Dashboard.AppManagement.Overlay.GET_OVERLAY_INFO))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.OVERLAY / 'API.Types.Dashboard.AppManagement.Overlay.GET_OVERLAY_INFO)
       :> API.Types.Dashboard.AppManagement.Overlay.GetOverlayInfo
   )
 
 type PostOverlaySchedule =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.OVERLAY) / ('API.Types.Dashboard.AppManagement.Overlay.POST_OVERLAY_SCHEDULE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.OVERLAY / 'API.Types.Dashboard.AppManagement.Overlay.POST_OVERLAY_SCHEDULE)
       :> API.Types.Dashboard.AppManagement.Overlay.PostOverlaySchedule
   )
 
@@ -76,7 +76,7 @@ postOverlayDelete merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' 
 getOverlayList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Overlay.ListOverlayResp)
 getOverlayList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Overlay.getOverlayList merchantShortId opCity apiTokenInfo
 
-getOverlayInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Overlay.OverlayInfoResp)
+getOverlayInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Overlay.OverlayInfoResp)
 getOverlayInfo merchantShortId opCity apiTokenInfo udf1 overlayKey = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Overlay.getOverlayInfo merchantShortId opCity apiTokenInfo udf1 overlayKey
 
 postOverlaySchedule :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.Overlay.ScheduleOverlay -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

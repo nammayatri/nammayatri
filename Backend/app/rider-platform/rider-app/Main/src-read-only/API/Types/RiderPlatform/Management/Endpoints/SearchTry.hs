@@ -45,9 +45,9 @@ data RecentSearchTryItem = RecentSearchTryItem
 
 type API = ("searchTry" :> PostSearchTryRecentSearchTries)
 
-type PostSearchTryRecentSearchTries = ("recentSearchTries" :> ReqBody ('[JSON]) RecentSearchTriesReq :> Post ('[JSON]) RecentSearchTriesRes)
+type PostSearchTryRecentSearchTries = ("recentSearchTries" :> ReqBody '[JSON] RecentSearchTriesReq :> Post '[JSON] RecentSearchTriesRes)
 
-newtype SearchTryAPIs = SearchTryAPIs {postSearchTryRecentSearchTries :: (RecentSearchTriesReq -> EulerHS.Types.EulerClient RecentSearchTriesRes)}
+newtype SearchTryAPIs = SearchTryAPIs {postSearchTryRecentSearchTries :: RecentSearchTriesReq -> EulerHS.Types.EulerClient RecentSearchTriesRes}
 
 mkSearchTryAPIs :: (Client EulerHS.Types.EulerClient API -> SearchTryAPIs)
 mkSearchTryAPIs searchTryClient = (SearchTryAPIs {..})
@@ -60,10 +60,10 @@ data SearchTryUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON SearchTryUserActionType where
-  toJSON (POST_SEARCH_TRY_RECENT_SEARCH_TRIES) = Data.Aeson.String "POST_SEARCH_TRY_RECENT_SEARCH_TRIES"
+  toJSON POST_SEARCH_TRY_RECENT_SEARCH_TRIES = Data.Aeson.String "POST_SEARCH_TRY_RECENT_SEARCH_TRIES"
 
 instance FromJSON SearchTryUserActionType where
   parseJSON (Data.Aeson.String "POST_SEARCH_TRY_RECENT_SEARCH_TRIES") = pure POST_SEARCH_TRY_RECENT_SEARCH_TRIES
   parseJSON _ = fail "POST_SEARCH_TRY_RECENT_SEARCH_TRIES expected"
 
-$(Data.Singletons.TH.genSingletons [(''SearchTryUserActionType)])
+$(Data.Singletons.TH.genSingletons [''SearchTryUserActionType])

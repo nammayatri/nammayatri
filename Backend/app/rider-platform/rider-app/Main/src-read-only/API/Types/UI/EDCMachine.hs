@@ -2,7 +2,6 @@
 
 module API.Types.UI.EDCMachine where
 
-import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.EDCMachineMapping
 import qualified Domain.Types.Person
@@ -13,52 +12,50 @@ import Servant
 import Tools.Auth
 
 data AssignEDCMachineReq = AssignEDCMachineReq
-  { personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    paytmMid :: Kernel.Prelude.Text,
-    channelId :: Kernel.Prelude.Text,
+  { channelId :: Kernel.Prelude.Text,
     clientId :: Kernel.Prelude.Text,
+    machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantKey :: Kernel.Prelude.Text,
-    paytmTid :: Kernel.Prelude.Text
+    paytmMid :: Kernel.Prelude.Text,
+    paytmTid :: Kernel.Prelude.Text,
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AssignEDCMachineResp = AssignEDCMachineResp
   { id :: Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    isActive :: Kernel.Prelude.Bool,
     machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paytmTid :: Kernel.Prelude.Text,
-    isActive :: Kernel.Prelude.Bool
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data EDCMachineMappingListItem = EDCMachineMappingListItem
-  { id :: Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping,
-    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    terminalId :: Kernel.Prelude.Text,
+  { createdAt :: Kernel.Prelude.UTCTime,
+    id :: Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping,
     isActive :: Kernel.Prelude.Bool,
-    createdAt :: Kernel.Prelude.UTCTime
+    machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    terminalId :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EDCMachineMappingListResp = EDCMachineMappingListResp
-  { mappings :: [EDCMachineMappingListItem]
-  }
+data EDCMachineMappingListResp = EDCMachineMappingListResp {mappings :: [EDCMachineMappingListItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data UpdateEDCMachineReq = UpdateEDCMachineReq
-  { machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    paytmMid :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    channelId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { channelId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     clientId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    machineName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    paytmTid :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    paytmMid :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paytmTid :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

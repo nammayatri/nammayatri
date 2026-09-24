@@ -76,24 +76,24 @@ instance Kernel.Types.HideSecrets.HideSecrets UpdateEDCMachineReq where
 
 type API = ("edcMachine" :> (AssignEDCMachine :<|> ListEDCMachine :<|> UpdateEDCMachine :<|> DeleteEDCMachine))
 
-type AssignEDCMachine = ("assign" :> ReqBody ('[JSON]) AssignEDCMachineReq :> Post ('[JSON]) AssignEDCMachineResp)
+type AssignEDCMachine = ("assign" :> ReqBody '[JSON] AssignEDCMachineReq :> Post '[JSON] AssignEDCMachineResp)
 
-type ListEDCMachine = ("list" :> QueryParam "isActive" Data.Bool.Bool :> QueryParam "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get ('[JSON]) EDCMachineMappingListResp)
+type ListEDCMachine = ("list" :> QueryParam "isActive" Data.Bool.Bool :> QueryParam "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get '[JSON] EDCMachineMappingListResp)
 
 type UpdateEDCMachine =
-  ( Capture "mappingId" (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping) :> "update" :> ReqBody ('[JSON]) UpdateEDCMachineReq
+  ( Capture "mappingId" (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping) :> "update" :> ReqBody '[JSON] UpdateEDCMachineReq
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type DeleteEDCMachine = (Capture "mappingId" (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping) :> "delete" :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type DeleteEDCMachine = (Capture "mappingId" (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping) :> "delete" :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data EDCMachineAPIs = EDCMachineAPIs
-  { assignEDCMachine :: (AssignEDCMachineReq -> EulerHS.Types.EulerClient AssignEDCMachineResp),
-    listEDCMachine :: (Kernel.Prelude.Maybe (Data.Bool.Bool) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient EDCMachineMappingListResp),
-    updateEDCMachine :: (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping -> UpdateEDCMachineReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    deleteEDCMachine :: (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { assignEDCMachine :: AssignEDCMachineReq -> EulerHS.Types.EulerClient AssignEDCMachineResp,
+    listEDCMachine :: Kernel.Prelude.Maybe Data.Bool.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient EDCMachineMappingListResp,
+    updateEDCMachine :: Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping -> UpdateEDCMachineReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    deleteEDCMachine :: Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkEDCMachineAPIs :: (Client EulerHS.Types.EulerClient API -> EDCMachineAPIs)
@@ -109,4 +109,4 @@ data EDCMachineUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''EDCMachineUserActionType)])
+$(Data.Singletons.TH.genSingletons [''EDCMachineUserActionType])

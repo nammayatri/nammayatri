@@ -29,25 +29,25 @@ handler merchantId city = getGeohashAreaList merchantId city :<|> postGeohashAre
 
 type GetGeohashAreaList =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.GET_GEOHASH_AREA_LIST))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.GEOHASH_AREA / 'API.Types.ProviderPlatform.Management.GeohashArea.GET_GEOHASH_AREA_LIST)
       :> API.Types.ProviderPlatform.Management.GeohashArea.GetGeohashAreaList
   )
 
 type PostGeohashAreaUpsert =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.POST_GEOHASH_AREA_UPSERT))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.GEOHASH_AREA / 'API.Types.ProviderPlatform.Management.GeohashArea.POST_GEOHASH_AREA_UPSERT)
       :> API.Types.ProviderPlatform.Management.GeohashArea.PostGeohashAreaUpsert
   )
 
 type PostGeohashAreaUpsertCsv =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.GEOHASH_AREA) / ('API.Types.ProviderPlatform.Management.GeohashArea.POST_GEOHASH_AREA_UPSERT_CSV))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.GEOHASH_AREA / 'API.Types.ProviderPlatform.Management.GeohashArea.POST_GEOHASH_AREA_UPSERT_CSV)
       :> API.Types.ProviderPlatform.Management.GeohashArea.PostGeohashAreaUpsertCsv
   )
 

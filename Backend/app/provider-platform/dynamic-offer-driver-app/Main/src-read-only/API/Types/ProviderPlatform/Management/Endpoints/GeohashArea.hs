@@ -17,21 +17,21 @@ import Servant.Client
 
 type API = ("geohashArea" :> (GetGeohashAreaList :<|> PostGeohashAreaUpsert :<|> PostGeohashAreaUpsertCsv))
 
-type GetGeohashAreaList = ("list" :> Get ('[JSON]) [Dashboard.Common.GeohashArea.GeohashAreaItem])
+type GetGeohashAreaList = ("list" :> Get '[JSON] [Dashboard.Common.GeohashArea.GeohashAreaItem])
 
-type PostGeohashAreaUpsert = ("upsert" :> ReqBody ('[JSON]) Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostGeohashAreaUpsert = ("upsert" :> ReqBody '[JSON] Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostGeohashAreaUpsertCsv =
   ( "upsert" :> "csv" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp Dashboard.Common.GeohashArea.GeohashAreaCsvReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 data GeohashAreaAPIs = GeohashAreaAPIs
-  { getGeohashAreaList :: (EulerHS.Types.EulerClient [Dashboard.Common.GeohashArea.GeohashAreaItem]),
-    postGeohashAreaUpsert :: (Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postGeohashAreaUpsertCsv :: ((Data.ByteString.Lazy.ByteString, Dashboard.Common.GeohashArea.GeohashAreaCsvReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getGeohashAreaList :: EulerHS.Types.EulerClient [Dashboard.Common.GeohashArea.GeohashAreaItem],
+    postGeohashAreaUpsert :: Dashboard.Common.GeohashArea.GeohashAreaBulkUpsertReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postGeohashAreaUpsertCsv :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.GeohashArea.GeohashAreaCsvReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkGeohashAreaAPIs :: (Client EulerHS.Types.EulerClient API -> GeohashAreaAPIs)
@@ -46,4 +46,4 @@ data GeohashAreaUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''GeohashAreaUserActionType)])
+$(Data.Singletons.TH.genSingletons [''GeohashAreaUserActionType])

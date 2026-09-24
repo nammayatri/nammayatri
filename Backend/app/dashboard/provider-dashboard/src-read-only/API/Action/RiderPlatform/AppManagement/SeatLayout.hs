@@ -30,40 +30,40 @@ handler merchantId city = upsertSeatLayout merchantId city :<|> listSeatLayout m
 
 type UpsertSeatLayout =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SEAT_LAYOUT) / ('API.Types.Dashboard.AppManagement.SeatLayout.UPSERT_SEAT_LAYOUT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SEAT_LAYOUT / 'API.Types.Dashboard.AppManagement.SeatLayout.UPSERT_SEAT_LAYOUT)
       :> API.Types.Dashboard.AppManagement.SeatLayout.UpsertSeatLayout
   )
 
 type ListSeatLayout =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SEAT_LAYOUT) / ('API.Types.Dashboard.AppManagement.SeatLayout.LIST_SEAT_LAYOUT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SEAT_LAYOUT / 'API.Types.Dashboard.AppManagement.SeatLayout.LIST_SEAT_LAYOUT)
       :> API.Types.Dashboard.AppManagement.SeatLayout.ListSeatLayout
   )
 
 type GetSeatLayout =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SEAT_LAYOUT) / ('API.Types.Dashboard.AppManagement.SeatLayout.GET_SEAT_LAYOUT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SEAT_LAYOUT / 'API.Types.Dashboard.AppManagement.SeatLayout.GET_SEAT_LAYOUT)
       :> API.Types.Dashboard.AppManagement.SeatLayout.GetSeatLayout
   )
 
 type DeleteSeatLayout =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SEAT_LAYOUT) / ('API.Types.Dashboard.AppManagement.SeatLayout.DELETE_SEAT_LAYOUT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SEAT_LAYOUT / 'API.Types.Dashboard.AppManagement.SeatLayout.DELETE_SEAT_LAYOUT)
       :> API.Types.Dashboard.AppManagement.SeatLayout.DeleteSeatLayout
   )
 
 upsertSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutUpsertReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 upsertSeatLayout merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.SeatLayout.upsertSeatLayout merchantShortId opCity apiTokenInfo req
 
-listSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler [Domain.Types.SeatLayout.SeatLayout])
+listSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler [Domain.Types.SeatLayout.SeatLayout])
 listSeatLayout merchantShortId opCity apiTokenInfo limit offset = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.SeatLayout.listSeatLayout merchantShortId opCity apiTokenInfo limit offset
 
 getSeatLayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> Environment.FlowHandler API.Types.Dashboard.AppManagement.SeatLayout.SeatLayoutDetailResp)

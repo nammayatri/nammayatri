@@ -45,7 +45,7 @@ instance ToTType' Beam.Toll Toll.Domain.Types.Toll.Toll where
         Beam.isTwoWheelerTollChargeApplicable = isTwoWheelerTollChargeApplicable,
         Beam.maxTollCountInRide = maxTollCountInRide,
         Beam.name = name,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) price,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.tollEndGates = tollEndGates,
         Beam.tollStartGates = tollStartGates,

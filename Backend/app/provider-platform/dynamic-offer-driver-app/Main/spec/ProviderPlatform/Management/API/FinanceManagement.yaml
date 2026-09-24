@@ -199,7 +199,6 @@ apis:
         type: ReconciliationTriggerReq
       response:
         type: ReconciliationTriggerRes
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
   # ----- Ledger adjustment (maker-checker) -----
   - POST: # LedgerAdjustmentSubmitAPI

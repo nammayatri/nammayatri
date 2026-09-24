@@ -7,7 +7,7 @@ import qualified Beckn.Types.Core.Taxi.Common.PaymentInstrument
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Booking
 import qualified Dashboard.Common.Ride
-import Dashboard.Common.RideDebug
+import qualified Dashboard.Common.RideDebug
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types
@@ -408,7 +408,7 @@ data RideFlowDebugRes = RideFlowDebugRes
   { currentStage :: FlowStage,
     tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     timeline :: [FlowStageEntry],
-    bapData :: Kernel.Prelude.Maybe BAPSideDebug,
+    bapData :: Kernel.Prelude.Maybe Dashboard.Common.RideDebug.BAPSideDebug,
     bppData :: Kernel.Prelude.Maybe BPPSideDebug,
     crossReferenceIds :: CrossReferenceIds,
     issues :: [Kernel.Prelude.Text]

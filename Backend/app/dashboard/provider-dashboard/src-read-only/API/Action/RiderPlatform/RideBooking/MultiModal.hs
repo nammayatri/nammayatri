@@ -34,45 +34,45 @@ handler merchantId city = getMultiModalList merchantId city :<|> postMultiModalS
 
 type GetMultiModalList =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MULTI_MODAL) / ('API.Types.Dashboard.RideBooking.MultiModal.GET_MULTI_MODAL_LIST))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.GET_MULTI_MODAL_LIST)
       :> API.Types.Dashboard.RideBooking.MultiModal.GetMultiModalList
   )
 
 type PostMultiModalSendMessage =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MULTI_MODAL) / ('API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_SEND_MESSAGE))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_SEND_MESSAGE)
       :> API.Types.Dashboard.RideBooking.MultiModal.PostMultiModalSendMessage
   )
 
 type PostMultiModalSendDirectMessage =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MULTI_MODAL) / ('API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_SEND_DIRECT_MESSAGE))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_SEND_DIRECT_MESSAGE)
       :> API.Types.Dashboard.RideBooking.MultiModal.PostMultiModalSendDirectMessage
   )
 
 type PostMultiModalAddComment =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MULTI_MODAL) / ('API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_ADD_COMMENT))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_ADD_COMMENT)
       :> API.Types.Dashboard.RideBooking.MultiModal.PostMultiModalAddComment
   )
 
 type GetMultiModalGetComments =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.MULTI_MODAL) / ('API.Types.Dashboard.RideBooking.MultiModal.GET_MULTI_MODAL_GET_COMMENTS))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.GET_MULTI_MODAL_GET_COMMENTS)
       :> API.Types.Dashboard.RideBooking.MultiModal.GetMultiModalGetComments
   )
 
-getMultiModalList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe ([Domain.Types.BookingStatus.BookingStatus]) -> Kernel.Prelude.Maybe ([Domain.Types.Journey.JourneyStatus]) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.Booking.API.BookingRequestType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListResV2)
+getMultiModalList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe [Domain.Types.BookingStatus.BookingStatus] -> Kernel.Prelude.Maybe [Domain.Types.Journey.JourneyStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.API.BookingRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListResV2)
 getMultiModalList merchantShortId opCity apiTokenInfo limit offset bookingOffset journeyOffset customerPhoneNo countryCode email fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.MultiModal.getMultiModalList merchantShortId opCity apiTokenInfo limit offset bookingOffset journeyOffset customerPhoneNo countryCode email fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType customerId
 
 postMultiModalSendMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

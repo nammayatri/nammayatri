@@ -25,7 +25,7 @@ createMany = traverse_ create
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer -> m (Maybe Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByReferenceId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer]))
+findByReferenceId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Payment.Domain.Types.OfflineOffer.OfflineOffer])
 findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
 findByPrimaryKey ::

@@ -46,15 +46,15 @@ newtype SendOtpResp = SendOtpResp {otp :: Data.Text.Text}
 
 type API = (PostPersonPersonCreateHelper :<|> PostPersonRegistrationSendOtpHelper)
 
-type PostPersonCreate = ("person" :> "create" :> ReqBody ('[JSON]) CreatePersonReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostPersonCreate = ("person" :> "create" :> ReqBody '[JSON] CreatePersonReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPersonPersonCreateHelper = ("person" :> "create" :> ReqBody ('[JSON]) CreatePersonReq :> Post ('[JSON]) CreatePersonResp)
+type PostPersonPersonCreateHelper = ("person" :> "create" :> ReqBody '[JSON] CreatePersonReq :> Post '[JSON] CreatePersonResp)
 
-type PostUserLoginSendOtp = ("user" :> "login" :> "sendOtp" :> ReqBody ('[JSON]) SendOtpReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostUserLoginSendOtp = ("user" :> "login" :> "sendOtp" :> ReqBody '[JSON] SendOtpReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostPersonRegistrationSendOtpHelper = ("registration" :> "sendOtp" :> ReqBody ('[JSON]) SendOtpReq :> Post ('[JSON]) SendOtpResp)
+type PostPersonRegistrationSendOtpHelper = ("registration" :> "sendOtp" :> ReqBody '[JSON] SendOtpReq :> Post '[JSON] SendOtpResp)
 
-data PersonAPIs = PersonAPIs {postPersonCreate :: (CreatePersonReq -> EulerHS.Types.EulerClient CreatePersonResp), postUserLoginSendOtp :: (SendOtpReq -> EulerHS.Types.EulerClient SendOtpResp)}
+data PersonAPIs = PersonAPIs {postPersonCreate :: CreatePersonReq -> EulerHS.Types.EulerClient CreatePersonResp, postUserLoginSendOtp :: SendOtpReq -> EulerHS.Types.EulerClient SendOtpResp}
 
 mkPersonAPIs :: (Client EulerHS.Types.EulerClient API -> PersonAPIs)
 mkPersonAPIs personClient = (PersonAPIs {..})
@@ -67,4 +67,4 @@ data PersonUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PersonUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PersonUserActionType])

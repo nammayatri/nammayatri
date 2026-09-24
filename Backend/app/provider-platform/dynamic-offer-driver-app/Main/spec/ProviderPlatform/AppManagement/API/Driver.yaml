@@ -27,7 +27,5 @@ apis:
         - financeData: Bool
       response:
         type: DriverRideListRes
-      migrate:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET LIST_DRIVER_RIDES
 
 types: {}

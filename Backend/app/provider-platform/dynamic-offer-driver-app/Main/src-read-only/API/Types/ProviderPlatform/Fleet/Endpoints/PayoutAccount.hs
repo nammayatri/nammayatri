@@ -67,22 +67,22 @@ data PayoutAccountType
 
 type API = ("fleet" :> (PostPayoutAccountPayoutAccountHelper :<|> PostPayoutAccountPayoutAccountStatusHelper))
 
-type PostPayoutAccount = ("payout" :> "account" :> ReqBody ('[JSON]) PayoutAccountReq :> Post ('[JSON]) PayoutAccountResp)
+type PostPayoutAccount = ("payout" :> "account" :> ReqBody '[JSON] PayoutAccountReq :> Post '[JSON] PayoutAccountResp)
 
-type PostPayoutAccountPayoutAccountHelper = ("payout" :> "account" :> Capture "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) PayoutAccountReq :> Post ('[JSON]) PayoutAccountResp)
+type PostPayoutAccountPayoutAccountHelper = ("payout" :> "account" :> Capture "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] PayoutAccountReq :> Post '[JSON] PayoutAccountResp)
 
-type PostPayoutAccountStatus = ("payout" :> "account" :> "status" :> ReqBody ('[JSON]) PayoutAccountStatusReq :> Post ('[JSON]) PayoutAccountStatusResp)
+type PostPayoutAccountStatus = ("payout" :> "account" :> "status" :> ReqBody '[JSON] PayoutAccountStatusReq :> Post '[JSON] PayoutAccountStatusResp)
 
 type PostPayoutAccountPayoutAccountStatusHelper =
-  ( "payout" :> "account" :> "status" :> Capture "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) PayoutAccountStatusReq
+  ( "payout" :> "account" :> "status" :> Capture "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] PayoutAccountStatusReq
       :> Post
-           ('[JSON])
+           '[JSON]
            PayoutAccountStatusResp
   )
 
 data PayoutAccountAPIs = PayoutAccountAPIs
-  { postPayoutAccount :: (Kernel.Prelude.Text -> PayoutAccountReq -> EulerHS.Types.EulerClient PayoutAccountResp),
-    postPayoutAccountStatus :: (Kernel.Prelude.Text -> PayoutAccountStatusReq -> EulerHS.Types.EulerClient PayoutAccountStatusResp)
+  { postPayoutAccount :: Kernel.Prelude.Text -> PayoutAccountReq -> EulerHS.Types.EulerClient PayoutAccountResp,
+    postPayoutAccountStatus :: Kernel.Prelude.Text -> PayoutAccountStatusReq -> EulerHS.Types.EulerClient PayoutAccountStatusResp
   }
 
 mkPayoutAccountAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAccountAPIs)
@@ -96,4 +96,4 @@ data PayoutAccountUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PayoutAccountUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PayoutAccountUserActionType])

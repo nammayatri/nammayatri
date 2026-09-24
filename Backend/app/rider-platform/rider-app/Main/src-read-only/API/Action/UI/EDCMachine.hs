@@ -46,7 +46,9 @@ type API =
            "mappingId"
            (Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping)
       :> "update"
-      :> ReqBody '[JSON] API.Types.UI.EDCMachine.UpdateEDCMachineReq
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.EDCMachine.UpdateEDCMachineReq
       :> Put
            '[JSON]
            Kernel.Types.APISuccess.APISuccess

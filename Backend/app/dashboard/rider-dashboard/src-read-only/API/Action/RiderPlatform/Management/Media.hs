@@ -28,9 +28,9 @@ handler merchantId city = getMediaFile merchantId city
 
 type GetMediaFile =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.MEDIA) / ('API.Types.RiderPlatform.Management.Media.GET_MEDIA_FILE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.MEDIA / 'API.Types.RiderPlatform.Management.Media.GET_MEDIA_FILE)
       :> API.Types.RiderPlatform.Management.Media.GetMediaFile
   )
 

@@ -25,4 +25,4 @@ data PersonDailyOfferStats = PersonDailyOfferStats
     totalDiscountAmount :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON))
+  deriving (Generic, Show, ToJSON, FromJSON)

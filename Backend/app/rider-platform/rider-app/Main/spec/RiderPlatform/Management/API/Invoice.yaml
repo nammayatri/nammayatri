@@ -93,8 +93,7 @@ apis:
         phoneNumber: Text
       response:
         type: "[InvoiceRes]"
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS INVOICE
+
   # GET /invoice/finance/list (module prefix adds /invoice)
   - GET:
       endpoint: /finance/list

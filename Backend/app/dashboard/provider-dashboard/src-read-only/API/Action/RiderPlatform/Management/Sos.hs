@@ -33,17 +33,17 @@ type GetSosDetails = API.Types.RiderPlatform.Management.Sos.GetSosDetails
 
 type PostSosCallExternalSOS =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.SOS) / ('API.Types.RiderPlatform.Management.Sos.POST_SOS_CALL_EXTERNAL_SOS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.SOS / 'API.Types.RiderPlatform.Management.Sos.POST_SOS_CALL_EXTERNAL_SOS)
       :> API.Types.RiderPlatform.Management.Sos.PostSosCallExternalSOS
   )
 
 type PostSosErssStatusUpdate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.SOS) / ('API.Types.RiderPlatform.Management.Sos.POST_SOS_ERSS_STATUS_UPDATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.SOS / 'API.Types.RiderPlatform.Management.Sos.POST_SOS_ERSS_STATUS_UPDATE)
       :> API.Types.RiderPlatform.Management.Sos.PostSosErssStatusUpdate
   )
 

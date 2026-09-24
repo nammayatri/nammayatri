@@ -11,13 +11,13 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FinanceTdsReimbursementInvoiceMappingT f = FinanceTdsReimbursementInvoiceMappingT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    invoiceId :: (B.C f Kernel.Prelude.Text),
-    requestId :: (B.C f Kernel.Prelude.Text),
-    revenueRecognisedSnapshot :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    tdsAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    tdsCreditReceivable :: (B.C f Kernel.Types.Common.HighPrecMoney)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    invoiceId :: B.C f Kernel.Prelude.Text,
+    requestId :: B.C f Kernel.Prelude.Text,
+    revenueRecognisedSnapshot :: B.C f Kernel.Types.Common.HighPrecMoney,
+    tdsAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    tdsCreditReceivable :: B.C f Kernel.Types.Common.HighPrecMoney
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table FinanceTdsReimbursementInvoiceMappingT where
 
 type FinanceTdsReimbursementInvoiceMapping = FinanceTdsReimbursementInvoiceMappingT Identity
 
-$(enableKVPG (''FinanceTdsReimbursementInvoiceMappingT) [('id)] [[('invoiceId)], [('requestId)]])
+$(enableKVPG ''FinanceTdsReimbursementInvoiceMappingT ['id] [['invoiceId], ['requestId]])
 
-$(mkTableInstancesGenericSchema (''FinanceTdsReimbursementInvoiceMappingT) "finance_tds_reimbursement_invoice_mapping")
+$(mkTableInstancesGenericSchema ''FinanceTdsReimbursementInvoiceMappingT "finance_tds_reimbursement_invoice_mapping")
