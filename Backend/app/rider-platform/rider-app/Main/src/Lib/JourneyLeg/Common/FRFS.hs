@@ -97,7 +97,9 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   -- 8.5 timeout end: a degraded ride has no tick watching it; the rider's status poll is the
   -- clock (05 §5). If the marker expired this poll flips INPROGRESS -> USED, and the just-read
   -- status is corrected locally so this response already shows DROPPED.
-  degradeExpired <- SharedCabDegraded.expireDegradedBoardingIfNeeded booking
+  degradeExpired <- case bookingStatus of
+    JMStateTypes.FRFSTicket DFRFSTicket.INPROGRESS -> SharedCabDegraded.expireDegradedBoardingIfNeeded booking
+    _ -> pure False
   let bookingStatus' = if degradeExpired then JMStateTypes.FRFSTicket DFRFSTicket.USED else bookingStatus
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession booking.vehicleNumber
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode

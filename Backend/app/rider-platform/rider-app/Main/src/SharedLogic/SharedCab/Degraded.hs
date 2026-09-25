@@ -20,6 +20,7 @@ module SharedLogic.SharedCab.Degraded
     shouldExpireDegraded,
     markDegradedBoarding,
     clearDegradedMarker,
+    isMarkerAlive,
     expireDegradedBoardingIfNeeded,
   )
 where
@@ -48,11 +49,13 @@ degradedKey :: Id DBooking.FRFSTicketBooking -> Text
 degradedKey bookingId = "sharedcab:degraded:" <> bookingId.getId
 
 -- | Whether an unknown code may degrade this booking, and which allocated plate it gives back first.
--- Nothing: refuse (not CONFIRMED, no ticket still held, or already riding a real cab). Just mbPlate: degrade,
+-- Nothing: refuse (not CONFIRMED, no ticket still held, already riding a real cab, or already degraded: a retry
+-- must not refresh the marker's TTL). Just mbPlate: degrade,
 -- releasing the allocation to that plate if there is one — a degraded ride has no cab and no seat (05 §5).
-planDegrade :: DBookingStatus.FRFSTicketBookingStatus -> Maybe Text -> [TicketStatus.FRFSTicketStatus] -> Maybe (Maybe Text)
-planDegrade bookingStatus mbPlate statuses
+planDegrade :: DBookingStatus.FRFSTicketBookingStatus -> Maybe Text -> [TicketStatus.FRFSTicketStatus] -> Bool -> Maybe (Maybe Text)
+planDegrade bookingStatus mbPlate statuses markerAlive
   | bookingStatus /= DBookingStatus.CONFIRMED = Nothing
+  | markerAlive = Nothing
   | not (any isDroppable statuses) = Nothing
   | isJust mbPlate && TicketStatus.INPROGRESS `elem` statuses = Nothing
   | otherwise = Just mbPlate
@@ -82,6 +85,7 @@ isMarkerAlive bookingId = isJust <$> shared (Redis.get @DegradedBoarding (degrad
 -- Returns True when this call did the flip, so the caller can adjust the status it just computed.
 -- Re-decided on a fresh read under the booking lock, so a boarding that lands after the caller's read is
 -- never ended; a poll that finds the lock taken leaves it to the next poll.
+-- TODO(review MED 3, after merge): a sweep for degraded rides whose rider never polls again; they stay INPROGRESS.
 expireDegradedBoardingIfNeeded ::
   (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) =>
   DBooking.FRFSTicketBooking ->

@@ -17,15 +17,17 @@ tests =
     [ testGroup
         "unknown code"
         [ testCase "FINDING degrades, nothing to give back" $
-            planDegrade BookingStatus.CONFIRMED Nothing [ACTIVE] @?= Just Nothing,
+            planDegrade BookingStatus.CONFIRMED Nothing [ACTIVE] False @?= Just Nothing,
           testCase "allocated gives its cab back, then degrades" $
-            planDegrade BookingStatus.CONFIRMED (Just "ML05A1234") [ACTIVE] @?= Just (Just "ML05A1234"),
+            planDegrade BookingStatus.CONFIRMED (Just "ML05A1234") [ACTIVE] False @?= Just (Just "ML05A1234"),
           testCase "already riding a real cab: refused" $
-            planDegrade BookingStatus.CONFIRMED (Just "ML05A1234") [INPROGRESS] @?= Nothing,
+            planDegrade BookingStatus.CONFIRMED (Just "ML05A1234") [INPROGRESS] False @?= Nothing,
           testCase "cancelled booking: refused" $
-            planDegrade BookingStatus.CANCELLED Nothing [ACTIVE] @?= Nothing,
+            planDegrade BookingStatus.CANCELLED Nothing [ACTIVE] False @?= Nothing,
+          testCase "already degraded: a retry is refused, the marker's TTL is not refreshed" $
+            planDegrade BookingStatus.CONFIRMED Nothing [INPROGRESS] True @?= Nothing,
           testCase "no ticket still held: refused" $
-            planDegrade BookingStatus.CONFIRMED Nothing [USED, CANCELLED] @?= Nothing
+            planDegrade BookingStatus.CONFIRMED Nothing [USED, CANCELLED] False @?= Nothing
         ],
       testGroup
         "timeout end"

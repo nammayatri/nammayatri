@@ -48,7 +48,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Location as JMLocation
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared, withBookingLock)
-import SharedLogic.SharedCab.Config (SharedCabTunables (..), getTunables)
+import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
@@ -186,8 +186,10 @@ degradedBoarding degradedTimeoutSec booking typedCode =
   withBookingLock booking.id $ do
     fresh <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
     tickets <- QTicket.findAllByTicketBookingId booking.id
-    mbAllocatedPlate <- Degraded.planDegrade fresh.status fresh.vehicleNumber (map (.status) tickets) & fromMaybeM BoardingFailed
+    markerAlive <- Degraded.isMarkerAlive booking.id
+    mbAllocatedPlate <- Degraded.planDegrade fresh.status fresh.vehicleNumber (map (.status) tickets) markerAlive & fromMaybeM BoardingFailed
     whenJust mbAllocatedPlate $ \plate -> do
+      -- TODO(7.6): Events allocation_closed {outcome: degraded, blame: none} for the released allocation.
       QBooking.updateAllocatedVehicle Nothing booking.id (Just plate)
       shared . void $ Redis.del (allocKey booking.id)
     forM_ (filter ((== TicketStatus.ACTIVE) . (.status)) tickets) $ \t ->
@@ -221,71 +223,69 @@ commitBoarding ::
   Environment.Flow ()
 commitBoarding journeyLeg booking target mbOld =
   let plate = canonicalisePlate target.vehicleNumber
-   in Session.withPlateLock plate $
-        do
-          -- target-cab lock FIRST (05 §2 lock order)
-          withBookingLock booking.id $ do
-            -- Re-validate under locks: the cab may have switched route / ended between resolve and here.
-            fresh <- Session.getSession target.vehicleNumber >>= fromMaybeM BoardingFailed
-            unless (fresh.status == ACTIVE) $ throwError BoardingFailed
-            -- SEAT GUARD (05 §4 option A): capacity − walkups − app-held seats ≥ this booking's
-            -- seats (one FRFSTicket row = one seat), recomputed UNDER the plate lock. Refuses
-            -- clearly as CabFull; the rider moves to the next cab or re-books.
-            held <- liveSeatsOnVehicle plate
-            myTickets <- QTicket.findAllByTicketBookingId booking.id
-            -- settle on ONE eligibility set (also the flip list): ACTIVE or INPROGRESS only.
-            let eligible = [t | t <- myTickets, t.status `elem` [TicketStatus.ACTIVE, TicketStatus.INPROGRESS]]
-            when (null eligible) $ throwError BoardingFailed
-            -- fresh read under the booking lock: the R11 owner was verified pre-lock; re-verify state + our own occupancy.
-            freshBooking <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
-            unless (freshBooking.status == DBookingStatus.CONFIRMED) $ throwError BoardingFailed
-            unless (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (length eligible)) $
-              throwError CabFull
-            -- Ticket FIRST: INPROGRESS — never postFrfsTicketVerify, which marks USED and the journey
-            -- layer reads USED as leg completed (05 §2 "Why not USED at boarding").
-            -- FLIP ONLY the eligible set (BLOCKER-3): CANCELLED/USED tickets stay put.
-            forM_ eligible $ \t ->
-              QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS (Just fresh.vehicleNumber) booking.id t.ticketNumber
-            -- CAS vehicleNumber (spec/Storage/FrfsTicket.yaml:656-666). Expected = what we read at
-            -- request time; a racing allocate/close makes this write a no-op.
-            -- TODO(M8.1 completion): KV read-back + "who won" check per the yaml comment —
-            -- frfs_ticket_booking is KV-enabled in prod (05 §2, review R8).
-            QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id booking.vehicleNumber
-            -- Ride the driver's ACTIVE run row: driver trips/history joins on this (04 §3a).
-            QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
-            -- Old cab's seat release = derived (05 decision 6): the booking row now counts against the new
-            -- cab, so the old cab's seat frees itself. Explicitly do NOT: bump session.consecutiveMisses,
-            -- bump alloc attempts, emit allocation_closed{blame: driver} — no driver penalty (8.3).
-            shared . void $ Redis.del (allocKey booking.id)
-        Degraded.clearDegradedMarker
-        booking.id
+   in Session.withPlateLock plate $ do
+        -- target-cab lock FIRST (05 §2 lock order)
+        withBookingLock booking.id $ do
+          -- Re-validate under locks: the cab may have switched route / ended between resolve and here.
+          -- readSession, not getSession: getSession may rebuild the session under this same (non-re-entrant) plate lock.
+          fresh <- Redis.withMasterRedis (Session.readSession plate) >>= fromMaybeM BoardingFailed
+          unless (fresh.status == ACTIVE) $ throwError BoardingFailed
+          -- SEAT GUARD (05 §4 option A): capacity − walkups − app-held seats ≥ this booking's
+          -- seats (one FRFSTicket row = one seat), recomputed UNDER the plate lock. Refuses
+          -- clearly as CabFull; the rider moves to the next cab or re-books.
+          held <- liveSeatsOnVehicle plate
+          myTickets <- QTicket.findAllByTicketBookingId booking.id
+          -- settle on ONE eligibility set (also the flip list): ACTIVE or INPROGRESS only.
+          let eligible = [t | t <- myTickets, t.status `elem` [TicketStatus.ACTIVE, TicketStatus.INPROGRESS]]
+          when (null eligible) $ throwError BoardingFailed
+          -- fresh read under the booking lock: the R11 owner was verified pre-lock; re-verify state + our own occupancy.
+          freshBooking <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
+          unless (freshBooking.status == DBookingStatus.CONFIRMED) $ throwError BoardingFailed
+          unless (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (length eligible)) $
+            throwError CabFull
+          -- Ticket FIRST: INPROGRESS — never postFrfsTicketVerify, which marks USED and the journey
+          -- layer reads USED as leg completed (05 §2 "Why not USED at boarding").
+          -- FLIP ONLY the eligible set (BLOCKER-3): CANCELLED/USED tickets stay put.
+          forM_ eligible $ \t ->
+            QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS (Just fresh.vehicleNumber) booking.id t.ticketNumber
+          -- CAS vehicleNumber (spec/Storage/FrfsTicket.yaml:656-666). Expected = what we read at
+          -- request time; a racing allocate/close makes this write a no-op.
+          -- TODO(M8.1 completion): KV read-back + "who won" check per the yaml comment —
+          -- frfs_ticket_booking is KV-enabled in prod (05 §2, review R8).
+          QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id booking.vehicleNumber
+          -- Ride the driver's ACTIVE run row: driver trips/history joins on this (04 §3a).
+          QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
+          -- Old cab's seat release = derived (05 decision 6): the booking row now counts against the new
+          -- cab, so the old cab's seat frees itself. Explicitly do NOT: bump session.consecutiveMisses,
+          -- bump alloc attempts, emit allocation_closed{blame: driver} — no driver penalty (8.3).
+          shared . void $ Redis.del (allocKey booking.id)
+          Degraded.clearDegradedMarker booking.id
           -- Ledger entries on the booking row (bus-branch parity, MultimodalConfirm.hs ~3059 analytics sync).
-          fork
-          "SharedCab: sync boarded vehicle data to ticket booking"
-          $ QBooking.updateFRFSTicketBookingVehicleDataById
-            (Just fresh.vehicleNumber)
-            (Just DJourneyLeg.UserActivated)
-            Nothing -- waybill: bus-fleet concept, cabs have none
-            Nothing -- scheduleNo
-            Nothing -- depot
-            booking.serviceTierType
-            Nothing -- conductorId
-            (Just fresh.driverId)
-            Nothing -- driverName: join driver-app later
-            Nothing -- driverMobileNumber
-            booking.id
-            -- Leg fields mean "boarded": written at boarding / re-bind only, never at allocation (05 §2).
-            QJourneyLeg.updateByPrimaryKey
-            $ journeyLeg
+          fork "SharedCab: sync boarded vehicle data to ticket booking" $
+            QBooking.updateFRFSTicketBookingVehicleDataById
+              (Just fresh.vehicleNumber)
+              (Just DJourneyLeg.UserActivated)
+              Nothing -- waybill: bus-fleet concept, cabs have none
+              Nothing -- scheduleNo
+              Nothing -- depot
+              booking.serviceTierType
+              Nothing -- conductorId
+              (Just fresh.driverId)
+              Nothing -- driverName: join driver-app later
+              Nothing -- driverMobileNumber
+              booking.id
+          -- Leg fields mean "boarded": written at boarding / re-bind only, never at allocation (05 §2).
+          QJourneyLeg.updateByPrimaryKey $
+            journeyLeg
               { DJourneyLeg.finalBoardedBusNumber = Just fresh.vehicleNumber,
                 DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
                 DJourneyLeg.finalBoardedBusServiceTierType = booking.serviceTierType
               }
-            -- NOTE(spec, not migrated): BusBoardingMethod has no SHARED_CAB value on this base;
-            -- UserActivated is the truthful closest fit. A dedicated value needs spec/Storage/MultiModal.yaml.
-            case mbOld of
-              Nothing -> emitSharedCabEvent "boarded" [("booking", booking.id.getId), ("cab", fresh.vehicleNumber), ("source", "code")]
-              Just old -> emitSharedCabEvent "rebound" [("booking", booking.id.getId), ("from", old.vehicleNumber), ("to", fresh.vehicleNumber), ("sibling_route", show (old.routeCode /= fresh.routeCode))]
+          -- NOTE(spec, not migrated): BusBoardingMethod has no SHARED_CAB value on this base;
+          -- UserActivated is the truthful closest fit. A dedicated value needs spec/Storage/MultiModal.yaml.
+          case mbOld of
+            Nothing -> emitSharedCabEvent "boarded" [("booking", booking.id.getId), ("cab", fresh.vehicleNumber), ("source", "code")]
+            Just old -> emitSharedCabEvent "rebound" [("booking", booking.id.getId), ("from", old.vehicleNumber), ("to", fresh.vehicleNumber), ("sibling_route", show (old.routeCode /= fresh.routeCode))]
 
 -- ---------------- entry point ----------------
 
@@ -307,17 +307,17 @@ tryBoardSharedCab journey journeyLeg booking mbPersonId req = do
   -- BLOCKER-3: CONFIRMED-only boarding; terminal bookings refuse, never resurrect.
   unless (booking.status == DBookingStatus.CONFIRMED) $ throwError BoardingFailed
   -- 8.6 (05 §8.1): ≤ boardAttemptsPer10Min; the limit trips the same generic error as a wrong code.
-  tunables <- getTunables booking.merchantOperatingCityId
+  tunables <- Config.getTunables booking.merchantOperatingCityId
   RateLimit.enforceBoardingAttemptLimit tunables.boardAttemptsPer10Min booking.id
   code <- req.vehicleNumber & fromMaybeM BoardingFailed
   matches <- resolveCabByCode booking code
   case matches of
     -- 05 §5 degraded boarding: an unknown code still boards (flagged), it is never blocked.
     [] -> degradedBoarding tunables.degradedTimeoutSec booking code >> pure (Just SharedCabDegraded)
-    [target] -> Just <$> boardMatched target
+    [target] -> Just <$> boardMatched tunables target
     _ -> throwError BoardingCodeAmbiguous -- two match: ask for the full plate (05 §4)
   where
-    boardMatched target = do
+    boardMatched tunables target = do
       let isAllocatedCab = booking.vehicleNumber == Just target.vehicleNumber
           isRebind = isJust booking.vehicleNumber && not isAllocatedCab
           -- 8.2: forceCheckIn reopens re-bind-from-home without this; honour it only for the allocated cab.

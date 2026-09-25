@@ -51,8 +51,9 @@ istDayStamp = T.pack . formatTime defaultTimeLocale "%Y%m%d" . addUTCTime 19800
 enforceBoardingAttemptLimit :: (Redis.HedisFlow m r, MonadFlow m) => Int -> Id DBooking.FRFSTicketBooking -> m ()
 enforceBoardingAttemptLimit boardAttemptsPer10Min bookingId =
   shared $ do
+    -- the TTL is set with the key, so an INCR can never leave a counter that lives forever
+    void $ Redis.setNxExpire key boardAttemptWindowSec (0 :: Integer)
     attempts <- Redis.incr key
-    when (attempts == 1) $ Redis.expire key boardAttemptWindowSec
     when (attempts > fromIntegral boardAttemptsPer10Min) $
       throwError BoardingFailed
   where
@@ -68,9 +69,8 @@ recordNoLocationBoarding noLocationSpotBookingsPerVehiclePerDay plate = do
   let key = noLocationKey plate <> ":" <> istDayStamp now
   count <-
     shared $ do
-      c <- Redis.incrby key 1
-      when (c == 1) $ Redis.expire key (2 * 24 * 60 * 60)
-      pure c
+      void $ Redis.setNxExpire key (2 * 24 * 60 * 60) (0 :: Integer)
+      Redis.incrby key 1
   when (count >= fromIntegral noLocationSpotBookingsPerVehiclePerDay) $
     logWarning $
       "sharedcab:ops-flag: vehicle " <> plate <> " at " <> show count
