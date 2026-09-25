@@ -141,9 +141,9 @@ guarded :: InvariantFlow m r => Text -> m () -> m ()
 guarded subject check =
   withTryCatch "sharedCabInvariants" check >>= either (\e -> logWarning $ "invariant check failed " <> subject <> ": " <> show e) pure
 
--- Key formats owned by the allocation engine (`05` §2) and degraded boarding (`05` §5).
+-- Key formats owned by the allocation engine (`05` §2) and degraded boarding (`05` §5); cross-app, as they write them.
 redisKeyExists :: InvariantFlow m r => Text -> m Bool
-redisKeyExists key = isJust <$> Redis.withMasterRedis (Redis.get @A.Value key)
+redisKeyExists key = isJust <$> Redis.runInMasterCloudRedisCellWithCrossAppRedis (Redis.withMasterRedis (Redis.get @A.Value key))
 
 bookingFacts :: InvariantFlow m r => DFTB.FRFSTicketBooking -> m BookingFacts
 bookingFacts booking = do

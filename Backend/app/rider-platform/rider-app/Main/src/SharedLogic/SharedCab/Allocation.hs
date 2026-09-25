@@ -94,6 +94,11 @@ type AllocFlow m r =
     Metrics.CoreMetrics m
   )
 
+-- | Unprefixed keys in the master cloud cell: the tick runs in the scheduler, whose key prefix differs from
+-- the API's, and both sides must see the same alloc, attempts and lease keys.
+shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
+shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
+
 -- | 05 §2: `sharedcab:alloc:{bookingId}` -> AllocationState JSON.
 allocKey :: Text -> Text
 allocKey bookingId = "sharedcab:alloc:" <> bookingId
@@ -317,17 +322,18 @@ attemptClaim cfg booking cand = do
                       -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
                       -- The key's TTL is only a garbage-collection backstop.
                       let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
-                      Redis.setExp
-                        (allocKey booking.bookingId.getId)
-                        AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
-                        cfg.findingTimeoutSec
+                      shared $
+                        Redis.setExp
+                          (allocKey booking.bookingId.getId)
+                          AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
+                          cfg.findingTimeoutSec
                       pure (Right now)
                     | otherwise -> pure (Left ClaimCasLost)
                   Nothing -> pure (Left ClaimCasLost)
       _ -> pure (Left ClaimSessionGone)
 
 readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Int
-readAttempts key = Redis.withMasterRedis $ fromMaybe 0 <$> Redis.safeGet key
+readAttempts key = shared $ fromMaybe 0 <$> Redis.safeGet key
 
 --------------------------------------------------------------------------------
 -- Release (timer / driver cancel / passed stop / seat lost) -- 05 §3
@@ -378,11 +384,11 @@ closeLocked cfg bookingId expectedPlate outcome =
     Just b
       | b.vehicleNumber == Just expectedPlate -> do
         QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
-        Redis.del (allocKey bookingId.getId)
+        shared $ Redis.del (allocKey bookingId.getId)
         -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
         attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
         let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
-        Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
+        shared $ Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
         when (attemptsNow >= cfg.maxAttempts) $
           logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface TODO (05 §3)"
         pure (Just b.merchantOperatingCityId)
@@ -409,13 +415,13 @@ expireTimers ::
 expireTimers cfg now movingOn live =
   forM_ [(b, plate) | entry@(b, _) <- live, Just plate <- [allocatedPlate entry]] $ \(b, plate) -> do
     result <- withBookingLock b.id $ do
-      mbState <- Redis.withMasterRedis $ Redis.safeGet (allocKey b.id.getId)
+      mbState <- shared $ Redis.safeGet (allocKey b.id.getId)
       case timerExpiry now mbState of
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
         Nothing -> do
           whenJust mbState $ \st ->
             when (st.timerKind == StandTimer && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $
-              Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} cfg.findingTimeoutSec
+              shared $ Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} cfg.findingTimeoutSec
           pure Nothing
     whenJust result $ \(outcome, cityId) -> afterClose cfg b.id plate outcome (Just cityId)
 
@@ -483,7 +489,7 @@ runSharedCabAllocationTick cityId = do
   let cfg = defaultAllocationConfig
   -- One tick per city (05 §3, §8.5): a pod or trigger that finds the lease held skips. The lease is
   -- released when the tick ends; its TTL only bounds a crashed holder, so it spans many ticks.
-  Redis.whenWithLockRedis ("sharedcab:alloc:lease:" <> cityId.getId) (10 * cfg.tickSec) $
+  withCityLease ("sharedcab:alloc:lease:" <> cityId.getId) (10 * cfg.tickSec) $
     if not sharedCabAllocationEnabled
       then logDebug "shared-cab allocation gated off (sharedCabAllocationEnabled); tick is a no-op"
       else do
@@ -507,6 +513,11 @@ runSharedCabAllocationTick cityId = do
             sessions <- Session.activeSessionsOnRoute routeCode
             forM_ bookings $ \booking ->
               void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+
+-- | whenWithLockRedis, on the cross-app key, so the scheduler's ticks and the API's triggers share one lease.
+withCityLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int -> m () -> m ()
+withCityLease key ttl action =
+  whenM (shared $ Redis.tryLockRedis key ttl) $ action `finally` shared (Redis.unlockRedis key)
 
 groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
 groupAllOn f = map (\grp -> (f (head grp), grp)) . groupBy ((==) `on` f) . sortOn f

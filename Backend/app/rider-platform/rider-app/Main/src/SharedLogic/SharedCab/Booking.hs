@@ -30,7 +30,8 @@ isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.rou
 -- | `05` §2: every write that moves a shared-cab booking between states runs under this lock.
 withBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
 withBookingLock bookingId =
-  Redis.withMasterRedis . Redis.withWaitAndLockRedis ("sharedcab:lock:booking:" <> bookingId.getId) 10 10000
+  -- cross-app: the allocation tick (scheduler) and the API take this lock on the same booking
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "waitForBookingLock" ("sharedcab:lock:booking:" <> bookingId.getId) 10 10000
 
 -- | R7: no cancel once a seat has boarded. Call inside `withBookingLock` so boarding can't slip in before the cancel.
 ensureCancellable :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
