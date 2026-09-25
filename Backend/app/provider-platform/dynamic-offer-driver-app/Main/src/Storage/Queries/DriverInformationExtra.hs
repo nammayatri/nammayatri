@@ -650,10 +650,10 @@ updateSharedCabSessionActive sharedCabSessionActive driverId = do
 findSharedCabActiveDriversAfter :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id Person.Person) -> Int -> m [DriverInformation]
 findSharedCabActiveDriversAfter merchantOpCityId mbLastDriverId batchSize = do
   findAllWithOptionsKV
-    [ Se.And
-        $ [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
-            Se.Is BeamDI.sharedCabSessionActive (Se.Eq True)
-          ]
+    [ Se.And $
+        [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+          Se.Is BeamDI.sharedCabSessionActive (Se.Eq True)
+        ]
           <> maybe [] (\lastId -> [Se.Is BeamDI.driverId $ Se.GreaterThan (getId lastId)]) mbLastDriverId
     ]
     (Se.Asc BeamDI.driverId)
