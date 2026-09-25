@@ -184,6 +184,7 @@ runDriverHealthcheck appCfg appEnv = do
               }
           )
           appCfg.kvConfigUpdateFrequency
+          >> L.setOption KBT.KafkaConn appEnv.kafkaProducerTools
       )
     flowRt'' <-
       runFlowR flowRt appEnv $ do
