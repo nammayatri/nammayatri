@@ -56,9 +56,10 @@ import EulerHS.Types (EulerClient, client)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error.BaseError.HTTPError.APIError (APICallError (..), APIError (..))
+import Kernel.Types.Error.BaseError.HTTPError.APIError (APIError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.APIError (APICallError (..))
 import qualified Kernel.Utils.Servant.Client as EC
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
@@ -144,14 +145,15 @@ probeSharedCabSession ::
   m SessionProbe
 probeSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  eResp <- withTryCatch "getSharedCabSession:sharedCabReconciler" $
-    EC.callApiUnwrappingApiError APICallError Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
+  eResp <-
+    withTryCatch "getSharedCabSession:sharedCabReconciler" $
+      EC.callApiUnwrappingApiError APICallError Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
   pure $ case eResp of
     Right _ -> SessionUnknown -- 2xx: a live session answered; nothing to do
     Left exc
       | Just (APICallError apiErr) <- fromException @APICallError exc,
         apiErr.errorCode `elem` clearSignalErrorCodes ->
-          SessionGone apiErr.errorCode
+        SessionGone apiErr.errorCode
       | otherwise -> SessionUnknown -- everything else: fail-closed, keep the flag
 
 runSharedCabReconcilerJob ::
