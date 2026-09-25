@@ -220,9 +220,17 @@ token: {{internal_key}}
 {"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "next": "END"}
 HTTP 200
 
-# ---- 3. walk-up spot booking ----
-# The rider walks up to cab A at the stop, books and types the code at once: the code boards a
-# FINDING booking directly, or one the tick has just allocated to A, whichever comes first.
+# ---- 3. walk-up: book then code ----
+# The rider walks up to cab A at the stop. Scanning or typing its plate resolves the cab's route (8.4),
+# then the rider books and types the code at once: the code boards a FINDING booking directly, or one
+# the tick has just allocated to A, whichever comes first (05 §4; one-step spot booking was dropped).
+
+GET {{base_url}}/v2/publicTransport/vehicleData/BUS/{{plate}}
+token: {{token}}
+HTTP 200
+[Asserts]
+jsonpath "$.rs[0].st" == "SHARED_CAB"
+jsonpath "$.rs[0].cd" == "{{route_a}}"
 
 POST {{base_url}}/v2/multimodalSearch
 token: {{token}}
