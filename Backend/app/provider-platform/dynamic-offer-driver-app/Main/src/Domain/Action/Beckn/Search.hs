@@ -852,7 +852,10 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         }
   let estimatedFare = fareSum fareParams (Just [])
   quoteId <- Id <$> generateGUID
-  void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
+  void $
+    if isScheduled
+      then cacheFarePolicyByScheduledQuoteId quoteId.getId pickupTime fullFarePolicy
+      else cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
