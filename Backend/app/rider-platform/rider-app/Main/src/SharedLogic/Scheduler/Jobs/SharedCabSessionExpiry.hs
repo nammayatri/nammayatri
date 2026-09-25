@@ -7,17 +7,18 @@ where
 
 import Data.List (nub)
 import qualified Data.Map.Strict as M
-import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601ParseM)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types (VehicleInfo)
 import SharedLogic.JobScheduler
+import qualified SharedLogic.SharedCab.Allocation as Allocation
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
 import SharedLogic.SharedCab.ExpirySchedule (claimTick, scheduleNextExpiry)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -31,18 +32,16 @@ pauseAfter = 15 * 60
 endAfter :: NominalDiffTime
 endAfter = 60 * 60
 
-sharedCabSessionExpiry :: (LtsFlow m r c, MonadMask m, JobCreator r m) => Job 'SharedCabSessionExpiry -> m ExecutionResult
+sharedCabSessionExpiry :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Job 'SharedCabSessionExpiry -> m ExecutionResult
 sharedCabSessionExpiry Job {jobInfo} = do
   let jobData = jobInfo.jobData
   claimed <- claimTick jobData.merchantOperatingCityId
   if claimed
-    then do
-      expireSilentSessions jobData.merchantOperatingCityId
-      scheduleNextExpiry jobData.merchantId jobData.merchantOperatingCityId
+    then expireSilentSessions jobData.merchantOperatingCityId `finally` scheduleNextExpiry jobData.merchantId jobData.merchantOperatingCityId
     else logInfo "sharedCab expiry: another chain ran this tick; dropping this one"
   pure Complete
 
-expireSilentSessions :: (LtsFlow m r c, MonadMask m) => Id DMOC.MerchantOperatingCity -> m ()
+expireSilentSessions :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> m ()
 expireSilentSessions mocId = do
   trips <- QVT.findAllLiveByMerchantOperatingCityId mocId
   pings <- M.fromList . catMaybes <$> mapM lastPings (nub $ map (.routeCode) trips)
@@ -52,25 +51,33 @@ expireSilentSessions mocId = do
       Left err -> logError $ "sharedCab expiry failed for " <> trip.vehicleNumber <> ": " <> show err
       Right () -> pure ()
 
+-- | A cab LTS lists whose timestamp can't be read is left alone, never taken for silent.
+data Ping = SeenAt UTCTime | Unreadable
+
 -- | plate → latest ping on the route, or Nothing if LTS couldn't be read.
-lastPings :: LtsFlow m r c => Text -> m (Maybe (Text, M.Map Text UTCTime))
+lastPings :: LtsFlow m r c => Text -> m (Maybe (Text, M.Map Text Ping))
 lastPings route =
   withTryCatch "sharedCab:trackVehicles" (LTS.vehicleTrackingOnRoute (LTS.ByRoute route)) >>= \case
     Left err -> do
       logError $ "sharedCab expiry: LTS read failed for route " <> route <> ", skipping it: " <> show err
       pure Nothing
-    Right vehicles -> pure $ Just (route, M.fromList [(v.vehicleNumber, ts) | v <- vehicles, Just ts <- [pingTime v.vehicleInfo]])
+    Right vehicles -> pure $ Just (route, M.fromList [(v.vehicleNumber, pingOf v.vehicleInfo) | v <- vehicles])
 
--- LTS serialises chrono DateTime<Utc> as RFC 3339.
-pingTime :: VehicleInfo -> Maybe UTCTime
-pingTime info = info.timestamp >>= iso8601ParseM . T.unpack
+pingOf :: VehicleInfo -> Ping
+pingOf info = maybe Unreadable SeenAt (info.timestamp >>= parseLtsTimestamp)
 
-checkTrip :: (LtsFlow m r c, MonadMask m) => M.Map Text (M.Map Text UTCTime) -> UTCTime -> DVT.VehicleTrip -> m ()
+checkTrip :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => M.Map Text (M.Map Text Ping) -> UTCTime -> DVT.VehicleTrip -> m ()
 checkTrip pings now trip = Session.getSession trip.vehicleNumber >>= traverse_ check
   where
-    check s = whenJust (M.lookup s.routeCode pings) $ \routePings -> do
-      let lastSeen = maybe trip.startedAt (max trip.startedAt) (M.lookup s.vehicleNumber routePings)
-      case expiryAction pauseAfter endAfter now lastSeen s.status of
-        Just PauseSilent -> void $ Session.pause s.vehicleNumber NO_LOCATION
-        Just EndSilent -> void $ Session.expire s.vehicleNumber
-        Nothing -> pure ()
+    check s = whenJust (M.lookup s.routeCode pings) $ \routePings ->
+      case M.lookup s.vehicleNumber routePings of
+        Just Unreadable -> logWarning $ "sharedCab expiry: unreadable LTS timestamp for " <> s.vehicleNumber <> ", skipping it"
+        mbPing -> do
+          let lastSeen = case mbPing of
+                Just (SeenAt ts) -> max trip.startedAt ts
+                _ -> trip.startedAt
+          case expiryAction pauseAfter endAfter now lastSeen s.status of
+            -- 05 §8.7: leaving ACTIVE releases unboarded allocations without penalty, after the plate lock is released
+            Just PauseSilent -> Session.pause s.vehicleNumber NO_LOCATION >> Allocation.releaseUnboarded s.vehicleNumber SessionClosed
+            Just EndSilent -> Session.expire s.vehicleNumber >> Allocation.releaseUnboarded s.vehicleNumber SessionClosed
+            Nothing -> pure ()

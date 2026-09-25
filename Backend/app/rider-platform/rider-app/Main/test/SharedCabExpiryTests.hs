@@ -65,8 +65,8 @@ tests =
         case sessionFromTrip liveTrip (minutes 5) of
           Session {routeCode = r, driverId = d, capacity = c, vehicleTripId = t, status = st} ->
             (r, d, c, t, st) @?= ("SC-R2", "d1", 4, Id "trip7", ACTIVE),
-      testCase "recovery keeps the walk-up mirror (offlineBoardings is durable)" $
-        walkupCount (sessionFromTrip liveTrip (minutes 5)) @?= 3,
+      testCase "recovery restarts walk-ups at 0 (offlineBoardings counts the whole run, not who is aboard)" $
+        walkupCount (sessionFromTrip liveTrip (minutes 5)) @?= 0,
       testCase "a PAUSED trip comes back paused (pause is non-terminal)" $
         status (sessionFromTrip liveTrip {DVT.status = DVT.PAUSED} (minutes 5)) @?= PAUSED,
       testCase "recovery's version outranks any pre-flush counter" $

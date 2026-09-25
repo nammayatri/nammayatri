@@ -175,7 +175,8 @@ checkBooking bookingId = guarded subject $ do
 -- | `plate` is canonical. Seats are Booking.liveSeatsOnVehicle's, the same count the allocation claim uses.
 checkCab :: InvariantFlow m r => Text -> m ()
 checkCab plate = guarded subject $ do
-  mbSession <- Session.getSession plate
+  -- read-only: a flushed session shows as trip_without_live_session instead of being rebuilt by the checker
+  mbSession <- Session.readSession plate
   activeTrip <- QVT.findActiveByVehicleNumber plate
   seats <- liveSeatsOnVehicle plate
   let live = do

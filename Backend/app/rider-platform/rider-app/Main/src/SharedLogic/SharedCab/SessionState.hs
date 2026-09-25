@@ -242,11 +242,11 @@ returnRouteOf code
   | Just corridor <- T.stripSuffix "-R" code = Right (corridor <> "-F")
   | otherwise = Left NoReturnRoute
 
--- | Flush recovery: the live trip row restores route, driver, capacity and the walk-up mirror (`offlineBoardings`
--- is persisted, so it survives the flush). A PAUSED trip comes back paused — pause is non-terminal — while a
--- `findActiveByVehicleNumber` miss means ENDED: no session. The pause reason itself was Redis-only, as are
--- `consecutiveMisses`; both restart empty. The version restarts above any pre-flush counter so a client's stale
--- version can't CAS it.
+-- | Flush recovery: the live trip row restores route, driver and capacity. A PAUSED trip comes back paused — pause
+-- is non-terminal — while a `findActiveByVehicleNumber` miss means ENDED: no session. Walk-ups restart at 0 and the
+-- driver re-taps them (`offlineBoardings` counts every walk-up of the run, not who is on board now, 04 §3); the pause
+-- reason and `consecutiveMisses` were Redis-only and restart empty too. The version restarts above any pre-flush
+-- counter so a client's stale version can't CAS it.
 sessionFromTrip :: DVT.VehicleTrip -> UTCTime -> Session
 sessionFromTrip trip now =
   Session
@@ -259,7 +259,7 @@ sessionFromTrip trip now =
       routeCode = trip.routeCode,
       queuedRouteCode = Nothing,
       capacity = trip.capacity,
-      walkupCount = trip.offlineBoardings,
+      walkupCount = 0,
       -- unreachable fallback: findActiveByVehicleNumber only returns live rows
       status = case trip.status of
         DVT.ACTIVE -> ACTIVE

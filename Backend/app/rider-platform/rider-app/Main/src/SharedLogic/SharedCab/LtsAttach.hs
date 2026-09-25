@@ -15,6 +15,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
+import Kernel.Utils.Forkable (runWithFallbackAndTimeout)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.SharedCab.SessionState (Session (..))
@@ -31,8 +32,17 @@ type LtsFlow m r c =
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    MonadReader r m
+    MonadReader r m,
+    Forkable m
   )
+
+-- Each LTS step runs under the plate lock (Session.lockTtlSec 30): waiting is cut off here so detach + attach +
+-- restore stay well inside it. The HTTP call itself can't be cancelled and finishes in the background.
+ltsStepSec :: Int
+ltsStepSec = 6
+
+bounded :: (LtsFlow m r c, MonadThrow m) => Text -> m () -> m ()
+bounded tag action = runWithFallbackAndTimeout tag [()] ltsStepSec (const True) (const action)
 
 busRideInfo :: Session -> LatLong -> RideInfo
 busRideInfo s destination =
@@ -51,8 +61,8 @@ ltsMerchantId :: LtsFlow m r c => Session -> m Text
 ltsMerchantId s = (.driverOfferMerchantId) <$> (CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId))
 
 -- | rideStart on the session's route, keyed by its vehicle_trip id. Throws if LTS or the route's stops are unavailable.
-attach :: LtsFlow m r c => Session -> m ()
-attach s = do
+attach :: (LtsFlow m r c, MonadThrow m) => Session -> m ()
+attach s = bounded "sharedCab:ltsAttach" $ do
   merchantId <- ltsMerchantId s
   ibc <- CQIBC.findById s.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
   stops <- OTPRest.getRouteStopMappingByRouteCode s.routeCode ibc
@@ -61,9 +71,9 @@ attach s = do
     RideStartReq {merchantId, driverId = s.driverId, rideInfo = Just (busRideInfo s lastStop.stopPoint)}
 
 -- | rideEnd carrying the route code — without it LTS keeps the cab in `route:{code}`. Never throws.
-detach :: LtsFlow m r c => Session -> m ()
+detach :: (LtsFlow m r c, MonadThrow m) => Session -> m ()
 detach s =
-  withTryCatch "sharedCab:ltsDetach" (ltsMerchantId s >>= end) >>= \case
+  withTryCatch "sharedCab:ltsDetach" (bounded "sharedCab:ltsDetach" $ ltsMerchantId s >>= end) >>= \case
     Left err -> logError $ "LTS rideEnd failed for " <> s.vehicleNumber <> " on " <> s.routeCode <> ": " <> show err
     Right () -> pure ()
   where

@@ -10,8 +10,6 @@ module SharedLogic.SharedCab.Session
     withPlateLock,
     activeSessionsOnRoute,
     setWalkupCount,
-    readSession,
-    withPlateLock,
     expire,
   )
 where
@@ -65,7 +63,7 @@ readSession = shared . Redis.safeGet . sessionKey
 -- an ACTIVE or PAUSED row recovers, an absent one means the run ended — no session. The plate's non-terminal
 -- bookings keep joining by plate on their own; they're counted into the log so a rebuilt session can be told
 -- apart from one that lost riders. Only the `saveSession` write makes the session downstream-visible.
-getSession :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> m (Maybe Session)
+getSession :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m, JobCreator r m) => Text -> m (Maybe Session)
 getSession rawPlate =
   readSession plate >>= \case
     Just s -> pure (Just s)
@@ -83,12 +81,14 @@ getSession rawPlate =
           <> ", "
           <> show (length bookings)
           <> " live app bookings)"
-      saveSession Nothing s
+      rebuilt <- saveSession Nothing s
+      ensureExpiryJob s.merchantId s.merchantOperatingCityId
+      pure rebuilt
 
 -- | Each member is re-read: a route set can outlive a session that has since paused or ended.
 activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m [Session]
-activeSessionsOnRoute route = Redis.withMasterRedis $ do
-  plates <- Redis.sMembers (routeKey route)
+activeSessionsOnRoute route = do
+  plates <- shared $ Redis.sMembers (routeKey route)
   filter ((== ACTIVE) . (.status)) . catMaybes <$> mapM readSession plates
 
 liftSession :: MonadFlow m => Either SharedCabSessionError a -> m a
@@ -114,10 +114,24 @@ switchTo reason newRoute s = do
   now <- getCurrentTime
   tripId <- generateGUID
   let s' = switchRoute newRoute tripId s
-  withAttach (Just s) s' $ do
-    closeLiveTrip s.vehicleNumber reason now
-    QVT.create (tripFor s' now)
-    saveSession (Just s) s'
+  withAttach (Just s) s' $ replaceLiveTrip reason now (Just s) s'
+
+-- | The live-trip index (1575) allows one ACTIVE/PAUSED row per plate, so the old run closes before the new one is
+-- created. If creating or saving then fails, the new row (if any) is abandoned and the old one reopened.
+replaceLiveTrip :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadCatch m) => DVT.VehicleTripEndReason -> UTCTime -> Maybe Session -> Session -> m Session
+replaceLiveTrip reason now prior s' = do
+  mbOld <- QVT.findActiveByVehicleNumber s'.vehicleNumber
+  whenJust mbOld $ \old -> QVT.closeTrip (closedTripStatus reason) (Just reason) (Just now) old.id
+  (QVT.create (tripFor s' now) >> saveSession prior s') `onException` undo mbOld
+  where
+    undo mbOld =
+      withTryCatch
+        "sharedCab:undoTripSwitch"
+        ( do
+            QVT.findById s'.vehicleTripId >>= traverse_ (\new -> QVT.closeTrip DVT.ABANDONED (Just DVT.SESSION_TIMEOUT) (Just now) new.id)
+            whenJust mbOld $ \old -> QVT.closeTrip old.status Nothing Nothing old.id
+        )
+        >>= either (\e -> logError $ "sharedCab: couldn't undo the trip switch for " <> s'.vehicleNumber <> ": " <> show e) pure
 
 -- | Every end path: close the trip, end the session, then take the cab off its LTS route.
 finish :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
@@ -153,10 +167,7 @@ selectRoute mode req = withPlateLock plate $ do
       now <- getCurrentTime
       tripId <- generateGUID
       let s = newSession req tripId now prior
-      opened <- withAttach Nothing s $ do
-        closeLiveTrip plate DVT.SESSION_TIMEOUT now
-        QVT.create (tripFor s now)
-        saveSession prior s
+      opened <- withAttach Nothing s $ replaceLiveTrip DVT.SESSION_TIMEOUT now prior s
       ensureExpiryJob s.merchantId s.merchantOperatingCityId
       pure (Right opened)
   where
@@ -219,12 +230,14 @@ pause rawPlate reason = withPlateLock plate $ do
   where
     plate = canonicalisePlate rawPlate
 
-resume :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> m Session
-resume driver rawPlate = withPlateLock plate $ do
-  prior <- readSession plate
-  s <- liftSession $ ownedSession driver prior >>= resumeSession
-  QVT.updateStatus DVT.ACTIVE s.vehicleTripId
-  saveSession prior s
+resume :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m, JobCreator r m) => Text -> Text -> m Session
+resume driver rawPlate = do
+  resumed <- withPlateLock plate $ do
+    prior <- readSession plate
+    s <- liftSession $ ownedSession driver prior >>= resumeSession
+    QVT.updateStatus DVT.ACTIVE s.vehicleTripId
+    saveSession prior s
+  resumed <$ ensureExpiryJob resumed.merchantId resumed.merchantOperatingCityId
   where
     plate = canonicalisePlate rawPlate
 
