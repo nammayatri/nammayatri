@@ -17,7 +17,7 @@ where
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -38,7 +38,7 @@ sharedCabAllocationTick ::
     CacheFlow m r,
     EsqDBFlow m r,
     MonadMask m,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasKafkaProducer r,
     Metrics.CoreMetrics m,
     HasField "blackListedJobs" r [Text],
     LtsFlow m r c

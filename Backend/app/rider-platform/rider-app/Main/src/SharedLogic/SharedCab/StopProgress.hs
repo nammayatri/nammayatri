@@ -176,7 +176,7 @@ offRouteStep spc now route freshPosition plate = do
           Invariants.checkCab plate
     OffRouteNoChange -> pure ()
 
-markReachedEnd :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m) => UTCTime -> Session -> m ()
+markReachedEnd :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m, Events.EventFlow m r) => UTCTime -> Session -> m ()
 markReachedEnd now s =
   QVT.findById s.vehicleTripId >>= traverse_ \trip ->
     when (isNothing trip.reachedEndAt) $ do

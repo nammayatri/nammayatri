@@ -25,7 +25,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer (produceMessage)
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
@@ -153,7 +153,9 @@ bookingEvent :: EventKind -> Text -> Maybe Text -> Maybe Text -> UTCTime -> Shar
 bookingEvent k booking plate route time =
   SharedCabEvent {kind = k, vehicleNumber = plate, bookingId = Just booking, routeCode = route, driverId = Nothing, vehicleTripId = Nothing, merchantOperatingCityId = Nothing, emittedAt = time}
 
-type EventFlow m r = (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools])
+-- HasKafkaProducer (plain HasField) is the form produceMessage and the journey-leg getState use; the
+-- HasFlowEnv spelling of the same field does not unify with it in polymorphic contexts.
+type EventFlow m r = (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasKafkaProducer r)
 
 -- | The run (vehicle_trip) a session or allocation event belongs to.
 withTrip :: Maybe Text -> SharedCabEvent -> SharedCabEvent
