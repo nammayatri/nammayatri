@@ -104,6 +104,7 @@ library
       API.Internal.XyneWebhook
       API.OnixBppWebhook
       API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
+      API.Types.UI.SharedCab
       API.Types.UI.TicketKapture
       API.UI
       API.UI.Aarokya
@@ -135,6 +136,7 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
+      API.UI.SharedCab
       API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
@@ -453,6 +455,7 @@ library
       Domain.Action.UI.SafetyWebhook
       Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SearchRequestLocation
+      Domain.Action.UI.SharedCab
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
