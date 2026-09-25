@@ -3,7 +3,6 @@
 -- with `SharedCabSession.route`.
 module SharedLogic.SharedCab.SessionView where
 
-import Data.OpenApi (ToSchema)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import SharedLogic.SharedCab.SessionState (PauseReason, SessionMovement, SessionStatus)
