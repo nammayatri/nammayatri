@@ -941,41 +941,46 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
       -- Recompute congestion charge at end ride if config enabled
       (farePolicyWithCongestion, endRideCongestionCharge) <-
-        if thresholdConfig.recomputeCongestionChargeOnEndRide == Just True
+        if recalcDistance <= 0
           then do
-            logInfo "Recomputing congestion charge on end ride"
-            mbCongestionDetails <-
-              getCongestionChargeOnEndRide
-                thresholdConfig.timeDiffFromUtc
-                (Just $ getCoordinates booking.fromLocation)
-                booking.fromLocGeohash
-                booking.toLocGeohash
-                booking.vehicleServiceTier
-                (Just chargeableDistance)
-                chargeableDuration
-                thresholdConfig.qarCalRadiusInKm
-                (FarePolicy.mkDropQARConfig thresholdConfig (Just . getCoordinates =<< booking.toLocation))
-                booking.specialLocationName
-                booking.dynamicPricingLogicVersion
-                booking.merchantOperatingCityId
-                booking.estimatedDuration
-                actualDuration
-                (Just booking.tripCategory)
-                (Just booking.transactionId)
-                booking.area
-            case mbCongestionDetails of
-              Just details -> do
-                logInfo $ "End ride congestion recompute result: " <> show details
-                let updatedFarePolicy =
-                      farePolicy
-                        { DFP.congestionChargeMultiplier = details.congestionChargeMultiplier,
-                          DFP.congestionChargePerMin = details.congestionChargePerMin
-                        }
-                return (updatedFarePolicy, Nothing) -- Pass Nothing so fare calculator recomputes from updated fare policy
-              Nothing -> do
-                logInfo "End ride congestion recompute returned Nothing, falling back to booking estimate"
-                return (farePolicy, booking.estimatedCongestionCharge)
-          else return (farePolicy, booking.estimatedCongestionCharge)
+            logInfo $ "Zero chargeable distance, skipping congestion charge for ride: " <> ride.id.getId
+            return (farePolicy, Just 0)
+          else
+            if thresholdConfig.recomputeCongestionChargeOnEndRide == Just True
+              then do
+                logInfo "Recomputing congestion charge on end ride"
+                mbCongestionDetails <-
+                  getCongestionChargeOnEndRide
+                    thresholdConfig.timeDiffFromUtc
+                    (Just $ getCoordinates booking.fromLocation)
+                    booking.fromLocGeohash
+                    booking.toLocGeohash
+                    booking.vehicleServiceTier
+                    (Just recalcDistance)
+                    finalDuration
+                    thresholdConfig.qarCalRadiusInKm
+                    (FarePolicy.mkDropQARConfig thresholdConfig (Just . getCoordinates =<< booking.toLocation))
+                    booking.specialLocationName
+                    booking.dynamicPricingLogicVersion
+                    booking.merchantOperatingCityId
+                    booking.estimatedDuration
+                    actualDuration
+                    (Just booking.tripCategory)
+                    (Just booking.transactionId)
+                    booking.area
+                case mbCongestionDetails of
+                  Just details -> do
+                    logInfo $ "End ride congestion recompute result: " <> show details
+                    let updatedFarePolicy =
+                          farePolicy
+                            { DFP.congestionChargeMultiplier = details.congestionChargeMultiplier,
+                              DFP.congestionChargePerMin = details.congestionChargePerMin
+                            }
+                    return (updatedFarePolicy, Nothing) -- Pass Nothing so fare calculator recomputes from updated fare policy
+                  Nothing -> do
+                    logInfo "End ride congestion recompute returned Nothing, falling back to booking estimate"
+                    return (farePolicy, booking.estimatedCongestionCharge)
+              else return (farePolicy, booking.estimatedCongestionCharge)
       let farePolicy' =
             farePolicyWithCongestion
               { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
