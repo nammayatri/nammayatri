@@ -214,9 +214,9 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
                           refundsAmount = Just order.amount,
                           refundsTries = refundRequest.refundsTries + 1
                          }
-      pairs <- BookingDeposit.prepareDepositRefundLedger booking
-      case find (\(_, o) -> o.id == order.id) pairs of
-        Nothing -> throwError (InvalidRequest $ "Deposit for order " <> order.id.getId <> " is not refundable (captured, or no paid attempt)")
+      mbPair <- BookingDeposit.prepareOrderRefund BookingDeposit.OpsRetry booking bpRow
+      case mbPair of
+        Nothing -> throwError (InvalidRequest $ "Deposit for order " <> order.id.getId <> " is not refundable (wallet balance short of the order amount)")
         Just pair -> BookingDeposit.executeDepositRefundGateway booking updReq (fromMaybe False req.retryRefunds) pair
       finalReq <- QRefundRequest.findById refundRequest.id >>= fromMaybeM (RefundRequestDoesNotExist refundRequest.id.getId)
       pure Common.RefundRequestRespondResp {status = finalReq.status, refundStatus = Nothing, errorCode = Nothing}
