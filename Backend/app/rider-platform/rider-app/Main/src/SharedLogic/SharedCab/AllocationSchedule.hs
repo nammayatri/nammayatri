@@ -20,6 +20,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Allocation (sharedCabAllocationEnabled)
 import SharedLogic.SharedCab.Allocation.Types (defaultAllocationConfig)
+import SharedLogic.SharedCab.Booking (shared)
 import Storage.Beam.SchedulerJob ()
 
 tickSec :: Int
@@ -36,7 +37,7 @@ runKey :: Id DMOC.MerchantOperatingCity -> Text
 runKey mocId = "sharedcab:allocRun:" <> mocId.getId
 
 setNx :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> m Bool
-setNx key ttl = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire key ttl ()
+setNx key ttl = shared $ Redis.setNxExpire key ttl ()
 
 -- | Idempotent; no job while the engine is gated off.
 ensureAllocationTick :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
@@ -50,7 +51,7 @@ claimTickRun mocId = setNx (runKey mocId) (max 1 (tickSec - 1))
 
 scheduleNextTick :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 scheduleNextTick merchantId mocId = do
-  Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setExp (guardKey mocId) () guardTtlSec
+  shared $ Redis.setExp (guardKey mocId) () guardTtlSec
   createNext merchantId mocId
 
 createNext :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()

@@ -28,7 +28,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (isPayOnBoard)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (SessionStatus (ENDED))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -142,7 +142,7 @@ guarded subject check =
 
 -- Key formats owned by the allocation engine (`05` §2) and degraded boarding (`05` §5); cross-app, as they write them.
 redisKeyExists :: InvariantFlow m r => Text -> m Bool
-redisKeyExists key = isJust <$> Redis.runInMasterCloudRedisCellWithCrossAppRedis (Redis.withMasterRedis (Redis.get @A.Value key))
+redisKeyExists key = isJust <$> shared (Redis.get @A.Value key)
 
 bookingFacts :: InvariantFlow m r => DFTB.FRFSTicketBooking -> m BookingFacts
 bookingFacts booking = do

@@ -71,7 +71,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, withBookingLock)
+import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -96,9 +96,6 @@ type AllocFlow m r =
 
 -- | Unprefixed keys in the master cloud cell: the tick runs in the scheduler, whose key prefix differs from
 -- the API's, and both sides must see the same alloc, attempts and lease keys.
-shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
-shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
-
 -- | 05 §2: `sharedcab:alloc:{bookingId}` -> AllocationState JSON.
 allocKey :: Text -> Text
 allocKey bookingId = "sharedcab:alloc:" <> bookingId

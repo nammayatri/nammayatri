@@ -187,6 +187,9 @@ RiderConfig:
     sharedCabDegradedTimeoutSec: Maybe Int
     sharedCabOffRouteMeters: Maybe Int
     sharedCabOffRouteSec: Maybe Int
+    sharedCabBoardProximityM: Maybe Int
+    sharedCabBoardAttemptsPer10Min: Maybe Int
+    sharedCabNoLocationSpotBookingsPerVehiclePerDay: Maybe Int
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds

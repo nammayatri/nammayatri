@@ -30,6 +30,9 @@ tests =
               autoEndAfterDropSec = 600,
               degradedTimeoutSec = 3600,
               offRouteMeters = 300,
-              offRouteSec = 120
+              offRouteSec = 120,
+              boardProximityM = 150,
+              boardAttemptsPer10Min = 5,
+              noLocationSpotBookingsPerVehiclePerDay = 5
             }
     ]

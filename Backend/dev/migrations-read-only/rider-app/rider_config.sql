@@ -916,3 +916,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_degraded_timeout_sec in
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_auto_end_after_drop_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_at_stop_radius_m integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_allocation_window_sec integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_no_location_spot_bookings_per_vehicle_per_day integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_board_proximity_m integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_board_attempts_per10_min integer ;

@@ -31,7 +31,10 @@ data SharedCabTunables = SharedCabTunables
     autoEndAfterDropSec :: Int,
     degradedTimeoutSec :: Int,
     offRouteMeters :: Int,
-    offRouteSec :: Int
+    offRouteSec :: Int,
+    boardProximityM :: Int,
+    boardAttemptsPer10Min :: Int,
+    noLocationSpotBookingsPerVehiclePerDay :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -52,7 +55,10 @@ defaultTunables =
       autoEndAfterDropSec = 10 * 60,
       degradedTimeoutSec = 60 * 60,
       offRouteMeters = 300,
-      offRouteSec = 120
+      offRouteSec = 120,
+      boardProximityM = 150,
+      boardAttemptsPer10Min = 5,
+      noLocationSpotBookingsPerVehiclePerDay = 5
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -73,7 +79,10 @@ tunablesFrom (Just rc) =
       autoEndAfterDropSec = pick rc.sharedCabAutoEndAfterDropSec (.autoEndAfterDropSec),
       degradedTimeoutSec = pick rc.sharedCabDegradedTimeoutSec (.degradedTimeoutSec),
       offRouteMeters = pick rc.sharedCabOffRouteMeters (.offRouteMeters),
-      offRouteSec = pick rc.sharedCabOffRouteSec (.offRouteSec)
+      offRouteSec = pick rc.sharedCabOffRouteSec (.offRouteSec),
+      boardProximityM = pick rc.sharedCabBoardProximityM (.boardProximityM),
+      boardAttemptsPer10Min = pick rc.sharedCabBoardAttemptsPer10Min (.boardAttemptsPer10Min),
+      noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay)
     }
   where
     pick mbValue field = fromMaybe (field defaultTunables) mbValue

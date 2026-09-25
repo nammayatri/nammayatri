@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.Booking
     ridersOnBoard,
     liveSeatsOnVehicle,
     findingOnRoute,
+    shared,
   )
 where
 
@@ -26,6 +27,11 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
 isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB
+
+-- | The cross-app master cell, unprefixed: allocation (`sharedcab:alloc:`) and degraded-boarding (`sharedcab:degraded:`)
+-- keys live here so every app and the scheduler see them. Session keys and the plate lock stay app-prefixed.
+shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
+shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
 
 -- | `05` §2: every write that moves a shared-cab booking between states runs under this lock.
 withBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
@@ -68,8 +74,6 @@ liveSeatsOnVehicle plate = do
   if null counted
     then pure 0
     else seatsHeld . map (.status) <$> QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
-  where
-    shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
 
 -- | `05` §3: FINDING = CONFIRMED with no cab yet.
 findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
