@@ -9,7 +9,17 @@ const _readContextApiOverride = (): string | null => {
     return null;
   }
 };
-const _proxyDefault = process.env.REACT_APP_PROXY_BASE ?? 'http://localhost:7082';
+// Local dev runs the dashboard (CRA dev server, :7070) and the backing
+// services (context-api :7082, local-api :7083) as separate localhost ports,
+// so hardcoded localhost URLs are correct there. Once deployed, nginx fronts
+// everything on one origin and proxies /api/* to those same services
+// internally — so from a browser that did NOT load this page from localhost,
+// the right base is just "wherever this page came from", not localhost.
+const _onLocalhost = (): boolean =>
+  typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const _proxyDefault = process.env.REACT_APP_PROXY_BASE
+  ?? (_onLocalhost() ? 'http://localhost:7082' : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:7082'));
 export const PROXY_BASE = _readContextApiOverride() || _proxyDefault;
 
 export function setContextApiBase(url: string | null): void {
@@ -195,7 +205,8 @@ export async function refreshPortsTable(): Promise<void> {
   }
 }
 
-export const LOCAL_API_BASE = process.env.REACT_APP_LOCAL_API_BASE || 'http://localhost:7083';
+export const LOCAL_API_BASE = process.env.REACT_APP_LOCAL_API_BASE
+  || (_onLocalhost() ? 'http://localhost:7083' : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:7083'));
 // MOCK_SERVER_URL / RIDER_URL / DRIVER_URL / PROVIDER_DASHBOARD_URL are kept
 // as live getters so they pick up runtime-resolved ports after refreshPortsTable.
 export const MOCK_SERVER_URL = process.env.REACT_APP_MOCK_SERVER_URL || getServiceUrl('mock-server');

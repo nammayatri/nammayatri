@@ -15,6 +15,7 @@ import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../serv
 import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
 import { LoadTestModal } from './LoadTestModal';
 import { StepResult, LogEntry } from '../types';
+import { startQaCollectionRun, stopQaCollectionRun, qaCollectionEventsUrl, syncQaCollectionsRepo, checkActiveQaRun, QaRunConflictError } from '../services/qaCollectionsRunner';
 
 // Cities whose backing data lives in the EU prod cluster. Any environment
 // matching one of these (by city or envName, case-insensitive) defaults its
@@ -180,6 +181,18 @@ interface StepState {
   mockHits?: MockHit[];
 }
 
+// Newman (backend/QA runs) sends request/response bodies as raw text — parse
+// JSON bodies back into objects so they render pretty-printed instead of as
+// an escaped string, same as the in-browser runtime's already-parsed bodies.
+function parseIfJson(body: unknown): unknown {
+  if (typeof body !== 'string') return body;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body; // not JSON (e.g. an HTML error page) — leave as raw text
+  }
+}
+
 // ── JSON Viewer Modal ──────────────────────────────────────────────
 function JsonViewerModal({ data, onClose }: { data: any; onClose: () => void }) {
   const [search, setSearch] = useState('');
@@ -292,8 +305,27 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [manualMode, setManualMode] = useState(false);
   const [versionId, setVersionId] = useState<string>('');
   const [showLoadTest, setShowLoadTest] = useState(false);
+  const [syncingQa, setSyncingQa] = useState(false);
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
+  // Live backend (Newman) run — set only while a backendOnly group's run is in flight.
+  const backendRunIdRef = useRef<string | null>(null);
+  const backendEsRef = useRef<EventSource | null>(null);
+
+  // Only one backend QA run may be in flight at a time (server-enforced) —
+  // poll for it so the button reflects a run someone else (or a webhook)
+  // started, not just one this tab itself kicked off.
+  const [activeQaRunId, setActiveQaRunId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      const id = await checkActiveQaRun();
+      if (!cancelled) setActiveQaRunId(id);
+    };
+    poll();
+    const timer = setInterval(poll, 4000);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, []);
 
   // Expanded steps for viewing details
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
@@ -396,6 +428,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     fetchCollection(selectedDir, selectedSuite).then(async raw => {
       if (!raw) return;
       const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
+
+      // backendOnly groups (ny-qa-automation) only use this for the read-only
+      // step preview below — actual execution (incl. prerequest scripts) runs
+      // server-side via Newman, so there's no need to eval their scripts here.
+      if (currentGroup?.backendOnly) {
+        setSteps(parsed.steps);
+        setNodes(parsed.nodes);
+        return;
+      }
 
       // Run collection-level prerequest script for variable init
       if (raw.event) {
@@ -604,7 +645,253 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('info', '-- Collection run complete --');
   }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, ensureTollDashboardSeed, onLog]);
 
-  const stop = useCallback(() => { abortRef.current = true; }, []);
+  // Run a backendOnly group (ny-qa-automation: NY/MSIL/YS) through Newman on
+  // test-local-api instead of in-browser — these collections rely on
+  // pm.execution.setNextRequest() branching that postman-runtime.ts doesn't
+  // implement. Streams live progress into the same LOGS panel as everything else.
+  const runBackend = useCallback(async () => {
+    if (isRunning || !currentSuite || !currentEnv) return;
+    abortRef.current = false;
+    setIsRunning(true);
+    setStepStates({});
+    // Newman's event stream identifies a request only by its item name (no
+    // stable index survives pm.execution.setNextRequest() branching), so that's
+    // also the only key we have to project results back onto the parsed step
+    // list below. Duplicate names within one suite will collide on this map —
+    // a rare, cosmetic mis-attribution, not a correctness issue for the run.
+    const nameToId = new Map(steps.map(s => [s.name, s.id]));
+    onLog('info', `-- Running ${currentSuite.name} (${currentEnv.envName}) [backend/Newman] --`);
+
+    try {
+      const runId = await startQaCollectionRun({
+        collections: [{ directory: selectedDir, filename: selectedSuite }],
+        envFile: currentEnv.filename,
+        concurrency: 1,
+      });
+      backendRunIdRef.current = runId;
+
+      await new Promise<void>((resolve) => {
+        const es = new EventSource(qaCollectionEventsUrl(runId));
+        backendEsRef.current = es;
+        const finish = () => { es.close(); resolve(); };
+
+        // Newman's events arrive one-at-a-time per step (item_start, then
+        // request, then zero or more assertions) — buffer them and emit ONE
+        // combined log line per step on completion, exactly like the
+        // in-browser engine does (a single onLog call carrying `request` +
+        // `response` in `extra`, which is what makes a log line expandable
+        // in the right-hand panel). Flushed on the next item_start or on the
+        // run's terminal events.
+        type PendingStep = {
+          name: string;
+          method?: string;
+          url?: string;
+          status?: number;
+          responseTime?: number;
+          error?: string;
+          requestBody?: any;
+          requestHeaders?: Record<string, string>;
+          responseBody?: any;
+          responseHeaders?: Record<string, string>;
+          assertions: Array<{ name: string; passed: boolean; error?: string }>;
+        };
+        let pending: PendingStep | null = null;
+
+        const flushPending = () => {
+          if (!pending) return;
+          const p = pending;
+          pending = null;
+          const httpFailed = !!p.error || (typeof p.status === 'number' && p.status >= 400);
+          const anyAssertFail = p.assertions.some(a => !a.passed);
+          const failed = httpFailed || anyAssertFail;
+          const assertSummary = p.assertions.length > 0
+            ? ` [${p.assertions.filter(a => a.passed).length}/${p.assertions.length} assertions]`
+            : '';
+          const message = p.error
+            ? `FAIL ${p.name}: ${p.error}`
+            : `${failed ? 'FAIL' : 'PASS'} ${p.name} (${p.responseTime ?? '?'}ms, ${p.status ?? '?'})${assertSummary}`;
+          onLog(failed ? 'error' : 'success', message, {
+            request: { method: p.method ?? '', url: p.url ?? '', body: p.requestBody, headers: p.requestHeaders },
+            response: { status: p.status ?? 0, body: p.responseBody, headers: p.responseHeaders },
+          });
+        };
+
+        es.onmessage = (ev) => {
+          let msg: any;
+          try { msg = JSON.parse(ev.data); } catch { return; }
+          switch (msg.type) {
+            case 'item_start': {
+              flushPending();
+              pending = { name: msg.name, assertions: [] };
+              onLog('req', `${msg.name}`);
+              const stepId = nameToId.get(msg.name);
+              if (stepId) setStepStates(prev => ({ ...prev, [stepId]: { status: 'running' } }));
+              break;
+            }
+            case 'request': {
+              if (pending && pending.name === msg.name) {
+                pending.method = msg.method;
+                pending.url = msg.url;
+                pending.status = msg.status;
+                pending.responseTime = msg.responseTime;
+                pending.error = msg.error;
+                pending.requestBody = parseIfJson(msg.requestBody);
+                pending.requestHeaders = Array.isArray(msg.requestHeaders)
+                  ? Object.fromEntries(msg.requestHeaders.map((h: any) => [h.key, h.value]))
+                  : undefined;
+                pending.responseBody = parseIfJson(msg.responseBody);
+                pending.responseHeaders = Array.isArray(msg.responseHeaders)
+                  ? Object.fromEntries(msg.responseHeaders.map((h: any) => [h.key, h.value]))
+                  : undefined;
+              }
+              const stepId = nameToId.get(msg.name);
+              if (stepId) {
+                const httpFailed = !!msg.error || (typeof msg.status === 'number' && msg.status >= 400);
+                const data = parseIfJson(msg.responseBody);
+                const responseHeaders = Array.isArray(msg.responseHeaders)
+                  ? Object.fromEntries(msg.responseHeaders.map((h: any) => [h.key, h.value]))
+                  : undefined;
+                setStepStates(prev => ({
+                  ...prev,
+                  [stepId]: {
+                    status: httpFailed ? 'fail' : 'pass',
+                    durationMs: msg.responseTime,
+                    result: {
+                      ok: !httpFailed,
+                      status: msg.status ?? 0,
+                      data,
+                      elapsed: msg.responseTime ?? 0,
+                      assertions: prev[stepId]?.result?.assertions ?? [],
+                      consoleLogs: [],
+                      serviceLogs: {},
+                      resolvedUrl: msg.url ?? '',
+                      responseHeaders,
+                      upstreamMs: msg.responseTime ?? 0,
+                    },
+                  },
+                }));
+              }
+              break;
+            }
+            case 'assertion': {
+              if (pending && pending.name === msg.item) {
+                pending.assertions.push({ name: msg.name, passed: msg.passed, error: msg.error ?? undefined });
+              }
+              const stepId = nameToId.get(msg.item);
+              if (stepId) {
+                setStepStates(prev => {
+                  const existing = prev[stepId] ?? { status: 'running' as const };
+                  const assertions = [
+                    ...(existing.result?.assertions ?? []),
+                    { name: msg.name, passed: msg.passed, error: msg.error ?? undefined },
+                  ];
+                  const anyFail = assertions.some(a => !a.passed);
+                  return {
+                    ...prev,
+                    [stepId]: {
+                      ...existing,
+                      status: anyFail ? 'fail' : existing.status,
+                      result: existing.result
+                        ? { ...existing.result, assertions }
+                        : {
+                            ok: !anyFail, status: 0, data: undefined, elapsed: 0, assertions,
+                            consoleLogs: [], serviceLogs: {}, resolvedUrl: '', upstreamMs: 0,
+                          },
+                    },
+                  };
+                });
+              }
+              break;
+            }
+            case 'collection_result':
+              flushPending();
+              onLog('info', `-- ${msg.collection} done: ${msg.passed}✓ ${msg.failed}✗ --`);
+              break;
+            case 'run_complete':
+              flushPending();
+              onLog(msg.failed > 0 ? 'error' : 'success',
+                `-- Collection run complete: ${msg.passed}✓ ${msg.failed}✗ in ${msg.durationMs}ms${msg.aborted ? ' (stopped)' : ''} --`);
+              finish();
+              break;
+            case 'error':
+              flushPending();
+              onLog('error', `error: ${msg.error}`);
+              finish();
+              break;
+            default:
+              break;
+          }
+        };
+        es.onerror = () => { /* server closes the stream on completion — transient errors are expected */ };
+      });
+    } catch (e: any) {
+      if (e instanceof QaRunConflictError) {
+        onLog('error', `Could not start — a QA run (${e.runId}) is already in progress`);
+        setActiveQaRunId(e.runId);
+      } else {
+        onLog('error', `Failed to start backend run: ${e?.message ?? e}`);
+      }
+    } finally {
+      backendEsRef.current = null;
+      backendRunIdRef.current = null;
+      setIsRunning(false);
+    }
+  }, [isRunning, currentSuite, currentEnv, selectedDir, selectedSuite, steps, onLog]);
+
+  // Run every suite in the currently selected backendOnly directory (NY/MSIL/
+  // YS) at once — same directory-shorthand expansion the webhook uses. Spans
+  // many suites/collections at once, so progress is shown via the same rich
+  // multi-collection viewer a webhook-triggered run gets, not the single-suite
+  // step list above (?qaRunId= — a full navigation so QaRunViewer picks up
+  // the new run id at mount).
+  const runBackendGroup = useCallback(async () => {
+    if (isRunning || !currentGroup?.backendOnly || !currentEnv) return;
+    try {
+      const runId = await startQaCollectionRun({
+        collections: [{ directory: selectedDir, filename: '' }],
+        envFile: currentEnv.filename,
+        concurrency: 2,
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.set('qaRunId', runId);
+      window.location.href = url.toString();
+    } catch (e: any) {
+      if (e instanceof QaRunConflictError) {
+        onLog('error', `Could not start — a QA run (${e.runId}) is already in progress`);
+        setActiveQaRunId(e.runId);
+      } else {
+        onLog('error', `Failed to start collection run: ${e?.message ?? e}`);
+      }
+    }
+  }, [isRunning, currentGroup, currentEnv, selectedDir, onLog]);
+
+  const stop = useCallback(() => {
+    abortRef.current = true;
+    if (backendRunIdRef.current) {
+      stopQaCollectionRun(backendRunIdRef.current);
+      backendEsRef.current?.close();
+    }
+  }, []);
+
+  // git clone-or-pull ny-qa-automation on disk (test-local-api), then
+  // re-fetch /api/collections so an updated/renamed/added collection shows
+  // up immediately without restarting anything.
+  const handleSyncQaRepo = useCallback(async () => {
+    if (syncingQa) return;
+    setSyncingQa(true);
+    onLog('info', '[qa-sync] syncing ny-qa-automation...');
+    try {
+      const result = await syncQaCollectionsRepo();
+      const summary = (result.output || result.error || '').trim().split('\n').slice(-3).join(' | ');
+      onLog(result.ok ? 'success' : 'error', `[qa-sync] ${result.ok ? 'synced' : 'failed'}${summary ? `: ${summary}` : ''}`);
+      if (result.ok) {
+        const fresh = await fetchCollections();
+        setGroups(fresh);
+      }
+    } finally {
+      setSyncingQa(false);
+    }
+  }, [syncingQa, onLog]);
 
   // Run ALL suites across ALL collections and environments
   const runAllCollections = useCallback(async () => {
@@ -616,6 +903,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     // Build the full list of (group, env, suite) combos
     const jobs: Array<{ group: CollectionGroup; env: CollectionEnvironment; suite: CollectionSuite }> = [];
     for (const group of groups) {
+      // backendOnly groups (ny-qa-automation) run via Newman one at a time from
+      // their own Run button, not folded into this in-browser bulk runner.
+      if (group.backendOnly) continue;
       for (const env of group.environments) {
         for (const suite of group.suites) {
           jobs.push({ group, env, suite });
@@ -1099,29 +1389,61 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </select>
         </label>
         <div className="cr-actions">
-          {!manualMode && (
-            <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
-              {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
-            </button>
+          {currentGroup?.backendOnly ? (
+            <>
+              <button
+                className="cr-run-btn"
+                onClick={runBackend}
+                disabled={isRunning || !currentSuite || !currentEnv || (!!activeQaRunId && activeQaRunId !== backendRunIdRef.current)}
+                title="Runs via Newman on test-local-api (backend) — this collection uses setNextRequest branching the in-browser runner doesn't support"
+              >
+                {isRunning ? 'Running (backend)...' : `Run ${currentSuite?.name ?? ''} (backend)`}
+              </button>
+              <button
+                className="cr-run-all-btn"
+                onClick={runBackendGroup}
+                disabled={isRunning || !currentEnv || (!!activeQaRunId && activeQaRunId !== backendRunIdRef.current)}
+                title={`Run every suite in ${selectedDir} at once (directory expansion, same as the webhook) — opens the live multi-collection viewer`}
+              >
+                Run All {selectedDir} Suites
+              </button>
+              {activeQaRunId && activeQaRunId !== backendRunIdRef.current && (
+                <a
+                  className="cr-active-run-link"
+                  href={`?qaRunId=${activeQaRunId}`}
+                  title="Another QA run is already in progress — only one can run at a time"
+                >
+                  ⚠ A QA run ({activeQaRunId}) is already in progress — view it
+                </a>
+              )}
+            </>
+          ) : (
+            <>
+              {!manualMode && (
+                <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
+                  {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+                </button>
+              )}
+              {!manualMode && (
+                <button
+                  className="cr-load-test-btn"
+                  onClick={() => setShowLoadTest(true)}
+                  disabled={isRunning || visibleSteps.length === 0}
+                  title="Run this collection with multiple parallel workers using seeded phone numbers"
+                >
+                  ⚡ Load Test
+                </button>
+              )}
+              <button
+                className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
+                onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
+                disabled={isRunning || visibleSteps.length === 0}
+                title="Run each step individually with Run / Skip buttons"
+              >
+                {manualMode ? 'Exit Step Mode' : 'Step-by-Step'}
+              </button>
+            </>
           )}
-          {!manualMode && (
-            <button
-              className="cr-load-test-btn"
-              onClick={() => setShowLoadTest(true)}
-              disabled={isRunning || visibleSteps.length === 0}
-              title="Run this collection with multiple parallel workers using seeded phone numbers"
-            >
-              ⚡ Load Test
-            </button>
-          )}
-          <button
-            className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
-            onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
-            disabled={isRunning || visibleSteps.length === 0}
-            title="Run each step individually with Run / Skip buttons"
-          >
-            {manualMode ? 'Exit Step Mode' : 'Step-by-Step'}
-          </button>
           <input
             className="cr-version-input"
             type="text"
@@ -1133,6 +1455,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           />
           <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0 || manualMode}>
             {runAllProgress ? `Running ${runAllProgress.current}/${runAllProgress.total}...` : 'Run All Collections'}
+          </button>
+          <button
+            className="cr-sync-btn"
+            onClick={handleSyncQaRepo}
+            disabled={syncingQa}
+            title="git pull (or clone) the private ny-qa-automation repo on disk, then re-scan for its NY/MSIL/YS collections — not gated on which group is selected, since it may not exist in the dropdown yet"
+          >
+            {syncingQa ? 'Syncing…' : '🔄 Sync ny-qa-automation'}
           </button>
           {isRunning && <button className="cr-stop-btn" onClick={stop}>Stop</button>}
         </div>
