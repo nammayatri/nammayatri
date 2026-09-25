@@ -50,7 +50,7 @@ data NearByDriversBucket = NearByDriversBucket {driverInfo :: [DriverInfo], radi
 
 data NearbyDriverReq = NearbyDriverReq
   { location :: Kernel.External.Maps.Types.LatLong,
-    radius :: Kernel.Types.Distance.Meters,
+    radius :: Kernel.Prelude.Maybe Kernel.Types.Distance.Meters,
     travelMode :: Kernel.Prelude.Maybe Domain.Types.Trip.MultimodalTravelMode,
     vehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant]
   }
