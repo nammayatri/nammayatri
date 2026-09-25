@@ -309,8 +309,12 @@ capAllowance capStrategy estimate = case capStrategy of
         flooredAllowance = maybe rawAllowance (`max` rawAllowance) cfg.minCapAmount
      in maybe flooredAllowance (`min` flooredAllowance) cfg.maxCapAmount
 
+-- Uncapped component: no allowance, so it is charged at min(estimate, actual).
+-- The FCBuffer pass leaves it at its estimate too, so it can never push the
+-- recomputed fare past 'bufferedFare'. A component estimated at 0 (e.g. waiting,
+-- stops, extra time) stays 0 on recompute -- give it a cap strategy to let it grow.
 capByStrategy :: Maybe CapStrategy -> HighPrecMoney -> HighPrecMoney -> HighPrecMoney
-capByStrategy Nothing _ recomputedValue = recomputedValue -- unconfigured: pass through, unbounded
+capByStrategy Nothing estimate recomputedValue = min recomputedValue estimate
 capByStrategy (Just capStrategy) estimate recomputedValue =
   min recomputedValue (estimate + capAllowance capStrategy estimate)
 
