@@ -2655,29 +2655,30 @@ resendOtp (personId, merchantId, merchantOpCityId) req = do
   logDebug $ "attemptsLeft" <> show attemptsLeft
   unless (attemptsLeft > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
-  let altNumber = req.alternateNumber
+  let useFakeOtpM = useFakeSms smsCfg
+      altNumber = req.alternateNumber
       counCode = req.mobileCountryCode
   otpCode <-
     Redis.get (makeAlternateNumberOtpKey personId) >>= \case
       Nothing -> do
-        let fakeOtp = show <$> useFakeSms smsCfg
-        newOtp <- maybe generateOTPCode return fakeOtp
+        newOtp <- maybe generateOTPCode (return . show) useFakeOtpM
         expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
         Redis.setExp (makeAlternateNumberOtpKey personId) newOtp expTime
         return newOtp
       Just a -> return a
-  let otpHash = smsCfg.credConfig.otpHash
-      altphoneNumber = counCode <> altNumber
-  withLogTag ("personId_" <> getId personId) $ do
-    (mbSender, message, templateId, messageType) <-
-      MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
-        MessageBuilder.BuildSendOTPMessageReq
-          { otp = otpCode,
-            hash = otpHash
-          }
-    let sender = fromMaybe smsCfg.sender mbSender
-    Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message altphoneNumber sender templateId messageType)
-      >>= Sms.checkSmsResult
+  whenNothing_ useFakeOtpM $ do
+    let otpHash = smsCfg.credConfig.otpHash
+        altphoneNumber = counCode <> altNumber
+    withLogTag ("personId_" <> getId personId) $ do
+      (mbSender, message, templateId, messageType) <-
+        MessageBuilder.buildSendAlternateNumberOTPMessage merchantOpCityId $
+          MessageBuilder.BuildSendOTPMessageReq
+            { otp = otpCode,
+              hash = otpHash
+            }
+      let sender = fromMaybe smsCfg.sender mbSender
+      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message altphoneNumber sender templateId messageType)
+        >>= Sms.checkSmsResult
   updAttempts <- Redis.decrby (makeAlternateNumberAttemptsKey personId) 1
   let updAttempt = fromIntegral updAttempts
   return $ ResendAuth {auth = otpCode, attemptsLeft = updAttempt}

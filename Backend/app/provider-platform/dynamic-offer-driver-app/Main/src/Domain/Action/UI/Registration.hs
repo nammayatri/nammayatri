@@ -405,8 +405,15 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
     checkAndUpdateAuthFraudByIP merchantOpCityId.getId clientIP transporterConfig
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let entityId = getId $ person.id
-      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      useFakeOtpM =
+        (show <$> useFakeSms smsCfg)
+          <|> person.useFakeOtp
+          <|> (req.mobileNumber >>= (\n -> if n `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing))
+          <|> (req.email >>= (\n -> if n `elem` transporterConfig.fakeOtpEmails then Just "7891" else Nothing))
       scfg = sessionConfig smsCfg
   let mkId = getId merchantId
   token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId (castChannelToMedium otpChannel) SR.OTP
@@ -849,22 +856,31 @@ resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+  smsCfg <- asks (.smsCfg)
   let merchantOpCityId = Id merchantOperatingCityId
-  let otpCode = authValueHash
-  otpChannel <- getPersonOTPChannel person.id
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mobileNumber <- mapM decrypt person.mobileNumber
   let receiverEmail = person.email
-
-  SOTP.sendOTP
-    otpChannel
-    otpCode
-    person.id
-    person.merchantId
-    merchantOpCityId
-    person.mobileCountryCode
-    mobileNumber
-    receiverEmail
-    mbSenderHash
+  let useFakeOtpM =
+        (show <$> useFakeSms smsCfg)
+          <|> person.useFakeOtp
+          <|> (mobileNumber >>= (\n -> if n `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing))
+          <|> (receiverEmail >>= (\n -> if n `elem` transporterConfig.fakeOtpEmails then Just "7891" else Nothing))
+  whenNothing_ useFakeOtpM $ do
+    let otpCode = authValueHash
+    otpChannel <- getPersonOTPChannel person.id
+    SOTP.sendOTP
+      otpChannel
+      otpCode
+      person.id
+      person.merchantId
+      merchantOpCityId
+      person.mobileCountryCode
+      mobileNumber
+      receiverEmail
+      mbSenderHash
 
   void $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) Nothing Nothing
