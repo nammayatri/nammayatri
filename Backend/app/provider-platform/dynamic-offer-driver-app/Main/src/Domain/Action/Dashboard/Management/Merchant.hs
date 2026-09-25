@@ -17,6 +17,7 @@ module Domain.Action.Dashboard.Management.Merchant
   ( postMerchantServiceConfigMapsUpdate,
     postMerchantServiceUsageConfigMapsUpdate,
     postMerchantUpdate,
+    postMerchantCloudUpdate,
     getMerchantServiceUsageConfig,
     postMerchantServiceConfigSmsUpdate,
     postMerchantServiceUsageConfigSmsUpdate,
@@ -5441,3 +5442,37 @@ getMerchantCityList merchantShortId _opCity = do
   merchant <- findMerchantByShortId merchantShortId
   operatingCities <- CQMOC.findAllByMerchantId merchant.id
   pure $ Common.CityListResp {Common.supportedCities = map (.city) operatingCities}
+
+-- | Move a merchant to another cloud.
+postMerchantCloudUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MerchantCloudUpdateReq ->
+  Flow Common.MerchantCloudUpdateRes
+postMerchantCloudUpdate pathMerchantShortId _city req = do
+  verifyCloudSwitchPassword req.password
+  let targetMerchantShortId = maybe pathMerchantShortId (ShortId . getShortId) req.merchantShortId
+  merchant <- findMerchantByShortId targetMerchantShortId
+  QM.updateCloudConfig (Just req.cloudType) req.cloudBaseUrl merchant.id
+  CQM.clearCache merchant
+  CQMOC.clearAllCrossCloudProxyCache
+
+  logTagInfo "dashboard -> postMerchantCloudUpdate : " $
+    merchant.id.getId <> " -> " <> show req.cloudType
+
+  pure
+    Common.MerchantCloudUpdateRes
+      { merchantId = merchant.id.getId,
+        merchantShortId = merchant.shortId.getShortId,
+        previousCloudType = merchant.cloudType,
+        previousCloudBaseUrl = showBaseUrl <$> merchant.cloudBaseUrl,
+        updatedCloudType = req.cloudType,
+        updatedCloudBaseUrl = showBaseUrl <$> req.cloudBaseUrl
+      }
+
+verifyCloudSwitchPassword :: Text -> Flow ()
+verifyCloudSwitchPassword given = do
+  expected <-
+    asks (.cloudSwitchPassword)
+      >>= fromMaybeM (InvalidRequest "Cloud switch is disabled: cloudSwitchPassword is not configured for this app")
+  unless (given == expected) $ throwError AccessDenied

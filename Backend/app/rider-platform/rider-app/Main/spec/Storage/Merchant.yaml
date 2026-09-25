@@ -254,6 +254,10 @@ Merchant:
       kvFunction: updateWithKV
       where: id
       params: [gatewayAndRegistryPriorityList]
+    updateCloudConfig:
+      kvFunction: updateWithKV
+      where: id
+      params: [cloudType, cloudBaseUrl]
 
   excludedDefaultQueries:
     - createMany
