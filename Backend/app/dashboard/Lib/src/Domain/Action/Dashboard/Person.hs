@@ -414,13 +414,13 @@ listPerson ::
 listPerson _ mbSearchStringRaw mbLimit mbOffset mbPersonId = do
   let mbSearchString = (T.strip <$> mbSearchStringRaw) >>= \s -> if T.null s then Nothing else Just s
   mbSearchStrDBHash <- traverse (getDbHash . T.toLower) mbSearchString
-  personAndRoleList <- B.runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
+  (personAndRoleList, totalCount) <- B.runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
     pure $ AP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant) [] Nothing
   let count = length res
-  let summary = Summary {totalCount = 10000, count}
+  let summary = Summary {totalCount, count}
   pure $ ListPersonRes {list = res, summary = summary}
 
 maxPTPageSize :: Integer

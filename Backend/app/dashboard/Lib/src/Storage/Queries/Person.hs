@@ -328,7 +328,7 @@ findAllWithLimitOffset ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe (Id Person.Person) ->
-  m [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
+  m ([(Person, Role, [ShortId Merchant.Merchant], [City.City])], Int)
 findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personId = do
   dbConf <- getReplicaBeamConfig
   res <- L.runDB dbConf $
@@ -350,6 +350,26 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
                   role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
                   merchantAccess <- B.leftJoin_' (B.all_ $ SBC.merchantAccess SBC.atlasDB) (\merchantAccess -> BeamP.id person B.==?. BeamMA.personId merchantAccess)
                   pure (person, role, merchantAccess)
+  -- Real total of matching persons for pagination. Mirrors the page filter (kept in sync,
+  -- like findAllPTWithLimitOffset); person⋈role is 1:1, so COUNT(*) here is the distinct-person total.
+  let countRes =
+        L.runDB dbConf $
+          L.findRows $
+            B.select $
+              B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+                B.filter_'
+                  ( \(person, _role) ->
+                      ( maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.lower_ (B.concat_ [person.firstName, B.val_ " ", person.lastName]) `B.like_` B.val_ ("%" <> T.toLower (escapeLikeLiteral searchString) <> "%"))) mbSearchString
+                          B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ searchStrDBHash) mbSearchStrDBHash
+                          -- Email is encrypted (no plaintext column), so only an exact full-email match is possible, via its deterministic hash.
+                          B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.emailHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
+                      )
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultPerson -> person.id B.==?. B.val_ (getId defaultPerson)) personId
+                  )
+                  $ do
+                    person <- B.all_ (SBC.person SBC.atlasDB)
+                    _role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
+                    pure (person, _role)
   case res of
     Right res' -> do
       finalRes <- forM res' $ \(person, role, mbMerchantAccess) -> runMaybeT $ do
@@ -357,8 +377,13 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
         r <- MaybeT $ fromTType' role
         ma <- forM mbMerchantAccess (MaybeT . fromTType')
         pure (p, r, ma)
-      pure $ groupByPerson $ catMaybes finalRes
-    Left _ -> pure []
+      let grouped = groupByPerson $ catMaybes finalRes
+      totalCount <-
+        countRes >>= \case
+          Right countRows | not (null countRows) -> pure (head countRows)
+          _ -> pure (fromIntegral offsetVal + length grouped)
+      pure (grouped, totalCount)
+    Left _ -> pure ([], 0)
   where
     limitVal = fromMaybe 100 mbLimit
     offsetVal = fromMaybe 0 mbOffset
