@@ -35,6 +35,9 @@ tests =
       testCase "offsets, a space separator and epoch seconds also parse" $
         map parseLtsTimestamp ["2026-09-25T15:30:00+05:30", "2026-09-25 10:00:00Z", "1790330400"]
           @?= [Just t0, Just t0, Just t0],
+      testCase "allocation_closed outcomes use the 05 §7 spellings" $
+        map outcomeText [StandTimeout, MovingTimeout, DriverCancelled, PassedStop, SeatLost, RouteChanged, SessionClosed, TimerLost]
+          @?= ["STAND_TIMEOUT", "MOVING_TIMEOUT", "DRIVER_CANCELLED", "PASSED_STOP", "SEAT_LOST", "ROUTE_CHANGED", "SESSION_CLOSED", "TIMER_LOST"],
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing
     ]

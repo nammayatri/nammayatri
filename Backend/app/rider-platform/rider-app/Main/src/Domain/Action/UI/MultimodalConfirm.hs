@@ -141,6 +141,8 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.SharedCab.Allocation as SharedCabAllocation
+import qualified SharedLogic.SharedCab.Allocation.Types as SharedCabAllocTypes
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.Invariants as SharedCabInvariants
@@ -1588,8 +1590,10 @@ dropSharedCabRider journeyLeg = do
   mbBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
   whenJust mbBooking $ \booking ->
     when (SharedCabBooking.isSharedCabBooking booking) $ do
-      SharedCabBooking.markDropped booking
-      whenJust booking.vehicleNumber SharedCabSession.applyQueuedRoute
+      SharedCabBooking.markDropped SharedCabEvents.DroppedByRider booking
+      whenJust booking.vehicleNumber $ \plate -> do
+        switched <- SharedCabSession.applyQueuedRoute plate
+        when switched $ SharedCabAllocation.releaseUnboarded plate SharedCabAllocTypes.RouteChanged
       SharedCabInvariants.checkBooking booking.id
       whenJust booking.vehicleNumber SharedCabInvariants.checkCab
 

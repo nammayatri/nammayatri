@@ -16,6 +16,7 @@ module SharedLogic.SharedCab.Allocation.Types
     parseLtsTimestamp,
     Blame (..),
     blameFor,
+    outcomeText,
     countsTowardAttempts,
     countsTowardDriverMisses,
     AllocationConfig (..),
@@ -71,6 +72,18 @@ data AllocationOutcome
   | -- | the alloc key vanished before any release (crash after the CAS, or ticks missed past the key's TTL)
     TimerLost
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+
+-- | The @outcome@ field of the @allocation_closed@ event (05 §7).
+outcomeText :: AllocationOutcome -> Text
+outcomeText = \case
+  StandTimeout -> "STAND_TIMEOUT"
+  MovingTimeout -> "MOVING_TIMEOUT"
+  DriverCancelled -> "DRIVER_CANCELLED"
+  PassedStop -> "PASSED_STOP"
+  SeatLost -> "SEAT_LOST"
+  RouteChanged -> "ROUTE_CHANGED"
+  SessionClosed -> "SESSION_CLOSED"
+  TimerLost -> "TIMER_LOST"
 
 -- | @blame@ field of the @allocation_closed@ event (05 §7) and the foundation for
 -- §8.4: "Timers blame the right party."

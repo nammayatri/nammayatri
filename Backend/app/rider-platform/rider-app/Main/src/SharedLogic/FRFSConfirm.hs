@@ -62,6 +62,7 @@ import SharedLogic.FRFSStatus
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -576,6 +577,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
         FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass paymentId parentOwnerId tripWindow
 
       QFRFSTicketBooking.create booking
+      when (mbServiceTierType == Just Spec.SHARED_CAB) $ SharedCabEvents.forBooking SharedCabEvents.BookingCreated booking
       Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show booking.status) "created"
 
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json

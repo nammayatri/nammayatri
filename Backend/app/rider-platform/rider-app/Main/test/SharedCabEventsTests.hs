@@ -27,6 +27,8 @@ tests =
               "bookingId" .= (Nothing :: Maybe Text),
               "routeCode" .= ("SC-MAWLAI-R" :: Text),
               "driverId" .= ("d1" :: Text),
+              "vehicleTripId" .= (Nothing :: Maybe Text),
+              "merchantOperatingCityId" .= (Nothing :: Maybe Text),
               "fromRoute" .= ("SC-MAWLAI-F" :: Text)
             ],
       testCase "booking event: enum payloads use the 05 §7 spellings" $
@@ -38,9 +40,16 @@ tests =
               "bookingId" .= ("b1" :: Text),
               "routeCode" .= (Nothing :: Maybe Text),
               "driverId" .= (Nothing :: Maybe Text),
+              "vehicleTripId" .= (Nothing :: Maybe Text),
+              "merchantOperatingCityId" .= (Nothing :: Maybe Text),
               "outcome" .= ("TIMEOUT" :: Text),
               "blame" .= ("driver" :: Text)
             ],
+      testCase "booking events are keyed by booking, session events by plate" $
+        ( partitionKey (bookingEvent BookingCreated "b1" (Just "ML05A1234") Nothing t0),
+          partitionKey (sessionEvent SessionStarted "ML05A1234" "SC-MAWLAI-F" "d1" t0)
+        )
+          @?= (Just "b1", Just "ML05A1234"),
       testCase "every kind has its 05 §7 name" $
         map eventName [SessionStarted, Resumed, Boarded ByFallbackR10, Dropped DroppedByTick, NoShow, SeatLost, InvariantViolation "r" "d"]
           @?= ["session_started", "resumed", "boarded", "dropped", "no_show", "seat_lost", "invariant_violation"]

@@ -11,6 +11,8 @@ module SharedLogic.SharedCab.Events
     sessionEvent,
     bookingEvent,
     emit,
+    withTrip,
+    partitionKey,
     forSession,
     forBooking,
   )
@@ -72,6 +74,8 @@ data SharedCabEvent = SharedCabEvent
     bookingId :: Maybe Text,
     routeCode :: Maybe Text,
     driverId :: Maybe Text,
+    vehicleTripId :: Maybe Text,
+    merchantOperatingCityId :: Maybe Text,
     emittedAt :: UTCTime
   }
   deriving (Show, Eq)
@@ -135,30 +139,40 @@ instance ToJSON SharedCabEvent where
         "vehicleNumber" .= e.vehicleNumber,
         "bookingId" .= e.bookingId,
         "routeCode" .= e.routeCode,
-        "driverId" .= e.driverId
+        "driverId" .= e.driverId,
+        "vehicleTripId" .= e.vehicleTripId,
+        "merchantOperatingCityId" .= e.merchantOperatingCityId
       ]
         <> kindFields e.kind
 
 sessionEvent :: EventKind -> Text -> Text -> Text -> UTCTime -> SharedCabEvent
 sessionEvent k plate route driver time =
-  SharedCabEvent {kind = k, vehicleNumber = Just plate, bookingId = Nothing, routeCode = Just route, driverId = Just driver, emittedAt = time}
+  SharedCabEvent {kind = k, vehicleNumber = Just plate, bookingId = Nothing, routeCode = Just route, driverId = Just driver, vehicleTripId = Nothing, merchantOperatingCityId = Nothing, emittedAt = time}
 
 bookingEvent :: EventKind -> Text -> Maybe Text -> Maybe Text -> UTCTime -> SharedCabEvent
 bookingEvent k booking plate route time =
-  SharedCabEvent {kind = k, vehicleNumber = plate, bookingId = Just booking, routeCode = route, driverId = Nothing, emittedAt = time}
+  SharedCabEvent {kind = k, vehicleNumber = plate, bookingId = Just booking, routeCode = route, driverId = Nothing, vehicleTripId = Nothing, merchantOperatingCityId = Nothing, emittedAt = time}
 
 type EventFlow m r = (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools])
 
--- | Keyed by plate (else booking) so one cab's events stay ordered on a partition.
+-- | The run (vehicle_trip) a session or allocation event belongs to.
+withTrip :: Maybe Text -> SharedCabEvent -> SharedCabEvent
+withTrip trip e = (e {vehicleTripId = trip} :: SharedCabEvent)
+
+-- | Booking events are keyed by booking and session events by plate, so each family stays ordered on a partition.
+partitionKey :: SharedCabEvent -> Maybe Text
+partitionKey e = maybe e.vehicleNumber Just e.bookingId
+
 emit :: EventFlow m r => Id DMOC.MerchantOperatingCity -> SharedCabEvent -> m ()
-emit cityId event = fork "sharedCabEvent" $ do
+emit cityId event' = fork "sharedCabEvent" $ do
+  let event = (event' {merchantOperatingCityId = Just cityId.getId} :: SharedCabEvent)
   result <- withTryCatch "sharedCabEvent" $ do
     topic <- maybe "shared-cab-events" (fromMaybe "shared-cab-events" . (.sharedCabEventsTopic)) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
-    produceMessage (topic, TE.encodeUtf8 <$> maybe event.bookingId Just event.vehicleNumber) event
-  either (\e -> logError $ "shared-cab event " <> eventName event.kind <> " not sent: " <> show e) pure result
+    produceMessage (topic, TE.encodeUtf8 <$> partitionKey event) event
+  either (\e -> logError $ "shared-cab event " <> eventName event'.kind <> " not sent: " <> show e) pure result
 
 forSession :: EventFlow m r => EventKind -> Session -> m ()
-forSession k s = getCurrentTime >>= emit s.merchantOperatingCityId . sessionEvent k s.vehicleNumber s.routeCode s.driverId
+forSession k s = getCurrentTime >>= emit s.merchantOperatingCityId . withTrip (Just s.vehicleTripId.getId) . sessionEvent k s.vehicleNumber s.routeCode s.driverId
 
 forBooking :: EventFlow m r => EventKind -> DFTB.FRFSTicketBooking -> m ()
 forBooking k booking = getCurrentTime >>= emit booking.merchantOperatingCityId . bookingEvent k booking.id.getId booking.vehicleNumber booking.routeCode

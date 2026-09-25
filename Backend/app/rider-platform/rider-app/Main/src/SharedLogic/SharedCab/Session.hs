@@ -178,13 +178,16 @@ changeRoute driver rawPlate newRoute = withPlateLock plate $ do
     plate = canonicalisePlate rawPlate
 
 -- | Call after each drop: applies an `afterLastDrop` route change once no rider is left on board.
-applyQueuedRoute :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> m ()
+-- True when it switched: the caller then releases the old route's unboarded allocations, outside this lock.
+applyQueuedRoute :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> m Bool
 applyQueuedRoute rawPlate = withPlateLock plate $ do
   mbSession <- readSession plate
-  whenJust mbSession $ \s -> whenJust s.queuedRouteCode $ \queued ->
-    when (s.status /= ENDED) $ do
+  case mbSession of
+    Just s | Just queued <- s.queuedRouteCode,
+             s.status /= ENDED -> do
       onBoard <- ridersOnBoard plate
-      when (null onBoard) $ void $ switchTo DVT.ROUTE_CHANGED queued s
+      if null onBoard then True <$ switchTo DVT.ROUTE_CHANGED queued s else pure False
+    _ -> pure False
   where
     plate = canonicalisePlate rawPlate
 

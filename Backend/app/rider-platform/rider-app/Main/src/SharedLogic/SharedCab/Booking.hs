@@ -51,12 +51,12 @@ ensureCancellable booking = do
 
 -- | "I got down" (R8): tickets still held go USED, which ends the leg and takes the seat out of the cab's live set.
 -- TODO(7.4): clear sharedcab:alloc:{bookingId} once allocation keys exist.
-markDropped :: (Events.EventFlow m r, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
-markDropped booking = withBookingLock booking.id $ do
+markDropped :: (Events.EventFlow m r, MonadMask m) => Events.DropBy -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
+markDropped by booking = withBookingLock booking.id $ do
   droppable <- filter (isDroppable . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   forM_ droppable $ \ticket ->
     QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
-  unless (null droppable) $ Events.forBooking (Events.Dropped Events.DroppedByRider) booking
+  unless (null droppable) $ Events.forBooking (Events.Dropped by) booking
 
 -- | `04` §4: the cab's bookings with a seat on board (a ticket INPROGRESS). `plate` is canonical.
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]

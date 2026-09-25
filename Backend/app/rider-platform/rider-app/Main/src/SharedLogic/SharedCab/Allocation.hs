@@ -427,7 +427,9 @@ afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> 
 afterClose _ bookingId plate outcome closed =
   whenJust closed $ \cityId -> do
     now <- getCurrentTime
-    Events.emit cityId $ Events.bookingEvent (Events.AllocationClosed (show outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
+    trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
+    Events.emit cityId . Events.withTrip trip $
+      Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
     Invariants.checkBooking bookingId
     Invariants.checkCab plate
 
@@ -565,7 +567,7 @@ claimFirst cfg booking = go (0 :: Int)
         Right _ -> do
           -- attemptClaim has released both locks by now.
           now <- getCurrentTime
-          Events.emit c.rcSession.merchantOperatingCityId $
+          Events.emit c.rcSession.merchantOperatingCityId . Events.withTrip (Just c.rcSession.vehicleTripId.getId) $
             Events.bookingEvent (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) booking.bookingId.getId (Just c.rcSession.vehicleNumber) (Just booking.routeCode) now
           Invariants.checkBooking booking.bookingId
           Invariants.checkCab c.rcSession.vehicleNumber
