@@ -7,6 +7,7 @@ import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified API.Types.Dashboard.AppManagement.EDCMachine
 import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.FRFSTicketService
+import qualified API.Types.Dashboard.AppManagement.FrfsFleetOperator
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified API.Types.Dashboard.AppManagement.Pass
 import qualified API.Types.Dashboard.AppManagement.PassOrganization
@@ -30,6 +31,7 @@ data AppManagementUserActionType
   | EDC_MACHINE API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineUserActionType
   | EVENT_MANAGEMENT API.Types.Dashboard.AppManagement.EventManagement.EventManagementUserActionType
   | FRFS_TICKET_SERVICE API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceUserActionType
+  | FRFS_FLEET_OPERATOR API.Types.Dashboard.AppManagement.FrfsFleetOperator.FrfsFleetOperatorUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
   | PASS API.Types.Dashboard.AppManagement.Pass.PassUserActionType
   | PASS_ORGANIZATION API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationUserActionType
@@ -50,6 +52,7 @@ instance Text.Show.Show AppManagementUserActionType where
     EDC_MACHINE e -> "EDC_MACHINE/" <> show e
     EVENT_MANAGEMENT e -> "EVENT_MANAGEMENT/" <> show e
     FRFS_TICKET_SERVICE e -> "FRFS_TICKET_SERVICE/" <> show e
+    FRFS_FLEET_OPERATOR e -> "FRFS_FLEET_OPERATOR/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
     PASS e -> "PASS/" <> show e
     PASS_ORGANIZATION e -> "PASS_ORGANIZATION/" <> show e
@@ -87,6 +90,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "FRFS_TICKET_SERVICE/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( FRFS_FLEET_OPERATOR v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "FRFS_FLEET_OPERATOR/" r,
                    ( v1,
                      r2
                      ) <-
@@ -196,4 +208,4 @@ instance Text.Read.Read AppManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])
