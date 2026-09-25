@@ -12,6 +12,7 @@ where
 import qualified API.Types.UI.SharedCabInternal as API
 import Data.List (sortOn)
 import Data.Time (Day, UTCTime (..), addUTCTime)
+import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -26,6 +27,7 @@ import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error
 
@@ -74,13 +76,14 @@ getSharedCabRoutes ibcId driverLat driverLon mbToken = do
           }
   pure API.SharedCabRoutesResp {routes = sortOn (.distanceKm) (map toResp routes)}
 
--- | `mode` only matters once riders can be on board; until allocation ships a change always applies.
+-- | A route change with riders on board and no `mode` applies nothing and returns them as `affectedRiders`.
 postSharedCabRouteSelect :: Maybe Text -> API.SelectRouteReq -> Environment.Flow API.SelectRouteResp
 postSharedCabRouteSelect mbToken req = do
   checkToken mbToken
   integratedBppConfig <- getIntegratedBppConfig req.integratedBppConfigId
-  session <-
+  selected <-
     Session.selectRoute
+      req.mode
       OpenSessionReq
         { driverId = req.driverId,
           vehicleNumber = req.vehicleNumber,
@@ -91,12 +94,26 @@ postSharedCabRouteSelect mbToken req = do
           capacity = fromMaybe defaultCapacity req.capacity,
           routeCode = req.routeCode
         }
-  session' <-
-    if req.walkupCount == session.walkupCount
-      then pure session
-      else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount
-  resp <- mkSessionResp session'
-  pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
+  case selected of
+    Left onBoard -> do
+      affected <- mapM affectedRider onBoard
+      pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
+    Right session -> do
+      session' <-
+        if req.walkupCount == session.walkupCount
+          then pure session
+          else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount
+      resp <- mkSessionResp session'
+      pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
+  where
+    affectedRider (booking :: DFTB.FRFSTicketBooking) = do
+      mbRider <- QPerson.findById booking.riderId
+      pure
+        API.AffectedRider
+          { bookingId = booking.id.getId,
+            firstName = fromMaybe "" (mbRider >>= (.firstName)),
+            dropStop = fromMaybe booking.toStationCode booking.toStationName
+          }
 
 ownSession :: Text -> Text -> Environment.Flow Session
 ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
@@ -116,9 +133,11 @@ postSharedCabRouteEnd :: Maybe Text -> API.EndRouteReq -> Environment.Flow (Mayb
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
-    API.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber StartReturn >>= mkSessionResp)
+    API.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= mkSessionResp)
     API.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
-    API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber (if req.atLastStop == Just True then EndRoute else EndForNow)
+    API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow)
+  where
+    forced = req.force == Just True
 
 postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow API.SharedCabSession
 postSharedCabResume mbToken req = do

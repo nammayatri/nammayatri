@@ -3,11 +3,13 @@ module SharedLogic.SharedCab.Booking
     withBookingLock,
     ensureCancellable,
     markDropped,
+    ridersOnBoard,
   )
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -17,6 +19,7 @@ import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
 import SharedLogic.SharedCab.LegState (isDroppable)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
 isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB
@@ -40,3 +43,14 @@ markDropped booking = withBookingLock booking.id $ do
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
   forM_ (filter (isDroppable . (.status)) tickets) $ \ticket ->
     QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+
+-- | `04` §4: the cab's bookings with a seat on board (a ticket INPROGRESS). `plate` is canonical.
+ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
+ridersOnBoard plate = do
+  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFRFSTicketBookingStatus.CONFIRMED]
+  if null bookings
+    then pure []
+    else do
+      tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+      let boarded = [ticket.frfsTicketBookingId | ticket <- tickets, ticket.status == DFRFSTicket.INPROGRESS]
+      pure $ filter ((`elem` boarded) . (.id)) bookings

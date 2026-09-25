@@ -668,6 +668,14 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [vehicleTripId]
       where: id
+    # A cab's live bookings by canonical plate (04 §3 recovery, 04 §4 on-board guard); partial index in ddl 1578.
+    findAllByVehicleNumberAndServiceTierTypeAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - vehicleNumber
+          - serviceTierType
+          - in: [status]
 
   extraIndexes:
     - columns: [tripId]

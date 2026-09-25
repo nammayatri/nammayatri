@@ -32,6 +32,18 @@ createMany = traverse_ create
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
+findAllByVehicleNumberAndServiceTierTypeAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByVehicleNumberAndServiceTierTypeAndStatus vehicleNumber serviceTierType status = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleNumber $ Se.Eq vehicleNumber,
+          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
+
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findByBppOrderId bppOrderId = do findOneWithKV [Se.Is Beam.bppOrderId $ Se.Eq bppOrderId]
 

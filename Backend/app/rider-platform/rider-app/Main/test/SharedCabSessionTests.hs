@@ -61,6 +61,12 @@ tests =
       testCase "the opened trip is ACTIVE on the new route" $
         let trip = tripFor (switchRoute "R2" (Id "trip2") active) t0
          in (DVT.routeCode trip, DVT.status trip, DVT.endedAt trip) @?= ("R2", DVT.ACTIVE, Nothing),
+      testCase "afterLastDrop queues the change and stays on the current route" $
+        queueRoute "R2" active @?= active {queuedRouteCode = Just "R2", version = 4},
+      testCase "applying the queued route clears it" $
+        queuedRouteCode (switchRoute "R2" (Id "trip2") (queueRoute "R2" active)) @?= Nothing,
+      testCase "END_ROUTE closes the trip as COMPLETED with its own reason" $
+        (endActionReason EndRoute, closedTripStatus (endActionReason EndRoute)) @?= (DVT.END_ROUTE, DVT.COMPLETED),
       testCase "walk-up with a stale version is rejected" $
         setWalkup 2 1 active @?= Left SessionVersionMismatch,
       testCase "walk-up with the current version bumps it" $

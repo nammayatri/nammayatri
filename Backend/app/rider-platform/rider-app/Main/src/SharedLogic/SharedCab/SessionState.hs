@@ -12,6 +12,7 @@ module SharedLogic.SharedCab.SessionState
     ownedSession,
     newSession,
     switchRoute,
+    queueRoute,
     endSession,
     pauseSession,
     resumeSession,
@@ -157,6 +158,10 @@ bump s = s {version = s.version + 1}
 switchRoute :: Text -> Id DVT.VehicleTrip -> Session -> Session
 switchRoute newRoute tripId s =
   bump s {routeCode = newRoute, vehicleTripId = tripId, queuedRouteCode = Nothing, status = ACTIVE, pauseReason = Nothing}
+
+-- | `afterLastDrop`: the change waits in `queuedRouteCode` until the cab is empty; `switchRoute` clears it.
+queueRoute :: Text -> Session -> Session
+queueRoute route s = bump s {queuedRouteCode = Just route}
 
 endSession :: Session -> Session
 endSession s = bump s {status = ENDED, pauseReason = Nothing}

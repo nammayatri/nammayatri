@@ -1,6 +1,7 @@
 module SharedLogic.SharedCab.Session
   ( selectRoute,
     changeRoute,
+    applyQueuedRoute,
     endRoute,
     pause,
     resume,
@@ -10,10 +11,12 @@ module SharedLogic.SharedCab.Session
   )
 where
 
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import SharedLogic.SharedCab.Booking (ridersOnBoard)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.Queries.VehicleTrip as QVT
@@ -78,19 +81,31 @@ switchTo reason newRoute s = do
   saveSession (Just s) s'
 
 -- | Open a session, or change route if this driver already has one (idempotent for the same route).
-selectRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => OpenSessionReq -> m Session
-selectRoute req = withPlateLock plate $ do
+-- A change with riders on board (`04` §4) needs a mode: Left lists them when there is none.
+selectRoute ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) =>
+  Maybe SelectRouteMode ->
+  OpenSessionReq ->
+  m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
+selectRoute mode req = withPlateLock plate $ do
   prior <- readSession plate
   liftSession (planSelect req.driverId req.routeCode prior) >>= \case
-    KeepRoute s -> pure s
-    ChangeRoute s -> switchTo DVT.ROUTE_CHANGED req.routeCode s
+    KeepRoute s -> pure (Right s)
+    ChangeRoute s -> do
+      onBoard <- ridersOnBoard plate
+      case mode of
+        _ | null onBoard -> Right <$> switchTo DVT.ROUTE_CHANGED req.routeCode s
+        -- TODO(B12): re-drop forced riders at the nearest common stop and notify them.
+        Just Force -> Right <$> switchTo DVT.ROUTE_CHANGED req.routeCode s
+        Just AfterLastDrop -> Right <$> saveSession (Just s) (queueRoute req.routeCode s)
+        Nothing -> pure (Left onBoard)
     OpenSession -> do
       now <- getCurrentTime
       tripId <- generateGUID
       let s = newSession req tripId now prior
       closeLiveTrip plate DVT.SESSION_TIMEOUT now
       QVT.create (tripFor s now)
-      saveSession prior s
+      Right <$> saveSession prior s
   where
     plate = canonicalisePlate req.vehicleNumber
 
@@ -101,9 +116,24 @@ changeRoute driver rawPlate newRoute = withPlateLock plate $ do
   where
     plate = canonicalisePlate rawPlate
 
-endRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> EndRouteAction -> m Session
-endRoute driver rawPlate action = withPlateLock plate $ do
+-- | Call after each drop: applies an `afterLastDrop` route change once no rider is left on board.
+applyQueuedRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> m ()
+applyQueuedRoute rawPlate = withPlateLock plate $ do
+  mbSession <- readSession plate
+  whenJust mbSession $ \s -> whenJust s.queuedRouteCode $ \queued ->
+    when (s.status /= ENDED) $ do
+      onBoard <- ridersOnBoard plate
+      when (null onBoard) $ void $ switchTo DVT.ROUTE_CHANGED queued s
+  where
+    plate = canonicalisePlate rawPlate
+
+-- | Refused while riders are on board unless `forced` (`04` §7: forced riders fall to the degraded timeout).
+endRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> Bool -> EndRouteAction -> m Session
+endRoute driver rawPlate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
+  unless forced $ do
+    onBoard <- ridersOnBoard plate
+    unless (null onBoard) $ throwError (RidersOnBoard (length onBoard))
   case action of
     StartReturn -> liftSession (returnRouteOf s.routeCode) >>= \returnRoute -> switchTo DVT.RETURN returnRoute s
     _ -> do

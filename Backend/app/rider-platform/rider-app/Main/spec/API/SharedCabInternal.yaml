@@ -121,11 +121,13 @@ types:
     enum: "RETURN, CHANGE, END"
 
   # END closes the run as END_ROUTE when atLastStop (driver ended at the route's last stop), else END_FOR_NOW.
+  # RETURN / END are refused (SHARED_CAB_RIDERS_ON_BOARD) while riders are on board unless force.
   EndRouteReq:
     driverId: Text
     vehicleNumber: Text
     next: EndRouteNext
     atLastStop: Maybe Bool
+    force: Maybe Bool
 
   SharedCabDriverReq:
     driverId: Text

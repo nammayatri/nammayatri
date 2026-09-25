@@ -142,6 +142,7 @@ import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -1578,7 +1579,9 @@ dropSharedCabRider :: DJourneyLeg.JourneyLeg -> Environment.Flow ()
 dropSharedCabRider journeyLeg = do
   mbBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId
   whenJust mbBooking $ \booking ->
-    when (SharedCabBooking.isSharedCabBooking booking) $ SharedCabBooking.markDropped booking
+    when (SharedCabBooking.isSharedCabBooking booking) $ do
+      SharedCabBooking.markDropped booking
+      whenJust booking.vehicleNumber SharedCabSession.applyQueuedRoute
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
