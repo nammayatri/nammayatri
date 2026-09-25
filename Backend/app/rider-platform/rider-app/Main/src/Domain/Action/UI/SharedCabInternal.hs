@@ -130,13 +130,13 @@ postSharedCabSeats mbToken req = do
   Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= mkSessionResp
 
 -- | CHANGE leaves the session as is: the driver picks the next route with route/select, which closes this run.
-postSharedCabRouteEnd :: Maybe Text -> API.EndRouteReq -> Environment.Flow (Maybe View.SharedCabSession)
+postSharedCabRouteEnd :: Maybe Text -> View.EndRouteReq -> Environment.Flow (Maybe View.SharedCabSession)
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
-    API.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= mkSessionResp)
-    API.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
-    API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow)
+    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= mkSessionResp)
+    View.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
+    View.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow)
   where
     forced = req.force == Just True
 

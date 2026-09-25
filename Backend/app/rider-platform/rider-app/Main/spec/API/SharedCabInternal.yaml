@@ -9,12 +9,14 @@ imports:
   SelectRouteMode: SharedLogic.SharedCab.SessionState
   SharedCabRoute: SharedLogic.SharedCab.SessionView
   SharedCabSession: SharedLogic.SharedCab.SessionView
+  EndRouteReq: SharedLogic.SharedCab.SessionView
 
 module: SharedCabInternal
 
 # Responses are the driver-app /sharedCab/* contract verbatim (driver-app proxies them unchanged);
 # requests add the driver/vehicle identity driver-app resolves from its token.
-# The session payload lives in SharedLogic.SharedCab.SessionView: its `route` field clashes with Servant.route here.
+# SharedCabSession and EndRouteReq live in SharedLogic.SharedCab.SessionView: their `route` / `force` fields
+# clash with Servant.route / EulerHS.Prelude.force in the generated module.
 types:
   SharedCabRoutesResp:
     routes: "[SharedCabRoute]"
@@ -43,18 +45,6 @@ types:
     vehicleNumber: Text
     walkupCount: Int
     version: Int
-
-  EndRouteNext:
-    enum: "RETURN, CHANGE, END"
-
-  # END closes the run as END_ROUTE when atLastStop (driver ended at the route's last stop), else END_FOR_NOW.
-  # RETURN / END are refused (SHARED_CAB_RIDERS_ON_BOARD) while riders are on board unless force.
-  EndRouteReq:
-    driverId: Text
-    vehicleNumber: Text
-    next: EndRouteNext
-    atLastStop: Maybe Bool
-    force: Maybe Bool
 
   SharedCabDriverReq:
     driverId: Text

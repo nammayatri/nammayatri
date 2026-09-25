@@ -18,23 +18,6 @@ data AffectedRider = AffectedRider {bookingId :: Kernel.Prelude.Text, dropStop :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EndRouteNext
-  = RETURN
-  | CHANGE
-  | END
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data EndRouteReq = EndRouteReq
-  { atLastStop :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    driverId :: Kernel.Prelude.Text,
-    force :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    next :: EndRouteNext,
-    vehicleNumber :: Kernel.Prelude.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data SeatsReq = SeatsReq {driverId :: Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text, version :: Kernel.Prelude.Int, walkupCount :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

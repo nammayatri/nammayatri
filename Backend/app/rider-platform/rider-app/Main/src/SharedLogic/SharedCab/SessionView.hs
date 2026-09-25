@@ -1,6 +1,5 @@
--- | The `/sharedCab/session` payload (driver-app contract, `04` §4). Hand-written, not in
--- spec/API/SharedCabInternal.yaml: generated API modules import Servant, whose `route` clashes
--- with `SharedCabSession.route`.
+-- | Driver-app contract types (`04` §4) kept out of spec/API/SharedCabInternal.yaml: the generated module
+-- imports Servant and EulerHS.Prelude, whose `route` and `force` clash with these field names.
 module SharedLogic.SharedCab.SessionView where
 
 import Kernel.Prelude
@@ -94,5 +93,19 @@ data SharedCabSession = SharedCabSession
     demandAhead :: [DemandAtStop],
     lowDemandCard :: Maybe LowDemandCard,
     offRoute :: Maybe OffRoute
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data EndRouteNext = RETURN | CHANGE | END
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | END closes the run as END_ROUTE when `atLastStop` (ended at the route's last stop), else END_FOR_NOW.
+-- RETURN / END are refused (SHARED_CAB_RIDERS_ON_BOARD) while riders are on board unless `force`.
+data EndRouteReq = EndRouteReq
+  { driverId :: Text,
+    vehicleNumber :: Text,
+    next :: EndRouteNext,
+    atLastStop :: Maybe Bool,
+    force :: Maybe Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

@@ -73,7 +73,7 @@ type API =
            Kernel.Prelude.Text
       :> ReqBody
            ('[JSON])
-           API.Types.UI.SharedCabInternal.EndRouteReq
+           SharedLogic.SharedCab.SessionView.EndRouteReq
       :> Post
            ('[JSON])
            ((Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession))
@@ -119,7 +119,7 @@ getSharedCabSession a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabIn
 postSharedCabSeats :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SeatsReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabSeats a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabSeats a2 a1
 
-postSharedCabRouteEnd :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.EndRouteReq -> Environment.FlowHandler (Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession))
+postSharedCabRouteEnd :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.SharedCab.SessionView.EndRouteReq -> Environment.FlowHandler (Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession))
 postSharedCabRouteEnd a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteEnd a2 a1
 
 postSharedCabResume :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SharedCabDriverReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
