@@ -36,6 +36,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
 import qualified SharedLogic.Type as SLT
+import Tools.Error (SharedCabBAPError (..))
 import Tools.Metrics (CoreMetrics)
 
 data FeedbackAnswer = FeedbackAnswer
@@ -559,6 +560,14 @@ notifyFrfsTripStarted apiKey internalUrl tripId = do
 
 -- Shared-cab driver-app -> rider-app internal proxy client (folded from former
 -- SharedLogic.CallSharedCabBAP; see 04-driver-side-plan.md §4 / rider-app 3.2 contract).
+-- All wrappers map the rider app's APIError envelope onto SharedCabBAPError so the
+-- driver app surfaces it verbatim (same errorCode + same HTTP status, 4.5 R11) —
+-- the callApiUnwrappingApiError edge stays, only the Slack-@Error identity (which
+-- forced CORE002/404 or a 500 wrap) is replaced at the mapping argument.
+
+-- | rider-app Tools.Error SharedCabSessionError SessionNotFound.
+sharedCabSessionNotFoundErrorCode :: Text
+sharedCabSessionNotFoundErrorCode = "SHARED_CAB_SESSION_NOT_FOUND"
 
 -- Internal request bodies ------------------------------------------------------
 
@@ -636,7 +645,7 @@ getSharedCabRoutes ::
 getSharedCabRoutes apiKey internalUrl integratedBppConfigId lat lon = do
   logInfo $ "CallSharedCabBAP: Getting routes for integratedBppConfigId: " <> integratedBppConfigId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callRoutesClient integratedBppConfigId lat lon (Just apiKey)) "GetSharedCabRoutes" callRoutesAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callRoutesClient integratedBppConfigId lat lon (Just apiKey)) "GetSharedCabRoutes" callRoutesAPI
 
 -- POST /internal/sharedCab/route/select -----------------------------------------
 
@@ -668,7 +677,7 @@ selectSharedCabRoute ::
 selectSharedCabRoute apiKey internalUrl req = do
   logInfo $ "CallSharedCabBAP: Selecting route " <> req.routeCode <> " for driverId: " <> req.driverId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSelectRouteClient (Just apiKey) req) "SelectSharedCabRoute" callSelectRouteAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSelectRouteClient (Just apiKey) req) "SelectSharedCabRoute" callSelectRouteAPI
 
 -- GET /internal/sharedCab/session?driverId=&vehicleNumber= ---------------------
 
@@ -701,7 +710,16 @@ getSharedCabSession ::
 getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   logInfo $ "CallSharedCabBAP: Getting session for driverId: " <> driverId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
+  -- 4.5 R11: no live session arrives as rider-app's SHARED_CAB_SESSION_NOT_FOUND
+  -- error body (NOT a bare status), so decode the APIError envelope and check the
+  -- errorCode; every other error re-throws verbatim (same errorCode + HTTP status).
+  res <- EC.callApiExtractingApiError Nothing internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
+  errorOrSession <- EC.unwrapEitherOnlyFromRawError (Just "BAP_INTERNAL_API_ERROR") internalUrl res
+  case errorOrSession of
+    Right mbSession -> pure mbSession
+    Left err
+      | err.fromBAPErrorCode == sharedCabSessionNotFoundErrorCode -> pure Nothing
+      | otherwise -> throwError err
 
 -- POST /internal/sharedCab/seats ------------------------------------------------
 
@@ -732,7 +750,7 @@ setSharedCabSeats ::
 setSharedCabSeats apiKey internalUrl req = do
   logInfo $ "CallSharedCabBAP: Setting seats for driverId: " <> req.driverId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSeatsClient (Just apiKey) req) "SetSharedCabSeats" callSeatsAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSeatsClient (Just apiKey) req) "SetSharedCabSeats" callSeatsAPI
 
 -- POST /internal/sharedCab/route/end --------------------------------------------
 
@@ -764,7 +782,7 @@ endSharedCabRoute ::
 endSharedCabRoute apiKey internalUrl req = do
   logInfo $ "CallSharedCabBAP: Ending route (next = " <> show req.next <> ") for driverId: " <> req.driverId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callEndRouteClient (Just apiKey) req) "EndSharedCabRoute" callEndRouteAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callEndRouteClient (Just apiKey) req) "EndSharedCabRoute" callEndRouteAPI
 
 -- POST /internal/sharedCab/resume ------------------------------------------------
 
@@ -795,7 +813,7 @@ resumeSharedCab ::
 resumeSharedCab apiKey internalUrl req = do
   logInfo $ "CallSharedCabBAP: Resuming session for driverId: " <> req.driverId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callResumeClient (Just apiKey) req) "ResumeSharedCab" callResumeAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callResumeClient (Just apiKey) req) "ResumeSharedCab" callResumeAPI
 
 -- GET /internal/sharedCab/trips?driverId=&date= ---------------------------------
 
@@ -804,11 +822,11 @@ type SharedCabTripsAPI =
     :> "sharedCab"
     :> "trips"
     :> QueryParam' '[Required, Strict] "driverId" Text
-    :> QueryParam "date" Text -- ISO-8601 calendar day (yyyy-mm-dd); parsed by rider-app (no kernel ToHttpApiData Day on the client path)
+    :> QueryParam' '[Required, Strict] "date" Text -- mandatory per the rider-app contract; ISO-8601 calendar day (yyyy-mm-dd), default "today" is defaulted in Domain.Action.UI.SharedCab
     :> Header "token" Text
     :> Get '[JSON] SharedCabTripsResp
 
-callTripsClient :: Text -> Maybe Text -> Maybe Text -> EulerClient SharedCabTripsResp
+callTripsClient :: Text -> Text -> Maybe Text -> EulerClient SharedCabTripsResp
 callTripsClient = client (Proxy @SharedCabTripsAPI)
 
 callTripsAPI :: Proxy SharedCabTripsAPI
@@ -823,9 +841,9 @@ getSharedCabTrips ::
   Text ->
   BaseUrl ->
   Text ->
-  Maybe Text ->
+  Text ->
   m SharedCabTripsResp
-getSharedCabTrips apiKey internalUrl driverId mbDate = do
-  logInfo $ "CallSharedCabBAP: Getting trips for driverId: " <> driverId
+getSharedCabTrips apiKey internalUrl driverId date = do
+  logInfo $ "CallSharedCabBAP: Getting trips for driverId: " <> driverId <> ", date: " <> date
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callTripsClient driverId mbDate (Just apiKey)) "GetSharedCabTrips" callTripsAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callTripsClient driverId date (Just apiKey)) "GetSharedCabTrips" callTripsAPI

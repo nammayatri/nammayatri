@@ -14,8 +14,10 @@
 
 module Tools.Error (module Tools.Error) where
 
-import Data.Aeson (Value (Null), object, (.=))
+import Data.Aeson (Value (Null), decode, object, (.=))
 import qualified Data.Text as T
+import qualified Network.HTTP.Types.Status as HTTP
+import Servant.Client (ResponseF (Response))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -2342,3 +2344,39 @@ instance IsHTTPError LedgerAdjustmentError where
     LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
 
 instance IsAPIError LedgerAdjustmentError
+
+
+-- | Rider-app \"/internal/sharedCab/*\" API error, carried across verbatim
+-- (4.5 / R11). When such a call fails with a JSON APIError envelope
+-- ({errorCode, errorMessage, errorPayload}), the driver-app proxy re-throws it
+-- keeping the SAME errorCode, the SAME message/payload, and the SAME HTTP status
+-- the rider app returned (400/404/409/...) instead of collapsing everything into
+-- an opaque 500. The status rides in the value because 'toHttpCode' and
+-- 'fromResponse' are both pure over the decoded type.
+data SharedCabBAPError = SharedCabBAPError
+  { fromBAPErrorCode :: Text,
+    fromBAPErrorMessage :: Maybe Text,
+    fromBAPErrorPayload :: Value,
+    fromBAPHttpCode :: HttpCode
+  }
+  deriving (Show, Generic)
+
+instanceExceptionWithParent 'HTTPException ''SharedCabBAPError
+
+instance FromResponse SharedCabBAPError where
+  fromResponse (Response status _ _ body) = do
+    APIError errorCodeValue errorMessageValue errorPayloadValue <- decode body
+    pure $ SharedCabBAPError errorCodeValue errorMessageValue errorPayloadValue (codeToHttpCodeWith500Default (HTTP.statusCode status))
+
+instance IsBaseError SharedCabBAPError where
+  toMessage = Just . fromBAPErrorMessage
+
+instance IsHTTPError SharedCabBAPError where
+  toErrorCode = fromBAPErrorCode
+  toHttpCode = fromBAPHttpCode
+
+instance IsAPIError SharedCabBAPError where
+  toPayload = fromBAPErrorPayload
+
+instance IsBecknAPIError SharedCabBAPError where
+  toType _ = DOMAIN_ERROR
