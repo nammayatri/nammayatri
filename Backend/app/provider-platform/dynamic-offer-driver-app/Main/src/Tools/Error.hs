@@ -958,6 +958,7 @@ data SubscriptionError
   | NoDriverPlanForMandate Text
   | NoSubscriptionConfigForService Text Text
   | InvalidAutoPayStatus
+  | DriversNotFoundOnPlan Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SubscriptionError
@@ -975,6 +976,7 @@ instance IsBaseError SubscriptionError where
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
     OngoingManualPayment -> Just "There is ongoing manual payment pls wait"
     NoSubscriptionConfigForService merchantOperatingCityId serviceName -> Just $ "No subscription config exists for merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and serviceName \"" <> show serviceName <> "\""
+    DriversNotFoundOnPlan planId -> Just $ "No drivers found on plan with planId \"" <> show planId <> "\""
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -989,8 +991,9 @@ instance IsHTTPError SubscriptionError where
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
     OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
     NoSubscriptionConfigForService _ _ -> "NO_SUBSCRIPTION_CONFIG_FOR_SERVICE"
+    DriversNotFoundOnPlan _ -> "DRIVERS_NOT_FOUND_ON_PLAN"
   toHttpCode = \case
-    PlanNotFound _ -> E500
+    PlanNotFound _ -> E404
     MandateNotFound _ -> E500
     ActiveMandateExists _ -> E400
     ActiveMandateDoNotExist _ -> E400
@@ -1001,6 +1004,7 @@ instance IsHTTPError SubscriptionError where
     NoDriverPlanForMandate _ -> E500
     OngoingManualPayment -> E400
     NoSubscriptionConfigForService _ _ -> E500
+    DriversNotFoundOnPlan _ -> E404
 
 instance IsAPIError SubscriptionError
 

@@ -620,7 +620,7 @@ apis:
       response:
         type: GetDriversOnPlanRes
       migrate:
-        capability: PUBLIC
+        capability: city-operations.subscription.read
   - POST:
       endpoint: /plan/migrate
       auth: ApiAuthV2
@@ -629,7 +629,7 @@ apis:
       response:
         type: MigratePlanRes
       migrate:
-        capability: PUBLIC
+        capability: city-operations.subscription.write
 
   - GET: # DriverStatsAPI
       endpoint: /stats

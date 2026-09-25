@@ -41,7 +41,8 @@ findDriverIdsByPlanId ::
 findDriverIdsByPlanId planId merchantOpCityId =
   CH.findAll $
     CH.select_
-      ( \dp -> dp.driverId
+      ( \dp -> do
+          CH.groupBy dp.driverId $ \driverIdAgg -> driverIdAgg
       )
       $ CH.filter_
         ( \dp ->

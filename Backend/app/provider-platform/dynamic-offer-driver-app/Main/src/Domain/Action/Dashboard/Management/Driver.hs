@@ -1531,6 +1531,8 @@ getDriverPlanDrivers merchantShortId opCity planIdText = do
   unless (plan.merchantOpCityId == merchantOpCityId) $
     throwError (InvalidRequest "Plan does not belong to the authorized city")
   driverIds <- CHDriverPlan.findDriverIdsByPlanId planId merchantOpCityId
+  when (null driverIds) $
+    throwError (DriversNotFoundOnPlan planIdText)
   return $ Common.GetDriversOnPlanRes {driverIds = map getId driverIds}
 
 -- | Migrate drivers from one plan to another.
