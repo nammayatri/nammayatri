@@ -792,12 +792,23 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 
-endAllRCAssociationsAndRemoveVehicle :: OnboardingFlow m r => Id Person.Person -> m ()
-endAllRCAssociationsAndRemoveVehicle driverId = do
+endAllRCAssociationsAndRemoveVehicle :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()
+endAllRCAssociationsAndRemoveVehicle transporterConfig driverId = do
+  -- Capture the ACTIVE RC links first: ACTIVE_VEHICLE_COUNT is keyed by the RC's fleet owner,
+  -- and once the associations are ended we can no longer resolve which owners to decrement.
+  activeAssocs <- DAQuery.findAllActiveByDriverIds [driverId]
   removeVehicle False driverId -- throws RCVehicleOnRide rather than unlinking under a live ride
   DAQuery.endAllRCAssociationsForDriver driverId
   now <- getCurrentTime
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
+  -- deactivateRC -- the sibling teardown doing the same removeVehicle + end-association work --
+  -- decrements here. This path never did, so with overwriteAssociation enabled every driver
+  -- re-association deleted the vehicle while leaving the fleet owner's count inflated, in one
+  -- direction only and with nothing to correct it.
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+    rcs <- RCQuery.findAllById (map (.rcId) activeAssocs)
+    forM_ rcs $ \rc ->
+      Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
 
 removeVehicle :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Person -> m ()
 removeVehicle isTaxiBoothRequest driverId = do

@@ -57,8 +57,14 @@ createFleetDriverAssociationIfNotExists ::
   Maybe Text ->
   Maybe (Id Merchant) ->
   Maybe (Id MerchantOperatingCity) ->
+  -- | Run only when a NEW association row is actually created, from inside the per
+  -- driver+fleet lock. Callers hang analytics off this: an unconditional increment at the
+  -- call site would over-count, because this function is a no-op when the link already
+  -- exists. Analytics cannot live in this module directly (SharedLogic.Analytics imports
+  -- Storage.Queries, so importing it here would be circular).
+  m () ->
   m ()
-createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorId onboardingVehicleCategory isActive requestReason merchantId merchantOperatingCityId = do
+createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorId onboardingVehicleCategory isActive requestReason merchantId merchantOperatingCityId onCreated = do
   now <- getCurrentTime
   Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
     mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
@@ -98,6 +104,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
               LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
               LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
             }
+        onCreated
 
 findAllActiveByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [FleetDriverAssociation]
 findAllActiveByFleetOwnerIds [] = pure []

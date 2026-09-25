@@ -1282,7 +1282,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         -- Check if there's an active association before ending it
         mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
         SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
-          DomainRC.endAllRCAssociationsAndRemoveVehicle personId
+          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
         unlinkedDriver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -2985,7 +2985,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
         void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken, isOnboardingFlow = Nothing}
         whenJust mbOperator $ \referredOperator ->
           DOR.makeDriverReferredByOperator merchantOpCityId person.id referredOperator.id
@@ -3015,7 +3015,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
         SA.endDriverAssociations merchantOpCityId transporterConfig person
         when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
+          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
         assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
         QFDV.create assoc
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
@@ -3834,9 +3834,9 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             unless isNew $ do
               SA.endDriverAssociations moc.id transporterConfig person
               when (merchant.overwriteAssociation == Just True) $
-                DomainRC.endAllRCAssociationsAndRemoveVehicle person.id
+                DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
-            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id)
+            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             fork "Sending onboarding link SMS to Driver" $
               SOnbCommon.sendOnboardingLinkSms moc transporterConfig person (Just fleetOwner)
@@ -4726,7 +4726,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
         SA.endDriverAssociations merchantOpCityId transporterConfig driver
         QFDV.approveFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
         when (merchant.overwriteAssociation == Just True) $ do
-          DomainRC.endAllRCAssociationsAndRemoveVehicle driverId
+          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
         when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $
           QDBA.deleteById driverId
         Analytics.handleDriverAnalyticsAndFlowStatus
@@ -4780,7 +4780,14 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
   let linkAsActive = isJust mbActiveAssociation
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver newFleetOwner.id personId) SGuard.ChangeFleetOwner (SGuard.TargetDriver personId) $ do
     SA.endDriverAssociations moc.id transporterConfig person
-    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id)
+    -- endDriverAssociations decrements the OLD fleet owner; the create side does no analytics
+    -- of its own, so without this the NEW owner never counts the driver it just gained and the
+    -- system total drifts down on every reassignment. Guarded on linkAsActive because an
+    -- inactive row is not part of ACTIVE_DRIVER_COUNT, and hung off onCreated so a pre-existing
+    -- link cannot double-count.
+    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
+      when (linkAsActive && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just newFleetOwner.id.getId) personId
   fork "Fleet owner change notification" $
     SOnboardingComms.notifyOnFleetOwnerChange moc.id person newFleetOwner mbOldFleetOwner
   pure Success
@@ -4799,8 +4806,17 @@ postDriverFleetVehicleChangeFleetOwner merchantShortId opCity rcNo req = do
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   currentFleetOwnerId <- rc.fleetOwnerId & fromMaybeM VehicleNotPartOfFleet
   SGuard.guardOnboardingAction transporterConfig (SGuard.ActorFleet newFleetOwner.id) SGuard.ChangeFleetOwner (SGuard.TargetVehicle rcNo)
+  -- Resolve the linked driver BEFORE the removal unlinks it; used only for the diagnostic
+  -- log inside the analytics helpers (the counters themselves key off the fleet owner id).
+  mbLinkedDriverId <- (fmap (.driverId) . listToMaybe) <$> DRCAE.findAllActiveAssociationByRCId rc.id
   void $ postDriverFleetRemoveVehicle merchantShortId opCity currentFleetOwnerId rcNo Nothing
   linkRCToFleet transporterConfig newFleetOwner.id rc
+  -- Neither postDriverFleetRemoveVehicle nor linkRCToFleet touches analytics, so without this
+  -- the old owner keeps counting a vehicle it no longer has and the new owner never counts it.
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+    let logDriverId = fromMaybe newFleetOwner.id mbLinkedDriverId
+    Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig (Just currentFleetOwnerId) logDriverId
+    Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig (Just newFleetOwner.id.getId) logDriverId
   pure Success
 
 validateNewFleetOwner :: Text -> Flow DP.Person

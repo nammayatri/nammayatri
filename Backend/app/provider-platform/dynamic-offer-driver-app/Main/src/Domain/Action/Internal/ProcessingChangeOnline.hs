@@ -210,7 +210,7 @@ calcAndUpdateOnlineDurationForOwner ::
   Text ->
   m ()
 calcAndUpdateOnlineDurationForOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited ownerId = do
-  Redis.whenWithLockRedis (updateEntityOnlineDurationLockKey ownerId) 60 $ do
+  Redis.withWaitAndLockRedis (updateEntityOnlineDurationLockKey ownerId) 10 5000 $ do
     statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds ownerId driverId.getId merchantLocalDate
     let (mbOwnerStats, mbDriverStats) = FOS.separateFleetAndDriverStats ownerId driverId.getId statsList
     let newOnlineDurationOwner = calcOnlineDuration localTime (mbOwnerStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
