@@ -17,6 +17,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
+import SharedLogic.SharedCab.Booking (shared)
 import Storage.Beam.SchedulerJob ()
 
 tickSec :: Int
@@ -29,7 +30,7 @@ tickKey :: Id DMOC.MerchantOperatingCity -> Text
 tickKey mocId = "sharedcab:expiryTick:" <> mocId.getId
 
 setNx :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> m Bool
-setNx key ttl = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire key ttl ()
+setNx key ttl = shared $ Redis.setNxExpire key ttl ()
 
 ensureExpiryJob :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureExpiryJob merchantId mocId =
@@ -41,7 +42,7 @@ claimTick mocId = setNx (tickKey mocId) (tickSec - 5)
 
 scheduleNextExpiry :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 scheduleNextExpiry merchantId mocId = do
-  Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setExp (guardKey mocId) () (2 * tickSec)
+  shared $ Redis.setExp (guardKey mocId) () (2 * tickSec)
   createNext merchantId mocId
 
 createNext :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()

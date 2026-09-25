@@ -21,7 +21,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
-import SharedLogic.SharedCab.Booking (ridersOnBoard)
+import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import SharedLogic.SharedCab.ExpirySchedule (ensureExpiryJob)
 import SharedLogic.SharedCab.LtsAttach
@@ -47,11 +47,6 @@ sessionTtlSec = 16 * 60 * 60
 -- Covers the LTS calls made under the lock.
 lockTtlSec :: Int
 lockTtlSec = 30
-
--- Unprefixed keys in the master cloud cell: the scheduler (expiry job) runs with its own key prefix, and the
--- allocation engine reads these by their literal names.
-shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
-shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
 
 withPlateLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> m a -> m a
 withPlateLock plate = Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "plateLock" (lockKey plate) lockTtlSec 25000
