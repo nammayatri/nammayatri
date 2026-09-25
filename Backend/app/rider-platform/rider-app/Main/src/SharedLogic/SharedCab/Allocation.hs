@@ -497,7 +497,8 @@ triggerSharedCabAllocation ::
     MonadMask m,
     Log m,
     Redis.HedisLTSFlowEnv r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    Events.EventFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()
@@ -513,7 +514,8 @@ runSharedCabAllocationTick ::
     MonadMask m,
     Log m,
     Redis.HedisLTSFlowEnv r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    Events.EventFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()

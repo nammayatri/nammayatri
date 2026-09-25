@@ -62,6 +62,7 @@ import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
+import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
@@ -83,7 +84,7 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 -- | `07` §3 shared-cab block; skips bus live tracking, which knows nothing of shared cabs.
 -- Positions and ETAs wait on the LTS read (7.2), driver details on the session (B6).
 getSharedCabLegState ::
-  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) =>
+  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m, SharedCabEvents.EventFlow m r) =>
   UTCTime ->
   [APITypes.RiderLocationReq] ->
   DJourneyLeg.JourneyLeg ->
