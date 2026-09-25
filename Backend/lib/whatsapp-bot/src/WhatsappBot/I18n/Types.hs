@@ -163,6 +163,11 @@ data LanguageStrings = LanguageStrings
     flexiRideEnded :: Text -> Text, -- (fareLine)
     flexiRideCancelled :: Text,
     flexiBookAnother :: Text,
+    -- App-download promo, shown as a button alongside flexiBookAnother on the
+    -- ride-completion message, and its follow-up when tapped (tap can't open
+    -- a link directly, only trigger a bot reply — see Engine.hs "get_app" arm).
+    getAppButton :: Text,
+    getAppMessage :: Text -> Text, -- (appDownloadUrl)
     -- Flexi end-ride OTP (rental)
     flexiEndRideButton :: Text,
     flexiEndOtpShare :: Text -> Text,

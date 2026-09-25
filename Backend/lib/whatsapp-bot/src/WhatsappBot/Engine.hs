@@ -52,7 +52,7 @@ import WhatsappBot.I18n (detectLanguage, getAllLanguages, languageCode, parseLan
 import WhatsappBot.I18n.Types ()
 import WhatsappBot.Messages (formatDialable)
 -- The flow-agnostic ride lifecycle now lives in Ride (Engine -> Ride -> Env).
-import WhatsappBot.Ride (cancelTriggers, handleCallDriver, handleCancel, handleCancelConfirm, handleMarkSafeTrigger, handleSosTrigger, handleStatus, handleTracking, statusTriggers)
+import WhatsappBot.Ride (handleCallDriver, handleCancel, handleCancelConfirm, handleMarkSafeTrigger, handleSosTrigger, handleStatus, handleTracking)
 import WhatsappBot.Types
 
 -- ---------------------------------------------------------------------------
@@ -106,8 +106,8 @@ runEngine env ev ctx = do
       | input == "choose_language" || input == "more_languages" -> handleChooseLanguage env ev ctx input -- :120-123
       -- 'handleCancel' takes the post-cancel menu row as a parameter: the row is
       -- booking-flow-specific (Flow.Booking) and Ride must not import a flow.
-      | lower `elem` cancelTriggers || "cancel:" `T.isPrefixOf` input -> handleCancel env ev ctx (menuRow env ev) input -- :126-129
-      | any (`T.isInfixOf` lower) statusTriggers -> case ctx.personId of -- :131-140
+      | lower `elem` env.cfg.merchant.cancelTriggers || "cancel:" `T.isPrefixOf` input -> handleCancel env ev ctx (menuRow env ev) input -- :126-129
+      | any (`T.isInfixOf` lower) env.cfg.merchant.statusTriggers -> case ctx.personId of -- :131-140
         Nothing -> handleIdle env ev ctx {pendingAction = Just PendingStatus} "book"
         Just _ -> handleStatus env ev ctx
       | input == "main_menu" -> do
@@ -156,6 +156,7 @@ runEngine env ev ctx = do
       | input == "help" -> handleHelp env ev ctx -- :376-380
       | input == "support" -> handleSupport env ev ctx -- :381-387
       | input == "call_driver" && isJust ctx.personId -> handleCallDriver env ev ctx -- :389-406
+      | input == "get_app" -> reply env to (s.getAppMessage env.cfg.merchant.appDownloadUrl) -- app-download promo (Messages.hs's buildEnded button)
       -- (resend_otp :409-421 dropped, D2)
       | input == "__location_pin__" && ctx.state `elem` [Idle, AwaitingPickup, ConfirmingPickup] ->
         handlePickup env ev ctx -- :426-430
