@@ -51,7 +51,7 @@ getFleetEngineConsumerToken (personId, _merchantId) rideId = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
-  cfg <- getFleetEngineCfg booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (InternalError "Fleet Engine not configured")
+  cfg <- getFleetEngineCfg booking.merchantId booking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Fleet Engine not configured")
   saText <- decrypt cfg.consumerServiceAccountJson
   sa <- case FEAuth.parseServiceAccount saText of
     Left err -> throwError $ InternalError ("Fleet Engine: invalid consumer service account: " <> T.pack err)
