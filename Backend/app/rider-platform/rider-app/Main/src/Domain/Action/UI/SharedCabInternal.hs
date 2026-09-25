@@ -24,6 +24,8 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified SharedLogic.SharedCab.Allocation as Allocation
+import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Demand as Demand
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
@@ -125,6 +127,10 @@ postSharedCabRouteSelect mbToken req = do
 checked :: Session -> Environment.Flow Session
 checked s = s <$ Invariants.checkCab s.vehicleNumber
 
+-- | 05 §8.7: allocations nobody boarded yet leave with the route; after the session write, outside its lock.
+releasing :: AllocTypes.AllocationOutcome -> Session -> Environment.Flow Session
+releasing outcome s = s <$ Allocation.releaseUnboarded s.vehicleNumber outcome
+
 checkedCab :: Text -> Environment.Flow a -> Environment.Flow a
 checkedCab rawPlate action = action <* Invariants.checkCab (canonicalisePlate rawPlate)
 
@@ -146,9 +152,9 @@ postSharedCabRouteEnd :: Maybe Text -> View.EndRouteReq -> Environment.Flow (May
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
-    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= checked >>= mkSessionResp)
+    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= releasing AllocTypes.RouteChanged >>= checked >>= mkSessionResp)
     View.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
-    View.END -> Nothing <$ (Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= checked)
+    View.END -> Nothing <$ (Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= releasing AllocTypes.SessionClosed >>= checked)
   where
     forced = req.force == Just True
 

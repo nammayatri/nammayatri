@@ -37,6 +37,7 @@ module SharedLogic.SharedCab.Allocation
     runSharedCabAllocationTick,
     triggerSharedCabAllocation,
     releaseSharedCabAllocation,
+    releaseUnboarded,
     tickStopProgressActions, -- shape stub, 7.5+
 
     -- pure phase-1 pieces, exported for unit tests (rider-app-test SharedCab suites exist)
@@ -54,9 +55,9 @@ module SharedLogic.SharedCab.Allocation
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (groupBy, sortOn)
+import qualified Data.Aeson as A
+import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -80,6 +81,18 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 -- Redis key contract
 --------------------------------------------------------------------------------
 
+-- | Everything the tick, claims and releases need (the release re-triggers the tick, hence LTS).
+type AllocFlow m r =
+  ( MonadFlow m,
+    Redis.HedisFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadMask m,
+    Log m,
+    Redis.HedisLTSFlowEnv r,
+    Metrics.CoreMetrics m
+  )
+
 -- | 05 §2: `sharedcab:alloc:{bookingId}` -> AllocationState JSON.
 allocKey :: Text -> Text
 allocKey bookingId = "sharedcab:alloc:" <> bookingId
@@ -100,8 +113,7 @@ bookingLockKey bookingId = "sharedcab:lock:booking:" <> bookingId
 --------------------------------------------------------------------------------
 
 -- | One FINDING shared-cab booking as the engine needs it (05 §2 state table: booking
--- CONFIRMED, ticket ACTIVE, vehicleNumber NULL). The projection is owned by the 4.1/4.5
--- vehicle-bound query layer; the tick itself never hand-rolls the list query.
+-- CONFIRMED, ticket ACTIVE, vehicleNumber NULL), built by findingOf from the city scan.
 data FindingBooking = FindingBooking
   { bookingId :: Id DFTB.FRFSTicketBooking,
     riderId :: Id DP.Person,
@@ -114,7 +126,7 @@ data FindingBooking = FindingBooking
   deriving (Show, Eq, Generic)
 
 --------------------------------------------------------------------------------
--- Gate + query stubs (4.1/4.5 owns the real ones; this milestone is write-only here)
+-- Gate + the city scan (FINDING and ALLOCATED views)
 --------------------------------------------------------------------------------
 
 -- | HARD GATE. The queries are real now (FINDING below, seats via Booking.liveSeatsOnVehicle), but the
@@ -122,33 +134,41 @@ data FindingBooking = FindingBooking
 sharedCabAllocationEnabled :: Bool
 sharedCabAllocationEnabled = False
 
--- | 05 §2 FINDING: CONFIRMED, SHARED_CAB, vehicleNumber NULL (partial index
--- idx_frfs_ticket_booking_shared_cab_finding), tickets still ACTIVE; seats = ticket rows.
-fetchFindingBookings ::
+-- | The city's live shared-cab bookings (partial index idx_frfs_ticket_booking_shared_cab_city), each
+-- with its ticket statuses: the tick's FINDING and ALLOCATED views both come from this one read.
+cityLiveBookings ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
-  m [FindingBooking]
-fetchFindingBookings cityId = do
-  bookings <-
-    filter ((== cityId) . (.merchantOperatingCityId))
-      <$> QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus Nothing (Just Spec.SHARED_CAB) [CONFIRMED]
+  m [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])]
+cityLiveBookings cityId = do
+  bookings <- QFRFSTicketBooking.findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus cityId (Just Spec.SHARED_CAB) [CONFIRMED]
   tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
-  pure $ mapMaybe (findingOf tickets) bookings
-  where
-    findingOf tickets b = do
-      route <- b.routeCode
-      let seatTickets = [t | t <- tickets, t.frfsTicketBookingId == b.id, t.status == DFRFSTicket.ACTIVE]
-      guard (not (null seatTickets))
-      pure
-        FindingBooking
-          { bookingId = b.id,
-            riderId = b.riderId,
-            routeCode = route,
-            boardStopCode = b.fromStationCode,
-            dropStopCode = b.toStationCode,
-            seats = length seatTickets,
-            findingSince = b.createdAt
-          }
+  pure [(b, [t.status | t <- tickets, t.frfsTicketBookingId == b.id]) | b <- bookings]
+
+-- | 05 §2 FINDING: no plate yet, tickets still ACTIVE; seats = ticket rows.
+findingOf :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe FindingBooking
+findingOf (b, statuses) = do
+  guard (isNothing b.vehicleNumber)
+  route <- b.routeCode
+  let seatCount = length (filter (== DFRFSTicket.ACTIVE) statuses)
+  guard (seatCount > 0)
+  pure
+    FindingBooking
+      { bookingId = b.id,
+        riderId = b.riderId,
+        routeCode = route,
+        boardStopCode = b.fromStationCode,
+        dropStopCode = b.toStationCode,
+        seats = seatCount,
+        findingSince = b.createdAt
+      }
+
+-- | 05 §2 ALLOCATED: plate set and nobody boarded (every ticket still ACTIVE); the plate it holds.
+allocatedPlate :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe Text
+allocatedPlate (b, statuses) = do
+  plate <- b.vehicleNumber
+  guard (not (null statuses) && all (== DFRFSTicket.ACTIVE) statuses)
+  pure plate
 
 --------------------------------------------------------------------------------
 -- LTS positions: one HGETALL on route:{routeCode} (05 §3 pseudo-code; 04 §3 join key)
@@ -163,20 +183,20 @@ fetchFindingBookings cityId = do
 -- Reliability note: all events that mutate what the allocator decides are Redis-side; replica
 -- staleness on the LTS cell is acceptable because Phase 2 re-verifies under locks.
 --
--- //TODO(verify, report Q6): field shape vs location-tracking-service redis/commands.rs:982-1035
--- -- assumed field = canonical plate, value decodes as LT.VehicleInfo (the shape
--- track_vehicles serves). If the rust writer wraps it differently, ONLY this function changes.
--- One bad field fails the whole hGetAll decode today; per-field tolerance is hardening, and the
--- tick skips the route on failure (below), which is fail-safe for allocation.
+-- Shape checked against location-tracking-service (redis/keys.rs driver_loc_based_on_route_key,
+-- commands.rs set_route_location): key route:{routeCode}, field = plate, value = VehicleTrackingInfo
+-- JSON. Fields are decoded one by one, so a bad one is logged and dropped, not the whole route.
 readRoutePositions ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, Log m) =>
   Text ->
   m [LT.VehicleTrackingOnRouteResp]
 readRoutePositions routeCode = do
   -- 04 §6: shared-cab route codes are prefixed (SC-*), so this key does not collide with the
   -- bus-feed cache key shape (mkRouteKey, Storage/CachedQueries/Merchant/MultiModalBus.hs:120).
-  pairs <- Redis.runInMultiCloudLTSRedisForListFromReplica $ Redis.hGetAll ("route:" <> routeCode)
-  pure $ map (uncurry LT.VehicleTrackingOnRouteResp) pairs
+  pairs <- Redis.runInMultiCloudLTSRedisForListFromReplica $ Redis.hGetAll @A.Value ("route:" <> routeCode)
+  fmap catMaybes . forM pairs $ \(plate, raw) -> case A.fromJSON raw of
+    A.Success info -> pure (Just (LT.VehicleTrackingOnRouteResp plate info))
+    A.Error err -> Nothing <$ logWarning ("shared-cab tick: dropping LTS field " <> plate <> " on route " <> routeCode <> ": " <> T.pack err)
 
 --------------------------------------------------------------------------------
 -- Phase 1 -- lock-free, once per route (05 §3)
@@ -190,16 +210,13 @@ data RankedCandidate = RankedCandidate
   deriving (Show, Generic)
 
 -- | Freshness gate (05 §3; ltsMaxAgeSec from §7): LTS never drops a silent cab by age (04 §3),
--- so anything older than the gate is dropped. Strict: missing or unparseable timestamp is NOT
--- fresh. //TODO(report Q7): verify the ts text format on real LTS payloads; §8.9's city-wide
--- outage rule must suspend this gate -- not built in the skeleton.
+-- so anything older than the gate is dropped. A missing or unparseable timestamp is NOT fresh
+-- (parseLtsTimestamp is lenient about the format). //TODO(05 §8.9): the city-wide outage rule must
+-- suspend this gate.
 isFreshPosition :: UTCTime -> Int -> LT.VehicleInfo -> Bool
-isFreshPosition now maxAgeSec vi = case vi.timestamp of
+isFreshPosition now maxAgeSec vi = case vi.timestamp >>= parseLtsTimestamp of
   Nothing -> False -- silent-by-absence must not read as fresh
-  Just tsText ->
-    case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" (T.unpack tsText) of
-      Just ts -> diffUTCTime now ts <= fromIntegral maxAgeSec
-      Nothing -> False
+  Just ts -> diffUTCTime now ts <= fromIntegral maxAgeSec
 
 -- | 05 §3 eligibility, per booking:
 --   * cab not past the board stop (§6 item 1) -- LTS keeps the stop listed as Upcoming while
@@ -294,12 +311,12 @@ attemptClaim cfg booking cand = do
                       QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
                       now <- getCurrentTime
                       attempts <- readAttempts (attemptsKey booking.bookingId.getId)
-                      -- stand timer armed now (05 §2); the moving timer re-arms when the tick
-                      -- sees the cab AT the board stop -> 05 §6 item 4 (//TODO 7.5+).
+                      -- stand timer armed now (05 §2); stop-progress (7.5) re-arms it as the moving
+                      -- timer when the cab reaches the board stop.
                       Redis.setExp
                         (allocKey booking.bookingId.getId)
-                        AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = Just (addUTCTime (intToNominalDiffTime cfg.standTimerSec) now), attempts}
-                        cfg.findingTimeoutSec
+                        AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = Just (addUTCTime (intToNominalDiffTime cfg.standTimerSec) now), attempts, timer = StandTimer}
+                        (allocKeyTtlSec cfg.standTimerSec)
                       pure (Right now)
                     | otherwise -> pure (Left ClaimCasLost)
                   Nothing -> pure (Left ClaimCasLost)
@@ -317,44 +334,75 @@ readAttempts key = Redis.withMasterRedis $ fromMaybe 0 <$> Redis.safeGet key
 -- tick re-triggered (§3 engine rule: tick + trigger on create/release). maxAttempts overflow is
 -- a warning + //TODO -- the R10 fallback surface (§3) belongs to the rider-notification work.
 releaseSharedCabAllocation ::
-  ( MonadFlow m,
-    Redis.HedisFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadMask m,
-    Log m,
-    Redis.HedisLTSFlowEnv r,
-    Metrics.CoreMetrics m
-  ) =>
+  AllocFlow m r =>
   AllocationConfig ->
   Id DFTB.FRFSTicketBooking ->
   Text -> -- expected plate -- the cab we believe holds the booking
   AllocationOutcome ->
   m Bool
 releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
-  attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
-  released <- withBookingLock bookingId $ do
-    QFRFSTicketBooking.findById bookingId >>= \case
-      Just b
-        | b.vehicleNumber == Just expectedPlate -> do
-          QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate) -- CAS plate -> null: back to FINDING
-          Redis.del (allocKey bookingId.getId)
-          pure (Just b.merchantOperatingCityId)
-      _ -> pure Nothing
-  case released of
-    Nothing -> pure False -- another closer won; emits nothing (05 §3)
-    Just cityId -> do
-      -- //TODO(report Q1): attemptsBefore == 0 cannot distinguish "first close" from
-      -- "attempts key evicted"; a Redis flush resets it by design (05 §11 flush row).
-      let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
-      Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
-      when (attemptsNow >= cfg.maxAttempts) $
-        logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface TODO (05 §3)"
-      -- TODO(7.6): Events.forBooking (Events.AllocationClosed (show outcome) (blameFor outcome)) once 7.6 merges.
-      Invariants.checkBooking bookingId
-      Invariants.checkCab expectedPlate
-      triggerSharedCabAllocation cityId
-      pure True
+  closed <- withBookingLock bookingId $ closeLocked cfg bookingId expectedPlate outcome
+  afterClose cfg bookingId expectedPlate outcome closed
+  whenJust closed triggerSharedCabAllocation
+  pure (isJust closed)
+
+-- | 05 §8.7: a cab leaving ACTIVE (pause, end) releases its unboarded allocations without penalty.
+-- Call it after the session write, outside the plate lock.
+releaseUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m ()
+releaseUnboarded plate outcome = do
+  let cfg = defaultAllocationConfig
+  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [CONFIRMED]
+  tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+  let unboarded = [b | b <- bookings, isJust (allocatedPlate (b, [t.status | t <- tickets, t.frfsTicketBookingId == b.id]))]
+  cities <- forM unboarded $ \b -> do
+    closed <- withBookingLock b.id $ closeLocked cfg b.id plate outcome
+    afterClose cfg b.id plate outcome closed
+    pure closed
+  mapM_ triggerSharedCabAllocation (nub (catMaybes cities))
+
+-- | Run inside the booking lock: KV read, CAS plate -> null (back to FINDING), clear the alloc key,
+-- bump attempts. The city it closed in, or Nothing when another closer won.
+closeLocked ::
+  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  AllocationConfig ->
+  Id DFTB.FRFSTicketBooking ->
+  Text ->
+  AllocationOutcome ->
+  m (Maybe (Id DMOC.MerchantOperatingCity))
+closeLocked cfg bookingId expectedPlate outcome =
+  QFRFSTicketBooking.findById bookingId >>= \case
+    Just b
+      | b.vehicleNumber == Just expectedPlate -> do
+        QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
+        Redis.del (allocKey bookingId.getId)
+        -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
+        attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
+        let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
+        Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
+        when (attemptsNow >= cfg.maxAttempts) $
+          logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface TODO (05 §3)"
+        pure (Just b.merchantOperatingCityId)
+    _ -> pure Nothing
+
+-- | Outside every lock, after a close attempt.
+afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe (Id DMOC.MerchantOperatingCity) -> m ()
+afterClose _ bookingId plate _ closed =
+  when (isJust closed) $ do
+    -- TODO(7.6): Events.forBooking (Events.AllocationClosed (show outcome) (blameFor outcome)) once 7.6 merges.
+    Invariants.checkBooking bookingId
+    Invariants.checkCab plate
+
+-- | 05 §2/§3 timers: an ALLOCATED booking whose timer ran out, or whose alloc key is gone, goes back
+-- to FINDING. Decided under the booking lock, so a claim still writing its key is never mistaken for a lost one.
+expireTimers :: AllocFlow m r => AllocationConfig -> UTCTime -> [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] -> m ()
+expireTimers cfg now live =
+  forM_ [(b, plate) | entry@(b, _) <- live, Just plate <- [allocatedPlate entry]] $ \(b, plate) -> do
+    result <- withBookingLock b.id $ do
+      st <- Redis.withMasterRedis $ Redis.safeGet (allocKey b.id.getId)
+      case timerExpiry now st of
+        Nothing -> pure Nothing
+        Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
+    whenJust result $ \(outcome, cityId) -> afterClose cfg b.id plate outcome (Just cityId)
 
 --------------------------------------------------------------------------------
 -- Driver notification todo
@@ -418,24 +466,29 @@ runSharedCabAllocationTick ::
 runSharedCabAllocationTick cityId = do
   -- //TODO: bind AllocationConfig from rider_config (05 §7) once the fields exist.
   let cfg = defaultAllocationConfig
-  if not sharedCabAllocationEnabled
-    then logDebug "shared-cab allocation gated off (queries 4.1/4.5 pending); tick is a no-op"
-    else do
-      findings <- fetchFindingBookings cityId
-      now <- getCurrentTime
-      forM_ (groupAllOn (.routeCode) findings) $ \(routeCode, bookings) -> do
-        ePositions <- try $ readRoutePositions routeCode
-        case ePositions of
-          Left (e :: SomeException) ->
-            -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in
-            -- the same minute must suspend the freshness gate (and NO_LOCATION pause/end).
-            -- Skipping the route here is fail-safe: no allocation from stale data; stop-progress
-            -- releases are 7.5+, so no false PASSED_STOP can come out of this branch either.
-            logError $ "shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e
-          Right positions -> do
-            sessions <- Session.activeSessionsOnRoute routeCode
-            forM_ bookings $ \booking ->
-              void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+  -- One tick per city (05 §3, §8.5): a pod or trigger that finds the lease held skips. The lease is
+  -- released when the tick ends; its TTL only bounds a crashed holder, so it spans many ticks.
+  Redis.whenWithLockRedis ("sharedcab:alloc:lease:" <> cityId.getId) (10 * cfg.tickSec) $
+    if not sharedCabAllocationEnabled
+      then logDebug "shared-cab allocation gated off (sharedCabAllocationEnabled); tick is a no-op"
+      else do
+        live <- cityLiveBookings cityId
+        now <- getCurrentTime
+        -- expired timers first: the seats they free are claimable in this same tick
+        expireTimers cfg now live
+        forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) -> do
+          ePositions <- try $ readRoutePositions routeCode
+          case ePositions of
+            Left (e :: SomeException) ->
+              -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in
+              -- the same minute must suspend the freshness gate (and NO_LOCATION pause/end).
+              -- Skipping the route here is fail-safe: no allocation from stale data, and no stop-progress
+              -- release (7.5) can act on it either.
+              logError $ "shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e
+            Right positions -> do
+              sessions <- Session.activeSessionsOnRoute routeCode
+              forM_ bookings $ \booking ->
+                void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
 
 groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
 groupAllOn f = map (\grp -> (f (head grp), grp)) . groupBy ((==) `on` f) . sortOn f

@@ -9,7 +9,11 @@
 --        "PASSED_STOP with the rider away = rider no-show only".
 module SharedLogic.SharedCab.Allocation.Types
   ( AllocationState (..),
+    TimerKind (..),
     AllocationOutcome (..),
+    timerExpiry,
+    allocKeyTtlSec,
+    parseLtsTimestamp,
     Blame (..),
     blameFor,
     countsTowardAttempts,
@@ -19,6 +23,9 @@ module SharedLogic.SharedCab.Allocation.Types
   )
 where
 
+import qualified Data.Aeson.Types as A
+import qualified Data.Text as T
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Kernel.Prelude
 
 -- | The value stored under Redis key @sharedcab:alloc:{bookingId}@ (05 §2).
@@ -34,8 +41,12 @@ data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
     allocatedAt :: UTCTime,
     expiresAt :: Maybe UTCTime,
-    attempts :: Int
+    attempts :: Int,
+    timer :: TimerKind -- which of the two timers expiresAt belongs to
   }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data TimerKind = StandTimer | MovingTimer
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Why a live allocation ended before boarding (05 §3 release reasons).
@@ -55,6 +66,8 @@ data AllocationOutcome
     RouteChanged
   | -- | session went PAUSED/ENDED: release without penalty (05 §8.7)
     SessionClosed
+  | -- | the alloc key vanished before any release (crash after the CAS, or ticks missed past the key's TTL)
+    TimerLost
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 -- | @blame@ field of the @allocation_closed@ event (05 §7) and the foundation for
@@ -78,6 +91,7 @@ blameFor = \case
   SeatLost -> BlameNone
   RouteChanged -> BlameNone
   SessionClosed -> BlameNone
+  TimerLost -> BlameNone
 
 -- | 05 §3: "@attempts@ counts allocations, not candidates. A phase-2 miss increments nothing;
 -- attempts+1 only when a real allocation ends in TIMEOUT / DRIVER_CANCELLED / PASSED_STOP / SEAT_LOST."
@@ -91,6 +105,7 @@ countsTowardAttempts = \case
   SeatLost -> True
   RouteChanged -> False
   SessionClosed -> False
+  TimerLost -> False
 
 -- | 05 §8.4 literal: "@consecutiveMisses@ counts only DRIVER_CANCELLED and stand TIMEOUT."
 countsTowardDriverMisses :: AllocationOutcome -> Bool
@@ -151,3 +166,22 @@ defaultAllocationConfig =
       autoEndAfterDropSec = 10 * 60,
       degradedTimeoutSec = 60 * 60
     }
+
+-- | The tick's timer decision for one ALLOCATED booking, given its alloc key (05 §2, §3).
+timerExpiry :: UTCTime -> Maybe AllocationState -> Maybe AllocationOutcome
+timerExpiry _ Nothing = Just TimerLost
+timerExpiry now (Just st) = case st.expiresAt of
+  Just deadline | now > deadline -> Just $ case st.timer of
+    StandTimer -> StandTimeout
+    MovingTimer -> MovingTimeout
+  _ -> Nothing
+
+-- | The alloc key outlives its timer by a margin, so the tick sees the expiry before the key goes.
+allocKeyTtlSec :: Int -> Int
+allocKeyTtlSec timerSec = timerSec + 60
+
+-- | LTS writes chrono DateTime<Utc> as RFC 3339 (`2026-09-25T10:15:30.123456789Z`); aeson's UTCTime
+-- parser also takes offsets and a space separator, and bare epoch seconds are accepted as a fallback.
+parseLtsTimestamp :: Text -> Maybe UTCTime
+parseLtsTimestamp ts =
+  maybe (posixSecondsToUTCTime . fromInteger <$> readMaybe (T.unpack ts)) Just (A.parseMaybe A.parseJSON (A.String ts))

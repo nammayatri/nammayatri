@@ -48,13 +48,8 @@ sharedCabAllocationTick ::
 sharedCabAllocationTick Job {jobInfo} = do
   let jobData@SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId} = jobInfo.jobData
       cfg = defaultAllocationConfig -- //TODO(05 §7): rider_config bind
-      -- skip silently when another pod holds the lease; lease ttl == tick period
-  Redis.whenWithLockRedis (cityLeaseKey merchantOperatingCityId.getId) cfg.tickSec $
-    runSharedCabAllocationTick merchantOperatingCityId
+      -- the city lease lives in runSharedCabAllocationTick, so on-demand triggers honour it too
+  runSharedCabAllocationTick merchantOperatingCityId
   -- self-reschedule: 05 §7 tickSec (default 3 s)
   createJobIn @_ @'SharedCabAllocationTick (Just merchantId) (Just merchantOperatingCityId) (intToNominalDiffTime cfg.tickSec) jobData
   pure Complete
-
--- | One tick per city (05 §3, §8.5).
-cityLeaseKey :: Text -> Text
-cityLeaseKey cityId = "sharedcab:alloc:lease:" <> cityId

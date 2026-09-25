@@ -669,6 +669,14 @@ FRFSTicketBooking:
       params: [vehicleTripId]
       where: id
     # A cab's live bookings by canonical plate (04 §3 recovery, 04 §4 on-board guard); partial index in ddl 1578.
+    # A city's live bookings of one tier: the allocation tick's FINDING + ALLOCATED scan (05 §3); partial index in ddl 1580.
+    findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - serviceTierType
+          - in: [status]
     findAllByVehicleNumberAndServiceTierTypeAndStatus:
       kvFunction: findAllWithKV
       where:

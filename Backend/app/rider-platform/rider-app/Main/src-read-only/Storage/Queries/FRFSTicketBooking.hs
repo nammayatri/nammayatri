@@ -9,6 +9,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleTrip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -28,6 +29,18 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
+
+findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus merchantOperatingCityId serviceTierType status = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
 
 findAllByRouteCodeAndServiceTierTypeAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
