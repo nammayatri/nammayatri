@@ -1027,7 +1027,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
   mbLastVerified <- QPassVerifyTransaction.findLastVerifiedVehicleNumberByPurchasePassId purchasedPass.id
   let lastVerifiedVehicleNumber = fmap fst mbLastVerified
   let isAutoVerified = (mbLastVerified >>= snd) == Just True
-  futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities futureRenewals
+  futureRenewalEntities <- buildPurchasedPassPaymentAPIEntities $ filter (\renewal -> Just renewal.id /= ((.id) <$> mbPayment)) futureRenewals
   let overlappingTerms = case mbLivePayment of
         Nothing -> []
         Just primary ->
