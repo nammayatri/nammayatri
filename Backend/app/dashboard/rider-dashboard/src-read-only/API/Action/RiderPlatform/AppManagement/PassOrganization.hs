@@ -32,75 +32,75 @@ handler merchantId city = getPassOrganizationGetPassOrganization merchantId city
 
 type GetPassOrganizationGetPassOrganization =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_GET_PASS_ORGANIZATION))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_GET_PASS_ORGANIZATION)
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationGetPassOrganization
   )
 
 type GetPassOrganizationPassDetailsDepot =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_DEPOT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_DEPOT)
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetailsDepot
   )
 
 type GetPassOrganizationPassDetails =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS)
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetails
   )
 
 type PostPassOrganizationPassDetailsVerify =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.POST_PASS_ORGANIZATION_PASS_DETAILS_VERIFY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.POST_PASS_ORGANIZATION_PASS_DETAILS_VERIFY)
       :> API.Types.Dashboard.AppManagement.PassOrganization.PostPassOrganizationPassDetailsVerify
   )
 
 type PostPassOrganizationUpdate =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.POST_PASS_ORGANIZATION_UPDATE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.POST_PASS_ORGANIZATION_UPDATE)
       :> API.Types.Dashboard.AppManagement.PassOrganization.PostPassOrganizationUpdate
   )
 
 type GetPassOrganizationGetOrganizations =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_GET_ORGANIZATIONS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_GET_ORGANIZATIONS)
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationGetOrganizations
   )
 
 type GetPassOrganizationPassDetailsDocument =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_DOCUMENT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_DOCUMENT)
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetailsDocument
   )
 
 type PostPassOrganizationAssignDepot =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PASS_ORGANIZATION) / ('API.Types.Dashboard.AppManagement.PassOrganization.POST_PASS_ORGANIZATION_ASSIGN_DEPOT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.POST_PASS_ORGANIZATION_ASSIGN_DEPOT)
       :> API.Types.Dashboard.AppManagement.PassOrganization.PostPassOrganizationAssignDepot
   )
 
 getPassOrganizationGetPassOrganization :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp)
 getPassOrganizationGetPassOrganization merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationGetPassOrganization merchantShortId opCity apiTokenInfo personId
 
-getPassOrganizationPassDetailsDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
+getPassOrganizationPassDetailsDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
 getPassOrganizationPassDetailsDepot merchantShortId opCity apiTokenInfo limit offset depotPersonId status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetailsDepot merchantShortId opCity apiTokenInfo limit offset depotPersonId status
 
-getPassOrganizationPassDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
+getPassOrganizationPassDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
 getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passOrganizationId status limit offset passEnum = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passOrganizationId status limit offset passEnum
 
 postPassOrganizationPassDetailsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.Dashboard.AppManagement.PassOrganization.VerifyPassDetailsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

@@ -12,18 +12,18 @@ import qualified Kernel.Prelude
 import qualified Safety.Domain.Types.Common
 
 data PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberT
-  { contactPersonId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    enableForFollowing :: (B.C f Kernel.Prelude.Bool),
-    enableForShareRide :: (B.C f Kernel.Prelude.Bool),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    mobileCountryCode :: (B.C f Kernel.Prelude.Text),
-    mobileNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    mobileNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    name :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    priority :: (B.C f Kernel.Prelude.Int),
-    shareTripWithEmergencyContactOption :: (B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions))
+  { contactPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enableForFollowing :: B.C f Kernel.Prelude.Bool,
+    enableForShareRide :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    mobileCountryCode :: B.C f Kernel.Prelude.Text,
+    mobileNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    mobileNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    name :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    priority :: B.C f Kernel.Prelude.Int,
+    shareTripWithEmergencyContactOption :: B.C f (Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table PersonDefaultEmergencyNumberT where
 
 type PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumberT Identity
 
-$(enableKVPG (''PersonDefaultEmergencyNumberT) [('mobileNumberHash), ('personId)] [[('contactPersonId)], [('mobileNumberHash)], [('personId)]])
+$(enableKVPG ''PersonDefaultEmergencyNumberT ['mobileNumberHash, 'personId] [['contactPersonId], ['mobileNumberHash], ['personId]])
 
-$(mkTableInstancesGenericSchema (''PersonDefaultEmergencyNumberT) "person_default_emergency_number")
+$(mkTableInstancesGenericSchema ''PersonDefaultEmergencyNumberT "person_default_emergency_number")

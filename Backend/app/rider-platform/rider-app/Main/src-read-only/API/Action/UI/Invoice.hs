@@ -19,7 +19,6 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Domain.Types.Invoice
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
@@ -32,9 +31,7 @@ type API =
       :<|> TokenAuth
       :> "invoice"
       :> "list"
-      :> QueryParam
-           "invoiceType"
-           Domain.Types.Invoice.InvoiceType
+      :> QueryParam "invoiceType" Domain.Types.Invoice.InvoiceType
       :> QueryParam
            "limit"
            Kernel.Prelude.Int

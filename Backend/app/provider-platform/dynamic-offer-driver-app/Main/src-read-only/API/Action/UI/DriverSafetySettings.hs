@@ -26,16 +26,16 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "driver" :> "getSafetySettings" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverSafetySettings.GetDriverSafetySettingsRes
       :<|> TokenAuth
       :> "driver"
       :> "updateSafetySettings"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverSafetySettings.UpdateDriverSafetySettingsReq
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

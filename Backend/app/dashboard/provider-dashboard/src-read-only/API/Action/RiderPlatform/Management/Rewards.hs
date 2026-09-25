@@ -30,89 +30,89 @@ handler merchantId city = postRewardsCampaign merchantId city :<|> putRewardsCam
 
 type PostRewardsCampaign =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN)
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCampaign
   )
 
 type PutRewardsCampaign =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.PUT_REWARDS_CAMPAIGN))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.PUT_REWARDS_CAMPAIGN)
       :> API.Types.RiderPlatform.Management.Rewards.PutRewardsCampaign
   )
 
 type PostRewardsCampaignCohort =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN_COHORT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN_COHORT)
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCampaignCohort
   )
 
 type PutRewardsCampaignCohort =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.PUT_REWARDS_CAMPAIGN_COHORT))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.PUT_REWARDS_CAMPAIGN_COHORT)
       :> API.Types.RiderPlatform.Management.Rewards.PutRewardsCampaignCohort
   )
 
 type PostRewardsCampaignCohortCodes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN_COHORT_CODES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN_COHORT_CODES)
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCampaignCohortCodes
   )
 
 type PostRewardsCampaignStatus =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN_STATUS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_CAMPAIGN_STATUS)
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCampaignStatus
   )
 
 type GetRewardsCampaign =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.GET_REWARDS_CAMPAIGN))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.GET_REWARDS_CAMPAIGN)
       :> API.Types.RiderPlatform.Management.Rewards.GetRewardsCampaign
   )
 
 type GetRewardsCampaigns =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.GET_REWARDS_CAMPAIGNS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.GET_REWARDS_CAMPAIGNS)
       :> API.Types.RiderPlatform.Management.Rewards.GetRewardsCampaigns
   )
 
 type GetRewardsCampaignStats =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.GET_REWARDS_CAMPAIGN_STATS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.GET_REWARDS_CAMPAIGN_STATS)
       :> API.Types.RiderPlatform.Management.Rewards.GetRewardsCampaignStats
   )
 
 type PostRewardsTriggerEval =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_TRIGGER_EVAL))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_TRIGGER_EVAL)
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsTriggerEval
   )
 
 type PostRewardsCohortValidateEligibility =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_MANAGEMENT) / ('API.Types.RiderPlatform.Management.REWARDS) / ('API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_COHORT_VALIDATE_ELIGIBILITY))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_MANAGEMENT / 'API.Types.RiderPlatform.Management.REWARDS / 'API.Types.RiderPlatform.Management.Rewards.POST_REWARDS_COHORT_VALIDATE_ELIGIBILITY)
       :> API.Types.RiderPlatform.Management.Rewards.PostRewardsCohortValidateEligibility
   )
 

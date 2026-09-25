@@ -31,33 +31,33 @@ handler merchantId city = postRegistrationAuth merchantId city :<|> postRegistra
 
 type PostRegistrationAuth =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.REGISTRATION) / ('API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_AUTH))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.REGISTRATION / 'API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_AUTH)
       :> API.Types.Dashboard.RideBooking.Registration.PostRegistrationAuth
   )
 
 type PostRegistrationVerify =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.REGISTRATION) / ('API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_VERIFY))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.REGISTRATION / 'API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_VERIFY)
       :> API.Types.Dashboard.RideBooking.Registration.PostRegistrationVerify
   )
 
 type PostRegistrationOtpResend =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.REGISTRATION) / ('API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_OTP_RESEND))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.REGISTRATION / 'API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_OTP_RESEND)
       :> API.Types.Dashboard.RideBooking.Registration.PostRegistrationOtpResend
   )
 
 type PostRegistrationLogout =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.REGISTRATION) / ('API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_LOGOUT))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.REGISTRATION / 'API.Types.Dashboard.RideBooking.Registration.POST_REGISTRATION_LOGOUT)
       :> API.Types.Dashboard.RideBooking.Registration.PostRegistrationLogout
   )
 

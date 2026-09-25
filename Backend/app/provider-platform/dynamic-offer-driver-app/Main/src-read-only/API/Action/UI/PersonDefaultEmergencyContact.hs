@@ -26,16 +26,16 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "driver" :> "personDefaultEmergencyContacts"
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.PersonDefaultEmergencyContact.PersonDefaultEmergencyContact]
       :<|> TokenAuth
       :> "driver"
       :> "personDefaultEmergencyContacts"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PersonDefaultEmergencyContact.UpdatePersonDefaultEmergencyContactsReq
       :> Put
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

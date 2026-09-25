@@ -15,9 +15,9 @@ import Servant.Client
 
 type API = ("healthCheck" :> GetHealthCheckTest)
 
-type GetHealthCheckTest = ("test" :> Get ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type GetHealthCheckTest = ("test" :> Get '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-newtype HealthCheckAPIs = HealthCheckAPIs {getHealthCheckTest :: (EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype HealthCheckAPIs = HealthCheckAPIs {getHealthCheckTest :: EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkHealthCheckAPIs :: (Client EulerHS.Types.EulerClient API -> HealthCheckAPIs)
 mkHealthCheckAPIs healthCheckClient = (HealthCheckAPIs {..})
@@ -30,10 +30,10 @@ data HealthCheckUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON HealthCheckUserActionType where
-  toJSON (GET_HEALTH_CHECK_TEST) = Data.Aeson.String "GET_HEALTH_CHECK_TEST"
+  toJSON GET_HEALTH_CHECK_TEST = Data.Aeson.String "GET_HEALTH_CHECK_TEST"
 
 instance FromJSON HealthCheckUserActionType where
   parseJSON (Data.Aeson.String "GET_HEALTH_CHECK_TEST") = pure GET_HEALTH_CHECK_TEST
   parseJSON _ = fail "GET_HEALTH_CHECK_TEST expected"
 
-$(Data.Singletons.TH.genSingletons [(''HealthCheckUserActionType)])
+$(Data.Singletons.TH.genSingletons [''HealthCheckUserActionType])

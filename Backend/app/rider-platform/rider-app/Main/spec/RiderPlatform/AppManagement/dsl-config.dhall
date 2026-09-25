@@ -36,6 +36,6 @@ in      common.defaultConfigs
         , _packageMapping =
           [ { _1 = common.GeneratorType.API_TYPES, _2 = "rider-app" }
           , { _1 = common.GeneratorType.SERVANT_API, _2 = "rider-app" }
-          , { _1 = common.GeneratorType.DOMAIN_HANDLER, _2 = "rider-app" }
+          , { _1 = common.GeneratorType.API_TREE_COMMON, _2 = "rider-app" }
           ]
         }

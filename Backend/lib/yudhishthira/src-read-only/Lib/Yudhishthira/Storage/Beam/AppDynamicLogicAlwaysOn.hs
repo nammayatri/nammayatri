@@ -12,12 +12,12 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data AppDynamicLogicAlwaysOnT f = AppDynamicLogicAlwaysOnT
-  { domain :: (B.C f Lib.Yudhishthira.Types.LogicDomain),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    order :: (B.C f Kernel.Prelude.Int),
-    version :: (B.C f Kernel.Prelude.Int),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { domain :: B.C f Lib.Yudhishthira.Types.LogicDomain,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    order :: B.C f Kernel.Prelude.Int,
+    version :: B.C f Kernel.Prelude.Int,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table AppDynamicLogicAlwaysOnT where
 
 type AppDynamicLogicAlwaysOn = AppDynamicLogicAlwaysOnT Identity
 
-$(enableKVPG (''AppDynamicLogicAlwaysOnT) [('domain), ('merchantOperatingCityId), ('version)] [])
+$(enableKVPG ''AppDynamicLogicAlwaysOnT ['domain, 'merchantOperatingCityId, 'version] [])
 
-$(mkTableInstancesGenericSchema (''AppDynamicLogicAlwaysOnT) "app_dynamic_logic_always_on")
+$(mkTableInstancesGenericSchema ''AppDynamicLogicAlwaysOnT "app_dynamic_logic_always_on")

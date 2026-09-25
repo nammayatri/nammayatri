@@ -40,8 +40,8 @@ data FinanceTdsReimbursementRequestStatus = PENDING | APPROVED | REJECTED derivi
 
 data Quarter = Q1 | Q2 | Q3 | Q4 deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AssessmentYear))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AssessmentYear)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceTdsReimbursementRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FinanceTdsReimbursementRequestStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Quarter))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Quarter)

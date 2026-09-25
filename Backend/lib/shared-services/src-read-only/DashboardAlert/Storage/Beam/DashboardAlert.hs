@@ -16,23 +16,23 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 
 data DashboardAlertT f = DashboardAlertT
-  { body :: (B.C f Data.Text.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    entityId :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    entityType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertEntityType.AlertEntityType)),
-    id :: (B.C f Data.Text.Text),
-    merchantId :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    reason :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    requestData :: (B.C f Domain.Types.Alert.AlertRequestData.AlertRequestData),
-    requestType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType)),
-    requesteeId :: (B.C f Data.Text.Text),
-    requesteeType :: (B.C f (Kernel.Prelude.Maybe DashboardAlert.Domain.Types.DashboardAlert.RequesteeType)),
-    requestorId :: (B.C f Data.Text.Text),
-    requestorType :: (B.C f (Kernel.Prelude.Maybe DashboardAlert.Domain.Types.DashboardAlert.RequestorType)),
-    status :: (B.C f Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus),
-    title :: (B.C f Data.Text.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { body :: B.C f Data.Text.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    entityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    entityType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertEntityType.AlertEntityType),
+    id :: B.C f Data.Text.Text,
+    merchantId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    reason :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    requestData :: B.C f Domain.Types.Alert.AlertRequestData.AlertRequestData,
+    requestType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType),
+    requesteeId :: B.C f Data.Text.Text,
+    requesteeType :: B.C f (Kernel.Prelude.Maybe DashboardAlert.Domain.Types.DashboardAlert.RequesteeType),
+    requestorId :: B.C f Data.Text.Text,
+    requestorType :: B.C f (Kernel.Prelude.Maybe DashboardAlert.Domain.Types.DashboardAlert.RequestorType),
+    status :: B.C f Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus,
+    title :: B.C f Data.Text.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -42,6 +42,6 @@ instance B.Table DashboardAlertT where
 
 type DashboardAlert = DashboardAlertT Identity
 
-$(enableKVPG (''DashboardAlertT) [('id)] [[('requesteeId)], [('requestorId)]])
+$(enableKVPG ''DashboardAlertT ['id] [['requesteeId], ['requestorId]])
 
-$(mkTableInstancesGenericSchema (''DashboardAlertT) "approval_request")
+$(mkTableInstancesGenericSchema ''DashboardAlertT "approval_request")

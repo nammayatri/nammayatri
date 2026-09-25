@@ -25,26 +25,26 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "dispatcher" :> Capture "fleetId" Kernel.Prelude.Text :> "getFleetInfo"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Dispatcher.DispatcherRes
       :<|> TokenAuth
       :> "dispatcher"
       :> "updateFleetSchedule"
-      :> ReqBody ('[JSON]) API.Types.UI.Dispatcher.DispatcherReq
+      :> ReqBody '[JSON] API.Types.UI.Dispatcher.DispatcherReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "dispatcher"
       :> "depotNames"
       :> Get
-           ('[JSON])
+           '[JSON]
            [Kernel.Prelude.Text]
       :<|> TokenAuth
       :> "dispatcher"
       :> "depotIds"
       :> Get
-           ('[JSON])
+           '[JSON]
            [Kernel.Prelude.Text]
       :<|> TokenAuth
       :> "dispatcher"
@@ -53,7 +53,7 @@ type API =
            "depotName"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Dispatcher.DepotVehicle]
       :<|> TokenAuth
       :> "dispatcher"
@@ -62,7 +62,7 @@ type API =
            "depotId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Dispatcher.DepotVehicle]
       :<|> TokenAuth
       :> "dispatcher"
@@ -71,7 +71,7 @@ type API =
            "depotId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.Prelude.Text
       :<|> TokenAuth
       :> "dispatcher"
@@ -83,7 +83,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
 
@@ -145,8 +145,8 @@ getDispatcherHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler [API.Types.UI.Dispatcher.DispatcherHistoryRes]
   )
 getDispatcherHistory a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Dispatcher.getDispatcherHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

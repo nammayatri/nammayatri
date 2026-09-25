@@ -4,7 +4,6 @@ imports:
   SearchResp: API.UI.Search
 
 importPackageOverrides:
-  API.Types.Dashboard.RideBooking: "rider-app"
   Domain.Types.Person: "rider-app"
   API.UI.Search: "rider-app"
 
@@ -22,8 +21,5 @@ apis:
         type: SearchReq
       response:
         type: SearchResp
-      migrate:
-        userActionType: ApiAuth APP_BACKEND CUSTOMERS SEARCH
-        endpoint: SearchAPI SearchEndPoint
 
 types: {}
