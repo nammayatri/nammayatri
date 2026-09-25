@@ -415,7 +415,8 @@ refundStatusHandler ::
     CacheFlow m r,
     MonadFlow m,
     EsqDBReplicaFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasBAPMetrics m r
   ) =>
   DOrder.PaymentOrder ->
   DOrder.PaymentServiceType ->
@@ -440,7 +441,8 @@ refundStatusHandler paymentOrder paymentServiceType = do
         MonadFlow m,
         EsqDBReplicaFlow m r,
         ServiceFlow m r,
-        EncFlow m r
+        EncFlow m r,
+        HasBAPMetrics m r
       ) =>
       DRefunds.Refunds ->
       m ()
@@ -449,14 +451,13 @@ refundStatusHandler paymentOrder paymentServiceType = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
       mapM_
         ( \bookingPayment -> do
-            let bookingPaymentId = bookingPayment.id
-                bookingId = bookingPayment.frfsTicketBookingId
+            let bookingId = bookingPayment.frfsTicketBookingId
             mbBooking <- QFRFSTicketBooking.findById bookingId
             case mbBooking of
               Nothing -> pure ()
               Just booking -> do
                 when (booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]) $ do
-                  QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+                  FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.FAILED "refunded_before_confirm" booking
             case refund.status of
               Payment.REFUND_SUCCESS -> do
                 let alreadyRefunded = bookingPayment.status == DFRFSTicketBookingPayment.REFUNDED
@@ -475,13 +476,14 @@ refundStatusHandler paymentOrder paymentServiceType = do
                           then FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.COUNTER_CANCELLED FRFSUtils.counterCancellationRefundTag booking bapConfig refund.refundAmount mRiderNumber fareParameters
                           else whenJust booking.refundAmount $ \bookingRefundAmount ->
                             FRFSUtils.createCancellationReconEntries DFRFSTicketStatus.CANCELLED FRFSUtils.cancellationRefundTag booking bapConfig bookingRefundAmount mRiderNumber fareParameters
-                QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUNDED bookingPaymentId
-              Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
-              _ -> do
+                FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUNDED "refund_success" mbBooking bookingPayment
+              Payment.REFUND_FAILURE ->
+                FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_FAILED "refund_failure" mbBooking bookingPayment
+              _ ->
                 case isRefundApiCallSuccess of
-                  Nothing -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPaymentId
-                  Just True -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED bookingPaymentId
-                  Just False -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED bookingPaymentId
+                  Nothing -> FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_PENDING "refund_api_call_unknown" mbBooking bookingPayment
+                  Just True -> FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_INITIATED "refund_api_call_success" mbBooking bookingPayment
+                  Just False -> FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_FAILED "refund_api_call_failed" mbBooking bookingPayment
         )
         bookingPayments
 
@@ -561,6 +563,7 @@ initiateRefundWithPaymentStatusRespSync ::
     ServiceFlow m r,
     EncFlow m r,
     SchedulerFlow r,
+    HasBAPMetrics m r,
     HasField "blackListedJobs" r [Text]
   ) =>
   Id Person.Person ->
@@ -650,10 +653,11 @@ markRefundPendingWithAmount personId orderId amount = do
           <> " - no further refund will be issued for this order"
     Nothing -> do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId orderId
-      mapM_ (\bookingPayment -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPayment.id) bookingPayments
+      mapM_ (FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_PENDING "refund_with_amount" Nothing) bookingPayments
       void $ initiateRefundWithPaymentStatusRespSync personId orderId
 
 markRefundPendingAndSyncOrderStatus ::
+  forall m r c.
   ( CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -690,9 +694,10 @@ markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
   let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
   syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder
   where
+    markBookingsRefundPending :: DOrder.PaymentOrder -> m ()
     markBookingsRefundPending paymentOrder = do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
-      mapM_ (\bookingPayment -> QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING bookingPayment.id) bookingPayments
+      mapM_ (FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_PENDING "sync_order_status" Nothing) bookingPayments
 
     markPassesRefundPending paymentOrder = do
       QPurchasedPassPayment.updateStatusByOrderId DPurchasedPass.RefundPending paymentOrder.id

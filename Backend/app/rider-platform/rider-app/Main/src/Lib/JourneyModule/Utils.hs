@@ -1462,7 +1462,7 @@ convertVehicleCategoryToEntityType Spec.BUS = DTRL.BUS
 convertVehicleCategoryToEntityType Spec.METRO = DTRL.METRO
 convertVehicleCategoryToEntityType Spec.SUBWAY = DTRL.SUBWAY
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, Metrics.HasBAPMetrics m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment skipCreateOrderCall = do
   frfsConfig <-
     getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
