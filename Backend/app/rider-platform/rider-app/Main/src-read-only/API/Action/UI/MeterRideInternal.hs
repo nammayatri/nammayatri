@@ -17,6 +17,7 @@ import qualified Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -39,7 +40,7 @@ handler :: Environment.FlowServer API
 handler = getGetCustomerInfo :<|> postAddDestination
 
 getGetCustomerInfo :: (Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.MeterRideInternal.CustomerInfo -> Environment.FlowHandler API.Types.UI.MeterRideInternal.CustomerInfoResponse)
-getGetCustomerInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRideInternal.getGetCustomerInfo a2 a1
+getGetCustomerInfo a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.MeterRideInternal.getGetCustomerInfo a2 a1
 
 postAddDestination :: (Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.MeterRideInternal.MeterRideAddDestinationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postAddDestination a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRideInternal.postAddDestination a3 a2 a1
+postAddDestination a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.MeterRideInternal.postAddDestination a3 a2 a1

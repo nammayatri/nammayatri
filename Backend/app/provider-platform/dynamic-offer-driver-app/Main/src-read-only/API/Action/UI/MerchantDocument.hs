@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import qualified MerchantDocuments.Domain.Types.MerchantDocument
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -67,7 +68,7 @@ getMerchantDocumentList ::
     MerchantDocuments.Domain.Types.MerchantDocument.Role ->
     Environment.FlowHandler API.Types.UI.MerchantDocument.MerchantDocumentListRes
   )
-getMerchantDocumentList a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MerchantDocument.getMerchantDocumentList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getMerchantDocumentList a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MerchantDocument.getMerchantDocumentList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMerchantDocument :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler MerchantDocuments.Domain.Types.MerchantDocument.MerchantDocument)
-getMerchantDocument a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MerchantDocument.getMerchantDocument a5 a4 a3 a2 a1
+getMerchantDocument a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.MerchantDocument.getMerchantDocument a5 a4 a3 a2 a1

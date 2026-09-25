@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -66,7 +67,7 @@ postPickupinstructions ::
     API.Types.UI.PickupInstructions.PickupInstructionsReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPickupinstructions a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.postPickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPickupinstructions a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PickupInstructions.postPickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPickupinstructionsClosest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -76,7 +77,7 @@ getPickupinstructionsClosest ::
     Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Environment.FlowHandler API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
   )
-getPickupinstructionsClosest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.getPickupinstructionsClosest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPickupinstructionsClosest a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.PickupInstructions.getPickupinstructionsClosest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 deletePickupinstructions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -87,4 +88,4 @@ deletePickupinstructions ::
     Kernel.Prelude.Maybe API.Types.UI.PickupInstructions.DeleteTarget ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-deletePickupinstructions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.deletePickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+deletePickupinstructions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.PickupInstructions.deletePickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

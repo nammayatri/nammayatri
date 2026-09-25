@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -38,4 +39,4 @@ postAttractionsRecommend ::
     API.Types.UI.AttractionRecommend.AttractionRecommendReq ->
     Environment.FlowHandler API.Types.UI.AttractionRecommend.AttractionRecommendResp
   )
-postAttractionsRecommend a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.AttractionRecommend.postAttractionsRecommend (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postAttractionsRecommend a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.AttractionRecommend.postAttractionsRecommend (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

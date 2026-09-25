@@ -25,6 +25,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -88,7 +89,7 @@ getPayoutReferralEarnings ::
     Data.Time.Calendar.Day ->
     Environment.FlowHandler API.Types.UI.ReferralPayout.ReferralEarningsRes
   )
-getPayoutReferralEarnings a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutReferralEarnings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPayoutReferralEarnings a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.ReferralPayout.getPayoutReferralEarnings (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postPayoutDeleteVpa ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -97,7 +98,7 @@ postPayoutDeleteVpa ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPayoutDeleteVpa a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutDeleteVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postPayoutDeleteVpa a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.ReferralPayout.postPayoutDeleteVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postPayoutUpdateVpa ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -107,7 +108,7 @@ postPayoutUpdateVpa ::
     API.Types.UI.ReferralPayout.UpdatePayoutVpaReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPayoutUpdateVpa a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutUpdateVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPayoutUpdateVpa a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.ReferralPayout.postPayoutUpdateVpa (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPayoutRegistration ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -116,7 +117,7 @@ getPayoutRegistration ::
     ) ->
     Environment.FlowHandler Domain.Action.UI.Driver.ClearDuesRes
   )
-getPayoutRegistration a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutRegistration (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getPayoutRegistration a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.ReferralPayout.getPayoutRegistration (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postPayoutCreateOrder ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -126,7 +127,7 @@ postPayoutCreateOrder ::
     API.Types.UI.ReferralPayout.CreatePayoutOrderReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPayoutCreateOrder a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.postPayoutCreateOrder (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPayoutCreateOrder a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.ReferralPayout.postPayoutCreateOrder (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPayoutOrderStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -136,4 +137,4 @@ getPayoutOrderStatus ::
     Data.Text.Text ->
     Environment.FlowHandler Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp
   )
-getPayoutOrderStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ReferralPayout.getPayoutOrderStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPayoutOrderStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.ReferralPayout.getPayoutOrderStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

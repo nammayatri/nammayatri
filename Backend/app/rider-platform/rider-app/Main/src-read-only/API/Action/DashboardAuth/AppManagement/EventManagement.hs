@@ -24,6 +24,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -138,14 +139,14 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getEventManagementTicketdashboardTicketplaceDef merchantId city :<|> postEventManagementTicketdashboardTicketplaceCleardraft merchantId city :<|> postEventManagementTicketdashboardTicketplaceSubmitDraft merchantId city :<|> postEventManagementTicketdashboardTicketplaceCancelSubmitDraft merchantId city :<|> postEventManagementTicketdashboardTicketplaceReviewDraft merchantId city :<|> postEventManagementTicketdashboardTicketplaceCreate merchantId city :<|> postEventManagementTicketdashboardTicketplaceUpdateBasicInfo merchantId city :<|> postEventManagementTicketdashboardTicketplaceUpdateService merchantId city :<|> postEventManagementTicketdashboardTicketplaceDelService merchantId city :<|> postEventManagementTicketdashboardTicketplaceServiceUpdateCategory merchantId city :<|> postEventManagementTicketdashboardTicketplaceServiceDelCategory merchantId city :<|> postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople merchantId city :<|> postEventManagementTicketdashboardTicketPlaceCategoryDelPeople merchantId city :<|> getEventManagementTicketdashboardTicketplaceDrafts merchantId city :<|> postEventManagementTicketdashboardTicketplaceRecommend merchantId city
 
 getEventManagementTicketdashboardTicketplaceDef :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
-getEventManagementTicketdashboardTicketplaceDef a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.EventManagement.getEventManagementTicketdashboardTicketplaceDef a4 a3 a1
+getEventManagementTicketdashboardTicketplaceDef a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EventManagement.getEventManagementTicketdashboardTicketplaceDef a4 a3 a1
 
 postEventManagementTicketdashboardTicketplaceCleardraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postEventManagementTicketdashboardTicketplaceCleardraft a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CLEARDRAFT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceCleardraft a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceCleardraft a4 a3 a1
     )
 
 postEventManagementTicketdashboardTicketplaceSubmitDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -153,7 +154,7 @@ postEventManagementTicketdashboardTicketplaceSubmitDraft a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SUBMIT_DRAFT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceSubmitDraft a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceSubmitDraft a4 a3 a1
     )
 
 postEventManagementTicketdashboardTicketplaceCancelSubmitDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -161,7 +162,7 @@ postEventManagementTicketdashboardTicketplaceCancelSubmitDraft a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CANCEL_SUBMIT_DRAFT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceCancelSubmitDraft a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceCancelSubmitDraft a4 a3 a1
     )
 
 postEventManagementTicketdashboardTicketplaceReviewDraft :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> API.Types.Dashboard.AppManagement.EventManagement.ReviewDraftReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -169,7 +170,7 @@ postEventManagementTicketdashboardTicketplaceReviewDraft a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_REVIEW_DRAFT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceReviewDraft a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceReviewDraft a5 a4 a2 a1
     )
 
 postEventManagementTicketdashboardTicketplaceCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Domain.Types.EventManagement.BasicInformation -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -177,7 +178,7 @@ postEventManagementTicketdashboardTicketplaceCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_CREATE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceCreate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceCreate a4 a3 a1
     )
 
 postEventManagementTicketdashboardTicketplaceUpdateBasicInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.EventManagement.BasicInformation -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -185,7 +186,7 @@ postEventManagementTicketdashboardTicketplaceUpdateBasicInfo a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_BASIC_INFO" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceUpdateBasicInfo a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceUpdateBasicInfo a5 a4 a2 a1
     )
 
 postEventManagementTicketdashboardTicketplaceUpdateService :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Domain.Types.EventManagement.TicketServiceDef -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -193,7 +194,7 @@ postEventManagementTicketdashboardTicketplaceUpdateService a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_UPDATE_SERVICE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceUpdateService a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceUpdateService a5 a4 a2 a1
     )
 
 postEventManagementTicketdashboardTicketplaceDelService :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -201,7 +202,7 @@ postEventManagementTicketdashboardTicketplaceDelService a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_DEL_SERVICE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceDelService a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceDelService a5 a4 a2 a1
     )
 
 postEventManagementTicketdashboardTicketplaceServiceUpdateCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Domain.Types.EventManagement.ServiceCategoryDef -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -209,7 +210,7 @@ postEventManagementTicketdashboardTicketplaceServiceUpdateCategory a6 a5 a4 a3 a
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_UPDATE_CATEGORY" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceServiceUpdateCategory a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceServiceUpdateCategory a6 a5 a3 a2 a1
     )
 
 postEventManagementTicketdashboardTicketplaceServiceDelCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -217,7 +218,7 @@ postEventManagementTicketdashboardTicketplaceServiceDelCategory a6 a5 a4 a3 a2 a
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_SERVICE_DEL_CATEGORY" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceServiceDelCategory a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceServiceDelCategory a6 a5 a3 a2 a1
     )
 
 postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Domain.Types.EventManagement.ServicePeopleCategoryDef -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -225,7 +226,7 @@ postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople a6 a5 a4 a3 a2
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_UPDATE_PEOPLE" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketPlaceCategoryUpdatePeople a6 a5 a3 a2 a1
     )
 
 postEventManagementTicketdashboardTicketPlaceCategoryDelPeople :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory -> Environment.FlowHandler Domain.Types.EventManagement.TicketPlaceDef)
@@ -233,16 +234,16 @@ postEventManagementTicketdashboardTicketPlaceCategoryDelPeople a6 a5 a4 a3 a2 a1
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKET_PLACE_CATEGORY_DEL_PEOPLE" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketPlaceCategoryDelPeople a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketPlaceCategoryDelPeople a6 a5 a3 a2 a1
     )
 
 getEventManagementTicketdashboardTicketplaceDrafts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> Domain.Types.DraftTicketChange.DraftStatus -> Environment.FlowHandler [Domain.Types.EventManagement.TicketPlaceDef])
-getEventManagementTicketdashboardTicketplaceDrafts a6 a5 _a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.EventManagement.getEventManagementTicketdashboardTicketplaceDrafts a6 a5 a3 a2 a1
+getEventManagementTicketdashboardTicketplaceDrafts a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.EventManagement.getEventManagementTicketdashboardTicketplaceDrafts a6 a5 a3 a2 a1
 
 postEventManagementTicketdashboardTicketplaceRecommend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> [API.Types.Dashboard.AppManagement.EventManagement.RecommendToggleReq] -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postEventManagementTicketdashboardTicketplaceRecommend a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EVENT_MANAGEMENT/POST_EVENT_MANAGEMENT_TICKETDASHBOARD_TICKETPLACE_RECOMMEND" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceRecommend a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EventManagement.postEventManagementTicketdashboardTicketplaceRecommend a4 a3 a1
     )

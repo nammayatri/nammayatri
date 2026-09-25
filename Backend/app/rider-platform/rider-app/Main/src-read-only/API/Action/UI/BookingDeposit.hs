@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -60,7 +61,7 @@ getBookingDepositStatus ::
     Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
     Environment.FlowHandler API.Types.UI.BookingDeposit.BookingDepositStatusResp
   )
-getBookingDepositStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BookingDeposit.getBookingDepositStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getBookingDepositStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.BookingDeposit.getBookingDepositStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postBookingDepositPaymentIntent ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -70,7 +71,7 @@ postBookingDepositPaymentIntent ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.BookingDeposit.BookingDepositPaymentResp
   )
-postBookingDepositPaymentIntent a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BookingDeposit.postBookingDepositPaymentIntent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postBookingDepositPaymentIntent a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.BookingDeposit.postBookingDepositPaymentIntent (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postBookingDepositRefund ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -79,4 +80,4 @@ postBookingDepositRefund ::
     Kernel.Types.Id.Id Domain.Types.Booking.Booking ->
     Environment.FlowHandler API.Types.UI.BookingDeposit.BookingDepositStatusResp
   )
-postBookingDepositRefund a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.BookingDeposit.postBookingDepositRefund (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postBookingDepositRefund a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.BookingDeposit.postBookingDepositRefund (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

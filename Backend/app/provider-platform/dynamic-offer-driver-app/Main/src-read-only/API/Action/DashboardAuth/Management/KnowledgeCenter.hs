@@ -18,6 +18,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -69,17 +70,17 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getKnowledgeCenterGetDocument merchantId city :<|> getKnowledgeCenterSopList merchantId city :<|> postKnowledgeCenterSopUpload merchantId city :<|> putKnowledgeCenterSopTypeRename merchantId city :<|> deleteKnowledgeCenterSopDocument merchantId city :<|> deleteKnowledgeCenterSopType merchantId city
 
 getKnowledgeCenterGetDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.KnowledgeCenter.GetKnowledgeCenterDocumentResp)
-getKnowledgeCenterGetDocument a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.KnowledgeCenter.getKnowledgeCenterGetDocument a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+getKnowledgeCenterGetDocument a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.KnowledgeCenter.getKnowledgeCenterGetDocument a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
 
 getKnowledgeCenterSopList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterSopListResp)
-getKnowledgeCenterSopList a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.KnowledgeCenter.getKnowledgeCenterSopList a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+getKnowledgeCenterSopList a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.KnowledgeCenter.getKnowledgeCenterSopList a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
 
 postKnowledgeCenterSopUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterUploadImageReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterUploadImageResp)
 postKnowledgeCenterSopUpload a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/POST_KNOWLEDGE_CENTER_SOP_UPLOAD" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.KnowledgeCenter.postKnowledgeCenterSopUpload a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.KnowledgeCenter.postKnowledgeCenterSopUpload a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
 
 putKnowledgeCenterSopTypeRename :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.KnowledgeCenter.KnowledgeCenterRenameSopTypeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -87,7 +88,7 @@ putKnowledgeCenterSopTypeRename a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/PUT_KNOWLEDGE_CENTER_SOP_TYPE_RENAME" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.KnowledgeCenter.putKnowledgeCenterSopTypeRename a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.KnowledgeCenter.putKnowledgeCenterSopTypeRename a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
 
 deleteKnowledgeCenterSopDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -95,7 +96,7 @@ deleteKnowledgeCenterSopDocument a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/DELETE_KNOWLEDGE_CENTER_SOP_DOCUMENT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.KnowledgeCenter.deleteKnowledgeCenterSopDocument a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.KnowledgeCenter.deleteKnowledgeCenterSopDocument a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
     )
 
 deleteKnowledgeCenterSopType :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -103,5 +104,5 @@ deleteKnowledgeCenterSopType a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/KNOWLEDGE_CENTER/DELETE_KNOWLEDGE_CENTER_SOP_TYPE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.KnowledgeCenter.deleteKnowledgeCenterSopType a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.KnowledgeCenter.deleteKnowledgeCenterSopType a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
     )

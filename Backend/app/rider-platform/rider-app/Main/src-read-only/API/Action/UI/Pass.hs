@@ -28,6 +28,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -222,7 +223,7 @@ getMultimodalPassAvailablePasses ::
     Kernel.Prelude.Maybe Kernel.External.Types.Language ->
     Environment.FlowHandler [API.Types.UI.Pass.PassInfoAPIEntity]
   )
-getMultimodalPassAvailablePasses a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassAvailablePasses (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalPassAvailablePasses a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.getMultimodalPassAvailablePasses (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPassSelect ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -237,7 +238,7 @@ postMultimodalPassSelect ::
     Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassSelect a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
+postMultimodalPassSelect a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.Pass.postMultimodalPassSelect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -248,7 +249,7 @@ postMultimodalPassV2Select ::
     API.Types.UI.Pass.PassSelectReq ->
     Environment.FlowHandler API.Types.UI.Pass.PassSelectionAPIEntity
   )
-postMultimodalPassV2Select a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassV2Select (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalPassV2Select a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.postMultimodalPassV2Select (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getMultimodalPassList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -262,7 +263,7 @@ getMultimodalPassList ::
     Kernel.Prelude.Maybe Domain.Types.PurchasedPass.StatusType ->
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassAPIEntity]
   )
-getMultimodalPassList a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+getMultimodalPassList a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.Pass.getMultimodalPassList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
 
 postMultimodalPassVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -272,7 +273,7 @@ postMultimodalPassVerify ::
     API.Types.UI.Pass.PassVerifyReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalPassVerify a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalPassVerify a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalPassSwitchDeviceId ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -281,7 +282,7 @@ postMultimodalPassSwitchDeviceId ::
     API.Types.UI.Pass.PassSwitchDeviceIdReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalPassSwitchDeviceId a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSwitchDeviceId (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalPassSwitchDeviceId a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.postMultimodalPassSwitchDeviceId (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalPassTransactions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -292,7 +293,7 @@ getMultimodalPassTransactions ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler [API.Types.UI.Pass.PurchasedPassTransactionAPIEntity]
   )
-getMultimodalPassTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getMultimodalPassTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.Pass.getMultimodalPassTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postMultimodalPassActivateToday ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -302,7 +303,7 @@ postMultimodalPassActivateToday ::
     Kernel.Prelude.Maybe Data.Time.Day ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalPassActivateToday a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalPassActivateToday a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassActivateToday (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMultimodalPassUploadProfilePicture ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -314,7 +315,7 @@ postMultimodalPassUploadProfilePicture ::
     IssueManagement.Common.UI.Issue.IssueMediaUploadReq ->
     Environment.FlowHandler IssueManagement.Common.UI.Issue.IssueMediaUploadRes
   )
-postMultimodalPassUploadProfilePicture a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalPassUploadProfilePicture a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePicture (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalPassUploadProfilePictureV1 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -323,7 +324,7 @@ postMultimodalPassUploadProfilePictureV1 ::
     API.Types.UI.Pass.PassUploadProfilePictureReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalPassUploadProfilePictureV1 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePictureV1 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postMultimodalPassUploadProfilePictureV1 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.postMultimodalPassUploadProfilePictureV1 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getMultimodalPassPhoto ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -332,7 +333,7 @@ getMultimodalPassPhoto ::
     Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
     Environment.FlowHandler Data.Text.Text
   )
-getMultimodalPassPhoto a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.getMultimodalPassPhoto (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getMultimodalPassPhoto a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Pass.getMultimodalPassPhoto (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalPassSetPrefSrcAndDest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -342,4 +343,4 @@ postMultimodalPassSetPrefSrcAndDest ::
     API.Types.UI.Pass.SetPassPrefSrcAndDestReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalPassSetPrefSrcAndDest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Pass.postMultimodalPassSetPrefSrcAndDest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMultimodalPassSetPrefSrcAndDest a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Pass.postMultimodalPassSetPrefSrcAndDest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

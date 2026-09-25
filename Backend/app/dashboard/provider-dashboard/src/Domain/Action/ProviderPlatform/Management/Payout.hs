@@ -88,7 +88,7 @@ getPayoutPayoutReferralHistory ::
   Environment.Flow ApiPayout.PayoutReferralHistoryRes
 getPayoutPayoutReferralHistory merchantShortId opCity apiTokenInfo areActivatedRidesOnly customerPhoneNo driverId driverPhoneCountryCode driverPhoneNo from limit offset to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutReferralHistory) areActivatedRidesOnly customerPhoneNo driverId driverPhoneCountryCode driverPhoneNo from limit offset to
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutReferralHistory) areActivatedRidesOnly customerPhoneNo driverId driverPhoneCountryCode driverPhoneNo from limit offset to (Just apiTokenInfo.personId.getId)
 
 postPayoutPayoutRetry ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -174,7 +174,7 @@ postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
-    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutScheduledPayoutConfigUpsert) req
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutScheduledPayoutConfigUpsert) (Just apiTokenInfo.personId.getId) req
 
 getPayoutPayoutOrder ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -184,4 +184,4 @@ getPayoutPayoutOrder ::
   Environment.Flow PayoutTypes.PayoutOrderResp
 getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId (Just apiTokenInfo.personId.getId)

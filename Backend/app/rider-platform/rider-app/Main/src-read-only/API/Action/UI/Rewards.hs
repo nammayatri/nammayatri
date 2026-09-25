@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -47,7 +48,7 @@ handler :: Environment.FlowServer API
 handler = getRewards :<|> postRewardsClaim :<|> postRewardsRedeemed
 
 getRewards :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.Rewards.RewardUnlockSummary])
-getRewards a1 = withFlowHandlerAPI $ Domain.Action.UI.Rewards.getRewards (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getRewards a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Rewards.getRewards (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postRewardsClaim ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -56,7 +57,7 @@ postRewardsClaim ::
     Kernel.Types.Id.Id Domain.Types.RewardUnlock.RewardUnlock ->
     Environment.FlowHandler API.Types.UI.Rewards.ClaimCouponResp
   )
-postRewardsClaim a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Rewards.postRewardsClaim (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postRewardsClaim a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Rewards.postRewardsClaim (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postRewardsRedeemed ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -65,4 +66,4 @@ postRewardsRedeemed ::
     Kernel.Types.Id.Id Domain.Types.RewardUnlock.RewardUnlock ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postRewardsRedeemed a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Rewards.postRewardsRedeemed (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postRewardsRedeemed a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Rewards.postRewardsRedeemed (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

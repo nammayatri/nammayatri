@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -36,7 +37,7 @@ postMapsAutoComplete a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/MAPS/POST_MAPS_AUTO_COMPLETE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.RideBooking.Maps.postMapsAutoComplete a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Maps.postMapsAutoComplete a5 a4 a2 a1
     )
 
 postMapsGetPlaceName :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Maps.GetPlaceNameReq -> Environment.FlowHandler Domain.Action.UI.Maps.GetPlaceNameResp)
@@ -44,5 +45,5 @@ postMapsGetPlaceName a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/MAPS/POST_MAPS_GET_PLACE_NAME" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.RideBooking.Maps.postMapsGetPlaceName a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Maps.postMapsGetPlaceName a5 a4 a2 a1
     )

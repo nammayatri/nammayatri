@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -53,7 +54,7 @@ handler :: Environment.FlowServer API
 handler = getFollowRide :<|> postShareRide :<|> getFollowRideECStatus :<|> getFollowRideCustomerDetails
 
 getFollowRide :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FollowRide.Followers])
-getFollowRide a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getFollowRide a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.FollowRide.getFollowRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postShareRide ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -62,7 +63,7 @@ postShareRide ::
     API.Types.UI.FollowRide.ShareRideReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postShareRide a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.postShareRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postShareRide a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FollowRide.postShareRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getFollowRideECStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -71,7 +72,7 @@ getFollowRideECStatus ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler API.Types.UI.FollowRide.EmergencyContactsStatusRes
   )
-getFollowRideECStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRideECStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getFollowRideECStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FollowRide.getFollowRideECStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getFollowRideCustomerDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -80,4 +81,4 @@ getFollowRideCustomerDetails ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler API.Types.UI.FollowRide.FollowRideCustomerDetailsRes
   )
-getFollowRideCustomerDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRideCustomerDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getFollowRideCustomerDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FollowRide.getFollowRideCustomerDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

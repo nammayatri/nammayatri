@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -62,4 +63,4 @@ getSubscriptionTransactions ::
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
     Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse
   )
-getSubscriptionTransactions a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SubscriptionTransaction.getSubscriptionTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
+getSubscriptionTransactions a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a8) $ Domain.Action.UI.SubscriptionTransaction.getSubscriptionTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1

@@ -22,6 +22,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -42,5 +43,5 @@ postConfirmRideSearchQuotes a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/CONFIRM/POST_CONFIRM_RIDE_SEARCH_QUOTES" a6 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.RideBooking.Confirm.postConfirmRideSearchQuotes a8 a7 a5 a4 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a6)) a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.RideBooking.Confirm.postConfirmRideSearchQuotes a8 a7 a5 a4 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a6)) a3 a2 a1
     )

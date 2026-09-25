@@ -26,6 +26,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.AppManagement.FRFSTicketService.API)
@@ -56,10 +57,10 @@ getFRFSTicketServiceCustomerFrfsSearchQuote :: (Kernel.Types.Id.ShortId Domain.T
 getFRFSTicketServiceCustomerFrfsSearchQuote a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsSearchQuote a4 a3 a2 a1
 
 postFRFSTicketServiceCustomerFrfsQuoteV2Confirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)
-postFRFSTicketServiceCustomerFrfsQuoteV2Confirm a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.postFRFSTicketServiceCustomerFrfsQuoteV2Confirm a7 a6 a5 a4 a3 a2 a1
+postFRFSTicketServiceCustomerFrfsQuoteV2Confirm a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.postFRFSTicketServiceCustomerFrfsQuoteV2Confirm a7 a6 a5 a4 a3 a2 a1
 
 getFRFSTicketServiceCustomerFrfsBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes)
-getFRFSTicketServiceCustomerFrfsBookingStatus a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsBookingStatus a5 a4 a3 a2 a1
+getFRFSTicketServiceCustomerFrfsBookingStatus a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a1) $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsBookingStatus a5 a4 a3 a2 a1
 
 getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSBookingPaymentAttemptsAPIRes)
 getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.FRFSTicketService.getFRFSTicketServiceCustomerFrfsBookingPaymentAttempts a4 a3 a2 a1

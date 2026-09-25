@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -58,7 +59,7 @@ postDriverDocumentRegister ::
     API.Types.ProviderPlatform.Management.DriverRegistration.DocumentRegisterReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverDocumentRegister a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverDocument.postDriverDocumentRegister (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverDocumentRegister a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverDocument.postDriverDocumentRegister (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverDocumentGet ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -70,4 +71,4 @@ getDriverDocumentGet ::
     Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.EntityType ->
     Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.GetDocumentResponse
   )
-getDriverDocumentGet a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverDocument.getDriverDocumentGet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getDriverDocumentGet a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.DriverDocument.getDriverDocumentGet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

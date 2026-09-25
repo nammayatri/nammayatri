@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -52,7 +53,7 @@ postDriverProfileUpdateAuthDataTriggerOTP ::
     API.Types.UI.DriverProfile.TriggerUpdateAuthOTPReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverProfileUpdateAuthDataTriggerOTP a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfile.postDriverProfileUpdateAuthDataTriggerOTP (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverProfileUpdateAuthDataTriggerOTP a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverProfile.postDriverProfileUpdateAuthDataTriggerOTP (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postDriverProfileUpdateAuthDataVerifyOTP ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -62,4 +63,4 @@ postDriverProfileUpdateAuthDataVerifyOTP ::
     API.Types.UI.DriverProfile.VerifyUpdateAuthOTPReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverProfileUpdateAuthDataVerifyOTP a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfile.postDriverProfileUpdateAuthDataVerifyOTP (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverProfileUpdateAuthDataVerifyOTP a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverProfile.postDriverProfileUpdateAuthDataVerifyOTP (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

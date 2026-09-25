@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -48,7 +49,7 @@ postFilesUpload ::
     FileManagement.Common.UI.File.FileUploadReq ->
     Environment.FlowHandler FileManagement.Common.UI.File.FileUploadRes
   )
-postFilesUpload a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.File.postFilesUpload (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postFilesUpload a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.File.postFilesUpload (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getFilesMedia :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
-getFilesMedia a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.File.getFilesMedia (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getFilesMedia a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.File.getFilesMedia (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -36,7 +37,7 @@ handler :: Environment.FlowServer API
 handler = getDriverFavorites :<|> postFavoritesRemove
 
 getDriverFavorites :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FavouriteDriver.FavouriteDriverResp])
-getDriverFavorites a1 = withFlowHandlerAPI $ Domain.Action.UI.FavouriteDriver.getDriverFavorites (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getDriverFavorites a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.FavouriteDriver.getDriverFavorites (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postFavoritesRemove ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -45,4 +46,4 @@ postFavoritesRemove ::
     Data.Text.Text ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postFavoritesRemove a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FavouriteDriver.postFavoritesRemove (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postFavoritesRemove a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FavouriteDriver.postFavoritesRemove (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

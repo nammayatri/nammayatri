@@ -3,6 +3,12 @@ imports:
   File: Dashboard.Common
 
 module: MediaFileDocument
+# requestorId applied for each api by default
+# for overwrite helperApiExtra/helperApi can be specified for each api separately
+default:
+  helperApiExtra:
+    mandatoryQuery:
+      - requestorId: Text
 
 apis:
   - POST:
@@ -12,16 +18,6 @@ apis:
         type: UploadMediaFileDocumentReq
       response:
         type: MediaFileDocumentResp
-      helperApi:
-        - POST:
-            endpoint: /uploadLink
-            auth: ApiAuthV2
-            request:
-              type: UploadMediaFileDocumentReq
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: MediaFileDocumentResp
   - POST:
       endpoint: /confirm
       auth: ApiAuthV2
@@ -29,16 +25,6 @@ apis:
         type: MediaFileDocumentReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /confirm
-            auth: ApiAuthV2
-            request:
-              type: MediaFileDocumentReq
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: APISuccess
   # Delete a MediaFile (removes the S3 object and the row).
   - POST:
       endpoint: /delete
@@ -47,16 +33,6 @@ apis:
         type: MediaFileDocumentReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /delete
-            auth: ApiAuthV2
-            request:
-              type: MediaFileDocumentReq
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: APISuccess
   # Resolve a MediaFile id to a presigned download URL.
   - GET:
       endpoint: /downloadLink
@@ -65,15 +41,6 @@ apis:
         - fileId: Text
       response:
         type: MediaFileDocumentResp
-      helperApi:
-        - GET:
-            endpoint: /downloadLink
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - fileId: Text
-              - requestorId: Text
-            response:
-              type: MediaFileDocumentResp
 
 types:
   UploadMediaFileDocumentReq:

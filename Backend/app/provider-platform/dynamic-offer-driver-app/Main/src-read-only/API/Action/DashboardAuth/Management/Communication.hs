@@ -20,6 +20,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -96,21 +97,21 @@ postCommunicationCreate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/COMMUNICATION/POST_COMMUNICATION_CREATE" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Communication.postCommunicationCreate a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Communication.postCommunicationCreate a5 a4 a2 a1
     )
 
 getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationListType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
-getCommunicationList a12 a11 _a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getCommunicationList a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.Communication.getCommunicationList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 getCommunicationInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationInfoResponse)
-getCommunicationInfo a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationInfo a4 a3 a1
+getCommunicationInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Communication.getCommunicationInfo a4 a3 a1
 
 postCommunicationSend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Communication -> API.Types.ProviderPlatform.Management.Communication.SendCommunicationRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postCommunicationSend a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/COMMUNICATION/POST_COMMUNICATION_SEND" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Communication.postCommunicationSend a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Communication.postCommunicationSend a5 a4 a2 a1
     )
 
 putCommunicationEdit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Communication -> API.Types.ProviderPlatform.Management.Communication.EditCommunicationRequest -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -118,7 +119,7 @@ putCommunicationEdit a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/COMMUNICATION/PUT_COMMUNICATION_EDIT" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Communication.putCommunicationEdit a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Communication.putCommunicationEdit a5 a4 a2 a1
     )
 
 deleteCommunicationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -126,14 +127,14 @@ deleteCommunicationDelete a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/COMMUNICATION/DELETE_COMMUNICATION_DELETE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.Communication.deleteCommunicationDelete a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Communication.deleteCommunicationDelete a4 a3 a1
     )
 
 getCommunicationDeliveryStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationDeliveryStatusType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.DeliveryStatusResponse)
-getCommunicationDeliveryStatus a8 a7 _a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationDeliveryStatus a8 a7 a5 a4 a3 a2 a1
+getCommunicationDeliveryStatus a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.Management.Communication.getCommunicationDeliveryStatus a8 a7 a5 a4 a3 a2 a1
 
 getCommunicationRecipients :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationRoleType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.RecipientsResponse)
-getCommunicationRecipients a10 a9 _a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationRecipients a10 a9 a7 a6 a5 a4 a3 a2 a1
+getCommunicationRecipients a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.Communication.getCommunicationRecipients a10 a9 a7 a6 a5 a4 a3 a2 a1
 
 getCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType -> API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationTemplateResponse)
-getCommunicationTemplate a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationTemplate a5 a4 a2 a1
+getCommunicationTemplate a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Communication.getCommunicationTemplate a5 a4 a2 a1
