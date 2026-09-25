@@ -48,6 +48,8 @@ Ride:
       end: UTCTime
     PickupBehaviour:
       enum: "REACHED_PICKUP,PROGRESSING,DETOURING,STALLED,MOVING_AWAY,GPS_DARK"
+    ScheduledAcceptanceMode:
+      enum: "AcceptedAsScheduled,AcceptedFromBroadcast,AssignedByOps,AssignedByFleetOwner"
   fields:
     id: Id Ride
     bookingId: Id Booking
@@ -133,6 +135,7 @@ Ride:
     cancellationConsequenceRowIdIfCancelled: Maybe Text
     cancellationFaultVerdict: Maybe Text
     cancellationFaultRule: Maybe Text
+    scheduledAcceptanceMode: Maybe ScheduledAcceptanceMode # how this scheduled ride's driver assignment came to be; authoritative, stamped once at accept time
     tipAmount: Maybe HighPrecMoney
     passedThroughDestination: Maybe Bool
     deliveryFileIds: Maybe [Id MediaFile]

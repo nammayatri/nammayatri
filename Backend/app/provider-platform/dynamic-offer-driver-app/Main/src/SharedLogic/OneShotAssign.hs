@@ -131,7 +131,7 @@ oneShotAssign OneShotAssignReq {..} = do
     -- confirm errHandler, or we'd strand an orphaned TRIP_ASSIGNED booking.
     postBookingResult <- withTryCatch "oneShotAssign:postBooking" $ do
       mFleetAssociation <- QFDA.findByDriverId driver.id True
-      (ride, rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True
+      (ride, rideDetails, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) True True Nothing
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) (Just transporterConfig)
       -- Everything the payload builder would otherwise re-read is already in hand;
       -- rideDetails in particular would be a replica read of a row created

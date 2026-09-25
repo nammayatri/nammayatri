@@ -5219,7 +5219,7 @@ postDriverFleetScheduledBookingAssign merchantShortId opCity fleetOwnerId Common
   -- Driver's selected service tiers must include booking's service tier (drivers can downgrade variant)
   vehicle <- QVehicle.findById driverPersonId >>= fromMaybeM (VehicleNotFound driverPersonId.getId)
   unless (booking.vehicleServiceTier `elem` vehicle.selectedServiceTiers) $ throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
-  void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId)
+  void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCityId) clientId (Id bookingId) (Just DRide.AssignedByFleetOwner)
   pure Success
 
 ----------------------------------------------------------------------
@@ -5315,7 +5315,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
   when newBooking.isScheduled $ void $ SBooking.addScheduledBookingInRedis newBooking
 
   -- 8. Assign to new driver immediately (reuse merchant, transporterConfig, newBooking to avoid duplicate queries)
-  void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId (Just newBooking)
+  void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId (Just newBooking) (Just DRide.AssignedByFleetOwner)
 
   pure Success
 

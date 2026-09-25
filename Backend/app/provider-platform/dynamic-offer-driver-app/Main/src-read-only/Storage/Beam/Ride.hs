@@ -107,6 +107,7 @@ data RideT f = RideT
     rideEndedBy :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy),
     rideTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     safetyAlertTriggered :: B.C f Kernel.Prelude.Bool,
+    scheduledAcceptanceMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.ScheduledAcceptanceMode),
     shortId :: B.C f Kernel.Prelude.Text,
     sosId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

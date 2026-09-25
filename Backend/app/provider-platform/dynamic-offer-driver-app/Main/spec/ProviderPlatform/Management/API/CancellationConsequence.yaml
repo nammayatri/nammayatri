@@ -85,6 +85,7 @@ types:
     - faultRule: Maybe Text
     - cancelledBy: Maybe Text
     - tripCategory: Maybe Text
+    - scheduledAcceptanceMode: Maybe Text # constructor name of Domain.Types.Ride.ScheduledAcceptanceMode; matches SharedLogic.CancellationSignals.effectiveAcceptanceMode, not booking.isScheduled directly
     - isAutoAccepted: Maybe Bool
     - vehicleServiceTier: Maybe Text
     - area: Maybe Text

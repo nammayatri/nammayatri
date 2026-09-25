@@ -175,6 +175,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.StclMembership as DStclMembership
@@ -2016,7 +2017,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                 acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats transporterConfig (Just oneShotAssignAction)
               -- Static-offer: the booking already exists (created at confirm) and the ride is
               -- initialized inside the accept, so it returns the assigned-ride payload too.
-              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing
+              DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing
             when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             cityLabel <- SML.getCityLabel merchantOpCityId
@@ -2211,8 +2212,8 @@ releaseOfferHoldsOnReject merchantId transporterConfig sReqFD searchTryId = do
         pure $ any (\srfd -> srfd.id /= sReqFD.id && srfd.fleetOwnerId == Just fleetOwnerId) activeSRFDs
     unless sameFleetStillActive $ FWallet.removeOfferHolds holdOwnerId searchTryId.getId
 
-acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Flow ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
-acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking = do
+acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> TransporterConfig -> Maybe DRB.Booking -> Maybe DRide.ScheduledAcceptanceMode -> Flow ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
+acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode = do
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
@@ -2250,11 +2251,11 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
             CS.markBookingAssignmentCompleted booking.id
             void $ addScheduledBookingInRedis booking
             throwM exc
-        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False
+        res <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False mbForcedAcceptanceMode
         -- gate write stays under the lock so concurrent accepts/releases cannot lose the min
         updateLatestScheduledAsMin booking
         pure res
-      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False
+      else initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id) False False mbForcedAcceptanceMode
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id (mkPrice (Just quote.currency) quote.estimatedFare) (Just transporterConfig)
@@ -3433,8 +3434,9 @@ acceptScheduledBookingWithPreFetched ::
   SP.Person ->
   Maybe Text ->
   Maybe DRB.Booking ->
+  Maybe DRide.ScheduledAcceptanceMode ->
   Flow APISuccess
-acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking = do
+acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking mbForcedAcceptanceMode = do
   -- overlap enforced by the shared accept guard (ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
   nowT <- getCurrentTime
   let scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT
@@ -3461,22 +3463,25 @@ acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver c
     unless creditsValid $
       throwError (InvalidRequest "Your ride credits expire before this booking's pickup time. Recharge to accept it.")
   mbActiveSearchTry <- QST.findActiveTryByQuoteId booking.quoteId
-  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking
+  void $ acceptStaticOfferDriverRequest mbActiveSearchTry driver booking.quoteId Nothing merchant clientId transporterConfig mbBooking mbForcedAcceptanceMode
   pure Success
 
 acceptScheduledBooking ::
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
   Id DRB.Booking ->
+  -- | mbForcedAcceptanceMode: Nothing for a driver's own self-accept; Just AssignedByOps /
+  -- Just AssignedByFleetOwner when a dashboard call site is assigning on the driver's behalf.
+  Maybe DRide.ScheduledAcceptanceMode ->
   Flow APISuccess
-acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = do
+acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId mbForcedAcceptanceMode = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   -- the list-disable flag also gates assignment, so one switch turns the board feature fully off
   when transporterConfig.disableListScheduledBookingAPI $ throwError (InvalidRequest "Scheduled booking assignment is disabled")
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   booking <- runInReplica $ QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId (Just booking)
+  acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId (Just booking) mbForcedAcceptanceMode
 
 clearDriverFeeWithCreate ::
   (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl], Finance.HasActorInfo m r) =>

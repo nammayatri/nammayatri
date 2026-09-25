@@ -324,3 +324,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN distance_to_pickup double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_distance_calculation_failed boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN scheduled_acceptance_mode text ;

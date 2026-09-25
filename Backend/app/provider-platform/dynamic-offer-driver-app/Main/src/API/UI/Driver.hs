@@ -427,7 +427,7 @@ listScheduledBookings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOp
 listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc = withFlowHandlerAPI $ DDriver.listScheduledBookings (personId, merchantId, merchantOpCityId) mbLimit mbOffset mbFromDay mbToDay mbTripCategory mbDLoc
 
 acceptScheduledBooking :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Id DRB.Booking -> FlowHandler APISuccess
-acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId
+acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId = withFlowHandlerAPI $ DDriver.acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId bookingId Nothing
 
 getInformationV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> Maybe Bool -> DDriver.UpdateProfileInfoPoints -> FlowHandler DDriver.DriverInformationRes
 getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant context serviceName mbFleetInfo req

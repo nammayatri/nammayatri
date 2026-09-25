@@ -459,7 +459,7 @@ postScheduledBookingAssign merchantShortId opCity transactionId _mbRequestorId r
   vehicle <- QVehicle.findById driverPersonId >>= fromMaybeM (VehicleNotFound driverPersonId.getId)
   unless (booking.vehicleServiceTier `elem` vehicle.selectedServiceTiers) $
     throwError (InvalidRequest "Booking's service tier is not in driver's selected service tiers")
-  void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCity.id) req.clientId booking.id
+  void $ UIDriver.acceptScheduledBooking (driverPersonId, merchant.id, merchantOpCity.id) req.clientId booking.id (Just DRide.AssignedByOps)
   pure APISuccess.Success
 
 postScheduledBookingUnassign ::

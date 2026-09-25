@@ -19,11 +19,14 @@
 -- the inputs of all of them at once.
 module SharedLogic.CancellationSignals where
 
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.BehaviourManagement.PickupStallState as PickupStallState
+import qualified SharedLogic.DriverPool as DP
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverQuote as QDQ
 
@@ -98,6 +101,18 @@ buildCancellationSignals req = do
       pickupFaultSeconds = maybe 0 (.faultSeconds) mbPickupJourney
       pickupDarkSeconds = maybe 0 (.darkSeconds) mbPickupJourney
   pure CancellationSignals {..}
+
+-- | How this ride's driver assignment came to be, for a scheduled booking; Nothing for a
+-- non-scheduled booking. Falls back to a best-effort reconstruction (from ride.createdAt and
+-- today's config) for a ride that predates the scheduledAcceptanceMode column.
+effectiveAcceptanceMode :: SRB.Booking -> DRide.Ride -> DTC.TransporterConfig -> Maybe DRide.ScheduledAcceptanceMode
+effectiveAcceptanceMode booking ride transporterConfig
+  | not booking.isScheduled = Nothing
+  | otherwise = Just $ fromMaybe reconstructed ride.scheduledAcceptanceMode
+  where
+    reconstructed
+      | DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime ride.createdAt = DRide.AcceptedFromBroadcast
+      | otherwise = DRide.AcceptedAsScheduled
 
 -- | The one definition of "the driver attempted to call the rider" — every cancellation
 -- consumer (tags, coins, dues, penalty preview) must derive from this count.
