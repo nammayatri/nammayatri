@@ -14,6 +14,7 @@
 
 module SharedLogic.Analytics where
 
+import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -277,6 +278,16 @@ updateOperatorAnalyticsTotalRequestCountBatch driverIds transporterConfig = do
   -- Update operator stats in batch (both overall and daily)
   unless (null operatorDriverPairs) $
     SFleetOperatorStats.incrementTotalRequestCountBatch operatorDriverPairs transporterConfig
+
+  -- Keep the all-time Redis TOTAL_REQUEST_COUNT in step with the DB counter above. Nothing else
+  -- writes this key: updateTotalRequestCountRedisKey is gated on incrementTotalRequestCount,
+  -- which is False at every call site, so it was only ever populated by a ClickHouse rebuild.
+  -- Meanwhile ACCEPTATION_COUNT is incremented live on every accept, so acceptanceRate
+  -- (acceptations / totalRequests) drifted upward between rebuilds and could exceed 100%.
+  -- One request is dispatched per driver, so an operator's increment is its number of drivers.
+  forM_ (Map.toList $ Map.fromListWith (+) [(oa.operatorId, 1 :: Integer) | oa <- operatorAssociations]) $ \(operatorId, requestCount) -> do
+    let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
+    ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId totalRequestCountKey Redis.incrby requestCount
 
   -- Fetch all fleet associations for drivers in batch
   fleetAssociations <- QFDA.findAllByDriverIds driverIds

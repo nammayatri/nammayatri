@@ -1555,7 +1555,7 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
           driver <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           SOnboardingComms.setOnboardingAs transporterConfig driver DI.FLEET_DRIVER
           SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $
-            FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId)
+            FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
   return Success
 
 -- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on
