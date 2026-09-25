@@ -47,7 +47,7 @@ data EncryptedRes = EncryptedRes
 data GetFareItem = GetFareItem
   { fromStationId :: Maybe T.Text,
     toStationId :: Maybe T.Text,
-    fareBeforeDiscount :: Double,
+    fareBeforeDiscount :: Maybe Double,
     discountAmount :: Double,
     fareAfterDiscount :: Double,
     cgst :: Double,
@@ -122,7 +122,7 @@ getFare integrationBPPConfig config _riderId fareReq = do
     (fareItem : _) -> do
       if fareItem.returnCode == "0"
         then do
-          let originalPrice = HighPrecMoney $ toRational fareItem.fareBeforeDiscount
+          let originalPrice = HighPrecMoney $ toRational $ fromMaybe (fareItem.finalFare + fareItem.discountAmount) fareItem.fareBeforeDiscount
               offeredPrice = HighPrecMoney $ toRational fareItem.finalFare
           logDebug $ "[CMRLV2:GetFare] Using API values - fareBeforeDiscount: " <> T.pack (show fareItem.fareBeforeDiscount) <> ", finalFare: " <> T.pack (show fareItem.finalFare) <> ", discountAmount: " <> T.pack (show fareItem.discountAmount)
           return
