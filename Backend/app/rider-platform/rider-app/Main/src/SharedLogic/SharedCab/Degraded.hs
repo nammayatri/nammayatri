@@ -34,6 +34,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Booking (shared, tryWithBookingLock)
+import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable)
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
@@ -87,7 +88,7 @@ isMarkerAlive bookingId = isJust <$> shared (Redis.get @DegradedBoarding (degrad
 -- never ended; a poll that finds the lock taken leaves it to the next poll.
 -- TODO(review MED 3, after merge): a sweep for degraded rides whose rider never polls again; they stay INPROGRESS.
 expireDegradedBoardingIfNeeded ::
-  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) =>
+  (Events.EventFlow m r, Redis.HedisFlow m r) =>
   DBooking.FRFSTicketBooking ->
   m Bool
 expireDegradedBoardingIfNeeded booking
@@ -105,7 +106,6 @@ expireDegradedBoardingIfNeeded booking
           then do
             forM_ (filter ((== TicketStatus.INPROGRESS) . (.status)) freshTickets) $ \t ->
               QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.USED t.scannedByVehicleNumber booking.id t.ticketNumber
-            -- TODO(7.6): Events.forBooking booking.id "dropped" [("by", "degraded_timeout")] — task 7.6 not merged yet.
-            logInfo $ "sharedcab:event:dropped " <> show ([("booking", booking.id.getId), ("by", "degraded_timeout")] :: [(Text, Text)])
+            Events.forBooking (Events.Dropped Events.DroppedByTick) booking
             pure True
           else pure False

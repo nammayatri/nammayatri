@@ -50,6 +50,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
+import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
 import qualified SharedLogic.SharedCab.Session as Session
@@ -195,8 +196,7 @@ degradedBoarding degradedTimeoutSec booking typedCode =
     forM_ (filter ((== TicketStatus.ACTIVE) . (.status)) tickets) $ \t ->
       QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS t.scannedByVehicleNumber booking.id t.ticketNumber
     Degraded.markDegradedBoarding degradedTimeoutSec booking.id typedCode
-    -- TODO(7.6): Events.forBooking booking.id "degraded_boarding" [("typedCode", typedCode)] — task 7.6 not merged yet.
-    emitSharedCabEvent "degraded_boarding" [("booking", booking.id.getId), ("typed_code", typedCode)]
+    Events.forBooking Events.DegradedBoarding booking
 
 -- ---------------- commit (8.1 + 8.3) ----------------
 
@@ -206,13 +206,6 @@ degradedBoarding degradedTimeoutSec booking typedCode =
 -- terminal for allocation; `attempts` is NOT bumped on re-bind (old cab gets no penalty, PRD §11.3).
 allocKey :: Id DBooking.FRFSTicketBooking -> Text
 allocKey bookingId = "sharedcab:alloc:" <> bookingId.getId
-
--- | LEDGER (05 §7: these Kafka events are PRD B9's only truth — mandatory).
--- TODO(M8.1 completion): produceMessage to the shared-cab event topic when the topic lands; until
--- then the log line is the transport so the flow is observable end-to-end.
-emitSharedCabEvent :: Text -> [(Text, Text)] -> Environment.Flow ()
-emitSharedCabEvent name attrs =
-  logInfo $ "sharedcab:event:" <> name <> " " <> show attrs
 
 -- | One atomic board/re-bind. Either everything below was observed or the boarding never happened.
 commitBoarding ::
@@ -283,9 +276,11 @@ commitBoarding journeyLeg booking target mbOld =
               }
           -- NOTE(spec, not migrated): BusBoardingMethod has no SHARED_CAB value on this base;
           -- UserActivated is the truthful closest fit. A dedicated value needs spec/Storage/MultiModal.yaml.
-          case mbOld of
-            Nothing -> emitSharedCabEvent "boarded" [("booking", booking.id.getId), ("cab", fresh.vehicleNumber), ("source", "code")]
-            Just old -> emitSharedCabEvent "rebound" [("booking", booking.id.getId), ("from", old.vehicleNumber), ("to", fresh.vehicleNumber), ("sibling_route", show (old.routeCode /= fresh.routeCode))]
+          now <- getCurrentTime
+          let event k = Events.withTrip (Just fresh.vehicleTripId.getId) $ Events.bookingEvent k booking.id.getId (Just fresh.vehicleNumber) (Just fresh.routeCode) now
+          Events.emit fresh.merchantOperatingCityId . event $ case mbOld of
+            Nothing -> Events.Boarded Events.ByCode
+            Just old -> Events.Rebound old.vehicleNumber (old.routeCode /= fresh.routeCode)
 
 -- ---------------- entry point ----------------
 
