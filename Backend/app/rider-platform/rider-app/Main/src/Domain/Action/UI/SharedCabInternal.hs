@@ -118,7 +118,7 @@ postSharedCabRouteEnd mbToken req = do
   case req.next of
     API.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber StartReturn >>= mkSessionResp)
     API.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
-    API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber EndForNow
+    API.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber (if req.atLastStop == Just True then EndRoute else EndForNow)
 
 postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow API.SharedCabSession
 postSharedCabResume mbToken req = do

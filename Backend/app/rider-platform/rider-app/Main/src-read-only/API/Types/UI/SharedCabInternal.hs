@@ -46,7 +46,7 @@ data EndRouteNext
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data EndRouteReq = EndRouteReq {driverId :: Kernel.Prelude.Text, next :: EndRouteNext, vehicleNumber :: Kernel.Prelude.Text}
+data EndRouteReq = EndRouteReq {atLastStop :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, driverId :: Kernel.Prelude.Text, next :: EndRouteNext, vehicleNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

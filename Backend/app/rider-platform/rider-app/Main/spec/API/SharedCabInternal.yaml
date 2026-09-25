@@ -120,10 +120,12 @@ types:
   EndRouteNext:
     enum: "RETURN, CHANGE, END"
 
+  # END closes the run as END_ROUTE when atLastStop (driver ended at the route's last stop), else END_FOR_NOW.
   EndRouteReq:
     driverId: Text
     vehicleNumber: Text
     next: EndRouteNext
+    atLastStop: Maybe Bool
 
   SharedCabDriverReq:
     driverId: Text
