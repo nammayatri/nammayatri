@@ -1,0 +1,46 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+
+module: SharedCab
+
+# Rider-facing route browse (R3, home card). Driver-side routes live in SharedCabInternal.
+types:
+  SharedCabStop:
+    code: Text
+    name: Text
+    point: LatLong
+    sequenceNum: Int
+
+  SharedCabRouteInfo:
+    routeCode: Text
+    name: Text
+    stops: "[SharedCabStop]"
+    polyline: Maybe Text
+    cabsRunning: Int
+
+  SharedCabRouteListResp:
+    routes: "[SharedCabRouteInfo]"
+
+  SharedCabLiveCab:
+    plateLast4: Text
+    position: Maybe LatLong
+    freeSeats: Int
+
+  SharedCabRouteDetailResp:
+    routeInfo: SharedCabRouteInfo
+    cabs: "[SharedCabLiveCab]"
+
+apis:
+  - GET:
+      endpoint: /sharedCab/routes
+      auth: TokenAuth
+      response:
+        type: SharedCabRouteListResp
+  - GET:
+      endpoint: /sharedCab/routes/{routeCode}
+      name: getSharedCabRoute
+      auth: TokenAuth
+      params:
+        routeCode: Text
+      response:
+        type: SharedCabRouteDetailResp

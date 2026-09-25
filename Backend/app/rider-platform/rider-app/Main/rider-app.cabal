@@ -370,6 +370,7 @@ library
       Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
+      Domain.Action.UI.SharedCab
       Domain.Action.UI.SharedCabInternal
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
@@ -1063,6 +1064,7 @@ library
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
       API.Action.UI.RiderPreferences
+      API.Action.UI.SharedCab
       API.Action.UI.SharedCabInternal
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
@@ -1216,6 +1218,7 @@ library
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
       API.Types.UI.RiderPreferences
+      API.Types.UI.SharedCab
       API.Types.UI.SharedCabInternal
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
