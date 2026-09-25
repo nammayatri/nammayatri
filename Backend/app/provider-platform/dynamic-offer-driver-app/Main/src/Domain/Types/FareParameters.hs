@@ -69,7 +69,7 @@ data FareParameters = FareParameters
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     conditionalCharges :: [DAC.ConditionalCharges],
-    customerGateFeeItems :: [CustomerGateFeeItem],
+    customerGateFeeItems :: Maybe [CustomerGateFeeItem],
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
     driverCancellationNotAllowed :: Maybe Bool,
