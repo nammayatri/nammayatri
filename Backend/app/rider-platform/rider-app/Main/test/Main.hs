@@ -1,8 +1,9 @@
+{-# LANGUAGE PackageImports #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
 import App
 import qualified Data.Text as T
-import Environment
+import "rider-app" Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
