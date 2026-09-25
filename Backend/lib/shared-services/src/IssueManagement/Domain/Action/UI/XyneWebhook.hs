@@ -56,7 +56,7 @@ import qualified IssueManagement.Storage.CachedQueries.MediaFile as CQMF
 import qualified IssueManagement.Storage.Queries.Issue.ChatMessage as QCM
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
-import IssueManagement.Tools.Error
+import IssueManagement.Tools.Error ()
 import IssueManagement.Utils.Html (stripHtml)
 import qualified IssueManagement.Utils.RemoteFile as RF
 import qualified Kernel.External.Ticket.XyneSpaces.Config as Xyne
@@ -146,50 +146,61 @@ handleDeskReply lookupXyneCfg issueHandle identifier payload = do
       pure $ XyneWebhookAck {externalId = cachedMsgId}
     Nothing -> do
       let issueReportId = Id payload.threadId :: Id DIR.IssueReport
-      issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist payload.threadId)
-      merchantId <-
-        issueReport.merchantId
-          & fromMaybeM (InternalError $ "IssueReport " <> payload.threadId <> " has no merchantId")
-      mocId <-
-        issueReport.merchantOperatingCityId
-          & fromMaybeM (InternalError $ "IssueReport " <> payload.threadId <> " has no merchantOperatingCityId")
-      cfg <- lookupXyneCfg merchantId mocId
-      merchant <-
-        issueHandle.findByMerchantId merchantId
-          >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-      moCity <-
-        issueHandle.findMOCityById mocId
-          >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
-      let messageText =
-            if fromMaybe True cfg.convertHtmlToPlainText
-              then stripHtml payload.body
-              else payload.body
-          senderUserIdText = fromMaybe cfg.xyneAgentUserId payload.replierUserId
-      merchantConfig <- issueHandle.findMerchantConfig merchantId mocId (Just $ cast issueReport.personId)
-      mediaIds <-
-        maybe
-          (pure [])
-          (mapM $ xyneAttachmentToMediaFile merchantConfig identifier issueReport.personId)
-          payload.attachments
-      let req =
-            DCI.SendChatMessageByUserReq
-              { DCI.message = messageText,
-                DCI.mediaFileIds = if null mediaIds then Nothing else Just mediaIds,
-                DCI.userId = Id senderUserIdText
-              }
-      resp <-
-        DDI.sendDashboardChatMessage
-          merchant.shortId
-          moCity.city
-          issueReport.id
-          issueHandle
-          identifier
-          -- Nothing: this message came from Xyne, so it must not be forwarded
-          -- back to Xyne.
-          Nothing
-          req
-      Redis.setExp key resp.messageId dedupTtlSeconds
-      pure $ XyneWebhookAck {externalId = resp.messageId}
+      mbIssueReport <- QIR.findById issueReportId
+      case mbIssueReport of
+        Nothing -> do
+          -- Not an in-app issue thread. Desk-external tickets (e.g. Control
+          -- Center / RADAR-created, whose threadIds are not IssueReport ids)
+          -- arrive on this same webhook because they share the Xyne app.
+          -- Ack so Xyne does not retry; the Control Center reads replies
+          -- from Xyne directly, so there is nothing to persist here.
+          logInfo $ "Xyne webhook: DESK_REPLY for non-issue thread, acking. threadId=" <> payload.threadId <> " externalId=" <> payload.externalId
+          Redis.setExp key payload.externalId dedupTtlSeconds
+          pure $ XyneWebhookAck {externalId = payload.externalId}
+        Just issueReport -> do
+          merchantId <-
+            issueReport.merchantId
+              & fromMaybeM (InternalError $ "IssueReport " <> payload.threadId <> " has no merchantId")
+          mocId <-
+            issueReport.merchantOperatingCityId
+              & fromMaybeM (InternalError $ "IssueReport " <> payload.threadId <> " has no merchantOperatingCityId")
+          cfg <- lookupXyneCfg merchantId mocId
+          merchant <-
+            issueHandle.findByMerchantId merchantId
+              >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+          moCity <-
+            issueHandle.findMOCityById mocId
+              >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+          let messageText =
+                if fromMaybe True cfg.convertHtmlToPlainText
+                  then stripHtml payload.body
+                  else payload.body
+              senderUserIdText = fromMaybe cfg.xyneAgentUserId payload.replierUserId
+          merchantConfig <- issueHandle.findMerchantConfig merchantId mocId (Just $ cast issueReport.personId)
+          mediaIds <-
+            maybe
+              (pure [])
+              (mapM $ xyneAttachmentToMediaFile merchantConfig identifier issueReport.personId)
+              payload.attachments
+          let req =
+                DCI.SendChatMessageByUserReq
+                  { DCI.message = messageText,
+                    DCI.mediaFileIds = if null mediaIds then Nothing else Just mediaIds,
+                    DCI.userId = Id senderUserIdText
+                  }
+          resp <-
+            DDI.sendDashboardChatMessage
+              merchant.shortId
+              moCity.city
+              issueReport.id
+              issueHandle
+              identifier
+              -- Nothing: this message came from Xyne, so it must not be forwarded
+              -- back to Xyne.
+              Nothing
+              req
+          Redis.setExp key resp.messageId dedupTtlSeconds
+          pure $ XyneWebhookAck {externalId = resp.messageId}
 
 -- | Persist a Xyne attachment and rehost it on our own S3.
 --
@@ -368,39 +379,47 @@ processXyneBearerWebhook bearerToken issueHandle identifier mbAuthHeader rawBody
       logError $ "Xyne bearer webhook: body parse failed: " <> T.pack err
       throwError (InvalidRequest "XYNE_BEARER_WEBHOOK_PARSE_FAILED")
   case event.eventType of
-    "TICKET_STATUS_UPDATED" ->
-      case readMaybe (T.unpack (T.toUpper event.payload.status)) :: Maybe Common.IssueStatus of
-        Just status -> do
-          issueReport <-
-            QIR.findByTicketIdOrAdditional event.payload.ticketId
-              >>= fromMaybeM (IssueReportDoesNotExist event.payload.ticketId)
-          merchantId <-
-            issueReport.merchantId
-              & fromMaybeM (InternalError $ "IssueReport " <> issueReport.id.getId <> " has no merchantId")
-          mocId <-
-            issueReport.merchantOperatingCityId
-              & fromMaybeM (InternalError $ "IssueReport " <> issueReport.id.getId <> " has no merchantOperatingCityId")
-          merchant <-
-            issueHandle.findByMerchantId merchantId
-              >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-          moCity <-
-            issueHandle.findMOCityById mocId
-              >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
-          void $
-            DDI.issueUpdate
-              merchant.shortId
-              moCity.city
-              issueReport.id
-              issueHandle
-              identifier
-              DCI.IssueUpdateByUserReq
-                { status = Just status,
-                  assignee = Nothing,
-                  userId = cast issueReport.personId
-                }
-        Nothing -> do
-          logError $ "Xyne bearer webhook: unrecognized status=" <> event.payload.status
-          throwError (InvalidRequest "XYNE_BEARER_WEBHOOK_INVALID_STATUS")
+    "TICKET_STATUS_UPDATED" -> do
+      -- Look up the ticket BEFORE parsing the status. RADAR board stages
+      -- ("BACKLOG", "IN PROGRESS", "NOT REQUIRED", …) are not Common.IssueStatus
+      -- values; parsing them first made every RADAR stage change 4xx and
+      -- retry forever. The status only needs to parse for real in-app issues.
+      mbIssueReport <- QIR.findByTicketIdOrAdditional event.payload.ticketId
+      case mbIssueReport of
+        Nothing ->
+          -- Desk-external ticket (e.g. Control Center / RADAR-created): not an
+          -- in-app issue, nothing to sync locally. Ack so Xyne does not retry.
+          logInfo $ "Xyne bearer webhook: status update for non-issue ticketId=" <> event.payload.ticketId <> ", acking"
+        Just issueReport ->
+          case readMaybe (T.unpack (T.toUpper event.payload.status)) :: Maybe Common.IssueStatus of
+            Nothing -> do
+              logError $ "Xyne bearer webhook: unrecognized status=" <> event.payload.status <> " for issue " <> issueReport.id.getId
+              throwError (InvalidRequest "XYNE_BEARER_WEBHOOK_INVALID_STATUS")
+            Just status -> do
+              merchantId <-
+                issueReport.merchantId
+                  & fromMaybeM (InternalError $ "IssueReport " <> issueReport.id.getId <> " has no merchantId")
+              mocId <-
+                issueReport.merchantOperatingCityId
+                  & fromMaybeM (InternalError $ "IssueReport " <> issueReport.id.getId <> " has no merchantOperatingCityId")
+              merchant <-
+                issueHandle.findByMerchantId merchantId
+                  >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+              moCity <-
+                issueHandle.findMOCityById mocId
+                  >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+              void $
+                DDI.issueUpdate
+                  merchant.shortId
+                  moCity.city
+                  issueReport.id
+                  issueHandle
+                  identifier
+                  DCI.IssueUpdateByUserReq
+                    { status = Just status,
+                      assignee = Nothing,
+                      userId = cast issueReport.personId
+                    }
     other ->
       logWarning $ "Xyne bearer webhook: ignoring unsupported eventType=" <> other
   pure Success

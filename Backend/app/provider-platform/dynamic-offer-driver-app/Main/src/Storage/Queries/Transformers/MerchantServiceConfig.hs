@@ -110,6 +110,7 @@ getConfigJSON = \case
     Ticket.KaptureConfig cfg -> toJSON cfg
     Ticket.ZendeskConfig cfg -> toJSON cfg
     Ticket.XyneSpacesConfig cfg -> toJSON cfg
+    Ticket.RadarXyneSpacesConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig cfg -> toJSON cfg
     Notification.PayTMConfig cfg -> toJSON cfg
@@ -206,6 +207,7 @@ getServiceName = \case
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> Domain.IssueTicketService Ticket.Zendesk
     Ticket.XyneSpacesConfig _ -> Domain.IssueTicketService Ticket.XyneSpaces
+    Ticket.RadarXyneSpacesConfig _ -> Domain.IssueTicketService Ticket.RadarXyneSpaces
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig _ -> Domain.NotificationService Notification.FCM
     Notification.PayTMConfig _ -> Domain.NotificationService Notification.PayTM
@@ -312,6 +314,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> eitherValue configJSON
   Domain.IssueTicketService Ticket.XyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.XyneSpacesConfig <$> eitherValue configJSON
+  Domain.IssueTicketService Ticket.RadarXyneSpaces -> Domain.IssueTicketServiceConfig . Ticket.RadarXyneSpacesConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON
