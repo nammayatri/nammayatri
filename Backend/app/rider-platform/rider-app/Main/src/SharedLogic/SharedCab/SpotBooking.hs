@@ -13,15 +13,17 @@ import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
+import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 
--- | The ACTIVE shared-cab session a typed or scanned plate belongs to.
+-- | The ACTIVE shared-cab session a typed or scanned plate belongs to. Read-only: a rider's scan never rebuilds a
+-- flushed session (the driver's poll and the expiry job do).
 liveSharedCab :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
-liveSharedCab plate = mfilter ((== ACTIVE) . (.status)) <$> Session.getSession plate
+liveSharedCab plate = mfilter ((== ACTIVE) . (.status)) <$> Session.readSession (canonicalisePlate plate)
 
 -- | The cab's current route as vehicle data, the shape the bus path returns, with the tier set to SHARED_CAB.
 sharedCabVehicleData :: Session -> Environment.Flow ApiTypes.PublicTransportData
