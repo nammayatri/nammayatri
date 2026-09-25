@@ -44,6 +44,11 @@ module Lib.Yudhishthira.Types
     UpdateNammaTagRequest (..),
     GetLogicsResp (..),
     LogicRolloutObject (..),
+    ConfigPilotVerifyReq (..),
+    ConfigPilotRolloutObject (..),
+    ConfigPilotRolloutReq,
+    ConfigPilotActionChangeRequest (..),
+    ConfigPilotVersionReq (..),
     RolloutVersion (..),
     UpdateRolloutGroupObject (..),
     UpdateRolloutGroupReq,
@@ -758,7 +763,6 @@ data AppDynamicLogicReq = AppDynamicLogicReq
     inputData :: [Value],
     description :: Maybe Text,
     shouldUpdateRule :: Maybe Bool,
-    updatePassword :: Maybe Text,
     verifyOutput :: Maybe Bool,
     domain :: LogicDomain
   }
@@ -892,6 +896,52 @@ data BulkLogicRolloutResult = BulkLogicRolloutResult
 
 instance HideSecrets BulkLogicRolloutResult where
   hideSecrets = identity
+
+-- ConfigPilot-specific request bodies.
+--
+-- /configPilot/{configType}/verify and /configPilot/{configType}/upsertLogicRollout
+-- are the config-scoped twins of the generic /appDynamicLogic/* routes.
+
+data ConfigPilotVerifyReq = ConfigPilotVerifyReq
+  { rules :: [Value],
+    inputData :: [Value],
+    description :: Maybe Text,
+    shouldUpdateRule :: Maybe Bool,
+    verifyOutput :: Maybe Bool
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ConfigPilotVerifyReq where
+  hideSecrets = identity
+
+data ConfigPilotRolloutObject = ConfigPilotRolloutObject
+  { timeBounds :: Text,
+    rollout :: [RolloutVersion],
+    modifiedBy :: Maybe (Id Person)
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ConfigPilotRolloutObject where
+  hideSecrets = identity
+
+type ConfigPilotRolloutReq = [ConfigPilotRolloutObject]
+
+instance HideSecrets ConfigPilotRolloutReq where
+  hideSecrets = identity
+
+data ConfigPilotActionChangeRequest
+  = ConfigPilotConclude ConfigPilotVersionReq
+  | ConfigPilotAbort ConfigPilotVersionReq
+  | ConfigPilotRevert
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
+
+instance HideSecrets ConfigPilotActionChangeRequest where
+  hideSecrets = identity
+
+data ConfigPilotVersionReq = ConfigPilotVersionReq
+  { version :: Int
+  }
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Read, Show)
 
 data RolloutVersion = RolloutVersion
   { version :: Int,
