@@ -124,12 +124,14 @@ RiderConfig:
     distanceWeightage: Int
     isAvoidToll: Bool
     enableRouteCacheRead: Maybe Bool
+    routeCacheMaxDurationDeviation: Maybe Seconds
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     passExpiryReminderDays: Maybe Int
     remindEverydayUntilPassExpiry: Maybe Bool
     passExpiryReminderBatchSize: Maybe Int
     passExpiryReminderNextRunLocalTime: Maybe TimeOfDay
+    enableAdjacentGeoHashPlaceNameLookup: Maybe Bool
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig

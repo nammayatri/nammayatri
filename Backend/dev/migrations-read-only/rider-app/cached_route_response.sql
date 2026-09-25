@@ -19,3 +19,8 @@ ALTER TABLE atlas_app.cached_route_response ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.cached_route_response ADD COLUMN avoid_toll boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.cached_route_response ADD COLUMN duration_static_duration_diff integer ;

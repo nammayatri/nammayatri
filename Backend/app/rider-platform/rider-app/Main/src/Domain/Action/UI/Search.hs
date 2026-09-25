@@ -912,8 +912,13 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
     case (cacheReadEnabled, mbCacheKey) of
       (True, Just (pickupGeohash, dropGeohash)) -> QCachedRouteResponse.findByRiderIdAndGeohashAndHourRangeAndToll person.id pickupGeohash dropGeohash hourOfDay finalEffectiveToll
       _ -> pure Nothing
-  let mbCachedRawRoutes = mbCacheEntry >>= \entry -> if Time.diffUTCTime now entry.createdAt <= routeCacheMaxAge then Just entry.routes else Nothing
-      staleEntryExists = isJust mbCacheEntry && isNothing mbCachedRawRoutes
+  let mbFreshCacheEntry = mfilter (\entry -> Time.diffUTCTime now entry.createdAt <= routeCacheMaxAge) mbCacheEntry
+      isDurationDeviationAcceptable entry =
+        case (entry.durationStaticDurationDiff, riderConfig.routeCacheMaxDurationDeviation) of
+          (Just diff, Just maxDeviation) -> diff <= maxDeviation
+          _ -> True
+      mbCachedRawRoutes = (.routes) <$> mfilter isDurationDeviationAcceptable mbFreshCacheEntry
+      staleEntryExists = isJust mbCacheEntry && isNothing mbFreshCacheEntry
 
   rawRoutes <- case mbCachedRawRoutes of
     Just cachedRoutes -> do
@@ -927,7 +932,7 @@ calculateDistanceAndRoutes riderConfig merchantOperatingCity person searchReques
                 mode = Just Maps.CAR
               }
       withTimeAPI "rideSearch" "getRoutes" $ Maps.getRoutes finalEffectiveToll person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
-  when (isNothing mbCachedRawRoutes && (cacheEnabled || staleEntryExists)) $
+  when (isNothing mbFreshCacheEntry && (cacheEnabled || staleEntryExists)) $
     whenJust mbCacheKey $ \(pickupGeohash, dropGeohash) ->
       fork "caching route response" $
         upsertCachedRouteResponse person merchantOperatingCity pickupGeohash dropGeohash hourOfDay finalEffectiveToll rawRoutes riderConfig.distanceWeightage now
@@ -974,9 +979,17 @@ upsertCachedRouteResponse person merchantOperatingCity pickupGeohash dropGeohash
         avoidToll = avoidToll,
         distance = (.distance) =<< shortestRouteInfo,
         duration = (.duration) =<< shortestRouteInfo,
+        durationStaticDurationDiff = mkDurationStaticDurationDiff shortestRouteInfo,
         routes = routes,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just merchantOperatingCity.id,
         createdAt = now,
         updatedAt = now
       }
+
+mkDurationStaticDurationDiff :: Maybe Maps.RouteInfo -> Maybe Seconds
+mkDurationStaticDurationDiff mbRouteInfo = do
+  routeInfo <- mbRouteInfo
+  duration <- routeInfo.duration
+  staticDuration <- routeInfo.staticDuration
+  pure . Seconds $ duration.getSeconds - staticDuration.getSeconds
