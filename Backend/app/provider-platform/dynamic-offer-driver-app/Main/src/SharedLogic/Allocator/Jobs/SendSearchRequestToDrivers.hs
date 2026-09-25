@@ -403,7 +403,7 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
   where
     handle mbBooking driverSearchBatchInput =
       Handle
-        { isBatchNumExceedLimit = I.isDispatchBudgetExhausted driverPoolConfig searchTry.id driverSearchBatchInput.searchReq.transactionId,
+        { isBatchNumExceedLimit = I.isDispatchBudgetExhausted driverPoolConfig searchTry driverSearchBatchInput.searchReq.transactionId,
           mbTopUpSize = mbTopUpSize,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = UI.getNextDriverPoolBatch driverPoolConfig driverSearchBatchInput.searchReq searchTry driverSearchBatchInput.tripQuoteDetails driverSearchBatchInput.paymentMethodInfo driverSearchBatchInput.riderDetails,
