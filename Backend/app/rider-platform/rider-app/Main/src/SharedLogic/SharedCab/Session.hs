@@ -13,10 +13,12 @@ where
 
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.VehicleTrip as DVT
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Booking (ridersOnBoard)
+import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.Queries.VehicleTrip as QVT
@@ -83,7 +85,7 @@ switchTo reason newRoute s = do
 -- | Open a session, or change route if this driver already has one (idempotent for the same route).
 -- A change with riders on board (`04` §4) needs a mode: Left lists them when there is none.
 selectRoute ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) =>
+  (ServiceFlow m r, MonadFlow m, MonadMask m) =>
   Maybe SelectRouteMode ->
   OpenSessionReq ->
   m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
@@ -96,7 +98,9 @@ selectRoute mode req = withPlateLock plate $ do
       case mode of
         _ | null onBoard -> Right <$> switchTo DVT.ROUTE_CHANGED req.routeCode s
         -- TODO(B12): re-drop forced riders at the nearest common stop and notify them.
-        Just Force -> Right <$> switchTo DVT.ROUTE_CHANGED req.routeCode s
+        Just Force -> do
+          s' <- switchTo DVT.ROUTE_CHANGED req.routeCode s
+          Right s' <$ mapM_ (Notify.notifyRouteChange req.routeCode) onBoard
         Just AfterLastDrop -> Right <$> saveSession (Just s) (queueRoute req.routeCode s)
         Nothing -> pure (Left onBoard)
     OpenSession -> do
@@ -128,18 +132,22 @@ applyQueuedRoute rawPlate = withPlateLock plate $ do
     plate = canonicalisePlate rawPlate
 
 -- | Refused while riders are on board unless `forced` (`04` §7: forced riders fall to the degraded timeout).
-endRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> Bool -> EndRouteAction -> m Session
+-- Forced riders are told: a return trip is a route change, an end asks them to confirm their drop.
+endRoute :: (ServiceFlow m r, MonadFlow m, MonadMask m) => Text -> Text -> Bool -> EndRouteAction -> m Session
 endRoute driver rawPlate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
-  unless forced $ do
-    onBoard <- ridersOnBoard plate
-    unless (null onBoard) $ throwError (RidersOnBoard (length onBoard))
+  onBoard <- ridersOnBoard plate
+  unless (forced || null onBoard) $ throwError (RidersOnBoard (length onBoard))
   case action of
-    StartReturn -> liftSession (returnRouteOf s.routeCode) >>= \returnRoute -> switchTo DVT.RETURN returnRoute s
+    StartReturn -> do
+      returnRoute <- liftSession (returnRouteOf s.routeCode)
+      s' <- switchTo DVT.RETURN returnRoute s
+      s' <$ mapM_ (Notify.notifyRouteChange returnRoute) onBoard
     _ -> do
       now <- getCurrentTime
       closeLiveTrip plate (endActionReason action) now
-      saveSession (Just s) (endSession s)
+      s' <- saveSession (Just s) (endSession s)
+      s' <$ mapM_ Notify.notifyDropConfirm onBoard
   where
     plate = canonicalisePlate rawPlate
 

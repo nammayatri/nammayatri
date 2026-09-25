@@ -1,0 +1,119 @@
+module SharedLogic.SharedCab.Notify
+  ( SharedCabNotificationType (..),
+    ReassignReason (..),
+    SharedCabNotificationEntityData (..),
+    notificationKey,
+    templateParams,
+    notifyAssigned,
+    notifyArriving,
+    notifyReassigned,
+    notifyBoardAny,
+    notifyRouteChange,
+    notifyDropConfirm,
+  )
+where
+
+import Control.Applicative ((<|>))
+import Domain.Types.EmptyDynamicParam
+import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (ServiceFlow)
+import Kernel.Prelude
+import Kernel.Utils.Common
+import qualified Storage.Queries.Person as QPerson
+import Tools.Notifications (createNotificationReq, dynamicNotifyPerson)
+
+-- | `07` B10. The constructor name is the merchant_push_notification key and the entity's notificationType.
+data SharedCabNotificationType
+  = SHARED_CAB_ASSIGNED
+  | SHARED_CAB_ARRIVING
+  | SHARED_CAB_REASSIGNED
+  | SHARED_CAB_BOARD_ANY
+  | SHARED_CAB_ROUTE_CHANGE
+  | SHARED_CAB_DROP_CONFIRM
+  deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
+
+data ReassignReason = SEAT_LOST | TIMEOUT
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+data SharedCabNotificationEntityData = SharedCabNotificationEntityData
+  { notificationType :: SharedCabNotificationType,
+    bookingId :: Text,
+    searchId :: Text,
+    vehicleNumber :: Maybe Text,
+    routeCode :: Maybe Text,
+    reassignReason :: Maybe ReassignReason
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+notificationKey :: SharedCabNotificationType -> Text
+notificationKey = show
+
+-- | Every type gets the same params, so the copy in merchant_push_notification can use any of them.
+-- Stops are `(name, code)`; the code stands in when the name is missing.
+templateParams :: (Maybe Text, Text) -> (Maybe Text, Text) -> Maybe Text -> [(Text, Text)]
+templateParams (boardName, boardCode) (dropName, dropCode) mbVehicleNumber =
+  [("boardStop", fromMaybe boardCode boardName), ("dropStop", fromMaybe dropCode dropName)]
+    <> maybe [] (\v -> [("vehicleNumber", v)]) mbVehicleNumber
+
+-- | Forked, and every failure only logged: a push never fails the rider's or driver's request.
+send ::
+  (ServiceFlow m r, MonadFlow m) =>
+  SharedCabNotificationType ->
+  Maybe Text ->
+  Maybe ReassignReason ->
+  Maybe Text ->
+  DFTB.FRFSTicketBooking ->
+  m ()
+send notificationType mbRouteCode reassignReason mbVehicleNumber booking =
+  fork tag $
+    withTryCatch tag push >>= either (\err -> logError $ tag <> " failed: " <> show err) pure
+  where
+    tag = "sharedCab:notify:" <> notificationKey notificationType <> ":" <> booking.id.getId
+    vehicleNumber = mbVehicleNumber <|> booking.vehicleNumber
+    entityData =
+      SharedCabNotificationEntityData
+        { notificationType,
+          bookingId = booking.id.getId,
+          searchId = booking.searchId.getId,
+          vehicleNumber,
+          routeCode = mbRouteCode,
+          reassignReason
+        }
+    push =
+      QPerson.findById booking.riderId >>= \case
+        Nothing -> logError $ tag <> ": rider " <> booking.riderId.getId <> " not found"
+        Just person ->
+          dynamicNotifyPerson
+            person
+            (createNotificationReq (notificationKey notificationType) identity)
+            EmptyDynamicParam
+            (Notification.Entity Notification.Product person.id.getId entityData)
+            Nothing
+            (templateParams (booking.fromStationName, booking.fromStationCode) (booking.toStationName, booking.toStationCode) vehicleNumber)
+            Nothing
+            Nothing
+
+-- | Allocation (`05` §8): a cab took the booking. `plate` is the allocated cab's.
+notifyAssigned :: (ServiceFlow m r, MonadFlow m) => Text -> DFTB.FRFSTicketBooking -> m ()
+notifyAssigned plate = send SHARED_CAB_ASSIGNED Nothing Nothing (Just plate)
+
+-- | The allocated cab is within `atStopRadiusM` of the board stop.
+notifyArriving :: (ServiceFlow m r, MonadFlow m) => Text -> DFTB.FRFSTicketBooking -> m ()
+notifyArriving plate = send SHARED_CAB_ARRIVING Nothing Nothing (Just plate)
+
+-- | The allocation was released (seat lost to a walk-up, or its timer ran out); the booking is FINDING again.
+notifyReassigned :: (ServiceFlow m r, MonadFlow m) => ReassignReason -> DFTB.FRFSTicketBooking -> m ()
+notifyReassigned reason = send SHARED_CAB_REASSIGNED Nothing (Just reason) Nothing
+
+-- | R10: allocation gave up; any cab on the route will do.
+notifyBoardAny :: (ServiceFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> m ()
+notifyBoardAny = send SHARED_CAB_BOARD_ANY Nothing Nothing Nothing
+
+-- | R13: the rider's cab is switching to `routeCode` before reaching their drop stop.
+notifyRouteChange :: (ServiceFlow m r, MonadFlow m) => Text -> DFTB.FRFSTicketBooking -> m ()
+notifyRouteChange routeCode = send SHARED_CAB_ROUTE_CHANGE (Just routeCode) Nothing Nothing
+
+-- | R8: "Did you get down?", answered by the "I got down" call.
+notifyDropConfirm :: (ServiceFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> m ()
+notifyDropConfirm = send SHARED_CAB_DROP_CONFIRM Nothing Nothing Nothing

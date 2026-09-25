@@ -633,6 +633,7 @@ library
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
@@ -2143,6 +2144,7 @@ test-suite rider-app-test
       FRFS.DirectQR
       SharedCabInvariantsTests
       SharedCabLegStateTests
+      SharedCabNotifyTests
       SharedCabPlateTests
       SharedCabSessionTests
       Paths_rider_app
