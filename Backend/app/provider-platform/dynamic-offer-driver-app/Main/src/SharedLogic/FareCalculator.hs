@@ -283,6 +283,15 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
 
       detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
+      -- The itemName is operator-configured free text, not an ONDC v2.1.0 breakup
+      -- title, so this line goes only to our own apps -- an external NP validating
+      -- against the spec vocabulary would reject it. The amount still reaches every
+      -- BAP inside RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, so the fare total
+      -- and the canonical summary are unchanged either way.
+      gateFeeItemsBreakup =
+        if isValueAddNP
+          then map (\item -> mkBreakupItem (Enums.mkGateFeeBreakupTitle item.itemName) $ mkPrice item.amount) (fromMaybe [] fareParams.customerGateFeeItems)
+          else []
   catMaybes
     [ Just baseFareItem,
       mbCongestionChargeItem,
@@ -319,6 +328,7 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
     ]
     <> detailsBreakups
     <> additionalChargesBreakup
+    <> gateFeeItemsBreakup
   where
     -- The ONDC v2.1.0 spec title for a component we already emit under its legacy
     -- title. Only external NPs need it; for our own apps it would be a duplicate.
@@ -409,6 +419,9 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
 
 -- TODO: make some tests for it
 
+customerGateFeeItemsSum :: FareParameters -> HighPrecMoney
+customerGateFeeItemsSum fareParams = sum $ map (.amount) (fromMaybe [] fareParams.customerGateFeeItems)
+
 fareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
 fareSum fareParams conditionalChargeCategories =
   pureFareSum
@@ -454,6 +467,7 @@ fareSum fareParams conditionalChargeCategories =
         + parkingTaxContribution
         -- Commission is intentionally excluded - stored for breakdown only
         + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
+        + customerGateFeeItemsSum fareParams
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do
@@ -660,6 +674,7 @@ calculateFareParametersHandler params = do
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
+            customerGateFeeItems = Nothing,
             driverCancellationNotAllowed = fp.driverCancellationNotAllowed,
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
@@ -1132,11 +1147,12 @@ calculateFareParameters params = do
     Just merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
     Nothing -> pure Nothing
   let isV2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) mbTransporterConfig
+  fareWithGateItems <- applyGateCustomerFeeItems params baseFareParams
   -- Apply configurable charges only if V2 is enabled
   fareWithV2 <-
     if isV2Enabled
-      then applyConfiguredCharges params.farePolicy baseFareParams
-      else pure baseFareParams
+      then applyConfiguredCharges params.farePolicy fareWithGateItems
+      else pure fareWithGateItems
   -- Apply airport entry fee (if any) to parkingCharge in FareParameters
   fareWithAirport <- applyAirportEntryFee params fareWithV2
   -- Gross up the fare by the Stripe payment charge when the RIDER bears it.
@@ -1278,6 +1294,49 @@ applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, p
             then fareParams {parkingCharge = Just (currentParking + airportFee)}
             else fareParams
   _ -> pure fareParams
+
+-- | Resolve the gate's CustomerFeeItem entries into fare parameters. Each entry is
+--   added to the fare sum and emitted as its own breakup line, outside tax and discounts.
+applyGateCustomerFeeItems ::
+  (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
+  CalculateFareParametersParams ->
+  FareParameters ->
+  m FareParameters
+applyGateCustomerFeeItems params fareParams = case params.pickupGateId of
+  Nothing -> pure fareParams
+  Just gateIdText -> do
+    items <- customerFeeItemsForGateId (Id gateIdText) fareParams.currency
+    pure $ if KP.null items then fareParams else fareParams {customerGateFeeItems = Just items}
+
+-- | CustomerFeeItem entries configured on a gate, skipping entries whose currency
+--   does not match the fare's currency and entries with a non-positive amount.
+customerFeeItemsForGateId ::
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DGI.GateInfo ->
+  Currency ->
+  m [DFParams.CustomerGateFeeItem]
+customerFeeItemsForGateId gateId currency = do
+  mbGate <- QGI.findById gateId
+  let configuredItems = fromMaybe [] (mbGate >>= (.feeItems))
+  fmap catMaybes $
+    forM configuredItems $ \item ->
+      if item.collectionType /= DGI.CustomerFeeItem || item.amountWithCurrency.amount <= 0
+        then pure Nothing
+        else
+          if item.amountWithCurrency.currency /= currency
+            then do
+              logWarning $ "customerFeeItemsForGateId: skipping gate fee item with currency " <> show item.amountWithCurrency.currency <> " on gate " <> gateId.getId
+              pure Nothing
+            else
+              pure $
+                Just
+                  DFParams.CustomerGateFeeItem
+                    { itemName = fromMaybe defaultCustomerGateFeeItemName item.itemName.customer,
+                      amount = item.amountWithCurrency.amount
+                    }
+
+defaultCustomerGateFeeItemName :: Text
+defaultCustomerGateFeeItemName = "GATE_FEE"
 
 -- | Entry fee for a single gate. Use when API sends gateId (e.g. SearchRequest/Booking.pickupGateId).
 --   Returns 0 if gate not found, no fee configured, or the gate exempts the given

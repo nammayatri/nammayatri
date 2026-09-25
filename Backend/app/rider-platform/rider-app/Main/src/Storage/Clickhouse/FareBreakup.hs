@@ -64,3 +64,21 @@ findFareBreakupByBookingIdAndDescription bookingId description createdAt = do
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fareBreakupTTable)
   return $ listToMaybe fareBreakup
+
+-- | Every breakup row for a booking. Used where the caller cannot enumerate the
+--   descriptions up front -- a gate fee item's title carries an operator-configured
+--   name, so it can only be recognised by its prefix after the fact.
+findFareBreakupsByBookingId ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DB.Booking ->
+  UTCTime ->
+  m [FareBreakup]
+findFareBreakupsByBookingId bookingId createdAt =
+  CH.findAll $
+    CH.select $
+      CH.filter_
+        ( \fareBreakup ->
+            fareBreakup.bookingId CH.==. bookingId
+              CH.&&. fareBreakup.date >=. addUTCTime (-120) createdAt
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fareBreakupTTable)

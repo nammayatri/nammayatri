@@ -489,6 +489,9 @@ isReallocatableCategory _ = False
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
 isTollApplicableForTrip AUTO_RICKSHAW _ = False
 isTollApplicableForTrip AUTO_PLUS _ = False
+isTollApplicableForTrip BIKE _ = False
+isTollApplicableForTrip BIKE_PLUS _ = False
+isTollApplicableForTrip DELIVERY_BIKE _ = False
 isTollApplicableForTrip _ (OneWay _) = True
 isTollApplicableForTrip _ (CrossCity _ _) = True
 isTollApplicableForTrip _ (Delivery _) = True

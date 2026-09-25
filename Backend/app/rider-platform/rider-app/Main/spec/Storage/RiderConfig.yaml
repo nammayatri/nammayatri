@@ -289,7 +289,13 @@ RiderConfig:
     # customer's own pickup/drop are never silently overridden.
     enableBetterRoutePointSuggestion: Maybe Bool
     minRideDistanceSavingForBetterPoint: Maybe Meters
+    # The pickup-side walk cap, and the fallback for the drop side when the drop is not
+    # configured separately. Leaving it unset is what keeps the feature off for a city.
     maxWalkDistanceForBetterPoint: Maybe Meters
+    # The drop side is a different ask: a customer walking the last stretch is not carrying
+    # the wait a pickup carries, and the two ends of a ride rarely deserve the same cap.
+    # Unset means the drop is held to the pickup's cap, as it was before this existed.
+    maxWalkDistanceForBetterPointAtDrop: Maybe Meters
     # How many metres of riding one metre of walking is worth when ranking candidate
     # points. 1 sends the customer to the walk cap for any extra saving; higher values
     # keep short walks winning. Ranking only -- never changes whether a point qualifies.
@@ -297,7 +303,13 @@ RiderConfig:
     # Thresholds scale with the ride: a 300m walk is absurd on a 2km hop and trivial on a
     # 20km one. minRideDistanceSavingForBetterPoint / maxWalkDistanceForBetterPoint act as
     # the absolute floor and ceiling around these.
+    #
+    # The walk percentage splits by end alongside the absolute cap, and has to: the
+    # effective cap is the smaller of the two, so a drop-side absolute cap on its own would
+    # be silently overruled by a shared percentage on every ride short enough for the
+    # percentage to bind.
     betterPointMaxWalkPctOfRide: Maybe Double
+    betterPointMaxWalkPctOfRideAtDrop: Maybe Double
     betterPointMinSavingPctOfRide: Maybe Double
     # How far off the parent's route a customer-chosen point may sit and still be priced by
     # trimming that route. Beyond this the trim would describe a ride that does not pass

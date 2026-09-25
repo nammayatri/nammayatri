@@ -33,6 +33,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
@@ -129,6 +130,8 @@ cancelBooking' notifyBAP booking mbDriver transporter = do
     whenJust mbRide $ \ride -> do
       void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
       QRide.updateStatus ride.id SRide.CANCELLED
+      fork "FleetEngine: cancel trip on ride cancelled" $
+        FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
       when (ride.status == SRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
       void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))

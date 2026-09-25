@@ -850,3 +850,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boarding_bus_ping_max_age_seconds 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN unified_qr_enabled boolean  default false;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_walk_distance_for_better_point_at_drop integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_walk_pct_of_ride_at_drop double precision ;

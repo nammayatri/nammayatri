@@ -4,6 +4,8 @@ imports:
   Merchant: Lib.Types.SpecialLocation
   MerchantOperatingCity: Lib.Types.SpecialLocation
   Map: Data.Map.Strict
+  PriceAPIEntity: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
 
 GateInfo:
   tableName: gate_info
@@ -15,6 +17,17 @@ GateInfo:
     GateConfig:
       enablePerKmFare: Maybe Bool
       enableIsDemandHigh: Maybe Bool
+      derive': Generic,Show,Eq,ToJSON,FromJSON,Data.OpenApi.ToSchema
+    GateFeeCollectionType:
+      enum: "CustomerFeeItem,DriverFeeItem"
+    GateFeeItemName:
+      customer: Maybe Text
+      driver: Maybe Text
+      derive': Generic,Show,Eq,ToJSON,FromJSON,Data.OpenApi.ToSchema
+    GateFeeItem:
+      amountWithCurrency: PriceAPIEntity
+      collectionType: GateFeeCollectionType
+      itemName: GateFeeItemName
       derive': Generic,Show,Eq,ToJSON,FromJSON,Data.OpenApi.ToSchema
 
   fields:
@@ -34,6 +47,8 @@ GateInfo:
     navigationInstructions: Maybe (Map Text Text)
     entryFeeAmount: Maybe Double
     entryFeeDisabledServiceTiers: Maybe [Text]
+    feeItems: Maybe [GateFeeItem]
+    minBalanceRequired: Maybe HighPrecMoney
     minDriverThresholds: Maybe (Map Text Int)
     maxDriverThresholds: Maybe (Map Text Int)
     demandThresholds: Maybe (Map Text Int)
@@ -64,6 +79,7 @@ GateInfo:
     point: Text
     enableQueueFilter: Maybe Text
     gateConfig: Maybe Text
+    feeItems: Maybe Text
 
   sqlType:
     id: character varying(36)
@@ -78,11 +94,13 @@ GateInfo:
     navigationInstructionsJson: text
     enableQueueFilter: text
     gateConfig: text
+    feeItems: text
 
   fromTType:
     point: Lib.Queries.Transformers.GateInfo.mkLatLongFromText point|E
     enableQueueFilter: Lib.Queries.Transformers.GateInfo.decodeBoolMap enableQueueFilter|E
     gateConfig: Lib.Queries.Transformers.GateInfo.decodeGateConfig gateConfig|E
+    feeItems: Lib.Queries.Transformers.GateInfo.decodeFeeItems feeItems|E
     minDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap minDriverThresholdsJson|E
     maxDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap maxDriverThresholdsJson|E
     demandThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap demandThresholdsJson|E
@@ -92,6 +110,7 @@ GateInfo:
     point: Lib.Queries.Transformers.GateInfo.latLongToText point|E
     enableQueueFilter: Lib.Queries.Transformers.GateInfo.encodeBoolMap enableQueueFilter|E
     gateConfig: Lib.Queries.Transformers.GateInfo.encodeGateConfig gateConfig|E
+    feeItems: Lib.Queries.Transformers.GateInfo.encodeFeeItems feeItems|E
     minDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
     maxDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
     demandThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
