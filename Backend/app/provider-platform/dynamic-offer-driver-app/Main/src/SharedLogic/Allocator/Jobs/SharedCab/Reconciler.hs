@@ -33,6 +33,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (..))
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Servant.Client as EC
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
