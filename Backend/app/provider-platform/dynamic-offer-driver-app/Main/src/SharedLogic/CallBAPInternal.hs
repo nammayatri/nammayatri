@@ -715,7 +715,18 @@ getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   -- 4.5 R11: no live session arrives as rider-app's SHARED_CAB_SESSION_NOT_FOUND
   -- error body (NOT a bare status), so decode the APIError envelope and check the
   -- errorCode; every other error re-throws verbatim (same errorCode + HTTP status).
-  res <- EC.callApiExtractingApiError Nothing internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
+  -- This function inlines callApiUnwrappingApiError's two halves (URL rewrite,
+  -- then unwrap) because the NOT_FOUND branch needs the decoded error value.
+  newInternalUrl <-
+    HM.foldrWithKey
+      ( \k v acc ->
+          if Data.Text.isInfixOf (showBaseUrlText k) (showBaseUrlText acc)
+            then parseBaseUrl (Data.Text.replace (showBaseUrlText k) (showBaseUrlText v) (showBaseUrlText acc))
+            else pure acc
+      )
+      (pure internalUrl)
+      internalEndPointHashMap
+  res <- EC.callApiExtractingApiError Nothing newInternalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
   case res of
     Right mbSession -> pure mbSession
     Left (CallAPIError.RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
