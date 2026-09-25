@@ -12,7 +12,7 @@ module SharedLogic.SharedCab.Allocation.Types
     TimerKind (..),
     AllocationOutcome (..),
     timerExpiry,
-    allocKeyTtlSec,
+    isMovingSpeed,
     parseLtsTimestamp,
     Blame (..),
     blameFor,
@@ -31,7 +31,9 @@ import Kernel.Prelude
 -- | The value stored under Redis key @sharedcab:alloc:{bookingId}@ (05 §2).
 -- Field names match the plan JSON exactly: {vehicleNumber, allocatedAt, expiresAt, attempts}.
 --
---   * expiresAt = allocatedAt + standTimerSec while the cab is still standing (stand timer).
+--   * Timer mode follows the cab, not the stop (05 §2 "Timer mode"): claimed while stationary ->
+--     stand timer, expiresAt = allocatedAt + standTimerSec (the cab must start moving); claimed while
+--     moving -> expiresAt = Nothing, and the tick clears a stand timer once the cab moves.
 --   * expiresAt is reset to <now> + movingTimerSec once the tick sees the cab at the board stop
 --     (moving timer, PRD §11 "90 s after arriving"); Nothing until the first timer is armed.
 --   * attempts mirrors the lifetime counter kept under sharedcab:attempts:{bookingId}
@@ -42,7 +44,7 @@ data AllocationState = AllocationState
     allocatedAt :: UTCTime,
     expiresAt :: Maybe UTCTime,
     attempts :: Int,
-    timer :: TimerKind -- which of the two timers expiresAt belongs to
+    timerKind :: TimerKind -- which of the two timers expiresAt belongs to
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -171,14 +173,15 @@ defaultAllocationConfig =
 timerExpiry :: UTCTime -> Maybe AllocationState -> Maybe AllocationOutcome
 timerExpiry _ Nothing = Just TimerLost
 timerExpiry now (Just st) = case st.expiresAt of
-  Just deadline | now > deadline -> Just $ case st.timer of
+  Just deadline | now > deadline -> Just $ case st.timerKind of
     StandTimer -> StandTimeout
     MovingTimer -> MovingTimeout
   _ -> Nothing
 
--- | The alloc key outlives its timer by a margin, so the tick sees the expiry before the key goes.
-allocKeyTtlSec :: Int -> Int
-allocKeyTtlSec timerSec = timerSec + 60
+-- | Moving per the cab's latest LTS speed (m/s); no speed reads as stationary, which arms the
+-- stand timer -- the conservative side.
+isMovingSpeed :: Maybe Double -> Bool
+isMovingSpeed = maybe False (> 1.0)
 
 -- | LTS writes chrono DateTime<Utc> as RFC 3339 (`2026-09-25T10:15:30.123456789Z`); aeson's UTCTime
 -- parser also takes offsets and a space separator, and bare epoch seconds are accepted as a fallback.

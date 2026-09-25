@@ -205,7 +205,8 @@ readRoutePositions routeCode = do
 data RankedCandidate = RankedCandidate
   { rcSession :: Session,
     rcEtaToBoardStopSec :: Int,
-    rcUpcomingStop :: LT.UpcomingStop
+    rcUpcomingStop :: LT.UpcomingStop,
+    rcMoving :: Bool -- per its fresh LTS position: decides the claim's timer mode (05 §2)
   }
   deriving (Show, Generic)
 
@@ -236,7 +237,7 @@ eligibleCandidates ::
   FindingBooking ->
   [RankedCandidate]
 eligibleCandidates now cfg tracking sessions booking =
-  [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop}
+  [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed}
     | s <- sessions,
       -- route sets hold ACTIVE plates only (SessionState.routeSetMoves), but this read is
       -- lock-free; status is the truth (04 §3), so re-check.
@@ -311,12 +312,14 @@ attemptClaim cfg booking cand = do
                       QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
                       now <- getCurrentTime
                       attempts <- readAttempts (attemptsKey booking.bookingId.getId)
-                      -- stand timer armed now (05 §2); stop-progress (7.5) re-arms it as the moving
-                      -- timer when the cab reaches the board stop.
+                      -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
+                      -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
+                      -- The key's TTL is only a garbage-collection backstop.
+                      let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
                       Redis.setExp
                         (allocKey booking.bookingId.getId)
-                        AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = Just (addUTCTime (intToNominalDiffTime cfg.standTimerSec) now), attempts, timer = StandTimer}
-                        (allocKeyTtlSec cfg.standTimerSec)
+                        AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
+                        cfg.findingTimeoutSec
                       pure (Right now)
                     | otherwise -> pure (Left ClaimCasLost)
                   Nothing -> pure (Left ClaimCasLost)
@@ -393,15 +396,26 @@ afterClose _ bookingId plate _ closed =
     Invariants.checkCab plate
 
 -- | 05 §2/§3 timers: an ALLOCATED booking whose timer ran out, or whose alloc key is gone, goes back
--- to FINDING. Decided under the booking lock, so a claim still writing its key is never mistaken for a lost one.
-expireTimers :: AllocFlow m r => AllocationConfig -> UTCTime -> [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] -> m ()
-expireTimers cfg now live =
+-- to FINDING; a stand timer is cleared once its cab is seen moving (timer mode follows the cab).
+-- Decided under the booking lock, so a claim still writing its key is never mistaken for a lost one.
+expireTimers ::
+  AllocFlow m r =>
+  AllocationConfig ->
+  UTCTime ->
+  (Text -> Text -> Bool) -> -- plate moving on route, per fresh LTS positions
+  [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] ->
+  m ()
+expireTimers cfg now movingOn live =
   forM_ [(b, plate) | entry@(b, _) <- live, Just plate <- [allocatedPlate entry]] $ \(b, plate) -> do
     result <- withBookingLock b.id $ do
-      st <- Redis.withMasterRedis $ Redis.safeGet (allocKey b.id.getId)
-      case timerExpiry now st of
-        Nothing -> pure Nothing
+      mbState <- Redis.withMasterRedis $ Redis.safeGet (allocKey b.id.getId)
+      case timerExpiry now mbState of
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
+        Nothing -> do
+          whenJust mbState $ \st ->
+            when (st.timerKind == StandTimer && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $
+              Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} cfg.findingTimeoutSec
+          pure Nothing
     whenJust result $ \(outcome, cityId) -> afterClose cfg b.id plate outcome (Just cityId)
 
 --------------------------------------------------------------------------------
@@ -474,21 +488,24 @@ runSharedCabAllocationTick cityId = do
       else do
         live <- cityLiveBookings cityId
         now <- getCurrentTime
+        let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
+        positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
+          try (readRoutePositions routeCode) >>= \case
+            -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in the
+            -- same minute must suspend the freshness gate (and NO_LOCATION pause/end). Skipping the
+            -- route is fail-safe: no allocation from stale data, and no stand timer cleared either.
+            Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
+            Right positions -> pure (Just (routeCode, positions))
+        let movingOn plate route =
+              any (\vt -> vt.vehicleNumber == plate && isFreshPosition now cfg.ltsMaxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed) $
+                fromMaybe [] (lookup route positionsByRoute)
         -- expired timers first: the seats they free are claimable in this same tick
-        expireTimers cfg now live
-        forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) -> do
-          ePositions <- try $ readRoutePositions routeCode
-          case ePositions of
-            Left (e :: SomeException) ->
-              -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in
-              -- the same minute must suspend the freshness gate (and NO_LOCATION pause/end).
-              -- Skipping the route here is fail-safe: no allocation from stale data, and no stop-progress
-              -- release (7.5) can act on it either.
-              logError $ "shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e
-            Right positions -> do
-              sessions <- Session.activeSessionsOnRoute routeCode
-              forM_ bookings $ \booking ->
-                void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+        expireTimers cfg now movingOn live
+        forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) ->
+          whenJust (lookup routeCode positionsByRoute) $ \positions -> do
+            sessions <- Session.activeSessionsOnRoute routeCode
+            forM_ bookings $ \booking ->
+              void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
 
 groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
 groupAllOn f = map (\grp -> (f (head grp), grp)) . groupBy ((==) `on` f) . sortOn f

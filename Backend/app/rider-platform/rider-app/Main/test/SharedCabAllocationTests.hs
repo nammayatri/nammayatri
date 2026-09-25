@@ -13,7 +13,7 @@ t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 36000
 
 standing :: AllocationState
-standing = AllocationState {vehicleNumber = "ML05A1234", allocatedAt = t0, expiresAt = Just (addUTCTime 180 t0), attempts = 0, timer = StandTimer}
+standing = AllocationState {vehicleNumber = "ML05A1234", allocatedAt = t0, expiresAt = Just (addUTCTime 180 t0), attempts = 0, timerKind = StandTimer}
 
 tests :: TestTree
 tests =
@@ -22,8 +22,12 @@ tests =
     [ testCase "a running timer keeps the allocation" $
         timerExpiry (addUTCTime 179 t0) (Just standing) @?= Nothing,
       testCase "an expired stand timer releases as StandTimeout, a moving one as MovingTimeout" $
-        (timerExpiry (addUTCTime 181 t0) (Just standing), timerExpiry (addUTCTime 181 t0) (Just standing {timer = MovingTimer}))
+        (timerExpiry (addUTCTime 181 t0) (Just standing), timerExpiry (addUTCTime 181 t0) (Just standing {timerKind = MovingTimer}))
           @?= (Just StandTimeout, Just MovingTimeout),
+      testCase "a cab claimed while moving has no timer to lapse" $
+        timerExpiry (addUTCTime 3600 t0) (Just standing {expiresAt = Nothing}) @?= Nothing,
+      testCase "timer mode follows the cab: moving above 1 m/s, no speed reads as stationary" $
+        map isMovingSpeed [Just 5.0, Just 0.2, Nothing] @?= [True, False, False],
       testCase "a vanished alloc key releases without blame" $
         (timerExpiry t0 Nothing, blameFor TimerLost, countsTowardAttempts TimerLost) @?= (Just TimerLost, BlameNone, False),
       testCase "LTS chrono RFC 3339 with nanoseconds and Z" $
