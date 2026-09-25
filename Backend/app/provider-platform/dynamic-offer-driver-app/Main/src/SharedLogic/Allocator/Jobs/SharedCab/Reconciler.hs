@@ -37,7 +37,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import Servant hiding (throwError)
-import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
+import SharedLogic.Allocator (AllocatorJobType (SharedCabReconciler), SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
