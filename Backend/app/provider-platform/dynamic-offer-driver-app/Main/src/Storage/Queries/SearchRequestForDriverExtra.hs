@@ -81,8 +81,31 @@ setInactiveBySTId mbSrfds searchTryId = do
     [Se.Set BeamSRFD.status Domain.Inactive, Se.Set BeamSRFD.updatedAt (Just now)]
     [Se.Is BeamSRFD.searchTryId (Se.Eq searchTryId)]
 
+-- | How long after validTill a driver's respond is still honoured (absorbs API latency on a
+-- last-second accept). Shared with the respond API so "can still respond" means one thing.
+searchRequestRespondGraceSeconds :: NominalDiffTime
+searchRequestRespondGraceSeconds = 10
+
+isRespondableAt :: UTCTime -> SearchRequestForDriver -> Bool
+isRespondableAt now srfd = now <= addUTCTime searchRequestRespondGraceSeconds srfd.searchRequestValidTill
+
+-- | Split rows being retracted into (still respondable, already expired). Only the first
+-- were actually pulled from a driver; the rest ran out unanswered and must keep an empty
+-- response, or ignores get recorded as Pulled (and uncounted from the driver's
+-- quote-response eligible count).
+partitionRespondable :: UTCTime -> [SearchRequestForDriver] -> ([SearchRequestForDriver], [SearchRequestForDriver])
+partitionRespondable now = partition (isRespondableAt now)
+
+-- | Retract rows without recording a response: for offers that expired unanswered.
+setInactiveByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
+setInactiveByIds = retractByIds Nothing
+
 setInactiveAndPulledByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [SearchRequestForDriver] -> m ()
-setInactiveAndPulledByIds srfds = do
+setInactiveAndPulledByIds = retractByIds (Just Domain.Pulled)
+
+retractByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe SearchRequestForDriverResponse -> [SearchRequestForDriver] -> m ()
+retractByIds _ [] = pure ()
+retractByIds mbResponse srfds = do
   now <- getCurrentTime
   mapM_
     ( \s -> do
@@ -94,10 +117,11 @@ setInactiveAndPulledByIds srfds = do
     )
     srfds -- this will remove the key from redis
   updateWithKV
-    [ Se.Set BeamSRFD.status Domain.Inactive,
-      Se.Set BeamSRFD.response (Just Domain.Pulled),
-      Se.Set BeamSRFD.updatedAt (Just now)
-    ]
+    ( [ Se.Set BeamSRFD.status Domain.Inactive,
+        Se.Set BeamSRFD.updatedAt (Just now)
+      ]
+        <> maybe [] (\response -> [Se.Set BeamSRFD.response (Just response)]) mbResponse
+    )
     [Se.Is BeamSRFD.id (Se.In $ (.id.getId) <$> srfds)]
 
 findByDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HedisFlow m r) => Id Person -> m [SearchRequestForDriver]

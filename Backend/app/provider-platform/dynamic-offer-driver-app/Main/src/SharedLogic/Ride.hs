@@ -704,16 +704,22 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
   -- whole driver pool's cleanup on the accepting driver's respond latency. Nothing reads
   -- its effects synchronously — losers are additionally bulk-deactivated by
   -- deactivateExistingQuotes, and a racing loser respond fails on the searchTry gate.
-  fork "pulling ride requests from other drivers" $
-    for_ driverSearchReqs $ \driverReq -> do
+  fork "pulling ride requests from other drivers" $ do
+    -- Rows of earlier batches stay Active past validTill (a new batch only retracts
+    -- drivers it re-offers), so the sweep also finds offers that expired unanswered.
+    -- Those were ignored, not pulled: close them without a response and without
+    -- uncounting them from the driver's quote-response eligible count.
+    now <- getCurrentTime
+    let (pulledReqs, expiredReqs) = QSRD.partitionRespondable now $ filter ((/= quoteDriverId) . (.driverId)) driverSearchReqs
+    QSRD.setInactiveByIds expiredReqs
+    for_ pulledReqs $ \driverReq -> do
       let driverId = driverReq.driverId
-      unless (driverId == quoteDriverId) $ do
-        DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
-        DP.decrementSrdSentCount driverReq.createdAt driverId
-        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
-        void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
-        driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
+      DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
+      DP.decrementSrdSentCount driverReq.createdAt driverId
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
+      void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
+      driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
 
 searchRequestKey :: Text -> Text
 searchRequestKey sId = "Driver:Search:Request:" <> sId

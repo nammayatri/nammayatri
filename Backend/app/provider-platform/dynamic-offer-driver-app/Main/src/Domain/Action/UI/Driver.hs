@@ -1984,8 +1984,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when (sReqFD.isForwardRequest) $ do
               mbGeohash <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get (editDestinationUpdatedLocGeohashKey driverId)
               when (maybe False (sReqFD.previousDropGeoHash /=) mbGeohash) $ throwError CustomerDestinationUpdated
-            let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ------ added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
-            when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
+            -- grace window so a last-second accept doesn't fail on API latency
+            unless (QSRD.isRespondableAt now sReqFD) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
             searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
             when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do

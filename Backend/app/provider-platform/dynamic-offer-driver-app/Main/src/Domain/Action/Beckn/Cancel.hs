@@ -288,9 +288,13 @@ cancelSearch merchantId searchTry = do
       mbActiveBooking <- runInMasterDbAndRedis $ QRB.findByTransactionIdAndStatuses searchRequest.transactionId [SRB.NEW, SRB.TRIP_ASSIGNED]
       whenJust mbActiveBooking $ \_ ->
         throwError RideRequestAlreadyAccepted
-    driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
+    activeSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
     QST.cancelActiveTriesByRequestId searchTry.requestId
+    -- earlier batches' rows stay Active past validTill; those were ignored, not pulled
+    now <- getCurrentTime
+    let (driverSearchReqs, expiredSearchReqs) = QSRD.partitionRespondable now activeSearchReqs
     QSRD.setInactiveAndPulledByIds driverSearchReqs
+    QSRD.setInactiveByIds expiredSearchReqs
     QDQ.setInactiveBySRId searchTry.requestId
     mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchTry.merchantOperatingCityId.getId}) Nothing
     for_ driverSearchReqs $ \driverReq -> do
