@@ -18,9 +18,10 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation (allocKey, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
-import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), TimerKind (..), defaultAllocationConfig)
+import SharedLogic.SharedCab.Allocation (allocKey, cityConfig, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
+import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), TimerKind (..))
 import SharedLogic.SharedCab.Booking (markDropped, withBookingLock)
+import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
@@ -49,15 +50,15 @@ dropClockKey bookingId = "sharedcab:dropclock:" <> bookingId.getId
 offRouteKey :: Text -> Text
 offRouteKey plate = "sharedcab:offroute:" <> plate
 
--- offRouteMeters / offRouteSec are `04` §3 rider_config defaults; read them from config once those fields exist.
-stopProgressConfig :: AllocationConfig -> StopProgressConfig
-stopProgressConfig cfg =
+-- | The city's tunables (rider_config via Config.getTunables, defaults where unset).
+stopProgressConfig :: Config.SharedCabTunables -> StopProgressConfig
+stopProgressConfig t =
   StopProgressConfig
-    { atStopRadiusM = fromIntegral cfg.atStopRadiusM,
-      autoEndAfterDropSec = cfg.autoEndAfterDropSec,
-      offRouteMeters = 300,
-      offRouteSec = 120,
-      movingTimerSec = cfg.movingTimerSec
+    { atStopRadiusM = fromIntegral t.atStopRadiusM,
+      autoEndAfterDropSec = t.autoEndAfterDropSec,
+      offRouteMeters = fromIntegral t.offRouteMeters,
+      offRouteSec = t.offRouteSec,
+      movingTimerSec = t.movingTimerSec
     }
 
 -- | Live = not ENDED: a PAUSED cab still carries and drops its riders, it just isn't checked for off-route.
@@ -69,7 +70,8 @@ runStopProgress ::
   [(Text, [LT.VehicleTrackingOnRouteResp])] ->
   m ()
 runStopProgress cityId live positionsByRoute = when sharedCabAllocationEnabled $ do
-  let cfg = defaultAllocationConfig
+  cfg <- cityConfig cityId
+  spc <- stopProgressConfig <$> Config.getTunables cityId
   trips <- QVT.findAllLiveByMerchantOperatingCityId cityId
   -- no flush recovery here: the expiry job owns that (it needs the scheduler's job-creation env)
   sessions <- filter ((/= ENDED) . (.status)) . catMaybes <$> mapM (Session.readSession . (.vehicleNumber)) trips
@@ -82,7 +84,7 @@ runStopProgress cityId live positionsByRoute = when sharedCabAllocationEnabled $
           >>= either (\e -> [] <$ logError ("shared-cab stop progress: LTS read failed for route " <> routeCode <> ": " <> show e)) pure
     route <- if any ((== ACTIVE) . (.status)) cabs then routePolyline cityId routeCode else pure []
     forM_ cabs $ \s ->
-      withTryCatch "sharedCabStopProgressCab" (stepCab cfg (stopProgressConfig cfg) now live positions route s)
+      withTryCatch "sharedCabStopProgressCab" (stepCab cfg spc now live positions route s)
         >>= either (\e -> logError $ "shared-cab stop progress failed for cab " <> s.vehicleNumber <> ": " <> show e) pure
 
 routePolyline :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m [LatLong]
@@ -110,7 +112,7 @@ stepCab cfg spc now live positions route s = do
     if any (boardStopPassed b.fromStationCode) mbCab
       then -- TODO(7.6): Events no_show when the rider is outside atStopRadiusM (`05` §6.2; needs the journey-stream position).
         void $ releaseSharedCabAllocation cfg b.id plate PassedStop
-      else movingTimerStep spc now freshCab plate b
+      else movingTimerStep cfg.findingTimeoutSec spc now freshCab plate b
   forM_ onBoard $ dropStep spc now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep spc now route ((.position) <$> freshCab) plate
   whenJust mbCab $ \cab -> when (reachedRouteEnd spc.atStopRadiusM cab) $ markReachedEnd now s
@@ -125,8 +127,8 @@ cabFix vi =
     mark u = StopMark {stopCode = u.stop.stopCode, stopIdx = u.stop.stopIdx, reached = u.status == LT.Reached, coordinate = u.stop.coordinate}
 
 -- | Under the booking lock the key is re-read, so a close or re-bind racing the tick is never overwritten.
-movingTimerStep :: StopProgressFlow m r c => StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
-movingTimerStep spc now freshCab plate b = do
+movingTimerStep :: StopProgressFlow m r c => Int -> StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
+movingTimerStep keyTtlSec spc now freshCab plate b = do
   mbState <- shared $ Redis.safeGet @AllocationState (allocKey b.id.getId)
   whenJust mbState $ \st -> whenJust (armMovingTimer spc now st.expiresAt freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
@@ -135,7 +137,7 @@ movingTimerStep spc now freshCab plate b = do
         Just cur
           | cur.vehicleNumber == plate,
             Just deadline <- armMovingTimer spc now cur.expiresAt freshCab b.fromStationCode -> do
-            shared $ Redis.setExp (allocKey b.id.getId) cur {expiresAt = Just deadline, timerKind = MovingTimer} defaultAllocationConfig.findingTimeoutSec
+            shared $ Redis.setExp (allocKey b.id.getId) cur {expiresAt = Just deadline, timerKind = MovingTimer} keyTtlSec
             pure True
         _ -> pure False
     when armed $ Invariants.checkBooking b.id
