@@ -54,6 +54,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import qualified Kernel.Storage.InMem as IM
+import qualified Kernel.Tools.Metrics.ApiCategory as ApiCategory
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Cache
@@ -253,6 +254,8 @@ data AppCfg = AppCfg
     disableViaPointTimetableCheck :: Bool,
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
+    transactionalApiRoutes :: [Text],
+    configApiRoutes :: [Text],
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     sftpConfig :: SFTPConfig,
@@ -418,6 +421,7 @@ data AppEnv = AppEnv
     url :: Maybe Text,
     parkingApiKey :: Text,
     corporatePartnerApiToken :: Text,
+    apiCategoryConfig :: ApiCategory.ApiCategoryConfig,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
@@ -502,6 +506,7 @@ buildAppEnv cfg@AppCfg {..} = do
           pure Nothing
         Right env -> pure (Just env)
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let apiCategoryConfig = ApiCategory.mkApiCategoryConfig transactionalApiRoutes configApiRoutes
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in api handler
   -- AppCfg carries the ISO 8601 string, AppEnv wants UTCTime. Same parse as

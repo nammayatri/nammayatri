@@ -682,6 +682,8 @@ in  { esqDBCfg
     , minDistanceBetweenTwoPoints = +25
     , inMemConfig
     , driverFleetLocationListAPIRateLimitOptions
+    , transactionalApiRoutes = [] : List Text
+    , configApiRoutes = [] : List Text
     , noSignatureSubscribers
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
