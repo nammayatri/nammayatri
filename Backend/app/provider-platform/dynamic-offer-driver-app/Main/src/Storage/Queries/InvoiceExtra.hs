@@ -230,6 +230,15 @@ findAllActiveByDriverFeeIds driverFeeIds =
         ]
     ]
 
+findAllByDriverFeeIdsAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> Domain.InvoiceStatus -> m [Domain.Invoice]
+findAllByDriverFeeIdsAndStatus driverFeeIds invoiceStatus =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds),
+          Se.Is BeamI.invoiceStatus $ Se.Eq invoiceStatus
+        ]
+    ]
+
 updateActiveInvoiceStatusByDriverFeeIdsAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> [Id DF.DriverFee] -> Domain.InvoicePaymentMode -> m ()
 updateActiveInvoiceStatusByDriverFeeIdsAndPaymentMode status driverFeeIds paymentMode = do
   now <- getCurrentTime

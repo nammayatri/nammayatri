@@ -7,6 +7,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Person as P
 import qualified Domain.Types.Plan as Plan
+import Kernel.Beam.Functions (runInMasterDb)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -71,9 +72,18 @@ retryAutopayCollection Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let batchSize = fromMaybe defaultRetryBatchSize jobData.batchSize
       remainingToConvert = maybe batchSize (\maxFees -> maxFees - convertedSoFar) jobData.maxFeesToConvert
       windowKey purpose = retryWindowKey purpose merchantId.getId merchantOpCityId.getId (show serviceName) startTime endTime
+      hasFeesPendingNotification = do
+        pendingDriverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId merchantOpCityId 1 startTime endTime 0 DF.PAYMENT_PENDING serviceName
+        unless (null pendingDriverFees) $
+          logWarning $ retryLogTag <> " window has converted driver fees pending notification, scheduling notification job"
+        return $ not (null pendingDriverFees)
       closeOutWindow = do
         logInfo $ retryLogTag <> " done for window, " <> show convertedSoFar <> " driver fees converted, dryRun " <> show jobData.dryRun
-        when (convertedSoFar > 0 && not jobData.dryRun) $ do
+        shouldScheduleNotification <-
+          if jobData.dryRun || convertedSoFar > 0
+            then return (not jobData.dryRun)
+            else hasFeesPendingNotification
+        when shouldScheduleNotification $ do
           isFirstCloseOut <- Redis.setNxExpire (windowKey "CloseOut") retryWindowCloseOutTtl True
           when isFirstCloseOut $
             Redis.runInMasterCloudRedisCell $
@@ -129,15 +139,19 @@ filterEligibleForRetry ::
   [DriverFee] ->
   m [DriverFee]
 filterEligibleForRetry serviceName driverFees = do
-  driverPlans <- QDP.findAllByDriverIdsPaymentModeAndServiceName (driverFees <&> (.driverId)) Plan.AUTOPAY serviceName (Just DI.ACTIVE)
-  activeInvoices <- QINV.findAllActiveByDriverFeeIds (driverFees <&> (.id))
+  let driverFeeIds = driverFees <&> (.id)
+  driverPlans <- runInMasterDb $ QDP.findAllByDriverIdsPaymentModeAndServiceName (driverFees <&> (.driverId)) Plan.AUTOPAY serviceName (Just DI.ACTIVE)
+  activeInvoices <- runInMasterDb $ QINV.findAllActiveByDriverFeeIds driverFeeIds
+  successfulInvoices <- runInMasterDb $ QINV.findAllByDriverFeeIdsAndStatus driverFeeIds INV.SUCCESS
   let mandateByDriverId = Map.fromList $ mapMaybe (\driverPlan -> (\mandateId -> (driverPlan.driverId, mandateId)) <$> driverPlan.mandateId) driverPlans
       driverFeeIdsWithLiveManualInvoice = filter ((/= INV.AUTOPAY_INVOICE) . (.paymentMode)) activeInvoices <&> (.driverFeeId)
+      driverFeeIdsAlreadyPaid = successfulInvoices <&> (.driverFeeId)
       driverFeesWithActiveMandate =
         filter
           ( \driverFee ->
               Map.member (cast @P.Driver @P.Person driverFee.driverId) mandateByDriverId
                 && driverFee.id `notElem` driverFeeIdsWithLiveManualInvoice
+                && driverFee.id `notElem` driverFeeIdsAlreadyPaid
           )
           driverFees
   filterM (fmap not . isManualPaymentInProgress) driverFeesWithActiveMandate
@@ -153,24 +167,18 @@ convertToAutoPay ::
   [DriverFee] ->
   m [DriverFee]
 convertToAutoPay eligibleStages driverFees = do
+  now <- getCurrentTime
   let driverFeeIds = driverFees <&> (.id)
-  QNTF.updateSuccessToFailedByDriverFeeIds driverFeeIds
-  QINV.retireAutopayInvoicesByDriverFeeIds driverFeeIds
-  forM driverFees convertDriverFee
-  where
-    convertDriverFee driverFee = do
-      now <- getCurrentTime
-      let reconvertedDriverFee =
-            driverFee
-              { DF.feeType = DF.RECURRING_EXECUTION_INVOICE,
-                DF.status = DF.PAYMENT_PENDING,
-                DF.autopayPaymentStage = Just DF.NOTIFICATION_SCHEDULED,
-                DF.stageUpdatedAt = Just now,
-                DF.notificationRetryCount = 0,
-                DF.updatedAt = now
-              }
-      invoiceId <- generateGUID
-      invoiceShortId <- generateShortId
-      QINV.create $ mkInvoiceAgainstDriverFee (invoiceId :: Text) invoiceShortId.getShortId now Nothing INV.AUTOPAY_INVOICE reconvertedDriverFee
-      QDF.updateManualToAutoPayForRetry eligibleStages driverFee.id
-      return reconvertedDriverFee
+  reconvertedDriverFees <- catMaybes <$> forM driverFeeIds (QDF.updateManualToAutoPayForRetry eligibleStages now)
+  let reconvertedDriverFeeIds = reconvertedDriverFees <&> (.id)
+      skippedDriverFeeIds = filter (`notElem` reconvertedDriverFeeIds) driverFeeIds
+  unless (null skippedDriverFeeIds) $
+    logWarning $ retryLogTag <> " skipped driver fees no longer eligible at conversion: " <> show (skippedDriverFeeIds <&> (.getId))
+  unless (null reconvertedDriverFeeIds) $ do
+    QNTF.updateSuccessToFailedByDriverFeeIds reconvertedDriverFeeIds
+    QINV.retireAutopayInvoicesByDriverFeeIds reconvertedDriverFeeIds
+  forM_ reconvertedDriverFees $ \reconvertedDriverFee -> do
+    invoiceId <- generateGUID
+    invoiceShortId <- generateShortId
+    QINV.create $ mkInvoiceAgainstDriverFee (invoiceId :: Text) invoiceShortId.getShortId now Nothing INV.AUTOPAY_INVOICE reconvertedDriverFee
+  return reconvertedDriverFees
