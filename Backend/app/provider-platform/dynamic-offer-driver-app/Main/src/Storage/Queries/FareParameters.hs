@@ -154,7 +154,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
             Nothing -> return Nothing
     now <- getCurrentTime
     let conditionalCharges' = fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< conditionalCharges
-        customerGateFeeItems' = fromMaybe [] $ (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customerGateFeeItems
+        customerGateFeeItems' = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customerGateFeeItems
     case mFareParametersDetails of
       Just fareParametersDetails -> do
         return $
@@ -268,7 +268,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         merchantId = getId <$> merchantId,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamFP.conditionalCharges = Just $ toJSON conditionalCharges,
-        BeamFP.customerGateFeeItems = Just $ toJSON customerGateFeeItems,
+        BeamFP.customerGateFeeItems = toJSON <$> customerGateFeeItems,
         BeamFP.paymentProcessingFee = paymentProcessingFee,
         BeamFP.paymentProcessingFeeVat = paymentProcessingFeeVat,
         BeamFP.isVatTaxType = isVatTaxType,
