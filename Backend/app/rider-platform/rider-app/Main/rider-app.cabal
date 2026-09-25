@@ -631,6 +631,7 @@ library
       SharedLogic.Search
       SharedLogic.Serviceability
       SharedLogic.SharedCab.Booking
+      SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.Session
@@ -2140,6 +2141,7 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      SharedCabInvariantsTests
       SharedCabLegStateTests
       SharedCabPlateTests
       SharedCabSessionTests

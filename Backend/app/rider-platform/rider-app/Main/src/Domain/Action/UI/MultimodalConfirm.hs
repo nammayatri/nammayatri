@@ -142,6 +142,7 @@ import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import qualified SharedLogic.SharedCab.Invariants as SharedCabInvariants
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -1571,7 +1572,8 @@ withSharedCabCancelGuard :: Maybe DFRFSTicketBooking.FRFSTicketBooking -> Enviro
 withSharedCabCancelGuard mbBooking cancelAction = case mbBooking of
   Just booking
     | SharedCabBooking.isSharedCabBooking booking ->
-      SharedCabBooking.withBookingLock booking.id $ SharedCabBooking.ensureCancellable booking >> cancelAction
+      SharedCabBooking.withBookingLock booking.id (SharedCabBooking.ensureCancellable booking >> cancelAction)
+        >> SharedCabInvariants.checkBooking booking.id
   _ -> cancelAction
 
 -- | "I got down" and journey complete end a shared-cab ticket (USED) before the leg is marked finished.
@@ -1582,6 +1584,8 @@ dropSharedCabRider journeyLeg = do
     when (SharedCabBooking.isSharedCabBooking booking) $ do
       SharedCabBooking.markDropped booking
       whenJust booking.vehicleNumber SharedCabSession.applyQueuedRoute
+      SharedCabInvariants.checkBooking booking.id
+      whenJust booking.vehicleNumber SharedCabInvariants.checkCab
 
 postMultimodalOrderReschedule ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

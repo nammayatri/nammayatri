@@ -23,6 +23,8 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified SharedLogic.SharedCab.Invariants as Invariants
+import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
@@ -83,18 +85,19 @@ postSharedCabRouteSelect mbToken req = do
   checkToken mbToken
   integratedBppConfig <- getIntegratedBppConfig req.integratedBppConfigId
   selected <-
-    Session.selectRoute
-      req.mode
-      OpenSessionReq
-        { driverId = req.driverId,
-          vehicleNumber = req.vehicleNumber,
-          merchantId = integratedBppConfig.merchantId,
-          merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
-          integratedBppConfigId = integratedBppConfig.id,
-          serviceTierType = req.serviceTierType,
-          capacity = fromMaybe defaultCapacity req.capacity,
-          routeCode = req.routeCode
-        }
+    checkedCab req.vehicleNumber $
+      Session.selectRoute
+        req.mode
+        OpenSessionReq
+          { driverId = req.driverId,
+            vehicleNumber = req.vehicleNumber,
+            merchantId = integratedBppConfig.merchantId,
+            merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId,
+            integratedBppConfigId = integratedBppConfig.id,
+            serviceTierType = req.serviceTierType,
+            capacity = fromMaybe defaultCapacity req.capacity,
+            routeCode = req.routeCode
+          }
   case selected of
     Left onBoard -> do
       affected <- mapM affectedRider onBoard
@@ -103,7 +106,7 @@ postSharedCabRouteSelect mbToken req = do
       session' <-
         if req.walkupCount == session.walkupCount
           then pure session
-          else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount
+          else Session.setWalkupCount req.driverId req.vehicleNumber session.version req.walkupCount >>= checked
       resp <- mkSessionResp session'
       pure API.SelectRouteResp {session = Just resp, affectedRiders = Nothing}
   where
@@ -116,6 +119,13 @@ postSharedCabRouteSelect mbToken req = do
             dropStop = fromMaybe booking.toStationCode booking.toStationName
           }
 
+-- | Validator layer 4 after every session transition; it logs and counts, never throws.
+checked :: Session -> Environment.Flow Session
+checked s = s <$ Invariants.checkCab s.vehicleNumber
+
+checkedCab :: Text -> Environment.Flow a -> Environment.Flow a
+checkedCab rawPlate action = action <* Invariants.checkCab (canonicalisePlate rawPlate)
+
 ownSession :: Text -> Text -> Environment.Flow Session
 ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
 
@@ -127,23 +137,23 @@ getSharedCabSession driver plate mbToken = do
 postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow View.SharedCabSession
 postSharedCabSeats mbToken req = do
   checkToken mbToken
-  Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= mkSessionResp
+  Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= checked >>= mkSessionResp
 
 -- | CHANGE leaves the session as is: the driver picks the next route with route/select, which closes this run.
 postSharedCabRouteEnd :: Maybe Text -> View.EndRouteReq -> Environment.Flow (Maybe View.SharedCabSession)
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
-    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= mkSessionResp)
+    View.RETURN -> Just <$> (Session.endRoute req.driverId req.vehicleNumber forced StartReturn >>= checked >>= mkSessionResp)
     View.CHANGE -> Just <$> (ownSession req.driverId req.vehicleNumber >>= mkSessionResp)
-    View.END -> Nothing <$ Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow)
+    View.END -> Nothing <$ (Session.endRoute req.driverId req.vehicleNumber forced (if req.atLastStop == Just True then EndRoute else EndForNow) >>= checked)
   where
     forced = req.force == Just True
 
 postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabResume mbToken req = do
   checkToken mbToken
-  Session.resume req.driverId req.vehicleNumber >>= mkSessionResp
+  Session.resume req.driverId req.vehicleNumber >>= checked >>= mkSessionResp
 
 -- | The driver's runs that started on `date` (IST). App riders and cash per run join here once boarding sets
 -- frfs_ticket_booking.vehicleTripId.
