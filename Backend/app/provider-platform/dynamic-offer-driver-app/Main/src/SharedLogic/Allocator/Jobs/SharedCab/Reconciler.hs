@@ -24,7 +24,7 @@ where
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import Data.Aeson (Value)
+import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import EulerHS.Types (EulerClient, client)
@@ -88,9 +88,9 @@ type SharedCabSessionAPI =
     :> QueryParam' '[Required, Strict] "driverId" Text
     :> QueryParam' '[Required, Strict] "vehicleNumber" Text
     :> Header "token" Text
-    :> Get '[JSON] Value
+    :> Get '[JSON] Aeson.Value
 
-callSessionClient :: Text -> Text -> Maybe Text -> EulerClient Value
+callSessionClient :: Text -> Text -> Maybe Text -> EulerClient Aeson.Value
 callSessionClient = client (Proxy @SharedCabSessionAPI)
 
 callSessionAPI :: Proxy SharedCabSessionAPI
@@ -106,7 +106,7 @@ getSharedCabSession ::
   BaseUrl ->
   Text ->
   Text ->
-  m Value
+  m Aeson.Value
 getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @SharedCabSessionApiError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
