@@ -1,0 +1,2 @@
+-- {"api":"GetSpecialZoneQueueDriverQueueRequests","migration":"capability","param":"city-operations.airport_queue.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.airport_queue.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/SPECIAL_ZONE_QUEUE/GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_REQUESTS' ) ON CONFLICT DO NOTHING;

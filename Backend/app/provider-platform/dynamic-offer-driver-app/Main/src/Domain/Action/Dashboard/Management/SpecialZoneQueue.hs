@@ -8,14 +8,16 @@ module Domain.Action.Dashboard.Management.SpecialZoneQueue
     postSpecialZoneQueueManualQueueRemove,
     getSpecialZoneQueueDriverQueuePosition,
     getSpecialZoneQueueDriverQueueHistory,
+    getSpecialZoneQueueDriverQueueRequests,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue as SZQT
+import qualified Dashboard.Common as Common
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import Data.Time (NominalDiffTime, addUTCTime)
+import Data.Time (NominalDiffTime, addUTCTime, diffUTCTime)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -45,6 +47,7 @@ import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
 import Tools.Error
 
@@ -369,3 +372,130 @@ getSpecialZoneQueueDriverQueueHistory merchantShortId opCity driverIdText = do
         { timestamp = ev.timestamp,
           value = ev.value
         }
+
+-- | Default lookback when the caller passes no 'from'.
+defaultQueueRequestsWindow :: NominalDiffTime
+defaultQueueRequestsWindow = 7 * 86400
+
+-- | Widest [from, to] the caller may ask for. The table takes one row per driver per
+-- trigger, so an open-ended window is an ops mistake, not a use case; reject it rather
+-- than serve an ever-growing scan even with the (driver_id, created_at) index in place.
+maxQueueRequestsWindow :: NominalDiffTime
+maxQueueRequestsWindow = 31 * 86400
+
+-- | Hard cap on rows pulled for one window. totalCount/summary are computed over the
+-- rows actually fetched, so when this cap bites the response says so via 'truncated'.
+queueRequestsFetchCap :: Int
+queueRequestsFetchCap = 500
+
+defaultQueueRequestsPageSize :: Int
+defaultQueueRequestsPageSize = 50
+
+maxQueueRequestsPageSize :: Int
+maxQueueRequestsPageSize = 200
+
+-- | Per-driver audit trail of pickup-zone (special zone queue) requests, straight from
+-- the special_zone_queue_request table — what was offered to the driver, what they did
+-- with it, and whether they were expected at the gate. This is the historical
+-- counterpart to 'getSpecialZoneQueueDriverQueuePosition' / 'getSpecialZoneQueueDriverQueueHistory',
+-- which only report live Redis queue state and keep nothing once the driver leaves.
+--
+-- Paging happens inside the fetched window rather than via a SQL OFFSET: the KV/DB
+-- merge in the connector does not compute offsets reliably, so we pull one capped,
+-- newest-first window and slice it here. That also lets the summary counts describe
+-- the whole window instead of just the current page.
+getSpecialZoneQueueDriverQueueRequests ::
+  ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+    Kernel.Types.Beckn.Context.City ->
+    Maybe UTCTime ->
+    Maybe UTCTime ->
+    Maybe Int ->
+    Maybe Int ->
+    Kernel.Types.Id.Id Common.Driver ->
+    Environment.Flow SZQT.DriverQueueRequestsRes
+  )
+getSpecialZoneQueueDriverQueueRequests merchantShortId opCity mbFrom mbTo mbLimit mbOffset reqDriverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let driverId = Kernel.Types.Id.cast @Common.Driver @DP.Person reqDriverId
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  -- Same scoping rule the rest of the provider dashboard uses: the caller's token is
+  -- valid for one (merchant, city), so a driver outside it is reported as not found.
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCity.id) $
+    throwError (PersonDoesNotExist driverId.getId)
+  now <- getCurrentTime
+  let toTime = fromMaybe now mbTo
+      fromTime = fromMaybe (addUTCTime (negate defaultQueueRequestsWindow) toTime) mbFrom
+      limit = max 0 $ min maxQueueRequestsPageSize (fromMaybe defaultQueueRequestsPageSize mbLimit)
+      offset = max 0 (fromMaybe 0 mbOffset)
+  when (toTime < fromTime) $ throwError (InvalidRequest "'to' must not be earlier than 'from'")
+  when (diffUTCTime toTime fromTime > maxQueueRequestsWindow) $
+    throwError (InvalidRequest "Requested window is wider than the 31 day maximum")
+  -- Fetch one past the cap so we can tell a full window from a truncated one.
+  fetched <- QSZQR.findAllByDriverIdAndTimeRange driverId fromTime toTime (queueRequestsFetchCap + 1)
+  let truncated = length fetched > queueRequestsFetchCap
+      windowRows = take queueRequestsFetchCap fetched
+      page = take limit (drop offset windowRows)
+  pure
+    SZQT.DriverQueueRequestsRes
+      { fromTime = fromTime,
+        toTime = toTime,
+        totalCount = length windowRows,
+        truncated = truncated,
+        summary = mkQueueRequestsSummary windowRows,
+        requests = map mkQueueRequestInfo page
+      }
+
+mkQueueRequestsSummary :: [DSZQR.SpecialZoneQueueRequest] -> SZQT.DriverQueueRequestsSummary
+mkQueueRequestsSummary rows =
+  SZQT.DriverQueueRequestsSummary
+    { total = length rows,
+      accepted = countResponse DSZQR.Accept,
+      rejected = countResponse DSZQR.Reject,
+      ignored = countResponse DSZQR.Ignored,
+      noShow = countResponse DSZQR.NoShow,
+      cancelled = countResponse DSZQR.Cancelled,
+      noResponse = length $ filter (isNothing . (.response)) rows
+    }
+  where
+    countResponse r = length $ filter ((== Just r) . (.response)) rows
+
+mkQueueRequestInfo :: DSZQR.SpecialZoneQueueRequest -> SZQT.DriverQueueRequestInfo
+mkQueueRequestInfo req =
+  SZQT.DriverQueueRequestInfo
+    { requestId = req.id.getId,
+      driverId = Kernel.Types.Id.cast @DP.Person @Common.Driver req.driverId,
+      gateId = req.gateId,
+      gateName = req.gateName,
+      specialLocationId = req.specialLocationId,
+      specialLocationName = req.specialLocationName,
+      vehicleType = req.vehicleType,
+      status = castQueueRequestStatus req.status,
+      response = castQueueRequestResponse <$> req.response,
+      triggerSource = castQueueTriggerSource <$> req.triggerSource,
+      triggerRequestId = req.triggerRequestId,
+      createdAt = req.createdAt,
+      updatedAt = req.updatedAt,
+      validTill = req.validTill,
+      arrivalDeadlineTime = req.arrivalDeadlineTime
+    }
+
+castQueueRequestStatus :: DSZQR.SpecialZoneQueueRequestStatus -> SZQT.QueueRequestStatus
+castQueueRequestStatus = \case
+  DSZQR.Active -> SZQT.Active
+  DSZQR.Accepted -> SZQT.Accepted
+  DSZQR.Completed -> SZQT.Completed
+  DSZQR.Expired -> SZQT.Expired
+
+castQueueRequestResponse :: DSZQR.SpecialZoneQueueRequestResponse -> SZQT.QueueRequestResponse
+castQueueRequestResponse = \case
+  DSZQR.Accept -> SZQT.Accept
+  DSZQR.Reject -> SZQT.Reject
+  DSZQR.Ignored -> SZQT.Ignored
+  DSZQR.NoShow -> SZQT.NoShow
+  DSZQR.Cancelled -> SZQT.Cancelled
+
+castQueueTriggerSource :: DSZQR.TriggerSource -> SZQT.QueueRequestTriggerSource
+castQueueTriggerSource = \case
+  DSZQR.App -> SZQT.App
+  DSZQR.Dashboard -> SZQT.Dashboard

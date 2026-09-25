@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue where
 
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -11,6 +12,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
+import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
@@ -19,6 +21,49 @@ data DriverQueueHistoryRes = DriverQueueHistoryRes {trackingState :: Kernel.Prel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverQueuePositionRes = DriverQueuePositionRes {queuePosition :: Kernel.Prelude.Maybe Kernel.Prelude.Int, queueSize :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverQueueRequestInfo = DriverQueueRequestInfo
+  { requestId :: Kernel.Prelude.Text,
+    driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
+    gateId :: Kernel.Prelude.Text,
+    gateName :: Kernel.Prelude.Text,
+    specialLocationId :: Kernel.Prelude.Text,
+    specialLocationName :: Kernel.Prelude.Text,
+    vehicleType :: Kernel.Prelude.Text,
+    status :: QueueRequestStatus,
+    response :: Kernel.Prelude.Maybe QueueRequestResponse,
+    triggerSource :: Kernel.Prelude.Maybe QueueRequestTriggerSource,
+    triggerRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    validTill :: Kernel.Prelude.UTCTime,
+    arrivalDeadlineTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverQueueRequestsRes = DriverQueueRequestsRes
+  { fromTime :: Kernel.Prelude.UTCTime,
+    toTime :: Kernel.Prelude.UTCTime,
+    totalCount :: Kernel.Prelude.Int,
+    truncated :: Kernel.Prelude.Bool,
+    summary :: DriverQueueRequestsSummary,
+    requests :: [DriverQueueRequestInfo]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverQueueRequestsSummary = DriverQueueRequestsSummary
+  { total :: Kernel.Prelude.Int,
+    accepted :: Kernel.Prelude.Int,
+    rejected :: Kernel.Prelude.Int,
+    ignored :: Kernel.Prelude.Int,
+    noShow :: Kernel.Prelude.Int,
+    cancelled :: Kernel.Prelude.Int,
+    noResponse :: Kernel.Prelude.Int
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -50,6 +95,29 @@ data QueueDriverDetail = QueueDriverDetail
 
 data QueueHistoryEvent = QueueHistoryEvent {timestamp :: Kernel.Prelude.Double, value :: Kernel.Prelude.Text}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data QueueRequestResponse
+  = Accept
+  | Reject
+  | Ignored
+  | NoShow
+  | Cancelled
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data QueueRequestStatus
+  = Active
+  | Accepted
+  | Completed
+  | Expired
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data QueueRequestTriggerSource
+  = App
+  | Dashboard
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data QueueTrackingState = QueueTrackingState {specialLocationId :: Kernel.Prelude.Text, vehicleType :: Kernel.Prelude.Text, consecutiveExitPings :: Kernel.Prelude.Int, lastRecordedRank :: Kernel.Prelude.Int}
@@ -123,7 +191,7 @@ data VehicleQueueStats = VehicleQueueStats
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueTriggerNotifyStatus :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition :<|> GetSpecialZoneQueueDriverQueueHistory))
+type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueTriggerNotifyStatus :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition :<|> GetSpecialZoneQueueDriverQueueHistory :<|> GetSpecialZoneQueueDriverQueueRequests))
 
 type PostSpecialZoneQueueTriggerNotify = ("triggerNotify" :> ReqBody '[JSON] TriggerSpecialZoneQueueNotifyReq :> Post '[JSON] TriggerSpecialZoneQueueNotifyRes)
 
@@ -146,6 +214,20 @@ type GetSpecialZoneQueueDriverQueuePosition =
 
 type GetSpecialZoneQueueDriverQueueHistory = ("driverQueueHistory" :> MandatoryQueryParam "driverId" Kernel.Prelude.Text :> Get '[JSON] DriverQueueHistoryRes)
 
+type GetSpecialZoneQueueDriverQueueRequests =
+  ( "driverQueueRequests" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> MandatoryQueryParam
+           "driverId"
+           (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> Get
+           '[JSON]
+           DriverQueueRequestsRes
+  )
+
 data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
   { postSpecialZoneQueueTriggerNotify :: TriggerSpecialZoneQueueNotifyReq -> EulerHS.Types.EulerClient TriggerSpecialZoneQueueNotifyRes,
     getSpecialZoneQueueTriggerNotifyStatus :: EulerHS.Types.EulerClient TriggerSpecialZoneQueueNotifyStatusRes,
@@ -153,13 +235,14 @@ data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
     postSpecialZoneQueueManualQueueAdd :: ManualQueueAddReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postSpecialZoneQueueManualQueueRemove :: ManualQueueRemoveReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getSpecialZoneQueueDriverQueuePosition :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueuePositionRes,
-    getSpecialZoneQueueDriverQueueHistory :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueueHistoryRes
+    getSpecialZoneQueueDriverQueueHistory :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueueHistoryRes,
+    getSpecialZoneQueueDriverQueueRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverQueueRequestsRes
   }
 
 mkSpecialZoneQueueAPIs :: (Client EulerHS.Types.EulerClient API -> SpecialZoneQueueAPIs)
 mkSpecialZoneQueueAPIs specialZoneQueueClient = (SpecialZoneQueueAPIs {..})
   where
-    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueTriggerNotifyStatus :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove :<|> getSpecialZoneQueueDriverQueuePosition :<|> getSpecialZoneQueueDriverQueueHistory = specialZoneQueueClient
+    postSpecialZoneQueueTriggerNotify :<|> getSpecialZoneQueueTriggerNotifyStatus :<|> getSpecialZoneQueueQueueStats :<|> postSpecialZoneQueueManualQueueAdd :<|> postSpecialZoneQueueManualQueueRemove :<|> getSpecialZoneQueueDriverQueuePosition :<|> getSpecialZoneQueueDriverQueueHistory :<|> getSpecialZoneQueueDriverQueueRequests = specialZoneQueueClient
 
 data SpecialZoneQueueUserActionType
   = POST_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY
@@ -169,6 +252,7 @@ data SpecialZoneQueueUserActionType
   | POST_SPECIAL_ZONE_QUEUE_MANUAL_QUEUE_REMOVE
   | GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_POSITION
   | GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_HISTORY
+  | GET_SPECIAL_ZONE_QUEUE_DRIVER_QUEUE_REQUESTS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
