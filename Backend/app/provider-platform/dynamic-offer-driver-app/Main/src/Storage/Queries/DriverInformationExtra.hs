@@ -639,20 +639,26 @@ updateSharedCabSessionActive sharedCabSessionActive driverId = do
     LTSSync.emptyUpdate {LTSSync.sharedCabSessionActive = LTSSync.Set sharedCabSessionActive}
 
 -- | Drivers in a city whose shared-cab session flag is stuck/likely-live
---   True. Read side of the 4.2B reconciler sweep: the job walks this list and
+--   True. Read side of the 4.2C reconciler sweep: the job walks this list and
 --   asks the rider-app for the live session; only the reconciler (and explicit
 --   session end) is allowed to flip the flag back to False.
-findAllSharedCabActiveDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe Int -> Maybe Int -> m [DriverInformation]
-findAllSharedCabActiveDrivers merchantOpCityId mbLimit mbOffset = do
+--
+--   Keyset pagination (driverId > lastSeen, same idiom as
+--   'findEligibleForScheduledPayout'), NOT offset: the sweep clears rows out
+--   of this very set, so an offset walk would skip every second row between
+--   pages (4.2B bug — rows shift back by the number cleared before them).
+findSharedCabActiveDriversAfter :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id Person.Person) -> Int -> m [DriverInformation]
+findSharedCabActiveDriversAfter merchantOpCityId mbLastDriverId batchSize = do
   findAllWithOptionsKV
     [ Se.And
-        [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
-          Se.Is BeamDI.sharedCabSessionActive (Se.Eq True)
-        ]
+        $ [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+            Se.Is BeamDI.sharedCabSessionActive (Se.Eq True)
+          ]
+          <> maybe [] (\lastId -> [Se.Is BeamDI.driverId $ Se.GreaterThan (getId lastId)]) mbLastDriverId
     ]
     (Se.Asc BeamDI.driverId)
-    mbLimit
-    mbOffset
+    (Just batchSize)
+    Nothing
 
 updateOnRideAndLatestScheduledBookingAndPickup ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
