@@ -141,7 +141,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
       pure Complete
     else do
       bap <- asks (.appBackendBapInternal)
-      (checked, cleared) <- reconcileAll bap.apiKey bap.url 0 (0 :: Int, 0 :: Int)
+      (checked, cleared) <- reconcileAll merchantOpCityId bap.apiKey bap.url 0 (0 :: Int, 0 :: Int)
       logInfo $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " checked=" <> show (checked :: Int) <> " cleared=" <> show (cleared :: Int)
       JC.createJobIn @_ @'SharedCabReconciler (Just merchantId) (Just merchantOpCityId) sharedCabReconcilerInterval jobData
       pure Complete
@@ -152,14 +152,14 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
     -- Offsets are taken over a filter this pass shrinks in place, so rows can
     -- shift between pages and a row may be rechecked or skipped within one
     -- pass; the 15-minute sweep cadence makes coverage eventual.
-    reconcileAll apiKey internalUrl offset (checked, cleared) = do
-      flagged <- QDIExtra.findAllSharedCabActiveDrivers jobData.merchantOperatingCityId (Just sharedCabReconcilerBatchSize) (Just offset)
+    reconcileAll merchantOpCity apiKey internalUrl offset (checked, cleared) = do
+      flagged <- QDIExtra.findAllSharedCabActiveDrivers merchantOpCity (Just sharedCabReconcilerBatchSize) (Just offset)
       clearedDelta <- foldM (reconcileDriver apiKey internalUrl) 0 flagged
       let checked' = checked + length flagged
           cleared' = cleared + clearedDelta
       if length flagged < sharedCabReconcilerBatchSize
         then pure (checked', cleared')
-        else reconcileAll apiKey internalUrl (offset + sharedCabReconcilerBatchSize) (checked', cleared')
+        else reconcileAll merchantOpCity apiKey internalUrl (offset + sharedCabReconcilerBatchSize) (checked', cleared')
 
     reconcileDriver apiKey internalUrl cleared driverInfo = do
       let driverId = driverInfo.driverId
