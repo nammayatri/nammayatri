@@ -94,6 +94,7 @@ postSharedCabRouteSelect :: Maybe Text -> API.SelectRouteReq -> Environment.Flow
 postSharedCabRouteSelect mbToken req = do
   checkToken mbToken
   integratedBppConfig <- getIntegratedBppConfig req.integratedBppConfigId
+  priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSession req.vehicleNumber
   selected <-
     checkedCab req.vehicleNumber $
       Session.selectRoute
@@ -114,6 +115,8 @@ postSharedCabRouteSelect mbToken req = do
       pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
     Right session -> do
       void $ seeded session
+      -- 05 §8.7: a route change leaves the unboarded riders of the old route behind (a queued change hasn't happened yet)
+      when (maybe False (/= session.routeCode) priorRoute) $ void $ releasing AllocTypes.RouteChanged session
       session' <-
         if req.walkupCount == session.walkupCount
           then pure session

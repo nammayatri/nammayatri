@@ -19,16 +19,17 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Allocation (sharedCabAllocationEnabled)
-import SharedLogic.SharedCab.Allocation.Types (defaultAllocationConfig)
 import SharedLogic.SharedCab.Booking (shared)
+import qualified SharedLogic.SharedCab.Config as Config
 import Storage.Beam.SchedulerJob ()
 
-tickSec :: Int
-tickSec = defaultAllocationConfig.tickSec -- //TODO(05 §7): rider_config bind
+-- | The city's tick period (05 §7 tickSec, rider_config).
+tickSecOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Int
+tickSecOf mocId = (.tickSec) <$> Config.getTunables mocId
 
 -- The scheduler polls every few seconds, so the chain's guard spans many ticks.
-guardTtlSec :: Int
-guardTtlSec = 10 * tickSec
+guardTtlSec :: Int -> Int
+guardTtlSec tickSec = 10 * tickSec
 
 guardKey :: Id DMOC.MerchantOperatingCity -> Text
 guardKey mocId = "sharedcab:allocJob:" <> mocId.getId
@@ -40,21 +41,25 @@ setNx :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> m Bool
 setNx key ttl = shared $ Redis.setNxExpire key ttl ()
 
 -- | Idempotent; no job while the engine is gated off.
-ensureAllocationTick :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+ensureAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureAllocationTick merchantId mocId =
-  when sharedCabAllocationEnabled $
-    whenM (setNx (guardKey mocId) guardTtlSec) $ createNext merchantId mocId
+  when sharedCabAllocationEnabled $ do
+    tickSec <- tickSecOf mocId
+    whenM (setNx (guardKey mocId) (guardTtlSec tickSec)) $ createNext tickSec merchantId mocId
 
 -- | False when another chain already ran this tick: the caller stops without rescheduling.
-claimTickRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
-claimTickRun mocId = setNx (runKey mocId) (max 1 (tickSec - 1))
+claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
+claimTickRun mocId = do
+  tickSec <- tickSecOf mocId
+  setNx (runKey mocId) (max 1 (tickSec - 1))
 
-scheduleNextTick :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+scheduleNextTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 scheduleNextTick merchantId mocId = do
-  shared $ Redis.setExp (guardKey mocId) () guardTtlSec
-  createNext merchantId mocId
+  tickSec <- tickSecOf mocId
+  shared $ Redis.setExp (guardKey mocId) () (guardTtlSec tickSec)
+  createNext tickSec merchantId mocId
 
-createNext :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
-createNext merchantId mocId =
+createNext :: JobCreator r m => Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+createNext tickSec merchantId mocId =
   createJobIn @_ @'SharedCabAllocationTick (Just merchantId) (Just mocId) (intToNominalDiffTime tickSec) $
     SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId}

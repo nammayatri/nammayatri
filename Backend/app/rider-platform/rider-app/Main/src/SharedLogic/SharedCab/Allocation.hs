@@ -36,6 +36,7 @@ module SharedLogic.SharedCab.Allocation
   ( -- entrypoints (M7.2 wire sites: the job module + booking create/release callers)
     runSharedCabAllocationTick,
     sharedCabAllocationEnabled,
+    cityConfig,
     triggerSharedCabAllocation,
     releaseSharedCabAllocation,
     releaseUnboarded,
@@ -72,6 +73,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
+import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -353,15 +355,36 @@ releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   whenJust closed triggerSharedCabAllocation
   pure (isJust closed)
 
+-- | The city's engine tunables from rider_config (05 §7), defaults where unset.
+cityConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m AllocationConfig
+cityConfig cityId = do
+  t <- Config.getTunables cityId
+  pure
+    AllocationConfig
+      { allocationWindowSec = t.allocationWindowSec,
+        atStopRadiusM = t.atStopRadiusM,
+        walkBufferSec = t.walkBufferSec,
+        standTimerSec = t.standTimerSec,
+        movingTimerSec = t.movingTimerSec,
+        maxAttempts = t.maxAttempts,
+        fallbackAfterSec = t.fallbackAfterSec,
+        noCabGraceSec = t.noCabGraceSec,
+        findingTimeoutSec = t.findingTimeoutSec,
+        tickSec = t.tickSec,
+        ltsMaxAgeSec = t.ltsMaxAgeSec,
+        autoEndAfterDropSec = t.autoEndAfterDropSec,
+        degradedTimeoutSec = t.degradedTimeoutSec
+      }
+
 -- | 05 §8.7: a cab leaving ACTIVE (pause, end) releases its unboarded allocations without penalty.
 -- Call it after the session write, outside the plate lock.
 releaseUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m ()
 releaseUnboarded plate outcome = do
-  let cfg = defaultAllocationConfig
   bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [CONFIRMED]
   tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
   let unboarded = [b | b <- bookings, isJust (allocatedPlate (b, [t.status | t <- tickets, t.frfsTicketBookingId == b.id]))]
   cities <- forM unboarded $ \b -> do
+    cfg <- cityConfig b.merchantOperatingCityId
     closed <- withBookingLock b.id $ closeLocked cfg b.id plate outcome
     afterClose cfg b.id plate outcome closed
     pure closed
@@ -482,8 +505,7 @@ runSharedCabAllocationTick ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 runSharedCabAllocationTick cityId = do
-  -- //TODO: bind AllocationConfig from rider_config (05 §7) once the fields exist.
-  let cfg = defaultAllocationConfig
+  cfg <- cityConfig cityId
   -- One tick per city (05 §3, §8.5): a pod or trigger that finds the lease held skips. The lease is
   -- released when the tick ends; its TTL only bounds a crashed holder, so it spans many ticks.
   withCityLease ("sharedcab:alloc:lease:" <> cityId.getId) (10 * cfg.tickSec) $
