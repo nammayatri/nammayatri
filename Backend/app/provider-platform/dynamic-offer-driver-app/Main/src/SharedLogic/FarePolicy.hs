@@ -110,6 +110,15 @@ cacheFarePolicyByQuoteId quoteId fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) expTime
 
+cacheFarePolicyByScheduledQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> UTCTime -> FarePolicyD.FullFarePolicy -> m ()
+cacheFarePolicyByScheduledQuoteId quoteId pickupTime fp = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  now <- getCurrentTime
+  let untilPickupWithBuffer = round (diffUTCTime pickupTime now) + scheduledQuoteFarePolicyBufferSecs
+  Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) (max expTime untilPickupWithBuffer)
+  where
+    scheduledQuoteFarePolicyBufferSecs = 15 * 60
+
 -- 30 Mins, Assuming that all searchTries would be done by then. Correct logic would be searchRequestExpirationTime * searchRepeatLimit
 cacheFarePolicyByEstimateId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
 cacheFarePolicyByEstimateId estimateId fp = Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey estimateId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) 1800

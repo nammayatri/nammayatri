@@ -36,8 +36,16 @@ type GetVehicleList =
       :> API.Types.ProviderPlatform.Management.Vehicle.GetVehicleList
   )
 
-getVehicleList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.Driver.ApprovalStatusFilter) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Vehicle.VehicleListRes)
+type PostVehicleParkingFeeExemption =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.VEHICLE / 'API.Types.ProviderPlatform.Management.Vehicle.POST_VEHICLE_PARKING_FEE_EXEMPTION)
+      :> API.Types.ProviderPlatform.Management.Vehicle.PostVehicleParkingFeeExemption
+  )
+
+getVehicleList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Vehicle.VehicleListRes)
 getVehicleList merchantShortId opCity apiTokenInfo limit offset fleetOwnerId vehicleNumber verified approvalStatus from to requestorId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Vehicle.getVehicleList merchantShortId opCity apiTokenInfo limit offset fleetOwnerId vehicleNumber verified approvalStatus from to requestorId
 
-postVehicleParkingFeeExemption :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Vehicle.ParkingFeeExemptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postVehicleParkingFeeExemption :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.Vehicle.ParkingFeeExemptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postVehicleParkingFeeExemption merchantShortId opCity apiTokenInfo vehicleNumber req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Vehicle.postVehicleParkingFeeExemption merchantShortId opCity apiTokenInfo vehicleNumber req

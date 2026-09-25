@@ -1167,7 +1167,6 @@ library
       API.Action.Dashboard.RideBooking.Ride
       API.Action.Dashboard.RideBooking.SearchRequest
       API.Action.Dashboard.RideBooking.Volunteer
-      API.Action.DashboardAuth.Management.Vehicle
       API.Action.UI.AvailableForRides
       API.Action.UI.Cac
       API.Action.UI.CallFeedback
