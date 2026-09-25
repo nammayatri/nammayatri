@@ -703,8 +703,10 @@ data SharedCabAllocationEntityData = SharedCabAllocationEntityData
   }
   deriving (Generic, ToJSON, Eq, FromJSON, Show)
 
--- Shared-cab allocation offer pushed by the internal FCM endpoint. Reuses the
--- ALLOCATION_REQUEST notification channel; priority defaults to HIGH via FCMReq def.
+-- Shared-cab allocation offer pushed by the internal FCM endpoint. Uses the
+-- dedicated SHARED_CAB_ALLOCATION notification key/type (task 4.6, shared-kernel
+-- feat/shared-cab-taxi-mode) so the driver app renders a shared-cab card, not a
+-- taxi allocation request; priority defaults to HIGH via FCMReq def.
 notifySharedCabAllocation ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -723,7 +725,7 @@ notifySharedCabAllocation merchantOpCityId personId mbDeviceToken lang entityDat
     mbDeviceToken
     lang
     Nothing
-    (createFCMReq "ALLOCATION_REQUEST" entityData.bookingId FCM.Product identity)
+    (createFCMReq "SHARED_CAB_ALLOCATION" entityData.bookingId FCM.Product identity)
     (Just entityData)
     [ ("seats", maybe "" show entityData.seats),
       ("boardingCode", fromMaybe "" entityData.boardingCode)
