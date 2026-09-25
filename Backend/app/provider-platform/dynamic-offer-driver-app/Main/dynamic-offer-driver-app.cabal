@@ -137,6 +137,7 @@ library
       API.UI.RideSummary
       API.UI.Route
       API.UI.SharedCab
+      API.UI.SharedCabBooking
       API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
@@ -456,6 +457,7 @@ library
       Domain.Action.UI.SearchRequestForDriver
       Domain.Action.UI.SearchRequestLocation
       Domain.Action.UI.SharedCab
+      Domain.Action.UI.SharedCabBooking
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.Sos
       Domain.Action.UI.SpecialLocation
@@ -624,6 +626,7 @@ library
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
+      SharedLogic.CallSharedCabBooking
       SharedLogic.Cancel
       SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
