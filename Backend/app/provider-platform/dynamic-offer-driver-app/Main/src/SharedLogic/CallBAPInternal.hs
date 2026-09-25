@@ -39,7 +39,7 @@ import qualified SharedLogic.Type as SLT
 import Tools.Error (SharedCabBAPError (..))
 import Tools.Metrics (CoreMetrics)
 import Kernel.Types.Error (ExternalAPICallError (..))
-import Kernel.Types.Error.BaseError.HTTPError.CallAPIError (CallAPIError (..))
+import qualified Kernel.Types.Error.BaseError.HTTPError.CallAPIError as CallAPIError
 
 data FeedbackAnswer = FeedbackAnswer
   { questionId :: Text,
@@ -718,8 +718,8 @@ getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   res <- EC.callApiExtractingApiError Nothing internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
   case res of
     Right mbSession -> pure mbSession
-    Left (RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
-    Left (APIError err)
+    Left (CallAPIError.RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
+    Left (CallAPIError.APIError err)
       | fromBAPErrorCode err == sharedCabSessionNotFoundErrorCode -> pure Nothing
       | otherwise -> throwError err
 
