@@ -15,7 +15,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
-import SharedLogic.External.LocationTrackingService.Types (VehicleInfo)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
@@ -44,40 +43,31 @@ sharedCabSessionExpiry Job {jobInfo} = do
 expireSilentSessions :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> m ()
 expireSilentSessions mocId = do
   trips <- QVT.findAllLiveByMerchantOperatingCityId mocId
-  pings <- M.fromList . catMaybes <$> mapM lastPings (nub $ map (.routeCode) trips)
   now <- getCurrentTime
+  pings <- M.fromList . catMaybes <$> mapM (lastPings now) (nub $ map (.routeCode) trips)
   forM_ trips $ \trip ->
     withTryCatch "sharedCab:expiry" (checkTrip pings now trip) >>= \case
       Left err -> logError $ "sharedCab expiry failed for " <> trip.vehicleNumber <> ": " <> show err
       Right () -> pure ()
 
--- | A cab LTS lists whose timestamp can't be read is left alone, never taken for silent.
-data Ping = SeenAt UTCTime | Unreadable
-
 -- | plate → latest ping on the route, or Nothing if LTS couldn't be read.
-lastPings :: LtsFlow m r c => Text -> m (Maybe (Text, M.Map Text Ping))
-lastPings route =
+lastPings :: LtsFlow m r c => UTCTime -> Text -> m (Maybe (Text, M.Map Text Ping))
+lastPings now route =
   withTryCatch "sharedCab:trackVehicles" (LTS.vehicleTrackingOnRoute (LTS.ByRoute route)) >>= \case
     Left err -> do
       logError $ "sharedCab expiry: LTS read failed for route " <> route <> ", skipping it: " <> show err
       pure Nothing
-    Right vehicles -> pure $ Just (route, M.fromList [(v.vehicleNumber, pingOf v.vehicleInfo) | v <- vehicles])
-
-pingOf :: VehicleInfo -> Ping
-pingOf info = maybe Unreadable SeenAt (info.timestamp >>= parseLtsTimestamp)
+    Right vehicles -> pure $ Just (route, M.fromList [(v.vehicleNumber, readPing now (v.vehicleInfo.timestamp >>= parseLtsTimestamp)) | v <- vehicles])
 
 checkTrip :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => M.Map Text (M.Map Text Ping) -> UTCTime -> DVT.VehicleTrip -> m ()
 checkTrip pings now trip = Session.getSession trip.vehicleNumber >>= traverse_ check
   where
-    check s = whenJust (M.lookup s.routeCode pings) $ \routePings ->
-      case M.lookup s.vehicleNumber routePings of
-        Just Unreadable -> logWarning $ "sharedCab expiry: unreadable LTS timestamp for " <> s.vehicleNumber <> ", skipping it"
-        mbPing -> do
-          let lastSeen = case mbPing of
-                Just (SeenAt ts) -> max trip.startedAt ts
-                _ -> trip.startedAt
-          case expiryAction pauseAfter endAfter now lastSeen s.status of
-            -- 05 §8.7: leaving ACTIVE releases unboarded allocations without penalty, after the plate lock is released
-            Just PauseSilent -> Session.pause s.vehicleNumber NO_LOCATION >> Allocation.releaseUnboarded s.vehicleNumber SessionClosed
-            Just EndSilent -> Session.expire s.vehicleNumber >> Allocation.releaseUnboarded s.vehicleNumber SessionClosed
-            Nothing -> pure ()
+    check s = whenJust (M.lookup s.routeCode pings) $ \routePings -> do
+      let ping = M.lookup s.vehicleNumber routePings
+      when (ping == Just Unreadable) $ logWarning $ "sharedCab expiry: unreadable or future LTS timestamp for " <> s.vehicleNumber
+      whenJust (lastSeenFor endAfter now trip.startedAt ping) $ \lastSeen ->
+        case expiryAction pauseAfter endAfter now lastSeen s.status of
+          -- 05 §8.7: leaving ACTIVE releases unboarded allocations without penalty, after the plate lock is released
+          Just PauseSilent -> Session.pause s.vehicleNumber NO_LOCATION >> Allocation.releaseUnboarded s.vehicleNumber SessionClosed
+          Just EndSilent -> Session.expire s.vehicleNumber >> Allocation.releaseUnboarded s.vehicleNumber SessionClosed
+          Nothing -> pure ()

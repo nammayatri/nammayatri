@@ -25,6 +25,9 @@ module SharedLogic.SharedCab.SessionState
     sessionFromTrip,
     ExpiryAction (..),
     expiryAction,
+    Ping (..),
+    readPing,
+    lastSeenFor,
   )
 where
 
@@ -243,10 +246,11 @@ returnRouteOf code
   | otherwise = Left NoReturnRoute
 
 -- | Flush recovery: the live trip row restores route, driver and capacity. A PAUSED trip comes back paused — pause
--- is non-terminal — while a `findActiveByVehicleNumber` miss means ENDED: no session. Walk-ups restart at 0 and the
--- driver re-taps them (`offlineBoardings` counts every walk-up of the run, not who is on board now, 04 §3); the pause
--- reason and `consecutiveMisses` were Redis-only and restart empty too. The version restarts above any pre-flush
--- counter so a client's stale version can't CAS it.
+-- is non-terminal — while a `findActiveByVehicleNumber` miss means ENDED: no session. Walk-ups are seeded from
+-- `offlineBoardings`, capped at capacity, and the driver corrects them down: it counts every walk-up of the run, not
+-- who is on board now (04 §3), so it errs high and allocation won't claim seats walk-ups may fill. The pause reason
+-- and `consecutiveMisses` were Redis-only and restart empty. The version restarts above any pre-flush counter so a
+-- client's stale version can't CAS it.
 sessionFromTrip :: DVT.VehicleTrip -> UTCTime -> Session
 sessionFromTrip trip now =
   Session
@@ -259,7 +263,7 @@ sessionFromTrip trip now =
       routeCode = trip.routeCode,
       queuedRouteCode = Nothing,
       capacity = trip.capacity,
-      walkupCount = 0,
+      walkupCount = min trip.capacity trip.offlineBoardings,
       -- unreachable fallback: findActiveByVehicleNumber only returns live rows
       status = case trip.status of
         DVT.ACTIVE -> ACTIVE
@@ -271,6 +275,24 @@ sessionFromTrip trip now =
       startedAt = trip.startedAt,
       vehicleTripId = trip.id
     }
+
+-- | A cab's LTS ping as the expiry job sees it: a readable time, or one it can't trust (missing, unparseable, or
+-- more than 5 min ahead, e.g. a millisecond epoch or a skewed clock, which would otherwise keep the cab alive forever).
+data Ping = SeenAt UTCTime | Unreadable
+  deriving (Show, Eq)
+
+readPing :: UTCTime -> Maybe UTCTime -> Ping
+readPing now = \case
+  Just ts | diffUTCTime ts now <= 5 * 60 -> SeenAt ts
+  _ -> Unreadable
+
+-- | When the cab was last heard from, or Nothing to skip it this tick. No ping on the route means silent since the
+-- trip began; an unreadable one is skipped, until the trip is older than `endAfter`, so it can't stay live forever.
+lastSeenFor :: NominalDiffTime -> UTCTime -> UTCTime -> Maybe Ping -> Maybe UTCTime
+lastSeenFor endAfter now startedAt = \case
+  Just (SeenAt ts) -> Just (max startedAt ts)
+  Just Unreadable | diffUTCTime now startedAt < endAfter -> Nothing
+  _ -> Just startedAt
 
 data ExpiryAction = PauseSilent | EndSilent
   deriving (Show, Eq)

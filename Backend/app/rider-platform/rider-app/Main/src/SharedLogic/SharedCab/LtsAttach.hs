@@ -88,7 +88,7 @@ detach s =
 withAttach :: (LtsFlow m r c, MonadCatch m) => Maybe Session -> Session -> m a -> m a
 withAttach old new persist = do
   traverse_ detach old
-  attach new `onException` restore
+  attach new `onException` (detach new >> restore)
   persist `onException` (detach new >> restore)
   where
     restore = traverse_ (withTryCatch "sharedCab:ltsReattach" . attach) old

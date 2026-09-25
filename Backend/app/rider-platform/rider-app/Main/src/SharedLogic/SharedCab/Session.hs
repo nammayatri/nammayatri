@@ -54,7 +54,7 @@ shared :: (Redis.HedisFlow m r, MonadFlow m) => m a -> m a
 shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
 
 withPlateLock :: (Redis.HedisFlow m r, MonadMask m, MonadFlow m) => Text -> m a -> m a
-withPlateLock plate = Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "plateLock" (lockKey plate) lockTtlSec 10000
+withPlateLock plate = Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "plateLock" (lockKey plate) lockTtlSec 25000
 
 readSession :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 readSession = shared . Redis.safeGet . sessionKey
@@ -128,7 +128,7 @@ replaceLiveTrip reason now prior s' = do
       withTryCatch
         "sharedCab:undoTripSwitch"
         ( do
-            QVT.findById s'.vehicleTripId >>= traverse_ (\new -> QVT.closeTrip DVT.ABANDONED (Just DVT.SESSION_TIMEOUT) (Just now) new.id)
+            QVT.findById s'.vehicleTripId >>= traverse_ (\new -> QVT.closeTrip DVT.ABANDONED (Just DVT.ROUTE_CHANGED) (Just now) new.id)
             whenJust mbOld $ \old -> QVT.closeTrip old.status Nothing Nothing old.id
         )
         >>= either (\e -> logError $ "sharedCab: couldn't undo the trip switch for " <> s'.vehicleNumber <> ": " <> show e) pure

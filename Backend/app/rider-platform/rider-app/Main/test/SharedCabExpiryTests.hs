@@ -65,8 +65,17 @@ tests =
         case sessionFromTrip liveTrip (minutes 5) of
           Session {routeCode = r, driverId = d, capacity = c, vehicleTripId = t, status = st} ->
             (r, d, c, t, st) @?= ("SC-R2", "d1", 4, Id "trip7", ACTIVE),
-      testCase "recovery restarts walk-ups at 0 (offlineBoardings counts the whole run, not who is aboard)" $
-        walkupCount (sessionFromTrip liveTrip (minutes 5)) @?= 0,
+      testCase "recovery seeds walk-ups from the run's offlineBoardings, capped at capacity" $
+        ( walkupCount (sessionFromTrip liveTrip (minutes 5)),
+          walkupCount (sessionFromTrip liveTrip {DVT.offlineBoardings = 9} (minutes 5))
+        )
+          @?= (3, 4),
+      testCase "a ping more than 5 min ahead (ms epoch, skewed clock) or missing is unreadable" $
+        map (readPing (minutes 10)) [Just (minutes 9), Just (minutes 15), Just (minutes 16), Nothing]
+          @?= [SeenAt (minutes 9), SeenAt (minutes 15), Unreadable, Unreadable],
+      testCase "an unreadable ping is skipped only until the trip is endAfter old" $
+        map (\(nowMin, ping) -> lastSeenFor (60 * 60) (minutes nowMin) t0 ping) [(30, Just Unreadable), (60, Just Unreadable), (30, Nothing), (30, Just (SeenAt (minutes 20)))]
+          @?= [Nothing, Just t0, Just t0, Just (minutes 20)],
       testCase "a PAUSED trip comes back paused (pause is non-terminal)" $
         status (sessionFromTrip liveTrip {DVT.status = DVT.PAUSED} (minutes 5)) @?= PAUSED,
       testCase "recovery's version outranks any pre-flush counter" $
