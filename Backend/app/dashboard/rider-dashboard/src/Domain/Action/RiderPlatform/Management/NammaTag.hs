@@ -50,6 +50,7 @@ import qualified API.Client.RiderPlatform.Management
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified Dashboard.Common
 import "rider-app" Domain.Types.AccessMatrix
+import qualified "lib-dashboard" Domain.Types.Capability
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -63,6 +64,7 @@ import qualified "lib-dashboard" SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Merchant
 import qualified Storage.Queries.MerchantAccess
+import qualified "lib-dashboard" Tools.Auth.Capability
 import Tools.Auth.Merchant
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -92,8 +94,10 @@ postNammaTagQueryCreate merchantShortId opCity apiTokenInfo req = do
 postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Lib.Yudhishthira.Types.AppDynamicLogicReq -> Environment.Flow Lib.Yudhishthira.Types.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagAppDynamicLogicVerify) req)
+  passwordExempt <- Tools.Auth.Capability.hasCapability apiTokenInfo.person Domain.Types.Capability.dynamicLogicPasswordExemptCapability
+  let updatedReq = req{skipPasswordCheck = Kernel.Prelude.Just passwordExempt}
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just updatedReq)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.nammaTagDSL.postNammaTagAppDynamicLogicVerify) updatedReq)
 
 getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.Flow [Lib.Yudhishthira.Types.GetLogicsResp])
 getNammaTagAppDynamicLogic merchantShortId opCity apiTokenInfo version domain = do

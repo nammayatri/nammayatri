@@ -21,6 +21,7 @@ module Tools.Auth.Capability
     invalidatePerson,
     invalidateEveryone,
     endpointCapabilities,
+    hasCapability,
     enforce,
     enforceResourceScopeFromRequest,
   )
@@ -144,6 +145,15 @@ resolveAccess personId roleId = do
       let value = CachedAccess {adminTier = tier, capabilities = caps}
       Redis.setExp key value capabilityCacheTtl
       pure value
+
+hasCapability ::
+  (BeamFlow m r, Redis.HedisFlow m r) =>
+  DP.Person ->
+  Text ->
+  m Bool
+hasCapability person capabilityId = do
+  access <- resolveAccess person.id person.roleId
+  pure $ access.adminTier == DC.superAdminTier || capabilityId `elem` access.capabilities
 
 -------------------------------------------------------------- enforcement
 

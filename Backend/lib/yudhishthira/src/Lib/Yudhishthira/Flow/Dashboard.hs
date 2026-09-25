@@ -426,7 +426,7 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
       then do
         if null errors
           then do
-            verifyPassword req.updatePassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
+            verifyPassword req.skipPasswordCheck req.updatePassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
             (updated, mbVersion) <- updateDynamicLogic req.rules req.domain
             when (updated && isDriverOrRiderConfig req.domain) $
               whenJust mbVersion $ \ver ->
@@ -436,9 +436,11 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
       else return (False, Nothing)
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version errors
   where
-    verifyPassword :: BeamFlow m r => Maybe Text -> m ()
-    verifyPassword Nothing = throwError $ InvalidRequest "Password not provided"
-    verifyPassword (Just updatePassword) =
+    verifyPassword :: BeamFlow m r => Maybe Bool -> Maybe Text -> m ()
+    verifyPassword (Just True) _ =
+      logInfo $ "Dynamic logic update password check skipped for domain: " <> show req.domain
+    verifyPassword _ Nothing = throwError $ InvalidRequest "Password not provided"
+    verifyPassword _ (Just updatePassword) =
       unless (updatePassword == referralLinkPassword) $ throwError $ InvalidRequest "Password does not match"
 
     updateDynamicLogic :: BeamFlow m r => [A.Value] -> Lib.Yudhishthira.Types.LogicDomain -> m (Bool, Maybe Int)
