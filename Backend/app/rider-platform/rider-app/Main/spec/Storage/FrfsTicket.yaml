@@ -655,7 +655,8 @@ FRFSTicketBooking:
       params: [ondcOnInitReceived, ondcOnInitReceivedAt, updatedAt]
       where: id
     # Compare-and-set: Se.Eq on a Maybe column is IS NULL / =, i.e. IS NOT DISTINCT FROM.
-    # Returns (): the caller must read back (findOneWithDb) and wins iff vehicleNumber == its new value.
+    # Returns (): the caller holds sharedcab:lock:booking:{id} and checks the expected vehicleNumber via a KV read
+    # (findById) first — not a DB read-back, which can be stale mid-drain on this KV table (05 §2).
     updateAllocatedVehicle:
       kvFunction: updateOneWithKV
       params: [vehicleNumber]
