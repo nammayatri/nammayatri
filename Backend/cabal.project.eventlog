@@ -1,0 +1,6 @@
+import: cabal.project
+
+flags: -Local
+
+package *
+  ghc-options: -O1 -finfo-table-map -eventlog -j2

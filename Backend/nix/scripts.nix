@@ -55,7 +55,45 @@ _:
       ]);
     in
     {
+      legacyPackages.profiling-tools = pkgs.symlinkJoin {
+        name = "profiling-tools";
+        paths = map lib.getBin [
+          pkgs.haskellPackages.eventlog2html
+          pkgs.haskellPackages.hs-speedscope
+          pkgs.haskellPackages.ghc-prof-flamegraph
+          pkgs.haskellPackages.ghc-events
+          pkgs.oha
+        ];
+      };
+
       mission-control.scripts = {
+        prof = {
+          category = "Backend";
+          description = "Build/run a Haskell exe with profiling or eventlog instrumentation and turn the output into reports (, prof help).";
+          cdToProjectRoot = false;
+          exec = ''
+            exec ${lib.getExe pkgs.bash} "''${FLAKE_ROOT}/Backend/dev/perf/prof.sh" "$@"
+          '';
+        };
+
+        perf-watch = {
+          category = "Backend";
+          description = "Live GC/memory/CPU plus per-handler, datastore and external-call latency from a service /metrics endpoint (default rider-app :9999).";
+          cdToProjectRoot = false;
+          exec = ''
+            exec ${lib.getExe pkgs.python3} "''${FLAKE_ROOT}/Backend/dev/perf/perf_watch.py" "$@"
+          '';
+        };
+
+        perf-ramp = {
+          category = "Backend";
+          description = "Step an endpoint through rising concurrency and report the throughput ceiling, the latency knee and what saturates.";
+          cdToProjectRoot = false;
+          exec = ''
+            exec ${lib.getExe pkgs.python3} "''${FLAKE_ROOT}/Backend/dev/perf/perf_ramp.py" "$@"
+          '';
+        };
+
         ghcid = {
           category = "Backend";
           description = "Compile the given local package using ghcid.";
