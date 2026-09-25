@@ -13,6 +13,15 @@ import Storage.Queries.OrphanInstances.Plan ()
 
 -- Extra code goes here --
 
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> m (Maybe Plan)
+findById (Id planId) = findOneWithKV [Se.Is BeamP.id $ Se.Eq planId]
+
+findAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Plan] -> m [Plan]
+findAllByIds planIds =
+  if null planIds
+    then pure []
+    else findAllWithKV [Se.Is BeamP.id $ Se.In (getId <$> planIds)]
+
 findByMerchantOpCityIdAndPaymentModeWithServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

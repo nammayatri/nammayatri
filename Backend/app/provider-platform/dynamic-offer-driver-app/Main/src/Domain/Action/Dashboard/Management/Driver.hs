@@ -54,6 +54,8 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    postDriverBulkPlanPreview,
+    postDriverBulkPlanSwitch,
     getDriverStats,
     checkDriverOperatorAssociation,
     checkFleetOperatorAssociation,
@@ -91,7 +93,9 @@ import qualified Data.HashSet as HS
 import Data.List (nub, partition, sortOn)
 import Data.List.NonEmpty (nonEmpty)
 import Data.List.Split (chunksOf)
+import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Vector as V
@@ -194,6 +198,8 @@ import qualified Storage.Queries.IdfyVerification as QIdfyVerification
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.OnboardingList.DriverList as QDriverList
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Plan as QPlan
+import qualified Storage.Queries.PlanExtra as QPlanExtra
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
@@ -1516,6 +1522,118 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
   return Success
+
+-- | Preview API: reads driver IDs from CSV, groups by planId and suggests target plans.
+-- Only fetches driver plans scoped to the authorized city — no cross-city data is exposed.
+postDriverBulkPlanPreview :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow Common.BulkPlanPreviewRes
+postDriverBulkPlanPreview merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  driverIdTexts <- readCsvAndGetDriverIds req.file
+  let driverIds = map Id driverIdTexts
+      totalDrivers = length driverIds
+  -- Query scoped to authorized city only — never fetches cross-city plans
+  cityDriverPlans <- fmap concat $
+    forM (chunksOf 100 driverIds) $ \chunk ->
+      QDP.findAllByDriverIdsAndMerchantOpCityId chunk merchantOpCityId
+  let driversWithPlan = length (nub $ map (.driverId) cityDriverPlans)
+      driversWithNoPlan = totalDrivers - driversWithPlan
+  when (null cityDriverPlans) $ throwError (InvalidRequest "No valid drivers found for this city")
+  let uniquePlanIds = nub $ map (.planId) cityDriverPlans
+  currentPlans <- QPlanExtra.findAllByIds uniquePlanIds
+  let planMap = Map.fromList $ map (\p -> (p.id, p)) currentPlans
+  let grouped = Map.toList $ Map.fromListWith (<>) [(dp.planId, [getId dp.driverId]) | dp <- cityDriverPlans]
+  planGroups <- forM grouped $ \(pId, dIds) -> do
+    let mbPlan = Map.lookup pId planMap
+        svcName = maybe YATRI_SUBSCRIPTION (.serviceName) mbPlan
+        cityId = maybe "" (getId . (.merchantOpCityId)) mbPlan
+        mbVc = mbPlan <&> (.vehicleCategory)
+    availablePlans <- case (mbPlan, mbVc) of
+      (Just plan, Just vc) -> QPlan.findByCityServiceAndVehicle plan.merchantOpCityId svcName vc False
+      _ -> pure []
+    let sortedPlans = sortOn (.listingPriority) availablePlans
+        suggestedPlan = listToMaybe sortedPlans
+    return $
+      Common.BulkPlanGroup
+        { currentPlanId = Just pId.getId,
+          currentPlanName = mbPlan <&> (.name),
+          isDeprecated = maybe False (.isDeprecated) mbPlan,
+          serviceName = Just $ mapServiceNameToDashboard svcName,
+          vehicleCategory = mbVc,
+          cityId = cityId,
+          driverCount = length dIds,
+          driverIds = dIds,
+          suggestedPlanId = suggestedPlan <&> (.id.getId),
+          suggestedPlanName = suggestedPlan <&> (.name),
+          availablePlans = map (\p -> Common.PlanInfo {planId = p.id.getId, planName = p.name}) sortedPlans
+        }
+  return $
+    Common.BulkPlanPreviewRes
+      { groups = planGroups,
+        totalDrivers = totalDrivers,
+        driversWithPlan = driversWithPlan,
+        driversWithNoPlan = driversWithNoPlan
+      }
+
+-- | Switch plan for drivers from CSV file, processes in chunks of 100.
+-- Scoped to authorized city and validates serviceName match.
+postDriverBulkPlanSwitch :: ShortId DM.Merchant -> Context.City -> Text -> Common.PersonIdsReq -> Flow Common.BulkPlanSwitchRes
+postDriverBulkPlanSwitch merchantShortId opCity planIdText req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  driverIdTexts <- readCsvAndGetDriverIds req.file
+  let planId = Id planIdText
+  plan <- QPlanExtra.findById planId >>= fromMaybeM (PlanNotFound planIdText)
+  unless (plan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Target plan does not belong to the authorized city")
+  let driverIds = map Id driverIdTexts
+  -- Query scoped to authorized city only
+  cityDriverPlans <- fmap concat $
+    forM (chunksOf 100 driverIds) $ \chunk ->
+      QDP.findAllByDriverIdsAndMerchantOpCityId chunk merchantOpCityId
+  let cityDriverIdSet = Set.fromList $ map (getId . (.driverId)) cityDriverPlans
+      -- Filter by serviceName to avoid false-success on service mismatch
+      eligibleDriverIds = map (.driverId) $ filter (\dp -> dp.serviceName == plan.serviceName) cityDriverPlans
+      eligibleIdSet = Set.fromList $ map getId eligibleDriverIds
+      serviceMismatchIds = [getId dp.driverId | dp <- cityDriverPlans, not (Set.member (getId dp.driverId) eligibleIdSet)]
+      noPlanDriverIds = [dId | dId <- driverIdTexts, not (Set.member dId cityDriverIdSet)]
+  -- Bulk update in batches of 100
+  batchErrors <- fmap concat $
+    forM (chunksOf 100 eligibleDriverIds) $ \chunk -> do
+      res <-
+        withTryCatch "bulkPlanSwitch" $
+          QDP.bulkUpdatePlanIdByDriverIdsAndServiceName chunk planId plan.serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
+      case res of
+        Left err -> do
+          logInfo $ "Bulk plan switch failed for batch: " <> show err
+          return [(getId dId, show err) | dId <- chunk]
+        Right _ -> return []
+  let successes = length eligibleDriverIds - length batchErrors
+      failures =
+        batchErrors
+          <> [(dId, "Driver has a different service subscription") | dId <- serviceMismatchIds]
+          <> [(dId, "No active plan found for this city") | dId <- noPlanDriverIds]
+  logInfo $ "Bulk plan switch completed: " <> show successes <> " success, " <> show (length failures) <> " failed"
+  return $
+    Common.BulkPlanSwitchRes
+      { success = successes,
+        failed = length failures,
+        failedDriverIds = map (\(dId, errMsg) -> Common.BulkPlanSwitchFailure {driverId = dId, errorMessage = T.pack errMsg}) failures
+      }
+
+mapServiceNameToDashboard :: ServiceNames -> Common.ServiceNames
+mapServiceNameToDashboard = \case
+  YATRI_SUBSCRIPTION -> Common.YATRI_SUBSCRIPTION
+  YATRI_RENTAL -> Common.YATRI_RENTAL
+  PREPAID_SUBSCRIPTION -> Common.PREPAID_SUBSCRIPTION
+  DASHCAM_RENTAL _ -> Common.DASHCAM_RENTAL_CAUTIO
+
+readCsvAndGetDriverIds :: FilePath -> Flow [Text]
+readCsvAndGetDriverIds csvFile = do
+  csvData <- liftIO $ BS.readFile csvFile
+  case decodeByName (LBS.fromStrict csvData) :: Either String (V.Vector BS.ByteString, V.Vector Common.PersonIdsCsvRow) of
+    Left err -> throwError (InvalidRequest $ "CSV parsing error: " <> show err)
+    Right (_, v) -> pure $ map (.personId) $ V.toList v
 
 getDriverStats :: ShortId DM.Merchant -> Context.City -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Text -> Flow Common.DriverStatsRes
 getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId = do
