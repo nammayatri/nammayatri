@@ -287,6 +287,8 @@ validateEntry entry = case entry of
   PassTicketBenefit config
     | config.benefit.enforceMaxFare /= Just True ->
       Left "a PassTicketBenefit must set enforce_max_fare, or it would cover every fare"
+    | isUnlimitedBenefit config.benefit ->
+      Left "a PassTicketBenefit cannot grant unlimited trips; the price is charged per trip"
     | otherwise -> entry <$ (validateDynamicPricing config.pricing >> validateBenefit False config.benefit)
 
 validateBenefit :: Bool -> OverrideBenefit -> Either Text OverrideBenefit

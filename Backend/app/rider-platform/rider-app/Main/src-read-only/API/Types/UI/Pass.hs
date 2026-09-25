@@ -32,29 +32,22 @@ data DynamicPricedPassAPIEntity = DynamicPricedPassAPIEntity
     code :: Data.Text.Text,
     description :: Data.Maybe.Maybe Data.Text.Text,
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
-    dynamicPricingConfig :: DynamicPricingConfigAPIEntity,
     eligibility :: Kernel.Prelude.Bool,
     formVerificationConfig :: Data.Maybe.Maybe Data.Aeson.Value,
     frfsCancelLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    frfsOverrideConfig :: Data.Maybe.Maybe FrfsOverrideConfigAPIEntity,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    maximumPurchaseableTripCount :: Kernel.Prelude.Int,
     minDaysToSuggestRenewal :: Data.Maybe.Maybe Kernel.Prelude.Int,
     minTripsAllowingOverlap :: Data.Maybe.Maybe Kernel.Prelude.Int,
     name :: Data.Maybe.Maybe Data.Text.Text,
     referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    referenceServiceTier :: BecknV2.FRFS.Enums.ServiceTierType,
     timeOverlappingFrfsBookingsLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
-  }
-  deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DynamicPricingConfigAPIEntity = DynamicPricingConfigAPIEntity
-  { fixedSaving :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    maximumPurchaseableTripCount :: Kernel.Prelude.Int,
-    percentageSaving :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    primaryServiceTier :: BecknV2.FRFS.Enums.ServiceTierType
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
