@@ -79,6 +79,7 @@ data RiderJobType
   | ReconcileRewardInflight
   | BookingDepositExpiry
   | SilentReallocationExpiry
+  | SharedCabAllocationTick
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -128,6 +129,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
+  restoreAnyJobInfo SSharedCabAllocationTick jobData = AnyJobInfo <$> restoreJobInfo SSharedCabAllocationTick jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -500,3 +502,15 @@ data SilentReallocationExpiryJobData = SilentReallocationExpiryJobData
 instance JobInfoProcessor 'SilentReallocationExpiry
 
 type instance JobContent 'SilentReallocationExpiry = SilentReallocationExpiryJobData
+
+-- | Self-rescheduling per-city allocation tick for shared cabs (05-allocation-plan §3, §7 tickSec).
+-- Seeding the first job per city is open (see SharedLogic.Scheduler.Jobs.SharedCabAllocationTick).
+data SharedCabAllocationTickJobData = SharedCabAllocationTickJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SharedCabAllocationTick
+
+type instance JobContent 'SharedCabAllocationTick = SharedCabAllocationTickJobData

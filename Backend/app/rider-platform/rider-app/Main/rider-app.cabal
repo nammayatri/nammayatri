@@ -624,12 +624,15 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
+      SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
       SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
       SharedLogic.Search
       SharedLogic.Serviceability
+      SharedLogic.SharedCab.Allocation
+      SharedLogic.SharedCab.Allocation.Types
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Demand

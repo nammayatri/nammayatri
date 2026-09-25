@@ -1,0 +1,478 @@
+{-# LANGUAGE TypeApplications #-}
+
+-- |
+-- M7.2-7.4 skeleton: shared-cab allocation engine (rider-app).
+-- Plan anchors: 05-allocation-plan.md §2 (booking CAS + lock contract), §3 (engine, phases),
+-- §6 (tick stop-progress actions -- stubbed, 7.5+), §7 (events + tunables), §8.4/§8.5 (blame / CAS).
+--
+-- SEQUENCING CONTRACT (everything unsafe is flagged here and at the site):
+--
+--   * OFFERS-ONLY-LOCK-FREE: Phase 1 (read positions, screen, rank) holds NO lock. Its reads
+--     (LTS hash, session hash, route set) may be stale by up to a tick; that is intentional --
+--     every fact that can be raced (seat count, booking vehicleNumber, session liveness) is
+--     re-checked in Phase 2 under the locks.
+--
+--   * PHASE 2 LOCK ORDER (05 §2): target cab lock FIRST (`sharedcab:lock:{plate}`, the same lock
+--     walk-up writes take in SharedLogic.SharedCab.Session), then the booking lock
+--     (`sharedcab:lock:booking:{bookingId}`). NEVER reverse. The §4 re-bind path must join this
+--     same order when it lands (report Q2).
+--
+--   * BOOKING CAS: frfs_ticket_booking is KV-enabled outside local dev (05 §2), so a DB-level CAS
+--     read can observe a stale row mid-drain. The Redis booking lock IS the row mutex; the
+--     updateAllocatedVehicle expected-value predicate (spec/Storage/FrfsTicket.yaml:659,
+--     `vehicleNumber IS NOT DISTINCT FROM :expected`) is the belt-and-braces inside it.
+--
+--   * NON-REENTRANT locks: withWaitAndLockRedis deadlocks on a key you already hold.
+--     withPlateLock / readSession come from SharedLogic.SharedCab.Session and withBookingLock from
+--     SharedLogic.SharedCab.Booking, so every caller shares one key per lock.
+--     NEVER call releaseSharedCabAllocation or the §4 re-bind from inside cancelLeg while it
+--     holds the booking lock (parent relay, 2026-09).
+--
+--   * EVENT-ORDERING HAZARD: allocation_created goes out AFTER the CAS + alloc-key write. A crash in
+--     between leaves an allocated booking with no event and eventually an orphan allocation; the
+--     alloc key TTL (findingTimeoutSec) bounds it and the close path treats a missing alloc key as
+--     attempts=0. There is no transactional bridge KV x Redis x Kafka.
+module SharedLogic.SharedCab.Allocation
+  ( -- entrypoints (M7.2 wire sites: the job module + booking create/release callers)
+    runSharedCabAllocationTick,
+    triggerSharedCabAllocation,
+    releaseSharedCabAllocation,
+    tickStopProgressActions, -- shape stub, 7.5+
+
+    -- pure phase-1 pieces, exported for unit tests (rider-app-test SharedCab suites exist)
+    planRouteAllocation,
+    eligibleCandidates,
+    rankCandidates,
+    isFreshPosition,
+    RankedCandidate (..),
+    FindingBooking (..),
+    -- redis key contract (report Q1)
+    allocKey,
+    attemptsKey,
+    bookingLockKey,
+  )
+where
+
+import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (groupBy, sortOn)
+import qualified Data.Text as T
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
+import qualified Domain.Types.FRFSTicketBooking as DFTB
+import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.SharedCab.Allocation.Types
+import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, withBookingLock)
+import qualified SharedLogic.SharedCab.Invariants as Invariants
+import qualified SharedLogic.SharedCab.Session as Session
+import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+
+--------------------------------------------------------------------------------
+-- Redis key contract
+--------------------------------------------------------------------------------
+
+-- | 05 §2: `sharedcab:alloc:{bookingId}` -> AllocationState JSON.
+allocKey :: Text -> Text
+allocKey bookingId = "sharedcab:alloc:" <> bookingId
+
+-- | Lifetime attempts counter (05 §3 maxAttempts / fallbackAfterMin). NOT in the plan's key
+-- list: the alloc value is deleted on close (§3 "closing is idempotent"), so the counter needs
+-- its own home with the booking's outer TTL. Report Q1 flags this as a plan gap, not a
+-- deviation from it.
+attemptsKey :: Text -> Text
+attemptsKey bookingId = "sharedcab:attempts:" <> bookingId
+
+-- | 05 §2: `sharedcab:lock:booking:{bookingId}`.
+bookingLockKey :: Text -> Text
+bookingLockKey bookingId = "sharedcab:lock:booking:" <> bookingId
+
+--------------------------------------------------------------------------------
+-- Engine input views
+--------------------------------------------------------------------------------
+
+-- | One FINDING shared-cab booking as the engine needs it (05 §2 state table: booking
+-- CONFIRMED, ticket ACTIVE, vehicleNumber NULL). The projection is owned by the 4.1/4.5
+-- vehicle-bound query layer; the tick itself never hand-rolls the list query.
+data FindingBooking = FindingBooking
+  { bookingId :: Id DFTB.FRFSTicketBooking,
+    riderId :: Id DP.Person,
+    routeCode :: Text,
+    boardStopCode :: Text, -- == frfs_ticket_booking.fromStationCode
+    dropStopCode :: Text, -- == frfs_ticket_booking.toStationCode
+    seats :: Int, -- number of ticket rows (05 decision 1 "quantity = seats"); 1-4 (decision 10)
+    findingSince :: UTCTime -- drives fallbackAfterSec / findingTimeoutSec (05 §7, §8.11)
+  }
+  deriving (Show, Eq, Generic)
+
+--------------------------------------------------------------------------------
+-- Gate + query stubs (4.1/4.5 owns the real ones; this milestone is write-only here)
+--------------------------------------------------------------------------------
+
+-- | HARD GATE. The queries are real now (FINDING below, seats via Booking.liveSeatsOnVehicle), but the
+-- engine has never run end to end: flip only after the 7.x scenario run, as a human decision.
+sharedCabAllocationEnabled :: Bool
+sharedCabAllocationEnabled = False
+
+-- | 05 §2 FINDING: CONFIRMED, SHARED_CAB, vehicleNumber NULL (partial index
+-- idx_frfs_ticket_booking_shared_cab_finding), tickets still ACTIVE; seats = ticket rows.
+fetchFindingBookings ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  m [FindingBooking]
+fetchFindingBookings cityId = do
+  bookings <-
+    filter ((== cityId) . (.merchantOperatingCityId))
+      <$> QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus Nothing (Just Spec.SHARED_CAB) [CONFIRMED]
+  tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+  pure $ mapMaybe (findingOf tickets) bookings
+  where
+    findingOf tickets b = do
+      route <- b.routeCode
+      let seatTickets = [t | t <- tickets, t.frfsTicketBookingId == b.id, t.status == DFRFSTicket.ACTIVE]
+      guard (not (null seatTickets))
+      pure
+        FindingBooking
+          { bookingId = b.id,
+            riderId = b.riderId,
+            routeCode = route,
+            boardStopCode = b.fromStationCode,
+            dropStopCode = b.toStationCode,
+            seats = length seatTickets,
+            findingSince = b.createdAt
+          }
+
+--------------------------------------------------------------------------------
+-- LTS positions: one HGETALL on route:{routeCode} (05 §3 pseudo-code; 04 §3 join key)
+--------------------------------------------------------------------------------
+
+-- | The scheduler env has no ltsCfg for the HTTP client but does have ltsHedisEnv, and 05 §3's
+-- pseudo-code calls exactly this "1 HGETALL on route:{routeCode}" -- so the tick reads the LTS
+-- hash directly. Decision 8's "raw client, not FRFSUtils.trackVehicles" is respected:
+-- FRFSUtils.trackVehicles resolves every vehicle's next stop via OTPRest bus logic
+-- (FRFSUtils.hs:604 trackVehicles, OTPRest next-stop logic within), wrong for cabs.
+--
+-- Reliability note: all events that mutate what the allocator decides are Redis-side; replica
+-- staleness on the LTS cell is acceptable because Phase 2 re-verifies under locks.
+--
+-- //TODO(verify, report Q6): field shape vs location-tracking-service redis/commands.rs:982-1035
+-- -- assumed field = canonical plate, value decodes as LT.VehicleInfo (the shape
+-- track_vehicles serves). If the rust writer wraps it differently, ONLY this function changes.
+-- One bad field fails the whole hGetAll decode today; per-field tolerance is hardening, and the
+-- tick skips the route on failure (below), which is fail-safe for allocation.
+readRoutePositions ::
+  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Text ->
+  m [LT.VehicleTrackingOnRouteResp]
+readRoutePositions routeCode = do
+  -- 04 §6: shared-cab route codes are prefixed (SC-*), so this key does not collide with the
+  -- bus-feed cache key shape (mkRouteKey, Storage/CachedQueries/Merchant/MultiModalBus.hs:120).
+  pairs <- Redis.runInMultiCloudLTSRedisForListFromReplica $ Redis.hGetAll ("route:" <> routeCode)
+  pure $ map (uncurry LT.VehicleTrackingOnRouteResp) pairs
+
+--------------------------------------------------------------------------------
+-- Phase 1 -- lock-free, once per route (05 §3)
+--------------------------------------------------------------------------------
+
+data RankedCandidate = RankedCandidate
+  { rcSession :: Session,
+    rcEtaToBoardStopSec :: Int,
+    rcUpcomingStop :: LT.UpcomingStop
+  }
+  deriving (Show, Generic)
+
+-- | Freshness gate (05 §3; ltsMaxAgeSec from §7): LTS never drops a silent cab by age (04 §3),
+-- so anything older than the gate is dropped. Strict: missing or unparseable timestamp is NOT
+-- fresh. //TODO(report Q7): verify the ts text format on real LTS payloads; §8.9's city-wide
+-- outage rule must suspend this gate -- not built in the skeleton.
+isFreshPosition :: UTCTime -> Int -> LT.VehicleInfo -> Bool
+isFreshPosition now maxAgeSec vi = case vi.timestamp of
+  Nothing -> False -- silent-by-absence must not read as fresh
+  Just tsText ->
+    case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" (T.unpack tsText) of
+      Just ts -> diffUTCTime now ts <= fromIntegral maxAgeSec
+      Nothing -> False
+
+-- | 05 §3 eligibility, per booking:
+--   * cab not past the board stop (§6 item 1) -- LTS keeps the stop listed as Upcoming while
+--     the cab is still standing at it (verified semantics of get_upcoming_stops_by_route_code;
+--     report Q8 asks for an integration check)
+--   * optimistic seat screen (capacity − walkupCount): the booking-sum join is Phase 2's job
+--     under the lock; the plan literally lists `available >= seats` in Phase 1 too -- report Q3
+--     (per-plate query per tick vs under-lock authority).
+--   * ETA gate: upcoming-stop eta within allocationWindowSec.
+-- Queued-route check ("queued route change still serves boardStop") is stubbed by
+-- queuedRouteStillServes below.
+eligibleCandidates ::
+  UTCTime ->
+  AllocationConfig ->
+  [LT.VehicleTrackingOnRouteResp] ->
+  [Session] ->
+  FindingBooking ->
+  [RankedCandidate]
+eligibleCandidates now cfg tracking sessions booking =
+  [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop}
+    | s <- sessions,
+      -- route sets hold ACTIVE plates only (SessionState.routeSetMoves), but this read is
+      -- lock-free; status is the truth (04 §3), so re-check.
+      s.status == ACTIVE,
+      queuedRouteStillServes s booking.boardStopCode,
+      s.capacity - s.walkupCount >= booking.seats,
+      Just veh <- [find (\vt -> vt.vehicleNumber == s.vehicleNumber) tracking],
+      isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
+      Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
+      let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
+      etaSec <= cfg.allocationWindowSec
+  ]
+
+-- | //TODO(§3 + §10 stale feed): a queued route must still serve the board stop; deciding that
+-- needs the queued route's stop list from OTPRest. Tolerant here (one-tick window; Phase 2
+-- re-reads the session's route) -- deliberately, and documented in the module haddock.
+queuedRouteStillServes :: Session -> Text -> Bool
+queuedRouteStillServes _ _ = True
+
+-- | 05 §3: "rank by eta; tie: stand match → fewer live allocations → earlier route select".
+-- //TODO(heuristic): the tie-breakers are genuinely heuristic -- stand membership is deferred
+-- (04 §3), live-allocation counts need the bookings join; ETA order is the correct first
+-- approximation and the only one the skeleton commits to.
+rankCandidates :: [RankedCandidate] -> [RankedCandidate]
+rankCandidates = sortOn rcEtaToBoardStopSec
+
+-- | Phase 1 entry: ranked candidates for one booking on one route. Lock-free by design.
+planRouteAllocation ::
+  UTCTime ->
+  AllocationConfig ->
+  [LT.VehicleTrackingOnRouteResp] ->
+  [Session] ->
+  FindingBooking ->
+  [RankedCandidate]
+planRouteAllocation now cfg tracking sessions booking =
+  rankCandidates (eligibleCandidates now cfg tracking sessions booking)
+
+--------------------------------------------------------------------------------
+-- Phase 2 -- target cab lock, then booking lock (05 §2/§3 order)
+--------------------------------------------------------------------------------
+
+data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost
+  deriving (Show, Eq)
+
+-- | 05 §3 Phase 2, one candidate. Under `sharedcab:lock:{plate}` then
+-- `sharedcab:lock:booking:{id}`: re-read the session, recompute seats from Postgres (04 §3),
+-- CAS vehicleNumber (Nothing -> plate), write the alloc key. On miss the caller tries the next
+-- candidate; a miss increments NOTHING (§3: attempts counts allocations, not candidates).
+attemptClaim ::
+  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, MonadMask m) =>
+  AllocationConfig ->
+  FindingBooking ->
+  RankedCandidate ->
+  m (Either ClaimMiss UTCTime)
+attemptClaim cfg booking cand = do
+  let plate = cand.rcSession.vehicleNumber
+  Session.withPlateLock plate $ do
+    -- Re-read the session inside the lock: the Phase 1 snapshot is stale by design.
+    mbSession <- Session.readSession plate
+    case mbSession of
+      Just s
+        | s.status == ACTIVE && s.routeCode == booking.routeCode -> do
+          withBookingLock booking.bookingId $ do
+            liveSeats <- liveSeatsOnVehicle plate
+            let available = s.capacity - s.walkupCount - liveSeats
+            if available < booking.seats
+              then pure (Left ClaimSeatsGone)
+              else do
+                QFRFSTicketBooking.findById booking.bookingId >>= \case
+                  Just b
+                    | b.status == CONFIRMED && isNothing b.vehicleNumber -> do
+                      QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
+                      now <- getCurrentTime
+                      attempts <- readAttempts (attemptsKey booking.bookingId.getId)
+                      -- stand timer armed now (05 §2); the moving timer re-arms when the tick
+                      -- sees the cab AT the board stop -> 05 §6 item 4 (//TODO 7.5+).
+                      Redis.setExp
+                        (allocKey booking.bookingId.getId)
+                        AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = Just (addUTCTime (intToNominalDiffTime cfg.standTimerSec) now), attempts}
+                        cfg.findingTimeoutSec
+                      pure (Right now)
+                    | otherwise -> pure (Left ClaimCasLost)
+                  Nothing -> pure (Left ClaimCasLost)
+      _ -> pure (Left ClaimSessionGone)
+
+readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Int
+readAttempts key = Redis.withMasterRedis $ fromMaybe 0 <$> Redis.safeGet key
+
+--------------------------------------------------------------------------------
+-- Release (timer / driver cancel / passed stop / seat lost) -- 05 §3
+--------------------------------------------------------------------------------
+
+-- | Idempotent close (05 §3): whoever loses the booking CAS emits nothing. On win:
+-- alloc key cleared, attempts bumped per §8.4 blame rules, allocation_closed emitted, immediate
+-- tick re-triggered (§3 engine rule: tick + trigger on create/release). maxAttempts overflow is
+-- a warning + //TODO -- the R10 fallback surface (§3) belongs to the rider-notification work.
+releaseSharedCabAllocation ::
+  ( MonadFlow m,
+    Redis.HedisFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadMask m,
+    Log m,
+    Redis.HedisLTSFlowEnv r,
+    Metrics.CoreMetrics m
+  ) =>
+  AllocationConfig ->
+  Id DFTB.FRFSTicketBooking ->
+  Text -> -- expected plate -- the cab we believe holds the booking
+  AllocationOutcome ->
+  m Bool
+releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
+  attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
+  released <- withBookingLock bookingId $ do
+    QFRFSTicketBooking.findById bookingId >>= \case
+      Just b
+        | b.vehicleNumber == Just expectedPlate -> do
+          QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate) -- CAS plate -> null: back to FINDING
+          Redis.del (allocKey bookingId.getId)
+          pure (Just b.merchantOperatingCityId)
+      _ -> pure Nothing
+  case released of
+    Nothing -> pure False -- another closer won; emits nothing (05 §3)
+    Just cityId -> do
+      -- //TODO(report Q1): attemptsBefore == 0 cannot distinguish "first close" from
+      -- "attempts key evicted"; a Redis flush resets it by design (05 §11 flush row).
+      let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
+      Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
+      when (attemptsNow >= cfg.maxAttempts) $
+        logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface TODO (05 §3)"
+      -- TODO(7.6): Events.forBooking (Events.AllocationClosed (show outcome) (blameFor outcome)) once 7.6 merges.
+      Invariants.checkBooking bookingId
+      Invariants.checkCab expectedPlate
+      triggerSharedCabAllocation cityId
+      pure True
+
+--------------------------------------------------------------------------------
+-- Driver notification todo
+--------------------------------------------------------------------------------
+
+-- | 05 §3 Phase-2 tail: "FCM the driver". The FCM itself belongs to driver-app, triggered over
+-- its internal notify endpoint (04-plan §5.3 + build step 4) which does not exist yet. This is
+-- the single call site that task wires.
+notifyDriverOfAllocation ::
+  (MonadFlow m, Log m) =>
+  FindingBooking ->
+  RankedCandidate ->
+  m ()
+notifyDriverOfAllocation booking cand =
+  -- //TODO(driver-app build step 4): POST the driver-app internal notify with
+  -- {driverId = cand.rcSession.driverId, vehicleNumber, bookingId, boardStopCode, seats,
+  --  etaSeconds = cand.rcEtaToBoardStopSec} + sound flag.
+  logInfo $
+    "notifyDriverOfAllocation TODO driver="
+      <> cand.rcSession.driverId
+      <> " booking="
+      <> booking.bookingId.getId
+      <> " etaSec="
+      <> show cand.rcEtaToBoardStopSec
+
+--------------------------------------------------------------------------------
+-- Tick (05 §3): "one tick per city (Redis lease) + trigger on booking create / release"
+--------------------------------------------------------------------------------
+
+-- | Immediate, non-blocking re-run. Wire sites (TODO, other milestones): shared-cab confirm
+-- branch in SharedLogic.FRFSConfirm (05 §3; the tier itself is not built on this base) and
+-- releaseSharedCabAllocation. NEVER call from inside a held cab/booking lock.
+triggerSharedCabAllocation ::
+  ( MonadFlow m,
+    Redis.HedisFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadMask m,
+    Log m,
+    Redis.HedisLTSFlowEnv r,
+    Metrics.CoreMetrics m
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+triggerSharedCabAllocation cityId =
+  void $ fork "shared-cab-allocation-trigger" $ runSharedCabAllocationTick cityId
+
+-- | One city, all routes with FINDING bookings. Reads lock-free; claims behind the two locks.
+runSharedCabAllocationTick ::
+  ( MonadFlow m,
+    Redis.HedisFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadMask m,
+    Log m,
+    Redis.HedisLTSFlowEnv r,
+    Metrics.CoreMetrics m
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+runSharedCabAllocationTick cityId = do
+  -- //TODO: bind AllocationConfig from rider_config (05 §7) once the fields exist.
+  let cfg = defaultAllocationConfig
+  if not sharedCabAllocationEnabled
+    then logDebug "shared-cab allocation gated off (queries 4.1/4.5 pending); tick is a no-op"
+    else do
+      findings <- fetchFindingBookings cityId
+      now <- getCurrentTime
+      forM_ (groupAllOn (.routeCode) findings) $ \(routeCode, bookings) -> do
+        ePositions <- try $ readRoutePositions routeCode
+        case ePositions of
+          Left (e :: SomeException) ->
+            -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in
+            -- the same minute must suspend the freshness gate (and NO_LOCATION pause/end).
+            -- Skipping the route here is fail-safe: no allocation from stale data; stop-progress
+            -- releases are 7.5+, so no false PASSED_STOP can come out of this branch either.
+            logError $ "shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e
+          Right positions -> do
+            sessions <- Session.activeSessionsOnRoute routeCode
+            forM_ bookings $ \booking ->
+              void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+
+groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
+groupAllOn f = map (\grp -> (f (head grp), grp)) . groupBy ((==) `on` f) . sortOn f
+
+-- | Try ranked candidates, best first (05 §3: "CAS fails or seats gone -> next candidate").
+claimFirst ::
+  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, MonadMask m, Log m, Metrics.CoreMetrics m) =>
+  AllocationConfig ->
+  FindingBooking ->
+  [RankedCandidate] ->
+  m (Maybe RankedCandidate)
+claimFirst cfg booking = go (0 :: Int)
+  where
+    go _ [] = pure Nothing
+    go rank (c : cs) =
+      attemptClaim cfg booking c >>= \case
+        Right _ -> do
+          -- attemptClaim has released both locks by now.
+          -- TODO(7.6): Events.forBooking (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) once 7.6 merges.
+          Invariants.checkBooking booking.bookingId
+          Invariants.checkCab c.rcSession.vehicleNumber
+          notifyDriverOfAllocation booking c
+          pure (Just c)
+        Left miss -> do
+          logDebug $ "shared-cab claim missed booking=" <> booking.bookingId.getId <> " cab=" <> c.rcSession.vehicleNumber <> " reason=" <> show miss
+          go (rank + 1) cs
+
+--------------------------------------------------------------------------------
+-- Stop-progress actions (05 §6) -- 7.5+, stubbed now so the shape is fixed
+--------------------------------------------------------------------------------
+
+-- | //TODO(7.5+, 05 §6): per-route stop-progress pass:
+--   1. eligibility -- already consumed by eligibleCandidates
+--   2. board stop passed, not boarded -> releaseSharedCabAllocation ... PassedStop with
+--      BlameRider iff the rider is outside atStopRadiusM (§8.4)
+--   3. drop stop passed -> autoEndAfterDropSec clock; ticket -> USED on expiry
+--   4. moving timer: expiresAt = now + movingTimerSec when the cab is AT the board stop (§2)
+--   5. off-route: ring sharedcab:pos:{plate} (04 §3); > offRouteMeters for > offRouteSec -> pause OFF_ROUTE
+tickStopProgressActions :: MonadFlow m => m ()
+tickStopProgressActions = pure ()
