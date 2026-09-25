@@ -56,26 +56,17 @@ verifyDashboardUser ::
   DSN.ServerName ->
   Text ->
   -- | Request path segments. Layer C reads the scoped endpoint's resource id
-  -- from a @{param}@ capture, so it needs the raw path. Supplied by
-  -- 'Tools.Servant.HeaderAuth' from @rawPathInfo@.
+  -- from a @{param}@ capture.
   [Text] ->
   RegToken ->
   m VerifiedUser
 verifyDashboardUser requiredServerAccess endpointId pathSegments token = do
   verified <- verifySession requiredServerAccess token
-  -- Layer B -- is the merchant/city in the URL the one this session holds.
-  -- Cheap, so it runs before the capability lookups below.
-  verifyUrlScope endpointId verified pathSegments
-  -- Authorization. Resolve the operator's access and this endpoint's capability
-  -- rows ONCE, then run both gates off the same data:
-  --   Layer A -- may this operator call this endpoint at all
-  --   Layer C -- and may they touch the specific resource named in the path
-  -- Both must run here, or a route served directly would be authorized more
-  -- loosely than the same route served through provider-dashboard.
+  verifyUrlScope endpointId verified pathSegments -- Layer B -- is the merchant/city in the URL the one this session holds.
   access <- Capability.resolveAccess verified.person.id verified.person.roleId
   endpoints <- Capability.endpointCapabilities endpointId
-  Capability.enforce access endpoints verified.person endpointId
-  Capability.enforceResourceScopeFromRequest
+  Capability.enforce access endpoints verified.person endpointId -- Layer A -- may this operator call this endpoint at all
+  Capability.enforceResourceScopeFromRequest -- Layer C -- and may they touch the specific resource named in the path
     access
     endpoints
     verified.person

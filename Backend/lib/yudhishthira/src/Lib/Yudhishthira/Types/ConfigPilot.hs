@@ -6,10 +6,11 @@ module Lib.Yudhishthira.Types.ConfigPilot where
 
 import Data.Aeson
 import Data.OpenApi as OpenApi hiding (description, name, tags, version)
+import qualified Data.Text as T
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Version (DeviceType (..))
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 data PlatformType = TypeScript | PureScript
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
@@ -80,7 +81,12 @@ data ConfigType
   | DocumentVerificationStagesConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
-$(mkHttpInstancesForEnum ''ConfigType)
+instance ToHttpApiData ConfigType where
+  toUrlPiece = T.pack . show
+
+instance FromHttpApiData ConfigType where
+  parseUrlPiece t = maybe (Left $ "Invalid ConfigType: " <> t) Right (readMaybe (T.unpack t))
+
 $(mkBeamInstancesForEnum ''ConfigType)
 
 data Config a = Config

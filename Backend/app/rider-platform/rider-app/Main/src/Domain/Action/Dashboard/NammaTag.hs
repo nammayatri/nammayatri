@@ -46,6 +46,9 @@ module Domain.Action.Dashboard.NammaTag
     postNammaTagConfigPilotGetConfigWithDimensions,
     getNammaTagConfigPilotGetDimensionSchema,
     postNammaTagConfigPilotCreateRow,
+    postNammaTagConfigPilotVerify,
+    postNammaTagConfigPilotUpsertLogicRollout,
+    postNammaTagConfigPilotRolloutAction,
   )
 where
 
@@ -168,7 +171,6 @@ import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
-import Tools.Error
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
 $(YTH.generateGenericDefault ''CumulativeOfferReq)
@@ -356,7 +358,6 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   resp <- case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
@@ -364,102 +365,102 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config defaultConfig.config Nothing 1
       logicData :: (LYTU.Config Value) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       url <- TC.getTSServiceUrl
-      YudhishthiraFlow.verifyAndUpdateUIDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config Value)) _riderConfig.dynamicLogicUpdatePassword req logicData url
+      YudhishthiraFlow.verifyAndUpdateUIDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config Value)) req logicData url
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
       def' <- fromMaybeM (InvalidRequest "RiderConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTR.RiderConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTR.RiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTR.RiderConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTR.RiderConfig)) req logicData
     LYTU.CUMULATIVE_OFFER_POLICY -> do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
       logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy CumulativeOfferRespI) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy CumulativeOfferRespI) req logicData
     LYTU.FRFS_OFFER_SEGMENT_POLICY -> do
       defaultVal <- fromMaybeM (InvalidRequest "OfferSegmentInput not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @SOfferSegment.OfferSegmentInput))
       logicData :: SOfferSegment.OfferSegmentInput <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SOfferSegment.OfferSegmentResp) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SOfferSegment.OfferSegmentResp) req logicData
     LYTU.OFFERS_FRAUD_CHECKS -> do
       defaultVal <- fromMaybeM (InvalidRequest "OffersFraudChecksReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @OffersFraudChecksReq))
       logicData :: OffersFraudChecksReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy OffersFraudChecksResp) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy OffersFraudChecksResp) req logicData
     LYTU.PICKUP_ETA_CALCULATION -> do
       logicData :: PickupETA.PickupETAInput <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy PickupETA.PickupETAResult) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy PickupETA.PickupETAResult) req logicData
     LYTU.RIDER_CONFIG LYTU.PayoutConfigRider -> do
       def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTP.PayoutConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTP.PayoutConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfigRider -> do
       def' <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTRN.RideRelatedNotificationConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTRN.RideRelatedNotificationConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
       def' <- fromMaybeM (InvalidRequest "MerchantConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTM.MerchantConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTM.MerchantConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTM.MerchantConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTM.MerchantConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTPN.MerchantPushNotification)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTPN.MerchantPushNotification)) req logicData
     LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
       def' <- fromMaybeM (InvalidRequest "FRFSConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DFRFS.FRFSConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DFRFS.FRFSConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DFRFS.FRFSConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DFRFS.FRFSConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
       def' <- fromMaybeM (InvalidRequest "BecknConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTBC.BecknConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTBC.BecknConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTBC.BecknConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTBC.BecknConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.ExophoneRider -> do
       def' <- fromMaybeM (InvalidRequest "Exophone not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTE.Exophone))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTE.Exophone) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTE.Exophone)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTE.Exophone)) req logicData
     LYTU.CANCELLATION_REASONS -> do
       let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
       logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) req logicData
     LYTU.PASS_PURCHASE_ELIGIBILITY -> do
       logicData :: SLE.PassEligibilityData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SLE.PassEligibilityResult) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SLE.PassEligibilityResult) req logicData
     LYTU.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
     LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
       def' <- fromMaybeM (InvalidRequest "HotSpotConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DHSC.HotSpotConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DHSC.HotSpotConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DHSC.HotSpotConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DHSC.HotSpotConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPaymentMethod not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DMPM.MerchantPaymentMethod))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DMPM.MerchantPaymentMethod) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DMPM.MerchantPaymentMethod)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DMPM.MerchantPaymentMethod)) req logicData
     LYTU.RIDER_CONFIG LYTU.CancellationReason -> do
       def' <- fromMaybeM (InvalidRequest "CancellationReason not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DCR.CancellationReason))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DCR.CancellationReason) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DCR.CancellationReason)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DCR.CancellationReason)) req logicData
     LYTU.RIDER_CONFIG LYTU.Translation -> do
       def' <- fromMaybeM (InvalidRequest "Translations not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTL.Translations))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTL.Translations) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTL.Translations)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTL.Translations)) req logicData
     LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
       def' <- fromMaybeM (InvalidRequest "IssueConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DIC.IssueConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DIC.IssueConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DIC.IssueConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DIC.IssueConfig)) req logicData
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       def' <- fromMaybeM (InvalidRequest "PassCategory not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DPC.PassCategory))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DPC.PassCategory) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DPC.PassCategory)) _riderConfig.dynamicLogicUpdatePassword req logicData
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DPC.PassCategory)) req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
   when resp.isRuleUpdated $ case req.domain of
@@ -958,8 +959,10 @@ mkNammaTagDetailsResp tag events inputDataMap =
       updatedAt = tag.updatedAt
     }
 
-postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigPilotGetConfigRequest -> Environment.Flow LYTU.TableDataResp
-postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
+postNammaTagConfigPilotGetConfigWithDimensions :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> LYTU.ConfigPilotGetConfigRequest -> Environment.Flow LYTU.TableDataResp
+postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity configType req = do
+  unless (configType == req.configType) $
+    throwError $ InvalidRequest "configType in the path does not match the request body"
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mocId = merchantOperatingCity.id.getId
       dims = parseDims req.dimensions
@@ -1062,8 +1065,10 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = d
           LYTU.schema = toInlinedSchemaValue p
         }
 
-postNammaTagConfigPilotCreateRow :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigPilotCreateRowRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
-postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
+postNammaTagConfigPilotCreateRow :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> LYTU.ConfigPilotCreateRowRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotCreateRow merchantShortId opCity configType req = do
+  unless (configType == req.configType) $
+    throwError $ InvalidRequest "configType in the path does not match the request body"
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mocId = merchantOperatingCity.id
   case req.configType of
@@ -1144,3 +1149,38 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
     parseConfigData val = case A.fromJSON val of
       A.Success cfg -> pure cfg
       A.Error err -> throwError $ InvalidRequest $ "Invalid config data: " <> show err
+
+postNammaTagConfigPilotVerify :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> LYTU.ConfigPilotVerifyReq -> Environment.Flow LYTU.AppDynamicLogicResp
+postNammaTagConfigPilotVerify merchantShortId opCity configType req =
+  postNammaTagAppDynamicLogicVerify merchantShortId opCity $
+    LYTU.AppDynamicLogicReq
+      { rules = req.rules,
+        inputData = req.inputData,
+        description = req.description,
+        shouldUpdateRule = req.shouldUpdateRule,
+        verifyOutput = req.verifyOutput,
+        domain = LYTU.RIDER_CONFIG configType
+      }
+
+postNammaTagConfigPilotUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> LYTU.ConfigPilotRolloutReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotUpsertLogicRollout merchantShortId opCity configType req =
+  postNammaTagAppDynamicLogicUpsertLogicRollout merchantShortId opCity (map toRolloutObject req)
+  where
+    toRolloutObject :: LYTU.ConfigPilotRolloutObject -> LYTU.LogicRolloutObject
+    toRolloutObject r =
+      LYTU.LogicRolloutObject
+        { domain = LYTU.RIDER_CONFIG configType,
+          timeBounds = r.timeBounds,
+          rollout = r.rollout,
+          modifiedBy = r.modifiedBy
+        }
+
+postNammaTagConfigPilotRolloutAction :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> LYTU.ConfigPilotActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagConfigPilotRolloutAction merchantShortId opCity configType req =
+  postNammaTagConfigPilotActionChange merchantShortId opCity actionChangeReq
+  where
+    logicDomain = LYTU.RIDER_CONFIG configType
+    actionChangeReq = case req of
+      LYTU.ConfigPilotConclude c -> LYTU.Conclude LYTU.ConcludeReq {version = c.version, domain = logicDomain}
+      LYTU.ConfigPilotAbort a -> LYTU.Abort LYTU.AbortReq {version = a.version, domain = logicDomain}
+      LYTU.ConfigPilotRevert -> LYTU.Revert LYTU.RevertReq {domain = logicDomain}
