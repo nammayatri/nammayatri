@@ -42,6 +42,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import Kernel.External.Settlement.Types (SettlementService)
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -102,6 +103,7 @@ data AllocatorJobType
   | ScheduledBatchPayout
   | PayoutStatusCheck
   | SettlementReportIngestion
+  | PgSettlementIngestion
   | CheckPickupZoneArrival
   | TriggerSpecialZoneNotify
   | ScheduledTDSDistribution
@@ -166,6 +168,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
+  restoreAnyJobInfo SPgSettlementIngestion jobData = AnyJobInfo <$> restoreJobInfo SPgSettlementIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
@@ -679,6 +682,21 @@ data SettlementReportIngestionJobData = SettlementReportIngestionJobData
 instance JobInfoProcessor 'SettlementReportIngestion
 
 type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData
+
+data PgSettlementIngestionJobData = PgSettlementIngestionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    juspayServiceName :: Maybe ServiceName,
+    settlementProvider :: Maybe SettlementService,
+    startTime :: UTCTime,
+    endTime :: UTCTime,
+    scheduleNextJob :: Bool
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'PgSettlementIngestion
+
+type instance JobContent 'PgSettlementIngestion = PgSettlementIngestionJobData
 
 data CheckPickupZoneArrivalJobData = CheckPickupZoneArrivalJobData
   { requestId :: Text,

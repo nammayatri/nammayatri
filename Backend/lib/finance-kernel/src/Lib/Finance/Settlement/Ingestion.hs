@@ -99,7 +99,7 @@ ingestPaymentSettlementReport ::
   m IngestionResult
 ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId resolveOrderType = do
   logInfo $ "Starting settlement report ingestion for merchant: " <> merchantId
-  fetchResult <- fetchSettlementCsv cfg merchantId merchantOperatingCityId
+  fetchResult <- fetchSettlementCsv cfg merchantId merchantOperatingCityId Nothing Nothing
   case fetchResult of
     Left err -> do
       logWarning $ "Failed to fetch settlement CSV: " <> err
