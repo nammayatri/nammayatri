@@ -31,6 +31,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Error
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
@@ -155,7 +156,7 @@ getFinanceInvoicePdf ::
   Maybe Text ->
   Maybe DateOrTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset _mbReferenceId mbTo = do
+getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   mbDriver <- QPerson.findById driverId
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
@@ -163,20 +164,33 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo
 
-  invoicesAll <-
-    QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-      merchantOpCityId.getId
-      fromTime
-      toTime
-      mbInvoiceType
-      Nothing
-      (Just driverId.getId)
-      Nothing
-      Nothing
-      []
-      []
-      (mbLimit <|> Just 10)
-      (mbOffset <|> Just 0)
+  -- referenceId is a ride id; invoices are keyed by booking id, so resolves to that.
+  invoicesAll <- case mbReferenceId of
+    Just rideId -> do
+      ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideDoesNotExist rideId)
+      unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId)
+      let issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER
+      QFinanceInvoiceExtra.findByReferenceIdWithOptions
+        ride.bookingId.getId
+        mbInvoiceType
+        (Just issuedToType)
+        [FinanceInvoice.Draft, FinanceInvoice.Issued, FinanceInvoice.Paid]
+        (Just 1)
+        (Just 0)
+    Nothing ->
+      QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+        merchantOpCityId.getId
+        fromTime
+        toTime
+        mbInvoiceType
+        Nothing
+        (Just driverId.getId)
+        Nothing
+        Nothing
+        []
+        []
+        (mbLimit <|> Just 10)
+        (mbOffset <|> Just 0)
 
   -- Hide Voided/Cancelled (incl. 0-amount AggregatedCommission markers).
   let invoices = filter (\i -> i.status `notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
