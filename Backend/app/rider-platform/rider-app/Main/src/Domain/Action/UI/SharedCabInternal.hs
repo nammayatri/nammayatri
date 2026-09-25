@@ -26,6 +26,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
+import SharedLogic.SharedCab.AllocationSchedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Demand as Demand
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
@@ -107,6 +108,7 @@ postSharedCabRouteSelect mbToken req = do
       affected <- mapM affectedRider onBoard
       pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
     Right session -> do
+      void $ seeded session
       session' <-
         if req.walkupCount == session.walkupCount
           then pure session
@@ -126,6 +128,10 @@ postSharedCabRouteSelect mbToken req = do
 -- | Validator layer 4 after every session transition; it logs and counts, never throws.
 checked :: Session -> Environment.Flow Session
 checked s = s <$ Invariants.checkCab s.vehicleNumber
+
+-- | An ACTIVE session is what a FINDING booking needs, so its city gets an allocation tick chain.
+seeded :: Session -> Environment.Flow Session
+seeded s = s <$ ensureAllocationTick s.merchantId s.merchantOperatingCityId
 
 -- | 05 §8.7: allocations nobody boarded yet leave with the route; after the session write, outside its lock.
 releasing :: AllocTypes.AllocationOutcome -> Session -> Environment.Flow Session
@@ -161,7 +167,7 @@ postSharedCabRouteEnd mbToken req = do
 postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabResume mbToken req = do
   checkToken mbToken
-  Session.resume req.driverId req.vehicleNumber >>= checked >>= mkSessionResp
+  Session.resume req.driverId req.vehicleNumber >>= seeded >>= checked >>= mkSessionResp
 
 -- | The driver's runs that started on `date` (IST). App riders and cash per run join here once boarding sets
 -- frfs_ticket_booking.vehicleTripId.

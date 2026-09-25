@@ -21,15 +21,12 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import Lib.Scheduler
-import Lib.Scheduler.JobStorageType.SchedulerType
 import SharedLogic.JobScheduler
-import SharedLogic.SharedCab.Allocation (runSharedCabAllocationTick)
-import SharedLogic.SharedCab.Allocation.Types (defaultAllocationConfig)
+import SharedLogic.SharedCab.Allocation (runSharedCabAllocationTick, sharedCabAllocationEnabled)
+import SharedLogic.SharedCab.AllocationSchedule (claimTickRun, scheduleNextTick)
 import Storage.Beam.SchedulerJob ()
 
--- TODO(seed): nothing creates the first job per city yet (same bootstrap question existing
--- self-rescheduling jobs have). Once rider_config fields land (05 §7), seed on config change /
--- city enable; then the job keeps itself alive by re-scheduling below.
+-- Seeded per city by AllocationSchedule.ensureAllocationTick on session open; keeps itself alive below.
 sharedCabAllocationTick ::
   ( MonadFlow m,
     Redis.HedisFlow m r,
@@ -46,10 +43,11 @@ sharedCabAllocationTick ::
   Job 'SharedCabAllocationTick ->
   m ExecutionResult
 sharedCabAllocationTick Job {jobInfo} = do
-  let jobData@SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId} = jobInfo.jobData
-      cfg = defaultAllocationConfig -- //TODO(05 §7): rider_config bind
-      -- the city lease lives in runSharedCabAllocationTick, so on-demand triggers honour it too
-  runSharedCabAllocationTick merchantOperatingCityId
-  -- self-reschedule: 05 §7 tickSec (default 3 s)
-  createJobIn @_ @'SharedCabAllocationTick (Just merchantId) (Just merchantOperatingCityId) (intToNominalDiffTime cfg.tickSec) jobData
+  let SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId} = jobInfo.jobData
+  -- a duplicate chain finds this tick claimed and ends; the gate going off ends the chain too
+  claimed <- claimTickRun merchantOperatingCityId
+  when (claimed && sharedCabAllocationEnabled) $ do
+    -- the city lease lives in runSharedCabAllocationTick, so on-demand triggers honour it too
+    runSharedCabAllocationTick merchantOperatingCityId
+    scheduleNextTick merchantId merchantOperatingCityId
   pure Complete

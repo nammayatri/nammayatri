@@ -633,6 +633,7 @@ library
       SharedLogic.Serviceability
       SharedLogic.SharedCab.Allocation
       SharedLogic.SharedCab.Allocation.Types
+      SharedLogic.SharedCab.AllocationSchedule
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Demand

@@ -35,6 +35,7 @@
 module SharedLogic.SharedCab.Allocation
   ( -- entrypoints (M7.2 wire sites: the job module + booking create/release callers)
     runSharedCabAllocationTick,
+    sharedCabAllocationEnabled,
     triggerSharedCabAllocation,
     releaseSharedCabAllocation,
     releaseUnboarded,
