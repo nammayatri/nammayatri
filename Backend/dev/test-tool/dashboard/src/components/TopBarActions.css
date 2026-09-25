@@ -235,7 +235,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px 16px;
-  align-items: end;
+  /* Top-aligned, NOT bottom-aligned: only some fields carry a hint under
+     their control, so bottom-alignment would push the taller ones' labels
+     up and leave the header row ragged. Aligning to the top keeps every
+     label and every control on the same line, and hints simply hang below. */
+  align-items: start;
 }
 .tb-modal-form-field {
   display: flex; flex-direction: column; gap: 4px;
@@ -246,6 +250,8 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  /* Explicit so the button's offset below can match it exactly. */
+  line-height: 16px;
 }
 .tb-modal-form-field select {
   background: #161b22;
@@ -261,18 +267,41 @@
   color: #58a6ff; border-color: #58a6ff;
 }
 .tb-modal-form-field select:disabled { opacity: 0.55; cursor: not-allowed; }
+/* Checkbox styled to occupy the same slot a <select> does in the other
+   fields, so the control row stays level across the whole form. */
+.tb-modal-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #c9d1d9;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+.tb-modal-checkbox:hover { border-color: #58a6ff; }
+.tb-modal-checkbox input { margin: 0; cursor: pointer; }
+
 .tb-modal-form-hint {
   color: #6e7681;
   font-size: 11px;
   line-height: 1.4;
 }
 .tb-modal-form-actions {
-  display: flex; align-items: end; gap: 8px;
-  /* Sit in the same grid row as the selectors. Bottom-aligned so the
-     button baseline matches the dropdowns. Right-aligned within the
-     cell so Start lands at the far right of the modal. */
-  align-self: end;
+  display: flex; align-items: start; gap: 8px;
+  /* Sits in the same grid row as the selectors. The row is top-aligned
+     (see .tb-modal-form), so offset by the label block — 16px line-height
+     + the 4px field gap — to land level with the dropdowns rather than
+     level with the labels above them. Right-aligned within the cell so
+     the button ends up at the far right of the modal. */
+  align-self: start;
   justify-self: end;
+  margin-top: 20px;
 }
 .tb-modal-form-actions .tb-btn {
   margin-left: 0;
