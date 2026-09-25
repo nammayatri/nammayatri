@@ -174,16 +174,16 @@ snapToRoadOSRMOnly ::
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
 snapToRoadOSRMOnly merchantOpCityId entityId req = do
-  osrmServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService Maps.OSRM)}) Nothing
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show Maps.OSRM))
-  case osrmServiceConfig.serviceConfig of
-    DOSC.MapsServiceConfig msc -> do
-      result <- withTryCatch "snapToRoadOSRMOnly" $ Maps.snapToRoad entityId msc req
-      case result of
-        Right resp -> pure ([Maps.OSRM], Right resp)
-        Left err -> pure ([], Left (show err))
-    _ -> throwError $ InternalError "Unknown Service Config"
+  result <- withTryCatch "snapToRoadOSRMOnly" $ do
+    osrmServiceConfig <-
+      getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService Maps.OSRM)}) Nothing
+        >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show Maps.OSRM))
+    case osrmServiceConfig.serviceConfig of
+      DOSC.MapsServiceConfig msc -> Maps.snapToRoad entityId msc req
+      _ -> throwError $ InternalError "Unknown Service Config"
+  case result of
+    Right resp -> pure ([Maps.OSRM], Right resp)
+    Left err -> pure ([], Left (show err))
 
 autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
