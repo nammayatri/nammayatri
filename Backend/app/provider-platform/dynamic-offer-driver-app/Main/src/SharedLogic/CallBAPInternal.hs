@@ -720,9 +720,9 @@ getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   newInternalUrl <-
     HM.foldrWithKey
       ( \k v acc ->
-          if Data.Text.isInfixOf (showBaseUrl k) (showBaseUrl acc)
-            then parseBaseUrl (Data.Text.replace (showBaseUrl k) (showBaseUrl v) (showBaseUrl acc))
-            else pure acc
+          if Data.Text.isInfixOf (showBaseUrl k) (showBaseUrl internalUrl)
+            then parseBaseUrl (Data.Text.replace (showBaseUrl k) (showBaseUrl v) (showBaseUrl internalUrl))
+            else acc
       )
       (pure internalUrl)
       internalEndPointHashMap
