@@ -144,6 +144,7 @@ import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Invariants as SharedCabInvariants
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
+import qualified SharedLogic.SharedCab.SpotBooking as SharedCabSpot
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -854,10 +855,13 @@ getPublicTransportVehicleData ::
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers = do
-  case vehicleType of
-    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
-    _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber mbNewServiceTiers =
+  -- A plate with a live shared-cab session is a spot booking's first step (05 §4), whatever vehicleType the app sent.
+  SharedCabSpot.liveSharedCab vehicleNumber >>= \case
+    Just session -> SharedCabSpot.sharedCabVehicleData session
+    Nothing -> case vehicleType of
+      BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
+      _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 -- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
 

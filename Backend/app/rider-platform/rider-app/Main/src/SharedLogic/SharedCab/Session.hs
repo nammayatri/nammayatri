@@ -8,6 +8,8 @@ module SharedLogic.SharedCab.Session
     getSession,
     activeSessionsOnRoute,
     setWalkupCount,
+    readSession,
+    withPlateLock,
   )
 where
 

@@ -640,6 +640,7 @@ library
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
       SharedLogic.SharedCab.SessionView
+      SharedLogic.SharedCab.SpotBooking
       SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
