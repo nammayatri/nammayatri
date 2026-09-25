@@ -1,11 +1,13 @@
 module Tools.ActorInfo where
 
 import qualified Domain.Types.Person as DP
+import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
+import qualified Tools.Auth.DashboardUserAuth as DashboardUser
 
 withMbActorInfo :: (HasCallStack, Finance.HasActorInfo m r) => Maybe ActorInfo -> m a -> m a
 withMbActorInfo (Just ActorInfo {actorType, actorId}) action = Finance.withActorInfo actorType actorId action
@@ -40,3 +42,6 @@ withDashboardMbPersonIdActorInfo (Just personId) action = withDashboardPersonIdA
 withDashboardMbPersonIdActorInfo Nothing action = do
   logWarning "DashboardPersonId not found for actor info, using Unknown as default"
   action -- keep `Unknown requestId` as default
+
+withDashboardUserActorInfo :: (Finance.HasActorInfo m r, Log m) => DashboardUser.DashboardUser -> m a -> m a
+withDashboardUserActorInfo = withDashboardPersonIdActorInfo . cast @DDashboardPerson.Person @DP.Person . (.personId)

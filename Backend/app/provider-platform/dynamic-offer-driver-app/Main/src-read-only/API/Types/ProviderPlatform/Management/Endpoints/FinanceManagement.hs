@@ -1177,10 +1177,10 @@ type PostFinanceManagementTdsReimbursementRequestSubmitHelper =
   )
 
 type GetFinanceManagementTdsReimbursementStatus =
-  ( "tdsReimbursement" :> "status" :> MandatoryQueryParam "assessmentYear" Kernel.Prelude.Text
+  ( "tdsReimbursement" :> "status" :> MandatoryQueryParam "quarter" TdsReimbursementQuarter
       :> MandatoryQueryParam
-           "quarter"
-           TdsReimbursementQuarter
+           "assessmentYear"
+           Kernel.Prelude.Text
       :> Get '[JSON] TdsReimbursementStatusRes
   )
 
@@ -1194,27 +1194,26 @@ type GetFinanceManagementTdsReimbursementStatusHelper =
   )
 
 type GetFinanceManagementTdsReimbursementList =
-  ( "tdsReimbursement" :> "list" :> QueryParam "assessmentYear" Kernel.Prelude.Text
+  ( "tdsReimbursement" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
-           "excludeCurrentAdminMaker"
-           Kernel.Prelude.Bool
-      :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
-      :> QueryParam "from" Kernel.Prelude.UTCTime
-      :> QueryParam
-           "limit"
-           Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> QueryParam "tanNumber" Kernel.Prelude.Text
       :> QueryParam
            "quarter"
            TdsReimbursementQuarter
       :> QueryParam
+           "assessmentYear"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "excludeCurrentAdminMaker"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "status"
            TdsReimbursementStatus
       :> QueryParam
-           "tanNumber"
-           Kernel.Prelude.Text
+           "from"
+           Kernel.Prelude.UTCTime
       :> QueryParam
            "to"
            Kernel.Prelude.UTCTime

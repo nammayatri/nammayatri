@@ -19,7 +19,7 @@ types:
     channelId: Maybe Text
     source: Maybe MessageSource
 
-apis :
+apis:
   - POST :
       endpoint : /triggerFCM/message
       auth : TokenAuth

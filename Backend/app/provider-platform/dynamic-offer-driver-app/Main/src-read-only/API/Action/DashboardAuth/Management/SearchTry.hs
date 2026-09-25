@@ -17,6 +17,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -37,5 +38,5 @@ postSearchTryRecentSearchTries a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/SEARCH_TRY/POST_SEARCH_TRY_RECENT_SEARCH_TRIES" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.SearchTry.postSearchTryRecentSearchTries a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SearchTry.postSearchTryRecentSearchTries a4 a3 a1
     )

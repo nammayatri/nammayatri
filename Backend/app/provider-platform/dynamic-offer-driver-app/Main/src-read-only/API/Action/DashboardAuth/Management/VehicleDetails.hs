@@ -16,6 +16,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -32,4 +33,4 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getVehicleDetailsVehicleModels merchantId city
 
 getVehicleDetailsVehicleModels :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleDetails.VehicleMakeModelsItem])
-getVehicleDetailsVehicleModels a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleDetails.getVehicleDetailsVehicleModels a3 a2
+getVehicleDetailsVehicleModels a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.VehicleDetails.getVehicleDetailsVehicleModels a3 a2

@@ -23,6 +23,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -193,17 +194,17 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationGenerateTempAppCode merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationVerifyBankAccount merchantId city :<|> getDriverRegistrationInfoBankAccount merchantId city :<|> getDriverRegistrationPayoutRegistration merchantId city :<|> postDriverRegistrationDeleteBankAccount merchantId city :<|> getDriverRegistrationPayoutOrderStatus merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> getDriverRegistrationVerificationStatus merchantId city :<|> getDriverRegistrationDocumentsCommonList merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city :<|> postDriverRegistrationDocumentsCommon merchantId city :<|> postDriverRegistrationDocumentRegister merchantId city :<|> postDriverRegistrationUnlinkDocument merchantId city :<|> postDriverRegistrationTriggerReminder merchantId city
 
 getDriverRegistrationDocumentsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.DocumentsListResponse)
-getDriverRegistrationDocumentsList a6 a5 _a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsList a6 a5 a3 a2 a1
+getDriverRegistrationDocumentsList a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsList a6 a5 a3 a2 a1
 
 getDriverRegistrationGetDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.DriverRegistration.EntityType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.GetDocumentResponse)
-getDriverRegistrationGetDocument a6 a5 _a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationGetDocument a6 a5 a3 a2 a1
+getDriverRegistrationGetDocument a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationGetDocument a6 a5 a3 a2 a1
 
 postDriverRegistrationGenerateTempAppCode :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.TempAppCodeRes)
 postDriverRegistrationGenerateTempAppCode a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_GENERATE_TEMP_APP_CODE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationGenerateTempAppCode a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationGenerateTempAppCode a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
     )
 
 postDriverRegistrationDocumentUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.UploadDocumentResp)
@@ -211,7 +212,7 @@ postDriverRegistrationDocumentUpload a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationDocumentUpload a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationDocumentUpload a5 a4 a3 a2 a1
     )
 
 postDriverRegistrationRegisterDl :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.RegisterDLReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -219,7 +220,7 @@ postDriverRegistrationRegisterDl a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_DL" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterDl a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterDl a5 a4 a2 a1
     )
 
 postDriverRegistrationVerifyBankAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.VerifyBankAccountReq -> Environment.FlowHandler Kernel.External.Verification.Interface.Types.VerifyAsyncResp)
@@ -227,32 +228,32 @@ postDriverRegistrationVerifyBankAccount a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_VERIFY_BANK_ACCOUNT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationVerifyBankAccount a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationVerifyBankAccount a5 a4 a2 a1
     )
 
 getDriverRegistrationInfoBankAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.External.Verification.Types.BankAccountVerificationResponse)
-getDriverRegistrationInfoBankAccount a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationInfoBankAccount a5 a4 a2 a1
+getDriverRegistrationInfoBankAccount a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationInfoBankAccount a5 a4 a2 a1
 
 getDriverRegistrationPayoutRegistration :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.PayoutRegistrationRes)
-getDriverRegistrationPayoutRegistration a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationPayoutRegistration a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
+getDriverRegistrationPayoutRegistration a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationPayoutRegistration a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
 
 postDriverRegistrationDeleteBankAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationDeleteBankAccount a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DELETE_BANK_ACCOUNT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDeleteBankAccount a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDeleteBankAccount a4 a3 a1
     )
 
 getDriverRegistrationPayoutOrderStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.External.Payout.Interface.Types.PayoutOrderStatusResp)
-getDriverRegistrationPayoutOrderStatus a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationPayoutOrderStatus a5 a4 a2 a1
+getDriverRegistrationPayoutOrderStatus a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationPayoutOrderStatus a5 a4 a2 a1
 
 postDriverRegistrationRegisterRc :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.RegisterRCReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationRegisterRc a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_RC" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterRc a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterRc a5 a4 a2 a1
     )
 
 postDriverRegistrationRegisterAadhaar :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.AadhaarCardReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -260,7 +261,7 @@ postDriverRegistrationRegisterAadhaar a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_AADHAAR" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterAadhaar a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterAadhaar a5 a4 a2 a1
     )
 
 postDriverRegistrationRegisterGenerateAadhaarOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.GenerateAadhaarOtpRes)
@@ -268,7 +269,7 @@ postDriverRegistrationRegisterGenerateAadhaarOtp a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_GENERATE_AADHAAR_OTP" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterGenerateAadhaarOtp a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterGenerateAadhaarOtp a5 a4 a2 a1
     )
 
 postDriverRegistrationRegisterVerifyAadhaarOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.VerifyAadhaarOtpRes)
@@ -276,27 +277,27 @@ postDriverRegistrationRegisterVerifyAadhaarOtp a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_REGISTER_VERIFY_AADHAAR_OTP" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterVerifyAadhaarOtp a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationRegisterVerifyAadhaarOtp a5 a4 a2 a1
     )
 
 getDriverRegistrationUnderReviewDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.UnderReviewDriversListResponse)
-getDriverRegistrationUnderReviewDrivers a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationUnderReviewDrivers a5 a4 a2 a1
+getDriverRegistrationUnderReviewDrivers a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationUnderReviewDrivers a5 a4 a2 a1
 
 getDriverRegistrationDocumentsInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.StatusRes)
-getDriverRegistrationDocumentsInfo a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsInfo a4 a3 a1
+getDriverRegistrationDocumentsInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsInfo a4 a3 a1
 
 getDriverRegistrationVerificationStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> API.Types.ProviderPlatform.Management.DriverRegistration.ServiceType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.VerificationStatusListResponse)
-getDriverRegistrationVerificationStatus a10 a9 _a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationVerificationStatus a10 a9 a7 a6 a5 a4 a3 a2 a1
+getDriverRegistrationVerificationStatus a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationVerificationStatus a10 a9 a7 a6 a5 a4 a3 a2 a1
 
 getDriverRegistrationDocumentsCommonList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType] -> Kernel.Prelude.Maybe [Dashboard.Common.VerificationStatus] -> Kernel.Prelude.Maybe [Kernel.Types.Id.Id Dashboard.Common.Driver] -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.CommonDocumentsListRes)
-getDriverRegistrationDocumentsCommonList a12 a11 _a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsCommonList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getDriverRegistrationDocumentsCommonList a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a10 $ Domain.Action.Dashboard.Management.DriverRegistration.getDriverRegistrationDocumentsCommonList a12 a11 a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 postDriverRegistrationDocumentsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.UpdateDocumentResp)
 postDriverRegistrationDocumentsUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENTS_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationDocumentsUpdate a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationDocumentsUpdate a4 a3 a2 a1
     )
 
 postDriverRegistrationDocumentsCommon :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.CommonDocumentCreateReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.CommonDocumentCreateRes)
@@ -304,7 +305,7 @@ postDriverRegistrationDocumentsCommon a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENTS_COMMON" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentsCommon a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentsCommon a5 a4 a2 a1
     )
 
 postDriverRegistrationDocumentRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentRegisterReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -312,7 +313,7 @@ postDriverRegistrationDocumentRegister a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_DOCUMENT_REGISTER" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentRegister a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.DriverRegistration.postDriverRegistrationDocumentRegister a6 a5 a3 a2 a1
     )
 
 postDriverRegistrationUnlinkDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.DocumentType -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -320,7 +321,7 @@ postDriverRegistrationUnlinkDocument a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_UNLINK_DOCUMENT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationUnlinkDocument a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationUnlinkDocument a5 a4 a3 a2 a1
     )
 
 postDriverRegistrationTriggerReminder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Management.DriverRegistration.TriggerReminderReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -328,5 +329,5 @@ postDriverRegistrationTriggerReminder a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_TRIGGER_REMINDER" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationTriggerReminder a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.DriverRegistration.postDriverRegistrationTriggerReminder a5 a4 a3 a2 a1
     )

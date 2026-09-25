@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -56,7 +57,7 @@ postMeterRideAddDestination ::
     API.Types.UI.MeterRide.MeterRideAddDestinationReq ->
     Environment.FlowHandler API.Types.UI.MeterRide.MeterRideAddDestinationResp
   )
-postMeterRideAddDestination a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRide.postMeterRideAddDestination (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMeterRideAddDestination a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MeterRide.postMeterRideAddDestination (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postMeterRideShareReceipt ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -67,4 +68,4 @@ postMeterRideShareReceipt ::
     API.Types.UI.MeterRide.SendRecietRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postMeterRideShareReceipt a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRide.postMeterRideShareReceipt (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postMeterRideShareReceipt a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.MeterRide.postMeterRideShareReceipt (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

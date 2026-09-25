@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "driver" :> "availableForRides" :> "activate" :> Post '[JSON] API.Types.UI.AvailableForRides.AvailableForRidesRes)
@@ -34,4 +35,4 @@ postDriverAvailableForRidesActivate ::
     ) ->
     Environment.FlowHandler API.Types.UI.AvailableForRides.AvailableForRidesRes
   )
-postDriverAvailableForRidesActivate a1 = withFlowHandlerAPI $ Domain.Action.UI.AvailableForRides.postDriverAvailableForRidesActivate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postDriverAvailableForRidesActivate a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.AvailableForRides.postDriverAvailableForRidesActivate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

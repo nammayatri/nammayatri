@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -67,7 +68,7 @@ postCrisGetSDKData ::
     API.Types.UI.CRIS.GetSDKDataRequest ->
     Environment.FlowHandler API.Types.UI.CRIS.GetSDKDataResponse
   )
-postCrisGetSDKData a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CRIS.postCrisGetSDKData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postCrisGetSDKData a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.CRIS.postCrisGetSDKData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getCrisOtpGeneration ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -76,7 +77,7 @@ getCrisOtpGeneration ::
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-getCrisOtpGeneration a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CRIS.getCrisOtpGeneration (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getCrisOtpGeneration a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.CRIS.getCrisOtpGeneration (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postCrisChangeDevice ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -86,4 +87,4 @@ postCrisChangeDevice ::
     API.Types.UI.CRIS.CrisChangeDeviceRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postCrisChangeDevice a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.CRIS.postCrisChangeDevice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postCrisChangeDevice a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.CRIS.postCrisChangeDevice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
