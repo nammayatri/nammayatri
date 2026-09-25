@@ -880,6 +880,7 @@ library
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.DriverInformation
       Storage.Clickhouse.DriverOperatorAssociation
+      Storage.Clickhouse.DriverPlan
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.FleetOperatorAssociation

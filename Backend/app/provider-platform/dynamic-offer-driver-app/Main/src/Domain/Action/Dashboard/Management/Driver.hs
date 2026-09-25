@@ -54,6 +54,8 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    getDriverPlanDrivers,
+    postDriverPlanMigrate,
     getDriverStats,
     checkDriverOperatorAssociation,
     checkFleetOperatorAssociation,
@@ -170,6 +172,7 @@ import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.DriverPlan as CHDriverPlan
 import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -194,6 +197,7 @@ import qualified Storage.Queries.IdfyVerification as QIdfyVerification
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.OnboardingList.DriverList as QDriverList
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Plan as QPlan
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
@@ -1516,6 +1520,62 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
   return Success
+
+-- | Get all driver IDs on a given plan, scoped to authorized city. Reads from ClickHouse.
+getDriverPlanDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.GetDriversOnPlanRes
+getDriverPlanDrivers merchantShortId opCity planIdText = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let planId = Id planIdText
+  plan <- QPlan.findByPrimaryKey planId >>= fromMaybeM (PlanNotFound planIdText)
+  unless (plan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Plan does not belong to the authorized city")
+  driverIds <- CHDriverPlan.findDriverIdsByPlanId planId merchantOpCityId
+  when (null driverIds) $
+    throwError (DriversNotFoundOnPlan planIdText)
+  return $ Common.GetDriversOnPlanRes {driverIds = map getId driverIds}
+
+-- | Migrate drivers from one plan to another.
+-- FE sends batches of 1000, BE sub-batches at 100.
+-- Both plans are validated upfront. currPlanId is in the WHERE clause to prevent race conditions.
+postDriverPlanMigrate :: ShortId DM.Merchant -> Context.City -> Common.MigratePlanReq -> Flow Common.MigratePlanRes
+postDriverPlanMigrate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let currentPlanId = Id req.currentPlanId
+      newPlanId = Id req.newPlanId
+  currentPlan <- QPlan.findByPrimaryKey currentPlanId >>= fromMaybeM (PlanNotFound req.currentPlanId)
+  newPlan <- QPlan.findByPrimaryKey newPlanId >>= fromMaybeM (PlanNotFound req.newPlanId)
+  -- Validate both plans belong to the authorized city
+  unless (currentPlan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Current plan does not belong to the authorized city")
+  unless (newPlan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Target plan does not belong to the authorized city")
+  -- Validate same serviceName
+  unless (currentPlan.serviceName == newPlan.serviceName) $
+    throwError (InvalidRequest "Plans must have the same service name")
+  let driverIds = map Id req.driverIds
+  -- Bulk update in batches of 100 with currPlanId in WHERE for safety
+  batchErrors <- fmap concat $
+    forM (chunksOf 100 driverIds) $ \chunk -> do
+      res <-
+        withTryCatch "planMigrate" $
+          QDP.bulkMigratePlan chunk currentPlanId newPlanId newPlan.serviceName (Just newPlan.vehicleCategory) merchantOpCityId
+      case res of
+        Left err -> do
+          logInfo $ "Plan migrate failed for batch: " <> show err
+          return [(getId dId, show err) | dId <- chunk]
+        Right _ -> return []
+  let totalDrivers = length driverIds
+      failCount = length batchErrors
+      successCount = totalDrivers - failCount
+  logInfo $ "Plan migrate completed: " <> show successCount <> " success, " <> show failCount <> " failed"
+  return $
+    Common.MigratePlanRes
+      { success = successCount,
+        failed = failCount,
+        failures = map (\(dId, errMsg) -> Common.MigratePlanFailure {driverId = dId, reason = T.pack errMsg}) batchErrors
+      }
 
 getDriverStats :: ShortId DM.Merchant -> Context.City -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Text -> Flow Common.DriverStatsRes
 getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId = do

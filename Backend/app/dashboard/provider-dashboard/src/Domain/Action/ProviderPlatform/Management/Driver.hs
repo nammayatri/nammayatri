@@ -70,6 +70,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverIdentityInfo,
     postDriverIdentityInfoUpdate,
     postDriverAssociationChange,
+    getDriverPlanDrivers,
+    postDriverPlanMigrate,
   )
 where
 
@@ -470,3 +472,15 @@ postDriverVehicleRemoveSelectedServiceTiers merchantShortId opCity apiTokenInfo 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverVehicleRemoveSelectedServiceTiers) driverId req)
+
+getDriverPlanDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Text -> Flow Common.GetDriversOnPlanRes
+getDriverPlanDrivers merchantShortId opCity apiTokenInfo planId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverPlanDrivers) planId
+
+postDriverPlanMigrate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.MigratePlanReq -> Flow Common.MigratePlanRes
+postDriverPlanMigrate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverPlanMigrate) req

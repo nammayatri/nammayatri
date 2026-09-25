@@ -195,6 +195,30 @@ updatePlanIdByDriverIdAndServiceName (Id driverId) (Id planId) serviceName mbVeh
         ]
     ]
 
+bulkMigratePlan ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person] ->
+  Id DPlan.Plan ->
+  Id DPlan.Plan ->
+  DPlan.ServiceNames ->
+  Maybe VC.VehicleCategory ->
+  Id MOC.MerchantOperatingCity ->
+  m ()
+bulkMigratePlan driverIds (Id currentPlanId) (Id newPlanId) serviceName mbVehicleCategory merchantOpCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.planId newPlanId,
+      Se.Set BeamDF.vehicleCategory mbVehicleCategory,
+      Se.Set BeamDF.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
+          Se.Is BeamDF.planId $ Se.Eq currentPlanId,
+          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
+          Se.Is BeamDF.merchantOpCityId $ Se.Eq (Just merchantOpCityId.getId)
+        ]
+    ]
+
 updateIsSubscriptionEnabledAtCategoryLevel ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person ->

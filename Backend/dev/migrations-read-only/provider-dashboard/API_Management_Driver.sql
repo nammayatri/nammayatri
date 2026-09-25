@@ -233,3 +233,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostDriverVehicleRemoveSelectedServiceTiers","migration":"capability","param":"city-operations.vehicle.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_VEHICLE_REMOVE_SELECTED_SERVICE_TIERS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetDriverPlanDrivers","migration":"capability","param":"PUBLIC","schema":"atlas_dashboard"}
+-- capability: PUBLIC - no capability_endpoint row; every authenticated caller may call this endpoint.
+
+-- {"api":"PostDriverPlanMigrate","migration":"capability","param":"PUBLIC","schema":"atlas_dashboard"}
+-- capability: PUBLIC - no capability_endpoint row; every authenticated caller may call this endpoint.

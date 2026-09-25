@@ -612,6 +612,24 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_SERVICE_UPDATE
+  - GET:
+      endpoint: /plan/drivers
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - planId: Text
+      response:
+        type: GetDriversOnPlanRes
+      migrate:
+        capability: city-operations.subscription.read
+  - POST:
+      endpoint: /plan/migrate
+      auth: ApiAuthV2
+      request:
+        type: MigratePlanReq
+      response:
+        type: MigratePlanRes
+      migrate:
+        capability: city-operations.subscription.write
 
   - GET: # DriverStatsAPI
       endpoint: /stats
@@ -1049,6 +1067,23 @@ types:
   BulkServiceUpdateReq:
     - driverIds : [Text]
     - serviceNames : [ServiceNames]
+    - derive: "'HideSecrets"
+  GetDriversOnPlanRes:
+    - driverIds : [Text]
+    - derive: "'HideSecrets"
+  MigratePlanReq:
+    - driverIds : [Text]
+    - currentPlanId : Text
+    - newPlanId : Text
+    - derive: "'HideSecrets"
+  MigratePlanRes:
+    - success : Int
+    - failed : Int
+    - failures : [MigratePlanFailure]
+    - derive: "'HideSecrets"
+  MigratePlanFailure:
+    - driverId : Text
+    - reason : Text
     - derive: "'HideSecrets"
   DriverStatsRes:
     - numDriversOnboarded: Int
