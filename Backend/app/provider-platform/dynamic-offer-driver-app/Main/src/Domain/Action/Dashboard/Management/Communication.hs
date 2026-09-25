@@ -805,7 +805,8 @@ dispatchFromPayload p = do
                 templateId = whatsappTemplateId,
                 variables = [Just p.title, Just p.body],
                 ctaButtonUrl = Nothing,
-                containsUrlButton = Nothing
+                containsUrlButton = Nothing,
+                mediaUrl = mbMerchantMsg >>= (.mediaUrl)
               }
       result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId req
       when (result._response.status /= "success") $ throwError (InvalidRequest "WhatsApp send failed")

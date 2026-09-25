@@ -2049,7 +2049,7 @@ sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig = do
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKeyInRideFlow person.merchantOperatingCityId messageKey booking.configInExperimentVersions >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
   let driverNumber = (fromMaybe "+91" ride.driverMobileCountryCode) <> ride.driverMobileNumber
       fare = show booking.estimatedTotalFare.amount
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just driverNumber, Just ride.vehicleNumber, Just fare, Just ride.otp, Just trackingUrl, Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just driverNumber, Just ride.vehicleNumber, Just fare, Just ride.otp, Just trackingUrl, Just riderConfig.appUrl] Nothing Nothing merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Ride Booking Details Whatsapp message")
 
 sendBookingCancelledMessageViaWhatsapp ::
@@ -2069,7 +2069,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   let phoneNumber = countryCode <> mobileNumber
       messageKey = DMM.WHATSAPP_CALL_BOOKING_CANCELLED_RIDE_MESSAGE
   merchantMessage <- CMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing >>= fromMaybeM (MerchantMessageNotFound person.merchantOperatingCityId.getId (show messageKey))
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing merchantMessage.mediaUrl) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 
 updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()

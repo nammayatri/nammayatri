@@ -368,7 +368,8 @@ sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeep
                 templateId = merchantMessage.templateId,
                 variables = [amount], -- Accepts at most 7 variables using GupShup
                 ctaButtonUrl = Just webPaymentLink,
-                containsUrlButton = Just merchantMessage.containsUrlButton
+                containsUrlButton = Just merchantMessage.containsUrlButton,
+                mediaUrl = merchantMessage.mediaUrl
               }
       result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId whatsAppReq
       when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")

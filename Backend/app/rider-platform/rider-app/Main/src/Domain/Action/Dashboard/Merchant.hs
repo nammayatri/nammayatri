@@ -2350,7 +2350,7 @@ getMerchantMerchantMessageCatalog ::
   Context.City ->
   Flow Common.RiderMerchantMessageCatalogResp
 getMerchantMerchantMessageCatalog _merchantShortId _city = do
-  let values = map show [minBound .. maxBound :: DMM.MessageKey]
+  let values = map show DMM.knownMessageKeys
   pure $ Common.RiderMerchantMessageCatalogResp {values}
 
 postMerchantMerchantMessageUpsert ::
@@ -2382,7 +2382,9 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
                 messageType = req.messageType,
                 senderHeader = req.senderHeader,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                mediaUrl = Nothing,
+                channel = Nothing
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey
