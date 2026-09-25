@@ -1,0 +1,41 @@
+# Pinned upstream tree fetched by setup.sh
+2023/
+
+# Exported from the database on every run by setup.sh
+demo-map/site/areas.geojson
+
+# Backend binaries downloaded from the GitHub Actions build artifact
+# (.github/workflows/algeria-backend-build.yml). ~320 MB, and rebuildable —
+# they do not belong in git. MANIFEST.txt records which run produced them.
+bin/
+
+# The repo root .gitignore has a blanket `docker-compose.yml` rule; this stack's
+# compose file is source, not local scratch, so re-include it.
+!docker-compose.yml
+
+# 20 MB of extracted OSM place names, rebuilt in ~4 minutes by
+# ./geocoder-prepare.sh extract. The script is source; its output is not.
+geocoder/places.csv
+
+# TLS private keys and the ACME account. Never in git, on any branch, ever --
+# a private key in history is a key that has to be revoked.
+edge-certs/
+edge-webroot/
+
+# Per-driver sign-in codes for the auth guard. Salted hashes, not codes -- but
+# it is still a list of every driver's phone number, and it is the thing that
+# decides who may sign in at all. Written by ./enrol-driver.sh, lives only on
+# the VPS, and belongs in the backup set.
+auth-guard/driver-codes.json
+
+# Per-machine settings, and from 2026-08-26 the Chargily Pay secret key -- a
+# credential that can move money. The repo-root .gitignore does not cover this
+# path, and nothing here was tracked, so the key was one `git add -A` away from
+# being in history for ever. A secret in a public history is a secret that has
+# to be revoked, and revoking this one means every driver's payment page stops
+# working until a new key is deployed.
+#
+# What belongs in it: BIND_ADDR, CHARGILY_SECRET_KEY, CHARGILY_BASE,
+# PUBLIC_URL, SUBSCRIPTION_PRICE. See docker-compose.yml (maps-shim) for what
+# each one does.
+.env
