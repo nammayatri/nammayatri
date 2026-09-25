@@ -637,6 +637,7 @@ library
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Demand
+      SharedLogic.SharedCab.DriverAction
       SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
       SharedLogic.SharedCab.Notify
@@ -2152,6 +2153,7 @@ test-suite rider-app-test
       SharedCabAllocationTests
       SharedCabConfigTests
       SharedCabDemandTests
+      SharedCabDriverActionTests
       SharedCabInvariantsTests
       SharedCabLegStateTests
       SharedCabNotifyTests

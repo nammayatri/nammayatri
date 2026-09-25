@@ -6,6 +6,9 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabRouteEnd,
     postSharedCabResume,
     getSharedCabTrips,
+    postSharedCabBookingCancel,
+    postSharedCabBookingBoardedWithoutCode,
+    postSharedCabBookingDropped,
   )
 where
 
@@ -28,6 +31,7 @@ import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import SharedLogic.SharedCab.AllocationSchedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Demand as Demand
+import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -168,6 +172,22 @@ postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow 
 postSharedCabResume mbToken req = do
   checkToken mbToken
   Session.resume req.driverId req.vehicleNumber >>= seeded >>= checked >>= mkSessionResp
+
+postSharedCabBookingCancel :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
+postSharedCabBookingCancel = driverAction DriverCancel
+
+postSharedCabBookingBoardedWithoutCode :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
+postSharedCabBookingBoardedWithoutCode = driverAction DriverBoarded
+
+postSharedCabBookingDropped :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
+postSharedCabBookingDropped = driverAction DriverDropped
+
+driverAction :: DriverAction -> Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
+driverAction action bookingId mbToken req = do
+  checkToken mbToken
+  s <- runDriverAction action req.driverId req.vehicleNumber bookingId >>= checked
+  Invariants.checkBooking bookingId
+  mkSessionResp s
 
 -- | The driver's runs that started on `date` (IST). App riders and cash per run join here once boarding sets
 -- frfs_ticket_booking.vehicleTripId.

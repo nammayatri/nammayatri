@@ -10,6 +10,7 @@ imports:
   SharedCabRoute: SharedLogic.SharedCab.SessionView
   SharedCabSession: SharedLogic.SharedCab.SessionView
   EndRouteReq: SharedLogic.SharedCab.SessionView
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
 
 module: SharedCabInternal
 
@@ -130,3 +131,36 @@ apis:
         date: Day
       response:
         type: SharedCabTripsResp
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/cancel
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/boardedWithoutCode
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/dropped
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
