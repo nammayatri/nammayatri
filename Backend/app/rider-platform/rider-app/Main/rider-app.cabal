@@ -651,6 +651,8 @@ library
       SharedLogic.SharedCab.SessionState
       SharedLogic.SharedCab.SessionView
       SharedLogic.SharedCab.SpotBooking
+      SharedLogic.SharedCab.StopProgress
+      SharedLogic.SharedCab.StopProgress.Rules
       SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch
@@ -2166,6 +2168,7 @@ test-suite rider-app-test
       SharedCabNotifyTests
       SharedCabPlateTests
       SharedCabSessionTests
+      SharedCabStopProgressTests
       Paths_rider_app
   hs-source-dirs:
       test

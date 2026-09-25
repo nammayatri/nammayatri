@@ -22,8 +22,10 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
-import SharedLogic.SharedCab.Allocation (runSharedCabAllocationTick, sharedCabAllocationEnabled)
+import SharedLogic.SharedCab.Allocation (allocationPass, sharedCabAllocationEnabled, withCityTickLease)
 import SharedLogic.SharedCab.AllocationSchedule (claimTickRun, scheduleNextTick)
+import SharedLogic.SharedCab.LtsAttach (LtsFlow)
+import SharedLogic.SharedCab.StopProgress (runStopProgress)
 import Storage.Beam.SchedulerJob ()
 
 -- Seeded per city by AllocationSchedule.ensureAllocationTick on session open; keeps itself alive below.
@@ -38,7 +40,8 @@ sharedCabAllocationTick ::
     MonadMask m,
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     Metrics.CoreMetrics m,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    LtsFlow m r c
   ) =>
   Job 'SharedCabAllocationTick ->
   m ExecutionResult
@@ -47,7 +50,8 @@ sharedCabAllocationTick Job {jobInfo} = do
   -- a duplicate chain finds this tick claimed and ends; the gate going off ends the chain too
   claimed <- claimTickRun merchantOperatingCityId
   when (claimed && sharedCabAllocationEnabled) $ do
-    -- the city lease lives in runSharedCabAllocationTick, so on-demand triggers honour it too
-    runSharedCabAllocationTick merchantOperatingCityId
+    -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress (7.5) shares it
+    withCityTickLease merchantOperatingCityId $
+      allocationPass merchantOperatingCityId >>= uncurry (runStopProgress merchantOperatingCityId)
     scheduleNextTick merchantId merchantOperatingCityId
   pure Complete

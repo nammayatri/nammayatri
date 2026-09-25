@@ -53,6 +53,7 @@ VehicleTrip:
   # Those only hold because vehicle_trip is in kv_configs.disableForKV (1576), so *WithKV calls hit Postgres directly.
   extraIndexes:
     - columns: [driverId, startedAt]
+    - columns: [merchantOperatingCityId, status]
 
   queries:
     findById:

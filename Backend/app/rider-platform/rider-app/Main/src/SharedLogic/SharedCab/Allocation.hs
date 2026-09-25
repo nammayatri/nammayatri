@@ -40,8 +40,10 @@ module SharedLogic.SharedCab.Allocation
     triggerSharedCabAllocation,
     releaseSharedCabAllocation,
     releaseUnboarded,
-    tickStopProgressActions, -- shape stub, 7.5+
-
+    withCityTickLease,
+    allocationPass,
+    readRoutePositions,
+    shared,
     -- pure phase-1 pieces, exported for unit tests (rider-app-test SharedCab suites exist)
     planRouteAllocation,
     eligibleCandidates,
@@ -515,34 +517,47 @@ runSharedCabAllocationTick ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()
-runSharedCabAllocationTick cityId = do
+runSharedCabAllocationTick cityId = withCityTickLease cityId . void $ allocationPass cityId
+
+-- | One tick per city (05 §3, §8.5): a pod or trigger that finds the lease held skips. The lease is
+-- released when the tick ends; its TTL only bounds a crashed holder, so it spans many ticks.
+withCityTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m () -> m ()
+withCityTickLease cityId action = do
   cfg <- cityConfig cityId
-  -- One tick per city (05 §3, §8.5): a pod or trigger that finds the lease held skips. The lease is
-  -- released when the tick ends; its TTL only bounds a crashed holder, so it spans many ticks.
-  withCityLease ("sharedcab:alloc:lease:" <> cityId.getId) (10 * cfg.tickSec) $
-    if not sharedCabAllocationEnabled
-      then logDebug "shared-cab allocation gated off (sharedCabAllocationEnabled); tick is a no-op"
-      else do
-        live <- cityLiveBookings cityId
-        now <- getCurrentTime
-        let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
-        positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
-          try (readRoutePositions routeCode) >>= \case
-            -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in the
-            -- same minute must suspend the freshness gate (and NO_LOCATION pause/end). Skipping the
-            -- route is fail-safe: no allocation from stale data, and no stand timer cleared either.
-            Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
-            Right positions -> pure (Just (routeCode, positions))
-        let movingOn plate route =
-              any (\vt -> vt.vehicleNumber == plate && isFreshPosition now cfg.ltsMaxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed) $
-                fromMaybe [] (lookup route positionsByRoute)
-        -- expired timers first: the seats they free are claimable in this same tick
-        expireTimers cfg now movingOn live
-        forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) ->
-          whenJust (lookup routeCode positionsByRoute) $ \positions -> do
-            sessions <- Session.activeSessionsOnRoute routeCode
-            forM_ bookings $ \booking ->
-              void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+  withCityLease ("sharedcab:alloc:lease:" <> cityId.getId) (10 * cfg.tickSec) action
+
+-- | The allocation work of one tick; run it under withCityTickLease. Returns the city's live bookings and the
+-- LTS positions it read, for the stop-progress pass that follows in the same tick.
+allocationPass ::
+  AllocFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  m ([(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])], [(Text, [LT.VehicleTrackingOnRouteResp])])
+allocationPass cityId = do
+  cfg <- cityConfig cityId
+  if not sharedCabAllocationEnabled
+    then ([], []) <$ logDebug "shared-cab allocation gated off (sharedCabAllocationEnabled); tick is a no-op"
+    else do
+      live <- cityLiveBookings cityId
+      now <- getCurrentTime
+      let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
+      positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
+        try (readRoutePositions routeCode) >>= \case
+          -- //TODO(05 §8.9): "LTS outage ≠ everyone silent" -- most sessions of a city stale in the
+          -- same minute must suspend the freshness gate (and NO_LOCATION pause/end). Skipping the
+          -- route is fail-safe: no allocation from stale data, and no stand timer cleared either.
+          Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
+          Right positions -> pure (Just (routeCode, positions))
+      let movingOn plate route =
+            any (\vt -> vt.vehicleNumber == plate && isFreshPosition now cfg.ltsMaxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed) $
+              fromMaybe [] (lookup route positionsByRoute)
+      -- expired timers first: the seats they free are claimable in this same tick
+      expireTimers cfg now movingOn live
+      forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) ->
+        whenJust (lookup routeCode positionsByRoute) $ \positions -> do
+          sessions <- Session.activeSessionsOnRoute routeCode
+          forM_ bookings $ \booking ->
+            void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+      pure (live, positionsByRoute)
 
 -- | whenWithLockRedis, on the cross-app key, so the scheduler's ticks and the API's triggers share one lease.
 withCityLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int -> m () -> m ()
@@ -576,17 +591,3 @@ claimFirst cfg booking = go (0 :: Int)
         Left miss -> do
           logDebug $ "shared-cab claim missed booking=" <> booking.bookingId.getId <> " cab=" <> c.rcSession.vehicleNumber <> " reason=" <> show miss
           go (rank + 1) cs
-
---------------------------------------------------------------------------------
--- Stop-progress actions (05 §6) -- 7.5+, stubbed now so the shape is fixed
---------------------------------------------------------------------------------
-
--- | //TODO(7.5+, 05 §6): per-route stop-progress pass:
---   1. eligibility -- already consumed by eligibleCandidates
---   2. board stop passed, not boarded -> releaseSharedCabAllocation ... PassedStop with
---      BlameRider iff the rider is outside atStopRadiusM (§8.4)
---   3. drop stop passed -> autoEndAfterDropSec clock; ticket -> USED on expiry
---   4. moving timer: expiresAt = now + movingTimerSec when the cab is AT the board stop (§2)
---   5. off-route: ring sharedcab:pos:{plate} (04 §3); > offRouteMeters for > offRouteSec -> pause OFF_ROUTE
-tickStopProgressActions :: MonadFlow m => m ()
-tickStopProgressActions = pure ()

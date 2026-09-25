@@ -20,3 +20,8 @@ ALTER TABLE atlas_app.vehicle_trip ADD COLUMN updated_at timestamp with time zon
 ALTER TABLE atlas_app.vehicle_trip ADD COLUMN vehicle_number text NOT NULL;
 ALTER TABLE atlas_app.vehicle_trip ADD PRIMARY KEY ( id);
 CREATE INDEX CONCURRENTLY vehicle_trip_idx_driver_id_started_at ON atlas_app.vehicle_trip USING btree (driver_id, started_at);
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY vehicle_trip_idx_merchant_operating_city_id_status ON atlas_app.vehicle_trip USING btree (merchant_operating_city_id, status);
