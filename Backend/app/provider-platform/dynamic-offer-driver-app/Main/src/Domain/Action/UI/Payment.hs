@@ -958,17 +958,20 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed ::
 notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventName mbBankErrorCode fromWebhook (serviceName, subsConfig) = do
   Redis.whenWithLockRedis (invoiceProcessingLockKey orderId.getId) 60 $ do
     activeExecutionInvoice <- QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.ACTIVE_INVOICE
+    executionInvoice <- case activeExecutionInvoice of
+      Just invoice' -> pure (Just invoice')
+      Nothing -> QIN.findByIdWithPaymenModeAndStatus (cast orderId) INV.AUTOPAY_INVOICE INV.INACTIVE
     now <- getCurrentTime
-    let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
-    let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
+    let paymentMode = if isJust executionInvoice then DP.AUTOPAY else DP.MANUAL
+    let (notifyFailure, updateFailure) = toNotifyFailure (isJust executionInvoice) eventName orderStatus
     when (updateFailure || (not fromWebhook && notifyFailure)) $ do
       QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
-      case activeExecutionInvoice of
+      case executionInvoice of
         Just invoice' -> do
           QDF.updateAutoPayToManual invoice'.driverFeeId
           QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
         Nothing -> do
-          logError $ "No active execution invoice found for orderId: " <> orderId.getId <> " driverId: " <> driverId.getId
+          logError $ "No active or inactive execution invoice found for orderId: " <> orderId.getId <> " driverId: " <> driverId.getId
           pure ()
       when (subsConfig.sendInAppFcmNotifications) $ do
         notifyPaymentFailureIfNotNotified paymentMode
