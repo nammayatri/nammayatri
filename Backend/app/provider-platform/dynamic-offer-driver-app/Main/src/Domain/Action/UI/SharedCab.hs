@@ -16,12 +16,16 @@ module Domain.Action.UI.SharedCab where
 -- integratedBppConfigId from the SHARED_CAB IntegratedBPPConfig of the driver's
 -- merchant operating city; serviceTierType is SHARED_CAB; capacity defaults to
 -- 4 when the Vehicle row has no explicit capacity.
--- NO session/flag/Redis/DB writes here — the sharedCabSessionActive flag and
--- reconciler 4.2B are owned by task 4.2 (updateSharedCabSessionActive is the
--- designated writer, Domain/Action/UI/Driver.hs setActivity wires it later).
+-- Flag ownership (4.5 R11): selectSharedCabRoute sets DriverInformation
+-- .sharedCabSessionActive True BEFORE the BAP call (fail-CLOSED set side) and
+-- endSharedCabRoute clears it ONLY after a successful route END whose response
+-- decodes to null. updateSharedCabSessionActive (the designated writer, also the
+-- LTS choke point) does every write; the 4.2B reconciler is otherwise the only
+-- clearer. Nothing else here writes session/flag/Redis/DB state.
 
 import API.Types.UI.SharedCab
-import Data.Time.Calendar (Day)
+import Data.Time (addUTCTime)
+import Data.Time.Calendar (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -37,6 +41,7 @@ import Kernel.Utils.Common
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as SharedCabBAP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
+import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
@@ -78,11 +83,26 @@ getSharedCabRoutes (personId, _merchantId, merchantOpCityId) lat lon = do
   bap <- bapInternal
   SharedCabBAP.getSharedCabRoutes bap.apiKey bap.url integratedBPPConfig.id.getId lat lon
 
+-- 4.5 R11: set the taxi-pool exclusion flag BEFORE the BAP route/select call is
+-- issued (fail-CLOSED: if the call then fails, the driver stays excluded until the
+-- 4.2B reconciler clears the flag — never the other way round). Idempotent on
+-- driverId+vehicleNumber: a driver has at most one live shared-cab vehicle, the
+-- DriverInformation row and its LTS shadow are keyed by driverId, and a
+-- re-submitted select finds the flag already True and skips the write — no
+-- double-set, no toggle trip.
+setSharedCabSessionActiveBeforeSelect :: Id SP.Person -> Flow ()
+setSharedCabSessionActiveBeforeSelect driverId = do
+  mbDriverInfo <- QDriverInformationExtra.findById (cast driverId)
+  case mbDriverInfo of
+    Just driverInfo | driverInfo.sharedCabSessionActive -> pure ()
+    _ -> QDriverInformationExtra.updateSharedCabSessionActive True driverId
+
 selectSharedCabRoute :: DriverAuthInfo -> SelectRouteReq -> Flow SelectRouteResp
 selectSharedCabRoute (personId, _merchantId, merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
+  setSharedCabSessionActiveBeforeSelect personId
   SharedCabBAP.selectSharedCabRoute bap.apiKey bap.url $
     SharedCabBAP.BAPSelectRouteReq
       { SharedCabBAP.mode = req.mode,
@@ -117,14 +137,22 @@ endSharedCabRoute :: DriverAuthInfo -> EndRouteReq -> Flow (Maybe SharedCabSessi
 endSharedCabRoute (personId, _merchantId, _merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
   bap <- bapInternal
-  SharedCabBAP.endSharedCabRoute bap.apiKey bap.url $
-    SharedCabBAP.BAPEndRouteReq
-      { SharedCabBAP.next = req.next,
-        SharedCabBAP.atLastStop = req.atLastStop,
-        SharedCabBAP.force = req.force,
-        SharedCabBAP.driverId = personId.getId,
-        SharedCabBAP.vehicleNumber = vehicle.registrationNo
-      }
+  mbSession <-
+    SharedCabBAP.endSharedCabRoute bap.apiKey bap.url $
+      SharedCabBAP.BAPEndRouteReq
+        { SharedCabBAP.next = req.next,
+          SharedCabBAP.atLastStop = req.atLastStop,
+          SharedCabBAP.force = req.force,
+          SharedCabBAP.driverId = personId.getId,
+          SharedCabBAP.vehicleNumber = vehicle.registrationNo
+        }
+  -- 4.5 R11: the flag clears ONLY after a successful route END whose response
+  -- decodes to null (rider-app: next = END drops the session). A session payload
+  -- (RETURN/CHANGE) keeps the driver excluded; any error above already threw and
+  -- left the flag alone. The 4.2B reconciler is otherwise the only clearer.
+  when (isNothing mbSession) $
+    QDriverInformationExtra.updateSharedCabSessionActive False personId
+  pure mbSession
 
 resumeSharedCab :: DriverAuthInfo -> Flow SharedCabSession
 resumeSharedCab (personId, _merchantId, _merchantOpCityId) = do
@@ -140,4 +168,8 @@ getSharedCabTrips :: DriverAuthInfo -> Maybe Day -> Flow SharedCabTripsResp
 getSharedCabTrips (personId, _merchantId, _merchantOpCityId) mbDate = do
   _ <- validateSharedCabDriver personId
   bap <- bapInternal
-  SharedCabBAP.getSharedCabTrips bap.apiKey bap.url personId.getId (show <$> mbDate)
+  -- rider-app's date query param is mandatory; an undated request means
+  -- "today's runs" (4.5), and rider-app interprets the day in IST (UTC+5:30).
+  now <- getCurrentTime
+  let todayIST = utctDay (addUTCTime 19800 now)
+  SharedCabBAP.getSharedCabTrips bap.apiKey bap.url personId.getId (show (fromMaybe todayIST mbDate))
