@@ -25,6 +25,7 @@ imports:
   DisabledReasonFlag: Dashboard.Common.Driver
   DriverAssociationInfo: Dashboard.Common.Driver
   SpecialLocation: Lib.Types.SpecialLocation
+  Meters: Kernel.Types.Common
 module: Driver
 
 apis:
@@ -370,6 +371,11 @@ types:
     - approved: Maybe Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
     - specialLocWarriorInfo: SpecialLocWarriorInfo
+    - isPetModeEnabled: Maybe Bool
+    - tripDistanceMinThreshold: Maybe Meters
+    - tripDistanceMaxThreshold: Maybe Meters
+    - maxPickupRadius: Maybe Meters
+    - isSilentModeEnabled: Maybe Bool
   SpecialLocWarriorInfo:
     - isSpecialLocWarrior: Bool
     - preferredPrimarySpecialLocId: Maybe (Id SpecialLocation)
