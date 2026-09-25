@@ -380,6 +380,16 @@
           "listen": "prerequest",
           "script": {
             "exec": [
+              "// BUG: this step used to POST to {{mockServerUrl}}/mock/status with a",
+              "// {service, id, status, data} body. That path does not exist in the mock",
+              "// server's ROUTES table (server.py only matches prefixes like /juspay, /stripe, ...),",
+              "// so the request fell through to the generic fallback handler and returned",
+              "// {status:'ok', mock:true, path:...} WITHOUT ever registering the override.",
+              "// The next step then queried a plain unmocked order and got status 'NEW'.",
+              "// Fix: use the real /mock/override endpoint (service/extract/match/value/response),",
+              "// same as 01-DirectBusBooking.json and 02-AutoRefunded.json, so status_store",
+              "// actually records the CHARGED + txn_list override keyed by the order id.",
+              "//",
               "// Build a CHARGED Juspay order_status override carrying TWO txn_list entries:",
               "//   1. UPI / UPI_PAY (effective_amount 5)",
               "//   2. REWARD / LOYALTYOS7 (effective_amount 8)",
@@ -392,11 +402,8 @@
               "var nowIso = new Date().toISOString();",
               "var paymentShort = pm.environment.get('payment_order_short_id') || '';",
               "var paymentId = pm.environment.get('payment_order_id') || '';",
-              "var body = {",
-              "    service: 'juspay',",
-              "    id: [paymentShort, paymentId],",
-              "    status: 'CHARGED',",
-              "    data: {",
+              "var overrideResponse = {",
+              "        status: 'CHARGED',",
               "        amount: 13.0,",
               "        effective_amount: 13.0,",
               "        currency: 'INR',",
@@ -491,9 +498,25 @@
               "                offers: []",
               "            }",
               "        ]",
-              "    }",
               "};",
-              "pm.environment.set('_mock_status_body', JSON.stringify(body));"
+              "// Register the override against BOTH id forms (order_id and order_short_id) —",
+              "// rider-app's GET /juspay/orders/{id} may use either depending on config, and",
+              "// path.2 must match whichever one actually appears in the request path.",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({",
+              "        service: 'juspay', extract: 'path.2', match: '/orders',",
+              "        value: paymentId,",
+              "        response: overrideResponse",
+              "    }) }",
+              "}, function(){});",
+              "pm.environment.set('_mock_override_body', JSON.stringify({",
+              "    service: 'juspay', extract: 'path.2', match: '/orders',",
+              "    value: paymentShort,",
+              "    response: overrideResponse",
+              "}));"
             ],
             "type": "text/javascript"
           }
@@ -515,11 +538,11 @@
       "request": {
         "method": "POST",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{{_mock_status_body}}" },
+        "body": { "mode": "raw", "raw": "{{_mock_override_body}}" },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": ["{{mockServerUrl}}"],
-          "path": ["mock", "status"]
+          "path": ["mock", "override"]
         }
       },
       "response": []
@@ -714,6 +737,30 @@
     },
     {
       "name": "Verify Ticket",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// BUG: this step ran unconditionally and expected the ticket to flip to USED,",
+              "// but POST /frfs/ticket/verify (ExternalBPP/ExternalAPI/CallAPI.hs:244-248) is",
+              "// only implemented for DIRECT BPP integration and throws Unimplemented! for ONDC.",
+              "// Bhubaneshwar's env declares frfs_integration_type=ONDC, so the call was a no-op",
+              "// there and the ticket stayed ACTIVE, failing the next step's assertion.",
+              "// Fix: skip on non-DIRECT envs, same guard used in 01-DirectBusBooking.json.",
+              "(function () {",
+              "  var t = pm.environment.get('frfs_integration_type') || 'DIRECT';",
+              "  if (t === 'DIRECT') return;",
+              "  console.log('[skip] ' + (pm.info && pm.info.requestName) + ' — frfs_integration_type=' + t);",
+              "  if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+              "    pm.execution.skipRequest();",
+              "  }",
+              "})();"
+            ]
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -740,6 +787,25 @@
     {
       "name": "Verify Ticket Status",
       "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Skip when the city is not DIRECT — verifyTicket in rider-app",
+              "// (ExternalBPP/ExternalAPI/CallAPI.hs:244-248) is only implemented for DIRECT,",
+              "// so on ONDC (e.g. Bhubaneshwar) the ticket never transitions to USED here.",
+              "(function () {",
+              "  var t = pm.environment.get('frfs_integration_type') || 'DIRECT';",
+              "  if (t === 'DIRECT') return;",
+              "  console.log('[skip] ' + (pm.info && pm.info.requestName) + ' — frfs_integration_type=' + t);",
+              "  if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+              "    pm.execution.skipRequest();",
+              "  }",
+              "})();"
+            ]
+          }
+        },
         {
           "listen": "prerequest",
           "script": {
