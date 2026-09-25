@@ -2,6 +2,9 @@ imports:
   User: Dashboard.Common
   ConfigPilotGetConfigRequest: Lib.Yudhishthira.Types
   ConfigPilotCreateRowRequest: Lib.Yudhishthira.Types
+  ConfigPilotVerifyReq: Lib.Yudhishthira.Types
+  ConfigPilotRolloutReq: Lib.Yudhishthira.Types
+  ConfigPilotActionChangeRequest: Lib.Yudhishthira.Types
   CreateNammaTagRequest: Lib.Yudhishthira.Types
   UpdateNammaTagRequest: Lib.Yudhishthira.Types
   APISuccess: Kernel.Types.APISuccess
@@ -351,18 +354,18 @@ apis:
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
-      endpoint: /configPilot/configDetails
+      endpoint: /configPilot/{tableName}/configDetails
       auth: ApiAuthV2
-      mandatoryQuery:
+      params:
         tableName: ConfigType
       response:
         type: "[ConfigDetailsResp]"
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - GET:
-      endpoint: /configPilot/getTableData
+      endpoint: /configPilot/{tableName}/getTableData
       auth: ApiAuthV2
-      mandatoryQuery:
+      params:
         tableName: ConfigType
       response:
         type: TableDataResp
@@ -413,23 +416,60 @@ apis:
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
-      endpoint: /configPilot/getConfigWithDimensions
+      endpoint: /configPilot/{configType}/getConfigWithDimensions
       auth: ApiAuthV2
+      params:
+        configType: ConfigType
       request:
         type: ConfigPilotGetConfigRequest
       response:
         type: TableDataResp
   - GET:
-      endpoint: /configPilot/getDimensionSchema
+      endpoint: /configPilot/{configType}/getDimensionSchema
       auth: ApiAuthV2
-      mandatoryQuery:
+      params:
         configType: ConfigType
       response:
         type: DomainSchemaResp
   - POST:
-      endpoint: /configPilot/createRow
+      endpoint: /configPilot/{configType}/createRow
       auth: ApiAuthV2
+      params:
+        configType: ConfigType
       request:
         type: ConfigPilotCreateRowRequest
       response:
         type: APISuccess
+  - POST:
+      endpoint: /configPilot/{configType}/verify
+      auth: ApiAuthV2
+      params:
+        configType: ConfigType
+      request:
+        type: ConfigPilotVerifyReq
+      response:
+        type: AppDynamicLogicResp
+      migrate:
+        capability: system-config.config_pilot.write
+  - POST:
+      endpoint: /configPilot/{configType}/upsertLogicRollout
+      auth: ApiAuthV2
+      params:
+        configType: ConfigType
+      request:
+        type: ConfigPilotRolloutReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.config_pilot.write
+  - POST:
+      endpoint: /configPilot/{configType}/rolloutAction
+      auth: ApiAuthV2
+      params:
+        configType: ConfigType
+      request:
+        type: ConfigPilotActionChangeRequest
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.config_pilot.write

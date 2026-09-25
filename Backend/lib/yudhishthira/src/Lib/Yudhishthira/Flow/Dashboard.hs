@@ -412,11 +412,10 @@ verifyAndUpdateDynamicLogic ::
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Proxy b ->
-  Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword req logicData = do
+verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ req logicData = do
   resp <- runLogics req.rules logicData
   let shouldUpdateRule = fromMaybe False req.shouldUpdateRule
   let shouldVerifyOutput = fromMaybe False req.verifyOutput
@@ -426,7 +425,6 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
       then do
         if null errors
           then do
-            verifyPassword req.updatePassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
             (updated, mbVersion) <- updateDynamicLogic req.rules req.domain
             when (updated && isDriverOrRiderConfig req.domain) $
               whenJust mbVersion $ \ver ->
@@ -436,11 +434,6 @@ verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId _ referralLinkPassword
       else return (False, Nothing)
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version errors
   where
-    verifyPassword :: BeamFlow m r => Maybe Text -> m ()
-    verifyPassword Nothing = throwError $ InvalidRequest "Password not provided"
-    verifyPassword (Just updatePassword) =
-      unless (updatePassword == referralLinkPassword) $ throwError $ InvalidRequest "Password does not match"
-
     updateDynamicLogic :: BeamFlow m r => [A.Value] -> Lib.Yudhishthira.Types.LogicDomain -> m (Bool, Maybe Int)
     updateDynamicLogic rules domain = do
       now <- getCurrentTime
@@ -531,12 +524,11 @@ verifyAndUpdateUIDynamicLogic ::
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
   Proxy b ->
-  Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
   BaseUrl ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateUIDynamicLogic mbMerchantId merchantOpCityId proxy referralLinkPassword req logicData url = do
+verifyAndUpdateUIDynamicLogic mbMerchantId merchantOpCityId proxy req logicData url = do
   resp <- runLogics req.rules logicData
   validateInputData <-
     case (fromJSON resp.result :: Result (LYT.Config Value)) of
@@ -548,7 +540,7 @@ verifyAndUpdateUIDynamicLogic mbMerchantId merchantOpCityId proxy referralLinkPa
     CPT.VALID_CONFIG -> pure ()
     CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
     CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
-  verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId proxy referralLinkPassword req logicData
+  verifyAndUpdateDynamicLogic mbMerchantId merchantOpCityId proxy req logicData
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain merchantOpCityId mbVersion domain = do
