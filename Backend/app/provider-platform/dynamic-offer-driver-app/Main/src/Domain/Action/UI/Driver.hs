@@ -1955,6 +1955,7 @@ offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..}
 respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow DriverRespondRes
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
+  when (searchTryId.getId == DLoc.dummyFromLocationData.dummyId) $ throwError (InvalidRequest "Invalid searchTryId")
   searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
   sReqFD <-
