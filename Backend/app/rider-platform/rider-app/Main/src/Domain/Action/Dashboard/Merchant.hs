@@ -2382,7 +2382,8 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
                 messageType = req.messageType,
                 senderHeader = req.senderHeader,
                 createdAt = now,
-                updatedAt = now
+                updatedAt = now,
+                category = Nothing
               }
       QMM.create merchantMessage
       CQMM.clearCache merchantOpCity.id messageKey

@@ -15,7 +15,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
-  { containsUrlButton :: Kernel.Prelude.Bool,
+  { category :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageCategory,
+    containsUrlButton :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -28,6 +29,8 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
+
+data MessageCategory = SYSTEM | PROMOTIONAL | MARKETING deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data MessageKey
   = INVITE_TO_UNEXISTENT_EMERGENCY_NUMBER
@@ -77,5 +80,7 @@ instance ToJSON (MerchantMessageD 'Unsafe)
 instance FromJSON (MerchantMessageD 'Safe)
 
 instance ToJSON (MerchantMessageD 'Safe)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageCategory)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MessageKey)

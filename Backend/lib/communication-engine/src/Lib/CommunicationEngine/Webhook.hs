@@ -26,6 +26,7 @@ module Lib.CommunicationEngine.Webhook
     EmailAttachment (..),
     RawTemplate (..),
     MerchantMessageTemplate (..),
+    MessageCategory (..),
     TemplateRequirement (..),
     WebhookServiceHandler (..),
     templatePolicy,
@@ -127,7 +128,8 @@ data RawTemplate = RawTemplate
     channel :: Maybe NotifyChannel,
     templateId :: Text,
     message :: Text,
-    senderHeader :: Maybe Text
+    senderHeader :: Maybe Text,
+    category :: Maybe MessageCategory
   }
 
 -- | List item returned by the templates endpoint.
@@ -137,9 +139,13 @@ data MerchantMessageTemplate = MerchantMessageTemplate
     templateId :: Text,
     message :: Text,
     senderHeader :: Maybe Text,
-    templateRequired :: Bool
+    templateRequired :: Bool,
+    category :: Maybe MessageCategory
   }
   deriving (Show, Generic, ToJSON, ToSchema)
+
+data MessageCategory = SYSTEM | PROMOTIONAL | MARKETING
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data TemplateRequirement = Required | NotRequired
   deriving (Show, Eq)
@@ -169,7 +175,8 @@ buildTemplates channel providers = map toTemplate
           templateId = r.templateId,
           message = r.message,
           senderHeader = r.senderHeader,
-          templateRequired = required
+          templateRequired = required,
+          category = r.category
         }
 
 -- | Injected app behaviour: person lookup + the four channel send primitives.

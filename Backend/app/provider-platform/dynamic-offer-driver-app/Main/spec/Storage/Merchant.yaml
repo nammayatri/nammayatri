@@ -227,6 +227,10 @@ MerchantMessage:
       enum: FLEET,RIDE_HAILING,GENERAL
       derive: "Bounded, Enum"
 
+    MessageCategory:
+      enum: SYSTEM,PROMOTIONAL,MARKETING
+      derive: "Bounded, Enum"
+
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -241,6 +245,7 @@ MerchantMessage:
     domain: Maybe MessageDomain
     templateName: Maybe Text
     channel: Maybe MediaChannel
+    category: Maybe MessageCategory
     updatedAt: UTCTime
     createdAt: UTCTime
 
@@ -252,6 +257,7 @@ MerchantMessage:
     templateName: character varying(255)
     domain: character varying(255)
     channel: character varying(255)
+    category: character varying(255)
   default:
     containsUrlButton: "false"
   beamType:

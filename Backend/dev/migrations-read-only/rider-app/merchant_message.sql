@@ -20,3 +20,8 @@ ALTER TABLE atlas_app.merchant_message ADD COLUMN sender_header text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_message ADD COLUMN message_type character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_message ADD COLUMN category character varying(255) ;
