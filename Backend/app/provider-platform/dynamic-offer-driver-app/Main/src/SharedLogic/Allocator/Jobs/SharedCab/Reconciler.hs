@@ -21,6 +21,9 @@ module SharedLogic.Allocator.Jobs.SharedCab.Reconciler
   )
 where
 
+import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import Data.Aeson (Value)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
@@ -152,6 +155,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
     -- Offsets are taken over a filter this pass shrinks in place, so rows can
     -- shift between pages and a row may be rechecked or skipped within one
     -- pass; the 15-minute sweep cadence makes coverage eventual.
+    reconcileAll :: Id DMOC.MerchantOperatingCity -> Text -> BaseUrl -> Int -> (Int, Int) -> m (Int, Int)
     reconcileAll merchantOpCity apiKey internalUrl offset (checked, cleared) = do
       flagged <- QDIExtra.findAllSharedCabActiveDrivers merchantOpCity (Just sharedCabReconcilerBatchSize) (Just offset)
       clearedDelta <- foldM (reconcileDriver apiKey internalUrl) 0 flagged
@@ -161,6 +165,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
         then pure (checked', cleared')
         else reconcileAll merchantOpCity apiKey internalUrl (offset + sharedCabReconcilerBatchSize) (checked', cleared')
 
+    reconcileDriver :: Text -> BaseUrl -> Int -> DDI.DriverInformation -> m Int
     reconcileDriver apiKey internalUrl cleared driverInfo = do
       let driverId = driverInfo.driverId
       mbVehicle <- QVeh.findById driverId
@@ -180,6 +185,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
               clearFlag driverId
       pure $ if clearedNow then cleared + 1 else cleared
 
+    clearFlag :: Id DP.Person -> m Bool
     clearFlag driverId = do
       QDIExtra.updateSharedCabSessionActive False driverId
       pure True
