@@ -22,6 +22,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -87,7 +88,7 @@ getGetOrganizations ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.PassDetails.GetOrganizationResp]
   )
-getGetOrganizations a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getGetOrganizations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getGetOrganizations a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.getGetOrganizations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postPassDetailsUpdate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -97,7 +98,7 @@ postPassDetailsUpdate ::
     API.Types.UI.PassDetails.PassDetailsUpdateReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postPassDetailsUpdate a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.postPassDetailsUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postPassDetailsUpdate a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.PassDetails.postPassDetailsUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getPassDetailsData ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -106,7 +107,7 @@ getPassDetailsData ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.PassDetails.PassDetailsDataResp
   )
-getPassDetailsData a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPassDetailsData a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.getPassDetailsData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPassDetailsVerificationStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -115,7 +116,7 @@ getPassDetailsVerificationStatus ::
     Kernel.Prelude.Text ->
     Environment.FlowHandler API.Types.UI.PassDetails.PassStatusResp
   )
-getPassDetailsVerificationStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsVerificationStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPassDetailsVerificationStatus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.getPassDetailsVerificationStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postPassDetailsUploadDocument ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -124,7 +125,7 @@ postPassDetailsUploadDocument ::
     API.Types.UI.PassDetails.UploadDocumentReq ->
     Environment.FlowHandler API.Types.UI.PassDetails.UploadDocumentResp
   )
-postPassDetailsUploadDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.postPassDetailsUploadDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPassDetailsUploadDocument a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.postPassDetailsUploadDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPassDetailsDocument ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -133,4 +134,4 @@ getPassDetailsDocument ::
     Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
     Environment.FlowHandler Kernel.Prelude.Text
   )
-getPassDetailsDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPassDetailsDocument a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PassDetails.getPassDetailsDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

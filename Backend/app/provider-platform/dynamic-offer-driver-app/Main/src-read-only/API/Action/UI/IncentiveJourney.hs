@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -64,7 +65,7 @@ getIncentiveJourneyList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.IncentiveJourney.IncentiveJourneyListRes
   )
-getIncentiveJourneyList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.IncentiveJourney.getIncentiveJourneyList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getIncentiveJourneyList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.IncentiveJourney.getIncentiveJourneyList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getIncentiveJourneyHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -76,4 +77,4 @@ getIncentiveJourneyHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.IncentiveJourney.IncentiveJourneyHistoryRes
   )
-getIncentiveJourneyHistory a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.IncentiveJourney.getIncentiveJourneyHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getIncentiveJourneyHistory a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.IncentiveJourney.getIncentiveJourneyHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

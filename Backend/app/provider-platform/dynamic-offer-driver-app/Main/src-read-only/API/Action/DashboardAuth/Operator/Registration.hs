@@ -18,6 +18,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -45,7 +46,7 @@ postOperatorRegister a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_OPERATOR/REGISTRATION/POST_OPERATOR_REGISTER" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.DashboardAuth.Operator.Registration.postOperatorRegister a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Operator.Registration.postOperatorRegister a4 a3 a2 a1
     )
 
 postRegistrationDashboardRegister :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Operator.Registration.CreateDashboardOperatorReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -53,5 +54,5 @@ postRegistrationDashboardRegister a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_OPERATOR/REGISTRATION/POST_REGISTRATION_DASHBOARD_REGISTER" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.DashboardAuth.Operator.Registration.postRegistrationDashboardRegister a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Operator.Registration.postRegistrationDashboardRegister a4 a3 a2 a1
     )

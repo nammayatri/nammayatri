@@ -26,6 +26,7 @@ import qualified Lib.Types.SpecialLocation
 import qualified Lib.Yudhishthira.Tools.DebugLog
 import Servant
 import qualified Toll.Domain.Types.Toll
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -500,29 +501,29 @@ postMerchantUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantUpdate a4 a3 a1
     )
 
 getMerchantConfigCommon :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigRes)
-getMerchantConfigCommon a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigCommon a3 a2
+getMerchantConfigCommon a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigCommon a3 a2
 
 postMerchantConfigCommonUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.MerchantCommonConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigCommonUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_COMMON_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigCommonUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigCommonUpdate a4 a3 a1
     )
 
 getMerchantConfigDriverPool :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigRes)
-getMerchantConfigDriverPool a6 a5 _a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigDriverPool a6 a5 a3 a2 a1
+getMerchantConfigDriverPool a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigDriverPool a6 a5 a3 a2 a1
 
 postMerchantConfigDriverPoolUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Common.Meters -> Lib.Types.SpecialLocation.Area -> API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigDriverPoolUpdate a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_POOL_UPDATE" a8 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverPoolUpdate a10 a9 a7 a6 a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverPoolUpdate a10 a9 a7 a6 a5 a4 a3 a2 a1
     )
 
 postMerchantConfigDriverPoolCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Common.Meters -> Lib.Types.SpecialLocation.Area -> API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigCreateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -530,7 +531,7 @@ postMerchantConfigDriverPoolCreate a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_POOL_CREATE" a8 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverPoolCreate a10 a9 a7 a6 a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverPoolCreate a10 a9 a7 a6 a5 a4 a3 a2 a1
     )
 
 postMerchantConfigDriverPoolUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.UpsertDriverPoolConfigCsvReq -> Environment.FlowHandler Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
@@ -538,32 +539,32 @@ postMerchantConfigDriverPoolUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_POOL_UPSERT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverPoolUpsert a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverPoolUpsert a4 a3 a1
     )
 
 getMerchantConfigDriverPoolList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.DriverPoolConfigListRes)
-getMerchantConfigDriverPoolList a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigDriverPoolList a3 a2
+getMerchantConfigDriverPoolList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigDriverPoolList a3 a2
 
 getMerchantConfigDriverIntelligentPool :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigRes)
-getMerchantConfigDriverIntelligentPool a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigDriverIntelligentPool a3 a2
+getMerchantConfigDriverIntelligentPool a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigDriverIntelligentPool a3 a2
 
 postMerchantConfigDriverIntelligentPoolUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.DriverIntelligentPoolConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigDriverIntelligentPoolUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DRIVER_INTELLIGENT_POOL_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverIntelligentPoolUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDriverIntelligentPoolUpdate a4 a3 a1
     )
 
 getMerchantConfigOnboardingDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Merchant.DocumentType -> Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigRes)
-getMerchantConfigOnboardingDocument a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigOnboardingDocument a5 a4 a2 a1
+getMerchantConfigOnboardingDocument a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigOnboardingDocument a5 a4 a2 a1
 
 postMerchantConfigOnboardingDocumentUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.DocumentType -> Dashboard.Common.VehicleCategory -> API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigOnboardingDocumentUpdate a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_UPDATE" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOnboardingDocumentUpdate a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOnboardingDocumentUpdate a6 a5 a3 a2 a1
     )
 
 postMerchantConfigOnboardingDocumentCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.DocumentType -> Dashboard.Common.VehicleCategory -> API.Types.ProviderPlatform.Management.Merchant.DocumentVerificationConfigCreateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -571,18 +572,18 @@ postMerchantConfigOnboardingDocumentCreate a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_ONBOARDING_DOCUMENT_CREATE" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOnboardingDocumentCreate a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOnboardingDocumentCreate a6 a5 a3 a2 a1
     )
 
 getMerchantServiceUsageConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler Dashboard.Common.Merchant.ServiceUsageConfigRes)
-getMerchantServiceUsageConfig a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantServiceUsageConfig a3 a2
+getMerchantServiceUsageConfig a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantServiceUsageConfig a3 a2
 
 postMerchantServiceConfigMapsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.MapsServiceConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantServiceConfigMapsUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_MAPS_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantServiceConfigMapsUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantServiceConfigMapsUpdate a4 a3 a1
     )
 
 postMerchantServiceUsageConfigMapsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.MapsServiceUsageConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -590,7 +591,7 @@ postMerchantServiceUsageConfigMapsUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_MAPS_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantServiceUsageConfigMapsUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantServiceUsageConfigMapsUpdate a4 a3 a1
     )
 
 postMerchantServiceConfigSmsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.SmsServiceConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -598,7 +599,7 @@ postMerchantServiceConfigSmsUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_SMS_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantServiceConfigSmsUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantServiceConfigSmsUpdate a4 a3 a1
     )
 
 postMerchantServiceUsageConfigSmsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.SmsServiceUsageConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -606,7 +607,7 @@ postMerchantServiceUsageConfigSmsUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_USAGE_CONFIG_SMS_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantServiceUsageConfigSmsUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantServiceUsageConfigSmsUpdate a4 a3 a1
     )
 
 postMerchantServiceConfigVerificationUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.VerificationServiceConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -614,7 +615,7 @@ postMerchantServiceConfigVerificationUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SERVICE_CONFIG_VERIFICATION_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantServiceConfigVerificationUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantServiceConfigVerificationUpdate a4 a3 a1
     )
 
 postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -622,7 +623,7 @@ postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_CREATE" a6 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate a8 a7 a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyDriverExtraFeeBoundsCreate a8 a7 a5 a4 a3 a2 a1
     )
 
 postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.CreateFPDriverExtraFeeReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -630,7 +631,7 @@ postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate a8 a7 a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_DRIVER_EXTRA_FEE_BOUNDS_UPDATE" a6 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate a8 a7 a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyDriverExtraFeeBoundsUpdate a8 a7 a5 a4 a3 a2 a1
     )
 
 postMerchantConfigFarePolicyPerExtraKmRateUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Kernel.Types.Common.Meters -> API.Types.ProviderPlatform.Management.Merchant.UpdateFPPerExtraKmRateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -638,7 +639,7 @@ postMerchantConfigFarePolicyPerExtraKmRateUpdate a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_PER_EXTRA_KM_RATE_UPDATE" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyPerExtraKmRateUpdate a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyPerExtraKmRateUpdate a6 a5 a3 a2 a1
     )
 
 postMerchantConfigFarePolicyUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> API.Types.ProviderPlatform.Management.Merchant.UpdateFarePolicyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -646,7 +647,7 @@ postMerchantConfigFarePolicyUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_UPDATE" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyUpdate a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyUpdate a5 a4 a2 a1
     )
 
 postMerchantConfigFarePolicyUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.UpsertFarePolicyResp)
@@ -654,24 +655,24 @@ postMerchantConfigFarePolicyUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_POLICY_UPSERT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyUpsert a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFarePolicyUpsert a4 a3 a1
     )
 
 getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler Kernel.Prelude.Text)
-getMerchantConfigFarePolicyExport a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigFarePolicyExport a3 a2
+getMerchantConfigFarePolicyExport a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigFarePolicyExport a3 a2
 
 getMerchantConfigFarePolicyDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.FarePolicy -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.FarePolicyDetailsResp)
-getMerchantConfigFarePolicyDetails a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigFarePolicyDetails a4 a3 a1
+getMerchantConfigFarePolicyDetails a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigFarePolicyDetails a4 a3 a1
 
 getMerchantConfigFareProductList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Bool -> Dashboard.Common.TripCategory -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.FareProductListRes)
-getMerchantConfigFareProductList a6 a5 _a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigFareProductList a6 a5 a3 a2 a1
+getMerchantConfigFareProductList a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigFareProductList a6 a5 a3 a2 a1
 
 postMerchantConfigFareProductSetEnabled :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.SetFareProductEnabledReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigFareProductSetEnabled a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FARE_PRODUCT_SET_ENABLED" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFareProductSetEnabled a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFareProductSetEnabled a4 a3 a1
     )
 
 postMerchantConfigOperatingCityCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.CreateMerchantOperatingCityReq -> Environment.FlowHandler Dashboard.Common.Merchant.CreateMerchantOperatingCityRes)
@@ -679,7 +680,7 @@ postMerchantConfigOperatingCityCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_CREATE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.DashboardAuth.Management.Merchant.postMerchantConfigOperatingCityCreate a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.Merchant.postMerchantConfigOperatingCityCreate a4 a3 a2 a1
     )
 
 postMerchantSchedulerTrigger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.SchedulerTriggerReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -687,7 +688,7 @@ postMerchantSchedulerTrigger a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SCHEDULER_TRIGGER" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantSchedulerTrigger a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantSchedulerTrigger a4 a3 a1
     )
 
 postMerchantUpdateOnboardingVehicleVariantMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.UpdateOnboardingVehicleVariantMappingReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -695,7 +696,7 @@ postMerchantUpdateOnboardingVehicleVariantMapping a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantUpdateOnboardingVehicleVariantMapping a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantUpdateOnboardingVehicleVariantMapping a4 a3 a1
     )
 
 postMerchantConfigSpecialLocationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq -> Environment.FlowHandler Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
@@ -703,21 +704,21 @@ postMerchantConfigSpecialLocationUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_SPECIAL_LOCATION_UPSERT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigSpecialLocationUpsert a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigSpecialLocationUpsert a4 a3 a1
     )
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.SpecialLocationType] -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.SpecialLocationResp)
-getMerchantConfigSpecialLocationList a7 a6 _a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigSpecialLocationList a7 a6 a4 a3 a2 a1
+getMerchantConfigSpecialLocationList a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigSpecialLocationList a7 a6 a4 a3 a2 a1
 
 getMerchantConfigGeometryList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.GeometryResp)
-getMerchantConfigGeometryList a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigGeometryList a5 a4 a2 a1
+getMerchantConfigGeometryList a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigGeometryList a5 a4 a2 a1
 
 putMerchantConfigGeometryUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.UpdateGeometryReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putMerchantConfigGeometryUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/PUT_MERCHANT_CONFIG_GEOMETRY_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.putMerchantConfigGeometryUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.putMerchantConfigGeometryUpdate a4 a3 a1
     )
 
 postMerchantSpecialLocationUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> Dashboard.Common.Merchant.UpsertSpecialLocationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -725,7 +726,7 @@ postMerchantSpecialLocationUpsert a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_UPSERT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.DashboardAuth.Management.Merchant.postMerchantSpecialLocationUpsert a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.Merchant.postMerchantSpecialLocationUpsert a5 a4 a3 a2 a1
     )
 
 deleteMerchantSpecialLocationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -733,7 +734,7 @@ deleteMerchantSpecialLocationDelete a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_DELETE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.Merchant.deleteMerchantSpecialLocationDelete a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.deleteMerchantSpecialLocationDelete a4 a3 a1
     )
 
 postMerchantSpecialLocationGatesUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Dashboard.Common.Merchant.UpsertSpecialLocationGateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -741,7 +742,7 @@ postMerchantSpecialLocationGatesUpsert a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_SPECIAL_LOCATION_GATES_UPSERT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.DashboardAuth.Management.Merchant.postMerchantSpecialLocationGatesUpsert a5 a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.Merchant.postMerchantSpecialLocationGatesUpsert a5 a4 a3 a2 a1
     )
 
 deleteMerchantSpecialLocationGatesDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -749,7 +750,7 @@ deleteMerchantSpecialLocationGatesDelete a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_SPECIAL_LOCATION_GATES_DELETE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.Merchant.deleteMerchantSpecialLocationGatesDelete a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.deleteMerchantSpecialLocationGatesDelete a5 a4 a2 a1
     )
 
 postMerchantConfigTollUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.UpsertTollCsvReq -> Environment.FlowHandler Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities)
@@ -757,18 +758,18 @@ postMerchantConfigTollUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_TOLL_UPSERT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigTollUpsert a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigTollUpsert a4 a3 a1
     )
 
 getMerchantConfigTollList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.TollListResp)
-getMerchantConfigTollList a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigTollList a5 a4 a2 a1
+getMerchantConfigTollList a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigTollList a5 a4 a2 a1
 
 postMerchantTollUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll) -> Dashboard.Common.Merchant.UpsertTollReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantTollUpsert a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_TOLL_UPSERT" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantTollUpsert a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.postMerchantTollUpsert a5 a4 a2 a1
     )
 
 deleteMerchantTollDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Toll.Domain.Types.Toll.Toll -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -776,7 +777,7 @@ deleteMerchantTollDelete a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_TOLL_DELETE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.Merchant.deleteMerchantTollDelete a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.deleteMerchantTollDelete a4 a3 a1
     )
 
 postMerchantConfigClearCacheSubscription :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.ClearCacheSubscriptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -784,7 +785,7 @@ postMerchantConfigClearCacheSubscription a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_CLEAR_CACHE_SUBSCRIPTION" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigClearCacheSubscription a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigClearCacheSubscription a4 a3 a1
     )
 
 postMerchantConfigUpsertPlanAndConfigSubscription :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.UpsertPlanAndConfigReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.UpsertPlanAndConfigResp)
@@ -792,21 +793,21 @@ postMerchantConfigUpsertPlanAndConfigSubscription a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_UPSERT_PLAN_AND_CONFIG_SUBSCRIPTION" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigUpsertPlanAndConfigSubscription a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigUpsertPlanAndConfigSubscription a4 a3 a1
     )
 
 getMerchantConfigVendorSplitDetailsList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Merchant.VendorSplitDetailsAPIEntity])
-getMerchantConfigVendorSplitDetailsList a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVendorSplitDetailsList a3 a2
+getMerchantConfigVendorSplitDetailsList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVendorSplitDetailsList a3 a2
 
 getMerchantConfigSubscriptionConfigList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.Merchant.SubscriptionConfigAPIEntity])
-getMerchantConfigSubscriptionConfigList a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigSubscriptionConfigList a3 a2
+getMerchantConfigSubscriptionConfigList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigSubscriptionConfigList a3 a2
 
 postMerchantConfigFailover :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.ConfigNames -> Dashboard.Common.Merchant.ConfigFailoverReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigFailover a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_FAILOVER" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFailover a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigFailover a5 a4 a2 a1
     )
 
 postMerchantPayoutConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.PayoutConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -814,7 +815,7 @@ postMerchantPayoutConfigUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_PAYOUT_CONFIG_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantPayoutConfigUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantPayoutConfigUpdate a4 a3 a1
     )
 
 postMerchantConfigOperatingCityWhiteList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.WhiteListOperatingCityReq -> Environment.FlowHandler Dashboard.Common.Merchant.WhiteListOperatingCityRes)
@@ -822,7 +823,7 @@ postMerchantConfigOperatingCityWhiteList a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_OPERATING_CITY_WHITE_LIST" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOperatingCityWhiteList a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigOperatingCityWhiteList a4 a3 a1
     )
 
 postMerchantConfigAllowedDestinationStates :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.UpsertAllowedDestinationStatesReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -830,32 +831,32 @@ postMerchantConfigAllowedDestinationStates a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigAllowedDestinationStates a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigAllowedDestinationStates a4 a3 a1
     )
 
 getMerchantConfigAllowedDestinationStates :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Dashboard.Common.Merchant.AllowedDestinationStatesResp)
-getMerchantConfigAllowedDestinationStates a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigAllowedDestinationStates a4 a3 a1
+getMerchantConfigAllowedDestinationStates a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigAllowedDestinationStates a4 a3 a1
 
 postMerchantConfigMerchantCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.CreateMerchantOperatingCityReq -> Environment.FlowHandler Dashboard.Common.Merchant.CreateMerchantOperatingCityRes)
 postMerchantConfigMerchantCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_MERCHANT_CREATE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.DashboardAuth.Management.Merchant.postMerchantConfigMerchantCreate a4 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.Merchant.postMerchantConfigMerchantCreate a4 a3 a2 a1
     )
 
 getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.VehicleServiceTierRes)
-getMerchantConfigVehicleServiceTier a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVehicleServiceTier a4 a3 a1
+getMerchantConfigVehicleServiceTier a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVehicleServiceTier a4 a3 a1
 
 getMerchantConfigVehicleServiceTierList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.VehicleServiceTierListRes)
-getMerchantConfigVehicleServiceTierList a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVehicleServiceTierList a3 a2
+getMerchantConfigVehicleServiceTierList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.Merchant.getMerchantConfigVehicleServiceTierList a3 a2
 
 postMerchantConfigVehicleServiceTierUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.ServiceTierType -> API.Types.ProviderPlatform.Management.Merchant.VehicleServiceTierConfigUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantConfigVehicleServiceTierUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_VEHICLE_SERVICE_TIER_UPDATE" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigVehicleServiceTierUpdate a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigVehicleServiceTierUpdate a5 a4 a2 a1
     )
 
 postMerchantConfigVehicleServiceTierCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.VehicleServiceTierConfigCreateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -863,7 +864,7 @@ postMerchantConfigVehicleServiceTierCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_VEHICLE_SERVICE_TIER_CREATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigVehicleServiceTierCreate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigVehicleServiceTierCreate a4 a3 a1
     )
 
 postMerchantConfigDebugLogUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Tools.DebugLog.SetJsonLogicDebugReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -871,21 +872,21 @@ postMerchantConfigDebugLogUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CONFIG_DEBUG_LOG_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDebugLogUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantConfigDebugLogUpdate a4 a3 a1
     )
 
 getMerchantMerchantDocumentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> API.Types.ProviderPlatform.Management.Merchant.MerchantDocumentRoleT -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantDocumentListResp)
-getMerchantMerchantDocumentList a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantMerchantDocumentList a5 a4 a2 a1
+getMerchantMerchantDocumentList a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.getMerchantMerchantDocumentList a5 a4 a2 a1
 
 getMerchantMerchantDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> API.Types.ProviderPlatform.Management.Merchant.MerchantDocumentRoleT -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantDocumentItem)
-getMerchantMerchantDocument a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantMerchantDocument a5 a4 a3 a2 a1
+getMerchantMerchantDocument a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.Management.Merchant.getMerchantMerchantDocument a5 a4 a3 a2 a1
 
 postMerchantMerchantDocumentCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.CreateMerchantDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantDocumentItem)
 postMerchantMerchantDocumentCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_CREATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantDocumentCreate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantDocumentCreate a4 a3 a1
     )
 
 postMerchantMerchantDocumentUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.UpdateMerchantDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantDocumentItem)
@@ -893,7 +894,7 @@ postMerchantMerchantDocumentUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantDocumentUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantDocumentUpdate a4 a3 a1
     )
 
 postMerchantMerchantDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.DeleteMerchantDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -901,18 +902,18 @@ postMerchantMerchantDocumentDelete a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_DOCUMENT_DELETE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantDocumentDelete a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantDocumentDelete a4 a3 a1
     )
 
 getMerchantMerchantMessageCatalog :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.MerchantMessageCatalogType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.MerchantMessageCatalogResp)
-getMerchantMerchantMessageCatalog a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantMerchantMessageCatalog a4 a3 a1
+getMerchantMerchantMessageCatalog a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.getMerchantMerchantMessageCatalog a4 a3 a1
 
 postMerchantMerchantMessageUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Merchant.UpsertMerchantMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMerchantMerchantMessageUpsert a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_MERCHANT_MESSAGE_UPSERT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantMessageUpsert a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantMerchantMessageUpsert a4 a3 a1
     )
 
 deleteMerchantMerchantMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -920,16 +921,16 @@ deleteMerchantMerchantMessage a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/DELETE_MERCHANT_MERCHANT_MESSAGE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Management.Merchant.deleteMerchantMerchantMessage a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.Merchant.deleteMerchantMerchantMessage a5 a4 a2 a1
     )
 
 getMerchantCityList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Merchant.CityListResp)
-getMerchantCityList a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Merchant.getMerchantCityList a2 a1
+getMerchantCityList a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.Management.Merchant.getMerchantCityList a2 a1
 
 postMerchantCloudUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Merchant.MerchantCloudUpdateReq -> Environment.FlowHandler Dashboard.Common.Merchant.MerchantCloudUpdateRes)
 postMerchantCloudUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CLOUD_UPDATE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Merchant.postMerchantCloudUpdate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Merchant.postMerchantCloudUpdate a4 a3 a1
     )

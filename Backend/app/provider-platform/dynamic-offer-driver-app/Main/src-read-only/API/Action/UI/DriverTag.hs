@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "driver" :> "tag" :> "update" :> ReqBody '[JSON] API.Types.UI.DriverTag.DriverTagUpdateReq :> Post '[JSON] API.Types.UI.DriverTag.DriverTagRes)
@@ -35,4 +36,4 @@ postDriverTagUpdate ::
     API.Types.UI.DriverTag.DriverTagUpdateReq ->
     Environment.FlowHandler API.Types.UI.DriverTag.DriverTagRes
   )
-postDriverTagUpdate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverTag.postDriverTagUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverTagUpdate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverTag.postDriverTagUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

@@ -373,18 +373,10 @@ apis:
         type: ClearDriverFeeReq
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /clearFee
-            auth: ApiAuthV2
-            mandatoryQuery:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            request:
-              type: ClearDriverFeeReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - GET:
       endpoint: /panAadharSelfieDetails
       mandatoryQuery:
@@ -451,18 +443,10 @@ apis:
       auth: ApiAuthV2
       response:
         type: APISuccess
-      helperApi:
-        - POST:
-            endpoint: /{driverId}/refundByPayout
-            auth: ApiAuthV2
-            params:
-              driverId: Id Driver
-            query:
-              - requestorId: Text
-            request:
-              type: RefundByPayoutReq
-            response:
-              type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - GET:
       endpoint: /{driverId}/securityDepositStatus
       params:
@@ -497,18 +481,9 @@ apis:
         - toDate: Day
       response:
         type: DriverStatsRes
-      helperApi:
-        - GET:
-            endpoint: /stats
-            auth: ApiAuthV2
-            query:
-              - entityId: Id Driver
-              - fromDate: Day
-              - toDate: Day
-            mandatoryQuery:
-              - requestorId: Text
-            response:
-              type: DriverStatsRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - GET: # DriverEarningsArrayAPI
       endpoint: /earnings
@@ -520,18 +495,9 @@ apis:
         - driverId: Id Driver
       response:
         type: EarningPeriodStatsRes
-      helperApi:
-        - GET:
-            endpoint: /earnings
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - from: Day
-              - to: Day
-              - earningType: EarningType
-              - driverId: Id Driver
-              - requestorId: Text
-            response:
-              type: EarningPeriodStatsRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   # FY / quarter earnings for a driver OR a fleet owner. entityId is a person id
   # (the accumulator is keyed on personId), so pass either. Dashboard-only:
@@ -549,18 +515,9 @@ apis:
         type: FyEarningsRes
       migrate:
         capability: finance.earnings.read
-      helperApi:
-        - GET:
-            endpoint: /fyEarnings
-            auth: ApiAuthV2
-            mandatoryQuery:
-              - financialYear: Int
-              - entityId: Id Driver
-              - requestorId: Text
-            query:
-              - quarter: Int
-            response:
-              type: FyEarningsRes
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
 
   - POST: # UpdateTdsRateAPI
       endpoint: /tdsRate/update

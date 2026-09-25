@@ -20,6 +20,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -80,7 +81,7 @@ postRewardsCampaign a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.postRewardsCampaign a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Rewards.postRewardsCampaign a4 a3 a1
     )
 
 putRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.EditCampaignReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -88,7 +89,7 @@ putRewardsCampaign a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/PUT_REWARDS_CAMPAIGN" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.putRewardsCampaign a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Rewards.putRewardsCampaign a5 a4 a2 a1
     )
 
 postRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.CreateCohortReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CreateCohortResp)
@@ -96,7 +97,7 @@ postRewardsCampaignCohort a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN_COHORT" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.postRewardsCampaignCohort a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Rewards.postRewardsCampaignCohort a5 a4 a2 a1
     )
 
 putRewardsCampaignCohort :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> API.Types.RiderPlatform.Management.Rewards.EditCohortReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -104,7 +105,7 @@ putRewardsCampaignCohort a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/PUT_REWARDS_CAMPAIGN_COHORT" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.putRewardsCampaignCohort a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Rewards.putRewardsCampaignCohort a6 a5 a3 a2 a1
     )
 
 postRewardsCampaignCohortCodes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCohort -> Dashboard.RiderPlatform.Management.Rewards.UploadCodesReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.UploadCodesResp)
@@ -112,7 +113,7 @@ postRewardsCampaignCohortCodes a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN_COHORT_CODES" a4 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.postRewardsCampaignCohortCodes a6 a5 a3 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Rewards.postRewardsCampaignCohortCodes a6 a5 a3 a2 a1
     )
 
 postRewardsCampaignStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> API.Types.RiderPlatform.Management.Rewards.SetStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -120,24 +121,24 @@ postRewardsCampaignStatus a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/POST_REWARDS_CAMPAIGN_STATUS" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.postRewardsCampaignStatus a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Rewards.postRewardsCampaignStatus a5 a4 a2 a1
     )
 
 getRewardsCampaign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CampaignDetails)
-getRewardsCampaign a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Rewards.getRewardsCampaign a4 a3 a1
+getRewardsCampaign a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Rewards.getRewardsCampaign a4 a3 a1
 
 getRewardsCampaigns :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Rewards.CampaignDetails])
-getRewardsCampaigns a3 a2 _a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Rewards.getRewardsCampaigns a3 a2
+getRewardsCampaigns a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Rewards.getRewardsCampaigns a3 a2
 
 getRewardsCampaignStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id API.Types.RiderPlatform.Management.Rewards.RewardCampaign -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.CampaignStats)
-getRewardsCampaignStats a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Rewards.getRewardsCampaignStats a4 a3 a1
+getRewardsCampaignStats a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Rewards.getRewardsCampaignStats a4 a3 a1
 
 postRewardsTriggerEval :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRewardsTriggerEval a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/POST_REWARDS_TRIGGER_EVAL" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
-        Domain.Action.Dashboard.Rewards.postRewardsTriggerEval a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Rewards.postRewardsTriggerEval a4 a3 a1
     )
 
 postRewardsCohortValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Rewards.ValidateCohortEligibilityResp)
@@ -145,5 +146,5 @@ postRewardsCohortValidateEligibility a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/REWARDS/POST_REWARDS_COHORT_VALIDATE_ELIGIBILITY" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Rewards.postRewardsCohortValidateEligibility a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Rewards.postRewardsCohortValidateEligibility a4 a3 a1
     )

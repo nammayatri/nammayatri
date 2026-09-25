@@ -25,4 +25,4 @@ getPayoutPayoutOrder ::
   Environment.Flow PayoutTypes.PayoutOrderResp
 getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId (Just apiTokenInfo.personId.getId)

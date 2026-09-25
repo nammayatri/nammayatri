@@ -20,6 +20,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -57,13 +58,13 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = stopRouteDetailsGetStops merchantId city :<|> stopRouteDetailsGetStop merchantId city :<|> stopRouteDetailsGetRouteStopMappingByStop merchantId city :<|> stopRouteDetailsGetRouteStopMappingByRoute merchantId city
 
 stopRouteDetailsGetStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [Domain.Types.Station.Station])
-stopRouteDetailsGetStops a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetStops a5 a4 a2 a1
+stopRouteDetailsGetStops a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetStops a5 a4 a2 a1
 
 stopRouteDetailsGetStop :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler API.Types.Dashboard.AppManagement.StopRouteDetails.StationResp)
-stopRouteDetailsGetStop a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetStop a5 a4 a2 a1
+stopRouteDetailsGetStop a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetStop a5 a4 a2 a1
 
 stopRouteDetailsGetRouteStopMappingByStop :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [Domain.Types.RouteStopMapping.RouteStopMapping])
-stopRouteDetailsGetRouteStopMappingByStop a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetRouteStopMappingByStop a5 a4 a2 a1
+stopRouteDetailsGetRouteStopMappingByStop a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetRouteStopMappingByStop a5 a4 a2 a1
 
 stopRouteDetailsGetRouteStopMappingByRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler API.Types.Dashboard.AppManagement.StopRouteDetails.RouteStopMappingWithPolyline)
-stopRouteDetailsGetRouteStopMappingByRoute a5 a4 _a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetRouteStopMappingByRoute a5 a4 a2 a1
+stopRouteDetailsGetRouteStopMappingByRoute a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.StopRouteDetails.stopRouteDetailsGetRouteStopMappingByRoute a5 a4 a2 a1

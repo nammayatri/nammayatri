@@ -17,6 +17,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -34,7 +35,7 @@ postPassettoEncrypt a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASSETTO/POST_PASSETTO_ENCRYPT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.AppManagement.Passetto.postPassettoEncrypt a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Passetto.postPassettoEncrypt a4 a3 a1
     )
 
 postPassettoDecrypt :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.Dashboard.AppManagement.Passetto.PassettoDecryptReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Passetto.PassettoDecryptResp)
@@ -42,5 +43,5 @@ postPassettoDecrypt a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/PASSETTO/POST_PASSETTO_DECRYPT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.AppManagement.Passetto.postPassettoDecrypt a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Passetto.postPassettoDecrypt a4 a3 a1
     )

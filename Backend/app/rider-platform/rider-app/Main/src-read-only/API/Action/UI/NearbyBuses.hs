@@ -22,6 +22,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -74,7 +75,7 @@ postNearbyBusBooking ::
     API.Types.UI.NearbyBuses.NearbyBusesRequest ->
     Environment.FlowHandler API.Types.UI.NearbyBuses.NearbyBusesResponse
   )
-postNearbyBusBooking a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.postNearbyBusBooking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postNearbyBusBooking a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.NearbyBuses.postNearbyBusBooking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getNextVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -85,7 +86,7 @@ getNextVehicleDetails ::
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler Lib.JourneyModule.Utils.UpcomingTripInfo
   )
-getNextVehicleDetails a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getNextVehicleDetails a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.NearbyBuses.getNextVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getTimetableStop ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -98,4 +99,4 @@ getTimetableStop ::
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.NearbyBuses.TimetableResponse
   )
-getTimetableStop a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getTimetableStop a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1

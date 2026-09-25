@@ -17,6 +17,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -39,7 +40,7 @@ postPayoutAccount a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/PAYOUT_ACCOUNT/POST_PAYOUT_ACCOUNT" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccount a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccount a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
 
 postPayoutAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountStatusReq -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.PayoutAccount.PayoutAccountStatusResp)
@@ -47,5 +48,5 @@ postPayoutAccountStatus a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/PAYOUT_ACCOUNT/POST_PAYOUT_ACCOUNT_STATUS" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccountStatus a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Fleet.PayoutAccount.postPayoutAccountStatus a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )

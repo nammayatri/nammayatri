@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -50,7 +51,7 @@ getEditResult ::
     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
     Environment.FlowHandler API.Types.UI.EditLocation.EditLocationResultAPIResp
   )
-getEditResult a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EditLocation.getEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getEditResult a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EditLocation.getEditResult (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postEditResultConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -59,4 +60,4 @@ postEditResultConfirm ::
     Kernel.Types.Id.Id Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postEditResultConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.EditLocation.postEditResultConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postEditResultConfirm a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.EditLocation.postEditResultConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

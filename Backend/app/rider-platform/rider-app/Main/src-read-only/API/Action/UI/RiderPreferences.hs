@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -69,7 +70,7 @@ postRiderPreference ::
     API.Types.UI.RiderPreferences.RiderPreferenceReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postRiderPreference a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.postRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postRiderPreference a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.RiderPreferences.postRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -79,7 +80,7 @@ getRiderPreference ::
     Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Environment.FlowHandler API.Types.UI.RiderPreferences.RiderPreferencesResp
   )
-getRiderPreference a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getRiderPreference a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.RiderPreferences.getRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getRiderPreferenceAll ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -87,7 +88,7 @@ getRiderPreferenceAll ::
     ) ->
     Environment.FlowHandler API.Types.UI.RiderPreferences.AllRiderPreferencesResp
   )
-getRiderPreferenceAll a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceAll (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getRiderPreferenceAll a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.RiderPreferences.getRiderPreferenceAll (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getRiderPreferenceNotification ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -95,7 +96,7 @@ getRiderPreferenceNotification ::
     ) ->
     Environment.FlowHandler API.Types.UI.RiderPreferences.NotificationPreferenceOnlyResp
   )
-getRiderPreferenceNotification a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.getRiderPreferenceNotification (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getRiderPreferenceNotification a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.RiderPreferences.getRiderPreferenceNotification (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 deleteRiderPreference ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -104,4 +105,4 @@ deleteRiderPreference ::
     Kernel.Types.Id.Id Domain.Types.RiderPreferences.RiderPreferences ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-deleteRiderPreference a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderPreferences.deleteRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+deleteRiderPreference a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.RiderPreferences.deleteRiderPreference (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

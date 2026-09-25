@@ -24,6 +24,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PayoutRequest
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -104,7 +105,7 @@ getWalletBalance ::
     ) ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletBalanceResponse
   )
-getWalletBalance a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletBalance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getWalletBalance a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverWallet.getWalletBalance (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getWalletTransactions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -116,7 +117,7 @@ getWalletTransactions ::
     Kernel.Prelude.Maybe API.Types.UI.DriverWallet.AggregationLevel ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse
   )
-getWalletTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getWalletTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.DriverWallet.getWalletTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postWalletPayout ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -125,7 +126,7 @@ postWalletPayout ::
     ) ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postWalletPayout a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.postWalletPayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postWalletPayout a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverWallet.postWalletPayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postWalletTopup ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -135,7 +136,7 @@ postWalletTopup ::
     API.Types.UI.DriverWallet.TopUpRequest ->
     Environment.FlowHandler Domain.Action.UI.Plan.PlanSubscribeRes
   )
-postWalletTopup a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.postWalletTopup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postWalletTopup a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverWallet.postWalletTopup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getWalletPayoutHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -149,7 +150,7 @@ getWalletPayoutHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.DriverWallet.PayoutHistoryResponse
   )
-getWalletPayoutHistory a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getWalletPayoutHistory a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.DriverWallet.getWalletPayoutHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getWalletTransactionHistory ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -162,4 +163,4 @@ getWalletTransactionHistory ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletTransactionHistoryResponse
   )
-getWalletTransactionHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletTransactionHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getWalletTransactionHistory a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.DriverWallet.getWalletTransactionHistory (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
