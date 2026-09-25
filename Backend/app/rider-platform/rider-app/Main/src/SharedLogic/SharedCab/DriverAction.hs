@@ -19,8 +19,9 @@ import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Allocation as Allocation
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (DriverCancelled), defaultAllocationConfig)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (DriverCancelled, RouteChanged))
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, shared, withBookingLock)
+import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -101,25 +102,28 @@ runDriverAction action driver rawPlate bookingId = do
     case action of
       DriverDropped -> do
         decide booking
-        markDropped booking
+        markDropped Events.DroppedByDriver booking
         pure (Just booking)
       -- TODO(7.4 blame): count the DRIVER_CANCELLED miss on the session (consecutiveMisses, absent pause).
       DriverCancel -> do
         decide booking
-        void $ Allocation.releaseSharedCabAllocation defaultAllocationConfig booking.id plate DriverCancelled
+        cfg <- Allocation.cityConfig booking.merchantOperatingCityId
+        void $ Allocation.releaseSharedCabAllocation cfg booking.id plate DriverCancelled
         pure Nothing
       DriverBoarded -> withBookingLock booking.id $ do
         decide booking
         board s booking
         pure Nothing
-  whenJust mbDropped $ \_ -> Session.applyQueuedRoute plate
+  whenJust mbDropped $ \_ -> do
+    switched <- Session.applyQueuedRoute plate
+    when switched $ Allocation.releaseUnboarded plate RouteChanged
   Session.getSession plate >>= fromMaybeM SessionNotFound
   where
     plate = canonicalisePlate rawPlate
     decide booking = do
       tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
       either throwError pure $ decideDriverAction action plate booking.vehicleNumber (map (.status) tickets)
-    -- A boarded booking is done with allocation: its timer key goes. TODO(7.6): emit boarded {source: driver_fallback}.
+    -- A boarded booking is done with allocation: its timer key goes.
     -- TODO(05 §2): write the journey leg's finalBoardedBusNumber / busTagNumber as the code path (8.1) does.
     board s booking = do
       tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
@@ -127,3 +131,6 @@ runDriverAction action driver rawPlate bookingId = do
         QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
       QFRFSTicketBooking.updateVehicleTripId (Just s.vehicleTripId) booking.id
       shared $ Redis.del (Allocation.allocKey booking.id.getId)
+      now <- getCurrentTime
+      Events.emit s.merchantOperatingCityId . Events.withTrip (Just s.vehicleTripId.getId) $
+        Events.bookingEvent (Events.Boarded Events.ByDriverFallback) booking.id.getId (Just plate) (Just s.routeCode) now
