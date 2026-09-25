@@ -172,6 +172,21 @@ RiderConfig:
     busTrackingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     busApproachingNotificationTiers: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
     frfsDriverDetailsLeadTimeSeconds: Maybe Seconds
+    sharedCabAllocationWindowSec: Maybe Int
+    sharedCabAtStopRadiusM: Maybe Int
+    sharedCabWalkBufferSec: Maybe Int
+    sharedCabStandTimerSec: Maybe Int
+    sharedCabMovingTimerSec: Maybe Int
+    sharedCabMaxAttempts: Maybe Int
+    sharedCabFallbackAfterSec: Maybe Int
+    sharedCabNoCabGraceSec: Maybe Int
+    sharedCabFindingTimeoutSec: Maybe Int
+    sharedCabTickSec: Maybe Int
+    sharedCabLtsMaxAgeSec: Maybe Int
+    sharedCabAutoEndAfterDropSec: Maybe Int
+    sharedCabDegradedTimeoutSec: Maybe Int
+    sharedCabOffRouteMeters: Maybe Int
+    sharedCabOffRouteSec: Maybe Int
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds

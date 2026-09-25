@@ -896,3 +896,23 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN max_walk_distance_for_better_point
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_max_walk_pct_of_ride_at_drop double precision ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN route_cache_max_duration_deviation integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_adjacent_geo_hash_place_name_lookup boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_walk_buffer_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_tick_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_stand_timer_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_off_route_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_off_route_meters integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_no_cab_grace_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_moving_timer_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_attempts integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_lts_max_age_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_finding_timeout_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_fallback_after_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_degraded_timeout_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_auto_end_after_drop_sec integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_at_stop_radius_m integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_allocation_window_sec integer ;

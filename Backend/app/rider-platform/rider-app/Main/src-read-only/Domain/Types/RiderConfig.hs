@@ -198,6 +198,21 @@ data RiderConfig = RiderConfig
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     serviceTierRelationshipCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.ServiceTierRelationshipCfg],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    sharedCabAllocationWindowSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabAtStopRadiusM :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabAutoEndAfterDropSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabDegradedTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabFallbackAfterSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabFindingTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabLtsMaxAgeSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabMaxAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabMovingTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabNoCabGraceSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabOffRouteMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabOffRouteSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabStandTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabTickSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabWalkBufferSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     silentReallocationWindowSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     singleModeWalkSpeed :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     sosTrackingLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -237,7 +252,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, Eq)
+  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -295,8 +310,8 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))

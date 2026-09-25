@@ -16,6 +16,7 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
+import qualified SharedCabConfigTests
 import qualified SharedCabDemandTests
 import qualified SharedCabInvariantsTests
 import qualified SharedCabLegStateTests
@@ -42,4 +43,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests]
