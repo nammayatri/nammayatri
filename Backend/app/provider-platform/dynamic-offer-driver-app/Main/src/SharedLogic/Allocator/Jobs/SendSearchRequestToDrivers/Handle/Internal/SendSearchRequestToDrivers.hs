@@ -624,6 +624,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
         then tryAssign validTill quoteRespondCoolDown rest
         else do
           result :: Either SomeException Bool <- C.try $ do
+            now <- getCurrentTime
             mbFreshPoolData <- listToMaybe <$> DPD.getDriverPoolDataBatch [driverId]
             let stillHasTierSelected = maybe False ((dp.driverPoolResult.serviceTier `elem`) . (.selectedServiceTiers)) mbFreshPoolData
                 stillHasAutoAcceptTierSelected = maybe False ((dp.driverPoolResult.serviceTier `elem`) . fromMaybe [] . (.selectedAutoAcceptTiers)) mbFreshPoolData
@@ -646,6 +647,9 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.
                 onRide = maybe True (.onRide) mbFreshPoolData
+                -- Post-ride cool-off: skip silent-assign only, broadcast unaffected.
+                coolOffPeriod = secondsToNominalDiffTime (fromMaybe 0 transporterConfig.driverCoolOffPeriod)
+                inCoolOff = maybe False (\d -> maybe False (\endedAt -> diffUTCTime now endedAt < coolOffPeriod) d.lastRideEndedAt) mbFreshPoolData
             -- The Redis lock above expires after quoteRespondCoolDown while a quote stays Active for
             -- driverQuoteExpirationSeconds, so the lock alone does NOT rule out a live quote or a
             -- confirmed booking -- re-run the two DB guards respondQuote's Accept branch enforces.
@@ -655,7 +659,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
               if DTC.isDynamicOfferTrip searchTry.tripCategory
                 then runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
                 else pure Nothing
-            if onRide || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
+            if onRide || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
               then pure False
               else do
                 sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True dp

@@ -805,6 +805,7 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe Double
     - scheduledRideMinLeadTime: Maybe Seconds
     - scheduledRideMaxLeadTime: Maybe Seconds
+    - driverCoolOffPeriod: Maybe Seconds
     - createdAt: UTCTime
     - updatedAt: UTCTime
   MerchantCommonConfigUpdateReq:
@@ -851,6 +852,7 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe (OptionalValue Double)
     - scheduledRideMinLeadTime: Maybe (OptionalValue Seconds)
     - scheduledRideMaxLeadTime: Maybe (OptionalValue Seconds)
+    - driverCoolOffPeriod: Maybe (OptionalValue Seconds)
     - derive: "'HideSecrets"
   DriverPoolConfigRes:
     - recordType: Type

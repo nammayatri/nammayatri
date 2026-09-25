@@ -1499,6 +1499,7 @@ TransporterConfig:
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverLocationStalenessThresholdSeconds: Maybe Seconds
+    driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
@@ -2134,6 +2135,7 @@ TransporterConfig:
     knowledgeCenterSopTypes: "'[]' :: json"
     allowFarePolicyUpdateBelowMinBaseFare: "true"
     driverSearchBlacklistDurationSeconds: "3600"
+    driverCoolOffPeriod: "30"
     allowPanReupload: "false"
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
@@ -2212,6 +2214,7 @@ TransporterConfig:
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - metricsDistanceBucketsKm
+        - driverCoolOffPeriod
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
