@@ -20,13 +20,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (DriverCancelled), defaultAllocationConfig)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, shared, withBookingLock)
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), ownedSession)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Tools.Error (SharedCabSessionError (SessionNotFound))
 
 data SharedCabDriverActionError
   = BookingNotOnThisCab
@@ -102,8 +103,7 @@ runDriverAction action driver rawPlate bookingId = do
         decide booking
         markDropped booking
         pure (Just booking)
-      -- TODO(7.4): count the DRIVER_CANCELLED miss on the session (consecutiveMisses, absent pause); nothing counts
-      -- misses yet. TODO(7.6): emit allocation_closed {blame: driver}.
+      -- TODO(7.4 blame): count the DRIVER_CANCELLED miss on the session (consecutiveMisses, absent pause).
       DriverCancel -> do
         decide booking
         void $ Allocation.releaseSharedCabAllocation defaultAllocationConfig booking.id plate DriverCancelled
@@ -113,18 +113,17 @@ runDriverAction action driver rawPlate bookingId = do
         board s booking
         pure Nothing
   whenJust mbDropped $ \_ -> Session.applyQueuedRoute plate
-  Session.getSession plate >>= fromMaybeM BookingNotOnThisCab
+  Session.getSession plate >>= fromMaybeM SessionNotFound
   where
     plate = canonicalisePlate rawPlate
     decide booking = do
       tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
       either throwError pure $ decideDriverAction action plate booking.vehicleNumber (map (.status) tickets)
     -- A boarded booking is done with allocation: its timer key goes. TODO(7.6): emit boarded {source: driver_fallback}.
+    -- TODO(05 §2): write the journey leg's finalBoardedBusNumber / busTagNumber as the code path (8.1) does.
     board s booking = do
       tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
       forM_ (filter ((== DFRFSTicket.ACTIVE) . (.status)) tickets) $ \ticket ->
         QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
       QFRFSTicketBooking.updateVehicleTripId (Just s.vehicleTripId) booking.id
       shared $ Redis.del (Allocation.allocKey booking.id.getId)
-    -- Booking.shared once R14 exports it: the allocation keys live unprefixed in the cross-app master cell.
-    shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedis
