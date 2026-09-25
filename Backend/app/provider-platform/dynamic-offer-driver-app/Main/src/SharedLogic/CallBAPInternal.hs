@@ -38,6 +38,8 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Type as SLT
 import Tools.Error (SharedCabBAPError (..))
 import Tools.Metrics (CoreMetrics)
+import Kernel.Types.Error (ExternalAPICallError (..))
+import Kernel.Types.Error.BaseError.HTTPError.CallAPIError (CallAPIError (..))
 
 data FeedbackAnswer = FeedbackAnswer
   { questionId :: Text,
@@ -714,11 +716,11 @@ getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   -- error body (NOT a bare status), so decode the APIError envelope and check the
   -- errorCode; every other error re-throws verbatim (same errorCode + HTTP status).
   res <- EC.callApiExtractingApiError Nothing internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
-  errorOrSession <- EC.unwrapEitherOnlyFromRawError (Just "BAP_INTERNAL_API_ERROR") internalUrl res
-  case errorOrSession of
+  case res of
     Right mbSession -> pure mbSession
-    Left err
-      | err.fromBAPErrorCode == sharedCabSessionNotFoundErrorCode -> pure Nothing
+    Left (RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
+    Left (APIError err)
+      | fromBAPErrorCode err == sharedCabSessionNotFoundErrorCode -> pure Nothing
       | otherwise -> throwError err
 
 -- POST /internal/sharedCab/seats ------------------------------------------------

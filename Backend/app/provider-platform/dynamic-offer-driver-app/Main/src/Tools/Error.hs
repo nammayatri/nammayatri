@@ -24,6 +24,7 @@ import Kernel.Types.Common (HighPrecMoney)
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoesNotExist)
 import Kernel.Types.Error.BaseError.HTTPError
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (..))
 import Kernel.Utils.Common (Meters)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
@@ -2369,7 +2370,7 @@ instance FromResponse SharedCabBAPError where
     pure $ SharedCabBAPError errorCodeValue errorMessageValue errorPayloadValue (codeToHttpCodeWith500Default (HTTP.statusCode status))
 
 instance IsBaseError SharedCabBAPError where
-  toMessage = Just . fromBAPErrorMessage
+  toMessage = fromBAPErrorMessage
 
 instance IsHTTPError SharedCabBAPError where
   toErrorCode = fromBAPErrorCode
