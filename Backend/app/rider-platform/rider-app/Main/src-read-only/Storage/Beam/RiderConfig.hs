@@ -36,6 +36,7 @@ data RiderConfigT f = RiderConfigT
     betterPointMinSavingPctOfRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     betterPointResolvePlaceNameOnSelect :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     betterPointWalkAversion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    betterPointWalkDistanceSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.BetterPointWalkDistanceSource),
     blockedUntilInMins :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),
     boardingBusPingMaxAgeSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     boardingMatchRadiusInMeters :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

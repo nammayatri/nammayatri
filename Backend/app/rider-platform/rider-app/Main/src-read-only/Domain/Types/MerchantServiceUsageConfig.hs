@@ -41,6 +41,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     enableDashboardSms :: Kernel.Prelude.Bool,
     eventTrackingOverrides :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text [Kernel.External.EventTracking.EventTrackingService]),
     eventTrackingProviders :: [Kernel.External.EventTracking.EventTrackingService],
+    getBetterPointWalkDistance :: Kernel.External.Maps.Types.MapsService,
     getCardList :: Kernel.External.Payment.Types.PaymentService,
     getDistances :: Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,

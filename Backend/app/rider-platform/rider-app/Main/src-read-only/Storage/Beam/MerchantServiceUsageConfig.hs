@@ -41,6 +41,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     eventTrackingOverrides :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     eventTrackingProviders :: B.C f (Kernel.Prelude.Maybe [Kernel.External.EventTracking.EventTrackingService]),
+    getBetterPointWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     getCardList :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
