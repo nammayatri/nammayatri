@@ -19,6 +19,7 @@ import Kernel.Utils.FlowLogging
 import qualified SharedCabAllocationTests
 import qualified SharedCabBoardingTests
 import qualified SharedCabConfigTests
+import qualified SharedCabDegradedTests
 import qualified SharedCabDemandTests
 import qualified SharedCabDriverActionTests
 import qualified SharedCabEventsTests
@@ -49,4 +50,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests]

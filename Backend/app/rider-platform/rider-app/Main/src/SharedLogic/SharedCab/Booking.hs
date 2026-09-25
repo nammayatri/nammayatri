@@ -1,6 +1,7 @@
 module SharedLogic.SharedCab.Booking
   ( isSharedCabBooking,
     withBookingLock,
+    tryWithBookingLock,
     ensureCancellable,
     markDropped,
     ridersOnBoard,
@@ -40,7 +41,22 @@ shared = Redis.runInMasterCloudRedisCellWithCrossAppRedis . Redis.withMasterRedi
 withBookingLock :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m a
 withBookingLock bookingId =
   -- cross-app: the allocation tick (scheduler) and the API take this lock on the same booking
-  Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "waitForBookingLock" ("sharedcab:lock:booking:" <> bookingId.getId) 10 10000
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "sharedCab" "waitForBookingLock" (bookingLockKey bookingId) 10 10000
+
+bookingLockKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+bookingLockKey bookingId = "sharedcab:lock:booking:" <> bookingId.getId
+
+-- | The same lock without waiting, for read paths that have no MonadMask (the status poll): Nothing when it is
+-- held. Not exception-safe: a throw inside leaves the lock to its 10 s expiry.
+tryWithBookingLock :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m a -> m (Maybe a)
+tryWithBookingLock bookingId action = do
+  acquired <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.tryLockRedis (bookingLockKey bookingId) 10
+  if not acquired
+    then pure Nothing
+    else do
+      result <- action
+      Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (bookingLockKey bookingId)
+      pure (Just result)
 
 -- | R7: no cancel once a seat has boarded. Call inside `withBookingLock` so boarding can't slip in before the cancel.
 ensureCancellable :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSTicketBooking.FRFSTicketBooking -> m ()

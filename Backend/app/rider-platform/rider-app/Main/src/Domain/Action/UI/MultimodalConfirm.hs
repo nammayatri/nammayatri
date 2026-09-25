@@ -2998,6 +2998,10 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
     Just (SCB.SharedCabBoarded _) -> do
       updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
       generateJourneyInfoResponse journey updatedLegs
+    Just SCB.SharedCabDegraded -> do
+      -- 8.5: boarded in degraded mode — the leg state renders the DEGRADED flag on the next poll.
+      updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+      generateJourneyInfoResponse journey updatedLegs
     Just (SCB.SharedCabProximityHold holdDistanceMeters holdReason) -> do
       -- Mirrors the bus-branch soft proximity hold (boardingConfirmationRequired): the client asks
       -- "check in anyway?" and retries; the shared-cab branch honours forceCheckIn only for the

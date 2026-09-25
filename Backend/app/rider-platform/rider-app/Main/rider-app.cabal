@@ -639,6 +639,7 @@ library
       SharedLogic.SharedCab.Boarding
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Config
+      SharedLogic.SharedCab.Degraded
       SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.DriverAction
       SharedLogic.SharedCab.Events
@@ -648,6 +649,7 @@ library
       SharedLogic.SharedCab.LtsAttach
       SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Plate
+      SharedLogic.SharedCab.RateLimit
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
       SharedLogic.SharedCab.SessionView
@@ -2161,6 +2163,7 @@ test-suite rider-app-test
       SharedCabAllocationTests
       SharedCabBoardingTests
       SharedCabConfigTests
+      SharedCabDegradedTests
       SharedCabDemandTests
       SharedCabDriverActionTests
       SharedCabEventsTests

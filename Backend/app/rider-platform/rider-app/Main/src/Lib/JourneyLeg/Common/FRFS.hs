@@ -19,6 +19,7 @@ import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
@@ -60,6 +61,7 @@ import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
@@ -81,7 +83,7 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 -- | `07` §3 shared-cab block; skips bus live tracking, which knows nothing of shared cabs.
 -- Positions and ETAs wait on the LTS read (7.2), driver details on the session (B6).
 getSharedCabLegState ::
-  (Redis.HedisFlow m r, MonadFlow m) =>
+  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m) =>
   UTCTime ->
   [APITypes.RiderLocationReq] ->
   DJourneyLeg.JourneyLeg ->
@@ -92,6 +94,11 @@ getSharedCabLegState ::
   [(Int, JMStateTypes.TrackingStatus, UTCTime)] ->
   m JT.JourneyLegState
 getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses = do
+  -- 8.5 timeout end: a degraded ride has no tick watching it; the rider's status poll is the
+  -- clock (05 §5). If the marker expired this poll flips INPROGRESS -> USED, and the just-read
+  -- status is corrected locally so this response already shows DROPPED.
+  degradeExpired <- SharedCabDegraded.expireDegradedBoardingIfNeeded booking
+  let bookingStatus' = if degradeExpired then JMStateTypes.FRFSTicket DFRFSTicket.USED else bookingStatus
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession booking.vehicleNumber
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
@@ -111,7 +118,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
     JT.Single
       JT.JourneyLegStateData
         { status = oldStatus,
-          bookingStatus,
+          bookingStatus = bookingStatus',
           trackingStatus,
           trackingStatusLastUpdatedAt,
           userPosition = (.latLong) <$> listToMaybe riderLastPoints,
@@ -122,7 +129,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkSharedCab <$> SharedCabLeg.deriveSharedCabState bookingStatus booking.vehicleNumber hasLiveSession
+          sharedCab = mkSharedCab <$> SharedCabLeg.deriveSharedCabState bookingStatus' booking.vehicleNumber hasLiveSession
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
