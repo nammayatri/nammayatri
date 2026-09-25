@@ -1,5 +1,6 @@
 module Storage.Queries.SearchRequestForDriverExtra where
 
+import Data.List (partition)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T
 import Domain.Types.Common as Domain
