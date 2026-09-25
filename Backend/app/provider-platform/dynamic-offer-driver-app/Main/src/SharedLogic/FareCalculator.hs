@@ -290,7 +290,7 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
       -- and the canonical summary are unchanged either way.
       gateFeeItemsBreakup =
         if isValueAddNP
-          then map (\item -> mkBreakupItem (Enums.mkGateFeeBreakupTitle item.itemName) $ mkPrice item.amount) fareParams.customerGateFeeItems
+          then map (\item -> mkBreakupItem (Enums.mkGateFeeBreakupTitle item.itemName) $ mkPrice item.amount) (fromMaybe [] fareParams.customerGateFeeItems)
           else []
   catMaybes
     [ Just baseFareItem,
@@ -420,7 +420,7 @@ mkFareParamsDisplayBreakups isValueAddNP mkPrice mkBreakupItem fareParams = do
 -- TODO: make some tests for it
 
 customerGateFeeItemsSum :: FareParameters -> HighPrecMoney
-customerGateFeeItemsSum fareParams = sum $ map (.amount) fareParams.customerGateFeeItems
+customerGateFeeItemsSum fareParams = sum $ map (.amount) (fromMaybe [] fareParams.customerGateFeeItems)
 
 fareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
 fareSum fareParams conditionalChargeCategories =
@@ -674,7 +674,7 @@ calculateFareParametersHandler params = do
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
-            customerGateFeeItems = [],
+            customerGateFeeItems = Nothing,
             driverCancellationNotAllowed = fp.driverCancellationNotAllowed,
             businessDiscount = businessDiscount,
             personalDiscount = personalDiscount,
@@ -1306,7 +1306,7 @@ applyGateCustomerFeeItems params fareParams = case params.pickupGateId of
   Nothing -> pure fareParams
   Just gateIdText -> do
     items <- customerFeeItemsForGateId (Id gateIdText) fareParams.currency
-    pure $ if KP.null items then fareParams else fareParams {customerGateFeeItems = items}
+    pure $ if KP.null items then fareParams else fareParams {customerGateFeeItems = Just items}
 
 -- | CustomerFeeItem entries configured on a gate, skipping entries whose currency
 --   does not match the fare's currency and entries with a non-positive amount.
