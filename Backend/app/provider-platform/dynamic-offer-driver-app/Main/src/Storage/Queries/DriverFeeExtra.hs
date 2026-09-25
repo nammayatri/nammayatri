@@ -858,10 +858,9 @@ findDriverFeeInRangeEligibleForAutopayRetry merchantId merchantOperatingCityId l
     (Just limit)
     Nothing
 
-updateManualToAutoPayForRetry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Domain.AutopayPaymentStage] -> Id DriverFee -> m ()
-updateManualToAutoPayForRetry eligibleStages driverFeeId = do
-  now <- getCurrentTime
-  updateOneWithKV
+updateManualToAutoPayForRetry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Domain.AutopayPaymentStage] -> UTCTime -> Id DriverFee -> m (Maybe DriverFee)
+updateManualToAutoPayForRetry eligibleStages now driverFeeId =
+  updateOneWithKVReturning
     [ Se.Set BeamDF.feeType RECURRING_EXECUTION_INVOICE,
       Se.Set BeamDF.status PAYMENT_PENDING,
       Se.Set BeamDF.autopayPaymentStage (Just NOTIFICATION_SCHEDULED),

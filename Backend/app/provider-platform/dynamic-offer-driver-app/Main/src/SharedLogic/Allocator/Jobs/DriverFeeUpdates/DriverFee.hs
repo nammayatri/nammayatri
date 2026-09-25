@@ -220,6 +220,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
               then do
                 updateDriverFeeToManual $ driverFeeIds <> [driverFee.id]
+                QINV.updateActiveInvoiceStatusByDriverFeeIdsAndPaymentMode INV.INACTIVE (driverFeeIds <> [driverFee.id]) INV.AUTOPAY_INVOICE
                 when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
                   updateSubscription False (cast driverFee.driverId)
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
