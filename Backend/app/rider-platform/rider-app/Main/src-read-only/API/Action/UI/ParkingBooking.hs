@@ -16,6 +16,7 @@ import qualified Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -42,7 +43,7 @@ handler :: Environment.FlowServer API
 handler = postMultimodalParkingBook :<|> postMultimodalParkingMarshalCreate
 
 postMultimodalParkingBook :: (Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.ParkingBooking.ParkingBookingReq -> Environment.FlowHandler API.Types.UI.ParkingBooking.ParkingBookingResponse)
-postMultimodalParkingBook a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ParkingBooking.postMultimodalParkingBook a2 a1
+postMultimodalParkingBook a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.ParkingBooking.postMultimodalParkingBook a2 a1
 
 postMultimodalParkingMarshalCreate :: (Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.ParkingBooking.MarshalPersonReq -> Environment.FlowHandler API.Types.UI.ParkingBooking.MarshalPersonResp)
-postMultimodalParkingMarshalCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.ParkingBooking.postMultimodalParkingMarshalCreate a2 a1
+postMultimodalParkingMarshalCreate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.ParkingBooking.postMultimodalParkingMarshalCreate a2 a1

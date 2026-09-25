@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -47,7 +48,7 @@ getCoinsIncentiveConfig ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler (Headers '[Header "ETag" Data.Text.Text] [API.Types.UI.DriverIncentiveCoins.DriverIncentiveCoinConfigItem])
   )
-getCoinsIncentiveConfig a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverIncentiveCoins.getCoinsIncentiveConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getCoinsIncentiveConfig a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverIncentiveCoins.getCoinsIncentiveConfig (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getCoinsIncentiveRideCount ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -56,4 +57,4 @@ getCoinsIncentiveRideCount ::
     ) ->
     Environment.FlowHandler API.Types.UI.DriverIncentiveCoins.DriverIncentiveRideCountRes
   )
-getCoinsIncentiveRideCount a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverIncentiveCoins.getCoinsIncentiveRideCount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getCoinsIncentiveRideCount a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverIncentiveCoins.getCoinsIncentiveRideCount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -56,7 +57,7 @@ getVehicleMakes ::
     ) ->
     Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleMakesResp
   )
-getVehicleMakes a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.getVehicleMakes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getVehicleMakes a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.VehicleDetails.getVehicleMakes (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postVehicleModels ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -66,7 +67,7 @@ postVehicleModels ::
     API.Types.UI.VehicleDetails.VehicleModelsReq ->
     Environment.FlowHandler API.Types.UI.VehicleDetails.VehicleModelsResp
   )
-postVehicleModels a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.postVehicleModels (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postVehicleModels a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.VehicleDetails.postVehicleModels (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getVehicleModelsV2 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -75,7 +76,7 @@ getVehicleModelsV2 ::
     ) ->
     Environment.FlowHandler [API.Types.UI.VehicleDetails.VehicleMakeModelsItem]
   )
-getVehicleModelsV2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.getVehicleModelsV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getVehicleModelsV2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.VehicleDetails.getVehicleModelsV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postVehicleDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -85,4 +86,4 @@ postVehicleDetails ::
     API.Types.UI.VehicleDetails.VehicleDetailsReq ->
     Environment.FlowHandler Domain.Types.VehicleDetails.VehicleDetails
   )
-postVehicleDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleDetails.postVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postVehicleDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.VehicleDetails.postVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

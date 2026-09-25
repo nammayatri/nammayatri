@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -59,13 +60,13 @@ getSvpQr ::
     Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Environment.FlowHandler API.Types.UI.SVP.GenerateQrResp
   )
-getSvpQr a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.getSvpQr (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getSvpQr a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.SVP.getSvpQr (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getSvpPublicKey :: Environment.FlowHandler Data.Text.Text
-getSvpPublicKey = withFlowHandlerAPI $ Domain.Action.UI.SVP.getSvpPublicKey
+getSvpPublicKey = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SVP.getSvpPublicKey
 
 postSvpGate :: (API.Types.UI.SVP.GateCallbackReq -> Environment.FlowHandler API.Types.UI.SVP.GateCallbackResp)
-postSvpGate a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.postSvpGate a1
+postSvpGate a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SVP.postSvpGate a1
 
 postSvpSignQR :: (API.Types.UI.SVP.SignQRReq -> Environment.FlowHandler API.Types.UI.SVP.SignQRResp)
-postSvpSignQR a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.postSvpSignQR a1
+postSvpSignQR a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.SVP.postSvpSignQR a1

@@ -40,7 +40,6 @@ import qualified Domain.Action.UI.TicketDashboard
 import qualified Domain.Action.UI.TicketService
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.MerchantOnboarding
-import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.TicketBooking
 import qualified "this" Domain.Types.TicketBookingService
 import qualified "this" Domain.Types.TicketDashboard
@@ -58,7 +57,6 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Tools.ActorInfo as ActorInfo
 
 postTicketsVerify ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -279,9 +277,9 @@ postTicketPlacesBook ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   API.Types.UI.TicketService.TicketBookingReq ->
   Environment.Flow Kernel.External.Payment.Interface.Types.CreateOrderResp
-postTicketPlacesBook merchantShortId _opCity placeId mbRequestorId req = ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @Domain.Types.Person.Person) <$> mbRequestorId) $ do
+postTicketPlacesBook merchantShortId _opCity placeId _mbRequestorId req = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.postTicketPlacesBookWithActor (Nothing, m.id) placeId req
+  Domain.Action.UI.TicketService.postTicketPlacesBook (Nothing, m.id) placeId req
 
 getTicketPlaces ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -353,8 +351,7 @@ postTicketPlacesDirectBook ::
   Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
 postTicketPlacesDirectBook merchantShortId _opCity placeId requestorId req = do
   m <- findMerchantByShortId merchantShortId
-  ActorInfo.withDashboardMbPersonIdActorInfo ((Kernel.Types.Id.Id @Domain.Types.Person.Person) <$> requestorId) $
-    Domain.Action.UI.TicketService.postTicketPlacesDirectBookWithActor (Nothing, m.id) requestorId placeId req
+  Domain.Action.UI.TicketService.postTicketPlacesDirectBook (Nothing, m.id) requestorId placeId req
 
 getTicketFleetVehiclesV2 ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

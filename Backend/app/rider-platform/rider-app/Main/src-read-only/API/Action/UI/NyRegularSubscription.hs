@@ -23,6 +23,7 @@ import qualified Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -129,7 +130,7 @@ postNyRegularSubscriptionsCreate ::
     API.Types.UI.NyRegularSubscription.CreateSubscriptionReq ->
     Environment.FlowHandler API.Types.UI.NyRegularSubscription.CreateSubscriptionRes
   )
-postNyRegularSubscriptionsCreate a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
+postNyRegularSubscriptionsCreate a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a9) $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
 
 getNyRegularSubscriptionsEstimate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -138,7 +139,7 @@ getNyRegularSubscriptionsEstimate ::
     Data.Text.Text ->
     Environment.FlowHandler Domain.Action.UI.Quote.GetQuotesRes
   )
-getNyRegularSubscriptionsEstimate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptionsEstimate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getNyRegularSubscriptionsEstimate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptionsEstimate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postNyRegularSubscriptionsConfirm ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -147,7 +148,7 @@ postNyRegularSubscriptionsConfirm ::
     API.Types.UI.NyRegularSubscription.ConfirmSubscriptionReq ->
     Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
-postNyRegularSubscriptionsConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postNyRegularSubscriptionsConfirm a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postNyRegularSubscriptionsUpdate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -156,7 +157,7 @@ postNyRegularSubscriptionsUpdate ::
     API.Types.UI.NyRegularSubscription.UpdateSubscriptionReq ->
     Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
-postNyRegularSubscriptionsUpdate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postNyRegularSubscriptionsUpdate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getNyRegularSubscriptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -167,7 +168,7 @@ getNyRegularSubscriptions ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler [API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity]
   )
-getNyRegularSubscriptions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getNyRegularSubscriptions a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 getNyRegularSubscriptionDetails ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -176,7 +177,7 @@ getNyRegularSubscriptionDetails ::
     Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription ->
     Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
-getNyRegularSubscriptionDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptionDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getNyRegularSubscriptionDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptionDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postNyRegularSubscriptionsCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -185,4 +186,4 @@ postNyRegularSubscriptionsCancel ::
     Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription ->
     Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
-postNyRegularSubscriptionsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postNyRegularSubscriptionsCancel a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

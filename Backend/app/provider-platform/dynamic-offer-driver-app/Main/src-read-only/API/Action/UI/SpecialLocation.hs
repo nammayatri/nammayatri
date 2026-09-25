@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -42,4 +43,4 @@ getSpecialLocationList ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler (Headers '[Header "ETag" Data.Text.Text] [Lib.Queries.SpecialLocation.SpecialLocationFull])
   )
-getSpecialLocationList a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getSpecialLocationList a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "places" :> ReqBody '[JSON] API.Types.UI.Places.PlacesRequest :> Post '[JSON] API.Types.UI.Places.PlacesResponse)
@@ -33,4 +34,4 @@ postPlaces ::
     API.Types.UI.Places.PlacesRequest ->
     Environment.FlowHandler API.Types.UI.Places.PlacesResponse
   )
-postPlaces a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Places.postPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPlaces a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Places.postPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

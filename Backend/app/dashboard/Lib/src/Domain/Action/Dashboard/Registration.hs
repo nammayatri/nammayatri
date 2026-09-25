@@ -46,7 +46,6 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
-import Tools.Auth.Capability (isSuperAdmin)
 import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.EntityAccess as QEntityAccess
 import qualified Storage.Queries.Merchant as QMerchant
@@ -55,6 +54,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
+import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
 import Tools.Auth.Merchant

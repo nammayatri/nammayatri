@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "identifyNearByBus" :> ReqBody '[JSON] API.Types.UI.RiderLocation.RiderLocationRequest :> Post '[JSON] API.Types.UI.RiderLocation.RiderLocationResponse)
@@ -33,4 +34,4 @@ postIdentifyNearByBus ::
     API.Types.UI.RiderLocation.RiderLocationRequest ->
     Environment.FlowHandler API.Types.UI.RiderLocation.RiderLocationResponse
   )
-postIdentifyNearByBus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderLocation.postIdentifyNearByBus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postIdentifyNearByBus a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.RiderLocation.postIdentifyNearByBus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

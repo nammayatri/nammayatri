@@ -5,6 +5,13 @@ importPackageOverrides:
   Lib.Payment.API.Payout.Types: payment
 
 module: Payout
+# requestorId/actorInfo applied for each api by default
+# for overwrite helperApiExtra/helperApi can be specified for each api separately
+default:
+  helperApiExtra:
+    query:
+      - requestorId: Text
+    actorInfo: requestorId
 
 types: {}
 

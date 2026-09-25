@@ -141,4 +141,3 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: MembershipDetailsResp
-

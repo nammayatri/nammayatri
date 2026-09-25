@@ -37,6 +37,8 @@ logAudit input = do
   now <- getCurrentTime
   auditId <- generateGUID
 
+  when (input.actorType == UNKNOWN) $ do
+    logWarning $ "Finance audit: UNKNOWN actor type was applied for auditId: " <> auditId <> "; requestId: " <> fromMaybe "none" input.actorId
   let entry =
         AuditEntry
           { id = Id auditId,

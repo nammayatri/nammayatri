@@ -501,6 +501,7 @@ apis:
         type: JourneyInfoResp
   - POST:
       endpoint: /multimodal/{journeyId}/confirm
+      auth: TokenAuth
       params:
         journeyId: Id Journey
       request:
@@ -519,6 +520,7 @@ apis:
         type: JourneyInfoResp
   - GET:
       endpoint: /multimodal/{journeyId}/booking/paymentStatus
+      auth: TokenAuth
       params:
         journeyId: Id Journey
       response:
