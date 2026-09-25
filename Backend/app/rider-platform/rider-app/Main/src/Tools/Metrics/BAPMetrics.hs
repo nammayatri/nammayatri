@@ -233,3 +233,56 @@ finishMetrics' bmContainer action merchantName version txnId merchantOperatingCi
         void $ Redis.del (durationKey txnId action)
         putDuration durationHistogram merchantName version merchantOperatingCityId . realToFrac . diffUTCTime endTime $ startTime
       Nothing -> return ()
+
+incrementFRFSSearchCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementFRFSSearchCount merchantId merchantOperatingCityId vehicleCategory = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.frfsSearchCounter (merchantId, version.getDeploymentVersion, merchantOperatingCityId, vehicleCategory) P.incCounter
+
+incrementFRFSBookingCount :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> Text -> m ()
+incrementFRFSBookingCount merchantId merchantOperatingCityId vehicleCategory status reason = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.frfsBookingCounter (merchantId, version.getDeploymentVersion, merchantOperatingCityId, vehicleCategory, status, reason) P.incCounter
+
+incrementFRFSPassPaymentCount :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> m ()
+incrementFRFSPassPaymentCount merchantId merchantOperatingCityId passType status = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.frfsPassPaymentCounter (merchantId, version.getDeploymentVersion, merchantOperatingCityId, passType, status) P.incCounter
+
+data FRFSExternalBppOutcome = FRFSBppSucceeded | FRFSBppEmpty | FRFSBppFailed
+
+frfsExternalBppOutcomeLabel :: FRFSExternalBppOutcome -> Text
+frfsExternalBppOutcomeLabel = \case
+  FRFSBppSucceeded -> "SUCCESS"
+  FRFSBppEmpty -> "EMPTY"
+  FRFSBppFailed -> "FAILED"
+
+incrementExternalBppApiCallCount :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementExternalBppApiCallCount provider api outcome = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.externalBppApiCallCounter (version.getDeploymentVersion, provider, api, outcome) P.incCounter
+
+-- | Which provider call this is. A label rather than a metric per operation, so adding STATUS or
+-- VERIFY later costs one constructor instead of a new metric, container field and helper.
+data FRFSExternalBppApi = FRFSBppSearch | FRFSBppOrder
+
+frfsExternalBppApiLabel :: FRFSExternalBppApi -> Text
+frfsExternalBppApiLabel = \case
+  FRFSBppSearch -> "SEARCH"
+  FRFSBppOrder -> "ORDER"
+
+incrementFRFSExternalBppCount :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> FRFSExternalBppApi -> FRFSExternalBppOutcome -> m ()
+incrementFRFSExternalBppCount merchantId merchantOperatingCityId vehicleCategory provider api outcome = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.frfsExternalBppCounter (merchantId, version.getDeploymentVersion, merchantOperatingCityId, vehicleCategory, provider, frfsExternalBppApiLabel api, frfsExternalBppOutcomeLabel outcome) P.incCounter
+
+incrementFRFSBookingPaymentCount :: HasBAPMetrics m r => Text -> Text -> Text -> Text -> Text -> m ()
+incrementFRFSBookingPaymentCount merchantId merchantOperatingCityId vehicleCategory status reason = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  liftIO $ P.withLabel bmContainer.frfsBookingPaymentCounter (merchantId, version.getDeploymentVersion, merchantOperatingCityId, vehicleCategory, status, reason) P.incCounter
