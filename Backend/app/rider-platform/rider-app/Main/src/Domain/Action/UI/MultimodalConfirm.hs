@@ -143,6 +143,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SharedCab.Allocation as SharedCabAllocation
 import qualified SharedLogic.SharedCab.Allocation.Types as SharedCabAllocTypes
+import qualified SharedLogic.SharedCab.Boarding as SCB
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.Invariants as SharedCabInvariants
@@ -2985,134 +2986,156 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) journeyId legOrder _subLegOrder req = runAction journeyId $ do
-  vehicleNumber <- req.vehicleNumber & fromMaybeM (InvalidRequest "vehicleNumber is required")
-  let boardingMethod = DJourneyLeg.UserActivated
-  let mbForceCheckIn = req.forceCheckIn
-  mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
   journey <- JM.getJourney journeyId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
   booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
-  quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound $ "FRFS quote with ID:" <> booking.quoteId.getId)
-  vehicleType <-
-    case journeyLeg.mode of
-      DTrip.Bus -> return Enums.BUS
-      DTrip.Metro -> return Enums.METRO
-      DTrip.Subway -> return Enums.SUBWAY
-      _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
-  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-  (integratedBPPConfig, vehicleLiveRouteInfo) <- case mbVehicleOverrideInfo of
-    Just (sourceVehicleNumber, overrideWaybillNo) -> do
-      mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
-      let scannedVehicleRouteInfo = JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-      case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
-        JLU.FleetOverrideUsable -> mbSourceRouteInfo & fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-        JLU.FleetOverrideFinished -> do
-          Dispatcher.delFleetOverrideInfo vehicleNumber
-          scannedVehicleRouteInfo
-        JLU.FleetOverrideNotYetUsable -> scannedVehicleRouteInfo
-    Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
-  whenJust booking.vehicleNumber $ \bookingVeh ->
-    when (bookingVeh /= vehicleLiveRouteInfo.vehicleNumber) $ do
-      let blockedOverrideTiers = fromMaybe [] riderConfig.nonAllowedOverrideFleetNoServiceTiers
-      when (vehicleLiveRouteInfo.serviceType `elem` blockedOverrideTiers) $
-        throwError $ VehicleServiceTierUnserviceable ("Fleet override from " <> bookingVeh <> " to " <> vehicleLiveRouteInfo.vehicleNumber <> " is not allowed for service tier " <> show vehicleLiveRouteInfo.serviceType)
-  let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-  case mbServiceTier of
-    Just serviceTier -> do
-      let allowedVariants = maybe (Utils.defaultBusBoardingRelationshitCfg serviceTier._type) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Enums.BUS && serviceRelationShip.serviceTierType == serviceTier._type) =<< riderConfig.serviceTierRelationshipCfg
-      unless (vehicleLiveRouteInfo.serviceType `elem` allowedVariants) $
-        throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show allowedVariants)
-    Nothing -> do
-      -- todo: MERTRICS add metric here
-      logError $ "CRITICAL: Service tier not found for vehicle, skipping validation " <> vehicleLiveRouteInfo.vehicleNumber
-  let journeyLegRouteCodes = nub (mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails))
-
-  case vehicleLiveRouteInfo.routeCode of
-    Just routeCode -> do
-      unless (routeCode `elem` journeyLegRouteCodes) $ do
-        logError $ "Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the route code " <> routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
-        when (riderConfig.validateSetOnboardingVehicleRequest == Just True) $
-          throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the route code " <> routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking.")
-    Nothing -> logError $ "Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> " not found on any route " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
-
-  -- Proximity gate: for a genuine boarding (not an explicit force-confirm retry), check the rider's
-  -- recent location history against the vehicle actually being boarded (prefer the pre-assigned
-  -- booking.vehicleNumber over whatever the rider typed, since that's the bus this ticket is really
-  -- for) before committing an irreversible ticket verify. A miss doesn't error -- it returns the
-  -- current journey info with a flag so the client can ask "bus looks far away, check in anyway?"
-  -- and retry with forceCheckIn if the rider confirms.
-  let proximityCheckVehicleNumber = fromMaybe vehicleNumber booking.vehicleNumber
-  riderLocationHistory <- getAllPoints journeyId
-  -- Gated on both the server-side rollout switch AND the client explicitly declaring it understands
-  -- boardingConfirmationRequired: enableBoardingProximityCheck alone can't tell which specific rider
-  -- is still on an old app build, and an old client would otherwise show a false "checked in" success
-  -- on a soft (non-error) proximity mismatch it doesn't know how to interpret. A client that never
-  -- sends supportsBoardingConfirmation always gets the pre-redesign behavior, unconditionally.
-  let clientSupportsCheck = fromMaybe False req.supportsBoardingConfirmation
-  (isNearBus, mbClosestDistance, mbConfirmationReason) <-
-    if mbForceCheckIn == Just True || not clientSupportsCheck || not (fromMaybe False riderConfig.enableBoardingProximityCheck)
-      then pure (True, Nothing, Nothing) -- explicit override, unsupported client, or feature off: skip the check entirely
-      else JLCF.checkRiderNearBusFRFS proximityCheckVehicleNumber booking.routeCode booking.tripId booking.startTime riderLocationHistory riderConfig integratedBPPConfig
-  if not isNearBus
-    then do
+  -- M8.1 SINGLE INSERTION POINT for the SHARED_CAB tier: the rider's typed vehicle entry is the
+  -- cab's boarding code (plate last-4, Plans/Shared-Cab-Plans/05-allocation-plan.md §4). `Nothing`
+  -- falls through to the unchanged bus/metro body below.
+  mbSharedCabOutcome <- SCB.tryBoardSharedCab journey journeyLeg booking mbPersonId req
+  case mbSharedCabOutcome of
+    Just (SCB.SharedCabBoarded _) -> do
+      updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+      generateJourneyInfoResponse journey updatedLegs
+    Just (SCB.SharedCabProximityHold holdDistanceMeters holdReason) -> do
+      -- Mirrors the bus-branch soft proximity hold (boardingConfirmationRequired): the client asks
+      -- "check in anyway?" and retries; the shared-cab branch honours forceCheckIn only for the
+      -- booking's allocated cab (05 §4 item 3), so a re-bind can never be forced from home.
       updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
       journeyInfoResp <- generateJourneyInfoResponse journey updatedLegs
       pure
         journeyInfoResp
           { API.Types.UI.MultimodalConfirm.boardingConfirmationRequired = Just True,
-            API.Types.UI.MultimodalConfirm.boardingDistanceFromBusMeters = mbClosestDistance,
-            API.Types.UI.MultimodalConfirm.boardingConfirmationReason = mbConfirmationReason
+            API.Types.UI.MultimodalConfirm.boardingDistanceFromBusMeters = holdDistanceMeters,
+            API.Types.UI.MultimodalConfirm.boardingConfirmationReason = Just holdReason
           }
-    else do
-      let mbNewRouteCode = (vehicleLiveRouteInfo.routeCode,) <$> (listToMaybe journeyLeg.routeDetails) -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
-      qrDataList <- updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode vehicleLiveRouteInfo
-      merchantOperatingCity <- CQMOC.findById journey.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "MerchantOperatingCity not found")
-      let frfsVehicleCategory =
-            case journeyLeg.mode of
-              DTrip.Bus -> Spec.BUS
-              DTrip.Metro -> Spec.METRO
-              DTrip.Subway -> Spec.SUBWAY
-              _ -> Spec.BUS
-
-      void $
-        withTryCatch
-          "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
-          ( do
-              forM_ qrDataList $ \qrData -> do
-                let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
-                void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
-          )
-
-      QJourneyLeg.updateByPrimaryKey $
-        journeyLeg
-          { DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber,
-            DJourneyLeg.finalBoardedBusNumberSource = Just boardingMethod,
-            DJourneyLeg.boardingConfirmedDespiteDistance = Just (mbForceCheckIn == Just True),
-            DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
-            DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
-            DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
-            DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType
-          }
-      -- Sync journey leg data to frfs_ticket_booking for analytics
-      fork "FRFS Analytics: sync vehicle data to ticket booking" $
-        QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
-          (Just vehicleNumber)
-          (Just boardingMethod)
-          vehicleLiveRouteInfo.waybillId
-          vehicleLiveRouteInfo.scheduleNo
-          vehicleLiveRouteInfo.depot
-          (Just vehicleLiveRouteInfo.serviceType)
-          journeyLeg.busConductorId
-          (maybe journeyLeg.busDriverId (\driverId -> if T.null driverId then journeyLeg.busDriverId else Just driverId) booking.driverId)
-          booking.driverName
-          booking.driverMobileNumber
-          booking.id
-      updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
-      generateJourneyInfoResponse journey updatedLegs
+    Nothing -> doOnboardBusOrMetro journey journeyLeg booking
   where
+    doOnboardBusOrMetro journey journeyLeg booking = do
+      vehicleNumber <- req.vehicleNumber & fromMaybeM (InvalidRequest "vehicleNumber is required")
+      let boardingMethod = DJourneyLeg.UserActivated
+      let mbForceCheckIn = req.forceCheckIn
+      mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
+      quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound $ "FRFS quote with ID:" <> booking.quoteId.getId)
+      vehicleType <-
+        case journeyLeg.mode of
+          DTrip.Bus -> return Enums.BUS
+          DTrip.Metro -> return Enums.METRO
+          DTrip.Subway -> return Enums.SUBWAY
+          _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
+      integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+      (integratedBPPConfig, vehicleLiveRouteInfo) <- case mbVehicleOverrideInfo of
+        Just (sourceVehicleNumber, overrideWaybillNo) -> do
+          mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+          let scannedVehicleRouteInfo = JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+          case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+            JLU.FleetOverrideUsable -> mbSourceRouteInfo & fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+            JLU.FleetOverrideFinished -> do
+              Dispatcher.delFleetOverrideInfo vehicleNumber
+              scannedVehicleRouteInfo
+            JLU.FleetOverrideNotYetUsable -> scannedVehicleRouteInfo
+        Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
+      whenJust booking.vehicleNumber $ \bookingVeh ->
+        when (bookingVeh /= vehicleLiveRouteInfo.vehicleNumber) $ do
+          let blockedOverrideTiers = fromMaybe [] riderConfig.nonAllowedOverrideFleetNoServiceTiers
+          when (vehicleLiveRouteInfo.serviceType `elem` blockedOverrideTiers) $
+            throwError $ VehicleServiceTierUnserviceable ("Fleet override from " <> bookingVeh <> " to " <> vehicleLiveRouteInfo.vehicleNumber <> " is not allowed for service tier " <> show vehicleLiveRouteInfo.serviceType)
+      let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+      let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+      case mbServiceTier of
+        Just serviceTier -> do
+          let allowedVariants = maybe (Utils.defaultBusBoardingRelationshitCfg serviceTier._type) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Enums.BUS && serviceRelationShip.serviceTierType == serviceTier._type) =<< riderConfig.serviceTierRelationshipCfg
+          unless (vehicleLiveRouteInfo.serviceType `elem` allowedVariants) $
+            throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show allowedVariants)
+        Nothing -> do
+          -- todo: MERTRICS add metric here
+          logError $ "CRITICAL: Service tier not found for vehicle, skipping validation " <> vehicleLiveRouteInfo.vehicleNumber
+      let journeyLegRouteCodes = nub (mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails))
+
+      case vehicleLiveRouteInfo.routeCode of
+        Just routeCode -> do
+          unless (routeCode `elem` journeyLegRouteCodes) $ do
+            logError $ "Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the route code " <> routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
+            when (riderConfig.validateSetOnboardingVehicleRequest == Just True) $
+              throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> ", the route code " <> routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking.")
+        Nothing -> logError $ "Vehicle " <> vehicleLiveRouteInfo.vehicleNumber <> " not found on any route " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
+
+      -- Proximity gate: for a genuine boarding (not an explicit force-confirm retry), check the rider's
+      -- recent location history against the vehicle actually being boarded (prefer the pre-assigned
+      -- booking.vehicleNumber over whatever the rider typed, since that's the bus this ticket is really
+      -- for) before committing an irreversible ticket verify. A miss doesn't error -- it returns the
+      -- current journey info with a flag so the client can ask "bus looks far away, check in anyway?"
+      -- and retry with forceCheckIn if the rider confirms.
+      let proximityCheckVehicleNumber = fromMaybe vehicleNumber booking.vehicleNumber
+      riderLocationHistory <- getAllPoints journeyId
+      -- Gated on both the server-side rollout switch AND the client explicitly declaring it understands
+      -- boardingConfirmationRequired: enableBoardingProximityCheck alone can't tell which specific rider
+      -- is still on an old app build, and an old client would otherwise show a false "checked in" success
+      -- on a soft (non-error) proximity mismatch it doesn't know how to interpret. A client that never
+      -- sends supportsBoardingConfirmation always gets the pre-redesign behavior, unconditionally.
+      let clientSupportsCheck = fromMaybe False req.supportsBoardingConfirmation
+      (isNearBus, mbClosestDistance, mbConfirmationReason) <-
+        if mbForceCheckIn == Just True || not clientSupportsCheck || not (fromMaybe False riderConfig.enableBoardingProximityCheck)
+          then pure (True, Nothing, Nothing) -- explicit override, unsupported client, or feature off: skip the check entirely
+          else JLCF.checkRiderNearBusFRFS proximityCheckVehicleNumber booking.routeCode booking.tripId booking.startTime riderLocationHistory riderConfig integratedBPPConfig
+      if not isNearBus
+        then do
+          updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+          journeyInfoResp <- generateJourneyInfoResponse journey updatedLegs
+          pure
+            journeyInfoResp
+              { API.Types.UI.MultimodalConfirm.boardingConfirmationRequired = Just True,
+                API.Types.UI.MultimodalConfirm.boardingDistanceFromBusMeters = mbClosestDistance,
+                API.Types.UI.MultimodalConfirm.boardingConfirmationReason = mbConfirmationReason
+              }
+        else do
+          let mbNewRouteCode = (vehicleLiveRouteInfo.routeCode,) <$> (listToMaybe journeyLeg.routeDetails) -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
+          qrDataList <- updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode vehicleLiveRouteInfo
+          merchantOperatingCity <- CQMOC.findById journey.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "MerchantOperatingCity not found")
+          let frfsVehicleCategory =
+                case journeyLeg.mode of
+                  DTrip.Bus -> Spec.BUS
+                  DTrip.Metro -> Spec.METRO
+                  DTrip.Subway -> Spec.SUBWAY
+                  _ -> Spec.BUS
+
+          void $
+            withTryCatch
+              "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
+              ( do
+                  forM_ qrDataList $ \qrData -> do
+                    let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
+                    void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
+              )
+
+          QJourneyLeg.updateByPrimaryKey $
+            journeyLeg
+              { DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber,
+                DJourneyLeg.finalBoardedBusNumberSource = Just boardingMethod,
+                DJourneyLeg.boardingConfirmedDespiteDistance = Just (mbForceCheckIn == Just True),
+                DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
+                DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
+                DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
+                DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType
+              }
+          -- Sync journey leg data to frfs_ticket_booking for analytics
+          fork "FRFS Analytics: sync vehicle data to ticket booking" $
+            QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataById
+              (Just vehicleNumber)
+              (Just boardingMethod)
+              vehicleLiveRouteInfo.waybillId
+              vehicleLiveRouteInfo.scheduleNo
+              vehicleLiveRouteInfo.depot
+              (Just vehicleLiveRouteInfo.serviceType)
+              journeyLeg.busConductorId
+              (maybe journeyLeg.busDriverId (\driverId -> if T.null driverId then journeyLeg.busDriverId else Just driverId) booking.driverId)
+              booking.driverName
+              booking.driverMobileNumber
+              booking.id
+          updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+          generateJourneyInfoResponse journey updatedLegs
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
 

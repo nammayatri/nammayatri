@@ -1469,6 +1469,8 @@ data SharedCabSessionError
   | RidersOnBoard Int
   deriving (Eq, Show, IsBecknAPIError)
 
+instance IsAPIError SharedCabSessionError
+
 instanceExceptionWithParent 'HTTPException ''SharedCabSessionError
 
 instance IsBaseError SharedCabSessionError where
@@ -1502,4 +1504,34 @@ instance IsHTTPError SharedCabSessionError where
     NoReturnRoute -> E400
     RidersOnBoard _ -> E409
 
-instance IsAPIError SharedCabSessionError
+-- | Shared-cab boarding engine (M8). 05-allocation-plan §8.1: one generic error for every boarding
+-- failure — callers must not be able to tell "no cab here" from "wrong code".
+data SharedCabBoardingError
+  = BoardingFailed
+  | BoardingCodeAmbiguous
+  | BoardingLocationRequired
+  | CabFull
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance IsAPIError SharedCabBoardingError
+
+instanceExceptionWithParent 'HTTPException ''SharedCabBoardingError
+
+instance IsBaseError SharedCabBoardingError where
+  toMessage = \case
+    BoardingFailed -> Just "Couldn't board this cab. Check the code on the in-cab sticker and try again."
+    BoardingCodeAmbiguous -> Just "More than one cab matches. Enter the full registration number."
+    BoardingLocationRequired -> Just "We need your location to move you to another cab. Turn on location and try again."
+    CabFull -> Just "This cab just filled up. Take the next shared cab on your route — we'll keep your booking for it."
+
+instance IsHTTPError SharedCabBoardingError where
+  toErrorCode = \case
+    BoardingFailed -> "SHARED_CAB_BOARDING_FAILED"
+    BoardingCodeAmbiguous -> "SHARED_CAB_BOARDING_CODE_AMBIGUOUS"
+    BoardingLocationRequired -> "SHARED_CAB_BOARDING_LOCATION_REQUIRED"
+    CabFull -> "SHARED_CAB_FULL"
+  toHttpCode = \case
+    BoardingFailed -> E400
+    BoardingCodeAmbiguous -> E409
+    BoardingLocationRequired -> E400
+    CabFull -> E409
