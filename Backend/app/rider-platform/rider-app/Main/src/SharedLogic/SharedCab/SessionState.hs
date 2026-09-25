@@ -22,6 +22,9 @@ module SharedLogic.SharedCab.SessionState
     routeSetMoves,
     tripFor,
     returnRouteOf,
+    sessionFromTrip,
+    ExpiryAction (..),
+    expiryAction,
   )
 where
 
@@ -30,6 +33,8 @@ import Data.Aeson (Options (..), defaultOptions)
 import qualified Data.Char as Char
 import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 import qualified Data.Text as T
+import Data.Time (diffUTCTime)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -236,3 +241,46 @@ returnRouteOf code
   | Just corridor <- T.stripSuffix "-F" code = Right (corridor <> "-R")
   | Just corridor <- T.stripSuffix "-R" code = Right (corridor <> "-F")
   | otherwise = Left NoReturnRoute
+
+-- | Flush recovery: the live trip row restores route, driver, capacity and the walk-up mirror (`offlineBoardings`
+-- is persisted, so it survives the flush). A PAUSED trip comes back paused — pause is non-terminal — while a
+-- `findActiveByVehicleNumber` miss means ENDED: no session. The pause reason itself was Redis-only, as are
+-- `consecutiveMisses`; both restart empty. The version restarts above any pre-flush counter so a client's stale
+-- version can't CAS it.
+sessionFromTrip :: DVT.VehicleTrip -> UTCTime -> Session
+sessionFromTrip trip now =
+  Session
+    { driverId = trip.driverId,
+      vehicleNumber = trip.vehicleNumber,
+      merchantId = trip.merchantId,
+      merchantOperatingCityId = trip.merchantOperatingCityId,
+      integratedBppConfigId = trip.integratedBppConfigId,
+      serviceTierType = trip.serviceTierType,
+      routeCode = trip.routeCode,
+      queuedRouteCode = Nothing,
+      capacity = trip.capacity,
+      walkupCount = trip.offlineBoardings,
+      -- unreachable fallback: findActiveByVehicleNumber only returns live rows
+      status = case trip.status of
+        DVT.ACTIVE -> ACTIVE
+        DVT.PAUSED -> PAUSED
+        _ -> ACTIVE,
+      pauseReason = Nothing,
+      consecutiveMisses = 0,
+      version = floor (utcTimeToPOSIXSeconds now),
+      startedAt = trip.startedAt,
+      vehicleTripId = trip.id
+    }
+
+data ExpiryAction = PauseSilent | EndSilent
+  deriving (Show, Eq)
+
+-- | `lastSeen` = the latest LTS ping, or the trip's start if the cab hasn't pinged on this route yet.
+expiryAction :: NominalDiffTime -> NominalDiffTime -> UTCTime -> UTCTime -> SessionStatus -> Maybe ExpiryAction
+expiryAction pauseAfter endAfter now lastSeen status
+  | status == ENDED = Nothing
+  | silentFor >= endAfter = Just EndSilent
+  | silentFor >= pauseAfter && status == ACTIVE = Just PauseSilent
+  | otherwise = Nothing
+  where
+    silentFor = diffUTCTime now lastSeen

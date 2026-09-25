@@ -92,7 +92,7 @@ getSharedCabLegState ::
   [(Int, JMStateTypes.TrackingStatus, UTCTime)] ->
   m JT.JourneyLegState
 getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses = do
-  mbSession <- maybe (pure Nothing) SharedCabSession.getSession booking.vehicleNumber
+  mbSession <- maybe (pure Nothing) SharedCabSession.readSession booking.vehicleNumber
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)

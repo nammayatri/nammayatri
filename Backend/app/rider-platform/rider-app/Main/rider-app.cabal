@@ -540,6 +540,7 @@ library
       SharedLogic.EditLocationThrottle
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
+      SharedLogic.External.LocationTrackingService.API.Ride
       SharedLogic.External.LocationTrackingService.API.Sos
       SharedLogic.External.LocationTrackingService.API.VehicleTrackingOnRoute
       SharedLogic.External.LocationTrackingService.Flow
@@ -625,6 +626,7 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
       SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
+      SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
       SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
@@ -638,8 +640,10 @@ library
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.DriverAction
+      SharedLogic.SharedCab.ExpirySchedule
       SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.LtsAttach
       SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.Session
@@ -2154,6 +2158,7 @@ test-suite rider-app-test
       SharedCabConfigTests
       SharedCabDemandTests
       SharedCabDriverActionTests
+      SharedCabExpiryTests
       SharedCabInvariantsTests
       SharedCabLegStateTests
       SharedCabNotifyTests

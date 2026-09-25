@@ -55,6 +55,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
 import Passetto.Lib (mkPassettoContextAuto)
+import SharedLogic.External.LocationTrackingService.Types (LocationTrackingeServiceConfig)
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -87,6 +88,7 @@ data HandlerEnv = HandlerEnv
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
     ltsReplicaHedisEnv :: Maybe HedisEnv,
+    ltsCfg :: LocationTrackingeServiceConfig,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     cacheConfig :: CacheConfig,

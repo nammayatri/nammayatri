@@ -80,6 +80,7 @@ data RiderJobType
   | BookingDepositExpiry
   | SilentReallocationExpiry
   | SharedCabAllocationTick
+  | SharedCabSessionExpiry
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -130,6 +131,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
   restoreAnyJobInfo SSharedCabAllocationTick jobData = AnyJobInfo <$> restoreJobInfo SSharedCabAllocationTick jobData
+  restoreAnyJobInfo SSharedCabSessionExpiry jobData = AnyJobInfo <$> restoreJobInfo SSharedCabSessionExpiry jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -503,9 +505,15 @@ instance JobInfoProcessor 'SilentReallocationExpiry
 
 type instance JobContent 'SilentReallocationExpiry = SilentReallocationExpiryJobData
 
--- | Self-rescheduling per-city allocation tick for shared cabs (05-allocation-plan §3, §7 tickSec).
--- Seeding the first job per city is open (see SharedLogic.Scheduler.Jobs.SharedCabAllocationTick).
+-- | Self-rescheduling per-city allocation tick for shared cabs (05-allocation-plan §3, §7 tickSec),
+-- seeded by SharedLogic.SharedCab.AllocationSchedule.
 data SharedCabAllocationTickJobData = SharedCabAllocationTickJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data SharedCabSessionExpiryJobData = SharedCabSessionExpiryJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   }
@@ -514,3 +522,7 @@ data SharedCabAllocationTickJobData = SharedCabAllocationTickJobData
 instance JobInfoProcessor 'SharedCabAllocationTick
 
 type instance JobContent 'SharedCabAllocationTick = SharedCabAllocationTickJobData
+
+instance JobInfoProcessor 'SharedCabSessionExpiry
+
+type instance JobContent 'SharedCabSessionExpiry = SharedCabSessionExpiryJobData

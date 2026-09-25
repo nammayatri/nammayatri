@@ -7,6 +7,8 @@ module SharedLogic.SharedCab.Booking
     liveSeatsOnVehicle,
     findingOnRoute,
     shared,
+    nonTerminalStatuses,
+    liveBookingsForVehicle,
   )
 where
 
@@ -80,3 +82,14 @@ findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRF
 findingOnRoute routeCode =
   filter (isNothing . (.vehicleNumber))
     <$> QFRFSTicketBooking.findAllByRouteCodeAndServiceTierTypeAndStatus (Just routeCode) (Just Spec.SHARED_CAB) DFRFSTicketBookingStatus.CONFIRMED
+
+-- | Statuses that still hold a seat or can come to: retryable payment flow (NEW/APPROVED/PAYMENT_PENDING) plus
+-- CONFIRMING/CONFIRMED live and TECHNICAL_CANCEL_REJECTED bounced back. Terminal: FAILED, CANCELLED,
+-- COUNTER_CANCELLED, CANCEL_INITIATED, RESCHEDULED.
+nonTerminalStatuses :: [DFRFSTicketBookingStatus.FRFSTicketBookingStatus]
+nonTerminalStatuses = [DFRFSTicketBookingStatus.NEW, DFRFSTicketBookingStatus.APPROVED, DFRFSTicketBookingStatus.PAYMENT_PENDING, DFRFSTicketBookingStatus.CONFIRMING, DFRFSTicketBookingStatus.CONFIRMED, DFRFSTicketBookingStatus.TECHNICAL_CANCEL_REJECTED]
+
+-- | The plate's live app bookings (04 §3's flush-recovery join). No pagination: a
+-- cab holds few books. `plate` must be canonicalised by the caller.
+liveBookingsForVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
+liveBookingsForVehicle plate = QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) nonTerminalStatuses

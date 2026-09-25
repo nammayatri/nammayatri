@@ -180,6 +180,29 @@ instance ToJSON RideInfo where
               ]
         ]
 
+-- merchantId / driverId are driver-app's: LTS keys the ride record by the pinging driver.
+data RideStartReq = RideStartReq
+  { merchantId :: Text,
+    driverId :: Text,
+    rideInfo :: Maybe RideInfo
+  }
+  deriving (Generic, ToJSON)
+
+data RideEndReq = RideEndReq
+  { lat :: Double,
+    lon :: Double,
+    merchantId :: Text,
+    driverId :: Text,
+    rideInfo :: Maybe RideInfo
+  }
+  deriving (Generic, ToJSON)
+
+data RideEndRes = RideEndRes
+  { rideId :: Text,
+    driverId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
 data SosProviderKind = ERSS
   deriving (Generic, Show, Eq)
 

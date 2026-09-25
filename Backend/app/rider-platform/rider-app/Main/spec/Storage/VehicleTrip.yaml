@@ -67,6 +67,14 @@ VehicleTrip:
           - in:
             - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
 
+    findAllLiveByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - in:
+            - status: "[Domain.Types.VehicleTrip.ACTIVE, Domain.Types.VehicleTrip.PAUSED]|CIM"
+
     closeTrip:
       kvFunction: updateOneWithKV
       params: [status, endReason, endedAt]
@@ -80,6 +88,12 @@ VehicleTrip:
     updateReachedEndAt:
       kvFunction: updateOneWithKV
       params: [reachedEndAt]
+      where: id
+
+    # Pause/resume mirror in Postgres so a Redis flush doesn't silently un-pause the recovered session.
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
       where: id
 
     updateOfflineBoardings:
