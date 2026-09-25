@@ -18,7 +18,6 @@ module SharedLogic.SharedCab.Invariants
   )
 where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingStatus as DFTBS
@@ -29,7 +28,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (isPayOnBoard)
-import SharedLogic.SharedCab.Booking (isSharedCabBooking)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (SessionStatus (ENDED))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -173,14 +172,12 @@ checkBooking bookingId = guarded subject $ do
   where
     subject = "booking " <> bookingId.getId
 
--- | `plate` is canonical. Seats are the booked tickets (ACTIVE or INPROGRESS) of the plate's live bookings.
+-- | `plate` is canonical. Seats are Booking.liveSeatsOnVehicle's, the same count the allocation claim uses.
 checkCab :: InvariantFlow m r => Text -> m ()
 checkCab plate = guarded subject $ do
   mbSession <- Session.getSession plate
   activeTrip <- QVT.findActiveByVehicleNumber plate
-  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFTBS.CONFIRMED]
-  counted <- filterM (fmap not . redisKeyExists . ("sharedcab:degraded:" <>) . getId . (.id)) bookings
-  tickets <- if null counted then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
+  seats <- liveSeatsOnVehicle plate
   let live = do
         s <- mfilter ((/= ENDED) . (.status)) mbSession
         pure LiveSession {vehicleTripId = s.vehicleTripId.getId, capacity = s.capacity, walkupCount = s.walkupCount}
@@ -189,7 +186,7 @@ checkCab plate = guarded subject $ do
       CabFacts
         { liveSession = live,
           activeTripId = getId . (.id) <$> activeTrip,
-          seatsTaken = length $ filter ((`elem` [ACTIVE, INPROGRESS]) . (.status)) tickets
+          seatsTaken = seats
         }
   where
     subject = "cab " <> plate
