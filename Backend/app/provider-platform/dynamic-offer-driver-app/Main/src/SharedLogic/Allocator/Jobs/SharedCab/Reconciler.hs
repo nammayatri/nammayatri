@@ -142,7 +142,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
     else do
       bap <- asks (.appBackendBapInternal)
       (checked, cleared) <- reconcileAll bap.apiKey bap.url 0 (0 :: Int, 0 :: Int)
-      logInfo $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " checked=" <> show checked <> " cleared=" <> show cleared
+      logInfo $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " checked=" <> show (checked :: Int) <> " cleared=" <> show (cleared :: Int)
       JC.createJobIn @_ @'SharedCabReconciler (Just merchantId) (Just merchantOpCityId) sharedCabReconcilerInterval jobData
       pure Complete
   where
