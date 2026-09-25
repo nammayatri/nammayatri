@@ -61,6 +61,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -69,6 +70,7 @@ import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.DriverCoins.IncentiveMetrics as IncentiveMetrics
+import qualified Lib.DriverCoins.IncentiveOverlay as IncentiveOverlay
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
@@ -166,7 +168,7 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
 -- matched per-leg against a config's 'DCT.RidesCompletedInSpecialLocation' scope:
 -- a Pickup/Drop milestone matches on that leg alone (regardless of the other),
 -- and PickupDrop requires both — so we compare the ids, not the whole Area.
-driverCoinsEvent :: (EventFlow m r, Finance.HasActorInfo m r) => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> Maybe SL.Area -> m ()
+driverCoinsEvent :: (EventFlow m r, EsqDBReplicaFlow m r, Finance.HasActorInfo m r) => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> Maybe SL.Area -> m ()
 driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap mbRideArea = do
   let mbRidePickupSpecialLocationId = mbRideArea >>= SL.pickupSpecialZoneIdFromArea
       mbRideDropSpecialLocationId = mbRideArea >>= SL.dropSpecialZoneIdFromArea
@@ -371,7 +373,7 @@ hasNonUnboundedTimeBound cc = case cc.timeBounds of
   Just tb -> tb /= TB.Unbounded
   Nothing -> False
 
-calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTCoinsConfig.CoinsConfig -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> IncentiveMetrics.IncentiveWindowKey -> m Int
+calculateCoins :: (EventFlow m r, EsqDBReplicaFlow m r) => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTCoinsConfig.CoinsConfig -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> IncentiveMetrics.IncentiveWindowKey -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId coinsConfig mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType metricWindow = do
   let eventFunction = coinsConfig.eventFunction
   case eventType of
@@ -416,7 +418,7 @@ hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbex
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DTCoinsConfig.CoinsConfig -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> IncentiveMetrics.IncentiveWindowKey -> m Int
+hEndRide :: (EventFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DTCoinsConfig.CoinsConfig -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> IncentiveMetrics.IncentiveWindowKey -> m Int
 hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTierRide _ride metroRideType tripCategoryType coinsConfig mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType metricWindow = do
   let eventFunction = coinsConfig.eventFunction
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
@@ -425,9 +427,11 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       validRideCount <- case tripCategoryType of
         DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
         DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
-      runActionWhenValidConditions
-        [ pure (validRideCount == a)
-        ]
+      awardRideCompletionIncentiveWithOverlay
+        merchantOpCityId
+        driverId
+        eventFunction
+        [pure (validRideCount == a)]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.RidesCompletedOnServiceTier tier a -> do
       -- Milestone counted within one vehicle service tier. matchesRideScoping (in
@@ -435,7 +439,10 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       -- of that service tier, so the count reaches the threshold on a matching ride.
       scopedCount <- fromMaybe 0 <$> getScopedValidRideCount tripCategoryType driverId (":ServiceTier:" <> show tier)
       logDebug $ "RidesCompletedOnServiceTier - driverId: " <> driverId.getId <> ", serviceTier: " <> show tier <> ", count: " <> show scopedCount <> ", threshold: " <> show a
-      runActionWhenValidConditions
+      awardRideCompletionIncentiveWithOverlay
+        merchantOpCityId
+        driverId
+        eventFunction
         [pure (scopedCount == a)]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.RidesCompletedInSpecialLocation area a -> do
@@ -456,7 +463,10 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
         Just suffix -> do
           scopedCount <- fromMaybe 0 <$> getScopedValidRideCount tripCategoryType driverId suffix
           logDebug $ "RidesCompletedInSpecialLocation - driverId: " <> driverId.getId <> ", area: " <> show area <> ", count: " <> show scopedCount <> ", threshold: " <> show a
-          runActionWhenValidConditions
+          awardRideCompletionIncentiveWithOverlay
+            merchantOpCityId
+            driverId
+            eventFunction
             [pure (scopedCount == a)]
             $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortRidesCompleted a -> do
@@ -473,9 +483,11 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
           <> show validRideCount
           <> ", configTimeBounds: "
           <> show coinsConfig.timeBounds
-      runActionWhenValidConditions
-        [ pure (validRideCount == a)
-        ]
+      awardRideCompletionIncentiveWithOverlay
+        merchantOpCityId
+        driverId
+        eventFunction
+        [pure (validRideCount == a)]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortRidesCompletedSlot slot a -> do
       validRideCount <- getCohortValidRideCount driverId tripCategoryType metricWindow
@@ -492,9 +504,11 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
           <> show validRideCount
           <> ", configTimeBounds: "
           <> show coinsConfig.timeBounds
-      runActionWhenValidConditions
-        [ pure (validRideCount == a)
-        ]
+      awardRideCompletionIncentiveWithOverlay
+        merchantOpCityId
+        driverId
+        eventFunction
+        [pure (validRideCount == a)]
         $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortMetrics metrics -> do
       alreadyAwarded <- isIncentiveConfigAlreadyAwarded driverId coinsConfig transporterConfig.timeDiffFromUtc
@@ -622,6 +636,22 @@ runActionWhenValidConditions conditions action = do
     checkAllConditions (condition : xs) = do
       isValid <- condition
       if isValid then checkAllConditions xs else pure False
+
+awardRideCompletionIncentiveWithOverlay ::
+  (EventFlow m r, EsqDBReplicaFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  DCT.DriverCoinsFunctionType ->
+  [m Bool] ->
+  m Int ->
+  m Int
+awardRideCompletionIncentiveWithOverlay merchantOpCityId driverId eventFunction conditions awardAction = do
+  awarded <- runActionWhenValidConditions conditions awardAction
+  when (awarded > 0) $
+    void $
+      withTryCatch "DriverCoins:sendIncentiveTargetCompletedOverlay" $
+        IncentiveOverlay.sendIncentiveTargetCompletedOverlay merchantOpCityId driverId eventFunction awarded
+  pure awarded
 
 updateEventAndGetCoinsvalue :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType = do
