@@ -21,6 +21,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (allocKey, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
 import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), TimerKind (..), defaultAllocationConfig)
 import SharedLogic.SharedCab.Booking (markDropped, withBookingLock)
+import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -38,7 +39,8 @@ type StopProgressFlow m r c =
     MonadMask m,
     Log m,
     Redis.HedisLTSFlowEnv r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    Events.EventFlow m r
   )
 
 dropClockKey :: Id DFTB.FRFSTicketBooking -> Text
@@ -147,10 +149,10 @@ dropStep spc now mbCab plate b = do
     case dropAction spc now clock mbCab b.toStationCode of
       StartDropClock -> Redis.withMasterRedis $ Redis.setExp (dropClockKey b.id) now (2 * spc.autoEndAfterDropSec)
       AutoEnd -> do
-        markDropped b
-        Session.applyQueuedRoute plate
+        markDropped Events.DroppedByTick b
+        switched <- Session.applyQueuedRoute plate
+        when switched $ releaseUnboarded plate RouteChanged
         Redis.withMasterRedis $ Redis.del (dropClockKey b.id)
-        -- TODO(7.6): Events dropped {by: tick}
         Invariants.checkBooking b.id
         Invariants.checkCab plate
       KeepWaiting -> pure ()
