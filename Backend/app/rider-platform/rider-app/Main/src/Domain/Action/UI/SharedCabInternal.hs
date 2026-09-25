@@ -10,6 +10,7 @@ module Domain.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal as API
+import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -23,6 +24,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified SharedLogic.SharedCab.Demand as Demand
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -187,12 +189,14 @@ sessionRoute integratedBppConfig code = do
         nextStops = map (.stopName) stops
       }
 
--- | Until the tick and allocation land: movement is MOVING, next stops are the whole route,
--- riders/demand are empty and `available` counts walk-ups only.
+-- | Until the tick and allocation land: movement is MOVING, next stops (and so demand ahead) are the
+-- whole route, riders are empty and `available` counts walk-ups only.
 mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
 mkSessionResp s = do
   integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
   route <- sessionRoute integratedBppConfig s.routeCode
+  stops <- routeStops integratedBppConfig s.routeCode
+  demand <- Demand.demandByStop s.merchantOperatingCityId.getId s.routeCode (map (.stopCode) stops)
   queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
   pure
     View.SharedCabSession
@@ -206,7 +210,12 @@ mkSessionResp s = do
         available = s.capacity - s.walkupCount,
         version = s.version,
         ridersByStop = [],
-        demandAhead = [],
+        demandAhead =
+          [ View.DemandAtStop {stopName = stop.stopName, waiting = d.waiting, searching = d.searching, windowMin = Demand.searchWindowMin}
+            | stop <- stops,
+              Just d <- [Map.lookup stop.stopCode demand],
+              d.waiting + d.searching > 0
+          ],
         lowDemandCard = Nothing,
         offRoute = Nothing
       }

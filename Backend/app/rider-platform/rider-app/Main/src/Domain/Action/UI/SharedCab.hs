@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -57,7 +58,6 @@ getSharedCabRoutes (mbPersonId, _) = do
       Just integratedBppConfig -> OTPRest.getRoutesByGtfsId integratedBppConfig >>= mapM (mkRouteInfo integratedBppConfig)
   pure API.SharedCabRouteListResp {routes}
 
--- | Free seats count walk-ups only: app bookings join once allocation can count a plate's live seats.
 getSharedCabRoute :: (Maybe (Id DP.Person), Id DM.Merchant) -> Text -> Environment.Flow API.SharedCabRouteDetailResp
 getSharedCabRoute (mbPersonId, _) routeCode = do
   integratedBppConfig <- findSharedCabConfig mbPersonId >>= fromMaybeM IntegratedBPPConfigNotFound
@@ -65,13 +65,15 @@ getSharedCabRoute (mbPersonId, _) routeCode = do
   routeInfo <- mkRouteInfo integratedBppConfig route
   sessions <- Session.activeSessionsOnRoute routeCode
   positions <- livePositions
-  let mkCab s =
-        API.SharedCabLiveCab
-          { plateLast4 = T.takeEnd 4 s.vehicleNumber,
-            position = Map.lookup s.vehicleNumber positions,
-            freeSeats = max 0 (s.capacity - s.walkupCount)
-          }
-  pure API.SharedCabRouteDetailResp {routeInfo, cabs = map mkCab sessions}
+  cabs <- forM sessions $ \s -> do
+    liveSeats <- liveSeatsOnVehicle s.vehicleNumber
+    pure
+      API.SharedCabLiveCab
+        { plateLast4 = T.takeEnd 4 s.vehicleNumber,
+          position = Map.lookup s.vehicleNumber positions,
+          freeSeats = max 0 (s.capacity - s.walkupCount - liveSeats)
+        }
+  pure API.SharedCabRouteDetailResp {routeInfo, cabs}
   where
     -- A failed LTS read lists the cabs without positions rather than failing the route view.
     livePositions =

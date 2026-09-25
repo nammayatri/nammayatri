@@ -4,6 +4,7 @@ module SharedLogic.SharedCab.LegState
     isSharedCabAgency,
     deriveSharedCabState,
     isDroppable,
+    seatsHeld,
   )
 where
 
@@ -53,3 +54,7 @@ deriveSharedCabState bookingStatus mbVehicleNumber hasLiveSession = case booking
 -- | Tickets the rider still holds; cancelled or finished ones are left alone when the rider gets down.
 isDroppable :: DFRFSTicket.FRFSTicketStatus -> Bool
 isDroppable status = status `elem` [DFRFSTicket.ACTIVE, DFRFSTicket.INPROGRESS]
+
+-- | A seat per ticket the rider still holds (`05` decision 1: quantity = ticket rows).
+seatsHeld :: [DFRFSTicket.FRFSTicketStatus] -> Int
+seatsHeld = length . filter isDroppable

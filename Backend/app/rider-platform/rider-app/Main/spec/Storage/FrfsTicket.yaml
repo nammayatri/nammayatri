@@ -676,6 +676,11 @@ FRFSTicketBooking:
           - vehicleNumber
           - serviceTierType
           - in: [status]
+    # FINDING bookings are the CONFIRMED ones with no vehicleNumber (05 §3); partial index in ddl 1579.
+    findAllByRouteCodeAndServiceTierTypeAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, serviceTierType, status]
 
   extraIndexes:
     - columns: [tripId]

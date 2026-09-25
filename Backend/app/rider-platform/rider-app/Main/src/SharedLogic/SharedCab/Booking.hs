@@ -4,6 +4,8 @@ module SharedLogic.SharedCab.Booking
     ensureCancellable,
     markDropped,
     ridersOnBoard,
+    liveSeatsOnVehicle,
+    findingOnRoute,
   )
 where
 
@@ -17,7 +19,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
-import SharedLogic.SharedCab.LegState (isDroppable)
+import SharedLogic.SharedCab.LegState (isDroppable, seatsHeld)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
@@ -54,3 +56,17 @@ ridersOnBoard plate = do
       tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
       let boarded = [ticket.frfsTicketBookingId | ticket <- tickets, ticket.status == DFRFSTicket.INPROGRESS]
       pure $ filter ((`elem` boarded) . (.id)) bookings
+
+-- | `04` §3: seats app bookings hold on the cab, one per ticket still held (ALLOCATED or BOARDED). `plate` is canonical.
+liveSeatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Int
+liveSeatsOnVehicle plate = do
+  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFRFSTicketBookingStatus.CONFIRMED]
+  if null bookings
+    then pure 0
+    else seatsHeld . map (.status) <$> QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+
+-- | `05` §3: FINDING = CONFIRMED with no cab yet.
+findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]
+findingOnRoute routeCode =
+  filter (isNothing . (.vehicleNumber))
+    <$> QFRFSTicketBooking.findAllByRouteCodeAndServiceTierTypeAndStatus (Just routeCode) (Just Spec.SHARED_CAB) DFRFSTicketBookingStatus.CONFIRMED
