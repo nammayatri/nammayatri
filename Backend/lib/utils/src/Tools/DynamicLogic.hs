@@ -14,13 +14,12 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as DALE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as DALR
-import qualified Lib.Yudhishthira.Storage.CachedQueries.TimeBoundConfig as CTBC
 import qualified Lib.Yudhishthira.Tools.DynamicLogicGroup as LYG
+import qualified Lib.Yudhishthira.Tools.TimeBoundRollout as LYTB
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import Lib.Yudhishthira.Types
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
@@ -118,7 +117,7 @@ getConfigVersion ::
   m (Maybe Int)
 getConfigVersion merchantOpCityId mbConfigInExperimentVersions domain = do
   case mbConfigInExperimentVersions of
-    Nothing -> selectVersionForUnboundedConfigs merchantOpCityId domain Nothing
+    Nothing -> selectVersionForConfigs merchantOpCityId domain Nothing
     Just configInExperimentVersions -> do
       let configVersionMap = find (\a -> a.config == domain) configInExperimentVersions
       return $ configVersionMap <&> (.version)
@@ -161,17 +160,17 @@ getAppDynamicLogic merchantOpCityId domain localTime mbVersion mbToss = do
       logWarning $ "Missing Version, No dynamic logic found for merchantOpCityId: " <> show merchantOpCityId <> " and domain: " <> show domain
       return ([], Nothing)
 
-selectVersionForUnboundedConfigs ::
+selectVersionForConfigs ::
   BeamFlow m r =>
   Id MerchantOperatingCity ->
   LogicDomain ->
   Maybe Int ->
   m (Maybe Int)
-selectVersionForUnboundedConfigs merchantOpCityId domain mbToss =
+selectVersionForConfigs merchantOpCityId domain mbToss =
   selectWithTxnStickiness domain $ do
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
     configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
-    let applicapleConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded") $ filterActiveRollouts configs
+    applicapleConfigs <- LYTB.filterByActiveTimeBound (cast merchantOpCityId) domain (filterActiveRollouts configs) -- Windows are looked up for mocid, so rollout falling back to "default" city can only match "Unbounded".
     mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
 
@@ -221,20 +220,10 @@ selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
     configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
     let activeConfigs = filterActiveRollouts configs
-    allTimeBoundConfigs <- CTBC.findByCityAndDomain (cast merchantOpCityId) domain
-    let boundedTimeBoundConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) allTimeBoundConfigs) localTime
-    let applicapleConfigs =
-          case boundedTimeBoundConfigs of -- if not bounded config found, return all configs with Unbounded timeBounds
-            [] -> unboundedConfigs activeConfigs
-            (x : _) -> do
-              let boundedConfigs = filter (\cfg -> cfg.timeBounds == x.name) activeConfigs
-              if null boundedConfigs
-                then unboundedConfigs activeConfigs
-                else boundedConfigs
+    mbWindowName <- LYTB.activeTimeBoundName (cast merchantOpCityId) domain localTime
+    let applicapleConfigs = LYTB.applicableForTimeBound mbWindowName activeConfigs
     mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
-  where
-    unboundedConfigs = filter (\cfg -> cfg.timeBounds == "Unbounded")
 
 -- | Filter out rollouts that are no longer active (DISCARDED, REVERTED).
 filterActiveRollouts :: [AppDynamicLogicRollout] -> [AppDynamicLogicRollout]
@@ -287,7 +276,7 @@ getConfigVersionMapForStickiness merchantOpCityId = do
   return configVersionMap
   where
     getVersion domain = do
-      mbVersion <- selectVersionForUnboundedConfigs merchantOpCityId domain Nothing
+      mbVersion <- selectVersionForConfigs merchantOpCityId domain Nothing
       case (mbVersion, domain) of
         (Just version, RIDER_CONFIG _) -> return $ Just $ ConfigVersionMap domain version
         (Just version, DRIVER_CONFIG _) -> return $ Just $ ConfigVersionMap domain version
