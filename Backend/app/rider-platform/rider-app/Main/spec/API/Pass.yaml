@@ -81,13 +81,6 @@ types:
     timeOverlappingFrfsBookingsLimit: Maybe Int
     derive: "Show"
 
-  DynamicPricingConfigAPIEntity:
-    percentageSaving: Maybe HighPrecMoney
-    fixedSaving: Maybe HighPrecMoney
-    primaryServiceTier: ServiceTierType
-    maximumPurchaseableTripCount: Int
-    derive: "Show"
-
   DynamicPricedPassAPIEntity:
     id: Id Pass
     code: Text
@@ -97,7 +90,9 @@ types:
     vehicleServiceTierType: "[ServiceTierType]"
     vehicleType: VehicleCategory
     maxDays: Maybe Int
-    dynamicPricingConfig: DynamicPricingConfigAPIEntity
+    frfsOverrideConfig: Maybe FrfsOverrideConfigAPIEntity
+    maximumPurchaseableTripCount: Int
+    referenceServiceTier: ServiceTierType
     frfsCancelLimit: Maybe Int
     documentsRequired: "[PassDocumentType]"
     eligibility: Bool

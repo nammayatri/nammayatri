@@ -586,7 +586,7 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               let adjustedStage = case endIsStageStop of
                     Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
                     _ -> stage -- Use original stage if not found or Nothing
-allStageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+              allStageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
               candidateStageFares <- case serviceTier of
                 Just serviceTier' -> do
                   vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')

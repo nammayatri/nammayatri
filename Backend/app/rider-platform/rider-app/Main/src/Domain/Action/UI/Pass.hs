@@ -504,7 +504,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             overrideBenefitConfigJson = mbOverrideBenefitConfig,
             sourceStopCode = (\(selection, _) -> selection.sourceStopCode) <$> mbDynamicPurchase,
             destinationStopCode = (\(selection, _) -> selection.destinationStopCode) <$> mbDynamicPurchase,
-            maxOverrideableFare = (\(_, priced) -> priced.referenceFare) <$> mbDynamicPurchase,
+            maxOverrideableFare = (\(_, priced) -> priced.perTripPrice) <$> mbDynamicPurchase,
             clientSdkVersion = person.clientSdkVersion,
             createdAt = now,
             updatedAt = now
@@ -613,7 +613,7 @@ postMultimodalPassSelect ::
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
 postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbIsMockPayment mbPassPhotoMediaIdParam mbProfilePicture mbStartDay =
-ActorInfo.withMbPersonIdActorInfo mbPersonId $ postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay Nothing (fromMaybe False mbIsMockPayment)
+  ActorInfo.withMbPersonIdActorInfo mbPersonId $ postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay Nothing (fromMaybe False mbIsMockPayment)
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -896,15 +896,6 @@ mkFrfsOverrideConfig benefit =
       maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
     }
 
-mkDynamicPricingConfig :: FRFSPassOverride.DynamicPricingConfig -> PassAPI.DynamicPricingConfigAPIEntity
-mkDynamicPricingConfig pricing =
-  PassAPI.DynamicPricingConfigAPIEntity
-    { percentageSaving = pricing.percentageSaving >>= \p -> if p.enabled == Just True then Just p.applicableValue else Nothing,
-      fixedSaving = pricing.fixedSaving >>= \f -> if f.enabled == Just True then Just f.applicableValue else Nothing,
-      primaryServiceTier = pricing.primaryServiceTier,
-      maximumPurchaseableTripCount = pricing.maximumPurchaseableTripCount
-    }
-
 findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
 findMerchantOperatingCity merchantShortId opCity =
   CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
@@ -987,6 +978,7 @@ buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass =
   FRFSPassOverride.dynamicPricingFromPass pass >>= \case
     FRFSPassOverride.DynamicallyPriced pricing -> do
       listing <- buildPassListing mbLanguage person eligibilityLogics pass
+      mbBenefit <- FRFSPassOverride.benefitFromPass pass
       pure . Just $
         PassAPI.DynamicPricedPassAPIEntity
           { id = pass.id,
@@ -997,7 +989,9 @@ buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass =
             vehicleServiceTierType = pass.applicableVehicleServiceTiers,
             vehicleType = pass.vehicleType,
             maxDays = pass.maxValidDays,
-            dynamicPricingConfig = mkDynamicPricingConfig pricing,
+            frfsOverrideConfig = mkFrfsOverrideConfig <$> mbBenefit,
+            maximumPurchaseableTripCount = pricing.maximumPurchaseableTripCount,
+            referenceServiceTier = pricing.primaryServiceTier,
             frfsCancelLimit = pass.frfsCancelLimit,
             documentsRequired = pass.documentsRequired,
             eligibility = listing.listingEligibility,
