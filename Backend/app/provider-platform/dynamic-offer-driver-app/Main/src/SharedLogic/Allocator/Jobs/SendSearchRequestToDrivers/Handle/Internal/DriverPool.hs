@@ -91,15 +91,25 @@ isDispatchBudgetExhausted ::
   ( CacheFlow m r
   ) =>
   DriverPoolConfig ->
-  Id DST.SearchTry ->
+  DST.SearchTry ->
   Text ->
   m Bool
-isDispatchBudgetExhausted driverPoolConfig searchTryId transactionId
+isDispatchBudgetExhausted driverPoolConfig searchTry transactionId
   | not (isContinuousBatchingEnabled driverPoolConfig) = isBatchNumExceedLimit driverPoolConfig searchTryId
   | otherwise = do
     mbBatchConfig <- SharedRedisKeys.getBatchConfig transactionId
     case mbBatchConfig of
       Nothing -> isBatchNumExceedLimit driverPoolConfig searchTryId
+      -- The batch config is keyed by transactionId, so a RETRIED / REALLOCATION try shares it
+      -- with the earlier try of the same search. A budget that started before this try existed
+      -- belongs to that earlier try; honouring it would expire the new try before its first batch.
+      Just batchConfig
+        | batchConfig.batchingStartedAt < searchTry.createdAt -> do
+          logInfo $
+            "DispatchBudget from an earlier search try ignored: searchTryId=" <> searchTryId.getId
+              <> " startedAt="
+              <> show batchConfig.batchingStartedAt
+          isBatchNumExceedLimit driverPoolConfig searchTryId
       Just batchConfig -> do
         now <- getCurrentTime
         let exhausted = now >= batchConfig.batchingExpireAt
@@ -109,6 +119,8 @@ isDispatchBudgetExhausted driverPoolConfig searchTryId transactionId
               <> " expireAt="
               <> show batchConfig.batchingExpireAt
         pure exhausted
+  where
+    searchTryId = searchTry.id
 
 previouslyAttemptedDriversKey :: Id DST.SearchTry -> Maybe Bool -> Text
 previouslyAttemptedDriversKey searchTryId consideOnRideDrivers = do

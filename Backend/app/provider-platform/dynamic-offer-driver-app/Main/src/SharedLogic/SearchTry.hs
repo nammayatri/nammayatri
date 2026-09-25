@@ -155,6 +155,15 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
             instantReallocation = maybe True (\scheduleTryTime -> diffUTCTime searchReq.startTime now <= scheduleTryTime) (listToMaybe scheduleTryTimes)
         if not searchTry.isScheduled || (instantReallocation && isRepeatSearch)
           then do
+            -- Write this try's budget before the inline first batch: under CONTINUOUS batching that
+            -- batch checks the budget, and the key is shared with any earlier try of this search.
+            SharedRedisKeys.setBatchConfig searchReq.transactionId $
+              SharedRedisKeys.BatchConfig
+                { totalBatches = driverPoolConfig.maxNumberOfBatches,
+                  batchTime = nominalDiffTimeToSeconds batchTime,
+                  batchingStartedAt = now,
+                  batchingExpireAt = totalBatchTime `addUTCTime` now
+                }
             dispatchStartTime <- getCurrentTime
             (res, _, mbNewScheduleTimeIn) <- sendSearchRequestToDrivers driverPoolConfig searchTry searchBatchInput goHomeCfg
             afterDispatchTime <- getCurrentTime
@@ -166,13 +175,6 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
             case res of
               (ReSchedule _) -> scheduleBatching searchTry inTime'
               _ -> return ()
-            SharedRedisKeys.setBatchConfig searchReq.transactionId $
-              SharedRedisKeys.BatchConfig
-                { totalBatches = driverPoolConfig.maxNumberOfBatches,
-                  batchTime = nominalDiffTimeToSeconds batchTime,
-                  batchingStartedAt = now,
-                  batchingExpireAt = totalBatchTime `addUTCTime` now
-                }
             logInfo $ "initiateDriverSearchBatch: " <> show (totalBatchTime `addUTCTime` now)
           else do
             mbScheduleTime <- getNextScheduleTime driverPoolConfig searchReq now
