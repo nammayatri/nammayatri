@@ -10,9 +10,8 @@ module Domain.Action.UI.SharedCabInternal
 where
 
 import qualified API.Types.UI.SharedCabInternal as API
-import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
-import Data.Time (Day, UTCTime (..), addUTCTime)
+import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Route as DRoute
