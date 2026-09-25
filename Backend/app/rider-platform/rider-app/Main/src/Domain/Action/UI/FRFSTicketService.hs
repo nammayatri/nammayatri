@@ -531,8 +531,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
       Just origin -> tryStationsAPIWithOSRMDistances mId merchantOpCity origin stations integratedBPPConfig
       Nothing -> return stations
 
-postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = withTimeAPI "frfsSearch" "total" $
+postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> Maybe [Spec.ServiceTierType] -> Spec.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (mbPersonId, merchantId) mbCity mbEnforcePassOverride mbHasPasses mbIntegratedBPPConfigId mbNewServiceTiers vehicleType_ req = withTimeAPI "frfsSearch" "total" $
   Metrics.withTimeFRFSMerchant "frfsSearch" "total" merchantId.getId $ do
     personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
     let platformType = fromMaybe DIBC.APPLICATION req.platformType
@@ -611,7 +611,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfig
         <> show finalServiceTier
         <> ", routeCode="
         <> show req.routeCode
-    postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses -- the journey leg upsert function is not required here
+    postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses mbEnforcePassOverride -- the journey leg upsert function is not required here
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -681,8 +681,9 @@ postFrfsSearchHandler ::
   Bool ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId mbHasPasses = do
+postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbFare multimodalSearchRequestId upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId mbHasPasses mbEnforcePassOverride = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType_), becknProtocol = Nothing}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_))) >>= fromMaybeM (InternalError "Beckn Config not found")
   cloudType <- asks (.cloudType)
@@ -704,7 +705,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   searchReqId <- generateGUID
   now <- getCurrentTime
   hasApplicablePass <-
-    if integratedBPPConfig.passOverrideApplicable /= Just True
+    if integratedBPPConfig.passOverrideApplicable /= Just True || not (passOverrideOffered integratedBPPConfig mbEnforcePassOverride)
       then pure Nothing
       else
         if mbHasPasses == Just True
@@ -740,6 +741,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             onSearchFailed = Nothing,
             validTill = Just validTill,
             searchAsParentStops = searchAsParentStops,
+            enforcePassOverride = mbEnforcePassOverride,
             cloudType = cloudType,
             clientSdkVersion = person.clientSdkVersion,
             clientBundleVersion = person.clientBundleVersion,
@@ -759,6 +761,10 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
         Left _ -> return []
   return $ FRFSSearchAPIRes quotes searchReqId
 
+passOverrideOffered :: DIBC.IntegratedBPPConfig -> Maybe Bool -> Bool
+passOverrideOffered integratedBPPConfig mbEnforcePassOverride =
+  integratedBPPConfig.autoOverridePassForFRFS /= Just False || mbEnforcePassOverride == Just True
+
 enrichQuotesWithPassOverride ::
   (CacheFlow m r, EsqDBFlow m r) =>
   DIBC.IntegratedBPPConfig ->
@@ -769,6 +775,7 @@ enrichQuotesWithPassOverride ::
   m [FRFSPassOverride.ApplicablePass]
 enrichQuotesWithPassOverride integratedBppConfig personId search mbClientHasPasses mbTripTime
   | integratedBppConfig.passOverrideApplicable /= Just True = pure []
+  | not (passOverrideOffered integratedBppConfig search.enforcePassOverride) = pure []
   | search.hasApplicablePass == Just False && mbClientHasPasses /= Just True = pure []
   | otherwise = do
     now <- getCurrentTime

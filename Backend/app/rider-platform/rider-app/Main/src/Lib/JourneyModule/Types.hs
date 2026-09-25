@@ -1468,6 +1468,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
       else pure []
   overridePasses <-
     if integratedBPPConfig.passOverrideApplicable /= Just True
+      || not (integratedBPPConfig.autoOverridePassForFRFS /= Just False || frfsSearch.enforcePassOverride == Just True)
       then pure []
       else do
         now' <- getCurrentTime

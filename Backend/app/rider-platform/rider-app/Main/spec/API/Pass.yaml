@@ -81,10 +81,35 @@ types:
     timeOverlappingFrfsBookingsLimit: Maybe Int
     derive: "Show"
 
+  DynamicPricedPassAPIEntity:
+    id: Id Pass
+    code: Text
+    name: Maybe Text
+    description: Maybe Text
+    benefitDescription: Text
+    vehicleServiceTierType: "[ServiceTierType]"
+    vehicleType: VehicleCategory
+    maxDays: Maybe Int
+    frfsOverrideConfig: Maybe FrfsOverrideConfigAPIEntity
+    maximumPurchaseableTripCount: Int
+    referenceServiceTier: ServiceTierType
+    frfsCancelLimit: Maybe Int
+    documentsRequired: "[PassDocumentType]"
+    eligibility: Bool
+    autoApply: Bool
+    verificationStatus: Maybe VerificationStatus
+    formVerificationConfig: Maybe Value
+    referenceNumber: Maybe Int
+    minTripsAllowingOverlap: Maybe Int
+    minDaysToSuggestRenewal: Maybe Int
+    timeOverlappingFrfsBookingsLimit: Maybe Int
+    derive: "Show"
+
   PassInfoAPIEntity:
     passCategory: PassCategoryAPIEntity
     passTypes: "[PassTypeAPIEntity]"
     passes: "[PassAPIEntity]"
+    dynamicPricedPasses: "[DynamicPricedPassAPIEntity]"
     derive: "Show"
 
   PassVerifyReq:
@@ -104,6 +129,24 @@ types:
     imeiNumber: Text
     profilePicture: Maybe Text
     passPhotoMediaId: Maybe (Id MediaFile)
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    numberOfTrips: Maybe Int
+
+  PassCalculatePriceReq:
+    sourceStopCode: Text
+    destinationStopCode: Text
+    numberOfTrips: Int
+    derive: "Show"
+
+  PassCalculatePriceResp:
+    amount: HighPrecMoney
+    perTripPrice: HighPrecMoney
+    referenceFare: HighPrecMoney
+    serviceTier: ServiceTierType
+    numberOfTrips: Int
+    routesConsidered: Int
+    derive: "Show"
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
@@ -214,6 +257,16 @@ apis:
         type: PassSelectReq
       response:
         type: PassSelectionAPIEntity
+
+  - POST:
+      endpoint: /multimodal/pass/{passId}/calculatePrice
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      request:
+        type: PassCalculatePriceReq
+      response:
+        type: PassCalculatePriceResp
 
   - GET:
       endpoint: /multimodal/pass/list

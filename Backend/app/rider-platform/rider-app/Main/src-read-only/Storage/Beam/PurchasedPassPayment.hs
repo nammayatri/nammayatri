@@ -3,6 +3,7 @@
 
 module Storage.Beam.PurchasedPassPayment where
 
+import qualified Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -15,32 +16,36 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data PurchasedPassPaymentT f = PurchasedPassPaymentT
-  { activatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    amount :: B.C f Kernel.Types.Common.HighPrecMoney,
-    availableTripCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    benefitDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
-    benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    endDate :: B.C f Data.Time.Calendar.Day,
-    id :: B.C f Kernel.Prelude.Text,
-    isDashboard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    orderId :: B.C f Kernel.Prelude.Text,
-    passCode :: B.C f Kernel.Prelude.Text,
-    passEnum :: B.C f (Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum),
-    passId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    passName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    passPhotoChangeCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    passPhotoMediaId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    personId :: B.C f Kernel.Prelude.Text,
-    profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    purchasedPassId :: B.C f Kernel.Prelude.Text,
-    startDate :: B.C f Data.Time.Calendar.Day,
-    status :: B.C f Domain.Types.PurchasedPass.StatusType,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { activatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    availableTripCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    benefitDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    benefitType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType)),
+    benefitValue :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    clientSdkVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    destinationStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    endDate :: (B.C f Data.Time.Calendar.Day),
+    id :: (B.C f Kernel.Prelude.Text),
+    isDashboard :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    maxOverrideableFare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    orderId :: (B.C f Kernel.Prelude.Text),
+    overrideBenefitConfigJson :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    passCode :: (B.C f Kernel.Prelude.Text),
+    passEnum :: (B.C f (Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum)),
+    passId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    passName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    passPhotoChangeCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    passPhotoMediaId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    personId :: (B.C f Kernel.Prelude.Text),
+    profilePicture :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    purchasedPassId :: (B.C f Kernel.Prelude.Text),
+    sourceStopCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    startDate :: (B.C f Data.Time.Calendar.Day),
+    status :: (B.C f Domain.Types.PurchasedPass.StatusType),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -50,6 +55,6 @@ instance B.Table PurchasedPassPaymentT where
 
 type PurchasedPassPayment = PurchasedPassPaymentT Identity
 
-$(enableKVPG ''PurchasedPassPaymentT ['id] [['orderId], ['personId], ['purchasedPassId]])
+$(enableKVPG (''PurchasedPassPaymentT) [('id)] [[('orderId)], [('personId)], [('purchasedPassId)]])
 
-$(mkTableInstances ''PurchasedPassPaymentT "purchased_pass_payment")
+$(mkTableInstances (''PurchasedPassPaymentT) "purchased_pass_payment")

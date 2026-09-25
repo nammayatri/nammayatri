@@ -159,6 +159,9 @@ type API =
            "city"
            Kernel.Types.Beckn.Context.City
       :> QueryParam
+           "enforcePassOverride"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "hasPasses"
            Kernel.Prelude.Bool
       :> QueryParam
@@ -543,13 +546,14 @@ postFrfsSearch ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
     Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.FRFSTicketService.FRFSSearchAPIReq ->
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
   )
-postFrfsSearch a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+postFrfsSearch a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1
 
 postFrfsDiscoverySearch ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
