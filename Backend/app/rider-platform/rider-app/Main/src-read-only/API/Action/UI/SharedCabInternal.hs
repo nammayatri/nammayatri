@@ -15,6 +15,7 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.SharedCab.SessionView
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
@@ -52,7 +53,7 @@ type API =
            Kernel.Prelude.Text
       :> Get
            ('[JSON])
-           API.Types.UI.SharedCabInternal.SharedCabSession
+           SharedLogic.SharedCab.SessionView.SharedCabSession
       :<|> "sharedCab"
       :> "seats"
       :> Header
@@ -63,7 +64,7 @@ type API =
            API.Types.UI.SharedCabInternal.SeatsReq
       :> Post
            ('[JSON])
-           API.Types.UI.SharedCabInternal.SharedCabSession
+           SharedLogic.SharedCab.SessionView.SharedCabSession
       :<|> "sharedCab"
       :> "route"
       :> "end"
@@ -75,7 +76,7 @@ type API =
            API.Types.UI.SharedCabInternal.EndRouteReq
       :> Post
            ('[JSON])
-           ((Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabSession))
+           ((Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession))
       :<|> "sharedCab"
       :> "resume"
       :> Header
@@ -86,7 +87,7 @@ type API =
            API.Types.UI.SharedCabInternal.SharedCabDriverReq
       :> Post
            ('[JSON])
-           API.Types.UI.SharedCabInternal.SharedCabSession
+           SharedLogic.SharedCab.SessionView.SharedCabSession
       :<|> "sharedCab"
       :> "trips"
       :> MandatoryQueryParam
@@ -112,16 +113,16 @@ getSharedCabRoutes a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCab
 postSharedCabRouteSelect :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SelectRouteReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SelectRouteResp)
 postSharedCabRouteSelect a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteSelect a2 a1
 
-getSharedCabSession :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabSession)
+getSharedCabSession :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 getSharedCabSession a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.getSharedCabSession a3 a2 a1
 
-postSharedCabSeats :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SeatsReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabSession)
+postSharedCabSeats :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SeatsReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabSeats a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabSeats a2 a1
 
-postSharedCabRouteEnd :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.EndRouteReq -> Environment.FlowHandler (Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabSession))
+postSharedCabRouteEnd :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.EndRouteReq -> Environment.FlowHandler (Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession))
 postSharedCabRouteEnd a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabRouteEnd a2 a1
 
-postSharedCabResume :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SharedCabDriverReq -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabSession)
+postSharedCabResume :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SharedCabDriverReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabResume a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabResume a2 a1
 
 getSharedCabTrips :: (Data.Time.Day -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabTripsResp)

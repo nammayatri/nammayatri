@@ -634,6 +634,7 @@ library
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
+      SharedLogic.SharedCab.SessionView
       SharedLogic.SilentReallocation
       SharedLogic.SosLocationTracking
       SharedLogic.SyncSearchDispatch

@@ -4,93 +4,20 @@ imports:
   VehicleTrip: Domain.Types.VehicleTrip
   VehicleTripStatus: Domain.Types.VehicleTrip
   VehicleTripEndReason: Domain.Types.VehicleTrip
-  HighPrecMoney: Kernel.Types.Common
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   ServiceTierType: BecknV2.FRFS.Enums
-  SessionStatus: SharedLogic.SharedCab.SessionState
-  PauseReason: SharedLogic.SharedCab.SessionState
-  SessionMovement: SharedLogic.SharedCab.SessionState
   SelectRouteMode: SharedLogic.SharedCab.SessionState
+  SharedCabRoute: SharedLogic.SharedCab.SessionView
+  SharedCabSession: SharedLogic.SharedCab.SessionView
 
 module: SharedCabInternal
 
 # Responses are the driver-app /sharedCab/* contract verbatim (driver-app proxies them unchanged);
 # requests add the driver/vehicle identity driver-app resolves from its token.
+# The session payload lives in SharedLogic.SharedCab.SessionView: its `route` field clashes with Servant.route here.
 types:
-  SharedCabRoute:
-    code: Text
-    name: Text
-    direction: Text
-    fromStop: Text
-    toStop: Text
-    distanceKm: Maybe Double
-    isStandRoute: Bool
-
   SharedCabRoutesResp:
     routes: "[SharedCabRoute]"
-
-  SessionRoute:
-    code: Text
-    name: Text
-    direction: Text
-    nextStops: "[Text]"
-
-  RiderStatus:
-    enum: "AT_STOP, MINUTES_AWAY"
-
-  BoardingRider:
-    bookingId: Text
-    firstName: Text
-    seats: Int
-    dropStop: Text
-    fare: HighPrecMoney
-    riderStatus: RiderStatus
-    minutesAway: Maybe Int
-    expiresAt: Maybe UTCTime
-
-  AlightingRider:
-    bookingId: Text
-    firstName: Text
-    seats: Int
-
-  RidersAtStop:
-    stopName: Text
-    boarding: "[BoardingRider]"
-    alighting: "[AlightingRider]"
-
-  DemandAtStop:
-    stopName: Text
-    waiting: Int
-    searching: Int
-    windowMin: Int
-
-  LowDemandAlternative:
-    routeCode: Text
-    name: Text
-    riders: Int
-    windowMin: Int
-    distanceKm: Double
-
-  LowDemandCard:
-    alternatives: "[LowDemandAlternative]"
-
-  OffRoute:
-    nearestRoutes: "[SharedCabRoute]"
-
-  SharedCabSession:
-    route: SessionRoute
-    queuedRoute: Maybe SessionRoute
-    status: SessionStatus
-    pauseReason: Maybe PauseReason
-    movement: SessionMovement
-    capacity: Int
-    walkupCount: Int
-    available: Int
-    version: Int
-    ridersByStop: "[RidersAtStop]"
-    demandAhead: "[DemandAtStop]"
-    lowDemandCard: Maybe LowDemandCard
-    offRoute: Maybe OffRoute
 
   AffectedRider:
     bookingId: Text
@@ -193,7 +120,7 @@ apis:
       request:
         type: EndRouteReq
       response:
-        type: "(Kernel.Prelude.Maybe API.Types.UI.SharedCabInternal.SharedCabSession)"
+        type: "(Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession)"
   - POST:
       endpoint: /sharedCab/resume
       auth: NoAuth

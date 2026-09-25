@@ -25,6 +25,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
+import qualified SharedLogic.SharedCab.SessionView as View
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
@@ -65,7 +66,7 @@ getSharedCabRoutes ibcId driverLat driverLon mbToken = do
       distanceKm route stops =
         realToFrac . (/ 1000) . foldl' min (distanceFrom route.startPoint) $ map distanceFrom (route.endPoint : map (.stopPoint) stops)
       toResp (route, stops) =
-        API.SharedCabRoute
+        View.SharedCabRoute
           { code = route.code,
             name = route.longName,
             direction = routeDirection stops,
@@ -118,18 +119,18 @@ postSharedCabRouteSelect mbToken req = do
 ownSession :: Text -> Text -> Environment.Flow Session
 ownSession driver plate = Session.getSession plate >>= either throwError pure . ownedSession driver
 
-getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow API.SharedCabSession
+getSharedCabSession :: Text -> Text -> Maybe Text -> Environment.Flow View.SharedCabSession
 getSharedCabSession driver plate mbToken = do
   checkToken mbToken
   ownSession driver plate >>= mkSessionResp
 
-postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow API.SharedCabSession
+postSharedCabSeats :: Maybe Text -> API.SeatsReq -> Environment.Flow View.SharedCabSession
 postSharedCabSeats mbToken req = do
   checkToken mbToken
   Session.setWalkupCount req.driverId req.vehicleNumber req.version req.walkupCount >>= mkSessionResp
 
 -- | CHANGE leaves the session as is: the driver picks the next route with route/select, which closes this run.
-postSharedCabRouteEnd :: Maybe Text -> API.EndRouteReq -> Environment.Flow (Maybe API.SharedCabSession)
+postSharedCabRouteEnd :: Maybe Text -> API.EndRouteReq -> Environment.Flow (Maybe View.SharedCabSession)
 postSharedCabRouteEnd mbToken req = do
   checkToken mbToken
   case req.next of
@@ -139,7 +140,7 @@ postSharedCabRouteEnd mbToken req = do
   where
     forced = req.force == Just True
 
-postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow API.SharedCabSession
+postSharedCabResume :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabResume mbToken req = do
   checkToken mbToken
   Session.resume req.driverId req.vehicleNumber >>= mkSessionResp
@@ -164,12 +165,12 @@ getSharedCabTrips date driver mbToken = do
           offlineBoardings = trip.offlineBoardings
         }
 
-sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow API.SessionRoute
+sessionRoute :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow View.SessionRoute
 sessionRoute integratedBppConfig code = do
   mbRoute <- OTPRest.getRouteByRouteId integratedBppConfig code
   stops <- routeStops integratedBppConfig code
   pure
-    API.SessionRoute
+    View.SessionRoute
       { code,
         name = maybe code (.longName) mbRoute,
         direction = routeDirection stops,
@@ -178,13 +179,13 @@ sessionRoute integratedBppConfig code = do
 
 -- | Until the tick and allocation land: movement is MOVING, next stops are the whole route,
 -- riders/demand are empty and `available` counts walk-ups only.
-mkSessionResp :: Session -> Environment.Flow API.SharedCabSession
+mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
 mkSessionResp s = do
   integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
   route <- sessionRoute integratedBppConfig s.routeCode
   queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
   pure
-    API.SharedCabSession
+    View.SharedCabSession
       { route,
         queuedRoute,
         status = s.status,

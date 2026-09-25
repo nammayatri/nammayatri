@@ -127,7 +127,7 @@ filterTransitRoutes riderConfig routes = filterM keepRoute routes
     hasCabComing :: (Hedis.HedisFlow m r, MonadFlow m) => MultiModalLeg -> m Bool
     hasCabComing leg =
       maybe (return False) (fmap (not . null) . SharedCabSession.activeSessionsOnRoute . gtfsIdtoDomainCode) $
-        listToMaybe leg.routeDetails >>= (.gtfsId)
+        KP.listToMaybe leg.routeDetails >>= (.gtfsId)
 
     filterBusRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => [MultiModalLeg] -> m Bool
     filterBusRoutes busLegs = do
