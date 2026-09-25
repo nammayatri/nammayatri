@@ -74,6 +74,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
+import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -93,7 +94,8 @@ type AllocFlow m r =
     MonadMask m,
     Log m,
     Redis.HedisLTSFlowEnv r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    Events.EventFlow m r
   )
 
 -- | Unprefixed keys in the master cloud cell: the tick runs in the scheduler, whose key prefix differs from
@@ -414,11 +416,18 @@ closeLocked cfg bookingId expectedPlate outcome =
         pure (Just b.merchantOperatingCityId)
     _ -> pure Nothing
 
+eventBlame :: Blame -> Events.Blame
+eventBlame = \case
+  BlameDriver -> Events.BlameDriver
+  BlameRider -> Events.BlameRider
+  BlameNone -> Events.BlameNone
+
 -- | Outside every lock, after a close attempt.
 afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe (Id DMOC.MerchantOperatingCity) -> m ()
-afterClose _ bookingId plate _ closed =
-  when (isJust closed) $ do
-    -- TODO(7.6): Events.forBooking (Events.AllocationClosed (show outcome) (blameFor outcome)) once 7.6 merges.
+afterClose _ bookingId plate outcome closed =
+  whenJust closed $ \cityId -> do
+    now <- getCurrentTime
+    Events.emit cityId $ Events.bookingEvent (Events.AllocationClosed (show outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
     Invariants.checkBooking bookingId
     Invariants.checkCab plate
 
@@ -543,7 +552,7 @@ groupAllOn f = map (\grp -> (f (head grp), grp)) . groupBy ((==) `on` f) . sortO
 
 -- | Try ranked candidates, best first (05 §3: "CAS fails or seats gone -> next candidate").
 claimFirst ::
-  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, MonadMask m, Log m, Metrics.CoreMetrics m) =>
+  AllocFlow m r =>
   AllocationConfig ->
   FindingBooking ->
   [RankedCandidate] ->
@@ -555,7 +564,9 @@ claimFirst cfg booking = go (0 :: Int)
       attemptClaim cfg booking c >>= \case
         Right _ -> do
           -- attemptClaim has released both locks by now.
-          -- TODO(7.6): Events.forBooking (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) once 7.6 merges.
+          now <- getCurrentTime
+          Events.emit c.rcSession.merchantOperatingCityId $
+            Events.bookingEvent (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) booking.bookingId.getId (Just c.rcSession.vehicleNumber) (Just booking.routeCode) now
           Invariants.checkBooking booking.bookingId
           Invariants.checkCab c.rcSession.vehicleNumber
           notifyDriverOfAllocation booking c
