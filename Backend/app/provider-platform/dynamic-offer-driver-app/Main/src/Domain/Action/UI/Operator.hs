@@ -50,7 +50,7 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver operator.id (cast driverId)) SGuard.LinkToOperator (SGuard.TargetDriver (cast driverId)) $ do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     when (merchant.overwriteAssociation == Just True) $
-      DomainRC.endAllRCAssociationsAndRemoveVehicle driverId
+      DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig driverId
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
     QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
     Analytics.handleDriverAnalyticsAndFlowStatus

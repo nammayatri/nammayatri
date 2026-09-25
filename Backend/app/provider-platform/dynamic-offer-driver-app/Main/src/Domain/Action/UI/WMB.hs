@@ -202,8 +202,14 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
         WMB.linkFleetBadge driverId merchantId merchantOperatingCityId fleetConfig.fleetOwnerId.getId conductorBadge DFBT.CONDUCTOR
         return $ Just conductorBadge
       Nothing -> pure Nothing
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing (Just merchantId) (Just merchantOperatingCityId)
-  qrStartTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  wmbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  -- The link is created ACTIVE, so the fleet owner's ACTIVE_DRIVER_COUNT must go up with it.
+  -- Hung off onCreated rather than done unconditionally here: a driver starting their second
+  -- trip under the same fleet already has the association, and incrementing again would inflate.
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing (Just merchantId) (Just merchantOperatingCityId) $
+    when wmbTransporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
+      Analytics.incrementFleetOwnerAnalyticsActiveDriverCount wmbTransporterConfig (Just vehicleRouteMapping.fleetOwnerId.getId) driverId
+  let qrStartTransporterConfig = wmbTransporterConfig
   qrStartDriver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   SOnboardingComms.setOnboardingAs qrStartTransporterConfig qrStartDriver DDI.FLEET_DRIVER
   tripTransaction <-
