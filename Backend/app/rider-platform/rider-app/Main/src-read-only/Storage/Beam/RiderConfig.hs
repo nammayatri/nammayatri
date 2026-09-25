@@ -201,6 +201,7 @@ data RiderConfigT f = RiderConfigT
     sharedCabBoardAttemptsPer10Min :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     sharedCabBoardProximityM :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     sharedCabDegradedTimeoutSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    sharedCabEventsTopic :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     sharedCabFallbackAfterSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     sharedCabFindingTimeoutSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     sharedCabLtsMaxAgeSec :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

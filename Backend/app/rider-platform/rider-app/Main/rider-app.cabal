@@ -640,6 +640,7 @@ library
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.DriverAction
+      SharedLogic.SharedCab.Events
       SharedLogic.SharedCab.ExpirySchedule
       SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
@@ -2158,6 +2159,7 @@ test-suite rider-app-test
       SharedCabConfigTests
       SharedCabDemandTests
       SharedCabDriverActionTests
+      SharedCabEventsTests
       SharedCabExpiryTests
       SharedCabInvariantsTests
       SharedCabLegStateTests

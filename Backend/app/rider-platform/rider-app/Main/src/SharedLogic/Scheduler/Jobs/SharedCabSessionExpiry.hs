@@ -18,6 +18,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.JobScheduler
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
+import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.ExpirySchedule (claimTick, scheduleNextExpiry)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -31,7 +32,7 @@ pauseAfter = 15 * 60
 endAfter :: NominalDiffTime
 endAfter = 60 * 60
 
-sharedCabSessionExpiry :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Job 'SharedCabSessionExpiry -> m ExecutionResult
+sharedCabSessionExpiry :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Job 'SharedCabSessionExpiry -> m ExecutionResult
 sharedCabSessionExpiry Job {jobInfo} = do
   let jobData = jobInfo.jobData
   claimed <- claimTick jobData.merchantOperatingCityId
@@ -40,7 +41,7 @@ sharedCabSessionExpiry Job {jobInfo} = do
     else logInfo "sharedCab expiry: another chain ran this tick; dropping this one"
   pure Complete
 
-expireSilentSessions :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> m ()
+expireSilentSessions :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> m ()
 expireSilentSessions mocId = do
   trips <- QVT.findAllLiveByMerchantOperatingCityId mocId
   now <- getCurrentTime
@@ -59,7 +60,7 @@ lastPings now route =
       pure Nothing
     Right vehicles -> pure $ Just (route, M.fromList [(v.vehicleNumber, readPing now (v.vehicleInfo.timestamp >>= parseLtsTimestamp)) | v <- vehicles])
 
-checkTrip :: (LtsFlow m r c, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => M.Map Text (M.Map Text Ping) -> UTCTime -> DVT.VehicleTrip -> m ()
+checkTrip :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r) => M.Map Text (M.Map Text Ping) -> UTCTime -> DVT.VehicleTrip -> m ()
 checkTrip pings now trip = Session.getSession trip.vehicleNumber >>= traverse_ check
   where
     check s = whenJust (M.lookup s.routeCode pings) $ \routePings -> do

@@ -23,6 +23,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
+import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable, seatsHeld)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -49,12 +50,13 @@ ensureCancellable booking = do
     throwError $ InvalidRequest "This shared cab ride has started and can't be cancelled"
 
 -- | "I got down" (R8): tickets still held go USED, which ends the leg and takes the seat out of the cab's live set.
--- TODO(7.4): clear sharedcab:alloc:{bookingId} and emit the drop event once allocation keys exist.
-markDropped :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
+-- TODO(7.4): clear sharedcab:alloc:{bookingId} once allocation keys exist.
+markDropped :: (Events.EventFlow m r, MonadMask m) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
 markDropped booking = withBookingLock booking.id $ do
-  tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
-  forM_ (filter (isDroppable . (.status)) tickets) $ \ticket ->
+  droppable <- filter (isDroppable . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
+  forM_ droppable $ \ticket ->
     QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
+  unless (null droppable) $ Events.forBooking (Events.Dropped Events.DroppedByRider) booking
 
 -- | `04` §4: the cab's bookings with a seat on board (a ticket INPROGRESS). `plate` is canonical.
 ridersOnBoard :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]

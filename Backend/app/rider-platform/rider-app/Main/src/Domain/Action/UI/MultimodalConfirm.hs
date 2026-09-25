@@ -142,6 +142,7 @@ import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.Invariants as SharedCabInvariants
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SpotBooking as SharedCabSpot
@@ -1577,6 +1578,7 @@ withSharedCabCancelGuard mbBooking cancelAction = case mbBooking of
   Just booking
     | SharedCabBooking.isSharedCabBooking booking ->
       SharedCabBooking.withBookingLock booking.id (SharedCabBooking.ensureCancellable booking >> cancelAction)
+        >> SharedCabEvents.forBooking SharedCabEvents.BookingCancelled booking
         >> SharedCabInvariants.checkBooking booking.id
   _ -> cancelAction
 

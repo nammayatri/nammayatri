@@ -298,6 +298,7 @@ RiderConfig:
     nearbyBusRadiusBucketStep: Maybe Meters
     singleModeWalkSpeed: Maybe Double
     kafkaTopicName: Text
+    sharedCabEventsTopic: Maybe Text # Kafka topic for shared-cab events (05 §7); null = shared-cab-events
     staticCustomerIdThresholdDay: Maybe Day
     duesExcludedPaymentPurposes: "Maybe [Text]"
     invoiceLogoUrl: Maybe Text

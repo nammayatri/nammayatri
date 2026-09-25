@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (isPayOnBoard)
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared)
+import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (SessionStatus (ENDED))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -128,12 +129,14 @@ ruleName = \case
   SessionTripMismatch -> "session_trip_mismatch"
   TripWithoutLiveSession -> "trip_without_live_session"
 
-type InvariantFlow m r = (CacheFlow m r, EsqDBFlow m r, MonadFlow m, Metrics.CoreMetrics m)
+type InvariantFlow m r = (Events.EventFlow m r, Metrics.CoreMetrics m)
 
-report :: InvariantFlow m r => Text -> [Violation] -> m ()
-report subject = mapM_ $ \v -> do
+-- | `emitAs` sends the Kafka `invariant_violation` event for the booking or cab the rule is about.
+report :: InvariantFlow m r => Text -> (Events.EventKind -> m ()) -> [Violation] -> m ()
+report subject emitAs = mapM_ $ \v -> do
   logError $ "invariant_violation " <> ruleName v <> " " <> subject <> ": " <> show v
   Metrics.incrementGenericMetrics $ "shared_cab_invariant_violation_" <> ruleName v
+  emitAs $ Events.InvariantViolation (ruleName v) (show v)
 
 -- | A failed read is logged and dropped: the checker must never fail the transition that called it.
 guarded :: InvariantFlow m r => Text -> m () -> m ()
@@ -168,7 +171,8 @@ bookingFacts booking = do
 checkBooking :: InvariantFlow m r => Id DFTB.FRFSTicketBooking -> m ()
 checkBooking bookingId = guarded subject $ do
   mbBooking <- QFRFSTicketBooking.findById bookingId
-  whenJust (mfilter isSharedCabBooking mbBooking) $ bookingFacts >=> report subject . bookingViolations
+  whenJust (mfilter isSharedCabBooking mbBooking) $ \booking ->
+    bookingFacts booking >>= report subject (`Events.forBooking` booking) . bookingViolations
   where
     subject = "booking " <> bookingId.getId
 
@@ -182,7 +186,11 @@ checkCab plate = guarded subject $ do
   let live = do
         s <- mfilter ((/= ENDED) . (.status)) mbSession
         pure LiveSession {vehicleTripId = s.vehicleTripId.getId, capacity = s.capacity, walkupCount = s.walkupCount}
-  report subject $
+  let emitAs k = case (mbSession, activeTrip) of
+        (Just s, _) -> Events.forSession k s
+        (Nothing, Just trip) -> getCurrentTime >>= Events.emit trip.merchantOperatingCityId . Events.sessionEvent k plate trip.routeCode trip.driverId
+        (Nothing, Nothing) -> pure ()
+  report subject emitAs $
     cabViolations
       CabFacts
         { liveSession = live,

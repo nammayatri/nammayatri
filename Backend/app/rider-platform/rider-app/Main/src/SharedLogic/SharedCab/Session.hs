@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
+import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.ExpirySchedule (ensureExpiryJob)
 import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -104,12 +105,12 @@ closeLiveTrip plate reason now =
     >>= traverse_ (\trip -> QVT.closeTrip (closedTripStatus reason) (Just reason) (Just now) trip.id)
 
 -- | LTS moves before anything is persisted; if it fails, the select/change fails and the session stays as it was.
-switchTo :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
+switchTo :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
 switchTo reason newRoute s = do
   now <- getCurrentTime
   tripId <- generateGUID
   let s' = switchRoute newRoute tripId s
-  withAttach (Just s) s' $ replaceLiveTrip reason now (Just s) s'
+  withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s') <* Events.forSession (Events.RouteChanged s.routeCode) s'
 
 -- | The live-trip index (1575) allows one ACTIVE/PAUSED row per plate, so the old run closes before the new one is
 -- created. If creating or saving then fails, the new row (if any) is abandoned and the old one reopened.
@@ -129,18 +130,18 @@ replaceLiveTrip reason now prior s' = do
         >>= either (\e -> logError $ "sharedCab: couldn't undo the trip switch for " <> s'.vehicleNumber <> ": " <> show e) pure
 
 -- | Every end path: close the trip, end the session, then take the cab off its LTS route.
-finish :: (LtsFlow m r c, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
+finish :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
 finish reason s = do
   now <- getCurrentTime
   closeLiveTrip s.vehicleNumber reason now
   ended <- saveSession (Just s) (endSession s)
   detach s
-  pure ended
+  ended <$ Events.forSession (Events.Ended (show reason)) s
 
 -- | Open a session, or change route if this driver already has one (idempotent for the same route).
 -- A change with riders on board (`04` §4) needs a mode: Left lists them when there is none.
 selectRoute ::
-  (ServiceFlow m r, LtsFlow m r c, MonadMask m, JobCreator r m) =>
+  (ServiceFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) =>
   Maybe SelectRouteMode ->
   OpenSessionReq ->
   m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
@@ -164,11 +165,12 @@ selectRoute mode req = withPlateLock plate $ do
       let s = newSession req tripId now prior
       opened <- withAttach Nothing s $ replaceLiveTrip DVT.SESSION_TIMEOUT now prior s
       ensureExpiryJob s.merchantId s.merchantOperatingCityId
+      Events.forSession Events.SessionStarted opened
       pure (Right opened)
   where
     plate = canonicalisePlate req.vehicleNumber
 
-changeRoute :: (LtsFlow m r c, MonadMask m) => Text -> Text -> Text -> m Session
+changeRoute :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> Text -> Text -> m Session
 changeRoute driver rawPlate newRoute = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
   if s.routeCode == newRoute then pure s else switchTo DVT.ROUTE_CHANGED newRoute s
@@ -176,7 +178,7 @@ changeRoute driver rawPlate newRoute = withPlateLock plate $ do
     plate = canonicalisePlate rawPlate
 
 -- | Call after each drop: applies an `afterLastDrop` route change once no rider is left on board.
-applyQueuedRoute :: (LtsFlow m r c, MonadMask m) => Text -> m ()
+applyQueuedRoute :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> m ()
 applyQueuedRoute rawPlate = withPlateLock plate $ do
   mbSession <- readSession plate
   whenJust mbSession $ \s -> whenJust s.queuedRouteCode $ \queued ->
@@ -188,7 +190,7 @@ applyQueuedRoute rawPlate = withPlateLock plate $ do
 
 -- | Refused while riders are on board unless `forced` (`04` §7: forced riders fall to the degraded timeout).
 -- Forced riders are told: a return trip is a route change, an end asks them to confirm their drop.
-endRoute :: (ServiceFlow m r, LtsFlow m r c, MonadMask m) => Text -> Text -> Bool -> EndRouteAction -> m Session
+endRoute :: (ServiceFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> Text -> Bool -> EndRouteAction -> m Session
 endRoute driver rawPlate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
   onBoard <- ridersOnBoard plate
@@ -205,7 +207,7 @@ endRoute driver rawPlate forced action = withPlateLock plate $ do
     plate = canonicalisePlate rawPlate
 
 -- | System end (expiry job, ops): no driver check.
-expire :: (LtsFlow m r c, MonadMask m) => Text -> m Session
+expire :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> m Session
 expire rawPlate =
   withPlateLock plate $
     readSession plate >>= \case
@@ -216,22 +218,23 @@ expire rawPlate =
 
 -- | System-initiated (tick, offline toggle): no driver check. Mirrored to the trip row so flush recovery
 -- restores PAUSED rather than silently resuming.
-pause :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m) => Text -> PauseReason -> m Session
+pause :: (Events.EventFlow m r, MonadMask m) => Text -> PauseReason -> m Session
 pause rawPlate reason = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ maybe (Left SessionNotFound) (pauseSession reason) prior
   QVT.updateStatus DVT.PAUSED s.vehicleTripId
-  saveSession prior s
+  saveSession prior s <* Events.forSession (Events.Paused (show reason)) s
   where
     plate = canonicalisePlate rawPlate
 
-resume :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m, JobCreator r m) => Text -> Text -> m Session
+resume :: (Events.EventFlow m r, MonadMask m, JobCreator r m) => Text -> Text -> m Session
 resume driver rawPlate = do
   resumed <- withPlateLock plate $ do
     prior <- readSession plate
     s <- liftSession $ ownedSession driver prior >>= resumeSession
     QVT.updateStatus DVT.ACTIVE s.vehicleTripId
     saveSession prior s
+  Events.forSession Events.Resumed resumed
   resumed <$ ensureExpiryJob resumed.merchantId resumed.merchantOperatingCityId
   where
     plate = canonicalisePlate rawPlate
