@@ -232,7 +232,11 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
       -- these unresponded requests are being retracted here: count them as expired
       forM_ (M.toList $ M.fromListWith (+) $ map (\srfd -> (srfd.vehicleServiceTier, 1 :: Int)) reOfferedSRFDs) $ \(serviceTier, expiredCount) ->
         TM.addSearchRequestExpiredCount merchantLabel cityLabel (show serviceTier) (SML.searchReqFunnelLabels metricsDistanceBucketEdges searchReq) expiredCount
-      QSRD.setInactiveAndPulledByIds reOfferedSRFDs
+      -- only a still-respondable card is actually pulled off the driver's screen
+      now <- getCurrentTime
+      let (pulledSRFDs, expiredSRFDs) = QSRD.partitionRespondable now reOfferedSRFDs
+      QSRD.setInactiveAndPulledByIds pulledSRFDs
+      QSRD.setInactiveByIds expiredSRFDs
   _ <- QSRD.createMany searchRequestsForDrivers
   -- Charge this dispatch against the "available for rides" budget of every driver that
   -- reached the batch on that boost, dropping the tag from whoever just spent theirs.
