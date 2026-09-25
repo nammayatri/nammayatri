@@ -18,6 +18,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -45,7 +46,7 @@ postBookingCancelAllStuck a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Booking.postBookingCancelAllStuck a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Booking.postBookingCancelAllStuck a4 a3 a1
     )
 
 postBookingSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Dashboard.Common.Booking.MultipleBookingSyncReq -> Environment.FlowHandler Dashboard.Common.Booking.MultipleBookingSyncResp)
@@ -53,5 +54,5 @@ postBookingSyncMultiple a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_SYNC_MULTIPLE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Management.Booking.postBookingSyncMultiple a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Booking.postBookingSyncMultiple a4 a3 a1
     )

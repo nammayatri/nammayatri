@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -47,7 +48,7 @@ postDriverProfileQues ::
     API.Types.UI.DriverProfileQuestions.DriverProfileQuesReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverProfileQues a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfileQuestions.postDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postDriverProfileQues a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverProfileQuestions.postDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getDriverProfileQues ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -57,4 +58,4 @@ getDriverProfileQues ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler API.Types.UI.DriverProfileQuestions.DriverProfileQuesRes
   )
-getDriverProfileQues a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverProfileQuestions.getDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getDriverProfileQues a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverProfileQuestions.getDriverProfileQues (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

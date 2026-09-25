@@ -87,7 +87,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
-import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 
 instance Kernel.Types.HideSecrets.HideSecrets DriverWallet.TopUpRequest where
@@ -610,7 +609,7 @@ postWalletTopup ::
     DriverWallet.TopUpRequest ->
     Environment.Flow PlanSubscribeRes
   )
-postWalletTopup (mbPersonId, merchantId, mocId) = ActorInfo.withMbPersonIdActorInfo mbPersonId . doWalletTopup mbPersonId merchantId mocId
+postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merchantId mocId
   where
     doWalletTopup mbP mId mocId0 r =
       do

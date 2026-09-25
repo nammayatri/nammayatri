@@ -47,4 +47,4 @@ postPaymentRefundRequestInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Mercha
 postPaymentRefundRequestInitiate a6 a5 a4 a3 _clientAutoApprove a1 = do
   accessType <- dashboardRequestorAccessType a4
   let autoApprove = accessType == DDashboardRole.DASHBOARD_ADMIN
-  Domain.Action.Dashboard.AppManagement.Payment.postPaymentRefundRequestInitiate a6 a5 a3 (Kernel.Prelude.Just autoApprove) a1
+  Domain.Action.Dashboard.AppManagement.Payment.postPaymentRefundRequestInitiate a6 a5 a3 (Kernel.Prelude.Just autoApprove) (Kernel.Prelude.Just (dashboardRequestorId a4)) a1

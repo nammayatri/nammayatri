@@ -14,11 +14,18 @@ import qualified "payment" Lib.Payment.API.Payout.Types
 import Servant
 import Servant.Client
 
-type API = ("payout" :> GetPayoutPayoutOrder)
+type API = ("payout" :> GetPayoutPayoutOrderHelper)
 
 type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutOrderResp)
 
-newtype PayoutAPIs = PayoutAPIs {getPayoutPayoutOrder :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp}
+type GetPayoutPayoutOrderHelper =
+  ( "payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Lib.Payment.API.Payout.Types.PayoutOrderResp
+  )
+
+newtype PayoutAPIs = PayoutAPIs {getPayoutPayoutOrder :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp}
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})

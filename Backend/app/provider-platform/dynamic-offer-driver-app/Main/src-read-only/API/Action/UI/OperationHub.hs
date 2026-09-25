@@ -23,6 +23,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -75,7 +76,7 @@ getOperationGetAllHubs ::
     ) ->
     Environment.FlowHandler [Domain.Types.OperationHub.OperationHub]
   )
-getOperationGetAllHubs a1 = withFlowHandlerAPI $ Domain.Action.UI.OperationHub.getOperationGetAllHubs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getOperationGetAllHubs a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.OperationHub.getOperationGetAllHubs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postOperationCreateRequest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -85,7 +86,7 @@ postOperationCreateRequest ::
     API.Types.UI.OperationHub.DriverOperationHubRequest ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postOperationCreateRequest a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.OperationHub.postOperationCreateRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postOperationCreateRequest a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.OperationHub.postOperationCreateRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getOperationGetRequests ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -102,4 +103,4 @@ getOperationGetRequests ::
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) ->
     Environment.FlowHandler API.Types.UI.OperationHub.OperationHubRequestsResp
   )
-getOperationGetRequests a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.OperationHub.getOperationGetRequests (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
+getOperationGetRequests a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a9) $ Domain.Action.UI.OperationHub.getOperationGetRequests (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1

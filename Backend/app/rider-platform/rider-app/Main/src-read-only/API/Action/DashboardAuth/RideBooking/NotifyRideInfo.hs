@@ -19,6 +19,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -39,5 +40,5 @@ postNotifyRideInfoNotifyRideInfo a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/NOTIFY_RIDE_INFO/POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO" a3 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.RideBooking.NotifyRideInfo.postNotifyRideInfoNotifyRideInfo a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.NotifyRideInfo.postNotifyRideInfoNotifyRideInfo a5 a4 a2 a1
     )

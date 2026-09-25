@@ -21,6 +21,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -57,7 +58,7 @@ getInvoice ::
     Kernel.Prelude.UTCTime ->
     Environment.FlowHandler [API.Types.UI.Invoice.InvoiceRes]
   )
-getInvoice a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Invoice.getInvoice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getInvoice a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Invoice.getInvoice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getInvoiceList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -69,4 +70,4 @@ getInvoiceList ::
     Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.Invoice.FinanceInvoiceListRes
   )
-getInvoiceList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Invoice.getInvoiceList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getInvoiceList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a5) $ Domain.Action.UI.Invoice.getInvoiceList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

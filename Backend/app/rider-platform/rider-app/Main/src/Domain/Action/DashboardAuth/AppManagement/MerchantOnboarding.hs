@@ -80,72 +80,72 @@ runDashboardSideHandler handler = case handler.handlerName of
   where
     metadataValue key = snd <$> find (\(k, _) -> k == key) handler.metadata
 
-merchantOnboardingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
-merchantOnboardingInfo a6 a5 a4 a3 _a2 _a1 = do
-  (requestorId, requestorRole) <- requestor a4
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingInfo a6 a5 a3 requestorId requestorRole
+merchantOnboardingInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingInfo merchantShortId opCity dashboardUser onboardingType' = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingInfo merchantShortId opCity onboardingType' requestorId requestorRole
 
-merchantOnboardingStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
-merchantOnboardingStart a6 a5 a4 a3 _a2 _a1 = do
-  (requestorId, requestorRole) <- requestor a4
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStart a6 a5 a3 requestorId requestorRole
+merchantOnboardingStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingStart merchantShortId opCity dashboardUser onboardingType' = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStart merchantShortId opCity onboardingType' requestorId requestorRole
 
-merchantOnboardingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
-merchantOnboardingList a5 a4 a3 _a2 _a1 = do
-  (requestorId, requestorRole) <- requestor a3
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingList a5 a4 requestorId requestorRole
+merchantOnboardingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboarding])
+merchantOnboardingList merchantShortId opCity dashboardUser = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingList merchantShortId opCity requestorId requestorRole
 
-merchantOnboardingStepSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
-merchantOnboardingStepSubmit a7 a6 a5 a4 _a3 _a2 a1 = do
-  (requestorId, requestorRole) <- requestor a5
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepSubmit a7 a6 a4 requestorId requestorRole a1
+merchantOnboardingStepSubmit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow Domain.Types.MerchantOnboarding.MerchantOnboardingAPI)
+merchantOnboardingStepSubmit merchantShortId opCity dashboardUser stepId payload = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepSubmit merchantShortId opCity stepId requestorId requestorRole payload
 
-merchantOnboardingStepUpdatePayload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingStepUpdatePayload a7 a6 a5 a4 _a3 _a2 a1 = do
-  (requestorId, requestorRole) <- requestor a5
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepUpdatePayload a7 a6 a4 requestorId requestorRole a1
+merchantOnboardingStepUpdatePayload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepUpdatePayload merchantShortId opCity dashboardUser stepId payload = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepUpdatePayload merchantShortId opCity stepId requestorId requestorRole payload
 
 -- | The approval also has dashboard-side work to finish, which is why the
 -- application server hands a handler back rather than doing it: the role it
 -- sets lives in the dashboard database.
-merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse)
-merchantOnboardingStepApprove a7 a6 a5 a4 _a3 _a2 a1 = do
-  (requestorId, requestorRole) <- requestor a5
-  resp <- Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepApprove a7 a6 a4 requestorId requestorRole a1
+merchantOnboardingStepApprove :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.ApproveResponse)
+merchantOnboardingStepApprove merchantShortId opCity dashboardUser stepId payload = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  resp <- Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepApprove merchantShortId opCity stepId requestorId requestorRole payload
   whenJust resp.handler runDashboardSideHandler
   Kernel.Prelude.pure resp {API.Types.Dashboard.AppManagement.MerchantOnboarding.handler = Kernel.Prelude.Nothing}
 
-merchantOnboardingStepReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingStepReject a7 a6 a5 a4 _a3 _a2 a1 = do
-  (requestorId, requestorRole) <- requestor a5
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepReject a7 a6 a4 requestorId requestorRole a1
+merchantOnboardingStepReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingStepReject merchantShortId opCity dashboardUser stepId payload = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepReject merchantShortId opCity stepId requestorId requestorRole payload
 
-merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
-merchantOnboardingStepUploadFile a8 a7 a6 a5 a4 _a3 _a2 a1 = do
-  (requestorId, requestorRole) <- requestor a6
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepUploadFile a8 a7 a5 a4 requestorId requestorRole a1
+merchantOnboardingStepUploadFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileRequest -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse)
+merchantOnboardingStepUploadFile merchantShortId opCity dashboardUser stepId payloadKey req = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepUploadFile merchantShortId opCity stepId payloadKey requestorId requestorRole req
 
-merchantOnboardingReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingReject a7 a6 a5 a4 _a3 _a2 a1 = do
-  (requestorId, requestorRole) <- requestor a5
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingReject a7 a6 a4 requestorId requestorRole a1
+merchantOnboardingReject :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Data.Aeson.Value -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingReject merchantShortId opCity dashboardUser onboardingId req = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingReject merchantShortId opCity onboardingId requestorId requestorRole req
 
-merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI])
-merchantOnboadingListAll a9 a8 a7 _a6 _a5 a4 a3 a2 a1 = do
-  (requestorId, requestorRole) <- requestor a7
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboadingListAll a9 a8 requestorId requestorRole a4 a3 a2 a1
+merchantOnboadingListAll :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingStatus -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.OnboardingType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow [Domain.Types.MerchantOnboarding.MerchantOnboardingAPI])
+merchantOnboadingListAll merchantShortId opCity dashboardUser mbStatus mbOnboardingType limit offset = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboadingListAll merchantShortId opCity mbStatus mbOnboardingType limit offset requestorId requestorRole
 
-merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep])
-merchantOnboardingStepList a6 a5 a4 a3 _a2 _a1 = do
-  (requestorId, requestorRole) <- requestor a4
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepList a6 a5 a3 requestorId requestorRole
+merchantOnboardingStepList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.Flow [Domain.Types.MerchantOnboardingStep.MerchantOnboardingStep])
+merchantOnboardingStepList merchantShortId opCity dashboardUser onboardingId = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingStepList merchantShortId opCity onboardingId requestorId requestorRole
 
-merchantOnboardingGetFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
-merchantOnboardingGetFile a7 a6 a5 a4 a3 _a2 _a1 = do
-  (requestorId, requestorRole) <- requestor a5
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingGetFile a7 a6 a4 a3 requestorId requestorRole
+merchantOnboardingGetFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
+merchantOnboardingGetFile merchantShortId opCity dashboardUser onboardingId fileId = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingGetFile merchantShortId opCity onboardingId fileId requestorId requestorRole
 
-merchantOnboardingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-merchantOnboardingCancel a6 a5 a4 a3 _a2 _a1 = do
-  (requestorId, requestorRole) <- requestor a4
-  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingCancel a6 a5 a3 requestorId requestorRole
+merchantOnboardingCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+merchantOnboardingCancel merchantShortId opCity dashboardUser onboardingId = do
+  (requestorId, requestorRole) <- requestor dashboardUser
+  Domain.Action.Dashboard.AppManagement.MerchantOnboarding.merchantOnboardingCancel merchantShortId opCity onboardingId requestorId requestorRole

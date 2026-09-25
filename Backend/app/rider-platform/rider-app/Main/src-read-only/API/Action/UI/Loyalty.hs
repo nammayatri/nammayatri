@@ -19,6 +19,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -32,7 +33,7 @@ handler :: Environment.FlowServer API
 handler = postWalletLoyaltyInfo :<|> postRiderMonthlyExpense
 
 postWalletLoyaltyInfo :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.Loyalty.LoyaltyInfoResp)
-postWalletLoyaltyInfo a1 = withFlowHandlerAPI $ Domain.Action.UI.Loyalty.postWalletLoyaltyInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postWalletLoyaltyInfo a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Loyalty.postWalletLoyaltyInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postRiderMonthlyExpense :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.Loyalty.MonthlyExpenseResp)
-postRiderMonthlyExpense a1 = withFlowHandlerAPI $ Domain.Action.UI.Loyalty.postRiderMonthlyExpense (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+postRiderMonthlyExpense a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Loyalty.postRiderMonthlyExpense (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

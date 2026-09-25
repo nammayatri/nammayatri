@@ -23,6 +23,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -115,7 +116,7 @@ getV2FrfsRoute ::
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSRouteAPI
   )
-getV2FrfsRoute a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+getV2FrfsRoute a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a6) $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsRoute (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getV2FrfsTripRouteManifest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -126,7 +127,7 @@ getV2FrfsTripRouteManifest ::
     Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSTripPassengerManifestResp
   )
-getV2FrfsTripRouteManifest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsTripRouteManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getV2FrfsTripRouteManifest a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsTripRouteManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postFrfsFleetOperatorTripAction ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -136,7 +137,7 @@ postFrfsFleetOperatorTripAction ::
     API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionReq ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionResp
   )
-postFrfsFleetOperatorTripAction a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorTripAction (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postFrfsFleetOperatorTripAction a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorTripAction (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postFrfsFleetOperatorCurrentOperation ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -146,7 +147,7 @@ postFrfsFleetOperatorCurrentOperation ::
     API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationReq ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationResp
   )
-postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postFrfsFleetOperatorActiveManifest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -156,7 +157,7 @@ postFrfsFleetOperatorActiveManifest ::
     API.Types.UI.FRFSFleetOperator.FRFSActiveManifestReq ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
   )
-postFrfsFleetOperatorActiveManifest a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorActiveManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postFrfsFleetOperatorActiveManifest a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorActiveManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getV2FrfsBusTripSchedule ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -168,4 +169,4 @@ getV2FrfsBusTripSchedule ::
     Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.BusTripScheduleResp
   )
-getV2FrfsBusTripSchedule a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsBusTripSchedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getV2FrfsBusTripSchedule a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsBusTripSchedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

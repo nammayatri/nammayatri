@@ -30,8 +30,9 @@ getPayoutPayoutOrder ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Text ->
   Flow PayoutTypes.PayoutOrderResp
-getPayoutPayoutOrder merchantShortId opCity payoutOrderId = do
+getPayoutPayoutOrder merchantShortId opCity payoutOrderId _mbRequestorId = do
   (merchant, _, timeZoneDiff) <- resolveMerchantOpCityAndTz merchantShortId opCity
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
   unless (payoutOrder.merchantId == merchant.id.getId) $

@@ -22,6 +22,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
@@ -60,32 +61,32 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getRideList merchantId city :<|> getRideInfo merchantId city :<|> cancellationChargesWaiveOff merchantId city :<|> getShareRideInfo merchantId city :<|> getShareRideInfoByShortId merchantId city :<|> getRideTripRoute merchantId city :<|> getRidePickupRoute merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRidePayoutOfferSync merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideKaptureList merchantId city :<|> getRideFlowDebugBap merchantId city
 
 getRideList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe API.Types.RiderPlatform.Management.Ride.BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideListRes)
-getRideList a11 a10 _a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1
+getRideList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a9 $ Domain.Action.Dashboard.Ride.getRideList a11 a10 a8 a7 a6 a5 a4 a3 a2 a1
 
 getRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.RideInfoRes)
-getRideInfo a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideInfo a4 a3 a1
+getRideInfo a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Ride.getRideInfo a4 a3 a1
 
 cancellationChargesWaiveOff :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.CancellationChargesWaiveOffRes)
-cancellationChargesWaiveOff a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.cancellationChargesWaiveOff a4 a3 a1
+cancellationChargesWaiveOff a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Ride.cancellationChargesWaiveOff a4 a3 a1
 
 getShareRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
-getShareRideInfo a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getShareRideInfo a3 a2 a1
+getShareRideInfo a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.Ride.getShareRideInfo a3 a2 a1
 
 getShareRideInfoByShortId :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.ShortId Dashboard.Common.Ride -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.ShareRideInfoRes)
-getShareRideInfoByShortId a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getShareRideInfoByShortId a3 a2 a1
+getShareRideInfoByShortId a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.Ride.getShareRideInfoByShortId a3 a2 a1
 
 getRideTripRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
-getRideTripRoute a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideTripRoute a5 a4 a3 a2 a1
+getRideTripRoute a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.Ride.getRideTripRoute a5 a4 a3 a2 a1
 
 getRidePickupRoute :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Environment.FlowHandler Kernel.External.Maps.GetRoutesResp)
-getRidePickupRoute a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRidePickupRoute a5 a4 a3 a2 a1
+getRidePickupRoute a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.Ride.getRidePickupRoute a5 a4 a3 a2 a1
 
 postRideSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
 postRideSyncMultiple a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC_MULTIPLE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Ride.postRideSyncMultiple a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Ride.postRideSyncMultiple a4 a3 a1
     )
 
 postRidePayoutOfferSync :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Ride.MultipleRideSyncReq -> Environment.FlowHandler Dashboard.Common.Ride.MultipleRideSyncResp)
@@ -93,7 +94,7 @@ postRidePayoutOfferSync a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/RIDE/POST_RIDE_PAYOUT_OFFER_SYNC" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Ride.postRidePayoutOfferSync a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)) a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Ride.postRidePayoutOfferSync a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)) a1
     )
 
 postRideCancelMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Ride.MultipleRideCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -101,11 +102,11 @@ postRideCancelMultiple a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/RIDE/POST_RIDE_CANCEL_MULTIPLE" a2 (Kernel.Prelude.Just a1)
-        Domain.Action.Dashboard.Ride.postRideCancelMultiple a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Ride.postRideCancelMultiple a4 a3 a1
     )
 
 getRideKaptureList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.RiderPlatform.Management.Ride.TicketRideListRes)
-getRideKaptureList a7 a6 _a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideKaptureList a7 a6 a4 a3 a2 a1
+getRideKaptureList a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.Ride.getRideKaptureList a7 a6 a4 a3 a2 a1
 
 getRideFlowDebugBap :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Dashboard.Common.RideDebug.BAPSideDebug)
-getRideFlowDebugBap a9 a8 _a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Ride.getRideFlowDebugBap a9 a8 a6 a5 a4 a3 a2 a1
+getRideFlowDebugBap a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.Ride.getRideFlowDebugBap a9 a8 a6 a5 a4 a3 a2 a1

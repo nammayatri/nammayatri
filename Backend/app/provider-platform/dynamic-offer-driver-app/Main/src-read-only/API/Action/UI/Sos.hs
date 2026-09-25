@@ -23,6 +23,7 @@ import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Sos
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
@@ -70,7 +71,7 @@ getSosGetDetails ::
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
     Environment.FlowHandler API.Types.UI.Sos.SosDetailsRes
   )
-getSosGetDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosGetDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSosGetDetails a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.getSosGetDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosCreate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -80,7 +81,7 @@ postSosCreate ::
     API.Types.UI.Sos.SosReq ->
     Environment.FlowHandler API.Types.UI.Sos.SosRes
   )
-postSosCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postSosCreate a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Sos.postSosCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosMarkRideAsSafe ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -91,7 +92,7 @@ postSosMarkRideAsSafe ::
     API.Types.UI.Sos.MarkAsSafeReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postSosMarkRideAsSafe a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postSosMarkRideAsSafe a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getSosRideDetails :: (Kernel.Types.Id.ShortId Domain.Types.Ride.Ride -> Environment.FlowHandler API.Types.UI.Sos.RideDetailsForDriverRes)
-getSosRideDetails a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosRideDetails a1
+getSosRideDetails a1 = withFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.UI.Sos.getSosRideDetails a1

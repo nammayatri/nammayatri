@@ -20,6 +20,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API = (TokenAuth :> "cityConfigs" :> Get '[JSON] API.Types.UI.Merchant.CityConfigs)
@@ -34,4 +35,4 @@ getCityConfigs ::
     ) ->
     Environment.FlowHandler API.Types.UI.Merchant.CityConfigs
   )
-getCityConfigs a1 = withFlowHandlerAPI $ Domain.Action.UI.Merchant.getCityConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+getCityConfigs a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Merchant.getCityConfigs (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
