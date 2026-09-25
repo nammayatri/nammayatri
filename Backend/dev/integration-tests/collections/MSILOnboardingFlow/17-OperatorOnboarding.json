@@ -1,0 +1,398 @@
+{
+	"info": {
+		"name": "Operator",
+		"description": "Operator creation only — the one flow with no upstream dependency.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "001 - Admin Login — credential check only (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/login",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"login"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{dashboard_admin_email}}\",\n  \"password\": \"{{dashboard_admin_password}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Credential check only — this step deliberately captures NO token.",
+							"// Local deployments run with is2faMandatory=true and is2faEnabled=false, so",
+							"// password login resolves the person but returns authToken=\"\" with the message",
+							"// '2 Factor authentication is not enabled, it is mandatory for this deployment'.",
+							"// The MSIL admin credential is minted in step 02 instead, from the seeded",
+							"// registration_token — see the TOKENS note in the collection description.",
+							"pm.test('admin login 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('resolved the seeded JUSPAY_ADMIN person', () => pm.expect(d.role).to.eql('JUSPAY_ADMIN'));",
+							"console.log('is2faMandatory:', d.is2faMandatory, '| is2faEnabled:', d.is2faEnabled, '| merchantId:', d.merchantId, '| city:', d.city, '| message:', d.message);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "002 - City Switch → MSIL_PARTNER/Delhi (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token_ny}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/switchMerchantAndCity",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"switchMerchantAndCity"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"merchantId\": \"{{dashboard_merchant_id}}\",\n  \"city\": \"{{dashboard_city}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Exercises cross-merchant access: the Bangalore/NAMMA_YATRI-scoped admin token is",
+							"// re-scoped to MSIL_PARTNER/Delhi and a fresh LoginRes.authToken comes back.",
+							"// That token is stored as `msilAdminToken` and is THE admin credential for every",
+							"// later MSIL_PARTNER/Delhi dashboard call in this and subsequent flows.",
+							"pm.test('switch merchant 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('switched authToken present', () => pm.expect(d.authToken).to.be.a('string').and.not.empty);",
+							"pm.test('scoped to MSIL_PARTNER', () => pm.expect(d.merchantId).to.eql(pm.environment.get('dashboard_merchant_id')));",
+							"// Requests take the City by name ('Delhi'); responses serialise it as an STD code",
+							"// ('std:011'), hence the separate dashboard_city_std env var.",
+							"pm.test('scoped to Delhi', () => pm.expect(d.city).to.eql(pm.environment.get('dashboard_city_std')));",
+							"pm.collectionVariables.set('msilAdminToken', d.authToken);",
+							"console.log('msilAdminToken set:', d.authToken);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "003 - Current Merchant/City — assert msilAdminToken scope (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/getCurrentMerchant",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"getCurrentMerchant"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Proves the token minted by step 02 really is scoped to MSIL_PARTNER/Delhi,",
+							"// rather than trusting the switch response alone.",
+							"pm.test('getCurrentMerchant 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('merchant is MSIL_PARTNER', () => pm.expect(d.merchantId).to.eql(pm.environment.get('dashboard_merchant_id')));",
+							"pm.test('operatingCity is Delhi', () => pm.expect(d.operatingCity).to.eql(pm.environment.get('dashboard_city_std')));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "004 - Grant Operator Role API Access — fleetOperatorInfo (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/admin/roles/{{operator_role_id}}/assignAccessLevel",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"admin",
+						"roles",
+						"{{operator_role_id}}",
+						"assignAccessLevel"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"apiEntity\": \"DSL\",\n  \"userActionType\": \"PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_OPERATOR_INFO\",\n  \"userAccessType\": \"USER_FULL_ACCESS\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// operator_role_id is the DASHBOARD_OPERATOR role seeded by config-sync",
+							"// (atlas_bpp_dashboard/role_insert_0000.sql). assignAccessLevel upserts the",
+							"// access_matrix row, so re-running this step is safe.",
+							"pm.test('assignAccessLevel 200', () => pm.response.to.have.status(200));",
+							"pm.test('APISuccess', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "005 - Create Operator (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/register",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"operator",
+						"register"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"firstName\": \"MSIL\",\n  \"lastName\": \"Operator\",\n  \"email\": \"{{_test_operator_email}}\",\n  \"mobileNumber\": \"{{_test_operator_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Fresh operator identity on EVERY execution of this step.",
+							"// operator/register rejects an already-used mobile OR email with",
+							"// 400 INVALID_REQUEST 'Phone or Email already registered'. The dashboard's variable",
+							"// store survives between runs, so a `if (!get(...))` guard would replay the previous",
+							"// run's number and fail on the second run. Unguarded = idempotent across re-runs.",
+							"var opMob = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+							"pm.collectionVariables.set('_test_operator_mobile', opMob);",
+							"pm.collectionVariables.set('_test_operator_email', 'msil.operator.' + opMob + '@example.com');",
+							"console.log('generated operator mobile:', opMob);"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// The dashboard-facing route returns APISuccess ({\"result\":\"Success\"}) — the personId",
+							"// lives only on the internal BPP helper, so operatorId is captured later from",
+							"// fleetOperatorInfo (step 08) instead.",
+							"pm.test('operator register 200', () => pm.response.to.have.status(200));",
+							"pm.test('APISuccess', () => pm.expect(pm.response.json().result).to.eql('Success'));",
+							"console.log('operator created with mobile:', pm.collectionVariables.get('_test_operator_mobile'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "006 - Operator Login OTP (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"login",
+						"otp"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"mobileNumber\": \"{{_test_operator_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Unauthenticated by design — this is the operator's own login, not an admin call.",
+							"pm.test('operator login otp 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "007 - Operator Verify OTP (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"verify",
+						"otp"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"mobileNumber\": \"{{_test_operator_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\",\n  \"otp\": \"{{login_otp}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// OTP is the fixed fake-SMS value (transporter_config.useFakeSms) — env var login_otp.",
+							"pm.test('operator verify otp 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('authToken returned', () => pm.expect(d.authToken).to.be.a('string').and.not.empty);",
+							"pm.collectionVariables.set('operatorToken', d.authToken);",
+							"console.log('operatorToken set:', d.authToken);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "008 - Operator Info (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleetOperatorInfo?mobileNumber={{_test_operator_mobile}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"fleetOperatorInfo"
+					],
+					"query": [
+						{
+							"key": "mobileNumber",
+							"value": "{{_test_operator_mobile}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Reads back with the operator's OWN token, which proves the DASHBOARD_OPERATOR role",
+							"// really did get GET_DRIVER_FLEET_OPERATOR_INFO from Admin Login step 04.",
+							"// This is also where operatorId comes from: operator/register returns only APISuccess.",
+							"pm.test('fleetOperatorInfo 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('operator id returned', () => pm.expect(d.id).to.be.a('string').and.not.empty);",
+							"pm.test('role is OPERATOR', () => pm.expect(d.roleName).to.eql('OPERATOR'));",
+							"// referralCode exists only because transporter_config.generateReferralCodeForOperator=true",
+							"// for MSIL/Delhi; the driver's link-to-operator step later consumes it.",
+							"pm.test('referralCode generated', () => pm.expect(d.referralCode).to.be.a('string').and.not.empty);",
+							"pm.collectionVariables.set('operatorId', d.id);",
+							"pm.collectionVariables.set('operatorCode', d.referralCode);",
+							"console.log('operatorId:', d.id, '| operatorCode:', d.referralCode);"
+						]
+					}
+				}
+			]
+		}
+	]
+}

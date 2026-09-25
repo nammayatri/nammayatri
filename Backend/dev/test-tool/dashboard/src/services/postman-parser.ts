@@ -67,6 +67,13 @@ export interface FormdataField {
   type: 'text' | 'file';
   /** For text fields: value template (may contain {{vars}}). Unused for file fields. */
   value?: string;
+  /**
+   * For file fields: Postman's `src`. A collection-relative path (e.g.
+   * `fixtures/doc-image.png`) is fetched from context-api and attached automatically,
+   * so multipart steps run with no manual file picking. Absolute paths and
+   * Postman-cloud refs (`postman-cloud:///…`) are ignored — they exist on no other machine.
+   */
+  src?: string;
   /** Free-text hint shown in the UI next to the file picker (from Postman `description`). */
   description?: string;
 }
@@ -205,6 +212,7 @@ function parseItem(item: PostmanItem, index: number, envVars: Record<string, str
           key: f.key,
           type: (f.type === 'file' ? 'file' : 'text') as 'text' | 'file',
           value: f.value,
+          src: typeof f.src === 'string' ? f.src : undefined,
           description: f.description,
         }))
       : null;

@@ -295,19 +295,55 @@ export interface PostmanStepResult extends ApiResult {
   skipped?: boolean;
 }
 
+// Fixtures a collection ships in the repo, keyed `<dir>/<src>`. Cached per session so a
+// collection with 19 multipart steps fetches the shared image once, not 19 times.
+const _fixtureCache: Record<string, Promise<File | null>> = {};
+
+/**
+ * Resolve a formdata file field's `src` to a File by fetching the fixture the collection
+ * ships at `collections/<dir>/<src>`, so multipart steps need no manual attachment.
+ *
+ * Null for anything not collection-relative — Postman-cloud refs (`postman-cloud:///…`)
+ * and absolute machine paths (`/Users/…/pic.png`) survive an export but resolve nowhere
+ * else, so those fall back to the file picker.
+ */
+function resolveFixtureFile(dir: string | undefined, src: string | undefined): Promise<File | null> {
+  if (!dir || !src || src.includes('://') || src.startsWith('/') || src.includes('..')) {
+    return Promise.resolve(null);
+  }
+  const key = `${dir}/${src}`;
+  if (!_fixtureCache[key]) {
+    _fixtureCache[key] = (async () => {
+      try {
+        const resp = await fetch(`${PROXY_BASE}/api/collection-asset/${key}`);
+        if (!resp.ok) return null;
+        const blob = await resp.blob();
+        return new File([blob], src.split('/').pop() || 'fixture', {
+          type: blob.type || 'application/octet-stream',
+        });
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return _fixtureCache[key];
+}
+
 /**
  * Execute a Postman collection step with variable substitution, script execution, and log capture.
  *
- * @param attachments  Files attached to this step's `formdata` file fields,
- *                     keyed by the formdata field's `key`. When a step has
- *                     `formdataFields` containing a `type: 'file'` entry and
- *                     no attachment is provided for that key, the step
- *                     self-skips (analogous to `pm.execution.skipRequest`).
+ * @param attachments   Files for this step's `formdata` file fields, keyed by the field's
+ *                      `key`. Takes precedence over the collection's own `src` fixture.
+ * @param collectionDir Directory under `integration-tests/collections/`, used to resolve a
+ *                      file field's `src` fixture. A `type: 'file'` field with neither an
+ *                      attachment nor a resolvable fixture makes the step self-skip
+ *                      (analogous to `pm.execution.skipRequest`).
  */
 export async function callPostmanStep(
   step: ParsedStep,
   stores: VariableStores,
   attachments?: Record<string, File>,
+  collectionDir?: string,
 ): Promise<PostmanStepResult> {
   // 1. Execute prerequest script (variable init only, delays handled by test script)
   if (step.prereqScript) {
@@ -360,17 +396,23 @@ export async function callPostmanStep(
   let body: any = undefined;
   let isMultipart = false;
   if (step.formdataFields && step.formdataFields.length > 0) {
-    // Any file field without an attachment => user did not opt in for this step;
-    // treat as a skip so the rest of the collection still runs.
-    const missingFile = step.formdataFields.find(
-      f => f.type === 'file' && !(attachments && attachments[f.key])
-    );
+    // Each file field resolves to a File from, in order: a picker attachment, or the
+    // fixture the collection ships at its `src`. Only a field with neither is a skip,
+    // so a collection carrying its own fixtures runs unattended.
+    const files: Record<string, File> = {};
+    for (const f of step.formdataFields) {
+      if (f.type !== 'file') continue;
+      const attached = attachments && attachments[f.key];
+      const file = attached || (await resolveFixtureFile(collectionDir, f.src));
+      if (file) files[f.key] = file;
+    }
+    const missingFile = step.formdataFields.find(f => f.type === 'file' && !files[f.key]);
     if (missingFile) {
       return {
         ok: true, status: 0, data: null, elapsed: 0, upstreamMs: 0,
         assertions: [],
         consoleLogs: [
-          `[skip] "${step.name}" — no file attached for formdata field "${missingFile.key}". Attach a file in the step's file picker to run this step.`,
+          `[skip] "${step.name}" — no file for formdata field "${missingFile.key}". Attach one in the step's file picker, or give the field a "src" fixture committed under the collection directory.`,
         ],
         serviceLogs: {},
         resolvedUrl: step.pathTemplate,
@@ -383,7 +425,7 @@ export async function callPostmanStep(
     const fd = new FormData();
     for (const f of step.formdataFields) {
       if (f.type === 'file') {
-        const file = attachments![f.key];
+        const file = files[f.key];
         fd.append(f.key, file, file.name);
       } else {
         fd.append(f.key, resolveVariables(f.value ?? '', stores));

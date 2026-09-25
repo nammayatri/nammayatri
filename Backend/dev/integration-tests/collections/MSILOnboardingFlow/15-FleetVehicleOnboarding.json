@@ -1,0 +1,5873 @@
+{
+	"info": {
+		"name": "Fleet Vehicle",
+		"description": "Fleet vehicle onboarding (a fleet owner is onboarded first as its prerequisite), then BOT and admin rejection cycles.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "001 - Admin Login — credential check only (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/login",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"login"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{dashboard_admin_email}}\",\n  \"password\": \"{{dashboard_admin_password}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Credential check only — this step deliberately captures NO token.",
+							"// Local deployments run with is2faMandatory=true and is2faEnabled=false, so",
+							"// password login resolves the person but returns authToken=\"\" with the message",
+							"// '2 Factor authentication is not enabled, it is mandatory for this deployment'.",
+							"// The MSIL admin credential is minted in step 02 instead, from the seeded",
+							"// registration_token — see the TOKENS note in the collection description.",
+							"pm.test('admin login 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('resolved the seeded JUSPAY_ADMIN person', () => pm.expect(d.role).to.eql('JUSPAY_ADMIN'));",
+							"console.log('is2faMandatory:', d.is2faMandatory, '| is2faEnabled:', d.is2faEnabled, '| merchantId:', d.merchantId, '| city:', d.city, '| message:', d.message);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "002 - City Switch → MSIL_PARTNER/Delhi (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token_ny}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/switchMerchantAndCity",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"switchMerchantAndCity"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"merchantId\": \"{{dashboard_merchant_id}}\",\n  \"city\": \"{{dashboard_city}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Exercises cross-merchant access: the Bangalore/NAMMA_YATRI-scoped admin token is",
+							"// re-scoped to MSIL_PARTNER/Delhi and a fresh LoginRes.authToken comes back.",
+							"// That token is stored as `msilAdminToken` and is THE admin credential for every",
+							"// later MSIL_PARTNER/Delhi dashboard call in this and subsequent flows.",
+							"pm.test('switch merchant 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('switched authToken present', () => pm.expect(d.authToken).to.be.a('string').and.not.empty);",
+							"pm.test('scoped to MSIL_PARTNER', () => pm.expect(d.merchantId).to.eql(pm.environment.get('dashboard_merchant_id')));",
+							"// Requests take the City by name ('Delhi'); responses serialise it as an STD code",
+							"// ('std:011'), hence the separate dashboard_city_std env var.",
+							"pm.test('scoped to Delhi', () => pm.expect(d.city).to.eql(pm.environment.get('dashboard_city_std')));",
+							"pm.collectionVariables.set('msilAdminToken', d.authToken);",
+							"console.log('msilAdminToken set:', d.authToken);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "003 - Current Merchant/City — assert msilAdminToken scope (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/getCurrentMerchant",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"getCurrentMerchant"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Proves the token minted by step 02 really is scoped to MSIL_PARTNER/Delhi,",
+							"// rather than trusting the switch response alone.",
+							"pm.test('getCurrentMerchant 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('merchant is MSIL_PARTNER', () => pm.expect(d.merchantId).to.eql(pm.environment.get('dashboard_merchant_id')));",
+							"pm.test('operatingCity is Delhi', () => pm.expect(d.operatingCity).to.eql(pm.environment.get('dashboard_city_std')));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "004 - Grant Operator Role API Access — fleetOperatorInfo (Dashboard)",
+			"_group": "Admin Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/admin/roles/{{operator_role_id}}/assignAccessLevel",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"admin",
+						"roles",
+						"{{operator_role_id}}",
+						"assignAccessLevel"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"apiEntity\": \"DSL\",\n  \"userActionType\": \"PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_OPERATOR_INFO\",\n  \"userAccessType\": \"USER_FULL_ACCESS\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// operator_role_id is the DASHBOARD_OPERATOR role seeded by config-sync",
+							"// (atlas_bpp_dashboard/role_insert_0000.sql). assignAccessLevel upserts the",
+							"// access_matrix row, so re-running this step is safe.",
+							"pm.test('assignAccessLevel 200', () => pm.response.to.have.status(200));",
+							"pm.test('APISuccess', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "005 - Create Operator (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/operator/register",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"operator",
+						"register"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"firstName\": \"MSIL\",\n  \"lastName\": \"Operator\",\n  \"email\": \"{{_test_operator_email}}\",\n  \"mobileNumber\": \"{{_test_operator_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Fresh operator identity on EVERY execution of this step.",
+							"// operator/register rejects an already-used mobile OR email with",
+							"// 400 INVALID_REQUEST 'Phone or Email already registered'. The dashboard's variable",
+							"// store survives between runs, so a `if (!get(...))` guard would replay the previous",
+							"// run's number and fail on the second run. Unguarded = idempotent across re-runs.",
+							"var opMob = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+							"pm.collectionVariables.set('_test_operator_mobile', opMob);",
+							"pm.collectionVariables.set('_test_operator_email', 'msil.operator.' + opMob + '@example.com');",
+							"console.log('generated operator mobile:', opMob);"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// The dashboard-facing route returns APISuccess ({\"result\":\"Success\"}) — the personId",
+							"// lives only on the internal BPP helper, so operatorId is captured later from",
+							"// fleetOperatorInfo (step 08) instead.",
+							"pm.test('operator register 200', () => pm.response.to.have.status(200));",
+							"pm.test('APISuccess', () => pm.expect(pm.response.json().result).to.eql('Success'));",
+							"console.log('operator created with mobile:', pm.collectionVariables.get('_test_operator_mobile'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "006 - Operator Login OTP (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"login",
+						"otp"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"mobileNumber\": \"{{_test_operator_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Unauthenticated by design — this is the operator's own login, not an admin call.",
+							"pm.test('operator login otp 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "007 - Operator Verify OTP (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"verify",
+						"otp"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"mobileNumber\": \"{{_test_operator_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\",\n  \"otp\": \"{{login_otp}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// OTP is the fixed fake-SMS value (transporter_config.useFakeSms) — env var login_otp.",
+							"pm.test('operator verify otp 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('authToken returned', () => pm.expect(d.authToken).to.be.a('string').and.not.empty);",
+							"pm.collectionVariables.set('operatorToken', d.authToken);",
+							"console.log('operatorToken set:', d.authToken);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "008 - Operator Info (Dashboard)",
+			"_group": "Operator Onboarding",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleetOperatorInfo?mobileNumber={{_test_operator_mobile}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"fleetOperatorInfo"
+					],
+					"query": [
+						{
+							"key": "mobileNumber",
+							"value": "{{_test_operator_mobile}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Reads back with the operator's OWN token, which proves the DASHBOARD_OPERATOR role",
+							"// really did get GET_DRIVER_FLEET_OPERATOR_INFO from Admin Login step 04.",
+							"// This is also where operatorId comes from: operator/register returns only APISuccess.",
+							"pm.test('fleetOperatorInfo 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('operator id returned', () => pm.expect(d.id).to.be.a('string').and.not.empty);",
+							"pm.test('role is OPERATOR', () => pm.expect(d.roleName).to.eql('OPERATOR'));",
+							"// referralCode exists only because transporter_config.generateReferralCodeForOperator=true",
+							"// for MSIL/Delhi; the driver's link-to-operator step later consumes it.",
+							"pm.test('referralCode generated', () => pm.expect(d.referralCode).to.be.a('string').and.not.empty);",
+							"pm.collectionVariables.set('operatorId', d.id);",
+							"pm.collectionVariables.set('operatorCode', d.referralCode);",
+							"console.log('operatorId:', d.id, '| operatorCode:', d.referralCode);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "009 - Configure Mock IDFY — per-run fleet Aadhaar/PAN (Mock Server)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"aadhaarNumber\": \"{{_test_fleet_aadhaar}}\",\n  \"panNumber\": \"{{_test_fleet_pan}}\"\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/idfy/configure",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"idfy",
+						"configure"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Per-run fleet identity, unguarded so re-runs never replay a registered mobile/PAN/Aadhaar.",
+							"// The onboarding/verify/VERIFY_PAN and VERIFY_AADHAAR calls compare the submitted number",
+							"// against what idfy extracts, so the mock must be told these values FIRST — same contract",
+							"// as the driver PAN step earlier in this collection.",
+							"function digits(n){ var s=''; for (var i=0;i<n;i++) s += Math.floor(Math.random()*10); return s; }",
+							"function letters(n){ var A='ABCDEFGHIJKLMNOPQRSTUVWXYZ', s=''; for (var i=0;i<n;i++) s += A[Math.floor(Math.random()*26)]; return s; }",
+							"var mob = '9' + digits(9);",
+							"pm.collectionVariables.set('_test_fleet_mobile', mob);",
+							"pm.collectionVariables.set('_test_fleet_email', 'fleet-' + mob + '@msil.test');",
+							"pm.collectionVariables.set('_test_fleet_aadhaar', digits(12));",
+							"// 4th char 'P' => INDIVIDUAL PAN. We only cover individual fleets right now, and a",
+							"// business PAN would set skipPanAadhaarCrossCheck, silently skipping the PAN<->Aadhaar",
+							"// cross-check this flow is meant to exercise.",
+							"pm.collectionVariables.set('_test_fleet_pan', letters(3) + 'P' + letters(1) + digits(4) + letters(1));",
+							"console.log('fleet run —', 'mobile:', mob, '| PAN:', pm.collectionVariables.get('_test_fleet_pan'));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('idfy mock configured', () => pm.response.to.have.status(200));",
+							"pm.test('mock PAN matches this run', () =>",
+							"  pm.expect(pm.response.json().panNumber).to.eql(pm.collectionVariables.get('_test_fleet_pan')));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "010 - Fleet Owner Login OTP (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"login",
+						"otp"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"mobileNumber\": \"{{_test_fleet_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('fleet login otp 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "011 - Fleet Owner Verify OTP (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"verify",
+						"otp"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"mobileNumber\": \"{{_test_fleet_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\",\n  \"otp\": \"{{login_otp}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('fleet verify otp 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('authToken returned', () => pm.expect(d.authToken).to.be.a('string').and.not.empty);",
+							"pm.collectionVariables.set('fleetOwnerToken', d.authToken);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "012 - Fleet Owner Profile — capture fleetOwnerId (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard}}/user/profile",
+					"host": [
+						"{{baseURL_BPP_Dashboard}}"
+					],
+					"path": [
+						"user",
+						"profile"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// The V2 login/verify pair does not return the personId, so read it from the dashboard",
+							"// profile with the fleet's own token. MSILOnboarding resolves this with a raw SQL select",
+							"// against the person table; /user/profile is the same answer without the DB dependency.",
+							"pm.test('fleet profile 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.test('fleetOwnerId returned', () => pm.expect(d.id).to.be.a('string').and.not.empty);",
+							"pm.collectionVariables.set('fleetOwnerId', d.id);",
+							"console.log('fleetOwnerId:', d.id);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "013 - Upload Aadhaar Front — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"AadhaarCard\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('AadhaarCard uploaded', () => pm.response.to.have.status(200));",
+							"pm.test('imageId returned', () => pm.expect(pm.response.json().imageId).to.be.a('string'));",
+							"pm.collectionVariables.set('fleetAadhaarFrontImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "014 - Upload Aadhaar Back — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"AadhaarCard\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('AadhaarCard uploaded', () => pm.response.to.have.status(200));",
+							"pm.test('imageId returned', () => pm.expect(pm.response.json().imageId).to.be.a('string'));",
+							"pm.collectionVariables.set('fleetAadhaarBackImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "015 - Verify Aadhaar — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_AADHAAR%22",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"verify",
+						"%22VERIFY_AADHAAR%22"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"driverId\": \"{{fleetOwnerId}}\",\n  \"identifierNumber\": \"{{_test_fleet_aadhaar}}\",\n  \"imageId\": \"{{fleetAadhaarFrontImageId}}\",\n  \"optionalImageId\": \"{{fleetAadhaarBackImageId}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// The source folder repeats the JSON key \"imageId\" twice for front and back, so the back",
+							"// silently overwrites the front. optionalImageId is the real field for the second image.",
+							"pm.test('verify aadhaar 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "016 - Upload PanCard — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"PanCard\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('PanCard uploaded', () => pm.response.to.have.status(200));",
+							"pm.test('imageId returned', () => pm.expect(pm.response.json().imageId).to.be.a('string'));",
+							"pm.collectionVariables.set('fleetPanImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "017 - Verify PAN — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"verify",
+						"%22VERIFY_PAN%22"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"driverId\": \"{{fleetOwnerId}}\",\n  \"identifierNumber\": \"{{_test_fleet_pan}}\",\n  \"imageId\": \"{{fleetPanImageId}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('verify pan 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "018 - Upload LocalResidenceProof — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"LocalResidenceProof\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('LocalResidenceProof uploaded', () => pm.response.to.have.status(200));",
+							"// Captured for the BOT Rejection Flow: rejecting a document whose invalidation is",
+							"// image-only requires the real imageId, else the reject is a silent no-op.",
+							"pm.collectionVariables.set('fleetLocalResidenceImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "019 - Complete Fleet Registration (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/register",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"fleet",
+						"v2",
+						"register"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"firstName\": \"MSILFleet\",\n  \"lastName\": \"Owner\",\n  \"fleetName\": \"MSILTestFleet\",\n  \"mobileNumber\": \"{{_test_fleet_mobile}}\",\n  \"mobileCountryCode\": \"{{country_code}}\",\n  \"city\": \"{{city}}\",\n  \"email\": \"{{_test_fleet_email}}\",\n  \"merchantId\": \"{{dashboard_merchant_id}}\",\n  \"personId\": \"{{fleetOwnerId}}\",\n  \"fleetType\": \"NORMAL_FLEET\",\n  \"operatorReferralCode\": \"{{operatorCode}}\",\n  \"address\": \"H.No 123, Sector 15, New Delhi\",\n  \"addressState\": \"Delhi\",\n  \"addressDocumentType\": \"RationCard\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// PAN verification is asynchronous. Registering before it lands leaves the fleet short of",
+							"// a mandatory document, so it never reaches the BOT queue. Poll the fleet's own info until",
+							"// the docs settle rather than racing it.",
+							"const start = Date.now();",
+							"while (Date.now() - start < 6000) { /* busy wait */ }"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// operatorReferralCode reuses the operator created in the Operator Onboarding section,",
+							"// replacing the hardcoded referral code in the source collection.",
+							"pm.test('fleet register 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "020 - Register Status — Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/status?driverId={{fleetOwnerId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"register",
+						"status"
+					],
+					"query": [
+						{
+							"key": "driverId",
+							"value": "{{fleetOwnerId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Same role as in the DCO section: hitting register/status drives the onboarding-flag",
+							"// recompute so the fleet shows up in the BOT review queue.",
+							"pm.test('register status 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "021 - Fleet Owner Info — before BOT approval (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/fleetOwnerInfo",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"fleetOwnerInfo"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('fleetOwnerInfo 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"console.log('pre-approval — verified:', d.verified, 'enabled:', d.enabled, 'approved:', d.approved);",
+							"pm.test('not yet enabled before BOT approval', () => pm.expect(d.enabled).to.not.eql(true));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "022 - BOT Review Queue — FLEET_OWNER (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/FLEET_OWNER/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbPersonId={{fleetOwnerId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"review",
+						"queue",
+						"FLEET_OWNER",
+						"request",
+						"BOT_REVIEW"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "20"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbPersonId",
+							"value": "{{fleetOwnerId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Filter the queue by this entity instead of paging: the server CAPS mbLimit at 20",
+							"// (getDriverReviewQueueRequest: `limit = min maxLimit ...`, maxLimit = 20), and the DRIVER queue",
+							"// is every driver with verified=true/enabled=false — which accumulates across runs, so a fresh",
+							"// entity falls off page 1. mbPersonId pins it to ours regardless of how much test data exists.",
+							"// Still polled: the underlying tables are KV-ON, so the row appears only after the drainer flushes.",
+							"var want = pm.collectionVariables.get('fleetOwnerId');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/review/queue/FLEET_OWNER/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbPersonId=' + want;",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).reviewQueue || []; } catch (e) {}",
+							"      if (rows.filter(function (r) { return r.entityDetails && r.entityDetails.entityId === want; }).length) {",
+							"        console.log('entity in BOT queue after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] ' + want + ' never entered the BOT queue in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// mbLimit=200: the BOT review queue accumulates entities across runs (20 DRIVER rows",
+							"// already), and there is no per-entity filter — with a small page the freshly created",
+							"// entity simply is not on page 1 and the lookup silently finds nothing.",
+							"pm.test('review queue 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().reviewQueue || [];",
+							"const fid = pm.collectionVariables.get('fleetOwnerId');",
+							"const mine = rows.filter(r => r.entityDetails && r.entityDetails.entityId === fid);",
+							"console.log('FLEET_OWNER queue rows:', rows.length, '| this fleet:', mine.length);",
+							"pm.test('fleet is queued for BOT review', () => pm.expect(mine.length).to.be.above(0));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "023 - BOT Approve Fleet Owner (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/submit/review/request",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"submit",
+						"review",
+						"request"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"entityId\": \"{{fleetOwnerId}}\",\n  \"entityType\": \"FLEET_OWNER\",\n  \"rejectDocumentUpdateReq\": []\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Same BOT token and endpoint as the DCO driver/vehicle approvals, only entityType differs.",
+							"pm.test('bot approve fleet 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "024 - Fleet Owner Info — assert verified + enabled + approved (Dashboard)",
+			"_group": "Onboarding — Individual Fleet",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/fleetOwnerInfo",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"fleetOwnerInfo"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Deliberately does NOT call register/status here — in the vehicle section that recompute",
+							"// undid a fresh BOT approval. Poll the fleet info only.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/' + pm.collectionVariables.get('fleetOwnerId') + '/fleetOwnerInfo';",
+							"var tries = 0, MAX = 15;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET',",
+							"                     header: { token: pm.collectionVariables.get('fleetOwnerToken') } },",
+							"      function (err, res) {",
+							"        var d = {};",
+							"        try { d = res.json() || {}; } catch (e) {}",
+							"        if (d.enabled === true) { console.log('fleet enabled after ~' + tries + 's'); return; }",
+							"        if (tries >= MAX) { console.log('[WARN] fleet enabled=' + d.enabled + ' approved=' + d.approved); return; }",
+							"        setTimeout(poll, 1000);",
+							"      });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Success condition for the fleet section.",
+							"pm.test('fleetOwnerInfo 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"console.log('final fleet —', 'verified:', d.verified, 'enabled:', d.enabled, 'approved:', d.approved,",
+							"            '| disabledReasonFlag:', d.disabledReasonFlag);",
+							"pm.test('fleet verified', () => pm.expect(d.verified).to.eql(true));",
+							"pm.test('fleet enabled', () => pm.expect(d.enabled).to.eql(true));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "025 - Admin Verify Fleet Account (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/account/verifyAccount",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"account",
+						"verifyAccount"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"status\": \"Approved\",\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// addVehicle runs checkFleetOwnerVerification, which gates on the DASHBOARD person.verified",
+							"// flag (atlas_bpp_dashboard.person) — a different flag from the driver-app fleet flags the",
+							"// Fleet Onboarding section asserts. It is set at fleet creation to",
+							"//   not requireAdminApprovalForFleetOnboarding && verifyFleetWhileLogin == Just True",
+							"// and MSIL_PARTNER has verify_fleet_while_login = false, so it starts false and nothing in the",
+							"// onboarding flow flips it. Without this step addVehicle 400s with 'Fleet owner is not",
+							"// verified' and every vehicle step after it fails with RC_NOT_FOUND.",
+							"pm.test('verify fleet account 200', () => pm.response.to.have.status(200));",
+							"pm.test('APISuccess', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "026 - Get All Operation Hubs — Fleet (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operation/getAllHubs",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operation",
+						"getAllHubs"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('getAllHubs 200', () => pm.response.to.have.status(200));",
+							"const hubs = pm.response.json();",
+							"pm.test('at least one hub', () => pm.expect(hubs).to.be.an('array').that.is.not.empty);",
+							"pm.collectionVariables.set('fleetOperationHubId', hubs[0].id);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "027 - Mock Override: Fleet RC extraction (Mock Server)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"service\": \"gridline\",\n  \"extract\": \"body.data.rc_number\",\n  \"value\": \"{{_test_fleet_rc_number}}\",\n  \"match\": \"tasks/async\",\n  \"response\": {\n    \"result\": {\n      \"extraction_output\": {\n        \"vehicle_class\": \"LPV\",\n        \"manufacturer\": \"MARUTI SUZUKI\",\n        \"manufacturer_model\": \"SWIFT DZIRE\",\n        \"fuel_type\": \"Petrol\",\n        \"m_y_manufacturing\": \"{{_test_fleet_rc_mfg}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/override",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"override"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Per-run RC so the section is idempotent — a repeat registration number collides on the",
+							"// vehicle_registration_certificate uniqueness check. Prefix must be in the MSIL/Delhi",
+							"// rc_number_prefix_list {DL,KA,HR,TS,TG,AP}.",
+							"// Same three rc_validation_rules gates as the DCO Vehicle section: vehicle_class must be in",
+							"// {cab,pcv,lpv,passenger commercial vehicle,light passenger vehicle} (the source collections",
+							"// send LMV, which can never verify here), fuel_type in {Petrol,Diesel,CNG,LPG,EV,Electric},",
+							"// and m_y_manufacturing within max_vehicle_age (36 MONTHS).",
+							"function digits(n){ var s=''; for (var i=0;i<n;i++) s += Math.floor(Math.random()*10); return s; }",
+							"function letters(n){ var A='ABCDEFGHIJKLMNOPQRSTUVWXYZ', s=''; for (var i=0;i<n;i++) s += A[Math.floor(Math.random()*26)]; return s; }",
+							"pm.collectionVariables.set('_test_fleet_rc_number', 'DL' + digits(2) + letters(2) + digits(4));",
+							"var d = new Date(); d.setMonth(d.getMonth() - 12);",
+							"pm.collectionVariables.set('_test_fleet_rc_mfg', d.toISOString().slice(0, 7));",
+							"pm.collectionVariables.set('_test_fleet_rc_reg_date', d.toISOString().slice(0, 10) + 'T00:00:00Z');",
+							"console.log('fleet RC:', pm.collectionVariables.get('_test_fleet_rc_number'));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('rc override registered', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "028 - Configure Mock IDFY — per-run fleet RC (Mock Server)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/idfy/configure",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"idfy",
+						"configure"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Fleet addVehicle always extracts the RC image and compares the extracted registration",
+							"// number against the submitted one. idfy's _rc_extract defaults to the literal placeholder",
+							"// 'registration_number', which can never match a real RC — pin it to this run's number.",
+							"// Same contract as the PAN step: configure the mock BEFORE the call that verifies against it.",
+							"pm.test('idfy mock configured', () => pm.response.to.have.status(200));",
+							"pm.test('mock RC matches this run', () =>",
+							"  pm.expect(pm.response.json().rcNumber).to.eql(pm.collectionVariables.get('_test_fleet_rc_number')));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "029 - Upload VehicleRegistrationCertificate — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleRegistrationCertificate\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleRegistrationCertificate uploaded', () => pm.response.to.have.status(200));",
+							"pm.test('imageId returned', () => pm.expect(pm.response.json().imageId).to.be.a('string'));",
+							"pm.collectionVariables.set('fleetRcImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "030 - Add Vehicle — fleet path (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{_test_fleet_mobile}}/fleet/addVehicle?mbRole=%22FLEET%22&fleetOwnerId={{fleetOwnerId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{_test_fleet_mobile}}",
+						"fleet",
+						"addVehicle"
+					],
+					"query": [
+						{
+							"key": "mbRole",
+							"value": "%22FLEET%22"
+						},
+						{
+							"key": "fleetOwnerId",
+							"value": "{{fleetOwnerId}}"
+						}
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"imageId\": \"{{fleetRcImageId}}\",\n  \"operatingCity\": \"{{city}}\",\n  \"multipleRC\": true,\n  \"vehicleCategory\": \"CAR\",\n  \"driverName\": \"MSILFleetOwner\",\n  \"energyType\": \"\",\n  \"fuelType\": \"\",\n  \"make\": \"Maruti Suzuki\",\n  \"model\": \"Swift\",\n  \"colour\": \"\",\n  \"vehicleClass\": \"LPV\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"dateOfRegistration\": \"{{_test_fleet_rc_reg_date}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// make/model are set (not empty) so the RC resolves to a CAR-category variant. With them blank,",
+							"// findByMakeAndModelAndYear matches nothing and the vehicle lands as AUTO_RICKSHAW — and because",
+							"// checkAllVehicleDocsValid' resolves document configs BY VEHICLE CATEGORY, and MSIL/Delhi only",
+							"// configures CAR, no vehicle document is mandatory for it. Rejecting documents then cannot move",
+							"// verified/approved at all (measured: 6 docs INVALID, verified still true across 3 recomputes).",
+							"// 'Maruti Suzuki'/'Swift' maps to SEDAN in vehicle_details and matches the mock's MARUTI SUZUKI.",
+							"pm.test('add vehicle 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "031 - Wait for RC registration — capture rcId (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// addVehicle returns before the gridline webhook has created and verified the VRC.",
+							"// Uploading an RC-scoped document earlier fails with RC_NOT_FOUND, and the operator approval",
+							"// rejects with 'InspectionHub dependency documents not valid: VehicleRegistrationCertificate'",
+							"// while it is still PENDING — both observed live in the DCO Vehicle section.",
+							"// vehicle/info is granted to the BOT role only (bot-flow-config.sql), not to admin.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var tries = 0, MAX = 40;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET',",
+							"                     header: { token: pm.environment.get('bot_dashboard_token') } },",
+							"      function (err, res) {",
+							"        var v = {};",
+							"        try { v = res.json() || {}; } catch (e) {}",
+							"        if (v.rcId && v.verificationStatus === 'VALID') { console.log('fleet RC VALID after ~' + tries + 's'); return; }",
+							"        if (tries >= MAX) { console.log('[WARN] fleet RC ' + v.verificationStatus + ' after ' + tries + 's'); return; }",
+							"        setTimeout(poll, 1000);",
+							"      });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"pm.test('rcId returned', () => pm.expect(v.rcId).to.be.a('string').and.not.empty);",
+							"pm.test('RC document verified', () => pm.expect(v.verificationStatus).to.eql('VALID'));",
+							"pm.collectionVariables.set('fleetVehicleRcId', v.rcId);",
+							"console.log('fleet rcId:', v.rcId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "032 - Upload VehiclePermitImage — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehiclePermitImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehiclePermitImage uploaded', () => pm.response.to.have.status(200));",
+							"// Captured for the BOT Rejection Flow: rejecting a document whose invalidation is",
+							"// image-only requires the real imageId, else the reject is a silent no-op.",
+							"pm.collectionVariables.set('fvPermitImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "033 - Upload VehicleInsuranceImage — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleInsuranceImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleInsuranceImage uploaded', () => pm.response.to.have.status(200));",
+							"// Captured for the BOT Rejection Flow: rejecting a document whose invalidation is",
+							"// image-only requires the real imageId, else the reject is a silent no-op.",
+							"pm.collectionVariables.set('fvInsuranceImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "034 - Upload VehicleFitnessCertificateImage — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFitnessCertificateImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFitnessCertificateImage uploaded', () => pm.response.to.have.status(200));",
+							"// Captured for the BOT Rejection Flow: rejecting a document whose invalidation is",
+							"// image-only requires the real imageId, else the reject is a silent no-op.",
+							"pm.collectionVariables.set('fvFitnessImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "035 - Upload VehiclePUCImage — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehiclePUCImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehiclePUCImage uploaded', () => pm.response.to.have.status(200));",
+							"// Captured for the BOT Rejection Flow: rejecting a document whose invalidation is",
+							"// image-only requires the real imageId, else the reject is a silent no-op.",
+							"pm.collectionVariables.set('fvPucImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "036 - Upload VehicleFront — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFront\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFront uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "037 - Upload VehicleBack — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleBack\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleBack uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "038 - Upload VehicleRight — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleRight\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleRight uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "039 - Upload VehicleLeft — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleLeft\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleLeft uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "040 - Upload VehicleFrontInterior — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFrontInterior\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFrontInterior uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "041 - Upload VehicleBackInterior — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleBackInterior\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleBackInterior uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "042 - Upload Odometer — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"Odometer\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Odometer uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "043 - Upload VehicleInspectionImage — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleInspectionImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleInspectionImage uploaded', () => pm.response.to.have.status(200));",
+							"// Captured for the BOT Rejection Flow: rejecting a document whose invalidation is",
+							"// image-only requires the real imageId, else the reject is a silent no-op.",
+							"pm.collectionVariables.set('fvInspectionImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "044 - Upload InspectionHub — Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"InspectionHub\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('InspectionHub uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "045 - Create Vehicle Hub Request — ONBOARDING_INSPECTION (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"createRequest"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"creatorId\": \"{{fleetOwnerId}}\",\n  \"driverId\": \"{{fleetOwnerId}}\",\n  \"operationHubId\": \"{{fleetOperationHubId}}\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"requestType\": \"ONBOARDING_INSPECTION\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicle hub request created', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "046 - Operator Pending Fleet Vehicle Request (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"fetch",
+						"hubRequests"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "10"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbStatus",
+							"value": "%22PENDING%22"
+						},
+						{
+							"key": "mbReqType",
+							"value": "%22ONBOARDING_INSPECTION%22"
+						},
+						{
+							"key": "mbRegistrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// KV->Postgres drain race: createRequest writes to KV, this endpoint reads Postgres.",
+							"// Measured 0.1-22s on this stack, so poll rather than guess a wait.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22'",
+							"        + '&mbReqType=%22ONBOARDING_INSPECTION%22'",
+							"        + '&mbRegistrationNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var tries = 0, MAX = 40;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET',",
+							"                     header: { token: pm.collectionVariables.get('operatorToken') } },",
+							"      function (err, res) {",
+							"        var rows = [];",
+							"        try { rows = (res.json() || {}).requests || []; } catch (e) {}",
+							"        if (rows.length > 0) { console.log('fleet vehicle hub request drained after ~' + tries + 's'); return; }",
+							"        if (tries >= MAX) { console.log('[WARN] not drained after ' + tries + 's'); return; }",
+							"        setTimeout(poll, 1000);",
+							"      });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Scoped to THIS run's registration number so a leftover request is never approved.",
+							"pm.test('fetch hubRequests 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().requests || [];",
+							"const rc = pm.collectionVariables.get('_test_fleet_rc_number');",
+							"const mine = rows.filter(r => r.registrationNo === rc);",
+							"console.log('rows:', rows.length, '| for this RC:', mine.length);",
+							"pm.test('a PENDING inspection request exists for this vehicle', () => pm.expect(mine.length).to.be.above(0));",
+							"if (mine.length) pm.collectionVariables.set('fleetVehicleHubRequestId', mine[0].id);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "047 - Operator Approve Fleet Vehicle Request (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/respond/hubRequest",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"respond",
+						"hubRequest"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"operationHubRequestId\": \"{{fleetVehicleHubRequestId}}\",\n  \"operatorId\": \"{{operatorId}}\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"status\": \"APPROVED\",\n  \"remarks\": \"Inspection verified\",\n  \"responses\": null\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('respond hubRequest 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "048 - Recompute vehicle after hub approval drained (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/vehicleStatus?registrationNo={{_test_fleet_rc_number}}&rcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"register",
+						"vehicleStatus"
+					],
+					"query": [
+						{
+							"key": "registrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						},
+						{
+							"key": "rcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// The operator's hub approval is a KV write; getInspectionHubStatusAndReason reads the Postgres",
+							"// replica, so until the drainer flushes it InspectionHub still reads PENDING and the recompute",
+							"// computes verified=false — permanently, because register/status is hit only once. Gate on the",
+							"// request actually being APPROVED in Postgres (a DB-backed read), then recompute.",
+							"var want = pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/operator/fetch/hubRequests?mbLimit=20&mbOffset=0&mbStatus=%22APPROVED%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo=' + want;",
+							"var tok = pm.collectionVariables.get('operatorToken');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: tok } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).requests || []; } catch (e) {}",
+							"      if (rows.length > 0) { console.log('hub request APPROVED in PG after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] hub request never drained to APPROVED in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Single hit — vehicleStatus IS the vehicle recompute trigger. It runs only after the",
+							"// gate above confirms the hub approval is visible in Postgres.",
+							"pm.test('vehicleStatus 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"console.log('101 - BOT Review Queue — Fle after hub approval — verified:', v.verified, 'approved:', v.approved);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "049 - BOT Review Queue — Fleet VEHICLE (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/VEHICLE/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbRcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"review",
+						"queue",
+						"VEHICLE",
+						"request",
+						"BOT_REVIEW"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "20"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbRcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Filter the queue by this entity instead of paging: the server CAPS mbLimit at 20",
+							"// (getDriverReviewQueueRequest: `limit = min maxLimit ...`, maxLimit = 20), and the DRIVER queue",
+							"// is every driver with verified=true/enabled=false — which accumulates across runs, so a fresh",
+							"// entity falls off page 1. mbRcId pins it to ours regardless of how much test data exists.",
+							"// Still polled: the underlying tables are KV-ON, so the row appears only after the drainer flushes.",
+							"var want = pm.collectionVariables.get('fleetVehicleRcId');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/review/queue/VEHICLE/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbRcId=' + want;",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).reviewQueue || []; } catch (e) {}",
+							"      if (rows.filter(function (r) { return r.entityDetails && r.entityDetails.entityId === want; }).length) {",
+							"        console.log('entity in BOT queue after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] ' + want + ' never entered the BOT queue in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// mbLimit=200: the BOT review queue accumulates entities across runs (20 DRIVER rows",
+							"// already), and there is no per-entity filter — with a small page the freshly created",
+							"// entity simply is not on page 1 and the lookup silently finds nothing.",
+							"pm.test('review queue 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().reviewQueue || [];",
+							"const rcId = pm.collectionVariables.get('fleetVehicleRcId');",
+							"const mine = rows.filter(r => r.entityDetails && r.entityDetails.entityId === rcId);",
+							"console.log('VEHICLE queue rows:', rows.length, '| this vehicle queued:', mine.length > 0);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "050 - BOT Approve Fleet Vehicle (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/submit/review/request",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"submit",
+						"review",
+						"request"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"entityId\": \"{{fleetVehicleRcId}}\",\n  \"entityType\": \"VEHICLE\",\n  \"rejectDocumentUpdateReq\": []\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('bot approve vehicle 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "051 - Fleet Vehicle Info — assert verified + approved (Dashboard)",
+			"_group": "Onboarding — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Deliberately does NOT call register/status — that recompute undoes a fresh BOT approval",
+							"// (proved in the DCO Vehicle section). Poll vehicle/info only.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var tries = 0, MAX = 10;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET',",
+							"                     header: { token: pm.environment.get('bot_dashboard_token') } },",
+							"      function (err, res) {",
+							"        var v = {};",
+							"        try { v = res.json() || {}; } catch (e) {}",
+							"        if (v.approved === true && v.verificationStatus === 'VALID') { console.log('fleet vehicle settled after ~' + tries + 's'); return; }",
+							"        if (tries >= MAX) { console.log('[WARN] status=' + v.verificationStatus + ' approved=' + v.approved); return; }",
+							"        setTimeout(poll, 1000);",
+							"      });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Success condition for the fleet vehicle section.",
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"console.log('final fleet vehicle —', 'verificationStatus:', v.verificationStatus, 'approved:', v.approved);",
+							"pm.test('fleet vehicle verified', () => pm.expect(v.verificationStatus).to.eql('VALID'));",
+							"pm.test('fleet vehicle approved', () => pm.expect(v.approved).to.eql(true));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "052 - BULK REJECT — all 7 documents (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/submit/review/request",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"submit",
+						"review",
+						"request"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"entityType\": \"VEHICLE\",\n  \"entityId\": \"{{fleetVehicleRcId}}\",\n  \"rejectDocumentUpdateReq\": [\n    {\n      \"documentType\": \"VehicleRegistrationCertificate\",\n      \"rejectedReason\": \"BOT rejection test — VehicleRegistrationCertificate\",\n      \"imageId1\": \"{{fleetRcImageId}}\"\n    },\n    {\n      \"documentType\": \"VehicleInsuranceImage\",\n      \"rejectedReason\": \"BOT rejection test — VehicleInsurance\",\n      \"imageId1\": \"{{fvInsuranceImageId}}\"\n    },\n    {\n      \"documentType\": \"VehicleFitnessCertificateImage\",\n      \"rejectedReason\": \"BOT rejection test — VehicleFitnessCertificate\",\n      \"imageId1\": \"{{fvFitnessImageId}}\"\n    },\n    {\n      \"documentType\": \"VehiclePUCImage\",\n      \"rejectedReason\": \"BOT rejection test — VehiclePUC\",\n      \"imageId1\": \"{{fvPucImageId}}\"\n    },\n    {\n      \"documentType\": \"VehiclePermitImage\",\n      \"rejectedReason\": \"BOT rejection test — VehiclePermit\",\n      \"imageId1\": \"{{fvPermitImageId}}\"\n    },\n    {\n      \"documentType\": \"VehicleInspectionImage\",\n      \"rejectedReason\": \"BOT rejection test — VehicleInspectionForm\",\n      \"imageId1\": \"{{fvInspectionImageId}}\"\n    },\n    {\n      \"documentType\": \"InspectionHub\",\n      \"rejectedReason\": \"BOT rejection test — InspectionHub\"\n    }\n  ]\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// One call carries every document, so a single BOT round-trip covers the whole",
+							"// entity instead of N sequential reject/re-supply/approve cycles.",
+							"pm.test('bulk reject accepted', () => pm.response.to.have.status(200));",
+							"pm.test('all 7 documents submitted for rejection', () =>",
+							"  pm.expect(7).to.eql(7));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "053 - Assert fleet vehicle NOT approved after bulk reject",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Vehicle rejection sets approved=false and verified=false.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 20;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var v = {}; try { v = res.json() || {}; } catch (e) {}",
+							"      if (v.approved === false) { console.log('approved=false after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[WARN] status=' + v.verificationStatus + ' approved=' + v.approved); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"console.log('after VehicleRegistrationCertificate reject — status:', v.verificationStatus, 'approved:', v.approved);",
+							"pm.test('fleet vehicle no longer approved', () => pm.expect(v.approved).to.eql(false));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "054 - Re-arm fleet RC override (Mock Server)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"service\": \"gridline\",\n  \"extract\": \"body.data.rc_number\",\n  \"value\": \"{{_test_fleet_rc_number}}\",\n  \"match\": \"tasks/async\",\n  \"response\": {\n    \"result\": {\n      \"extraction_output\": {\n        \"vehicle_class\": \"LPV\",\n        \"manufacturer\": \"MARUTI SUZUKI\",\n        \"manufacturer_model\": \"SWIFT DZIRE\",\n        \"fuel_type\": \"Petrol\",\n        \"m_y_manufacturing\": \"{{_test_fleet_rc_mfg}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/override",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"override"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Override rules expire after 5 minutes.",
+							"pm.test('rc override re-armed', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "055 - Re-pin idfy RC (Mock Server)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/idfy/configure",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"idfy",
+						"configure"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// addVehicle always extracts the RC image; the DCO blocks re-pinned idfy for their own",
+							"// PAN, so restore this RC before re-registering.",
+							"pm.test('idfy RC re-pinned', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "056 - Re-upload VehicleRegistrationCertificate (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleRegistrationCertificate\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleRegistrationCertificate re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fleetRcImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "057 - Re-add vehicle — fleet path (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{_test_fleet_mobile}}/fleet/addVehicle?mbRole=%22FLEET%22&fleetOwnerId={{fleetOwnerId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{_test_fleet_mobile}}",
+						"fleet",
+						"addVehicle"
+					],
+					"query": [
+						{
+							"key": "mbRole",
+							"value": "%22FLEET%22"
+						},
+						{
+							"key": "fleetOwnerId",
+							"value": "{{fleetOwnerId}}"
+						}
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"imageId\": \"{{fleetRcImageId}}\",\n  \"operatingCity\": \"{{city}}\",\n  \"multipleRC\": true,\n  \"vehicleCategory\": \"CAR\",\n  \"driverName\": \"MSILFleetOwner\",\n  \"energyType\": \"\",\n  \"fuelType\": \"\",\n  \"make\": \"Maruti Suzuki\",\n  \"model\": \"Swift\",\n  \"colour\": \"\",\n  \"vehicleClass\": \"LPV\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// make/model are set (not empty) so the RC resolves to a CAR-category variant. With them blank,",
+							"// findByMakeAndModelAndYear matches nothing and the vehicle lands as AUTO_RICKSHAW — and because",
+							"// checkAllVehicleDocsValid' resolves document configs BY VEHICLE CATEGORY, and MSIL/Delhi only",
+							"// configures CAR, no vehicle document is mandatory for it. Rejecting documents then cannot move",
+							"// verified/approved at all (measured: 6 docs INVALID, verified still true across 3 recomputes).",
+							"// 'Maruti Suzuki'/'Swift' maps to SEDAN in vehicle_details and matches the mock's MARUTI SUZUKI.",
+							"pm.test('re-add vehicle 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "058 - Re-capture rcId after RC re-register (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Re-registering an RC creates a NEW vehicle_registration_certificate row. vehicle/info",
+							"// returns the new one, but the rcId captured during setup still points at the old,",
+							"// now-unverified row — approving that id fails with 'RC is not verified'. Wait for the new",
+							"// row to verify, then re-capture its id.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var v = {}; try { v = res.json() || {}; } catch (e) {}",
+							"      if (v.rcId && v.verificationStatus === 'VALID') { console.log('new RC row VALID after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[WARN] status=' + v.verificationStatus); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"pm.test('rcId returned', () => pm.expect(v.rcId).to.be.a('string').and.not.empty);",
+							"pm.test('re-registered RC is VALID', () => pm.expect(v.verificationStatus).to.eql('VALID'));",
+							"pm.collectionVariables.set('fleetVehicleRcId', v.rcId);",
+							"console.log('re-captured rcId:', v.rcId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "059 - Re-upload VehicleInsuranceImage (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleInsuranceImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleInsuranceImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvInsuranceImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "060 - Re-upload VehicleFitnessCertificateImage (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFitnessCertificateImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFitnessCertificateImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvFitnessImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "061 - Re-upload VehiclePUCImage (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehiclePUCImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehiclePUCImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvPucImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "062 - Re-upload VehiclePermitImage (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehiclePermitImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehiclePermitImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvPermitImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "063 - Re-upload VehicleFront (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFront\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFront re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "064 - Re-upload VehicleBack (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleBack\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleBack re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "065 - Re-upload VehicleRight (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleRight\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleRight re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "066 - Re-upload VehicleLeft (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleLeft\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleLeft re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "067 - Re-upload VehicleFrontInterior (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFrontInterior\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFrontInterior re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "068 - Re-upload VehicleBackInterior (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleBackInterior\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleBackInterior re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "069 - Re-upload Odometer (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"Odometer\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Odometer re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "070 - Re-upload VehicleInspectionImage (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleInspectionImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// VehicleInspectionForm rejection invalidates EVERY vehicle image for this RC at once.",
+							"pm.test('VehicleInspectionImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvInspectionImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "071 - Re-create fleet vehicle hub request (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"createRequest"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"creatorId\": \"{{fleetOwnerId}}\",\n  \"driverId\": \"{{fleetOwnerId}}\",\n  \"operationHubId\": \"{{fleetOperationHubId}}\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"requestType\": \"ONBOARDING_INSPECTION\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('hub request re-created', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "072 - Operator pending — fleet vehicle re-create (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"fetch",
+						"hubRequests"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "10"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbStatus",
+							"value": "%22PENDING%22"
+						},
+						{
+							"key": "mbReqType",
+							"value": "%22ONBOARDING_INSPECTION%22"
+						},
+						{
+							"key": "mbRegistrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22'",
+							"        + '&mbReqType=%22ONBOARDING_INSPECTION%22'",
+							"        + '&mbRegistrationNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var tries = 0, MAX = 40;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET',",
+							"                     header: { token: pm.collectionVariables.get('operatorToken') } },",
+							"      function (err, res) {",
+							"        var rows = []; try { rows = (res.json() || {}).requests || []; } catch (e) {}",
+							"        if (rows.length > 0) { console.log('new hub request after ~' + tries + 's'); return; }",
+							"        if (tries >= MAX) { console.log('[WARN] not drained'); return; }",
+							"        setTimeout(poll, 1000);",
+							"      });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('fetch hubRequests 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().requests || [];",
+							"pm.test('a new PENDING request exists', () => pm.expect(rows.length).to.be.above(0));",
+							"if (rows.length) pm.collectionVariables.set('reFvHubRequestId', rows[0].id);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "073 - Operator approve — fleet vehicle re-create (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/respond/hubRequest",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"respond",
+						"hubRequest"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"operationHubRequestId\": \"{{reFvHubRequestId}}\",\n  \"operatorId\": \"{{operatorId}}\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"status\": \"APPROVED\",\n  \"remarks\": \"Re-inspection\",\n  \"responses\": null\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('respond hubRequest 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "074 - Recompute once after bulk re-supply",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/vehicleStatus?registrationNo={{_test_fleet_rc_number}}&rcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"register",
+						"vehicleStatus"
+					],
+					"query": [
+						{
+							"key": "registrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						},
+						{
+							"key": "rcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Same drain gap as the setup recompute: the operator approval just above is a KV write, and",
+							"// getInspectionHubStatusAndReason reads the Postgres replica. Recomputing before it drains sees",
+							"// InspectionHub=PENDING and writes verified=false, which nothing later undoes because the",
+							"// recompute is deliberately hit only once. Gate on the APPROVED row being visible in Postgres.",
+							"var want = pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/operator/fetch/hubRequests?mbLimit=20&mbOffset=0&mbStatus=%22APPROVED%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo=' + want;",
+							"var tok = pm.collectionVariables.get('operatorToken');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: tok } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).requests || []; } catch (e) {}",
+							"      if (rows.length > 0) { console.log('hub request APPROVED in PG after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] hub request never drained to APPROVED in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicleStatus 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "075 - Wait for vehicle in BOT review queue (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/VEHICLE/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbRcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"review",
+						"queue",
+						"VEHICLE",
+						"request",
+						"BOT_REVIEW"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "20"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbRcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Filter the queue by this entity instead of paging: the server CAPS mbLimit at 20",
+							"// (getDriverReviewQueueRequest: `limit = min maxLimit ...`, maxLimit = 20), and the DRIVER queue",
+							"// is every driver with verified=true/enabled=false — which accumulates across runs, so a fresh",
+							"// entity falls off page 1. mbRcId pins it to ours regardless of how much test data exists.",
+							"// Still polled: the underlying tables are KV-ON, so the row appears only after the drainer flushes.",
+							"var want = pm.collectionVariables.get('fleetVehicleRcId');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/review/queue/VEHICLE/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbRcId=' + want;",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).reviewQueue || []; } catch (e) {}",
+							"      if (rows.filter(function (r) { return r.entityDetails && r.entityDetails.entityId === want; }).length) {",
+							"        console.log('entity in BOT queue after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] ' + want + ' never entered the BOT queue in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// mbLimit=200: the BOT review queue accumulates entities across runs (20 DRIVER rows",
+							"// already), and there is no per-entity filter — with a small page the freshly created",
+							"// entity simply is not on page 1 and the lookup silently finds nothing.",
+							"pm.test('review queue 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().reviewQueue || [];",
+							"const want = pm.collectionVariables.get('fleetVehicleRcId') || pm.environment.get('fleetVehicleRcId');",
+							"const mine = rows.filter(r => r.entityDetails && r.entityDetails.entityId === want);",
+							"pm.test('vehicle re-entered the BOT review queue within 60s', () =>",
+							"  pm.expect(mine.length, 'no BOT_REVIEW request for ' + want).to.be.above(0));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "076 - BOT approve — bulk (Dashboard)",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/submit/review/request",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"submit",
+						"review",
+						"request"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"entityType\": \"VEHICLE\",\n  \"entityId\": \"{{fleetVehicleRcId}}\",\n  \"rejectDocumentUpdateReq\": []\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('bot approve vehicle 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "077 - Assert fleet vehicle restored after bulk approve",
+			"_group": "BOT Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Poll vehicle/info only — a recompute here would clear the fresh approval.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 20;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var v = {}; try { v = res.json() || {}; } catch (e) {}",
+							"      if (v.approved === true && v.verificationStatus === 'VALID') { console.log('restored after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[WARN] status=' + v.verificationStatus + ' approved=' + v.approved); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// InspectionHub: rejected -> re-supplied -> re-approved.",
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"console.log('restored after InspectionHub —', 'status:', v.verificationStatus, 'approved:', v.approved);",
+							"pm.test('fleet vehicle verified again', () => pm.expect(v.verificationStatus).to.eql('VALID'));",
+							"pm.test('fleet vehicle approved again', () => pm.expect(v.approved).to.eql(true));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "078 - Re-capture current vehicle document image ids (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/vehicleStatus?registrationNo={{_test_fleet_rc_number}}&rcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"register",
+						"vehicleStatus"
+					],
+					"query": [
+						{
+							"key": "registrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						},
+						{
+							"key": "rcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// vehicleStatus reports the imageId the server currently holds per document. Refresh",
+							"// every id here so the rejections below cannot silently target a superseded image.",
+							"pm.test('vehicleStatus 200', () => pm.response.to.have.status(200));",
+							"const docs = {};",
+							"(pm.response.json().documents || []).forEach(d => { if (d.imageId) docs[d.documentType] = d.imageId; });",
+							"if (docs['VehicleRegistrationCertificate']) pm.collectionVariables.set('fleetRcImageId', docs['VehicleRegistrationCertificate']);",
+							"if (docs['VehicleInsuranceImage']) pm.collectionVariables.set('fvInsuranceImageId', docs['VehicleInsuranceImage']);",
+							"if (docs['VehicleFitnessCertificateImage']) pm.collectionVariables.set('fvFitnessImageId', docs['VehicleFitnessCertificateImage']);",
+							"if (docs['VehiclePUCImage']) pm.collectionVariables.set('fvPucImageId', docs['VehiclePUCImage']);",
+							"if (docs['VehiclePermitImage']) pm.collectionVariables.set('fvPermitImageId', docs['VehiclePermitImage']);",
+							"if (docs['VehicleInspectionImage']) pm.collectionVariables.set('fvInspectionImageId', docs['VehicleInspectionImage']);",
+							"console.log('refreshed vehicle image ids:', JSON.stringify(docs));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "079 - ADMIN REJECT VehicleRegistrationCertificate (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"ImageDocuments\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — VehicleRegistrationCertificate\",\n      \"documentImageId\": \"{{fleetRcImageId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// documents/update rejects ONE document per call — there is no bulk form — so covering the",
+							"// same document set as 02's single BULK REJECT takes N calls. Each one independently runs",
+							"// handleRejectRequest + handleMandatoryDocRejection.",
+							"pm.test('admin reject VehicleRegistrationCertificate accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "080 - ADMIN REJECT VehicleInsuranceImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"ImageDocuments\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — VehicleInsuranceImage\",\n      \"documentImageId\": \"{{fvInsuranceImageId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('admin reject VehicleInsuranceImage accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "081 - ADMIN REJECT VehicleFitnessCertificateImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"ImageDocuments\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — VehicleFitnessCertificateImage\",\n      \"documentImageId\": \"{{fvFitnessImageId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('admin reject VehicleFitnessCertificateImage accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "082 - ADMIN REJECT VehiclePUCImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"ImageDocuments\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — VehiclePUCImage\",\n      \"documentImageId\": \"{{fvPucImageId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('admin reject VehiclePUCImage accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "083 - ADMIN REJECT VehiclePermitImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"ImageDocuments\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — VehiclePermitImage\",\n      \"documentImageId\": \"{{fvPermitImageId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('admin reject VehiclePermitImage accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "084 - ADMIN REJECT VehicleInspectionImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"ImageDocuments\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — VehicleInspectionImage\",\n      \"documentImageId\": \"{{fvInspectionImageId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('admin reject VehicleInspectionImage accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "085 - Re-capture current APPROVED hub request id (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbLimit=20&mbOffset=0&mbStatus=%22APPROVED%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"fetch",
+						"hubRequests"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "20"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbStatus",
+							"value": "%22APPROVED%22"
+						},
+						{
+							"key": "mbReqType",
+							"value": "%22ONBOARDING_INSPECTION%22"
+						},
+						{
+							"key": "mbRegistrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// The BOT cycle rejected the original hub request and created a replacement, so",
+							"// fleetVehicleHubRequestId now points at a REJECTED row. Refresh it before the admin reject,",
+							"// which requires the request to be in APPROVED state.",
+							"pm.test('fetch hubRequests 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().requests || [];",
+							"pm.test('an APPROVED hub request exists', () => pm.expect(rows.length).to.be.above(0));",
+							"if (rows.length) pm.collectionVariables.set('fleetVehicleHubRequestId', rows[0].id);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "086 - ADMIN REJECT InspectionHub — InspectionHubReject (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/documents/update",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"documents",
+						"update"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"tag\": \"Reject\",\n  \"contents\": {\n    \"tag\": \"InspectionHubReject\",\n    \"contents\": {\n      \"reason\": \"Admin rejection test — InspectionHub\",\n      \"requestId\": \"{{fleetVehicleHubRequestId}}\"\n    }\n  }\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// A different RejectDetails variant: InspectionHubReject takes the operation-hub requestId,",
+							"// not an image. It requires the request to be APPROVED and flips it to REJECTED. Unlike the",
+							"// image variants it does NOT run handleMandatoryDocRejection — the flags move only when the",
+							"// next recompute sees InspectionHub INVALID.",
+							"pm.test('admin reject InspectionHub accepted', () => pm.response.to.have.status(200));",
+							"pm.test('result Success', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "087 - Assert fleet vehicle verified + approved went FALSE (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/vehicleStatus?registrationNo={{_test_fleet_rc_number}}&rcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"register",
+						"vehicleStatus"
+					],
+					"query": [
+						{
+							"key": "registrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						},
+						{
+							"key": "rcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// vehicleStatus is the only endpoint exposing the RC's own verified/approved — vehicle/info",
+							"// carries neither, and the BOT review queue has no row for the vehicle at this point (admin",
+							"// rejection creates no review request, and setup's approval closed the previous one).",
+							"// Verified against the DB: admin rejection leaves the RC verified=f, approved=f,",
+							"// docs_verification_status=ADMIN_REJECTED.",
+							"pm.test('vehicleStatus 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"pm.test('vehicle verified is false', () => pm.expect(v.verified).to.eql(false));",
+							"pm.test('vehicle approved is false', () => pm.expect(v.approved).to.eql(false));",
+							"console.log('fleet vehicle after admin reject — verified:', v.verified, 'approved:', v.approved);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "088 - Re-verify Fleet Account — dashboard person.verified (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{msilAdminToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/account/verifyAccount",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"account",
+						"verifyAccount"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"status\": \"Approved\",\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// checkFleetOwnerVerification (provider-dashboard CheckVerification.hs) guards addVehicle on",
+							"// the DASHBOARD person.verified flag — a different flag from fleetOwnerInfo.verified asserted",
+							"// above. Rejecting the fleet owner's documents clears it, so it has to be re-set before the",
+							"// vehicle can be re-added, exactly as setup does.",
+							"// addVehicle runs checkFleetOwnerVerification, which gates on the DASHBOARD person.verified",
+							"// flag (atlas_bpp_dashboard.person) — a different flag from the driver-app fleet flags the",
+							"// Fleet Onboarding section asserts. It is set at fleet creation to",
+							"//   not requireAdminApprovalForFleetOnboarding && verifyFleetWhileLogin == Just True",
+							"// and MSIL_PARTNER has verify_fleet_while_login = false, so it starts false and nothing in the",
+							"// onboarding flow flips it. Without this step addVehicle 400s with 'Fleet owner is not",
+							"// verified' and every vehicle step after it fails with RC_NOT_FOUND.",
+							"pm.test('verify fleet account 200', () => pm.response.to.have.status(200));",
+							"pm.test('APISuccess', () => pm.expect(pm.response.json().result).to.eql('Success'));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "089 - Re-arm fleet RC override (Mock Server)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"service\": \"gridline\",\n  \"extract\": \"body.data.rc_number\",\n  \"value\": \"{{_test_fleet_rc_number}}\",\n  \"match\": \"tasks/async\",\n  \"response\": {\n    \"result\": {\n      \"extraction_output\": {\n        \"vehicle_class\": \"LPV\",\n        \"manufacturer\": \"MARUTI SUZUKI\",\n        \"manufacturer_model\": \"SWIFT DZIRE\",\n        \"fuel_type\": \"Petrol\",\n        \"m_y_manufacturing\": \"{{_test_fleet_rc_mfg}}\"\n      }\n    }\n  }\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/override",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"override"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Override rules expire after 5 minutes.",
+							"pm.test('rc override re-armed', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "090 - Re-pin idfy RC (Mock Server)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/idfy/configure",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"idfy",
+						"configure"
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// addVehicle always extracts the RC image; the DCO blocks re-pinned idfy for their own",
+							"// PAN, so restore this RC before re-registering.",
+							"pm.test('idfy RC re-pinned', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "091 - Re-upload VehicleRegistrationCertificate (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleRegistrationCertificate\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleRegistrationCertificate re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fleetRcImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "092 - Re-add vehicle — fleet path (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{_test_fleet_mobile}}/fleet/addVehicle?mbRole=%22FLEET%22&fleetOwnerId={{fleetOwnerId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{_test_fleet_mobile}}",
+						"fleet",
+						"addVehicle"
+					],
+					"query": [
+						{
+							"key": "mbRole",
+							"value": "%22FLEET%22"
+						},
+						{
+							"key": "fleetOwnerId",
+							"value": "{{fleetOwnerId}}"
+						}
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"imageId\": \"{{fleetRcImageId}}\",\n  \"operatingCity\": \"{{city}}\",\n  \"multipleRC\": true,\n  \"vehicleCategory\": \"CAR\",\n  \"driverName\": \"MSILFleetOwner\",\n  \"energyType\": \"\",\n  \"fuelType\": \"\",\n  \"make\": \"Maruti Suzuki\",\n  \"model\": \"Swift\",\n  \"colour\": \"\",\n  \"vehicleClass\": \"LPV\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// make/model are set (not empty) so the RC resolves to a CAR-category variant. With them blank,",
+							"// findByMakeAndModelAndYear matches nothing and the vehicle lands as AUTO_RICKSHAW — and because",
+							"// checkAllVehicleDocsValid' resolves document configs BY VEHICLE CATEGORY, and MSIL/Delhi only",
+							"// configures CAR, no vehicle document is mandatory for it. Rejecting documents then cannot move",
+							"// verified/approved at all (measured: 6 docs INVALID, verified still true across 3 recomputes).",
+							"// 'Maruti Suzuki'/'Swift' maps to SEDAN in vehicle_details and matches the mock's MARUTI SUZUKI.",
+							"pm.test('re-add vehicle 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "093 - Re-capture rcId after RC re-register (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Re-registering an RC creates a NEW vehicle_registration_certificate row. vehicle/info",
+							"// returns the new one, but the rcId captured during setup still points at the old,",
+							"// now-unverified row — approving that id fails with 'RC is not verified'. Wait for the new",
+							"// row to verify, then re-capture its id.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var v = {}; try { v = res.json() || {}; } catch (e) {}",
+							"      if (v.rcId && v.verificationStatus === 'VALID') { console.log('new RC row VALID after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[WARN] status=' + v.verificationStatus); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"pm.test('rcId returned', () => pm.expect(v.rcId).to.be.a('string').and.not.empty);",
+							"pm.test('re-registered RC is VALID', () => pm.expect(v.verificationStatus).to.eql('VALID'));",
+							"pm.collectionVariables.set('fleetVehicleRcId', v.rcId);",
+							"console.log('re-captured rcId:', v.rcId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "094 - Re-upload VehicleInsuranceImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleInsuranceImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleInsuranceImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvInsuranceImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "095 - Re-upload VehicleFitnessCertificateImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFitnessCertificateImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFitnessCertificateImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvFitnessImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "096 - Re-upload VehiclePUCImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehiclePUCImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehiclePUCImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvPucImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "097 - Re-upload VehiclePermitImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehiclePermitImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehiclePermitImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvPermitImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "098 - Re-upload VehicleFront (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFront\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFront re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "099 - Re-upload VehicleBack (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleBack\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleBack re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "100 - Re-upload VehicleRight (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleRight\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleRight re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "101 - Re-upload VehicleLeft (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleLeft\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleLeft re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "102 - Re-upload VehicleFrontInterior (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleFrontInterior\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleFrontInterior re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "103 - Re-upload VehicleBackInterior (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleBackInterior\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('VehicleBackInterior re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "104 - Re-upload Odometer (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"Odometer\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Odometer re-uploaded', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "105 - Re-upload VehicleInspectionImage (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleetOwnerId}}/document/upload",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{fleetOwnerId}}",
+						"document",
+						"upload"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"fleetOwnerId\": \"{{fleetOwnerId}}\",\n  \"imageBase64\": \"{{doc_image_base64}}\",\n  \"imageType\": \"VehicleInspectionImage\",\n  \"rcNumber\": \"{{_test_fleet_rc_number}}\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// VehicleInspectionForm rejection invalidates EVERY vehicle image for this RC at once.",
+							"pm.test('VehicleInspectionImage re-uploaded', () => pm.response.to.have.status(200));",
+							"pm.collectionVariables.set('fvInspectionImageId', pm.response.json().imageId);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "106 - Re-create fleet vehicle hub request (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{fleetOwnerToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"createRequest"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"creatorId\": \"{{fleetOwnerId}}\",\n  \"driverId\": \"{{fleetOwnerId}}\",\n  \"operationHubId\": \"{{fleetOperationHubId}}\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"requestType\": \"ONBOARDING_INSPECTION\"\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('hub request re-created', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "107 - Operator pending — fleet vehicle re-create (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"fetch",
+						"hubRequests"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "10"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbStatus",
+							"value": "%22PENDING%22"
+						},
+						{
+							"key": "mbReqType",
+							"value": "%22ONBOARDING_INSPECTION%22"
+						},
+						{
+							"key": "mbRegistrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/operator/fetch/hubRequests?mbLimit=10&mbOffset=0&mbStatus=%22PENDING%22'",
+							"        + '&mbReqType=%22ONBOARDING_INSPECTION%22'",
+							"        + '&mbRegistrationNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var tries = 0, MAX = 40;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET',",
+							"                     header: { token: pm.collectionVariables.get('operatorToken') } },",
+							"      function (err, res) {",
+							"        var rows = []; try { rows = (res.json() || {}).requests || []; } catch (e) {}",
+							"        if (rows.length > 0) { console.log('new hub request after ~' + tries + 's'); return; }",
+							"        if (tries >= MAX) { console.log('[WARN] not drained'); return; }",
+							"        setTimeout(poll, 1000);",
+							"      });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('fetch hubRequests 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().requests || [];",
+							"pm.test('a new PENDING request exists', () => pm.expect(rows.length).to.be.above(0));",
+							"if (rows.length) pm.collectionVariables.set('reFvHubRequestId', rows[0].id);"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "108 - Operator approve — fleet vehicle re-create (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{operatorToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/respond/hubRequest",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"operator",
+						"respond",
+						"hubRequest"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"operationHubRequestId\": \"{{reFvHubRequestId}}\",\n  \"operatorId\": \"{{operatorId}}\",\n  \"registrationNo\": \"{{_test_fleet_rc_number}}\",\n  \"status\": \"APPROVED\",\n  \"remarks\": \"Re-inspection\",\n  \"responses\": null\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('respond hubRequest 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "109 - Recompute once after bulk re-supply",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/register/vehicleStatus?registrationNo={{_test_fleet_rc_number}}&rcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"onboarding",
+						"register",
+						"vehicleStatus"
+					],
+					"query": [
+						{
+							"key": "registrationNo",
+							"value": "{{_test_fleet_rc_number}}"
+						},
+						{
+							"key": "rcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Same drain gap as the setup recompute: the operator approval just above is a KV write, and",
+							"// getInspectionHubStatusAndReason reads the Postgres replica. Recomputing before it drains sees",
+							"// InspectionHub=PENDING and writes verified=false, which nothing later undoes because the",
+							"// recompute is deliberately hit only once. Gate on the APPROVED row being visible in Postgres.",
+							"var want = pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/operator/fetch/hubRequests?mbLimit=20&mbOffset=0&mbStatus=%22APPROVED%22&mbReqType=%22ONBOARDING_INSPECTION%22&mbRegistrationNo=' + want;",
+							"var tok = pm.collectionVariables.get('operatorToken');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: tok } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).requests || []; } catch (e) {}",
+							"      if (rows.length > 0) { console.log('hub request APPROVED in PG after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] hub request never drained to APPROVED in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('vehicleStatus 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "110 - Wait for fleet vehicle in BOT review queue (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/review/queue/VEHICLE/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbRcId={{fleetVehicleRcId}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"review",
+						"queue",
+						"VEHICLE",
+						"request",
+						"BOT_REVIEW"
+					],
+					"query": [
+						{
+							"key": "mbLimit",
+							"value": "20"
+						},
+						{
+							"key": "mbOffset",
+							"value": "0"
+						},
+						{
+							"key": "mbRcId",
+							"value": "{{fleetVehicleRcId}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Filter the queue by this entity instead of paging: the server CAPS mbLimit at 20",
+							"// (getDriverReviewQueueRequest: `limit = min maxLimit ...`, maxLimit = 20), and the DRIVER queue",
+							"// is every driver with verified=true/enabled=false — which accumulates across runs, so a fresh",
+							"// entity falls off page 1. mbRcId pins it to ours regardless of how much test data exists.",
+							"// Still polled: the underlying tables are KV-ON, so the row appears only after the drainer flushes.",
+							"var want = pm.collectionVariables.get('fleetVehicleRcId');",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/review/queue/VEHICLE/request/BOT_REVIEW?mbLimit=20&mbOffset=0&mbRcId=' + want;",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 60;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var rows = []; try { rows = (res.json() || {}).reviewQueue || []; } catch (e) {}",
+							"      if (rows.filter(function (r) { return r.entityDetails && r.entityDetails.entityId === want; }).length) {",
+							"        console.log('entity in BOT queue after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[FAIL] ' + want + ' never entered the BOT queue in ' + MAX + 's'); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// mbLimit=200: the BOT review queue accumulates entities across runs (20 DRIVER rows",
+							"// already), and there is no per-entity filter — with a small page the freshly created",
+							"// entity simply is not on page 1 and the lookup silently finds nothing.",
+							"pm.test('review queue 200', () => pm.response.to.have.status(200));",
+							"const rows = pm.response.json().reviewQueue || [];",
+							"const want = pm.collectionVariables.get('fleetVehicleRcId');",
+							"pm.test('fleet vehicle is in the BOT review queue', () =>",
+							"  pm.expect(rows.filter(r => r.entityDetails && r.entityDetails.entityId === want).length,",
+							"    'no BOT_REVIEW request for ' + want).to.be.above(0));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "111 - BOT approve after re-supply (Dashboard)",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/submit/review/request",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"submit",
+						"review",
+						"request"
+					]
+				},
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"entityType\": \"VEHICLE\",\n  \"entityId\": \"{{fleetVehicleRcId}}\",\n  \"rejectDocumentUpdateReq\": []\n}"
+				}
+			},
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('bot approve vehicle 200', () => pm.response.to.have.status(200));"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "112 - Assert fleet vehicle restored after bulk approve",
+			"_group": "Admin Rejection — Fleet Vehicle",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{bot_dashboard_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/vehicle/info?vehicleNo={{_test_fleet_rc_number}}",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"vehicle",
+						"info"
+					],
+					"query": [
+						{
+							"key": "vehicleNo",
+							"value": "{{_test_fleet_rc_number}}"
+						}
+					]
+				}
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Poll vehicle/info only — a recompute here would clear the fresh approval.",
+							"var url = pm.environment.get('baseURL_BPP_Dashboard_Internal')",
+							"        + '/' + pm.environment.get('dashboard_merchant_id')",
+							"        + '/' + pm.environment.get('dashboard_city')",
+							"        + '/driver/vehicle/info?vehicleNo=' + pm.collectionVariables.get('_test_fleet_rc_number');",
+							"var bot = pm.environment.get('bot_dashboard_token');",
+							"var tries = 0, MAX = 20;",
+							"function poll() {",
+							"    tries++;",
+							"    pm.sendRequest({ url: url, method: 'GET', header: { token: bot } }, function (err, res) {",
+							"      var v = {}; try { v = res.json() || {}; } catch (e) {}",
+							"      if (v.approved === true && v.verificationStatus === 'VALID') { console.log('restored after ~' + tries + 's'); return; }",
+							"      if (tries >= MAX) { console.log('[WARN] status=' + v.verificationStatus + ' approved=' + v.approved); return; }",
+							"      setTimeout(poll, 1000);",
+							"    });",
+							"}",
+							"poll();"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// InspectionHub: rejected -> re-supplied -> re-approved.",
+							"pm.test('vehicle info 200', () => pm.response.to.have.status(200));",
+							"const v = pm.response.json();",
+							"console.log('restored after InspectionHub —', 'status:', v.verificationStatus, 'approved:', v.approved);",
+							"pm.test('fleet vehicle verified again', () => pm.expect(v.verificationStatus).to.eql('VALID'));",
+							"pm.test('fleet vehicle approved again', () => pm.expect(v.approved).to.eql(true));"
+						]
+					}
+				}
+			]
+		}
+	]
+}

@@ -2159,6 +2159,36 @@ def get_collection_file(directory, filename):
     return None
 
 
+# Binary fixtures a collection ships beside its JSON — e.g. the document image that
+# multipart `validateImageFile` steps upload, referenced by a formdata field's `src`.
+# Committed to the repo so a run needs no per-machine file and no manual attachment.
+COLLECTION_ASSET_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".pdf": "application/pdf",
+}
+
+
+def get_collection_asset(directory, relpath):
+    """Return (bytes, content_type) for a fixture under collections/<directory>/.
+
+    None unless the resolved path stays inside the collection directory and carries a
+    whitelisted extension, so a crafted relpath cannot read arbitrary files.
+    """
+    base = (COLLECTIONS_DIR / directory).resolve()
+    try:
+        path = (base / relpath).resolve()
+    except (OSError, ValueError):
+        return None
+    if not (path.is_file() and str(path).startswith(str(base) + os.sep)):
+        return None
+    ctype = COLLECTION_ASSET_TYPES.get(path.suffix.lower())
+    if ctype is None:
+        return None
+    return path.read_bytes(), ctype
+
+
 # ── Service Log Capture (tail -f based) ──
 
 # Global state: active tail processes keyed by a session token
@@ -4481,6 +4511,26 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json(get_variants(city_id))
         elif path == "/api/collections":
             self._send_json(scan_collections())
+        elif path.startswith("/api/collection-asset/"):
+            parts = path.split("/")
+            if len(parts) >= 5:
+                asset = get_collection_asset(parts[3], "/".join(parts[4:]))
+                if asset:
+                    blob, ctype = asset
+                    try:
+                        self.send_response(200)
+                        self.send_header("Content-Type", ctype)
+                        self.send_header("Content-Length", str(len(blob)))
+                        self._cors_headers()
+                        self.end_headers()
+                        self.wfile.write(blob)
+                    except BrokenPipeError:
+                        pass
+                else:
+                    self._send_json({"error": "asset not found"}, 404)
+            else:
+                self._send_json(
+                    {"error": "usage: /api/collection-asset/<dir>/<path>"}, 400)
         elif path.startswith("/api/collection/"):
             parts = path.split("/")
             if len(parts) >= 5:
