@@ -372,6 +372,7 @@ _:
               then
                 applyHint "''${FLAKE_ROOT}/Backend/app/rider-platform/rider-app/Main/src-read-only" "$allArg"
                 applyHint "''${FLAKE_ROOT}/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src-read-only" "$allArg"
+                applyHint "''${FLAKE_ROOT}/Backend/lib/incentive-journey/src-read-only" "$allArg"
                 applyHint "''${FLAKE_ROOT}/Backend/lib/yudhishthira/src-read-only" "$allArg"
                 applyHint "''${FLAKE_ROOT}/Backend/lib/finance-kernel/src-read-only" "$allArg"
                 applyHint "''${FLAKE_ROOT}/Backend/lib/payment/src-read-only" "$allArg"

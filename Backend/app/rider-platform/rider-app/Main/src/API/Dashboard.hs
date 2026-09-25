@@ -15,6 +15,7 @@
 module API.Dashboard where
 
 import qualified API.Action.Dashboard.AppManagement as AppManagementDSL
+import qualified API.Action.Dashboard.IncentiveJourney as IncentiveJourneyDSL
 import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
@@ -34,6 +35,7 @@ type APIV2 =
            :> ( ManagementDSLAPI
                   :<|> AppManagementDSLAPI
                   :<|> IssueManagementDSLAPI
+                  :<|> IncentiveJourneyDSLAPI
                   :<|> RideBookingDSLAPI
               )
        )
@@ -45,6 +47,8 @@ type AppManagementDSLAPI = DashboardTokenAuth :> AppManagementDSL.API
 
 type IssueManagementDSLAPI = DashboardTokenAuth :> IssueManagementDSL.API
 
+type IncentiveJourneyDSLAPI = DashboardTokenAuth :> IncentiveJourneyDSL.API
+
 type RideBookingDSLAPI = DashboardTokenAuth :> "rideBooking" :> RideBookingDSL.API
 
 handlerV2 :: FlowServer APIV2
@@ -53,6 +57,7 @@ handlerV2 =
       managementDSLHandler merchantId city
         :<|> appManagementDSLHandler merchantId city
         :<|> issueManagementDSLHandler merchantId city
+        :<|> incentiveJourneyDSLHandler merchantId city
         :<|> rideBookingDSLHandler merchantId city
   )
     :<|> exotelHandler
@@ -65,6 +70,9 @@ appManagementDSLHandler merchantId city _auth = AppManagementDSL.handler merchan
 
 issueManagementDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer IssueManagementDSLAPI
 issueManagementDSLHandler merchantId city _auth = IssueManagementDSL.handler merchantId city
+
+incentiveJourneyDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer IncentiveJourneyDSLAPI
+incentiveJourneyDSLHandler merchantId city _auth = IncentiveJourneyDSL.handler merchantId city
 
 rideBookingDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer RideBookingDSLAPI
 rideBookingDSLHandler merchantId city _auth = RideBookingDSL.handler merchantId city

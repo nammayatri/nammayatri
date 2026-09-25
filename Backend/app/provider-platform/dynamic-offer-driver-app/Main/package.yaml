@@ -139,6 +139,7 @@ dependencies:
   - yudhishthira
   - config-pilot
   - behavior-tracker
+  - incentive-journey
   - behavior-engine
   - consequence-engine
   - communication-engine

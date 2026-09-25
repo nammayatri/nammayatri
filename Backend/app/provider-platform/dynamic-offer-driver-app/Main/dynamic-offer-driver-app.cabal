@@ -117,6 +117,7 @@ library
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
       API.UI.ExotelEndRide
+      API.UI.IncentiveJourney
       API.UI.Issue
       API.UI.KioskLocation
       API.UI.LeaderBoard
@@ -238,6 +239,7 @@ library
       Domain.Action.Dashboard.Fleet.Referral
       Domain.Action.Dashboard.Fleet.Registration
       Domain.Action.Dashboard.Fleet.RegistrationV2
+      Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.Management.Account
       Domain.Action.Dashboard.Management.Booking
@@ -256,7 +258,6 @@ library
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
       Domain.Action.Dashboard.Management.GeohashArea
-      Domain.Action.Dashboard.Management.IncentiveJourney
       Domain.Action.Dashboard.Management.KnowledgeCenter
       Domain.Action.Dashboard.Management.Media
       Domain.Action.Dashboard.Management.MediaFileDocument
@@ -558,6 +559,7 @@ library
       SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS
       SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
       SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
+      SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload
       SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance
       SharedLogic.Allocator.Jobs.Mandate.Execution
       SharedLogic.Allocator.Jobs.Mandate.Notification
@@ -734,6 +736,7 @@ library
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
+      SharedLogic.RideEvents.DriverCoinsAndJourney
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
@@ -781,6 +784,7 @@ library
       Storage.Beam.Geometry.Geometry
       Storage.Beam.Geometry.GeometryGeom
       Storage.Beam.GovtDataRC
+      Storage.Beam.IncentiveJourney
       Storage.Beam.InterCityTravelCities
       Storage.Beam.InterCityTravelCities.InterCityTravelCities
       Storage.Beam.InterCityTravelCities.InterCityTravelCitiesGeom
@@ -832,9 +836,6 @@ library
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
       Storage.CachedQueries.GeohashArea
       Storage.CachedQueries.GoHomeConfig
-      Storage.CachedQueries.IncentiveJourney
-      Storage.CachedQueries.IncentiveJourneyMilestone
-      Storage.CachedQueries.IncentiveJourneyStats
       Storage.CachedQueries.InterCityTravelCities
       Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.KioskLocation
@@ -1003,7 +1004,6 @@ library
       Storage.Queries.IdfyVerificationExtra
       Storage.Queries.IffcoTokioInsuranceExtra
       Storage.Queries.ImageExtra
-      Storage.Queries.IncentiveJourneyStatsExtra
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
       Storage.Queries.KioskLocationExtra
@@ -1167,6 +1167,8 @@ library
       API.Action.Dashboard.Fleet.Onboarding
       API.Action.Dashboard.Fleet.PayoutAccount
       API.Action.Dashboard.Fleet.RegistrationV2
+      API.Action.Dashboard.IncentiveJourney
+      API.Action.Dashboard.IncentiveJourney.IncentiveJourney
       API.Action.Dashboard.IssueManagement
       API.Action.Dashboard.IssueManagement.Issue
       API.Action.Dashboard.Management
@@ -1187,7 +1189,6 @@ library
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement
       API.Action.Dashboard.Management.GeohashArea
-      API.Action.Dashboard.Management.IncentiveJourney
       API.Action.Dashboard.Management.KnowledgeCenter
       API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.MediaFileDocument
@@ -1236,6 +1237,8 @@ library
       API.Action.DashboardAuth.Fleet.Onboarding
       API.Action.DashboardAuth.Fleet.PayoutAccount
       API.Action.DashboardAuth.Fleet.RegistrationV2
+      API.Action.DashboardAuth.IncentiveJourney
+      API.Action.DashboardAuth.IncentiveJourney.IncentiveJourney
       API.Action.DashboardAuth.IssueManagement
       API.Action.DashboardAuth.IssueManagement.Issue
       API.Action.DashboardAuth.Management
@@ -1256,7 +1259,6 @@ library
       API.Action.DashboardAuth.Management.FeedbackForm
       API.Action.DashboardAuth.Management.FinanceManagement
       API.Action.DashboardAuth.Management.GeohashArea
-      API.Action.DashboardAuth.Management.IncentiveJourney
       API.Action.DashboardAuth.Management.KnowledgeCenter
       API.Action.DashboardAuth.Management.Media
       API.Action.DashboardAuth.Management.MediaFileDocument
@@ -1311,7 +1313,6 @@ library
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
       API.Action.UI.FRFSFleetOperator
-      API.Action.UI.IncentiveJourney
       API.Action.UI.Insurance
       API.Action.UI.Invoice
       API.Action.UI.LmsModule
@@ -1420,7 +1421,6 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement
       API.Types.ProviderPlatform.Management.Endpoints.GeohashArea
-      API.Types.ProviderPlatform.Management.Endpoints.IncentiveJourney
       API.Types.ProviderPlatform.Management.Endpoints.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Endpoints.Media
       API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
@@ -1447,7 +1447,6 @@ library
       API.Types.ProviderPlatform.Management.FeedbackForm
       API.Types.ProviderPlatform.Management.FinanceManagement
       API.Types.ProviderPlatform.Management.GeohashArea
-      API.Types.ProviderPlatform.Management.IncentiveJourney
       API.Types.ProviderPlatform.Management.KnowledgeCenter
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.MediaFileDocument
@@ -1494,7 +1493,6 @@ library
       API.Types.UI.FinanceInvoice
       API.Types.UI.FleetOwnerList
       API.Types.UI.FRFSFleetOperator
-      API.Types.UI.IncentiveJourney
       API.Types.UI.Insurance
       API.Types.UI.Invoice
       API.Types.UI.LmsModule
@@ -1624,9 +1622,6 @@ library
       Domain.Types.IdfyVerification
       Domain.Types.IffcoTokioInsurance
       Domain.Types.Image
-      Domain.Types.IncentiveJourney
-      Domain.Types.IncentiveJourneyMilestone
-      Domain.Types.IncentiveJourneyStats
       Domain.Types.IntegratedBPPConfig
       Domain.Types.Invoice
       Domain.Types.KioskLocation
@@ -1820,9 +1815,6 @@ library
       Storage.Beam.IdfyVerification
       Storage.Beam.IffcoTokioInsurance
       Storage.Beam.Image
-      Storage.Beam.IncentiveJourney
-      Storage.Beam.IncentiveJourneyMilestone
-      Storage.Beam.IncentiveJourneyStats
       Storage.Beam.IntegratedBPPConfig
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
@@ -2021,9 +2013,6 @@ library
       Storage.Queries.IdfyVerification
       Storage.Queries.IffcoTokioInsurance
       Storage.Queries.Image
-      Storage.Queries.IncentiveJourney
-      Storage.Queries.IncentiveJourneyMilestone
-      Storage.Queries.IncentiveJourneyStats
       Storage.Queries.IntegratedBPPConfig
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
@@ -2109,7 +2098,6 @@ library
       Storage.Queries.OrphanInstances.FleetRcDailyStats
       Storage.Queries.OrphanInstances.IffcoTokioInsurance
       Storage.Queries.OrphanInstances.Image
-      Storage.Queries.OrphanInstances.IncentiveJourneyStats
       Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
@@ -2315,6 +2303,7 @@ library
     , http-client-tls
     , http-conduit
     , http-types
+    , incentive-journey
     , json-logic-hs
     , jwt >=0.11
     , lens
@@ -2465,6 +2454,7 @@ executable dynamic-offer-driver-app-exe
     , http-client-tls
     , http-conduit
     , http-types
+    , incentive-journey
     , json-logic-hs
     , jwt >=0.11
     , lens

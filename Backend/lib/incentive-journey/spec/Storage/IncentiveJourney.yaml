@@ -1,0 +1,52 @@
+imports:
+  Merchant: Lib.IncentiveJourney.Domain.Types.Common
+  MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+
+IncentiveJourney:
+  tableName: incentive_journey
+
+  types:
+    IncentiveJourneyType:
+      enum: "Daily, Weekly, Monthly"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <IncentiveJourneyType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <IncentiveJourneyType>
+
+  fields:
+    id: Id IncentiveJourney
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    name: Text
+    description: Maybe Text
+    journeyType: Maybe IncentiveJourneyType
+    enabled: Bool
+    maxWaiveOffCount: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    journeyType: "'Daily'"
+    maxWaiveOffCount: "1"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+    findEnabledByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"

@@ -24,6 +24,7 @@ module Domain.Types.AccessMatrix (module Domain.Types.AccessMatrix, module Reexp
 import qualified "this" API.Types.Dashboard.AppManagement as ProviderAppManagement
 import qualified "this" API.Types.Dashboard.RideBooking as ProviderRideBooking
 import qualified "this" API.Types.ProviderPlatform.Fleet as ProviderFleet
+import qualified "incentive-journey" API.Types.ProviderPlatform.IncentiveJourney as ProviderIncentiveJourney
 import qualified "shared-services" API.Types.ProviderPlatform.IssueManagement as ProviderIssueManagement
 import qualified "this" API.Types.ProviderPlatform.Management as ProviderManagement
 import qualified "this" API.Types.ProviderPlatform.Operator as ProviderOperator
@@ -42,6 +43,7 @@ data UserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
   | PROVIDER_APP_MANAGEMENT ProviderAppManagement.AppManagementUserActionType
   | PROVIDER_ISSUE_MANAGEMENT ProviderIssueManagement.IssueManagementUserActionType
+  | PROVIDER_INCENTIVE_JOURNEY ProviderIncentiveJourney.IncentiveJourneyUserActionType
   | PROVIDER_RIDE_BOOKING ProviderRideBooking.RideBookingUserActionType
   deriving (Read, Generic, ToSchema, Eq, Ord)
 
@@ -52,6 +54,7 @@ instance Text.Show.Show UserActionType where
     PROVIDER_MANAGEMENT uat -> "PROVIDER_MANAGEMENT/" <> show uat
     PROVIDER_APP_MANAGEMENT uat -> "PROVIDER_APP_MANAGEMENT/" <> show uat
     PROVIDER_ISSUE_MANAGEMENT uat -> "PROVIDER_ISSUE_MANAGEMENT/" <> show uat
+    PROVIDER_INCENTIVE_JOURNEY uat -> "PROVIDER_INCENTIVE_JOURNEY/" <> show uat
     PROVIDER_RIDE_BOOKING uat -> "PROVIDER_RIDE_BOOKING/" <> show uat
 
 instance Auth.IsUserActionType UserActionType where

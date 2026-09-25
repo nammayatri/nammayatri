@@ -34,6 +34,7 @@ module API.DirectDashboard
 where
 
 import qualified API.Action.DashboardAuth.AppManagement as AppManagementDSL
+import qualified API.Action.DashboardAuth.IncentiveJourney as IncentiveJourneyDSL
 import qualified API.Action.DashboardAuth.IssueManagement as IssueManagementDSL
 import qualified API.Action.DashboardAuth.Management as ManagementDSL
 import qualified API.Action.DashboardAuth.RideBooking as RideBookingDSL
@@ -55,6 +56,7 @@ type API =
            -- than a per-folder rewrite.
            :<|> ("rideBooking" :> RideBookingDSL.API)
            :<|> IssueManagementDSL.API
+           :<|> IncentiveJourneyDSL.API
        )
 
 handler :: FlowServer API
@@ -63,3 +65,4 @@ handler merchantId city =
     :<|> ManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
+    :<|> IncentiveJourneyDSL.handler merchantId city

@@ -20,6 +20,7 @@ module Domain.Types.AccessMatrix (module Domain.Types.AccessMatrix, module Reexp
 
 import qualified "this" API.Types.Dashboard.AppManagement as RiderAppManagement
 import qualified "this" API.Types.Dashboard.RideBooking as RiderRideBooking
+import qualified "incentive-journey" API.Types.RiderPlatform.IncentiveJourney as RiderIncentiveJourney
 import qualified "shared-services" API.Types.RiderPlatform.IssueManagement as RiderIssueManagement
 import qualified "this" API.Types.RiderPlatform.Management as RiderManagement
 import Data.Singletons.TH
@@ -35,6 +36,7 @@ data UserActionType
   = RIDER_MANAGEMENT RiderManagement.ManagementUserActionType
   | RIDER_APP_MANAGEMENT RiderAppManagement.AppManagementUserActionType
   | RIDER_ISSUE_MANAGEMENT RiderIssueManagement.IssueManagementUserActionType
+  | RIDER_INCENTIVE_JOURNEY RiderIncentiveJourney.IncentiveJourneyUserActionType
   | RIDER_RIDE_BOOKING RiderRideBooking.RideBookingUserActionType
   | BHARAT_TAXI_FROM_LIST
   | BHARAT_TAXI_TO_LIST
@@ -55,6 +57,7 @@ instance Text.Show.Show UserActionType where
     RIDER_MANAGEMENT uat -> "RIDER_MANAGEMENT/" <> show uat
     RIDER_APP_MANAGEMENT uat -> "RIDER_APP_MANAGEMENT/" <> show uat
     RIDER_ISSUE_MANAGEMENT uat -> "RIDER_ISSUE_MANAGEMENT/" <> show uat
+    RIDER_INCENTIVE_JOURNEY uat -> "RIDER_INCENTIVE_JOURNEY/" <> show uat
     RIDER_RIDE_BOOKING uat -> "RIDER_RIDE_BOOKING/" <> show uat
     BHARAT_TAXI_FROM_LIST -> "BHARAT_TAXI_FROM_LIST"
     BHARAT_TAXI_TO_LIST -> "BHARAT_TAXI_TO_LIST"

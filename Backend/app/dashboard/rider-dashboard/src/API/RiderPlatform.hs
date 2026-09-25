@@ -21,6 +21,7 @@ module API.RiderPlatform
 where
 
 import qualified API.Action.RiderPlatform.AppManagement as AppManagementDSL
+import qualified API.Action.RiderPlatform.IncentiveJourney as IncentiveJourneyDSL
 import qualified API.Action.RiderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.RiderPlatform.Management as ManagementDSL
 import qualified API.Action.RiderPlatform.RideBooking as RideBookingDSL
@@ -49,6 +50,7 @@ type API' =
   ManagementDSL.API
     :<|> AppManagementDSL.API
     :<|> IssueManagementDSL.API
+    :<|> IncentiveJourneyDSL.API
     :<|> ("rideBooking" :> RideBookingDSL.API)
     :<|> Entity.API
     :<|> Person.API
@@ -60,6 +62,7 @@ handler merchantId = do
   ManagementDSL.handler merchantId city
     :<|> AppManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
+    :<|> IncentiveJourneyDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
     :<|> Entity.handler merchantId
     :<|> Person.handler merchantId
@@ -75,6 +78,7 @@ handlerV2 merchantId city =
   ManagementDSL.handler merchantId city
     :<|> AppManagementDSL.handler merchantId city
     :<|> IssueManagementDSL.handler merchantId city
+    :<|> IncentiveJourneyDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
     :<|> Entity.handler merchantId
     :<|> Person.handler merchantId

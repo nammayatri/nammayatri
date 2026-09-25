@@ -1,0 +1,68 @@
+imports:
+  Merchant: Lib.IncentiveJourney.Domain.Types.Common
+  MerchantOperatingCity: Lib.IncentiveJourney.Domain.Types.Common
+
+# Progress / audit row for Allocator BulkUserCohortMappingUpload jobs.
+# Keyed by runId (same id returned to dashboard). Scheduler remains the executor;
+# this table is the only source for Control Center list + progress APIs.
+BulkUserCohortMappingRun:
+  tableName: bulk_user_cohort_mapping_run
+
+  types:
+    BulkUserCohortMappingRunStatus:
+      enum: "Scheduled, Running, Succeeded, Failed, Cancelled"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BulkUserCohortMappingRunStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BulkUserCohortMappingRunStatus>
+
+  fields:
+    id: Id BulkUserCohortMappingRun
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    s3FilePath: Text
+    scheduledAt: UTCTime
+    status: BulkUserCohortMappingRunStatus
+    fileOffset: Int
+    batchSize: Int
+    rescheduleDelaySeconds: Int
+    totalRows: Maybe Int
+    rowsInserted: Int
+    rowsSkipped: Int
+    currentSchedulerJobId: Maybe Text
+    errorMessage: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    fileOffset: "0"
+    totalRows: "NULL"
+    rowsInserted: "0"
+    rowsSkipped: "0"
+    currentSchedulerJobId: "NULL"
+    errorMessage: "NULL"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy: createdAt
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId]
+    - columns: [merchantOperatingCityId, status]
+    - columns: [merchantId, merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.IncentiveJourney.Storage.Beam.BeamFlow.BeamFlow m r)"
