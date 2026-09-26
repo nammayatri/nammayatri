@@ -1417,6 +1417,8 @@ TransporterConfig:
     forceEnabledBypassingDocsUponDisableTakesToOnboarding: Maybe Bool
     enablePullPendingDocVerification: Maybe Bool # Just True ⇒ status renders re-pull stuck doc verifications via getTask (SyncVerificationStatus). NULL ⇒ off.
     driverOnboardingLinkExpiryHours: Maybe Int # Lifetime of the onboarding-link SMS code (and its short link). NULL ⇒ 24.
+    driverShareLinkTemplate: Maybe Text # Fleet driver's share link with {#driverId#} and {#code#} placeholders. NULL ⇒ sharing disabled.
+    driverShareLinkExpiryHours: Maybe Int # Lifetime of the code in a driver's shared onboarding link. NULL ⇒ 24.
     preProcessDocumentIdentifiers: Bool
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"

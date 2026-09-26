@@ -396,7 +396,8 @@ buildFRFSTicketBookedMessage merchantOperatingCityId pOrgId req = do
                 customShortCode = Nothing,
                 shortCodeLength = Nothing,
                 expiryInHours = smsPOCfg.shortUrlExpiryInHours,
-                urlCategory = Just UrlShortner.METRO_TICKET_BOOKING
+                urlCategory = Just UrlShortner.METRO_TICKET_BOOKING,
+                shortUrlHostFromBaseUrl = Nothing
               }
       res <- UrlShortner.generateShortUrl shortUrlReq
       let url = res.shortUrl
@@ -427,7 +428,8 @@ buildFRFSTicketCancelMessage merchantOperatingCityId pOrgId req = do
                 customShortCode = Nothing,
                 shortCodeLength = Nothing,
                 expiryInHours = smsPOCfg.shortUrlExpiryInHours,
-                urlCategory = Just UrlShortner.METRO_TICKET_BOOKING
+                urlCategory = Just UrlShortner.METRO_TICKET_BOOKING,
+                shortUrlHostFromBaseUrl = Nothing
               }
       res <- UrlShortner.generateShortUrl shortUrlReq
       let url = res.shortUrl
@@ -442,7 +444,8 @@ shortenTrackingUrl urlCategory url = do
             customShortCode = Nothing,
             shortCodeLength = Nothing,
             expiryInHours = Just 24,
-            urlCategory = urlCategory
+            urlCategory = urlCategory,
+            shortUrlHostFromBaseUrl = Nothing
           }
   res <- UrlShortner.generateShortUrl shortUrlReq
   return res.shortUrl

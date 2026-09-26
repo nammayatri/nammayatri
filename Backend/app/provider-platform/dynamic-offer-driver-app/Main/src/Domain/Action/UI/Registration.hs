@@ -38,6 +38,7 @@ module Domain.Action.UI.Registration
     TempCodeRes (..),
     selfServiceTempCodeTtl,
     operatorLinkTempCodeTtl,
+    shareLinkTempAppCodeCfg,
     driverTempAppCodeCfg,
     operatorLinkTempAppCodeCfg,
   )
@@ -1027,6 +1028,14 @@ operatorLinkTempAppCodeCfg =
       consumeOnRead = False,
       maxAttempts = 3,
       attemptWindowSeconds = 300
+    }
+
+-- | Own prefix so a share code can never be redeemed as a login.
+shareLinkTempAppCodeCfg :: TempAppCodeCfg
+shareLinkTempAppCodeCfg =
+  operatorLinkTempAppCodeCfg
+    { keyPrefix = "driver-offer:onboarding-share-code:",
+      limitKeyPrefix = "driver-offer:onboarding-share-code-attempts:"
     }
 
 selfServiceTempCodeTtl :: Int

@@ -28,7 +28,7 @@ import Prelude (show)
   So whenever adding new category,
   make sure to add corresponding enum to the url-shortner service as well.
 -}
-metroTicketBooking, mtbEnum, rtkEnum, rideTracking, meterRideReferralLink, mrlEnum, driverOnboardingLink, dolEnum :: String
+metroTicketBooking, mtbEnum, rtkEnum, rideTracking, meterRideReferralLink, mrlEnum, driverOnboardingLink, dolEnum, driverControlCenterLink, dccEnum :: String
 metroTicketBooking = "mtb"
 mtbEnum = "METRO_TICKET_BOOKING"
 rideTracking = "rtk"
@@ -37,8 +37,10 @@ meterRideReferralLink = "mrl"
 mrlEnum = "METER_RIDE_REFERRAL_LINK"
 driverOnboardingLink = "dol"
 dolEnum = "DRIVER_ONBOARDING_LINK"
+driverControlCenterLink = "dcc"
+dccEnum = "DRIVER_CONTROL_CENTER_LINK"
 
-data UrlCategory = METRO_TICKET_BOOKING | RIDE_TRACKING | METER_RIDE_REFERRAL_LINK | DRIVER_ONBOARDING_LINK
+data UrlCategory = METRO_TICKET_BOOKING | RIDE_TRACKING | METER_RIDE_REFERRAL_LINK | DRIVER_ONBOARDING_LINK | DRIVER_CONTROL_CENTER_LINK
   deriving (Generic)
 
 fromString :: String -> Maybe UrlCategory
@@ -48,6 +50,7 @@ fromString str =
       | str == rtkEnum || str == rideTracking -> Just RIDE_TRACKING
       | str == mrlEnum || str == meterRideReferralLink -> Just METER_RIDE_REFERRAL_LINK
       | str == dolEnum || str == driverOnboardingLink -> Just DRIVER_ONBOARDING_LINK
+      | str == dccEnum || str == driverControlCenterLink -> Just DRIVER_CONTROL_CENTER_LINK
       | otherwise -> Nothing
 
 toString :: UrlCategory -> String
@@ -55,6 +58,7 @@ toString METRO_TICKET_BOOKING = metroTicketBooking
 toString RIDE_TRACKING = rideTracking
 toString METER_RIDE_REFERRAL_LINK = meterRideReferralLink
 toString DRIVER_ONBOARDING_LINK = driverOnboardingLink
+toString DRIVER_CONTROL_CENTER_LINK = driverControlCenterLink
 
 instance Read UrlCategory where
   readsPrec _ = maybe [] (\x -> [(x, "")]) . fromString
@@ -74,7 +78,8 @@ data GenerateShortUrlReq = GenerateShortUrlReq
     customShortCode :: Maybe Text,
     shortCodeLength :: Maybe Int,
     expiryInHours :: Maybe Int,
-    urlCategory :: Maybe UrlCategory
+    urlCategory :: Maybe UrlCategory,
+    shortUrlHostFromBaseUrl :: Maybe Bool
   }
   deriving (Generic, Read, Show)
 
