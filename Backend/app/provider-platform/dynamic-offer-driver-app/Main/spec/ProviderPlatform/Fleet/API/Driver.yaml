@@ -1351,6 +1351,31 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # OnboardingLinkConsentAPI
+      endpoint: /fleet/onboardingLink/consent
+      appServerHandler: custom
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: OnboardingLinkConsentReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.onboarding.write
+      helperApi:
+        - POST:
+            endpoint: /{fleetOwnerId}/fleet/onboardingLink/consent
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - requestorId: Text
+            request:
+              type: OnboardingLinkConsentReq
+            response:
+              type: APISuccess
+
   - POST: # UpdateDriverAPI
       endpoint: /fleet/driver/{driverId}/update
       appServerHandler: custom
@@ -1612,6 +1637,10 @@ types:
     - driverId: Id Driver
     - approve: Maybe Bool
     - reason: Maybe Text
+    - derive: "'HideSecrets"
+  OnboardingLinkConsentReq:
+    - driverId: Id Driver
+    - code: Text
     - derive: "'HideSecrets"
   ChangeFleetOwnerReq:
     - newFleetOwnerId: Text

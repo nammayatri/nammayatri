@@ -60,6 +60,25 @@ apis:
           - requestorId: Text
       migrate:
         capability: city-operations.onboarding.write
+  - POST: # OnboardingLinkAPI
+      endpoint: /{driverId}/onboardingLink
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: OnboardingLinkRes
+      helperApi:
+        - POST:
+            endpoint: /{driverId}/onboardingLink
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: OnboardingLinkRes
+      migrate:
+        capability: city-operations.onboarding.write
   - POST: # UploadDocumentAPI
       endpoint: /{driverId}/document/upload
       appServerHandler: custom
@@ -379,6 +398,9 @@ types:
     - commonDocuments: [CommonDocumentItem]
   TempAppCodeRes:
     - code: Text
+    - expiresAt: UTCTime
+  OnboardingLinkRes:
+    - link: Text
     - expiresAt: UTCTime
   GetDocumentResponse:
     - imageBase64: Maybe Text

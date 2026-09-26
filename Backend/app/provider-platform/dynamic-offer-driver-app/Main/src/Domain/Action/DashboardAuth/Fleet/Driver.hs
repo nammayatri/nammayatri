@@ -48,6 +48,7 @@ module Domain.Action.DashboardAuth.Fleet.Driver
     getDriverFleetDashboardAnalytics,
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetApproveDriver,
+    postDriverFleetOnboardingLinkConsent,
     postDriverFleetDriverUpdate,
     getDriverFleetVehicleListStats,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles,
@@ -299,6 +300,11 @@ postDriverFleetApproveDriver :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 postDriverFleetApproveDriver a4 a3 a2 a1 = do
   fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) Kernel.Prelude.Nothing
   Domain.Action.Dashboard.Fleet.Driver.postDriverFleetApproveDriver a4 a3 fleetOwnerId a1
+
+postDriverFleetOnboardingLinkConsent :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Fleet.Driver.OnboardingLinkConsentReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverFleetOnboardingLinkConsent a5 a4 a3 a2 a1 = do
+  (fleetOwnerId, requestorId) <- SharedLogic.Fleet.getFleetOwnerAndRequestorIdMerchantBased (Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a3) (Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a3) (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a2
+  Domain.Action.Dashboard.Fleet.Driver.postDriverFleetOnboardingLinkConsent a5 a4 fleetOwnerId (Kernel.Prelude.Just requestorId) a1
 
 postDriverFleetDriverUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Driver -> API.Types.ProviderPlatform.Fleet.Driver.UpdateDriverReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetDriverUpdate a5 a4 a3 a2 a1 = do

@@ -20,6 +20,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
 import qualified Domain.Action.UI.DriverOnboarding.SyncVerificationStatus as SyncV
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
+import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
@@ -77,6 +78,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import SharedLogic.DriverOnboarding.Digilocker
   ( base64UrlEncodeNoPadding,
     constructDigiLockerAuthUrl,
@@ -94,6 +96,7 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.Finance.Prepaid as SFPrepaid
 import qualified SharedLogic.Finance.Wallet as SFWallet
 import qualified SharedLogic.Merchant as SMerchant
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -129,9 +132,12 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCE
+import qualified TempAppCode.Flow as TempAppCode
+import TempAppCode.Types (TempAppCodeCfg (..))
 import qualified Tools.BackgroundVerification as BackgroundVerificationT
 import Tools.Error
 import qualified Tools.Verification as Verification
+import qualified UrlShortner.Common as UrlShortner
 
 stringToPrice :: Currency -> Text -> Maybe Price
 stringToPrice currency value = do
@@ -1562,6 +1568,24 @@ postDriverLinkToFleet (mbDriverId, merchantId, merchantOperatingCityId) req = do
           SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver req.fleetOwnerId driverId) SGuard.LinkToFleet (SGuard.TargetDriver driverId) $
             FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason) (Just merchantId) (Just merchantOperatingCityId) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
   return Success
+
+postDriverOnboardingShareLink ::
+  (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
+  Flow APITypes.ShareLinkRes
+postDriverOnboardingShareLink (mbDriverId, _, merchantOperatingCityId) = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  linkTemplate <- transporterConfig.driverShareLinkTemplate & fromMaybeM (InvalidRequest "Share link is not configured for this city")
+  driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless (driverInfo.onboardingAs == Just DI.FLEET_DRIVER) $ throwError (InvalidRequest "Only fleet drivers can share their onboarding link")
+  let expiryHours = fromMaybe SOnbCommon.defaultDriverShareLinkExpiryHours transporterConfig.driverShareLinkExpiryHours
+  codeRes <- TempAppCode.generateTempAppCode (DReg.shareLinkTempAppCodeCfg {ttlSeconds = expiryHours * 3600}) driverId.getId
+  let longUrl =
+        linkTemplate
+          & T.replace (MessageBuilder.templateText "driverId") driverId.getId
+          & T.replace (MessageBuilder.templateText "code") codeRes.code
+  link <- MessageBuilder.shortenOnboardingLink UrlShortner.DRIVER_CONTROL_CENTER_LINK (expiryHours + 24) longUrl
+  pure $ APITypes.ShareLinkRes {link, expiresAt = codeRes.expiresAt}
 
 -- | Vehicle-only RC verify-status (driver app). RC resolved by @registrationNo@/@rcId@; access gated on
 --   the calling driver's active DriverRCAssociation. Fleet ownership is not accepted here.

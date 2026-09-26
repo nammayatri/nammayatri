@@ -305,6 +305,10 @@ data SSNReq = SSNReq {ssn :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ShareLinkRes = ShareLinkRes {expiresAt :: Kernel.Prelude.UTCTime, link :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TDSCertificateData = TDSCertificateData {overallTdsAmount :: Kernel.Types.Common.HighPrecMoney, tdsCertificates :: [TDSInvoiceEntry]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

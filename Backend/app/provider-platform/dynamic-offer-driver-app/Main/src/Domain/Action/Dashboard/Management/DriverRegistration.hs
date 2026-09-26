@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
     postDriverRegistrationGenerateTempAppCode,
+    postDriverRegistrationOnboardingLink,
     mapDocumentType,
     convertValidationStatus,
     sendDocumentDecisionNotification,
@@ -137,10 +138,12 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -184,6 +187,7 @@ import Tools.Error
 import Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
 import qualified Tools.SMS as Sms
+import qualified UrlShortner.Common as UrlShortner
 
 -- TDS Certificate validation (kept in sync with UI DriverOnboardingV2 flow)
 
@@ -3259,6 +3263,29 @@ postDriverRegistrationGenerateTempAppCode ::
   Text ->
   Flow Common.TempAppCodeRes
 postDriverRegistrationGenerateTempAppCode merchantShortId opCity driverId requestorId = do
+  (_, personId) <- checkRequestorDriverAccess merchantShortId opCity driverId requestorId
+  res <- DRegistration.generateTempAppCode DRegistration.operatorLinkTempAppCodeCfg personId
+  pure $ Common.TempAppCodeRes {code = res.code, expiresAt = res.expiresAt}
+
+postDriverRegistrationOnboardingLink ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Driver ->
+  Text ->
+  Flow Common.OnboardingLinkRes
+postDriverRegistrationOnboardingLink merchantShortId opCity driverId requestorId = do
+  (merchantOpCityId, personId) <- checkRequestorDriverAccess merchantShortId opCity driverId requestorId
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  (expiryHours, codeRes) <- SOnbCommon.generateOnboardingCode transporterConfig personId
+  merchantMessage <-
+    QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.DRIVER_ONBOARDING_DEEPLINK_MESSAGE Nothing Nothing
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show DMM.DRIVER_ONBOARDING_DEEPLINK_MESSAGE))
+  linkTemplate <- merchantMessage.jsonData.var1 & fromMaybeM (InvalidRequest "Missing json_data.var1 link template for DRIVER_ONBOARDING_DEEPLINK_MESSAGE")
+  link <- MessageBuilder.shortenOnboardingLink UrlShortner.DRIVER_ONBOARDING_LINK (expiryHours + 24) (T.replace (MessageBuilder.templateText "code") codeRes.code linkTemplate)
+  pure $ Common.OnboardingLinkRes {link, expiresAt = codeRes.expiresAt}
+
+checkRequestorDriverAccess :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Flow (Id DMOC.MerchantOperatingCity, Id DP.Person)
+checkRequestorDriverAccess merchantShortId opCity driverId requestorId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person driverId
@@ -3267,8 +3294,7 @@ postDriverRegistrationGenerateTempAppCode merchantShortId opCity driverId reques
   whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
     isValid <- isAssociationWithDriver requestor driver
     unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
-  res <- DRegistration.generateTempAppCode DRegistration.operatorLinkTempAppCodeCfg personId
-  pure $ Common.TempAppCodeRes {code = res.code, expiresAt = res.expiresAt}
+  pure (merchantOpCityId, personId)
   where
     isAssociationWithDriver requestor driver =
       case (requestor.role, driver.role) of
