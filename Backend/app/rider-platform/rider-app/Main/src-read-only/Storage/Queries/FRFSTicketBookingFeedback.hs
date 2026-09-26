@@ -31,7 +31,7 @@ findByBookingId bookingId = do findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.
 
 findByMerchantIdAndOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeedback]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeedback])
 findByMerchantIdAndOperatingCityId merchantId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -42,12 +42,14 @@ findByMerchantIdAndOperatingCityId merchantId merchantOperatingCityId = do
 
 updateByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateByBookingId isFareAccepted feedbackDetails bookingId = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateByBookingId isFareAccepted feedbackDetails driverRating fleetRating bookingId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.isFareAccepted isFareAccepted,
       Se.Set Beam.feedbackDetails feedbackDetails,
+      Se.Set Beam.driverRating driverRating,
+      Se.Set Beam.fleetRating fleetRating,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]]
@@ -62,7 +64,9 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeed
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingId (Kernel.Types.Id.getId bookingId),
+      Se.Set Beam.driverRating driverRating,
       Se.Set Beam.feedbackDetails feedbackDetails,
+      Se.Set Beam.fleetRating fleetRating,
       Se.Set Beam.isFareAccepted isFareAccepted,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -77,7 +81,9 @@ instance FromTType' Beam.FRFSTicketBookingFeedback Domain.Types.FRFSTicketBookin
         Domain.Types.FRFSTicketBookingFeedback.FRFSTicketBookingFeedback
           { bookingId = Kernel.Types.Id.Id bookingId,
             createdAt = createdAt,
+            driverRating = driverRating,
             feedbackDetails = feedbackDetails,
+            fleetRating = fleetRating,
             id = Kernel.Types.Id.Id id,
             isFareAccepted = isFareAccepted,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -90,7 +96,9 @@ instance ToTType' Beam.FRFSTicketBookingFeedback Domain.Types.FRFSTicketBookingF
     Beam.FRFSTicketBookingFeedbackT
       { Beam.bookingId = Kernel.Types.Id.getId bookingId,
         Beam.createdAt = createdAt,
+        Beam.driverRating = driverRating,
         Beam.feedbackDetails = feedbackDetails,
+        Beam.fleetRating = fleetRating,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isFareAccepted = isFareAccepted,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
