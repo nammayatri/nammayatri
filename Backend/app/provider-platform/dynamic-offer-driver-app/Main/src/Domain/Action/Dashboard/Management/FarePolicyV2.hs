@@ -423,7 +423,8 @@ postFarePolicyV2Preview merchantShortId opCity req = do
               numberOfLuggages = Nothing,
               govtChargesRate = Just transporterConfig.taxConfig.rideGst,
               pickupGateId = Nothing,
-              fareSettlementType = Nothing
+              fareSettlementType = Nothing,
+              isParkingFeeExempt = False
             }
     fareParams <- SFC.calculateFareParameters params
     let totalFare = SFC.fareSum fareParams (Just [])
@@ -1388,6 +1389,7 @@ toApiChargeCategory = \case
   NYREGULAR_SUBSCRIPTION_CHARGE -> Common.NYREGULAR_SUBSCRIPTION_CHARGE
   NO_CHARGES -> Common.NO_CHARGES
   BOOKING_DEPOSIT -> Common.BOOKING_DEPOSIT
+  SCHEDULED_RIDE_MIN_WALLET_BALANCE -> Common.SCHEDULED_RIDE_MIN_WALLET_BALANCE
 
 fromApiChargeCategory :: Common.FPV2ConditionalChargeCategory -> ConditionalChargesCategories
 fromApiChargeCategory = \case
@@ -1395,6 +1397,7 @@ fromApiChargeCategory = \case
   Common.NYREGULAR_SUBSCRIPTION_CHARGE -> NYREGULAR_SUBSCRIPTION_CHARGE
   Common.NO_CHARGES -> NO_CHARGES
   Common.BOOKING_DEPOSIT -> BOOKING_DEPOSIT
+  Common.SCHEDULED_RIDE_MIN_WALLET_BALANCE -> SCHEDULED_RIDE_MIN_WALLET_BALANCE
 
 toApiSearchSource :: DFareProduct.SearchSource -> Common.FPV2SearchSource
 toApiSearchSource = \case

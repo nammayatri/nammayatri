@@ -17,6 +17,7 @@ apis:
         from: UTCTime
         to: UTCTime
         assignmentStatus: AssignmentStatus
+        isHistory: Bool
       auth: ApiAuthV2
       response:
         type: ScheduledBookingListRes

@@ -35,6 +35,11 @@ updateAirConditioned airConditioned downgradeReason driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.airConditioned airConditioned, Se.Set Beam.downgradeReason downgradeReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateExemptParkingFeeByRegistrationNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> m ())
+updateExemptParkingFeeByRegistrationNo exemptParkingFee registrationNo = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.exemptParkingFee exemptParkingFee, Se.Set Beam.updatedAt _now] [Se.Is Beam.registrationNo $ Se.Eq registrationNo]
+
 updateOxygen :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateOxygen oxygen driverId = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 

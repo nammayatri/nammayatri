@@ -77,3 +77,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN enable_for_airport boolean
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN selected_auto_accept_tiers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN exempt_parking_fee boolean  default false;

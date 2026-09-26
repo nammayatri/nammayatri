@@ -243,6 +243,7 @@ import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
+import qualified Storage.Queries.ConditionalCharges as QCC
 import qualified Storage.Queries.DocumentVerificationConfig as QDVC
 import qualified Storage.Queries.DriverIntelligentPoolConfig as QDIPC
 import qualified Storage.Queries.DriverPoolConfig as QDPC
@@ -2276,7 +2277,7 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity req = do
   -- but only when nothing else references them.
   forM_ (DL.nub (map (.farePolicyId) deletions)) $ \fpId -> do
     stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
-    when (null stillReferenced) $ CQFP.delete fpId
+    when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
   -- clearCache also drops the city-list key, so list/export see the new state immediately.
   forM_ (keepers <> deletions) CQFProduct.clearCache
   pure Success
@@ -2828,6 +2829,21 @@ filterBoundedFareProductsFromSnapshot allFareProducts area vehicleServiceTier tr
         then (boundedFilter (SQF.removeCityFromTripCategory tripCategory), SQF.removeCityFromTripCategory tripCategory)
         else (results, tripCategory)
 
+-- | 'CQFP.create' does not write conditional charges, so every path that creates a policy
+-- under a fresh id writes them here, re-keyed to that id.
+createConditionalCharges :: Id FarePolicy.FarePolicy -> [DAC.ConditionalCharges] -> Flow ()
+createConditionalCharges farePolicyId charges = do
+  now <- getCurrentTime
+  forM_ (DL.nubBy (\a b -> a.chargeCategory == b.chargeCategory) charges) $ \charge ->
+    QCC.create charge {DAC.farePolicyId = farePolicyId.getId, DAC.createdAt = now, DAC.updatedAt = now}
+
+-- | 'CQFP.delete' leaves the policy's conditional charges behind; this removes them too.
+deleteFarePolicyWithCharges :: Id FarePolicy.FarePolicy -> Flow ()
+deleteFarePolicyWithCharges farePolicyId = do
+  CQFP.delete farePolicyId
+  charges <- QCC.findAllByFp farePolicyId.getId
+  forM_ charges $ \charge -> QCC.deleteByFpAndCategory farePolicyId.getId charge.chargeCategory
+
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -3057,6 +3073,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             then return (newErrors, boundedAlreadyDeletedMap)
             else do
               CQFP.create finalFarePolicy
+              -- Like every other column, additional_charges is what the new policy gets: blank means none.
+              createConditionalCharges finalFarePolicy.id $
+                fromMaybe [] (find (not . null) (map (\(_, _, _, _, _, _, _, _, fp) -> fp.conditionalCharges) (x : xs)))
               case finalFarePolicy.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
                   Hedis.withLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 $ do
@@ -3115,7 +3134,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
               forM_ (DL.nub (map (.farePolicyId) oldFareProducts)) $ \fpId -> do
                 stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
-                when (null stillReferenced) $ CQFP.delete fpId
+                when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
@@ -3578,6 +3597,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             merchantId = Just merchantId,
             priority = 0,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            parkingFeeExemptionEnabled = request.parkingFeeExemptionEnabled <|> (mbExistingSpLoc >>= (.parkingFeeExemptionEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             render = request.render <|> (mbExistingSpLoc >>= (.render)),
             fetchAllGateFareProduct = mbExistingSpLoc >>= (.fetchAllGateFareProduct),
@@ -4050,6 +4070,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             whenJust mbClonedPolicy $ \cloned -> do
               logDebug $ "createOperatingCity: inserting FarePolicy: " <> show cloned
               CQFP.create cloned
+              createConditionalCharges cloned.id cloned.conditionalCharges
               case cloned.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
                   forM_ (NE.toList details.slabs) $ \slab -> do

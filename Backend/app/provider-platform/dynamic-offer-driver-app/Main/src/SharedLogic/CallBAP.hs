@@ -966,6 +966,7 @@ buildVehicleFromRideDetailsSnapshot booking ride rideDetails =
       make = Nothing,
       oxygen = Nothing,
       registrationCategory = Nothing,
+      exemptParkingFee = Nothing,
       ruleBasedUpgradeTiers = Nothing,
       size = Nothing,
       vehicleImageId = Nothing,

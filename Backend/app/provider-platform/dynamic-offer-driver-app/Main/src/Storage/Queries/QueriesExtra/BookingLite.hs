@@ -45,6 +45,7 @@ findBookingsFromDBLite bookingIds = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel
 
 -- Lite list read for the ops "scheduled bookings" dashboard: scalar columns only, NO
 -- LocationMapping/Location joins (pickup is resolved per-page in the handler).
+-- latestFirst flips the start_time ordering for history; idx_booking_scheduled_ops serves both directions.
 findScheduledUpcomingBookingsLite ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -53,8 +54,9 @@ findScheduledUpcomingBookingsLite ::
   UTCTime ->
   Int ->
   Int ->
+  Bool ->
   m [BookingLite]
-findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limit offset =
+findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limit offset latestFirst =
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just (Kernel.Types.Id.getId merchantOpCityId)),
@@ -64,7 +66,7 @@ findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limi
           Se.Is Beam.startTime $ Se.LessThanOrEq toTime
         ]
     ]
-    (Se.Asc Beam.startTime)
+    (if latestFirst then Se.Desc Beam.startTime else Se.Asc Beam.startTime)
     (Just limit)
     (Just offset)
 
@@ -93,6 +95,7 @@ data BookingLite = BookingLite
     tripCategory :: Domain.Types.Common.TripCategory,
     startTime :: Kernel.Prelude.UTCTime,
     isScheduled :: Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -120,5 +123,6 @@ instance FromTType' BookingLiteTable BookingLite where
             tripCategory = Storage.Queries.Transformers.Booking.getTripCategory bookingType tripCategory,
             startTime = startTime,
             isScheduled = fromMaybe False isScheduled,
+            createdAt = createdAt,
             configInExperimentVersions = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)
           }

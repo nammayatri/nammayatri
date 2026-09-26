@@ -2169,6 +2169,22 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   whenJust reqOfferedValue $ \_ -> throwError (InvalidRequest "Driver can't offer fare in static trips")
   quote <- QQuote.findById (Id quoteId) >>= fromMaybeM (QuoteNotFound quoteId)
   booking <- maybe (QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)) pure mbBooking
+  when booking.isScheduled $ do
+    nowT <- getCurrentTime
+    unless (DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT) $ do
+      -- The snapshot taken when the quote was built, so a fare policy replaced since booking
+      -- does not change the floor this ride was booked under.
+      mbQuoteFarePolicy <- getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
+      let floorOf :: [DCC.ConditionalCharges] -> Maybe HighPrecMoney
+          floorOf = fmap (.charge) . find (\cc -> cc.chargeCategory == DCC.SCHEDULED_RIDE_MIN_WALLET_BALANCE)
+          -- The live policy only stands in when the snapshot has expired or was never written.
+          mbFarePolicyFloor = case mbQuoteFarePolicy of
+            Just quoteFarePolicy -> floorOf quoteFarePolicy.conditionalCharges
+            Nothing -> floorOf . (.conditionalCharges) =<< quote.farePolicy
+          minScheduledRideBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+      walletOk <- FWallet.hasMinWalletBalance counterpartyDriver minScheduledRideBalance driver.id.getId
+      unless walletOk $
+        throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> maybe "" show minScheduledRideBalance <> ".")
   when booking.isScheduled $ ensureNoScheduledOverlap transporterConfig booking
   when booking.isScheduled $ removeBookingFromRedis booking
   isBookingCancelled' <- CS.isBookingCancelled booking.id
@@ -3371,15 +3387,9 @@ acceptScheduledBookingWithPreFetched ::
   Flow APISuccess
 acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId mbBooking = do
   -- overlap enforced by the shared accept guard (ensureNoScheduledOverlap) inside acceptStaticOfferDriverRequest
-  -- R2 safety net: enforce the scheduled-ride minimum wallet balance on accept, unless the booking
-  -- is within the R4 open-to-all threshold (eligibility dropped for everyone near pickup).
   nowT <- getCurrentTime
   let scheduledOpenToAll = DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT
   unless scheduledOpenToAll $ do
-    let minScheduledRideBalance = transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
-    walletOk <- FWallet.hasMinWalletBalance counterpartyDriver minScheduledRideBalance driver.id.getId
-    unless walletOk $
-      throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> maybe "" show minScheduledRideBalance <> ".")
     -- Schedule-tag eligibility gate: reuse the same predicate the dispatch path applies, so a
     -- tag-excluded driver can't accept directly what they'd never be offered.
     cityServiceTiers <- CQVST.findAllByMerchantOpCityId booking.merchantOperatingCityId Nothing

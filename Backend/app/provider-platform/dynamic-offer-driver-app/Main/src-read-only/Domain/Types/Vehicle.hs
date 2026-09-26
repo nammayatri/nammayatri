@@ -26,6 +26,7 @@ data Vehicle = Vehicle
     downgradeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     energyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    exemptParkingFee :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     make :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

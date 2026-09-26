@@ -110,6 +110,15 @@ cacheFarePolicyByQuoteId quoteId fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) expTime
 
+cacheFarePolicyByScheduledQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> UTCTime -> FarePolicyD.FullFarePolicy -> m ()
+cacheFarePolicyByScheduledQuoteId quoteId pickupTime fp = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  now <- getCurrentTime
+  let untilPickupWithBuffer = round (diffUTCTime pickupTime now) + scheduledQuoteFarePolicyBufferSecs
+  Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) (max expTime untilPickupWithBuffer)
+  where
+    scheduledQuoteFarePolicyBufferSecs = 15 * 60
+
 -- 30 Mins, Assuming that all searchTries would be done by then. Correct logic would be searchRequestExpirationTime * searchRepeatLimit
 cacheFarePolicyByEstimateId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
 cacheFarePolicyByEstimateId estimateId fp = Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey estimateId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) 1800
@@ -267,13 +276,20 @@ getFareProduct :: FareProduct.FareProducts -> Maybe DVST.VehicleServiceTier -> M
 getFareProduct _ Nothing = Nothing
 getFareProduct fareProducts (Just vehicleServiceTier) = List.find (\fareProduct -> fareProduct.vehicleServiceTier == vehicleServiceTier.serviceTierType) fareProducts.fareProducts
 
+-- | Both special-zone fare flags in a single lookup: the EDC fare-settlement type
+--   (commission/parking collection at booth) and the zone's parking-fee exemption opt-in.
+getSpecialZoneFareFlags :: (Transactionable m, EsqDBReplicaFlow m r) => Maybe Text -> m (Maybe SL.FareSettlementType, Maybe Bool)
+getSpecialZoneFareFlags Nothing = pure (Nothing, Nothing)
+getSpecialZoneFareFlags (Just specialZoneId) = do
+  mbSpecialLocation <- QSpecialLocation.findById (Id specialZoneId)
+  let mbFareSettlementType = mbSpecialLocation >>= (.fareSettlementType)
+      mbParkingFeeExemptionEnabled = mbSpecialLocation >>= (.parkingFeeExemptionEnabled)
+  logDebug $ "getSpecialZoneFareFlags: specialZoneId: " <> specialZoneId <> ", fareSettlementType: " <> show mbFareSettlementType <> ", parkingFeeExemptionEnabled: " <> show mbParkingFeeExemptionEnabled
+  pure (mbFareSettlementType, mbParkingFeeExemptionEnabled)
+
 -- | Resolve the EDC fare-settlement type (commission/parking collection at booth) for a special zone, if any.
 getFareSettlementTypeForSpecialZone :: (Transactionable m, EsqDBReplicaFlow m r) => Maybe Text -> m (Maybe SL.FareSettlementType)
-getFareSettlementTypeForSpecialZone Nothing = pure Nothing
-getFareSettlementTypeForSpecialZone (Just specialZoneId) = do
-  mbFareSettlementType <- (>>= (.fareSettlementType)) <$> QSpecialLocation.findById (Id specialZoneId)
-  logDebug $ "getFareSettlementTypeForSpecialZone: specialZoneId: " <> specialZoneId <> ", fareSettlementType: " <> show mbFareSettlementType
-  pure mbFareSettlementType
+getFareSettlementTypeForSpecialZone = fmap fst . getSpecialZoneFareFlags
 
 getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> Maybe TransporterConfig -> Maybe (Maybe DVST.VehicleServiceTier) -> m (Maybe FarePolicyD.FullFarePolicy)
 getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct _configsInExperimentVersions dpInputsList mbTransporterConfig mbPreResolvedVSTItem = do
@@ -322,14 +338,14 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
       let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier mbDriverExtraFeeBounds
       logDebug $ "farePolicy after updating driverExtraFeeBounds: " <> show farePolicy <> " and mbDriverExtraFeeBounds: " <> show mbDriverExtraFeeBounds
       let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity (congestionChargeMultiplierFromModel >>= (.shadowSurgeMultiplier)) (congestionChargeMultiplierFromModel >>= (.shadowSurgeVersion))
-      mbFareSettlementType <- getFareSettlementTypeForSpecialZone mbSpecialZoneId
+      (mbFareSettlementType, mbParkingFeeExemptionEnabled) <- getSpecialZoneFareFlags mbSpecialZoneId
       -- Driver cancellation block needs a double opt-in: the service tier enables it,
       -- and the fare policy can explicitly opt out with Just False for finer scopes.
       let resolvedDriverCancellationNotAllowed =
             if (mbVehicleServiceTierItem >>= (.driverCancellationNotAllowed)) == Just True && farePolicy.driverCancellationNotAllowed /= Just False
               then Just True
               else Nothing
-      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed}
+      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed}
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
           if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)
@@ -401,7 +417,8 @@ calculateFareParametersForFarePolicy transporterConfig fullFarePolicy mbDistance
             numberOfLuggages = Nothing,
             govtChargesRate = gstBreakup,
             pickupGateId = Nothing,
-            fareSettlementType = fullFarePolicy.fareSettlementType
+            fareSettlementType = fullFarePolicy.fareSettlementType,
+            isParkingFeeExempt = False
           }
   SFC.calculateFareParameters params
 
@@ -580,13 +597,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
     toPercentage x = (x - 1) * 100
 
     processAdditionalCharges conditionalCharges = do
-      List.map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToTag addCharges.chargeCategory) . mkValue $ show addCharges.charge) conditionalCharges
+      mapMaybe (\addCharges -> (\tag -> mkBreakupItem (show tag) . mkValue $ show addCharges.charge) <$> castAdditionalChargeCategoriesToTag addCharges.chargeCategory) conditionalCharges
 
     castAdditionalChargeCategoriesToTag = \case
-      DAC.SAFETY_PLUS_CHARGES -> Tags.SAFETY_PLUS_CHARGES
-      DAC.NO_CHARGES -> Tags.NO_CHARGES
-      DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Tags.NYREGULAR_SUBSCRIPTION_CHARGE
-      DAC.BOOKING_DEPOSIT -> Tags.BOOKING_DEPOSIT
+      DAC.SAFETY_PLUS_CHARGES -> Just Tags.SAFETY_PLUS_CHARGES
+      DAC.NO_CHARGES -> Just Tags.NO_CHARGES
+      DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Just Tags.NYREGULAR_SUBSCRIPTION_CHARGE
+      DAC.BOOKING_DEPOSIT -> Just Tags.BOOKING_DEPOSIT
+      DAC.SCHEDULED_RIDE_MIN_WALLET_BALANCE -> Nothing
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs
