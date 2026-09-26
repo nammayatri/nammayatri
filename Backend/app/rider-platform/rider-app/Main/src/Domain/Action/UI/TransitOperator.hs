@@ -167,6 +167,16 @@ transitOperatorUpdateWaybillStatusUtil merchantShortId city vehicleCategory req 
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorWaybillStatus baseUrl gtfsId req
 
+transitOperatorGetScheduleTripRepeatUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> Flow ScheduleTripRepeatConfig
+transitOperatorGetScheduleTripRepeatUtil merchantShortId city vehicleCategory scheduleTripId = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorGetScheduleTripRepeat baseUrl gtfsId scheduleTripId
+
+transitOperatorSetScheduleTripRepeatUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Text -> SetScheduleTripRepeatReq -> Flow ScheduleTripRepeatConfig
+transitOperatorSetScheduleTripRepeatUtil merchantShortId city vehicleCategory scheduleTripId req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorSetScheduleTripRepeat baseUrl gtfsId scheduleTripId req
+
 transitOperatorUpdateWaybillFleetUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillFleetReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillFleetUtil merchantShortId city vehicleCategory req = do
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory

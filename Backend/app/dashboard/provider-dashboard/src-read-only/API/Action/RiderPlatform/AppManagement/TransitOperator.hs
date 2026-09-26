@@ -25,336 +25,352 @@ import Servant
 import qualified "rider-app" SharedLogic.External.Nandi.Types
 import Storage.Beam.CommonInstances ()
 
-type API = ("transitOperator" :> (TransitOperatorGetRow :<|> TransitOperatorGetAllRows :<|> TransitOperatorDeleteRow :<|> TransitOperatorUpsertRow :<|> TransitOperatorUpsertRows :<|> TransitOperatorQueryRows :<|> TransitOperatorGetServiceTypes :<|> TransitOperatorGetRoutes :<|> TransitOperatorGetDepots :<|> TransitOperatorGetShiftTypes :<|> TransitOperatorGetScheduleNumbers :<|> TransitOperatorGetDayTypes :<|> TransitOperatorGetTripTypes :<|> TransitOperatorGetBreakTypes :<|> TransitOperatorGetTripDetails :<|> TransitOperatorGetFleets :<|> TransitOperatorGetConductor :<|> TransitOperatorGetDriver :<|> TransitOperatorGetDeviceIds :<|> TransitOperatorGetTabletIds :<|> TransitOperatorGetOperators :<|> TransitOperatorUpdateWaybillStatus :<|> TransitOperatorUpdateWaybillFleet :<|> TransitOperatorUpdateWaybillDetails :<|> TransitOperatorUpdateWaybillTablet :<|> TransitOperatorGetWaybills :<|> TransitOperatorGetDeviceVehicleMappingList :<|> TransitOperatorUpsertDeviceVehicleMapping :<|> TransitOperatorUnblockBus :<|> TransitOperatorSearchStops :<|> TransitOperatorNearbyStops :<|> TransitOperatorBulkReplaceStops :<|> TransitOperatorRouteStops :<|> TransitOperatorInsertRouteStop :<|> TransitOperatorReprocessRoutes :<|> TransitOperatorExportRouteStopMapping :<|> TransitOperatorQueryVehicle :<|> TransitOperatorUpsertVehicles :<|> TransitOperatorDeleteVehicle))
+type API = ("transitOperator" :> (TransitOperatorGetRow :<|> TransitOperatorGetAllRows :<|> TransitOperatorDeleteRow :<|> TransitOperatorUpsertRow :<|> TransitOperatorUpsertRows :<|> TransitOperatorQueryRows :<|> TransitOperatorGetServiceTypes :<|> TransitOperatorGetRoutes :<|> TransitOperatorGetDepots :<|> TransitOperatorGetShiftTypes :<|> TransitOperatorGetScheduleNumbers :<|> TransitOperatorGetDayTypes :<|> TransitOperatorGetTripTypes :<|> TransitOperatorGetBreakTypes :<|> TransitOperatorGetTripDetails :<|> TransitOperatorGetFleets :<|> TransitOperatorGetConductor :<|> TransitOperatorGetDriver :<|> TransitOperatorGetDeviceIds :<|> TransitOperatorGetTabletIds :<|> TransitOperatorGetOperators :<|> TransitOperatorUpdateWaybillStatus :<|> TransitOperatorUpdateWaybillFleet :<|> TransitOperatorUpdateWaybillDetails :<|> TransitOperatorUpdateWaybillTablet :<|> TransitOperatorGetWaybills :<|> TransitOperatorGetDeviceVehicleMappingList :<|> TransitOperatorUpsertDeviceVehicleMapping :<|> TransitOperatorUnblockBus :<|> TransitOperatorSearchStops :<|> TransitOperatorNearbyStops :<|> TransitOperatorBulkReplaceStops :<|> TransitOperatorRouteStops :<|> TransitOperatorInsertRouteStop :<|> TransitOperatorReprocessRoutes :<|> TransitOperatorExportRouteStopMapping :<|> TransitOperatorQueryVehicle :<|> TransitOperatorUpsertVehicles :<|> TransitOperatorDeleteVehicle :<|> TransitOperatorGetScheduleTripRepeat :<|> TransitOperatorSetScheduleTripRepeat))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = transitOperatorGetRow merchantId city :<|> transitOperatorGetAllRows merchantId city :<|> transitOperatorDeleteRow merchantId city :<|> transitOperatorUpsertRow merchantId city :<|> transitOperatorUpsertRows merchantId city :<|> transitOperatorQueryRows merchantId city :<|> transitOperatorGetServiceTypes merchantId city :<|> transitOperatorGetRoutes merchantId city :<|> transitOperatorGetDepots merchantId city :<|> transitOperatorGetShiftTypes merchantId city :<|> transitOperatorGetScheduleNumbers merchantId city :<|> transitOperatorGetDayTypes merchantId city :<|> transitOperatorGetTripTypes merchantId city :<|> transitOperatorGetBreakTypes merchantId city :<|> transitOperatorGetTripDetails merchantId city :<|> transitOperatorGetFleets merchantId city :<|> transitOperatorGetConductor merchantId city :<|> transitOperatorGetDriver merchantId city :<|> transitOperatorGetDeviceIds merchantId city :<|> transitOperatorGetTabletIds merchantId city :<|> transitOperatorGetOperators merchantId city :<|> transitOperatorUpdateWaybillStatus merchantId city :<|> transitOperatorUpdateWaybillFleet merchantId city :<|> transitOperatorUpdateWaybillDetails merchantId city :<|> transitOperatorUpdateWaybillTablet merchantId city :<|> transitOperatorGetWaybills merchantId city :<|> transitOperatorGetDeviceVehicleMappingList merchantId city :<|> transitOperatorUpsertDeviceVehicleMapping merchantId city :<|> transitOperatorUnblockBus merchantId city :<|> transitOperatorSearchStops merchantId city :<|> transitOperatorNearbyStops merchantId city :<|> transitOperatorBulkReplaceStops merchantId city :<|> transitOperatorRouteStops merchantId city :<|> transitOperatorInsertRouteStop merchantId city :<|> transitOperatorReprocessRoutes merchantId city :<|> transitOperatorExportRouteStopMapping merchantId city :<|> transitOperatorQueryVehicle merchantId city :<|> transitOperatorUpsertVehicles merchantId city :<|> transitOperatorDeleteVehicle merchantId city
+handler merchantId city = transitOperatorGetRow merchantId city :<|> transitOperatorGetAllRows merchantId city :<|> transitOperatorDeleteRow merchantId city :<|> transitOperatorUpsertRow merchantId city :<|> transitOperatorUpsertRows merchantId city :<|> transitOperatorQueryRows merchantId city :<|> transitOperatorGetServiceTypes merchantId city :<|> transitOperatorGetRoutes merchantId city :<|> transitOperatorGetDepots merchantId city :<|> transitOperatorGetShiftTypes merchantId city :<|> transitOperatorGetScheduleNumbers merchantId city :<|> transitOperatorGetDayTypes merchantId city :<|> transitOperatorGetTripTypes merchantId city :<|> transitOperatorGetBreakTypes merchantId city :<|> transitOperatorGetTripDetails merchantId city :<|> transitOperatorGetFleets merchantId city :<|> transitOperatorGetConductor merchantId city :<|> transitOperatorGetDriver merchantId city :<|> transitOperatorGetDeviceIds merchantId city :<|> transitOperatorGetTabletIds merchantId city :<|> transitOperatorGetOperators merchantId city :<|> transitOperatorUpdateWaybillStatus merchantId city :<|> transitOperatorUpdateWaybillFleet merchantId city :<|> transitOperatorUpdateWaybillDetails merchantId city :<|> transitOperatorUpdateWaybillTablet merchantId city :<|> transitOperatorGetWaybills merchantId city :<|> transitOperatorGetDeviceVehicleMappingList merchantId city :<|> transitOperatorUpsertDeviceVehicleMapping merchantId city :<|> transitOperatorUnblockBus merchantId city :<|> transitOperatorSearchStops merchantId city :<|> transitOperatorNearbyStops merchantId city :<|> transitOperatorBulkReplaceStops merchantId city :<|> transitOperatorRouteStops merchantId city :<|> transitOperatorInsertRouteStop merchantId city :<|> transitOperatorReprocessRoutes merchantId city :<|> transitOperatorExportRouteStopMapping merchantId city :<|> transitOperatorQueryVehicle merchantId city :<|> transitOperatorUpsertVehicles merchantId city :<|> transitOperatorDeleteVehicle merchantId city :<|> transitOperatorGetScheduleTripRepeat merchantId city :<|> transitOperatorSetScheduleTripRepeat merchantId city
 
 type TransitOperatorGetRow =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_ROW))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_ROW)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetRow
   )
 
 type TransitOperatorGetAllRows =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_ALL_ROWS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_ALL_ROWS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetAllRows
   )
 
 type TransitOperatorDeleteRow =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_DELETE_ROW))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_DELETE_ROW)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorDeleteRow
   )
 
 type TransitOperatorUpsertRow =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_ROW))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_ROW)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpsertRow
   )
 
 type TransitOperatorUpsertRows =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_ROWS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_ROWS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpsertRows
   )
 
 type TransitOperatorQueryRows =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_QUERY_ROWS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_QUERY_ROWS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorQueryRows
   )
 
 type TransitOperatorGetServiceTypes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SERVICE_TYPES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SERVICE_TYPES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetServiceTypes
   )
 
 type TransitOperatorGetRoutes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_ROUTES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_ROUTES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetRoutes
   )
 
 type TransitOperatorGetDepots =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DEPOTS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DEPOTS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetDepots
   )
 
 type TransitOperatorGetShiftTypes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SHIFT_TYPES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SHIFT_TYPES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetShiftTypes
   )
 
 type TransitOperatorGetScheduleNumbers =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SCHEDULE_NUMBERS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SCHEDULE_NUMBERS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetScheduleNumbers
   )
 
 type TransitOperatorGetDayTypes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DAY_TYPES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DAY_TYPES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetDayTypes
   )
 
 type TransitOperatorGetTripTypes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_TRIP_TYPES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_TRIP_TYPES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetTripTypes
   )
 
 type TransitOperatorGetBreakTypes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_BREAK_TYPES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_BREAK_TYPES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetBreakTypes
   )
 
 type TransitOperatorGetTripDetails =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_TRIP_DETAILS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_TRIP_DETAILS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetTripDetails
   )
 
 type TransitOperatorGetFleets =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_FLEETS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_FLEETS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetFleets
   )
 
 type TransitOperatorGetConductor =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_CONDUCTOR))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_CONDUCTOR)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetConductor
   )
 
 type TransitOperatorGetDriver =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DRIVER))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DRIVER)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetDriver
   )
 
 type TransitOperatorGetDeviceIds =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DEVICE_IDS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DEVICE_IDS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetDeviceIds
   )
 
 type TransitOperatorGetTabletIds =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_TABLET_IDS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_TABLET_IDS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetTabletIds
   )
 
 type TransitOperatorGetOperators =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_OPERATORS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_OPERATORS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetOperators
   )
 
 type TransitOperatorUpdateWaybillStatus =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_STATUS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_STATUS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpdateWaybillStatus
   )
 
 type TransitOperatorUpdateWaybillFleet =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_FLEET))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_FLEET)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpdateWaybillFleet
   )
 
 type TransitOperatorUpdateWaybillDetails =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_DETAILS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_DETAILS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpdateWaybillDetails
   )
 
 type TransitOperatorUpdateWaybillTablet =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_TABLET))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPDATE_WAYBILL_TABLET)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpdateWaybillTablet
   )
 
 type TransitOperatorGetWaybills =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_WAYBILLS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_WAYBILLS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetWaybills
   )
 
 type TransitOperatorGetDeviceVehicleMappingList =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DEVICE_VEHICLE_MAPPING_LIST))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_DEVICE_VEHICLE_MAPPING_LIST)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetDeviceVehicleMappingList
   )
 
 type TransitOperatorUpsertDeviceVehicleMapping =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_DEVICE_VEHICLE_MAPPING))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_DEVICE_VEHICLE_MAPPING)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpsertDeviceVehicleMapping
   )
 
 type TransitOperatorUnblockBus =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UNBLOCK_BUS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UNBLOCK_BUS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUnblockBus
   )
 
 type TransitOperatorSearchStops =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_SEARCH_STOPS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_SEARCH_STOPS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorSearchStops
   )
 
 type TransitOperatorNearbyStops =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_NEARBY_STOPS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_NEARBY_STOPS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorNearbyStops
   )
 
 type TransitOperatorBulkReplaceStops =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_BULK_REPLACE_STOPS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_BULK_REPLACE_STOPS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorBulkReplaceStops
   )
 
 type TransitOperatorRouteStops =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_ROUTE_STOPS))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_ROUTE_STOPS)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorRouteStops
   )
 
 type TransitOperatorInsertRouteStop =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_INSERT_ROUTE_STOP))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_INSERT_ROUTE_STOP)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorInsertRouteStop
   )
 
 type TransitOperatorReprocessRoutes =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_REPROCESS_ROUTES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_REPROCESS_ROUTES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorReprocessRoutes
   )
 
 type TransitOperatorExportRouteStopMapping =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_EXPORT_ROUTE_STOP_MAPPING))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_EXPORT_ROUTE_STOP_MAPPING)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorExportRouteStopMapping
   )
 
 type TransitOperatorQueryVehicle =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_QUERY_VEHICLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_QUERY_VEHICLE)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorQueryVehicle
   )
 
 type TransitOperatorUpsertVehicles =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_VEHICLES))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_UPSERT_VEHICLES)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorUpsertVehicles
   )
 
 type TransitOperatorDeleteVehicle =
   ( ApiAuth
-      ('APP_BACKEND_MANAGEMENT)
-      ('DSL)
-      (('RIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR) / ('API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_DELETE_VEHICLE))
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_DELETE_VEHICLE)
       :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorDeleteVehicle
   )
 
-transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler SharedLogic.External.Nandi.Types.NandiRow)
+type TransitOperatorGetScheduleTripRepeat =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_GET_SCHEDULE_TRIP_REPEAT)
+      :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorGetScheduleTripRepeat
+  )
+
+type TransitOperatorSetScheduleTripRepeat =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.TRANSIT_OPERATOR / 'API.Types.Dashboard.AppManagement.TransitOperator.TRANSIT_OPERATOR_SET_SCHEDULE_TRIP_REPEAT)
+      :> API.Types.Dashboard.AppManagement.TransitOperator.TransitOperatorSetScheduleTripRepeat
+  )
+
+transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorGetRow merchantShortId opCity apiTokenInfo column table vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorGetRow merchantShortId opCity apiTokenInfo column table vehicleCategory
 
-transitOperatorGetAllRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiRow])
+transitOperatorGetAllRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiRow])
 transitOperatorGetAllRows merchantShortId opCity apiTokenInfo limit offset table vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorGetAllRows merchantShortId opCity apiTokenInfo limit offset table vehicleCategory
 
 transitOperatorDeleteRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.FlowHandler SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorDeleteRow merchantShortId opCity apiTokenInfo table vehicleCategory req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorDeleteRow merchantShortId opCity apiTokenInfo table vehicleCategory req
 
-transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.FlowHandler SharedLogic.External.Nandi.Types.NandiRow)
+transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.FlowHandler SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorUpsertRow merchantShortId opCity apiTokenInfo toRegen table vehicleCategory req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorUpsertRow merchantShortId opCity apiTokenInfo toRegen table vehicleCategory req
 
-transitOperatorUpsertRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> [Data.Aeson.Value] -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiRow])
+transitOperatorUpsertRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> [Data.Aeson.Value] -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiRow])
 transitOperatorUpsertRows merchantShortId opCity apiTokenInfo toRegen table vehicleCategory req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorUpsertRows merchantShortId opCity apiTokenInfo toRegen table vehicleCategory req
 
 transitOperatorQueryRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.QueryBody -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiRow])
@@ -387,7 +403,7 @@ transitOperatorGetBreakTypes merchantShortId opCity apiTokenInfo vehicleCategory
 transitOperatorGetTripDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiTripDetail])
 transitOperatorGetTripDetails merchantShortId opCity apiTokenInfo scheduleNumber vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorGetTripDetails merchantShortId opCity apiTokenInfo scheduleNumber vehicleCategory
 
-transitOperatorGetFleets :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.Fleet])
+transitOperatorGetFleets :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.Fleet])
 transitOperatorGetFleets merchantShortId opCity apiTokenInfo limit offset vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorGetFleets merchantShortId opCity apiTokenInfo limit offset vehicleCategory
 
 transitOperatorGetConductor :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler SharedLogic.External.Nandi.Types.Employee)
@@ -417,7 +433,7 @@ transitOperatorUpdateWaybillDetails merchantShortId opCity apiTokenInfo vehicleC
 transitOperatorUpdateWaybillTablet :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillTabletReq -> Environment.FlowHandler SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorUpdateWaybillTablet merchantShortId opCity apiTokenInfo vehicleCategory req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorUpdateWaybillTablet merchantShortId opCity apiTokenInfo vehicleCategory req
 
-transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiWaybillRow])
+transitOperatorGetWaybills :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.NandiWaybillRow])
 transitOperatorGetWaybills merchantShortId opCity apiTokenInfo limit offset vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorGetWaybills merchantShortId opCity apiTokenInfo limit offset vehicleCategory
 
 transitOperatorGetDeviceVehicleMappingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Environment.FlowHandler API.Types.Dashboard.AppManagement.TransitOperator.DeviceVehicleMappingListRes)
@@ -429,10 +445,10 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity apiTokenInfo re
 transitOperatorUnblockBus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 transitOperatorUnblockBus merchantShortId opCity apiTokenInfo vehicleNumber = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorUnblockBus merchantShortId opCity apiTokenInfo vehicleNumber
 
-transitOperatorSearchStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.EnrichedStop])
+transitOperatorSearchStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.EnrichedStop])
 transitOperatorSearchStops merchantShortId opCity apiTokenInfo limit withRoutes q vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorSearchStops merchantShortId opCity apiTokenInfo limit withRoutes q vehicleCategory
 
-transitOperatorNearbyStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Double) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.EnrichedStop])
+transitOperatorNearbyStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.EnrichedStop])
 transitOperatorNearbyStops merchantShortId opCity apiTokenInfo limit radius withRoutes lat lon vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorNearbyStops merchantShortId opCity apiTokenInfo limit radius withRoutes lat lon vehicleCategory
 
 transitOperatorBulkReplaceStops :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.BulkReplaceReq -> Environment.FlowHandler SharedLogic.External.Nandi.Types.BulkReplaceResult)
@@ -450,7 +466,7 @@ transitOperatorReprocessRoutes merchantShortId opCity apiTokenInfo vehicleCatego
 transitOperatorExportRouteStopMapping :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.RouteStopMappingExport])
 transitOperatorExportRouteStopMapping merchantShortId opCity apiTokenInfo vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorExportRouteStopMapping merchantShortId opCity apiTokenInfo vehicleCategory
 
-transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.Fleet])
+transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.Fleet])
 transitOperatorQueryVehicle merchantShortId opCity apiTokenInfo fleetNo tagNumber vehicleNo vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorQueryVehicle merchantShortId opCity apiTokenInfo fleetNo tagNumber vehicleNo vehicleCategory
 
 transitOperatorUpsertVehicles :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> BecknV2.OnDemand.Enums.VehicleCategory -> [SharedLogic.External.Nandi.Types.VehicleUpsertRequest] -> Environment.FlowHandler [SharedLogic.External.Nandi.Types.Fleet])
@@ -458,3 +474,9 @@ transitOperatorUpsertVehicles merchantShortId opCity apiTokenInfo vehicleCategor
 
 transitOperatorDeleteVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> BecknV2.OnDemand.Enums.VehicleCategory -> Kernel.Prelude.Text -> Environment.FlowHandler SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorDeleteVehicle merchantShortId opCity apiTokenInfo vehicleCategory vehicleId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorDeleteVehicle merchantShortId opCity apiTokenInfo vehicleCategory vehicleId
+
+transitOperatorGetScheduleTripRepeat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.FlowHandler SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig)
+transitOperatorGetScheduleTripRepeat merchantShortId opCity apiTokenInfo scheduleTripId vehicleCategory = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorGetScheduleTripRepeat merchantShortId opCity apiTokenInfo scheduleTripId vehicleCategory
+
+transitOperatorSetScheduleTripRepeat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.SetScheduleTripRepeatReq -> Environment.FlowHandler SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig)
+transitOperatorSetScheduleTripRepeat merchantShortId opCity apiTokenInfo scheduleTripId vehicleCategory req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.TransitOperator.transitOperatorSetScheduleTripRepeat merchantShortId opCity apiTokenInfo scheduleTripId vehicleCategory req

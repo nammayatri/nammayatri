@@ -23,6 +23,8 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorGetTabletIds,
     transitOperatorGetOperators,
     transitOperatorUpdateWaybillStatus,
+    transitOperatorGetScheduleTripRepeat,
+    transitOperatorSetScheduleTripRepeat,
     transitOperatorUpdateWaybillFleet,
     transitOperatorUpdateWaybillDetails,
     transitOperatorUpdateWaybillTablet,
@@ -156,6 +158,14 @@ transitOperatorGetOperators merchantShortId opCity role vehicleCategory =
 transitOperatorUpdateWaybillStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillStatusReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorUpdateWaybillStatus merchantShortId opCity vehicleCategory req =
   DTOp.transitOperatorUpdateWaybillStatusUtil merchantShortId opCity vehicleCategory req
+
+transitOperatorGetScheduleTripRepeat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig)
+transitOperatorGetScheduleTripRepeat merchantShortId opCity scheduleTripId vehicleCategory =
+  DTOp.transitOperatorGetScheduleTripRepeatUtil merchantShortId opCity vehicleCategory scheduleTripId
+
+transitOperatorSetScheduleTripRepeat :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.SetScheduleTripRepeatReq -> Environment.Flow SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig)
+transitOperatorSetScheduleTripRepeat merchantShortId opCity scheduleTripId vehicleCategory req =
+  DTOp.transitOperatorSetScheduleTripRepeatUtil merchantShortId opCity vehicleCategory scheduleTripId req
 
 transitOperatorUpdateWaybillFleet :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.UpdateWaybillFleetReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
 transitOperatorUpdateWaybillFleet merchantShortId opCity vehicleCategory req =
