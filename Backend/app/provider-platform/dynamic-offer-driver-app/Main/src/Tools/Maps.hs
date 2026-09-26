@@ -23,6 +23,7 @@ module Tools.Maps
     getRoutes,
     snapToRoad,
     snapToRoadWithFallback,
+    snapToRoadOSRMOnly,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
@@ -165,6 +166,24 @@ snapToRoad ::
   SnapToRoadReq ->
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
+
+snapToRoadOSRMOnly ::
+  ServiceFlow m r =>
+  Id MerchantOperatingCity ->
+  Maybe Text ->
+  SnapToRoadReq ->
+  m ([Maps.MapsService], Either String SnapToRoadResp)
+snapToRoadOSRMOnly merchantOpCityId entityId req = do
+  result <- withTryCatch "snapToRoadOSRMOnly" $ do
+    osrmServiceConfig <-
+      getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService Maps.OSRM)}) Nothing
+        >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show Maps.OSRM))
+    case osrmServiceConfig.serviceConfig of
+      DOSC.MapsServiceConfig msc -> Maps.snapToRoad entityId msc req
+      _ -> throwError $ InternalError "Unknown Service Config"
+  case result of
+    Right resp -> pure ([Maps.OSRM], Right resp)
+    Left err -> pure ([], Left (show err))
 
 autoComplete :: (ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
