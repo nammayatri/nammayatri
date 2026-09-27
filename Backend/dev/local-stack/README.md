@@ -415,6 +415,20 @@ driver, attaches his vehicle and reads his documents. Publishing `/ui/` must not
 carry `/dashboard/` with it. Two independent things refuse it: nginx's catch-all
 404, and the guard, which routes only prefixes it knows and 404s the rest.
 
+Beyond those, the edge publishes a handful of **exact** paths, each for one
+caller and each a `location =`, never a prefix:
+
+| Path | To | For |
+|---|---|---|
+| `/driver/documents`, `/driver/declaration` | admin-api | the driver's papers and what he typed |
+| `/rider/report` | admin-api | « Signaler » mid-ride (2026-09-27) |
+| `/driver/sanction` | admin-api | a suspended driver's countdown and reason (2026-09-27) |
+| `/whatsapp/webhook` | auth-guard | Meta's webhook (2026-09-27) — see *WhatsApp* below |
+
+admin-api's `/internal/*` is deliberately **not** among them: it is how the
+guard reports a driver's rating (see *Ratings*), and it answers the box only.
+Probed from outside on 2026-09-27: 404 / 405 on all three hostnames.
+
 **Every `/v2/` and every `/ui/` request goes through the guard.** That is not a
 detail: an nginx `location` that reached either backend directly would quietly
 undo the whole thing, so no such location exists.
@@ -2152,6 +2166,24 @@ state — the route that rates passengers went live the day before — so "nobod
 has rated you" and "the network failed" answer identically, and both apps draw
 *Nouveau*. That also means the apps ship safely **before** this route does.
 
+### Driver → passenger: the guard reports each one, since 2026-09-27
+
+`rateCustomer` adds the stars to a running total on
+`atlas_driver_offer_bpp.rider_details` and **writes no row**: which driver,
+which ride and how many stars are gone once it returns. The console's Notes
+needed them, so the auth guard catches them on the way through —
+`noteDriverRating` in `auth-guard/server.js`: after the driver backend answers
+2xx, it tells admin-api `POST /internal/driver-rating {rideId, stars}` on
+loopback, fire and forget. admin-api reads who drove and who rode from the ride
+and keeps the first rating per ride (`movin.driver_rider_rating`).
+**Anyone editing the guard must keep that call after the forward**, or the
+console silently stops receiving them.
+
+Ratings from before that day were recovered from `docker logs ny-edge` —
+ride and time, not stars (the log keeps no body). That log also showed the
+backend **counting every repeat**: six rides rated eleven times, all eleven in
+one passenger's average.
+
 ## Choosing a driver — the fleet, the car, and the shortlist
 
 Until August the passenger compared a first name, a star and a price. He could
@@ -3522,6 +3554,38 @@ so the unit is safe to enable before the bot exists. Thresholds are all `BOT_*`
 environment variables — change and restart, no rebuild.
 
 *It replaces `registration-notify.sh`, which did the registration half only.*
+
+## WhatsApp — the webhook, since 2026-09-27
+
+Movin's WhatsApp Business number is **+213 783 07 91 61** ("MovinApp", Cloud
+API). Business account `2899338557098050`, phone number id
+`1428730883648447` — checked against Meta's Graph API with the client's
+System User token (never expires). The Meta app **movindz** was subscribed to
+the business account the same day.
+
+The plan is sign-in **without a template**: the app opens WhatsApp with
+`MOVIN 483920` already typed, the passenger presses Send, and the sender's
+number — WhatsApp's word, not something he typed — proves he holds it.
+Messages people send a business are free and need no approval.
+
+Built so far: the receiving half, in the guard (`auth-guard/whatsapp.js`,
+because the guard owns sign-in sessions). `GET /whatsapp/webhook` is Meta's
+check against our verify token; `POST` is a delivery, HMAC-checked with the
+**app secret** whenever `WHATSAPP_APP_SECRET` is set. Until it is, messages are
+kept marked unsigned and `codeFrom()` never returns one — anybody can post an
+unsigned delivery. Codes are held ten minutes, in memory. Only counts and the
+last three digits of a sender are logged.
+
+Secrets: `/opt/ny/secrets/whatsapp.env` (root, 600), an optional `env_file`
+like Moorsyl's. It holds the verify token; the app secret goes there when the
+client sends it. The access token is **not** on the box yet.
+
+Not built: the sign-in path that reads `codeFrom()` (a guard route, a
+« Vérifier par WhatsApp » button in the app, SMS kept as fallback).
+
+When the compose `env_file` list changes, `docker compose up -d --no-deps
+auth-guard` — a `restart` does not re-read it. And the deployed compose is a
+superset of this one (see its header): patch it in place, never copy it.
 
 ## Tests, and what CI actually runs
 

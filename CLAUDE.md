@@ -341,3 +341,13 @@ the header of that script.
   tokens to APNs with the app's own words. The notification text for iOS is a
   copy of the app's `notifications.ts` — change both. local-stack README →
   *iPhones — the push relay*.
+- **The auth guard does more than sign-in now, and two of its jobs are
+  invisible.** Since 2026-09-27 it reports every accepted driver → passenger
+  rating to admin-api (`noteDriverRating`) — the backend keeps no row, so
+  dropping that call silently empties the console's Notes — and it answers
+  Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). local-stack README →
+  *Ratings* and *WhatsApp*.
+- **The deployed `docker-compose.yml` is a superset of the one in git.** It
+  also carries the website's `admin-api`, the `edge-web` mount and the
+  documents volume. Patch it in place with an asserted one-match edit; copying
+  the repo's over it takes the console and the drivers' papers down.
