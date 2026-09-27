@@ -61,40 +61,33 @@ function send(res, status, body) {
  * `rating` is null and `total` is 0 for a passenger nobody has rated yet. The
  * app must render that as "Nouveau", never as zero stars — a zero is a verdict
  * somebody gave, and nobody gave it.
+ *
+ * Her own only, by the person id her token belongs to (2026-09-27).
+ * The route used to answer anybody who knew a number: no token, and the
+ * average and count of whoever held it -- enough to learn that a number is a
+ * Movin passenger and how drivers rate her. The route now resolves the caller
+ * from her token and serves only her; the number in the path is not read.
  */
-async function serveForPhone(pool, phone, res) {
-  const digits = String(phone || '').replace(/\D/g, '');
-  if (!pool || digits.length < 9) return send(res, 200, { rating: null, total: 0 });
-  /* `rides` is deliberately absent here: it exists for the passenger's offer
-     list, which is about drivers. A passenger's own ride count is on her own
-     backend, and nothing has asked for it. */
-
+async function serveForRider(pool, personId, res) {
+  if (!pool || !personId) return send(res, 200, { rating: null, total: 0 });
   try {
     const q = await pool.query(
       `SELECT rd.rating, rd.total_ratings
          FROM atlas_app.person p
          JOIN atlas_driver_offer_bpp.rider_details rd
            ON rd.mobile_number_hash = p.mobile_number_hash
-        WHERE right(p.unencrypted_mobile_number, 9) = right($1, 9)
-        -- One passenger can have a rider_details row per merchant. There is one
-        -- merchant in this pilot, so this only ever picks between duplicates;
-        -- the most-rated row is the right one to pick if that ever changes.
+        WHERE p.id = $1
         ORDER BY rd.total_ratings DESC NULLS LAST
         LIMIT 1`,
-      [digits],
+      [personId],
     );
     const row = q.rows[0];
     if (!row || row.rating === null || row.rating === undefined) {
       return send(res, 200, { rating: null, total: 0 });
     }
-    return send(res, 200, {
-      rating: Number(row.rating),
-      total: Number(row.total_ratings || 0),
-    });
+    return send(res, 200, { rating: Number(row.rating), total: Number(row.total_ratings || 0) });
   } catch (e) {
     console.error('[rating] lookup', e.message);
-    // Same answer as "not rated". The alternative is a 500 on a settings
-    // screen, and the rating is the least important thing on it.
     return send(res, 200, { rating: null, total: 0 });
   }
 }
@@ -161,4 +154,4 @@ async function serveForDriver(pool, driverId, res) {
   }
 }
 
-module.exports = { serveForPhone, serveForDriver };
+module.exports = { serveForDriver, serveForRider };

@@ -586,7 +586,13 @@ http.createServer((req, res) => {
     if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' });
     const [, , kind, ...rest] = url.pathname.split('/');
     const who = decodeURIComponent(rest.join('/'));
-    if (kind === 'phone') return rating.serveForPhone(pool, who, res);
+    // Hers only, by her token -- never by a number anybody can type (2026-09-27).
+    // An older app that sends no token sees "not yet rated", not someone else's.
+    if (kind === 'phone') {
+      return identity
+        .riderFromToken(RIDER_URL, req.headers.token || '')
+        .then((me) => (me ? rating.serveForRider(pool, me.id, res) : send(res, 401, { error: 'sign in first' })));
+    }
     if (kind === 'driver') return rating.serveForDriver(pool, who, res);
     return send(res, 404, { error: 'no such rating' });
   }
@@ -739,11 +745,18 @@ http.createServer((req, res) => {
     // database lookup rather than a hash, so this is async where a driver's
     // is not.
     if (req.method === 'GET') {
+      // A passenger's photograph was served to anybody who typed her number
+      // (2026-09-27): a face, from a phone number, with no sign-in. The only
+      // reader was her own profile screen, so it now takes her token and
+      // serves hers -- the number in the path is not read. Drivers see her
+      // through /avatar/ride/{rideId}, which needs a ride id they were given.
       const resolve =
         kind === 'driver'
           ? Promise.resolve(avatars.driverKey(value))
           : kind === 'phone'
-            ? avatars.keyForPhone(pool, value)
+            ? identity
+                .riderFromToken(RIDER_URL, req.headers.token || '')
+                .then((r) => (r ? avatars.keyForRiderId(pool, r.id) : null))
             : Promise.resolve(null);
       return resolve.then((key) => avatars.serve(key, res));
     }
