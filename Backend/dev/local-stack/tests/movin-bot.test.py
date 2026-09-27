@@ -3,7 +3,8 @@
 Does the bot say the right thing, once, and never invent a fault?
 
 Everything outside the process is stubbed: `docker` is a script on PATH that
-prints the rows a query would have returned, Telegram is a local HTTP server
+prints the rows a query would have returned -- the rows in `tables/<name>` when
+the query names that table, else the default rows -- Telegram is a local HTTP server
 that records what it was asked to send, and the server snapshot and the
 certificate directory are temporary files. No database, no network, no bot.
 
@@ -54,10 +55,17 @@ def ok(name, cond, detail=""):
         fails.append(name)
 
 
-def run_bot(work, rows, env=None):
-    """One --once pass with `rows` as everything psql returns."""
+def run_bot(work, rows, env=None, tables=None):
+    """One --once pass with `rows` as what psql returns, except for a query
+    naming a table in `tables`, which gets that table's rows."""
     with open(os.path.join(work, "rows"), "w", encoding="utf-8") as fh:
         fh.write(rows)
+    tdir = os.path.join(work, "tables")
+    for f in os.listdir(tdir):
+        os.remove(os.path.join(tdir, f))
+    for name, body in (tables or {}).items():
+        with open(os.path.join(tdir, name), "w", encoding="utf-8") as fh:
+            fh.write(body)
     e = dict(os.environ)
     e.update({
         "PATH": os.path.join(work, "bin") + ":" + os.environ["PATH"],
@@ -69,6 +77,7 @@ def run_bot(work, rows, env=None):
         "BOT_GUARD_HEALTH": f"http://127.0.0.1:{PORT}/guard",
         "BOT_API_HEALTH": f"http://127.0.0.1:{PORT}/api",
         "ROWS_FILE": os.path.join(work, "rows"),
+        "ROWS_DIR": tdir,
         # Out of quiet hours and away from digest hour, so a test at 3am and a
         # test at noon behave identically.
         "BOT_QUIET_START": "3", "BOT_QUIET_END": "4", "BOT_DIGEST_HOUR": "25",
@@ -85,8 +94,17 @@ threading.Thread(target=srv.serve_forever, daemon=True).start()
 work = tempfile.mkdtemp()
 os.makedirs(os.path.join(work, "bin"))
 os.makedirs(os.path.join(work, "certs"))
+os.makedirs(os.path.join(work, "tables"))
+DOCKER = """#!/usr/bin/env bash
+sql="${@: -1}"
+for f in "$ROWS_DIR"/*; do
+  [ -e "$f" ] || continue
+  case "$sql" in *"$(basename "$f")"*) cat "$f"; exit 0 ;; esac
+done
+cat "$ROWS_FILE"
+"""
 with open(os.path.join(work, "bin", "docker"), "w", encoding="utf-8") as fh:
-    fh.write('#!/usr/bin/env bash\ncat "$ROWS_FILE"\n')
+    fh.write(DOCKER)
 os.chmod(os.path.join(work, "bin", "docker"), 0o755)
 with open(os.path.join(work, "server.json"), "w", encoding="utf-8") as fh:
     json.dump({"containers": [{"name": "ny-edge", "status": "Up 3 weeks"}],
@@ -95,7 +113,9 @@ with open(os.path.join(work, "server.json"), "w", encoding="utf-8") as fh:
 
 # One pending driver, tab-free: the bot splits on the unit separator.
 US = "\x1f"
-PENDING = US.join(["id-aaa", "Yas Kara", "36664750", "0", "2", "1"])
+MR = "favorit0-0000-0000-0000-00000favorit"
+DZ = "algeria0-0000-0000-0000-00000algeria"
+PENDING = US.join(["id-aaa", "Yas Kara", "36664750", "0", "2", "1", MR])
 
 print("1. A driver appears")
 run_bot(work, PENDING)
@@ -120,7 +140,61 @@ run_bot(work, PENDING)
 ok("announced again after clearing",
    len([m for m in sent if "nouvelle inscription" in m]) == 1)
 
-print("\n5. The database does not answer")
+print("\n5. A driver registers in ALGERIA (2026-09-27: never announced before)")
+sent.clear()
+run_bot(work, US.join(["id-dz1", "Amine Test", "0666123456", "0", "0", "0", DZ]))
+dz = [m for m in sent if "nouvelle inscription" in m]
+ok("announced", len(dz) == 1, f"{len(dz)} message(s)")
+ok("and says Algeria", bool(dz) and "Algérie" in dz[0], dz[:1])
+
+print("\n6. A passenger reports a driver -- at night too")
+sent.clear()
+REPORT = US.join(["41", "Il roulait trop vite", "AB12CD", "Karim B", "0666123456",
+                  "00001 116 16", DZ, "Sara", "0555123456"])
+run_bot(work, "", tables={"movin.ride_report": REPORT},
+        env={"BOT_QUIET_START": "0", "BOT_QUIET_END": "23"})   # always quiet
+rep_ = [m for m in sent if "SIGNALEMENT" in m]
+ok("announced through quiet hours", len(rep_) == 1, f"{len(rep_)} message(s)")
+ok("with the text, both people and the country",
+   bool(rep_) and all(x in rep_[0] for x in
+                      ("Il roulait trop vite", "Karim B", "Sara", "Algérie")), rep_[:1])
+before = len(sent)
+run_bot(work, "", tables={"movin.ride_report": REPORT})
+ok("and only once", len(sent) == before, f"{len(sent) - before} extra")
+
+print("\n7. Somebody asks for his account to be deleted")
+sent.clear()
+DEL = US.join(["7", "0555123456", "rider", "2026-09-27", "2026-10-27", "30", "Je pars"])
+run_bot(work, "", tables={"movin.deletion_request": DEL})
+d = [m for m in sent if "suppression de compte" in m]
+ok("announced, passenger, Algeria, with the reason",
+   len(d) == 1 and all(x in d[0] for x in ("passager", "Algérie", "Je pars")), d[:1])
+DEL_MR = US.join(["8", "36664750", "driver", "2026-09-27", "2026-10-27", "30", ""])
+sent.clear()
+run_bot(work, "", tables={"movin.deletion_request": DEL_MR})
+d = [m for m in sent if "suppression de compte" in m]
+ok("a Mauritanian driver's says Mauritania",
+   len(d) == 1 and "chauffeur" in d[0] and "Mauritanie" in d[0], d[:1])
+
+print("\n8. A driver is suspended from the console, and one is closed")
+sent.clear()
+BLOCKED = "\n".join([
+    US.join(["id-s1", "0666000001", "Test", DZ, "suspend", "dangerous_driving",
+             "2026-09-28 10:34"]),
+    # Closed: no end date, so the LAST column is empty -- the row that the
+    # old strip() used to drop.
+    US.join(["id-s2", "36664750", "Yas", MR, "close", "fraud", ""]),
+])
+run_bot(work, "", tables={"movin.driver_sanction": BLOCKED})
+b = [m for m in sent if "chauffeur suspendu" in m or "chauffeur fermé" in m]
+ok("both announced", len(b) == 2, f"{len(b)} message(s)")
+ok("suspension: reason, end, Algeria",
+   any(all(x in m for x in ("suspendu", "Conduite dangereuse", "2026-09-28", "Algérie"))
+       for m in b), b)
+ok("closure: reason, Mauritania",
+   any(all(x in m for x in ("compte chauffeur fermé", "Fraude", "Mauritanie")) for m in b), b)
+
+print("\n9. The database does not answer")
 sent.clear()
 with open(os.path.join(work, "bin", "docker"), "w", encoding="utf-8") as fh:
     fh.write('#!/usr/bin/env bash\nexit 1\n')     # psql fails, like a dead pool

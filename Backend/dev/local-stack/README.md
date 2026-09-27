@@ -3545,7 +3545,7 @@ read-only commands on 2026-09-23; validating, messaging the fleet and the
 tariff stay in the console behind a login. A bot in a pocket that can enable a
 driver is a mistake waiting for a thumb.
 
-Nineteen checks, grouped by what they are for:
+Twenty checks, grouped by what they are for:
 
 | | |
 |---|---|
@@ -3554,7 +3554,7 @@ Nineteen checks, grouped by what they are for:
 | **Silence** | no rides; searches returning no offer; driver positions stale; nobody online |
 | **Machine** | a container not `running`; the API unreachable from outside; disk; TLS expiry; a failed backup |
 | **Rhythm** | a daily digest, a weekly one |
-| **Quality** | a one or two star rating with a written complaint; a run of cancellations; a driver blocked |
+| **Quality** | a passenger's report (« Signaler »), at any hour; a one or two star rating with a written complaint; a run of cancellations; a driver suspended, closed or blocked, with the console's reason and end date |
 
 The *Silence* group is the point. This stack's documented faults — stale
 positions, the BECKN negative coordinate, Redis-cached merchant rows — each
@@ -3581,6 +3581,28 @@ Four things about it are deliberate:
 and is in the backup set. Without them the process exits 0 and does nothing,
 so the unit is safe to enable before the bot exists. Thresholds are all `BOT_*`
 environment variables — change and restart, no rebuild.
+
+**Both countries, since 2026-09-27.** Until then every driver query said
+`merchant_id = MR`, so a driver registering in Algeria was never announced —
+while his Chargily top-up was, the top-up query having no merchant filter at
+all. Found by the owner registering himself in Algeria and hearing nothing.
+Every driver query now names both merchants, every message carries 🇲🇷 or 🇩🇿
+(a driver's country is his merchant, a passenger's his number — the console's
+rule), and the digests and `/flotte` give one block per country so ouguiyas
+and dinars are never added. Every query was run through `EXPLAIN` on the live
+schema before deploying.
+
+**Reports and deletions.** A passenger's report (`movin.ride_report`) is sent
+at once and through quiet hours — the owner asked to hear each one as it
+happens, and it may be about a driver still on the road. A deletion request
+(`movin.deletion_request`, either side) is announced with the reason given,
+then again as its 30-day deadline nears.
+
+**A trap fixed on the way:** `psql()` used to `strip()` the output, and Python
+counts the column separator `\x1f` as whitespace — so a row whose **last
+column was empty** came back one field short and was silently skipped. A
+deletion with no reason, or a closure with no end date, would never have been
+announced. The test suite now has a row like that.
 
 *It replaces `registration-notify.sh`, which did the registration half only.*
 

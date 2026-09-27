@@ -73,6 +73,59 @@ GUARD_HEALTH = os.environ.get("BOT_GUARD_HEALTH", "http://127.0.0.1:8031/healthz
 API_HEALTH = os.environ.get("BOT_API_HEALTH", "https://api.movinapp.net/healthz")
 TELEGRAM_API = os.environ.get("BOT_TELEGRAM_API", "https://api.telegram.org")
 MR = "favorit0-0000-0000-0000-00000favorit"
+DZ = "algeria0-0000-0000-0000-00000algeria"
+
+# ── Two countries, 2026-09-27 ───────────────────────────────────────────────
+# Until then every driver query here said `merchant_id = MR`, so a driver who
+# registered in Algeria was never announced -- while his Chargily top-up WAS,
+# because the top-up query had no merchant filter at all. Found by the owner
+# registering himself in Algeria and hearing nothing. Every driver query now
+# names both merchants, and every message says which country it is about.
+#
+# A driver's country is his merchant; a passenger's is his number (the
+# console's own rule, apps/api/src/shared/country.ts in the website repo).
+COUNTRY = {
+    MR: {"code": "MR", "label": "🇲🇷 Mauritanie", "cur": "MRU",
+         "mobile": r"^[2-4][0-46-9][0-9]{6}$"},
+    DZ: {"code": "DZ", "label": "🇩🇿 Algérie", "cur": "DA",
+         "mobile": r"^0[5-7][0-9]{8}$"},
+}
+MERCHANTS = f"('{MR}', '{DZ}')"
+# wallet_topup.currency is ISO 4217; the office reads dinars as DA.
+CURRENCY_LABEL = {"DZD": "DA", "MRU": "MRU"}
+# The website's SANCTION_REASON_LABEL (packages/domain/src/sanctions.ts).
+SANCTION_REASON = {
+    "dangerous_driving": "Conduite dangereuse",
+    "behaviour": "Comportement inacceptable",
+    "harassment": "Harcèlement ou agression",
+    "fraud": "Fraude ou prix abusif",
+    "vehicle": "Véhicule non conforme ou dangereux",
+    "impersonation": "Ce n’est pas le titulaire du compte qui conduit",
+    "other": "Autre motif",
+}
+
+
+def country_of(merchant=None, phone=None):
+    """The country's entry, by merchant first, then by a stored national
+    number. None when it is neither -- upstream's seed accounts."""
+    if merchant in COUNTRY:
+        return COUNTRY[merchant]
+    digits = re.sub(r"\D", "", phone or "")
+    for c in COUNTRY.values():
+        if re.match(c["mobile"], digits):
+            return c
+    return None
+
+
+def where(merchant=None, phone=None):
+    c = country_of(merchant, phone)
+    return c["label"] if c else "Pays inconnu"
+
+
+def one_line(sql_expr):
+    """A free-text column made safe for the row splitter: psql rows are split
+    on newlines, so a report written over two lines would become two rows."""
+    return f"regexp_replace(coalesce({sql_expr}, ''), E'[\\n\\r\\x1f]+', ' ', 'g')"
 
 
 # ── configuration ───────────────────────────────────────────────────────────
@@ -135,7 +188,11 @@ def psql(sql):
         if out.returncode != 0:
             log(f"psql failed: {out.stderr.strip()[:200]}")
             return None
-        return [r.split("\x1f") for r in out.stdout.strip().split("\n") if r]
+        # Split on newlines only. `str.strip()` counts \x1f as whitespace, so
+        # stripping the output ate the separator before an EMPTY LAST COLUMN
+        # and the row came back one field short -- and was then skipped by
+        # the unpacking. A deletion with no reason vanished that way.
+        return [r.split("\x1f") for r in out.stdout.split("\n") if r]
     except Exception as exc:                                  # noqa: BLE001
         log(f"psql error: {exc}")
         return None
@@ -253,25 +310,27 @@ def check_registrations(_):
              p.unencrypted_mobile_number,
              round(extract(epoch from (now() - p.created_at)) / 3600)::int,
              (SELECT count(*) FROM movin.driver_document d WHERE d.driver_id = p.id),
-             (SELECT count(*) FROM movin.driver_declaration dd WHERE dd.driver_id = p.id)
+             (SELECT count(*) FROM movin.driver_declaration dd WHERE dd.driver_id = p.id),
+             p.merchant_id
         FROM atlas_driver_offer_bpp.person p
         JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-       WHERE p.merchant_id = '{MR}' AND NOT di.enabled AND NOT di.blocked
+       WHERE p.merchant_id IN {MERCHANTS} AND NOT di.enabled AND NOT di.blocked
        ORDER BY p.created_at""")
     if rows is None:
         return []
     out = []
-    for pid, name, number, hours, docs, decl in rows:
+    for pid, name, number, hours, docs, decl, merchant in rows:
+        land = where(merchant)
         hours = int(hours or 0)
         papers = f"{docs} papier(s) reçu(s)" if int(docs or 0) else "aucun papier reçu"
         if int(decl or 0):
             papers += ", véhicule déclaré"
         out.append((f"reg:new:{pid}", "normal",
-                    f"Movin · nouvelle inscription chauffeur\n\n{name}\n{number}\n"
+                    f"Movin · nouvelle inscription chauffeur\n{land}\n\n{name}\n{number}\n"
                     f"{papers}\nÀ l'instant\n\nhttps://admin.movinapp.net"))
         if hours >= PATIENCE_H:
             out.append((f"reg:waited:{pid}", "normal",
-                        f"Movin · chauffeur toujours en attente\n\n{name}\n{number}\n"
+                        f"Movin · chauffeur toujours en attente\n{land}\n\n{name}\n{number}\n"
                         f"{papers}\nEn attente depuis {hours} h\n\n"
                         f"https://admin.movinapp.net"))
     return out
@@ -322,42 +381,49 @@ def check_wallet(_):
     """3 · Money in and money wrong."""
     out = []
     neg = psql("""
-      SELECT w.driver_id, p.unencrypted_mobile_number, w.balance
+      SELECT w.driver_id, p.unencrypted_mobile_number, w.balance, p.merchant_id
         FROM movin.wallet w
         JOIN atlas_driver_offer_bpp.person p ON p.id = w.driver_id
        WHERE w.balance < 0""")
-    for did, number, bal in (neg or []):
+    for did, number, bal, merchant in (neg or []):
+        c = country_of(merchant)
         out.append((f"wallet:neg:{did}", "normal",
-                    f"Movin · porte-monnaie négatif\n\n{number}\nSolde : {bal} MRU"))
+                    f"Movin · porte-monnaie négatif\n{where(merchant)}\n\n{number}\n"
+                    f"Solde : {bal} {c['cur'] if c else ''}".rstrip()))
     tops = psql("""
-      SELECT t.transaction_id, p.unencrypted_mobile_number, t.amount, t.currency
+      SELECT t.transaction_id, p.unencrypted_mobile_number, t.amount, t.currency,
+             p.merchant_id
         FROM movin.wallet_topup t
         JOIN atlas_driver_offer_bpp.person p ON p.id = t.driver_id
        WHERE t.credited_at IS NOT NULL
          AND t.credited_at > now() - interval '2 days'""")
-    for txn, number, amount, cur in (tops or []):
+    for txn, number, amount, cur, merchant in (tops or []):
         out.append((f"wallet:topup:{txn}", "normal",
-                    f"Movin · rechargement reçu\n\n{number}\n{amount} {cur or 'MRU'}"))
+                    f"Movin · rechargement reçu\n{where(merchant)}\n\n{number}\n"
+                    f"{amount} {CURRENCY_LABEL.get(cur, cur or '')}".rstrip()))
     return out
 
 
 def check_deletions(_):
     """4 and 5 · The queue with a legal clock on it. `delete_by` is a promise
     with a date; the console shows it and nothing else does."""
-    rows = psql("""
+    rows = psql(f"""
       SELECT id, phone, side, requested_at::date,
              delete_by::date,
-             (delete_by::date - now()::date) AS days_left
+             (delete_by::date - now()::date) AS days_left,
+             {one_line("reason")}
         FROM movin.deletion_request
        WHERE status NOT IN ('done','withdrawn','anonymised')""")
     if rows is None:
         return []
     out = []
-    for rid, phone, side, asked, due, left in rows:
+    for rid, phone, side, asked, due, left, reason in rows:
         left = int(left or 0)
         who = "passager" if (side or "").lower().startswith("rider") else "chauffeur"
+        why = f"\nMotif : « {reason[:300]} »" if reason else ""
         out.append((f"del:new:{rid}", "normal",
-                    f"Movin · demande de suppression de compte\n\n{phone} ({who})\n"
+                    f"Movin · demande de suppression de compte\n{where(phone=phone)}\n\n"
+                    f"{phone} ({who}){why}\n"
                     f"Demandé le {asked}\nÀ traiter avant le {due}\n\n"
                     f"https://admin.movinapp.net"))
         if left < 0:
@@ -451,20 +517,26 @@ def check_stale_positions(_):
 
 
 def check_nobody_online(_):
-    """9 · The whole fleet offline in working hours."""
+    """9 · A whole country's fleet offline in working hours -- each country
+    on its own, since a busy Nouakchott says nothing about Algiers."""
     if quiet_hours():
         return []
-    n = one(f"""
-      SELECT count(*) FROM atlas_driver_offer_bpp.person p
-        JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-       WHERE p.merchant_id = '{MR}' AND di.active AND di.enabled AND NOT di.blocked""")
-    if n is None:
-        return []
-    if int(n) > 0:
-        return []
-    return [("fleet:empty", "normal",
-             "Movin · aucun chauffeur en ligne\n\n"
-             "Personne ne peut recevoir de course en Mauritanie en ce moment.")]
+    rows = psql(f"""
+      SELECT m.id, count(di.driver_id)
+        FROM unnest(ARRAY['{MR}', '{DZ}']) AS m(id)
+        LEFT JOIN atlas_driver_offer_bpp.person p ON p.merchant_id = m.id
+        LEFT JOIN atlas_driver_offer_bpp.driver_information di
+               ON di.driver_id = p.id AND di.active AND di.enabled AND NOT di.blocked
+       GROUP BY m.id""")
+    out = []
+    for merchant, n in (rows or []):
+        c = country_of(merchant)
+        if not c or int(n or 0) > 0:
+            continue
+        out.append((f"fleet:empty:{c['code']}", "normal",
+                    f"Movin · aucun chauffeur en ligne\n{c['label']}\n\n"
+                    f"Personne ne peut recevoir de course dans ce pays en ce moment."))
+    return out
 
 
 def check_containers(_):
@@ -587,17 +659,17 @@ def check_low_ratings(_):
     """17 · One or two stars, with something written. A complaint somebody
     took the trouble to type is worth reading the same day."""
     rows = psql("""
-      SELECT r.id, r.rating_value, coalesce(r.feedback_details,''),
-             coalesce(p.first_name,'')
+      SELECT r.id, r.rating_value, """ + one_line("r.feedback_details") + """,
+             coalesce(p.first_name,''), coalesce(p.merchant_id,'')
         FROM atlas_driver_offer_bpp.rating r
         LEFT JOIN atlas_driver_offer_bpp.person p ON p.id = r.driver_id
        WHERE r.rating_value <= 2
          AND coalesce(r.feedback_details,'') <> ''
          AND r.created_at > now() - interval '2 days'""")
     out = []
-    for rid, stars, text, driver in (rows or []):
+    for rid, stars, text, driver, merchant in (rows or []):
         out.append((f"rating:{rid}", "normal",
-                    f"Movin · note basse avec commentaire\n\n"
+                    f"Movin · note basse avec commentaire\n{where(merchant)}\n\n"
                     f"{stars}/5 — chauffeur {driver or '?'}\n« {text[:300]} »\n\n"
                     f"https://admin.movinapp.net"))
     return out
@@ -632,18 +704,69 @@ def check_cancellations(_):
 
 
 def check_blocked_drivers(_):
-    """19 · Somebody was blocked — by validation, or by the wallet gate."""
+    """19 · Somebody was blocked -- suspended or closed from the console, or
+    by upstream. The console's latest sanction says why and until when."""
     rows = psql(f"""
       SELECT p.id, p.unencrypted_mobile_number,
-             coalesce(nullif(trim(coalesce(p.first_name,'')),''),'?')
+             coalesce(nullif(trim(coalesce(p.first_name,'')),''),'?'),
+             p.merchant_id,
+             coalesce(s.action, ''), coalesce(s.reason, ''),
+             coalesce(to_char(s.until AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI'), '')
         FROM atlas_driver_offer_bpp.person p
         JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-       WHERE p.merchant_id = '{MR}' AND di.blocked""")
+        LEFT JOIN LATERAL (
+          SELECT action, reason, until FROM movin.driver_sanction ds
+           WHERE ds.driver_id = p.id
+           ORDER BY ds.decided_at DESC, ds.id DESC LIMIT 1) s ON true
+       WHERE p.merchant_id IN {MERCHANTS} AND di.blocked""")
     out = []
-    for pid, number, name in (rows or []):
+    for pid, number, name, merchant, action, reason, until in (rows or []):
+        title = {"suspend": "chauffeur suspendu",
+                 "close": "compte chauffeur fermé"}.get(action, "chauffeur bloqué")
+        detail = ""
+        if reason:
+            detail += f"\nMotif : {SANCTION_REASON.get(reason, reason)}"
+        if action == "suspend":
+            detail += f"\nJusqu'au {until} UTC" if until else "\nSans date de fin"
         out.append((f"driver:blocked:{pid}", "normal",
-                    f"Movin · chauffeur bloqué\n\n{name}\n{number}\n\n"
-                    f"https://admin.movinapp.net"))
+                    f"Movin · {title}\n{where(merchant)}\n\n{name}\n{number}"
+                    f"{detail}\n\nhttps://admin.movinapp.net"))
+    return out
+
+
+def check_reports(_):
+    """20 · A passenger reported a ride (« Signaler », 2026-09-27). Every one,
+    at once and through quiet hours: the owner asked to hear about each report
+    as it happens, and one may be about a driver who is still on the road.
+
+    A report's country is its driver's merchant, else the passenger's number
+    -- the console's rule. Two days back, like the ratings, so a restart never
+    replays the history."""
+    rows = psql(f"""
+      SELECT rr.id::text,
+             {one_line("rr.body")},
+             coalesce(rr.ride_short_id, ''),
+             coalesce(nullif(trim(concat_ws(' ', p.first_name, p.last_name)), ''),
+                      rr.driver_name, '?'),
+             coalesce(p.unencrypted_mobile_number, ''),
+             coalesce(rr.vehicle_number, ''),
+             coalesce(p.merchant_id, ''),
+             coalesce(nullif(trim(concat_ws(' ', ap.first_name, ap.last_name)), ''), '?'),
+             coalesce(ap.unencrypted_mobile_number, '')
+        FROM movin.ride_report rr
+        LEFT JOIN atlas_driver_offer_bpp.person p ON p.id = rr.driver_id
+        LEFT JOIN atlas_app.person ap ON ap.id = rr.rider_id
+       WHERE rr.created_at > now() - interval '2 days'
+       ORDER BY rr.created_at""")
+    out = []
+    for rid, body, ride, driver, dphone, plate, merchant, rider, rphone in (rows or []):
+        car = f" · {plate}" if plate else ""
+        course = f"\nCourse {ride}" if ride else ""
+        out.append((f"report:{rid}", "loud",
+                    f"Movin · SIGNALEMENT d'un passager\n{where(merchant, rphone)}\n\n"
+                    f"Chauffeur : {driver} {dphone}{car}\n"
+                    f"Passager : {rider} {rphone}{course}\n\n"
+                    f"« {body[:600]} »\n\nhttps://admin.movinapp.net"))
     return out
 
 
@@ -652,32 +775,40 @@ CHECKS = [
     check_deletions, check_no_rides, check_zero_estimates,
     check_stale_positions, check_nobody_online, check_containers, check_api,
     check_disk, check_certs, check_backups, check_low_ratings,
-    check_cancellations, check_blocked_drivers,
+    check_cancellations, check_blocked_drivers, check_reports,
 ]
 
 
 # ── 15 and 16 · the digests ─────────────────────────────────────────────────
 
-def numbers(window):
-    """The same figures the console's Aperçu screen answers with."""
+def numbers(window, merchant):
+    """The same figures the console's Aperçu screen answers with, for one
+    country: a ride belongs to its driver's merchant, and ouguiyas are never
+    added to dinars."""
     r = psql(f"""
       SELECT
-        (SELECT count(*) FROM atlas_driver_offer_bpp.ride
-          WHERE created_at > now() - interval '{window}'),
-        (SELECT coalesce(sum(fare),0) FROM atlas_driver_offer_bpp.ride
-          WHERE created_at > now() - interval '{window}' AND status = 'COMPLETED'),
+        (SELECT count(*) FROM atlas_driver_offer_bpp.ride r
+           JOIN atlas_driver_offer_bpp.person p ON p.id = r.driver_id
+          WHERE p.merchant_id = '{merchant}'
+            AND r.created_at > now() - interval '{window}'),
+        (SELECT coalesce(sum(r.fare),0) FROM atlas_driver_offer_bpp.ride r
+           JOIN atlas_driver_offer_bpp.person p ON p.id = r.driver_id
+          WHERE p.merchant_id = '{merchant}'
+            AND r.created_at > now() - interval '{window}' AND r.status = 'COMPLETED'),
         (SELECT count(*) FROM atlas_driver_offer_bpp.person p
            JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-          WHERE p.merchant_id = '{MR}' AND NOT di.enabled AND NOT di.blocked),
+          WHERE p.merchant_id = '{merchant}' AND NOT di.enabled AND NOT di.blocked),
         (SELECT count(*) FROM atlas_driver_offer_bpp.person p
            JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-          WHERE p.merchant_id = '{MR}' AND di.enabled AND NOT di.blocked),
+          WHERE p.merchant_id = '{merchant}' AND di.enabled AND NOT di.blocked),
         (SELECT count(*) FROM atlas_driver_offer_bpp.person p
            JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-          WHERE p.merchant_id = '{MR}' AND p.created_at > now() - interval '{window}'),
-        (SELECT coalesce(sum(amount),0) FROM movin.wallet_topup
-          WHERE credited_at > now() - interval '{window}')""")
-    if not r:
+          WHERE p.merchant_id = '{merchant}' AND p.created_at > now() - interval '{window}'),
+        (SELECT coalesce(sum(t.amount),0) FROM movin.wallet_topup t
+           JOIN atlas_driver_offer_bpp.person p ON p.id = t.driver_id
+          WHERE p.merchant_id = '{merchant}'
+            AND t.credited_at > now() - interval '{window}')""")
+    if not r or len(r[0]) < 6:
         return None
     v = r[0]
     return {"rides": v[0], "fare": v[1], "pending": v[2], "fleet": v[3],
@@ -685,17 +816,20 @@ def numbers(window):
 
 
 def digest(window, title):
-    n = numbers(window)
-    if not n:
-        return None
-    return (f"Movin · {title}\n\n"
-            f"Courses            {n['rides']}\n"
-            f"Encaissé           {n['fare']} MRU\n"
-            f"Rechargements      {n['topups']} MRU\n"
-            f"Nouveaux chauffeurs {n['new_drivers']}\n"
-            f"Flotte active      {n['fleet']}\n"
-            f"En attente         {n['pending']}\n\n"
-            f"https://admin.movinapp.net")
+    parts = []
+    for merchant, c in COUNTRY.items():
+        n = numbers(window, merchant)
+        if not n:
+            return None     # half a digest would read as the other half being zero
+        parts.append(f"{c['label']}\n"
+                     f"Courses            {n['rides']}\n"
+                     f"Encaissé           {n['fare']} {c['cur']}\n"
+                     f"Rechargements      {n['topups']} {c['cur']}\n"
+                     f"Nouveaux chauffeurs {n['new_drivers']}\n"
+                     f"Flotte active      {n['fleet']}\n"
+                     f"En attente         {n['pending']}")
+    return (f"Movin · {title}\n\n" + "\n\n".join(parts)
+            + "\n\nhttps://admin.movinapp.net")
 
 
 # ── the commands ────────────────────────────────────────────────────────────
@@ -721,17 +855,18 @@ def cmd_file(_):
                                   coalesce(p.last_name,'')),''),'Nom non renseigné'),
              p.unencrypted_mobile_number,
              round(extract(epoch from (now() - p.created_at))/3600)::int,
-             (SELECT count(*) FROM movin.driver_document d WHERE d.driver_id = p.id)
+             (SELECT count(*) FROM movin.driver_document d WHERE d.driver_id = p.id),
+             p.merchant_id
         FROM atlas_driver_offer_bpp.person p
         JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-       WHERE p.merchant_id = '{MR}' AND NOT di.enabled AND NOT di.blocked
+       WHERE p.merchant_id IN {MERCHANTS} AND NOT di.enabled AND NOT di.blocked
        ORDER BY p.created_at""")
     if rows is None:
         return "La base n'a pas répondu."
     if not rows:
         return "Personne n'attend. La file est vide."
-    lines = [f"{n}\n  {num_} · {h} h · {d} papier(s)"
-             for n, num_, h, d in rows]
+    lines = [f"{n}  {where(m)}\n  {num_} · {h} h · {d} papier(s)"
+             for n, num_, h, d, m in rows]
     return (f"Movin · {len(rows)} en attente\n\n" + "\n\n".join(lines)
             + "\n\nhttps://admin.movinapp.net")
 
@@ -756,7 +891,7 @@ def cmd_chauffeur(arg):
              coalesce((SELECT balance::text FROM movin.wallet w
                         WHERE w.driver_id = p.id),'—'),
              (SELECT count(*) FROM movin.driver_document d WHERE d.driver_id = p.id),
-             p.created_at::date
+             p.created_at::date, p.merchant_id
         FROM atlas_driver_offer_bpp.person p
         JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
         LEFT JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = p.id
@@ -767,32 +902,38 @@ def cmd_chauffeur(arg):
     if not rows:
         return f"Aucun chauffeur avec {digits}."
     out = []
-    for name, number, en, bl, ac, var, plate, bal, docs, since in rows:
+    for name, number, en, bl, ac, var, plate, bal, docs, since, merchant in rows:
+        c = country_of(merchant)
         state = ("bloqué" if bl == "t" else
                  "en ligne" if (en == "t" and ac == "t") else
                  "actif" if en == "t" else "en attente de validation")
-        out.append(f"{name}\n{number}\nÉtat : {state}\nVéhicule : {var} {plate}\n"
-                   f"Porte-monnaie : {bal} MRU\nPapiers : {docs}\nInscrit le {since}")
+        out.append(f"{name}\n{where(merchant)}\n{number}\nÉtat : {state}\n"
+                   f"Véhicule : {var} {plate}\n"
+                   f"Porte-monnaie : {bal} {c['cur'] if c else ''}\nPapiers : {docs}\n"
+                   f"Inscrit le {since}")
     return "Movin · chauffeur\n\n" + "\n\n———\n\n".join(out)
 
 
 def cmd_flotte(_):
-    rows = psql(f"""
-      SELECT coalesce(v.variant,'sans véhicule'), count(*)
-        FROM atlas_driver_offer_bpp.person p
-        JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-        LEFT JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = p.id
-       WHERE p.merchant_id = '{MR}' AND di.enabled AND NOT di.blocked
-       GROUP BY 1 ORDER BY 1""")
-    if rows is None:
-        return "La base n'a pas répondu."
-    online = one(f"""
-      SELECT count(*) FROM atlas_driver_offer_bpp.person p
-        JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
-       WHERE p.merchant_id = '{MR}' AND di.active AND di.enabled AND NOT di.blocked""",
-                 "?")
-    body = "\n".join(f"{v:<16} {n}" for v, n in rows) or "aucun"
-    return f"Movin · flotte\n\n{body}\n\nEn ligne maintenant : {online}"
+    sections = []
+    for merchant, c in COUNTRY.items():
+        rows = psql(f"""
+          SELECT coalesce(v.variant,'sans véhicule'), count(*)
+            FROM atlas_driver_offer_bpp.person p
+            JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
+            LEFT JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = p.id
+           WHERE p.merchant_id = '{merchant}' AND di.enabled AND NOT di.blocked
+           GROUP BY 1 ORDER BY 1""")
+        if rows is None:
+            return "La base n'a pas répondu."
+        online = one(f"""
+          SELECT count(*) FROM atlas_driver_offer_bpp.person p
+            JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
+           WHERE p.merchant_id = '{merchant}'
+             AND di.active AND di.enabled AND NOT di.blocked""", "?")
+        body = "\n".join(f"{v:<16} {n}" for v, n in rows) or "aucun"
+        sections.append(f"{c['label']}\n{body}\nEn ligne maintenant : {online}")
+    return "Movin · flotte\n\n" + "\n\n".join(sections)
 
 
 def cmd_serveur(_):
