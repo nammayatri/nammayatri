@@ -514,8 +514,15 @@ services:
     # `required: false` so a checkout without the secret still starts -- it logs
     # a loud warning and refuses rider sign-ins, which is the honest failure.
     # Without it, a missing file makes the whole stack refuse to come up.
+    #
+    # whatsapp.env, 2026-09-27: WHATSAPP_VERIFY_TOKEN (ours, pasted into Meta's
+    # webhook form) and, once the client sends it, WHATSAPP_APP_SECRET, which
+    # checks Meta's signature on every delivery. See auth-guard/whatsapp.js.
+    # Optional for the same reason: without it the webhook answers 503.
     env_file:
       - path: /opt/ny/secrets/moorsyl.env
+        required: false
+      - path: /opt/ny/secrets/whatsapp.env
         required: false
     volumes:
       - ./auth-guard:/app:ro

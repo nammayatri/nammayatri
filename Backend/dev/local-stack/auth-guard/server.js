@@ -88,6 +88,7 @@
 const http = require('http');
 const fs = require('fs');
 const crypto = require('crypto');
+const whatsapp = require('./whatsapp');
 
 const PORT = Number(process.env.PORT || 8031);
 
@@ -882,9 +883,26 @@ async function walletAllows(token) {
 async function handle(req, res) {
   const pathname = req.url.split('?')[0];
 
+  // Meta's webhook for the WhatsApp number. Not a /v2/ or /ui/ route, and
+  // forwarded nowhere: whatsapp.js answers it itself. See that file.
+  if (pathname === '/whatsapp/webhook') {
+    let status;
+    let text;
+    if (req.method === 'GET') {
+      [status, text] = whatsapp.handshake(req.url);
+    } else if (req.method === 'POST') {
+      [status, text] = whatsapp.deliver(await readBody(req), req.headers);
+    } else {
+      [status, text] = [405, 'method not allowed'];
+    }
+    res.writeHead(status, { 'content-type': 'text/plain;charset=utf-8' });
+    return res.end(text);
+  }
+
   if (pathname === '/healthz') {
     return send(res, 200, {
       ok: true,
+      whatsapp: whatsapp.health(),
       routes: ROUTES.map((r) => ({
         prefix: r.prefix,
         upstream: r.upstream,
