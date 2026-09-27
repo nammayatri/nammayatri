@@ -3300,9 +3300,15 @@ Opening Algeria is `OPEN_COUNTRIES=+222,+213` and a restart — no build, no APK
 Numbers on `SMS_BYPASS` pass the gate, which is how the test accounts work:
 
     bash algerian-test-accounts.sh
-      passengers  +213 0555000001..3      code 111111
-      drivers     +213 0666000001 Voiture code 213001
-                  +213 0666000002 Herbin  code 213002   (approved, 1000 DA test credit)
+      passengers  +213 0555000001..3      the private test code
+      drivers     +213 0666000001 Voiture a fresh personal code, printed once
+                  +213 0666000002 Herbin  a fresh personal code, printed once
+                                          (both approved, 1000 DA test credit)
+
+**No code is written here any more, and none may be (2026-09-27).** This
+repository is public — a fork of public Namma Yatri — and this block used to
+give the passengers' code and both drivers' personal codes, which let anyone
+sign in as them. All three were changed that day; the old values are refused.
 
 **All five must go before Algeria opens**: the `+213` line in `SMS_BYPASS`
 and `enrol-driver.sh --revoke`. `enrol-driver.sh` takes Algerian numbers with
@@ -3432,8 +3438,13 @@ and one environment variable away — it sends our own French wording under
 - **`SMS_BYPASS` is not a convenience.** Moorsyl only delivers to real `+222`
   mobiles, and everyone building this tests from Algeria with invented numbers.
   Without the exemption list this change locks the team out of the product.
-  Eleven numbers send nothing and use `SMS_BYPASS_CODE` (`111111`). **Empty it
-  before the first real rider**, together with `TEST_OTP` in the app.
+  The exempt numbers send nothing and use `SMS_BYPASS_CODE`. **Both live in
+  `/opt/ny/secrets/test-accounts.env`, not in git** (since 2026-09-27: they
+  were in `docker-compose.yml` and in the guard's default, in a public
+  repository). Without a private six-digit code — or with the old public
+  `111111` — the guard honours **no** exempt number and says so at startup.
+  **Empty the list before the first real rider**, together with `TEST_OTP` in
+  the app.
 - **The key is in `/opt/ny/secrets/moorsyl.env`**, mounted with `env_file:
   required: false` so a checkout without it still starts — loudly warning, and
   refusing rider sign-ins, which is the honest failure.

@@ -324,12 +324,21 @@ function recordSms() {
  * some numbers are exempt. Empty it the day the pilot has real riders -- that
  * is the same instruction TEST_OTP carries in the app, and they go together.
  */
-const SMS_BYPASS = new Set(
+const SMS_BYPASS_LISTED = new Set(
   (process.env.SMS_BYPASS || '').split(',').map((s) => s.trim()).filter(Boolean),
 );
 
 /**
  * What an exempt number types instead of a code it never received.
+ *
+ * ── Out of git since 2026-09-27, and it fails CLOSED ────────────────────────
+ * This repository is PUBLIC (a fork of public Namma Yatri), and both the list
+ * of exempt numbers and the code they accept used to be in it: the list in
+ * docker-compose.yml, the code as this constant's default. Anybody could read
+ * them and sign in as the test passengers, the test drivers and the simulated
+ * fleet. Both now come from /opt/ny/secrets/test-accounts.env on the box, and
+ * the code has no default: no code, or the old public one, means NO number is
+ * exempt, and the guard says so at startup.
  *
  * It cannot be the backend's own 7891. The app's input is six characters wide
  * now, because Moorsyl's Verify codes are exactly six, so a four-character code
@@ -340,7 +349,15 @@ const SMS_BYPASS = new Set(
  * Six ones, because it should be impossible to mistake for a real code in a
  * screenshot or a log.
  */
-const SMS_BYPASS_CODE = process.env.SMS_BYPASS_CODE || '111111';
+const SMS_BYPASS_CODE = (process.env.SMS_BYPASS_CODE || '').trim();
+
+/** The code everybody could read in git until 2026-09-27. Never accepted again. */
+const PUBLISHED_BYPASS_CODE = '111111';
+
+const BYPASS_CODE_USABLE = /^\d{6}$/.test(SMS_BYPASS_CODE) && SMS_BYPASS_CODE !== PUBLISHED_BYPASS_CODE;
+
+/** The exempt numbers actually honoured: none unless the code is private and usable. */
+const SMS_BYPASS = BYPASS_CODE_USABLE ? SMS_BYPASS_LISTED : new Set();
 
 /**
  * One GSM-7 segment, so one message and one charge. Accented characters are in
@@ -1323,8 +1340,15 @@ http.createServer((req, res) => {
   }
   // Printed in full, on purpose. These numbers can be signed into by anyone who
   // knows the fixed code, and that should be impossible to forget about.
+  if (SMS_BYPASS_LISTED.size && !BYPASS_CODE_USABLE) {
+    console.error(
+      `auth-guard  ${SMS_BYPASS_LISTED.size} exempt number(s) listed but IGNORED: SMS_BYPASS_CODE is ` +
+        `${SMS_BYPASS_CODE === PUBLISHED_BYPASS_CODE ? 'the old public code' : 'missing or not six digits'} ` +
+        '-- set it in /opt/ny/secrets/test-accounts.env',
+    );
+  }
   if (SMS_BYPASS.size) {
     console.warn(`auth-guard  ${SMS_BYPASS.size} number(s) EXEMPT from SMS, ` +
-      `code "${SMS_BYPASS_CODE}" accepted for: ${[...SMS_BYPASS].join(', ')}`);
+      `the private test code accepted for: ${[...SMS_BYPASS].join(', ')}`);
   }
 });

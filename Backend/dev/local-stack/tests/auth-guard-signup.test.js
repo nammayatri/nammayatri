@@ -37,7 +37,11 @@ const salt = 'abc';
 const hash = crypto.createHash('sha256').update(`${salt}:${enrolled}:654321`).digest('hex');
 fs.writeFileSync(codesFile, JSON.stringify({ codes: { [enrolled]: { salt, hash } } }));
 
-function startGuard(port, signup) {
+// A private test code, as on the box since 2026-09-27. Not 111111: that one
+// was public in this repository and the guard now refuses to honour it.
+const TEST_CODE = '482913';
+
+function startGuard(port, signup, bypassCode = TEST_CODE) {
   const env = {
     ...process.env,
     PORT: String(port),
@@ -46,6 +50,7 @@ function startGuard(port, signup) {
     DRIVER_CODES: codesFile,
     MOORSYL_API_KEY: '',
     SMS_BYPASS: '+22222778899',
+    SMS_BYPASS_CODE: bypassCode,
     OPEN_COUNTRIES: '+222',
     WALLET_URL: 'http://127.0.0.1:1',
   };
@@ -80,6 +85,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await new Promise((r) => fake.listen(UP, '127.0.0.1', r));
   const open = startGuard(18131, undefined);
   const closed = startGuard(18132, 'closed');
+  const publicCode = startGuard(18133, undefined, '111111');
+  const noCode = startGuard(18134, undefined, '');
   await wait(1500);
 
   const h = await call(18131, 'GET', '/healthz');
@@ -92,7 +99,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   check('open: new driver (test number) start -> 200', s.status === 200 && s.json.authId, s);
   let v = await call(18131, 'POST', `/ui/auth/${s.json.authId}/verify`, { otp: '000000', deviceToken: 'd' });
   check('open: wrong code refused', v.status !== 200, v);
-  v = await call(18131, 'POST', `/ui/auth/${s.json.authId}/verify`, { otp: '111111', deviceToken: 'd' });
+  v = await call(18131, 'POST', `/ui/auth/${s.json.authId}/verify`, { otp: TEST_CODE, deviceToken: 'd' });
   check('open: test code -> 200', v.status === 200, v);
   check('open: backend receives its fixed code, not the typed one', lastVerifyBody && lastVerifyBody.otp === '7891', lastVerifyBody);
 
@@ -116,8 +123,21 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const dz = await call(18131, 'POST', '/ui/auth', { mobileCountryCode: '+213', mobileNumber: '0666123456', merchantId: 'm' });
   check('open: closed country still 403', dz.status === 403, dz);
 
+  // 6. the code that was public in git is never honoured, and neither is none:
+  //    the listed number is simply not exempt, so it gets a real SMS attempt
+  //    (which fails here, no key) rather than a known code.
+  for (const [port, what] of [[18133, 'the old public code'], [18134, 'no code']]) {
+    const hz = await call(port, 'GET', '/healthz');
+    check(`${what}: no number exempt`, hz.json.gateway.bypassNumbers === 0, hz.json.gateway);
+    const t = await start(port, '22778899');
+    check(`${what}: listed number is not let in by a known code`, t.status !== 200 || !t.json.authId ||
+      (await call(port, 'POST', `/ui/auth/${t.json.authId}/verify`, { otp: '111111', deviceToken: 'd' })).status !== 200, t);
+  }
+
   open.kill();
   closed.kill();
+  publicCode.kill();
+  noCode.kill();
   fake.close();
   console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
   process.exitCode = failed ? 1 : 0;

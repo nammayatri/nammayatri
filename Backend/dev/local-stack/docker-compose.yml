@@ -473,40 +473,21 @@ services:
       VERIFY_CHECK_URL: "https://api.moorsyl.com/api/verify/check"
       SMS_URL: "https://api.moorsyl.com/api/sms"
       SMS_SENDER: "Movin"
-      # Numbers that skip the gateway and keep the fixed code, because no
-      # message could ever reach them: every one of these is invented.
+      # Numbers that skip the gateway -- the probe account, the seeded test
+      # fleet, the handset test driver and the Algerian test accounts -- and
+      # the code they type instead: SMS_BYPASS and SMS_BYPASS_CODE, both in
+      # /opt/ny/secrets/test-accounts.env since 2026-09-27, NOT here.
       #
-      #   22778899  the number every probe script in this directory signs in as
-      #   22000001-2, 22100001-8  the seeded test fleet, from
-      #                           seed-mauritanian-fleet.sh
-      #   22100009  the handset account -- a real person testing on a real
-      #             phone, deliberately NOT one of the eight above. The app
-      #             enforces one account on one phone now, so signing in as a
-      #             simulated driver from a handset would revoke the
-      #             simulator's session and quietly take a car out of the
-      #             fleet, which looks like a dispatch bug an hour later.
+      # They were here, with the code as the guard's default, and THIS
+      # REPOSITORY IS PUBLIC (a fork of public Namma Yatri): anyone could read
+      # the list and the code and sign in as those accounts. The old code is
+      # refused for ever now, and without a private code nothing is exempt
+      # (auth-guard/server.js, SMS_BYPASS_CODE). Who the numbers are and why
+      # each is there: local-stack README, *The SMS gateway*.
       #
-      # Without this the people building the app cannot sign in to it at all:
-      # Moorsyl only accepts real Mauritanian mobiles, and everyone testing from
-      # Algeria uses a made-up +222 number. A real driver enrolled later is
-      # deliberately NOT here -- he should get a real message.
-      #
-      # This list must be empty before the first real rider. It is the same
-      # instruction TEST_OTP carries in the app, and the two go together.
-      #
-      # The +213 line: Algerian TEST accounts (2026-09-13), added by
-      # algerian-test-accounts.sh -- passengers 0555000001-3 (code 111111),
-      # drivers 0666000001-2 (personal codes). Being listed here is also what
-      # lets them past OPEN_COUNTRIES while Algeria is closed. Remove the line
-      # before Algeria opens. No comments INSIDE the value below: it is a folded
-      # scalar, so a '#' line there becomes part of a number.
-      SMS_BYPASS: >-
-        +22222778899,
-        +2130555000001,+2130555000002,+2130555000003,+2130666000001,+2130666000002,
-        +22222000001,+22222000002,
-        +22222100001,+22222100002,+22222100003,+22222100004,
-        +22222100005,+22222100006,+22222100007,+22222100008,
-        +22222100009
+      # This list must be empty before the first real rider, and the +213
+      # entries removed before Algeria opens -- being listed is also what lets
+      # them past OPEN_COUNTRIES.
     # MOORSYL_API_KEY, and only that. Kept out of this file because this file is
     # in git: a key committed once is a key that has to be rotated, and rotating
     # this one means asking the client to go back into the Moorsyl console.
@@ -523,6 +504,10 @@ services:
       - path: /opt/ny/secrets/moorsyl.env
         required: false
       - path: /opt/ny/secrets/whatsapp.env
+        required: false
+      # The exempt test numbers and their private code. Optional: without it
+      # no number is exempt, which is the safe way for it to be missing.
+      - path: /opt/ny/secrets/test-accounts.env
         required: false
     volumes:
       - ./auth-guard:/app:ro

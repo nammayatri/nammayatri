@@ -34,11 +34,17 @@ Signs in as the test rider from memory (never as a simulated driver: that
 revokes the daemon's session and the car goes quiet for an hour).
 """
 import json
+import sys
+import os
 import urllib.error
 import urllib.request
 
 BASE = "https://api.169-58-139-65.sslip.io"
-RIDER, CC, OTP = "22778899", "+222", "111111"
+# The exempt test code is private since 2026-09-27 (this repository is public):
+# run with SMS_BYPASS_CODE from /opt/ny/secrets/test-accounts.env.
+RIDER, CC = "22778899", "+222"
+OTP = os.environ.get("SMS_BYPASS_CODE") or sys.exit(
+    "SMS_BYPASS_CODE is not set -- source /opt/ny/secrets/test-accounts.env first")
 
 
 def call(method, path, body=None, tok=None):

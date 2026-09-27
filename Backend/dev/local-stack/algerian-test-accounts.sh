@@ -3,15 +3,23 @@
 # Algerian test accounts that sign in WITHOUT an SMS (2026-09-13), until Algeria
 # has an SMS provider. Algeria stays closed to everyone else (OPEN_COUNTRIES).
 #
-#   passengers  +213 0555 00 00 01 / 02 / 03   code 111111  (the guard's bypass code)
-#   drivers     +213 0666 00 00 01  Voiture    code 213001
-#               +213 0666 00 00 02  Herbin     code 213002
+#   passengers  +213 0555 00 00 01 / 02 / 03   the private test code (SMS_BYPASS_CODE)
+#   drivers     +213 0666 00 00 01  Voiture    a personal code, generated
+#               +213 0666 00 00 02  Herbin     a personal code, generated
+#
+# -- No code in this file, since 2026-09-27 -----------------------------------
+# This repository is PUBLIC. It used to carry the passengers' code (111111)
+# and both drivers' personal codes, which let anybody sign in as them. Now the
+# passengers' code comes from /opt/ny/secrets/test-accounts.env, and each run
+# gives both drivers a fresh random code, printed once to the terminal and
+# replacing the one before (enrol-driver.sh always does). Nothing in this file
+# is ever a code.
 #
 # Runs ON the VPS, AFTER the +213 backend is deployed -- it checks that first
 # and stops otherwise. Idempotent.
 #
 # Everything here is a TEST account and must go before Algeria opens: remove
-# the numbers from SMS_BYPASS in docker-compose.yml and revoke the two driver
+# the numbers from SMS_BYPASS in /opt/ny/secrets/test-accounts.env and revoke the two driver
 # codes with enrol-driver.sh --revoke.
 #
 set -uo pipefail
@@ -19,11 +27,12 @@ cd "$(dirname "$0")"
 DZ=algeria0-0000-0000-0000-00000algeria
 LAT=36.7538; LON=3.0588
 BYPASS="+2130555000001,+2130555000002,+2130555000003,+2130666000001,+2130666000002"
-# number|first|last|variant|make|model|colour|plate|code
+# number|first|last|variant|make|model|colour|plate
 DRIVERS='
-0666000001|Test|Voiture|SEDAN|Renault|Symbol|Blanc|00001 116 16|213001
-0666000002|Test|Herbin|HATCHBACK|Toyota|Hilux|Blanc|00002 116 16|213002
+0666000001|Test|Voiture|SEDAN|Renault|Symbol|Blanc|00001 116 16
+0666000002|Test|Herbin|HATCHBACK|Toyota|Hilux|Blanc|00002 116 16
 '
+SECRETS=/opt/ny/secrets/test-accounts.env
 say() { printf '\n== %s\n' "$*"; }
 ok()  { printf '   ok   %s\n' "$*"; }
 bad() { printf '   BAD  %s\n' "$*"; }
@@ -40,38 +49,40 @@ fi
 ok "yes"
 
 say "1. the bypass list (sign-in without SMS, and past the closed-country gate)"
-python3 - "$BYPASS" <<'PY'
-import sys
-path, add = "docker-compose.yml", sys.argv[1]
-text = open(path).read()
-if "+2130555000001" in text:
+# The list lives in the secrets file, not in docker-compose.yml (which is in
+# this public repository). Added once; the file is created root-only if new.
+sudo -n python3 - "$BYPASS" "$SECRETS" <<'PY'
+import os, sys
+add, path = sys.argv[1].split(","), sys.argv[2]
+lines = open(path).read().splitlines() if os.path.exists(path) else []
+cur = next((l for l in lines if l.startswith("SMS_BYPASS=")), "SMS_BYPASS=")
+have = [n for n in cur.split("=", 1)[1].split(",") if n]
+new = have + [n for n in add if n not in have]
+if new != have:
+    lines = [l for l in lines if not l.startswith("SMS_BYPASS=")] + ["SMS_BYPASS=" + ",".join(new)]
+    old = os.umask(0o077)
+    open(path, "w").write("\n".join(lines) + "\n")
+    os.umask(old)
+    print("   ok   added")
+else:
     print("   ok   already listed")
-    sys.exit(0)
-anchor = "        +22222778899,\n"
-n = text.count(anchor)
-if n != 1:
-    sys.exit(f"   BAD  anchor found {n} times, expected 1 -- compose NOT changed")
-line = "        " + ",".join(add.split(",")) + ",\n"
-# NO comment line here: SMS_BYPASS is a folded scalar (>-), where a '#' line is
-# not a comment but part of the value, and would corrupt one of the numbers.
-text = text.replace(anchor, anchor + line)
-open(path, "w").write(text)
-print("   ok   added")
+if not any(l.startswith("SMS_BYPASS_CODE=") for l in lines):
+    print("   BAD  no SMS_BYPASS_CODE in " + path + " -- no number is exempt until it is set")
 PY
 [ $? -eq 0 ] || exit 1
 docker compose up -d --no-deps --force-recreate auth-guard 2>&1 | tail -n 2
 
 say "2. driver codes"
-echo "$DRIVERS" | while IFS='|' read -r num first last variant make model colour plate code; do
+echo "$DRIVERS" | while IFS='|' read -r num first last variant make model colour plate; do
   [ -z "$num" ] && continue
+  # Enrolling prints a NEW random code and replaces any earlier one: running
+  # this script rotates the test drivers' codes. Shown once; stored hashed.
   env COUNTRY_CODE=+213 NSN_LENGTH=9 TRUNK_ZERO=1 MOBILE_FIRST=567 FIXED_SECOND= \
-    ./enrol-driver.sh "$num" "$first $last (TEST)" >/dev/null
-  env COUNTRY_CODE=+213 NSN_LENGTH=9 TRUNK_ZERO=1 MOBILE_FIRST=567 FIXED_SECOND= \
-    ./enrol-driver.sh --set "$num" "$code" >/dev/null && ok "+213 $num  code $code"
+    ./enrol-driver.sh "$num" "$first $last (TEST)" | sed 's/^/   /'
 done
 
 say "3. driver accounts: created by signing in, then approved as the agency would"
-echo "$DRIVERS" | while IFS='|' read -r num first last variant make model colour plate code; do
+echo "$DRIVERS" | while IFS='|' read -r num first last variant make model colour plate; do
   [ -z "$num" ] && continue
   did=$(pg "SELECT id FROM atlas_driver_offer_bpp.person WHERE unencrypted_mobile_number='$num' AND merchant_id='$DZ'")
   if [ -z "$did" ]; then
@@ -110,15 +121,15 @@ a=$(curl -s -X POST "$API/v2/auth" -H 'content-type: application/json' \
 aid=$(echo "$a" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("authId",""))' 2>/dev/null)
 if [ -n "$aid" ]; then
   v=$(curl -s -X POST "$API/v2/auth/$aid/verify" -H 'content-type: application/json' \
-    -d '{"otp":"111111","deviceToken":"dz-test-accounts"}')
-  echo "$v" | grep -q '"token"' && ok "passenger +213 0555000001 signs in with 111111" \
+    -d "{\"otp\":\"${SMS_BYPASS_CODE:?source /opt/ny/secrets/test-accounts.env first}\",\"deviceToken\":\"dz-test-accounts\"}")
+  echo "$v" | grep -q '"token"' && ok "passenger +213 0555000001 signs in with the private test code" \
                                || bad "passenger verify: $(echo "$v" | head -c 140)"
 else
   bad "passenger auth: $(echo "$a" | head -c 140)"
 fi
 a=$(curl -s -X POST "$API/ui/auth" -H 'content-type: application/json' \
   -d "{\"mobileCountryCode\":\"+213\",\"mobileNumber\":\"0666000001\",\"merchantId\":\"$DZ\"}")
-echo "$a" | grep -q authId && ok "driver +213 0666000001 reaches the code screen (code 213001)" \
+echo "$a" | grep -q authId && ok "driver +213 0666000001 reaches the code screen" \
                             || bad "driver auth: $(echo "$a" | head -c 140)"
 c=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API/v2/auth" -H 'content-type: application/json' \
   -d '{"mobileCountryCode":"+213","mobileNumber":"0555999999","merchantId":"YATRI"}')
