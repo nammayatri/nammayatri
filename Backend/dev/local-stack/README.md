@@ -3579,20 +3579,29 @@ The plan is sign-in **without a template**: the app opens WhatsApp with
 number — WhatsApp's word, not something he typed — proves he holds it.
 Messages people send a business are free and need no approval.
 
-Built so far: the receiving half, in the guard (`auth-guard/whatsapp.js`,
-because the guard owns sign-in sessions). `GET /whatsapp/webhook` is Meta's
-check against our verify token; `POST` is a delivery, HMAC-checked with the
-**app secret** whenever `WHATSAPP_APP_SECRET` is set. Until it is, messages are
-kept marked unsigned and `codeFrom()` never returns one — anybody can post an
-unsigned delivery. Codes are held ten minutes, in memory. Only counts and the
-last three digits of a sender are logged.
+Built (2026-09-27): **sign-in by WhatsApp**, end to end, in the guard
+(`auth-guard/whatsapp.js` for Meta's side, `server.js` for the sessions).
 
-Secrets: `/opt/ny/secrets/whatsapp.env` (root, 600), an optional `env_file`
-like Moorsyl's. It holds the verify token; the app secret goes there when the
-client sends it. The access token is **not** on the box yet.
+- `POST {/v2,/ui}/auth/whatsapp` is a sign-in start with every check the SMS
+  start has, and no SMS: the answer carries a code and a `wa.me` link with
+  `MOVIN <code>` already written. nginx gives it the `signin` bucket.
+- `GET {/v2,/ui}/auth/{id}/whatsapp` → `{confirmed}`; the app polls it.
+- The usual verify accepts the code **only** once Meta has delivered it,
+  signed with the app secret, from the number signing in. The code alone was
+  handed to the caller and opens nothing. Numbers are compared without the
+  Algerian trunk zero (WhatsApp writes `213555…`, the app `+2130555…`).
+- The sender is answered « vérifié ✅ » on WhatsApp — free, inside the 24 h
+  his own message opened.
 
-Not built: the sign-in path that reads `codeFrom()` (a guard route, a
-« Vérifier par WhatsApp » button in the app, SMS kept as fallback).
+Proved live the same day through the public edge with a delivery signed by
+the real app secret: verify before the message → 400; after → 200 with a
+token. `tests/auth-guard-whatsapp.test.js` covers unsigned, forged,
+wrong-number and wrong-code deliveries. **Algeria stays closed**: a +213
+WhatsApp start is refused like an SMS one until `OPEN_COUNTRIES` says
+otherwise.
+
+Secrets: `/opt/ny/secrets/whatsapp.env` (root, 600) holds the verify token,
+the app secret, the access token, the phone number id and the number.
 
 When the compose `env_file` list changes, `docker compose up -d --no-deps
 auth-guard` — a `restart` does not re-read it. And the deployed compose is a
