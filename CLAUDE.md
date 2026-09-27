@@ -224,9 +224,10 @@ another service first. See the driver API section of the local-stack README.
 
 **Two countries at once since 2026-09-13.** The pilot moved Algeria →
 Mauritania on 2026-09-03 by *replacing* one with the other; the client then
-chose to run both. Mauritania is live; Algeria is built, priced and routed, and
-closed to sign-in (`OPEN_COUNTRIES` in the auth guard) until it has an SMS
-provider. The whole design — one rider merchant, one driver merchant per
+chose to run both. Mauritania is live; Algeria is built, priced and routed,
+and since 2026-09-27 **open to sign-in by WhatsApp only** — it has no SMS
+provider, so the guard refuses a `+213` SMS start (`OPEN_COUNTRIES` /
+`SMS_COUNTRIES` in `docker-compose.yml`). The whole design — one rider merchant, one driver merchant per
 country, and the search-lock race that design exposed — is in the local-stack
 README, section *Two countries*. Read it before touching merchants, tariffs,
 the registry or the map.
@@ -260,8 +261,9 @@ the registry or the map.
 - Test fleets: `./seed-mauritanian-fleet.sh` (two per sellable variant in
   Nouakchott, driven by the simulator — never sign in as one) and the pilot's
   twelve `+213` drivers parked in Algiers under `algeria0`. Algerian test
-  accounts that sign in without SMS: `./algerian-test-accounts.sh` — they must
-  be removed before Algeria opens.
+  accounts that sign in without SMS: `./algerian-test-accounts.sh` — Algeria
+  is open now, so they must go before the first real Algerian rider, and so
+  must the pilot's parked drivers (a real rider could book one).
 - **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
   only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
   rides. Without credit for a day and no day paid for, he may not work, and

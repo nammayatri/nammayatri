@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Algerian test accounts that sign in WITHOUT an SMS (2026-09-13), until Algeria
-# has an SMS provider. Algeria stays closed to everyone else (OPEN_COUNTRIES).
+# Algerian test accounts that sign in WITHOUT an SMS or WhatsApp (2026-09-13).
+# Algeria is open to everyone since 2026-09-27, by WhatsApp only (SMS_COUNTRIES).
 #
 #   passengers  +213 0555 00 00 01 / 02 / 03   the private test code (SMS_BYPASS_CODE)
 #   drivers     +213 0666 00 00 01  Voiture    a personal code, generated
@@ -18,7 +18,8 @@
 # Runs ON the VPS, AFTER the +213 backend is deployed -- it checks that first
 # and stops otherwise. Idempotent.
 #
-# Everything here is a TEST account and must go before Algeria opens: remove
+# Everything here is a TEST account and must go before the first real Algerian
+# rider -- Algeria is open now: remove
 # the numbers from SMS_BYPASS in /opt/ny/secrets/test-accounts.env and revoke the two driver
 # codes with enrol-driver.sh --revoke.
 #

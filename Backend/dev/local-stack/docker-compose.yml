@@ -468,6 +468,12 @@ services:
       # compliance, SMS_MODE=sms is the entire switch and riders get the
       # Movin-branded French message instead. Both use a 6-character code, so
       # the app is built once and the switch is invisible to it.
+      # Which countries may sign in, and which of those are sent an SMS
+      # (2026-09-27). Algeria is open by WhatsApp only: Moorsyl is Mauritanian,
+      # so a +213 SMS start answers 403 SMS_NOT_AVAILABLE and the app points at
+      # the WhatsApp button. Closing Algeria again is removing +213 here.
+      OPEN_COUNTRIES: "+222,+213"
+      SMS_COUNTRIES: "+222"
       SMS_MODE: "verify"
       VERIFY_SEND_URL: "https://api.moorsyl.com/api/verify/send"
       VERIFY_CHECK_URL: "https://api.moorsyl.com/api/verify/check"
@@ -485,9 +491,8 @@ services:
       # (auth-guard/server.js, SMS_BYPASS_CODE). Who the numbers are and why
       # each is there: local-stack README, *The SMS gateway*.
       #
-      # This list must be empty before the first real rider, and the +213
-      # entries removed before Algeria opens -- being listed is also what lets
-      # them past OPEN_COUNTRIES.
+      # This list must be empty before the first real rider. Algeria is open
+      # since 2026-09-27; the +213 entries were kept only for the owner's test.
     # MOORSYL_API_KEY, and only that. Kept out of this file because this file is
     # in git: a key committed once is a key that has to be rotated, and rotating
     # this one means asking the client to go back into the Moorsyl console.

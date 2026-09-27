@@ -120,6 +120,20 @@ const deliver = (raw, signed) =>
 
   const h = await call('GET', '/healthz');
   check('healthz says WhatsApp is ready', h.json.whatsapp.ready === true, h.json.whatsapp);
+  check('healthz: Algeria open, SMS to Mauritania only',
+    JSON.stringify(h.json.countries) === JSON.stringify({ open: ['+222', '+213'], sms: ['+222'] }), h.json.countries);
+
+  // Algeria is open by WhatsApp only (SMS_COUNTRIES): an SMS start is refused
+  // before the backend is asked, and so is a resend of a WhatsApp session.
+  const before = n;
+  const sms = await call('POST', '/ui/auth', { mobileCountryCode: '+213', mobileNumber: '0555123457', merchantId: 'm' });
+  check('+213 by SMS -> 403 SMS_NOT_AVAILABLE, backend never asked',
+    sms.status === 403 && sms.text.includes('SMS_NOT_AVAILABLE') && n === before, { sms, n });
+  const wa2 = await call('POST', '/ui/auth/whatsapp', { mobileCountryCode: '+213', mobileNumber: '0555123457', merchantId: 'm' });
+  check('+213 by WhatsApp -> 200', wa2.status === 200, wa2);
+  const rs = await call('POST', `/ui/auth/otp/${wa2.json.authId}/resend`);
+  check('resend to +213 -> 403 SMS_NOT_AVAILABLE, nothing sent',
+    rs.status === 403 && rs.text.includes('SMS_NOT_AVAILABLE'), rs);
 
   guard.kill();
   // And a guard without the app secret refuses to start one at all.
@@ -130,8 +144,9 @@ const deliver = (raw, signed) =>
   bare.stdout.on('data', () => {});
   bare.stderr.on('data', () => {});
   await wait(1500);
+  const opened = n;
   const noSecret = await call('POST', '/ui/auth/whatsapp', { mobileCountryCode: '+222', mobileNumber: '22123456', merchantId: 'm' });
-  check('no app secret -> 503 WHATSAPP_UNAVAILABLE, no session opened', noSecret.status === 503 && n === 1, { noSecret, n });
+  check('no app secret -> 503 WHATSAPP_UNAVAILABLE, no session opened', noSecret.status === 503 && n === opened, { noSecret, n });
   bare.kill();
   fake.close();
   console.log(failed ? `${failed} FAILED` : 'ALL PASSED');

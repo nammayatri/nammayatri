@@ -3215,7 +3215,8 @@ A `+222` number, eight digits, searching Tevragh Zeina → Ksar:
 
 The client reversed the 3 September *replacement*: the stack now serves **both**
 countries at once. Mauritania is live; Algeria is built, priced and routed, and
-**closed to sign-in** until it has an SMS provider.
+**open to sign-in by WhatsApp only since 2026-09-27** — it has no SMS provider
+(see *Sign-in: accepted by the backend, gated by the guard*).
 
 ### The design: one merchant per country — on the driver side only
 
@@ -3294,10 +3295,25 @@ The backend patch accepts `+222`/8 digits and `+213`/10 (the trunk-zero form
 Algerian accounts were stored in): `ExactLength 8 Or ExactLength 10`, `"+222"
 Or "+213"`. **Which countries may sign in is the guard's**:
 
-    OPEN_COUNTRIES=+222            # default; +213 answers 403 COUNTRY_NOT_OPEN
+    OPEN_COUNTRIES=+222,+213       # who may sign in at all (default +222)
+    SMS_COUNTRIES=+222             # who of those is sent an SMS (default +222)
 
-Opening Algeria is `OPEN_COUNTRIES=+222,+213` and a restart — no build, no APK.
-Numbers on `SMS_BYPASS` pass the gate, which is how the test accounts work:
+Both are in `docker-compose.yml` under `auth-guard`, and a change is
+`docker compose up -d --no-deps --force-recreate auth-guard` — no build, no
+APK. A country missing from `OPEN_COUNTRIES` answers `403 COUNTRY_NOT_OPEN`.
+
+**Algeria opened on 2026-09-27, by WhatsApp only.** Moorsyl is Mauritanian, so
+a `+213` SMS start answers `403 SMS_NOT_AVAILABLE` *before* the backend is
+asked — no person row, no send, nothing off the SMS budget — and the app
+(built after that date) says « Appuyez sur « Continuer avec WhatsApp » ». A
+resend is refused the same way. Two exceptions, both sending nothing: exempt
+numbers, and a driver who holds a personal code. `/healthz` shows the two
+lists as `countries`. Proved live through the edge the same day: `+213` by SMS
+→ 403 on both the rider and driver routes; `+213` by WhatsApp → 200 with the
+`wa.me` link; `+222` unchanged. When Algeria gets an SMS provider, adding
+`+213` to `SMS_COUNTRIES` is the whole switch.
+
+Numbers on `SMS_BYPASS` pass both gates, which is how the test accounts work:
 
     bash algerian-test-accounts.sh
       passengers  +213 0555000001..3      the private test code
@@ -3310,7 +3326,9 @@ repository is public — a fork of public Namma Yatri — and this block used to
 give the passengers' code and both drivers' personal codes, which let anyone
 sign in as them. All three were changed that day; the old values are refused.
 
-**All five must go before Algeria opens**: the `+213` line in `SMS_BYPASS`
+**All five must go before the first real Algerian rider** (Algeria is open
+since 2026-09-27, and they were kept only for the owner's APK test): the
+`+213` line in `SMS_BYPASS`
 and `enrol-driver.sh --revoke`. `enrol-driver.sh` takes Algerian numbers with
 `COUNTRY_CODE=+213 NSN_LENGTH=9 TRUNK_ZERO=1 MOBILE_FIRST=567 FIXED_SECOND=`.
 
@@ -3596,9 +3614,9 @@ Built (2026-09-27): **sign-in by WhatsApp**, end to end, in the guard
 Proved live the same day through the public edge with a delivery signed by
 the real app secret: verify before the message → 400; after → 200 with a
 token. `tests/auth-guard-whatsapp.test.js` covers unsigned, forged,
-wrong-number and wrong-code deliveries. **Algeria stays closed**: a +213
-WhatsApp start is refused like an SMS one until `OPEN_COUNTRIES` says
-otherwise.
+wrong-number and wrong-code deliveries. A closed country's WhatsApp start is
+refused like an SMS one; **Algeria is open by WhatsApp only** since the same
+evening (`SMS_COUNTRIES`, above).
 
 Secrets: `/opt/ny/secrets/whatsapp.env` (root, 600) holds the verify token,
 the app secret, the access token, the phone number id and the number.

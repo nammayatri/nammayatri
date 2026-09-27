@@ -779,21 +779,42 @@ const rx = {
 /**
  * Which countries may sign in at all, by dialling code.
  *
- * Two countries since 2026-09-13, and only one of them open: Algeria has no SMS
- * provider yet, so a +213 sign-in is refused here with `COUNTRY_NOT_OPEN` —
- * which the app shows as "not open in Algeria yet" rather than as a wrong
- * number. Refused BEFORE forwarding, so no person row is created and no code
- * is sent for a country that cannot receive one.
+ * A country missing here is refused with `COUNTRY_NOT_OPEN` -- which the app
+ * shows as "not open yet" rather than as a wrong number. Refused BEFORE
+ * forwarding, so no person row is created and no code is sent. Algeria was
+ * such a country from 2026-09-13 until 2026-09-27, when it opened by WhatsApp
+ * only (see SMS_COUNTRIES below).
  *
- * A setting and not code, so opening Algeria is `OPEN_COUNTRIES=+222,+213` and
- * a restart — no build, and no new APK: the app already has both countries.
+ * A setting and not code: `OPEN_COUNTRIES` in docker-compose.yml, and a
+ * recreate -- no build, and no new APK.
  *
  * Numbers on SMS_BYPASS pass regardless. That is how an Algerian test account
- * can sign in from a real phone before the country opens.
+ * signed in from a real phone before the country opened.
  */
 const OPEN_COUNTRIES = new Set(
   (process.env.OPEN_COUNTRIES || '+222').split(',').map((s) => s.trim()).filter(Boolean),
 );
+
+/**
+ * Which open countries a code may be SENT to by SMS (2026-09-27).
+ *
+ * Opening a country and texting it are separate questions since sign-in by
+ * WhatsApp: there the caller sends us the code, so a country with no SMS
+ * provider can open all the same. Algeria is that country -- Moorsyl is
+ * Mauritanian, and every text it sent to +213 would spend the Mauritanian
+ * budget on a network nobody has measured it reaching.
+ *
+ * So an SMS start from an open country missing here is refused with
+ * `SMS_NOT_AVAILABLE`, which the app answers by pointing at the WhatsApp
+ * button -- before forwarding, like every refusal above, so no person row and
+ * no send. A resend is refused the same way. Two exceptions, both of which
+ * send nothing: exempt numbers, and a driver who already holds a personal
+ * code, who signs in with it exactly as when the gateway is down.
+ */
+const SMS_COUNTRIES = new Set(
+  (process.env.SMS_COUNTRIES || '+222').split(',').map((s) => s.trim()).filter(Boolean),
+);
+const textable = (dialCode) => !dialCode || SMS_COUNTRIES.has(dialCode);
 
 /**
  * ── New drivers sign themselves up, 2026-09-17 ──────────────────────────────
@@ -958,6 +979,9 @@ async function handle(req, res) {
       })),
       sessions: sessions.size,
       numbers: starts.size,
+      // Which countries may sign in, and which of them by SMS -- the rest of
+      // the open ones by WhatsApp only. What a deploy is checked against.
+      countries: { open: [...OPEN_COUNTRIES], sms: [...SMS_COUNTRIES] },
       // Enough to tell "the gateway is down" from "the key was never mounted"
       // without opening a shell. The key itself is only ever a boolean here.
       gateway: {
@@ -1033,6 +1057,13 @@ async function handle(req, res) {
       return send(res, 403, refusal('COUNTRY_NOT_OPEN'));
     }
 
+    // Open, but not by SMS: this country signs in by WhatsApp. See SMS_COUNTRIES.
+    if (!waStart && route.sms && !textable(dialCode) && !SMS_BYPASS.has(number)
+        && !(codes && number && codes[number])) {
+      console.warn(`[guard] ${route.name}: no SMS to ${dialCode}, WhatsApp only`);
+      return send(res, 403, refusal('SMS_NOT_AVAILABLE'));
+    }
+
     // Only when sign-up is closed. When it is open, an unenrolled driver goes on
     // to the SMS code below exactly like a passenger. See DRIVER_SIGNUP_OPEN.
     if (codes && number && !codes[number] && !DRIVER_SIGNUP_OPEN) {
@@ -1095,6 +1126,7 @@ async function handle(req, res) {
             resends: 0,
             lockedUntil: 0,
             number,
+            dialCode,
             smsCode: null,
             verificationId: null,
           });
@@ -1132,6 +1164,10 @@ async function handle(req, res) {
       const s = sessions.get(key(authId));
       if (s) s.smsCode = SMS_BYPASS_CODE;
       console.log(`[guard] ${route.name}: ${number} is exempt, test code accepted`);
+    } else if (authId && route.sms && !textable(dialCode)) {
+      // Only a driver holding a personal code gets here (see SMS_COUNTRIES):
+      // nothing is sent, and that code is what he types.
+      console.log(`[guard] ${route.name}: no SMS to ${dialCode}, personal code stands`);
     } else if (authId && route.sms) {
       const s = sessions.get(key(authId));
       const sent = await issueCode(route, s, number);
@@ -1307,6 +1343,7 @@ async function handle(req, res) {
        behind it, and that 500 is what made the button look broken. */
     if (route.sms) {
       if (!s || !s.number) return send(res, 400, refusal('INVALID_AUTH_DATA'));
+      if (!textable(s.dialCode)) return send(res, 403, refusal('SMS_NOT_AVAILABLE'));
       if (s.resends >= MAX_RESENDS) {
         console.warn(`[guard] ${route.name}: resend cap on ${id}`);
         return send(res, 429, refusal('TOO_MANY_REQUESTS'),
