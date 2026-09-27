@@ -67,6 +67,18 @@ const MAX_BYTES = 512 * 1024;
 /** Only what both apps actually produce. A store that accepts anything is a file drop. */
 const TYPES = { 'image/jpeg': '.jpg', 'image/png': '.png' };
 
+/**
+ * What the bytes actually are, not what the header says (2026-09-27). Only the
+ * Content-Type was checked, so any file sent as image/jpeg was stored and then
+ * served back from our own hostname to every passenger who opened that
+ * driver. The first bytes of a JPEG and a PNG are fixed; anything else is
+ * refused, and a PNG sent as JPEG is refused too rather than guessed at.
+ */
+const MAGIC = {
+  '.jpg': Buffer.from([0xff, 0xd8, 0xff]),
+  '.png': Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+};
+
 function ensureDir() {
   try {
     fs.mkdirSync(DIR, { recursive: true });
@@ -296,6 +308,12 @@ function store(key, req, res) {
   });
   req.on('end', () => {
     if (aborted) return;
+    const bytes = Buffer.concat(chunks);
+    const magic = MAGIC[ext];
+    if (bytes.length < magic.length || !bytes.subarray(0, magic.length).equals(magic)) {
+      res.writeHead(415, { 'content-type': 'application/json' });
+      return res.end('{"error":"not a jpeg or png image"}');
+    }
     try {
       // One file per person: replacing a photograph must not leave the old one
       // behind, and the two extensions mean a JPEG can replace a PNG.
@@ -303,7 +321,7 @@ function store(key, req, res) {
         const old = path.join(DIR, key + e);
         if (fs.existsSync(old)) fs.unlinkSync(old);
       }
-      fs.writeFileSync(path.join(DIR, key + ext), Buffer.concat(chunks));
+      fs.writeFileSync(path.join(DIR, key + ext), bytes);
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: true, bytes: size }));
     } catch (e) {

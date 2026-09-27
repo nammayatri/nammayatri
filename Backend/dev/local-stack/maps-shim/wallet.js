@@ -91,6 +91,14 @@ const EXPIRES_MIN = Number(process.env.WALLET_CHECKOUT_MINUTES || 30);
  * webhook stays a hint and an unsigned POST can never put money in a wallet.
  */
 const DZ_MERCHANT = 'algeria0-0000-0000-0000-00000algeria';
+/**
+ * The most one top-up may be, in days of credit (2026-09-27). There was a
+ * minimum and no maximum, so any amount a phone sent became a checkout at the
+ * gateway and, once paid, a balance. A hundred days is far above the app's
+ * largest chip (thirty) and anything a driver would load at once; it is a
+ * bound on nonsense and on mistakes, not a business rule.
+ */
+const MAX_TOPUP_DAYS = Number(process.env.WALLET_MAX_TOPUP_DAYS || 100);
 const COUNTRIES = {
   MR: { price: PRICE, minTopup: MIN_TOPUP, currency: CURRENCY, gateway: 'moosyl' },
   DZ: {
@@ -100,6 +108,7 @@ const COUNTRIES = {
     gateway: 'chargily',
   },
 };
+for (const c of Object.values(COUNTRIES)) c.maxTopup = c.price * MAX_TOPUP_DAYS;
 const CHARGILY_SECRET = process.env.CHARGILY_SECRET_KEY || '';
 const CHARGILY = (process.env.CHARGILY_BASE || 'https://pay.chargily.net/test/api/v2').replace(/\/$/, '');
 const MAX_BODY = 64 * 1024;
@@ -247,6 +256,7 @@ async function status(pool, token, res) {
       currency: cfg.currency,
       dayPrice: cfg.price,
       minTopup: cfg.minTopup,
+      maxTopup: cfg.maxTopup,
       // Which page he will be sent to. The app shows the Edahabia / CIB choice
       // for Chargily only, and names the right gateway in its hand-off line.
       gateway: cfg.gateway,
@@ -290,6 +300,9 @@ async function topup(pool, token, amountRaw, method, res) {
   const amount = Math.floor(Number(amountRaw));
   if (!Number.isFinite(amount) || amount < cfg.minTopup) {
     return send(res, 400, { error: 'amount_too_small', minTopup: cfg.minTopup });
+  }
+  if (amount > cfg.maxTopup) {
+    return send(res, 400, { error: 'amount_too_large', maxTopup: cfg.maxTopup });
   }
 
   // Ours, and what the gateway echoes back on every read. Prefixed so a support

@@ -102,11 +102,22 @@ const seconds = (s) => {
 const loc = ([lat, lng]) => ({ lat, lng });
 
 // "36.7538,3.0588" -> "3.0588,36.7538"   (Google is lat,lng; OSRM is lon,lat)
+/**
+ * A point on Earth, or null. Range-checked since 2026-09-27: a finite number
+ * is not a latitude, and 1e308 went through to OSRM and the place index.
+ */
+function onEarth(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
 function toOsrmCoord(pair) {
   const [lat, lng] = String(pair).split(',').map((n) => parseFloat(n.trim()));
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (!onEarth(lat, lng)) return null;
   return `${lng},${lat}`;
 }
+
+/** More stops than any ride has; a bound on the path OSRM is asked to solve. */
+const MAX_WAYPOINTS = 8;
 
 // --------------------------------------------------------------- handler
 async function directions(query, res) {
@@ -117,6 +128,7 @@ async function directions(query, res) {
   // Google sends waypoints as "via:lat,lng|lat,lng" (or without the prefix).
   const waypoints = (query.get('waypoints') || '')
     .split('|').map((w) => w.trim()).filter(Boolean)
+    .slice(0, MAX_WAYPOINTS)
     .map((w) => toOsrmCoord(w.replace(/^via:/, ''))).filter(Boolean);
 
   const path = [origin, ...waypoints, destination].join(';');
@@ -289,11 +301,18 @@ const formatAddress = (row, country = FALLBACK_COUNTRY) =>
 function parseLatLng(raw) {
   if (!raw) return null;
   const [lat, lng] = String(raw).split(',').map((n) => parseFloat(n.trim()));
-  return Number.isFinite(lat) && Number.isFinite(lng) ? [lat, lng] : null;
+  return onEarth(lat, lng) ? [lat, lng] : null;
 }
 
+/**
+ * The longest search worth running. A place name is a few words; a longer
+ * input is a paste or an attack on the trigram index, and is cut here rather
+ * than refused, so a real search with a long tail still finds something.
+ */
+const MAX_INPUT = 100;
+
 async function autocomplete(query, res) {
-  const input = (query.get('input') || '').trim();
+  const input = (query.get('input') || '').trim().slice(0, MAX_INPUT);
   // The backend always sends `location`; it is a required field on its own
   // request type. The fallback is only so a hand-typed curl still works.
   const centre = parseLatLng(query.get('location')) || [36.7538, 3.0588];

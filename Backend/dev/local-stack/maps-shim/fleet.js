@@ -144,7 +144,8 @@ async function nearby({ url, res, pool, riderUrl, token }) {
 
   const lat = Number(url.searchParams.get('lat'));
   const lon = Number(url.searchParams.get('lon'));
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+  // Range-checked, not only finite (2026-09-27): 1e308 is a number and not a place.
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
     return send(res, 400, { error: 'lat and lon are required' });
   }
 

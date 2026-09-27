@@ -25,6 +25,9 @@ const fake = http.createServer((req, res) => {
       lastVerifyBody = JSON.parse(b);
       return res.end(JSON.stringify({ token: 'tok', person: {} }));
     }
+    if (req.method === 'PUT' && /^\/ui\/message\/[^/]+\/response$/.test(req.url)) {
+      return res.end(JSON.stringify({ result: 'Success' }));
+    }
     res.statusCode = 404;
     res.end('{}');
   });
@@ -133,6 +136,24 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     check(`${what}: listed number is not let in by a known code`, t.status !== 200 || !t.json.authId ||
       (await call(port, 'POST', `/ui/auth/${t.json.authId}/verify`, { otp: '111111', deviceToken: 'd' })).status !== 200, t);
   }
+
+  // 7. a driver's reply to an office message has an end (2026-09-27)
+  const reply = (text, raw) =>
+    fetch('http://127.0.0.1:18131/ui/message/m1/response', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json', token: 't' },
+      body: raw ?? JSON.stringify({ reply: text }),
+    }).then(async (r) => ({ status: r.status, json: await r.json().catch(() => null) }));
+  let r = await reply('Bien reçu, merci.');
+  check('reply: a normal reply goes through', r.status === 200, r);
+  r = await reply('x'.repeat(1000));
+  check('reply: 1000 characters goes through', r.status === 200, r);
+  r = await reply('x'.repeat(1001));
+  check('reply: 1001 characters -> 400 REPLY_TOO_LONG', r.status === 400 && r.json.errorCode === 'REPLY_TOO_LONG', r);
+  r = await reply(null, '{"reply": 12}');
+  check('reply: not a string -> 400', r.status === 400, r);
+  r = await reply(null, 'not json');
+  check('reply: not JSON -> 400', r.status === 400, r);
 
   open.kill();
   closed.kill();

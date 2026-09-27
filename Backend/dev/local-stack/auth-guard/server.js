@@ -866,6 +866,31 @@ function noteDriverRating(pathname, body, status) {
     .catch((err) => console.warn(`[guard] driver rating not recorded: ${err.message}`));
 }
 
+/**
+ * ── A driver's reply to an office message has an end, 2026-09-27 ───────────
+ * `PUT /ui/message/{id}/response` stores `reply` in message_report.reply, a
+ * `text` column with no length: every other field a person types lands in a
+ * varchar(255) that refuses more, and this one took whatever nginx let
+ * through (1 MB) and showed it on the console's Messages screen. The app caps
+ * the box at 500; this is the line for anything that is not the app.
+ */
+const REPLY_MAX = 1000;
+const MESSAGE_REPLY = /^\/ui\/message\/[^/]+\/response\/?$/;
+
+/** A refusal code when this request's body is out of bounds, else null. */
+function outOfBounds(pathname, method, body) {
+  if (method !== 'PUT' || !MESSAGE_REPLY.test(pathname)) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(body.toString('utf8'));
+  } catch {
+    return 'INVALID_REQUEST';
+  }
+  const reply = parsed && parsed.reply;
+  if (typeof reply !== 'string') return 'INVALID_REQUEST';
+  return reply.length > REPLY_MAX ? 'REPLY_TOO_LONG' : null;
+}
+
 /** Is this request a driver starting to work: going online, or accepting? */
 function isWork(pathname, url, body) {
   if (pathname === '/ui/driver/setActivity') {
@@ -1275,6 +1300,12 @@ async function handle(req, res) {
     }
     res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
     return res.end(up.text);
+  }
+
+  /* ── bounds on what a person may store: see `outOfBounds` ───────────────── */
+  if (route.name === 'driver') {
+    const refused = outOfBounds(pathname, req.method, body);
+    if (refused) return send(res, 400, refusal(refused));
   }
 
   /* ── the wallet gate: see `isWork` above ────────────────────────────────── */

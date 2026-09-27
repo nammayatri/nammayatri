@@ -3598,6 +3598,31 @@ When the compose `env_file` list changes, `docker compose up -d --no-deps
 auth-guard` — a `restart` does not re-read it. And the deployed compose is a
 superset of this one (see its header): patch it in place, never copy it.
 
+## What a person may send — the bounds, audited 2026-09-27
+
+**No SQL is built from user input anywhere we own.** All 67 queries in
+`maps-shim` are parameterised (`$1`…), and the one interpolation is a table
+name picked from two constants; admin-api's 45 routes all parse through Zod,
+and its only interpolations are constants (country predicates, merchant ids).
+The Haskell backend is upstream's, on Beam. So "injection" here means size and
+shape, and these are the bounds, outermost first:
+
+| Where | Bound |
+|---|---|
+| nginx | 1 MB per request by default; tighter per route (16 KB declaration and report, 256 KB WhatsApp, 512 KB avatar, 8 MB driver register, 10 MB documents) |
+| the database | every typed text field upstream stores is `varchar(255)` and refuses more |
+| auth-guard | a driver's reply to an office message ≤ 1000 characters (`message_report.reply` is the one unbounded `text`); must be JSON with a string `reply` |
+| maps-shim `/avatar/` | JPEG or PNG by **the file's first bytes**, not by its header; ≤ 512 KB |
+| maps-shim `/wallet/topup` | at least the minimum, **at most 100 days of credit** (`WALLET_MAX_TOPUP_DAYS`): 3000 MRU / 10000 DA |
+| maps-shim search | input cut at 100 characters; coordinates must be on Earth (±90/±180); at most 8 waypoints |
+| admin-api | every field has a Zod bound; the driver's declaration is truncated, not refused, by design |
+
+Each was proved on the live stack the day it went in: a script sent as
+image/jpeg and a PNG sent as JPEG → 415, a real JPEG → 200; a top-up of
+99 999 999 → 400 `amount_too_large`; a 1001-character reply → 400
+`REPLY_TOO_LONG`; latitude 999 → 400. The console renders every stored string
+through React, which escapes it.
+
 ## Tests, and what CI actually runs
 
 Three workflows, none of which deploys anything:
