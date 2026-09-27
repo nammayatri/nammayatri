@@ -771,6 +771,9 @@ const rx = {
   verify: (p) => new RegExp(`^${p}auth/([^/?]+)/verify/?$`),
   resend: (p) => new RegExp(`^${p}auth/otp/([^/?]+)/resend/?$`),
   start: (p) => new RegExp(`^${p}auth/?$`),
+  // Sign-in by WhatsApp, 2026-09-27: the same start, and a status to poll.
+  waStart: (p) => new RegExp(`^${p}auth/whatsapp/?$`),
+  waStatus: (p) => new RegExp(`^${p}auth/([^/?]+)/whatsapp/?$`),
 };
 
 /**
@@ -1001,7 +1004,12 @@ async function handle(req, res) {
   const key = (id) => `${route.name}:${id}`;
   const verify = rx.verify(route.prefix).exec(pathname);
   const resend = rx.resend(route.prefix).exec(pathname);
-  const isStart = rx.start(route.prefix).test(pathname);
+  const waStart = rx.waStart(route.prefix).test(pathname);
+  const waStatus = rx.waStatus(route.prefix).exec(pathname);
+  // A WhatsApp start IS a start: every check below -- closed country,
+  // enrolment, both throttles -- applies to it unchanged. Only the way the
+  // code travels differs, and that is decided after the backend has said yes.
+  const isStart = rx.start(route.prefix).test(pathname) || waStart;
 
   /* ── starting a sign-in ──────────────────────────────────────────────────
      Checked before forwarding, so a throttled or unknown number never reaches
@@ -1052,9 +1060,19 @@ async function handle(req, res) {
         { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
     }
 
+    // Refused before the backend is asked, so no session is opened for a
+    // button that could never finish. See whatsapp.ready().
+    if (waStart && !whatsapp.ready()) return send(res, 503, refusal('WHATSAPP_UNAVAILABLE'));
+
     let up;
     try {
-      up = await forward(route, req, body);
+      // The backend knows one start route; a WhatsApp start is that route.
+      let upstreamReq = req;
+      if (waStart) {
+        upstreamReq = Object.create(req);
+        upstreamReq.url = `${route.prefix}auth`;
+      }
+      up = await forward(route, upstreamReq, body);
     } catch (err) {
       console.error(`[guard] ${route.name} upstream: ${err.message}`);
       return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
@@ -1082,6 +1100,24 @@ async function handle(req, res) {
           });
         }
       } catch { /* not JSON we recognise; nothing to remember */ }
+    }
+
+    /* ── by WhatsApp: the code goes the other way ────────────────────────────
+       No SMS and no cost. The caller is given the code and a link that opens
+       WhatsApp to our number with `MOVIN <code>` already typed; he presses
+       Send. Knowing the code opens nothing: verify accepts it only once Meta
+       has delivered it, signed, FROM the number signing in (see the verify
+       route). That is the proof -- WhatsApp's word for who sent it. */
+    if (authId && waStart) {
+      const s = sessions.get(key(authId));
+      if (s) {
+        s.waCode = mkCode(6);
+        const wa = whatsapp.expect(number, s.waCode);
+        console.log(`[guard] ${route.name}: WhatsApp sign-in started for ${number}`);
+        let upBody = {};
+        try { upBody = JSON.parse(up.text); } catch { /* the authId was read above */ }
+        return send(res, 200, { ...upBody, whatsapp: { code: s.waCode, ...wa } });
+      }
     }
 
     /* ── the code the caller will have to type ──────────────────────────────
@@ -1118,6 +1154,16 @@ async function handle(req, res) {
 
     res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
     return res.end(up.text);
+  }
+
+  /* ── has the WhatsApp message come? ───────────────────────────────────────
+     Polled by the app while it waits. Costs no attempt and says only yes or
+     no about the caller's own session. */
+  if (waStatus && req.method === 'GET') {
+    const s = sessions.get(key(decodeURIComponent(waStatus[1])));
+    if (!s || !s.waCode) return send(res, 404, refusal('INVALID_AUTH_DATA'));
+    if (Date.now() - s.born > AUTH_TTL_MS) return send(res, 400, refusal('INVALID_AUTH_DATA'));
+    return send(res, 200, { confirmed: whatsapp.codeFrom(s.number) === s.waCode });
   }
 
   /* ── the guarded path ────────────────────────────────────────────────────── */
@@ -1181,7 +1227,7 @@ async function handle(req, res) {
     // the fixed code the deployed binary was built with, which is how 7891
     // stops being a password anybody has: it becomes an internal detail
     // between this process and a backend that costs 45 minutes to change.
-    if (codes || s.smsCode || s.verificationId) {
+    if (codes || s.smsCode || s.verificationId || s.waCode) {
       let given = null;
       let parsed = null;
       try {
@@ -1195,12 +1241,18 @@ async function handle(req, res) {
       // not say which of the two the caller got closer to.
       const bySms = s.smsCode ? sameCode(given, s.smsCode) : false;
       const byPersonal = codes ? codeMatches(codes[s.number], s.number, given) : false;
+      // Knowing the code is not enough -- it was handed to the caller. What
+      // opens the session is Meta having delivered it, signed, from this very
+      // number (whatsapp.codeFrom never returns an unsigned message).
+      const byWhatsapp = s.waCode
+        ? sameCode(given, s.waCode) && whatsapp.codeFrom(s.number) === s.waCode
+        : false;
 
       // Only asked when nothing local already opened the session: it is a
       // network round trip, and in Verify mode Moorsyl counts the attempt at
       // its end too. A driver who used his own code should not spend one.
       let byVerify = false;
-      if (s.verificationId && !bySms && !byPersonal) {
+      if (s.verificationId && !bySms && !byPersonal && !byWhatsapp) {
         const checked = await verifyCheck(s.verificationId, given);
         if (!checked.reachable) {
           // An outage is not a wrong code. Saying so costs the caller nothing
@@ -1210,7 +1262,7 @@ async function handle(req, res) {
         byVerify = checked.approved;
       }
 
-      if (!bySms && !byPersonal && !byVerify) return countWrong();
+      if (!bySms && !byPersonal && !byVerify && !byWhatsapp) return countWrong();
 
       parsed.otp = route.fixedOtp;
       outgoing = Buffer.from(JSON.stringify(parsed));

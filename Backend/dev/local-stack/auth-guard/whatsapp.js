@@ -11,8 +11,12 @@
  * and need no approval from Meta. The guard owns sign-in sessions, so the
  * message lands next to the session waiting for it.
  *
- * This file is the receiving half only. What it keeps is read by nothing yet;
- * the sign-in path that consumes it is the next piece of work.
+ * Since 2026-09-27 (evening) the sign-in path reads it: server.js starts a
+ * WhatsApp sign-in with `expect()`, asks `codeFrom()` whether the message has
+ * come, and the verify route opens the session only when it has -- signed,
+ * from the number signing in. When it arrives, the sender is answered on
+ * WhatsApp so he knows to go back to the app. Free: it is a reply inside the
+ * 24 hours his own message opened, which needs no template.
  *
  * ── The two halves of Meta's contract ───────────────────────────────────────
  *   GET  ?hub.mode=subscribe&hub.verify_token=…&hub.challenge=…
@@ -36,6 +40,30 @@ const crypto = require('crypto');
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || '';
 const APP_SECRET = process.env.WHATSAPP_APP_SECRET || '';
+/** For answering on WhatsApp. Without them the sign-in still works; nobody is answered. */
+const TOKEN = process.env.WHATSAPP_TOKEN || '';
+const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+/** Movin's WhatsApp number, digits only -- where the app sends people. */
+const NUMBER = (process.env.WHATSAPP_NUMBER || '').replace(/\D/g, '');
+const GRAPH = 'https://graph.facebook.com/v21.0';
+
+/**
+ * One spelling of a number, whichever side wrote it. WhatsApp sends E.164
+ * digits without the plus -- 22241234567, 213555123456 -- while the guard keeps
+ * what the app sent: +22241234567, and for Algeria +2130555123456, WITH the
+ * trunk zero the backend insists on. Both become country code + national
+ * number with no trunk zero.
+ */
+function normal(number) {
+  let d = String(number || '').replace(/\D/g, '');
+  for (const cc of ['222', '213']) {
+    if (d.startsWith(`${cc}0`)) d = cc + d.slice(cc.length + 1);
+  }
+  return d;
+}
+
+/** Sign-ins waiting for their message: number → the code it must carry. */
+const expected = new Map();
 
 /** How long a received message waits for the sign-in that asked for it. */
 const KEEP_MS = 10 * 60 * 1000;
@@ -52,6 +80,8 @@ const CODE = /\bMOVIN\s*[-:]?\s*(\d{6})\b/i;
 
 function prune(now) {
   for (const [from, m] of inbox) if (now - m.at > KEEP_MS) inbox.delete(from);
+  for (const [from, e] of expected) if (now - e.at > KEEP_MS) expected.delete(from);
+  while (expected.size > KEEP_MAX) expected.delete(expected.keys().next().value);
   while (inbox.size > KEEP_MAX) inbox.delete(inbox.keys().next().value);
 }
 
@@ -116,7 +146,13 @@ function deliver(raw, headers) {
   for (const m of messagesIn(payload)) {
     received += 1;
     const code = CODE.exec(m.text)?.[1] ?? null;
-    inbox.set(m.from, { code, id: m.id, at: now, signed });
+    const from = normal(m.from);
+    inbox.set(from, { code, id: m.id, at: now, signed });
+    const waiting = expected.get(from);
+    if (signed && code && waiting && waiting.code === code && now - waiting.at <= KEEP_MS) {
+      expected.delete(from);
+      void answer(m.from, 'Movin : votre numéro est vérifié ✅ Retournez dans l’application.');
+    }
     console.log(
       `[whatsapp] message from ${mask(m.from)} (${m.type}${code ? ', with a sign-in code' : ''}` +
         `${signed ? '' : ', UNSIGNED'})`,
@@ -130,20 +166,54 @@ function deliver(raw, headers) {
  * ten minutes, or null. Unsigned messages are never an answer.
  */
 function codeFrom(number) {
-  const m = inbox.get(String(number).replace(/\D/g, ''));
+  const m = inbox.get(normal(number));
   if (!m || !m.signed || Date.now() - m.at > KEEP_MS) return null;
   return m.code;
+}
+
+/** A reply inside the service window. Best effort: the sign-in never waits on it. */
+async function answer(to, text) {
+  if (!TOKEN || !PHONE_NUMBER_ID) return;
+  try {
+    const r = await fetch(`${GRAPH}/${PHONE_NUMBER_ID}/messages`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ messaging_product: 'whatsapp', to, type: 'text', text: { body: text } }),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) console.warn(`[whatsapp] reply to ${mask(to)} refused: ${r.status}`);
+  } catch (e) {
+    console.warn(`[whatsapp] reply to ${mask(to)} failed: ${e.message}`);
+  }
+}
+
+/**
+ * Only when every piece a trustworthy sign-in needs is present: a number to
+ * send people to, and the app secret -- without it no message can be believed,
+ * so offering the button would be offering something that can never finish.
+ */
+function ready() {
+  return NUMBER !== '' && APP_SECRET !== '' && VERIFY_TOKEN !== '';
+}
+
+/** A sign-in is waiting for this code from this number. Returns the link that writes it. */
+function expect(number, code) {
+  expected.set(normal(number), { code, at: Date.now() });
+  const text = `MOVIN ${code}`;
+  return { number: NUMBER, text, link: `https://wa.me/${NUMBER}?text=${encodeURIComponent(text)}` };
 }
 
 /** For /healthz: whether it is set up, and how much has come in. Never a secret. */
 function health() {
   return {
+    ready: ready(),
     verifyToken: VERIFY_TOKEN !== '',
     signatureChecked: APP_SECRET !== '',
+    replies: TOKEN !== '' && PHONE_NUMBER_ID !== '',
     received,
     rejected,
     waiting: inbox.size,
   };
 }
 
-module.exports = { handshake, deliver, codeFrom, health };
+module.exports = { handshake, deliver, codeFrom, health, ready, expect, normal };
