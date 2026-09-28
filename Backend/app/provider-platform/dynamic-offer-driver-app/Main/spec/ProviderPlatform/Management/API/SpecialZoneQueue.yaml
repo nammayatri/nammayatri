@@ -63,9 +63,9 @@ apis:
   - GET:
       endpoint: /driverQueueRequests
       auth: ApiAuthV2
-      mandatoryQuery:
-        driverId: Id Driver
       query:
+        - phoneNumber: Text
+        - vehicleNumber: Text
         - from: UTCTime
         - to: UTCTime
         - limit: Int
@@ -204,6 +204,8 @@ types:
     - noResponse: Int
 
   DriverQueueRequestsRes:
+    - driverId: Id Driver
+    - driverName: Text
     - fromTime: UTCTime
     - toTime: UTCTime
     - totalCount: Int

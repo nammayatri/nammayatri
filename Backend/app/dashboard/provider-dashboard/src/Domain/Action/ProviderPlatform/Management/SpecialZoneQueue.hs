@@ -67,7 +67,7 @@ getSpecialZoneQueueDriverQueueHistory merchantShortId opCity apiTokenInfo driver
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverQueueHistory) driverId
 
-getSpecialZoneQueueDriverQueueRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Common.Driver -> Environment.Flow API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueRequestsRes)
-getSpecialZoneQueueDriverQueueRequests merchantShortId opCity apiTokenInfo from to limit offset driverId = do
+getSpecialZoneQueueDriverQueueRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueRequestsRes)
+getSpecialZoneQueueDriverQueueRequests merchantShortId opCity apiTokenInfo phoneNumber vehicleNumber from to limit offset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverQueueRequests) from to limit offset driverId
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverQueueRequests) phoneNumber vehicleNumber from to limit offset

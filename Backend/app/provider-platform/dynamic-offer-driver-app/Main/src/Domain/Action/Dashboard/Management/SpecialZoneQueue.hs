@@ -26,6 +26,7 @@ import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import Domain.Types.VehicleVariant (castServiceTierToVariant)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (getDbHash)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude (read)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -49,6 +50,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 
 -- | Dashboard trigger: previously ran the full force-notify pipeline (LTS queue
@@ -407,22 +409,27 @@ maxQueueRequestsPageSize = 200
 getSpecialZoneQueueDriverQueueRequests ::
   ( Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
     Kernel.Types.Beckn.Context.City ->
+    Maybe Text ->
+    Maybe Text ->
     Maybe UTCTime ->
     Maybe UTCTime ->
     Maybe Int ->
     Maybe Int ->
-    Kernel.Types.Id.Id Common.Driver ->
     Environment.Flow SZQT.DriverQueueRequestsRes
   )
-getSpecialZoneQueueDriverQueueRequests merchantShortId opCity mbFrom mbTo mbLimit mbOffset reqDriverId = do
+getSpecialZoneQueueDriverQueueRequests merchantShortId _opCity mbPhoneNumber mbVehicleNumber mbFrom mbTo mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  let driverId = Kernel.Types.Id.cast @Common.Driver @DP.Person reqDriverId
-  driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  -- Same scoping rule the rest of the provider dashboard uses: the caller's token is
-  -- valid for one (merchant, city), so a driver outside it is reported as not found.
-  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCity.id) $
-    throwError (PersonDoesNotExist driverId.getId)
+  driver <- case (mbPhoneNumber, mbVehicleNumber) of
+    (Just phoneNumber, _) -> do
+      mobileNumberHash <- getDbHash phoneNumber
+      QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER
+        >>= fromMaybeM (InvalidRequest "Person not found")
+    (_, Just vehicleNumber) -> do
+      vehicle <- QVehicle.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      unless (vehicle.merchantId == merchant.id) $ throwError (VehicleDoesNotExist vehicleNumber)
+      QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
+    _ -> throwError $ InvalidRequest "Either phoneNumber or vehicleNumber must be provided"
+  let driverId = driver.id
   now <- getCurrentTime
   let toTime = fromMaybe now mbTo
       fromTime = fromMaybe (addUTCTime (negate defaultQueueRequestsWindow) toTime) mbFrom
@@ -438,7 +445,9 @@ getSpecialZoneQueueDriverQueueRequests merchantShortId opCity mbFrom mbTo mbLimi
       page = take limit (drop offset windowRows)
   pure
     SZQT.DriverQueueRequestsRes
-      { fromTime = fromTime,
+      { driverId = Kernel.Types.Id.cast @DP.Person @Common.Driver driverId,
+        driverName = driver.firstName <> maybe "" (" " <>) driver.lastName,
+        fromTime = fromTime,
         toTime = toTime,
         totalCount = length windowRows,
         truncated = truncated,

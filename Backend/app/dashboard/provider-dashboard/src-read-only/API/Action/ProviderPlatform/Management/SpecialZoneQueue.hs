@@ -9,7 +9,6 @@ where
 
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
-import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.Management.SpecialZoneQueue
 import "dynamic-offer-driver-app" Domain.Types.AccessMatrix
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -113,5 +112,5 @@ getSpecialZoneQueueDriverQueuePosition merchantShortId opCity apiTokenInfo drive
 getSpecialZoneQueueDriverQueueHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueHistoryRes)
 getSpecialZoneQueueDriverQueueHistory merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueHistory merchantShortId opCity apiTokenInfo driverId
 
-getSpecialZoneQueueDriverQueueRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueRequestsRes)
-getSpecialZoneQueueDriverQueueRequests merchantShortId opCity apiTokenInfo from to limit offset driverId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueRequests merchantShortId opCity apiTokenInfo from to limit offset driverId
+getSpecialZoneQueueDriverQueueRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueRequestsRes)
+getSpecialZoneQueueDriverQueueRequests merchantShortId opCity apiTokenInfo phoneNumber vehicleNumber from to limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueRequests merchantShortId opCity apiTokenInfo phoneNumber vehicleNumber from to limit offset

@@ -45,7 +45,9 @@ data DriverQueueRequestInfo = DriverQueueRequestInfo
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverQueueRequestsRes = DriverQueueRequestsRes
-  { fromTime :: Kernel.Prelude.UTCTime,
+  { driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
+    driverName :: Kernel.Prelude.Text,
+    fromTime :: Kernel.Prelude.UTCTime,
     toTime :: Kernel.Prelude.UTCTime,
     totalCount :: Kernel.Prelude.Int,
     truncated :: Kernel.Prelude.Bool,
@@ -215,14 +217,17 @@ type GetSpecialZoneQueueDriverQueuePosition =
 type GetSpecialZoneQueueDriverQueueHistory = ("driverQueueHistory" :> MandatoryQueryParam "driverId" Kernel.Prelude.Text :> Get '[JSON] DriverQueueHistoryRes)
 
 type GetSpecialZoneQueueDriverQueueRequests =
-  ( "driverQueueRequests" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "to" Kernel.Prelude.UTCTime
+  ( "driverQueueRequests" :> QueryParam "phoneNumber" Kernel.Prelude.Text :> QueryParam "vehicleNumber" Kernel.Prelude.Text
+      :> QueryParam
+           "from"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "to" Kernel.Prelude.UTCTime
       :> QueryParam
            "limit"
            Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
-      :> MandatoryQueryParam
-           "driverId"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam
+           "offset"
+           Kernel.Prelude.Int
       :> Get
            '[JSON]
            DriverQueueRequestsRes
@@ -236,7 +241,7 @@ data SpecialZoneQueueAPIs = SpecialZoneQueueAPIs
     postSpecialZoneQueueManualQueueRemove :: ManualQueueRemoveReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getSpecialZoneQueueDriverQueuePosition :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueuePositionRes,
     getSpecialZoneQueueDriverQueueHistory :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverQueueHistoryRes,
-    getSpecialZoneQueueDriverQueueRequests :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverQueueRequestsRes
+    getSpecialZoneQueueDriverQueueRequests :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient DriverQueueRequestsRes
   }
 
 mkSpecialZoneQueueAPIs :: (Client EulerHS.Types.EulerClient API -> SpecialZoneQueueAPIs)
