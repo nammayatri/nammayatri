@@ -3388,33 +3388,24 @@ and `enrol-driver.sh --revoke`. `enrol-driver.sh` takes Algerian numbers with
 `SMS_BYPASS` is a **folded scalar** (`>-`): a `#` line inside it is part of the
 value, not a comment, and would corrupt a number. Comments go above the key.
 
-### Which country the sign-in screen shows — `GET /geo/country`, since 2026-09-15
+### Which country the sign-in screen shows — the phone's GPS, and nothing else
 
 The boss did not want users to see the other country, so the phone screen has
 **no picker**: the app detects the country. There is deliberately no way to
 switch on screen.
 
-> **The app stopped calling this route on 2026-09-28** (owner's decision). It
-> now detects by GPS only — matched on the phone, the position never leaves
-> it — and anything short of a fix is **Mauritania**, with « Vous devez activer
-> la localisation pour détecter votre pays » and a button to turn it on. The
-> IP guess and the last-country fallback put people under the wrong country
-> without saying so. The route below stays up for installs older than that
-> APK; remove it once none are left. The app's privacy page was corrected the
-> same day.
+**GPS only since 2026-09-28** (owner's decision): matched on the phone against
+the two outlines, the position never leaves it. Anything short of a fix is
+**Mauritania**, with « Vous devez activer la localisation pour détecter votre
+pays » and a button to turn it on. The server has no part in it.
 
-`maps-shim/geo.js` answers `{"country": "DZ" | "MR" | null}` for the caller's
-address (`X-Real-IP`, set by nginx — a client cannot choose it), from
-`ip-countries.json`: AfriNIC's public delegation file, 54 IPv4 and 14 IPv6
-blocks for the two countries, held in memory. Nothing is stored; the log line
-carries only the answer. Rebuild the table with `./geo-ip-refresh.sh`, then
-deploy the shim. The nginx `/geo/` location is inserted into the deployed
-config in place by `edge/add-geo-location.py`.
-
-**Its blind spot:** an operator whose space is registered with RIPE rather
-than AfriNIC is not in the list. With GPS refused too, such a user gets the
-last-used country (Mauritania on a new install) and cannot switch — if a real
-user reports it, add the block; the fix is data, not UI.
+From 2026-09-15 to 2026-09-28 there was an IP fallback: `GET /geo/country` on
+the shim (`geo.js`, AfriNIC's delegation list in `ip-countries.json`, the
+nginx `/geo/` location), then the last country used on the phone. Both guessed
+people into the wrong country without saying so. **Removed the same day** —
+route, module, table, `geo-ip-refresh.sh` and `edge/add-geo-location.py` — on
+the owner's word that every phone updates; `/geo/country` now answers the
+edge's 404. The app's privacy page was corrected to match.
 
 ### The wallet, per country
 

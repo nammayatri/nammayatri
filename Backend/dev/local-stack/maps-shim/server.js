@@ -28,7 +28,6 @@ const wallet = require('./wallet');
 const identity = require('./identity');
 const restricted = require('./restricted');
 const deletion = require('./deletion');
-const geo = require('./geo');
 const pushRelay = require('./push-relay');
 const driverPush = require('./driver-push');
 
@@ -578,14 +577,6 @@ http.createServer((req, res) => {
       send(res, r.ok ? 200 : 502, r);
     });
     return undefined;
-  }
-
-  // Which of our countries the caller's IP belongs to, for the sign-in
-  // screen's country detection (2026-09-14). The phone asks its own GPS first;
-  // this is the second opinion. See geo.js.
-  if (url.pathname === '/geo/country') {
-    if (req.method !== 'GET') return send(res, 405, { error: 'method not allowed' });
-    return geo.serve(req, res);
   }
 
   // Who is nearby and what they drive. Nothing to do with Google, and kept in
