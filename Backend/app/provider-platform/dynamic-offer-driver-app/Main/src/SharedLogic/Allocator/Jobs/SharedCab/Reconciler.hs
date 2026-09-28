@@ -56,7 +56,6 @@ import EulerHS.Types (EulerClient, client)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error.BaseError.HTTPError.APIError (APIError (..))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.APIError (APICallError (..))
