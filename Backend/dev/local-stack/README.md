@@ -2047,6 +2047,13 @@ while he has no vehicle linked: the dispatch pool honours `blocked` and ignores
 `enabled`. Both routes are exact `location =` blocks in `edge/nginx.conf`. The
 bot announces it as « dossier renvoyé après refus ».
 
+**Proved on the owner's own phone the same day**, end to end: refused in the
+console → « Dossier refusé » push and the reason on screen; « Renvoyer mon
+dossier » → back in the queue as « Renvoyé par le chauffeur »; accepted →
+« Dossier accepté » push and the screen turned to « Vous êtes validé » by
+itself. The same day, also on his phone: a Chargily top-up put the driver back
+into dispatch at once (`wallet.js` now republishes `movin:unpaid` on credit).
+
 ### Push: no route, because none is needed
 
 There is no push/notification route on the rider API — only an
