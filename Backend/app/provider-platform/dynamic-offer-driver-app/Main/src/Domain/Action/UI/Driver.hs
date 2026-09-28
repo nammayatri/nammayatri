@@ -506,8 +506,7 @@ data DriverInformationRes = DriverInformationRes
     operatorBadgeToken :: Maybe Text,
     nomineeDob :: Maybe Day,
     approved :: Maybe Bool,
-    preferredMapProvider :: Maybe DriverInfo.MapProvider,
-    todayOnlineDuration :: Minutes
+    preferredMapProvider :: Maybe DriverInfo.MapProvider
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -770,7 +769,8 @@ data DriverStatsRes = DriverStatsRes
     bonusEarningWithCurrency :: PriceAPIEntity,
     coinBalance :: Int,
     totalValidRidesOfDay :: Int,
-    tipsEarning :: PriceAPIEntity
+    tipsEarning :: PriceAPIEntity,
+    todayOnlineDuration :: Minutes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1794,7 +1794,6 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  todayOnlineDuration <- secondsToMinutes <$> DriverOnlineHoursCache.getTodayOnlineDuration driverInfo.driverId merchantConfig.timeDiffFromUtc
   membershipId <-
     if fromMaybe False merchantConfig.sendMembershipIdInProfile
       then do
@@ -2334,6 +2333,12 @@ getStats (driverId, _, merchantOpCityId) date = do
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   validRideCountOfDriver <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  now <- getCurrentTime
+  let today = DriverOnlineHoursCache.localDay transporterConfig.timeDiffFromUtc now
+  todayOnlineDuration <-
+    if date == today
+      then secondsToMinutes <$> DriverOnlineHoursCache.getTodayOnlineDuration driverId transporterConfig.timeDiffFromUtc
+      else pure (Minutes 0)
 
   let totalEarningsOfDay = maybe 0.0 (.totalEarnings) driverDailyStats
       tipsEarningOfDay = maybe 0.0 (.tipAmount) driverDailyStats
@@ -2355,7 +2360,8 @@ getStats (driverId, _, merchantOpCityId) date = do
         totalEarningsOfDayPerKm = roundToIntegral totalEarningsOfDayPerKm,
         totalEarningsOfDayPerKmWithCurrency = PriceAPIEntity totalEarningsOfDayPerKm currency,
         bonusEarning = roundToIntegral bonusEarning,
-        bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency
+        bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency,
+        todayOnlineDuration = todayOnlineDuration
       }
 
 getEarnings :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> Flow DCommon.EarningPeriodStatsRes

@@ -16,6 +16,7 @@ module SharedLogic.DriverOnlineHoursCache
   ( markOnlineToday,
     markOfflineToday,
     getTodayOnlineDuration,
+    localDay,
   )
 where
 
