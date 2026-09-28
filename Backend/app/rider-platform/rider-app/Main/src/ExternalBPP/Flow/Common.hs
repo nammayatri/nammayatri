@@ -5,6 +5,7 @@ import Control.Applicative ((<|>))
 import Data.List (sortOn)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (Down (..))
+import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Action.Beckn.FRFS.OnInit
 import Domain.Action.Beckn.FRFS.OnSearch
@@ -220,7 +221,8 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
     mkQuote _serviceTier _vehicleType [] = return []
     mkQuote serviceTier vehicleType routesInfo = do
       logDebug $ "Routes Info Debug: " <> show routesInfo
-      let segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode, color = routeInfo.route.color}) routesInfo
+      let routeColorOf routeInfo = routeInfo.route.color <|> mkLineName routeInfo.route.shortName
+          segments = map (\routeInfo -> CallAPI.BasicRouteDetail {routeCode = routeInfo.route.code, startStopCode = routeInfo.startStopCode, endStopCode = routeInfo.endStopCode, color = routeColorOf routeInfo}) routesInfo
           fareRoute = CallAPI.FareRoute {segments = NE.fromList segments, mbProviderRouteId}
       stationsPerSegment <- CallAPI.buildStationsPerSegment segments integratedBPPConfig
       let stations = concat stationsPerSegment
@@ -244,7 +246,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                               routeServiceTier = Just $ mkDVehicleServiceTier vehicleServiceTier,
                               routePrice = adultPrice,
                               routeSequenceNum = Just routeSeqNum,
-                              routeColor = routeInfo.route.color
+                              routeColor = routeColorOf routeInfo
                             }
                       )
                       [1 ..]
@@ -634,3 +636,8 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
     matchesTier mins tier =
       mins >= tier.minMinutesBeforeDeparture
         && maybe True (mins <) tier.maxMinutesBeforeDeparture
+
+mkLineName :: Text -> Maybe Text
+mkLineName shortName =
+  let lineName = T.strip (T.replace " Direct" "" shortName)
+   in if T.null lineName then Nothing else Just lineName
