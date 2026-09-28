@@ -2053,6 +2053,11 @@ dossier » → back in the queue as « Renvoyé par le chauffeur »; accepted �
 « Dossier accepté » push and the screen turned to « Vous êtes validé » by
 itself. The same day, also on his phone: a Chargily top-up put the driver back
 into dispatch at once (`wallet.js` now republishes `movin:unpaid` on credit).
+That fix covers **Moosyl in Mauritania too**, and was proved rather than
+assumed: both gateways credit through the one `creditIfPaid`, and
+`tests/wallet-dispatch.test.js` runs the webhook once per gateway (Chargily's
+`/checkouts/`, Moosyl's `/checkout-session/public/`). On the wallet.js before
+the fix both fail with 0 writes to the key; after it, both pass.
 
 ### Push: no route, because none is needed
 
