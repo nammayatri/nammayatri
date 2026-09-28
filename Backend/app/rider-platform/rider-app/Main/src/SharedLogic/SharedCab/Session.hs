@@ -83,10 +83,23 @@ getSession rawPlate =
       pure rebuilt
 
 -- | Each member is re-read: a route set can outlive a session that has since paused or ended.
+-- R21: the route set is an index, the session key is truth. A member is kept only while its session is ACTIVE
+-- and still on this route; anything else is stale (a crash between `saveSession`'s session write and set moves, or
+-- an expired key) and is repaired lazily: the session is re-read once, and the SREM is skipped only if the plate
+-- meanwhile flapped back onto this route ACTIVE, so an A->B->A move can't be undone by a stale read.
 activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m [Session]
 activeSessionsOnRoute route = do
   plates <- shared $ Redis.sMembers (routeKey route)
-  filter ((== ACTIVE) . (.status)) . catMaybes <$> mapM readSession plates
+  catMaybes <$> mapM keepOrRepair plates
+  where
+    keepOrRepair plate =
+      readSession plate >>= \case
+        Just s | s.status == ACTIVE && s.routeCode == route -> pure (Just s)
+        _ -> repair plate >> pure Nothing
+    repair plate =
+      readSession plate >>= \case
+        Just s | s.status == ACTIVE && s.routeCode == route -> pure ()
+        _ -> void $ shared $ Redis.srem (routeKey route) [plate]
 
 liftSession :: MonadFlow m => Either SharedCabSessionError a -> m a
 liftSession = either throwError pure

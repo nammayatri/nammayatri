@@ -67,6 +67,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -2176,7 +2177,8 @@ data RefreshedTicketVehicleInfo = RefreshedTicketVehicleInfo
 applyWaybillMetadataToTicket ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    MonadMask m
   ) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   Maybe DJourneyLeg.JourneyLeg ->
@@ -2225,7 +2227,14 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
             <> meta.vehicle_no
       when busChanged $ do
         QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag journeyLeg.id
-        QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
+        -- R22: shared-cab bookings move seats under sharedcab:lock:booking:{id} with expected-value CAS writes;
+        -- this waybill refresh holds no lock, so guard it the same way. Scheduled-BUS bookings are untouched.
+        if SharedCabBooking.isSharedCabBooking booking
+          then SharedCabBooking.withBookingLock booking.id $ do
+            mbFresh <- QFRFSTicketBooking.findById booking.id
+            whenJust mbFresh $ \fresh ->
+              QFRFSTicketBooking.updateAllocatedVehicle effectiveBus booking.id fresh.vehicleNumber
+          else QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
       pure (effectiveBus, effectiveBusTag, busChanged)
   pure
     RefreshedTicketVehicleInfo

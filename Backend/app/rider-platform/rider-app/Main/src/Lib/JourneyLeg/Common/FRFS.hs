@@ -109,6 +109,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   -- R15: where the rider is while a cab is on its way decides the blame if it passes the stop
   when (isJust booking.vehicleNumber) $
     whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
+  -- R20 deferred: readSession self-heals on the driver poll.
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession booking.vehicleNumber
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
   -- R16/R17: the fallback gate (attempts + how long this booking has been FINDING) and the arrival
