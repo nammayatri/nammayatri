@@ -3391,10 +3391,17 @@ value, not a comment, and would corrupt a number. Comments go above the key.
 ### Which country the sign-in screen shows — `GET /geo/country`, since 2026-09-15
 
 The boss did not want users to see the other country, so the phone screen has
-**no picker**: the app detects the country — GPS matched on the phone against
-the two outlines (the position never leaves it), then this route, then the
-last country used on that phone. There is deliberately no way to switch on
-screen.
+**no picker**: the app detects the country. There is deliberately no way to
+switch on screen.
+
+> **The app stopped calling this route on 2026-09-28** (owner's decision). It
+> now detects by GPS only — matched on the phone, the position never leaves
+> it — and anything short of a fix is **Mauritania**, with « Vous devez activer
+> la localisation pour détecter votre pays » and a button to turn it on. The
+> IP guess and the last-country fallback put people under the wrong country
+> without saying so. The route below stays up for installs older than that
+> APK; remove it once none are left. The app's privacy page was corrected the
+> same day.
 
 `maps-shim/geo.js` answers `{"country": "DZ" | "MR" | null}` for the caller's
 address (`X-Real-IP`, set by nginx — a client cannot choose it), from
