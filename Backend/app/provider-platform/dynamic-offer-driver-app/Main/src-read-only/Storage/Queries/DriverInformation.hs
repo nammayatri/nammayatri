@@ -339,6 +339,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.referredByDriverId (Kernel.Types.Id.getId <$> referredByDriverId),
       Se.Set Beam.referredByFleetOwnerId referredByFleetOwnerId,
       Se.Set Beam.referredByOperatorId referredByOperatorId,
+      Se.Set Beam.rideBillingModel rideBillingModel,
       Se.Set Beam.rideRequestVolume rideRequestVolume,
       Se.Set Beam.rideRequestVolumeEnabled rideRequestVolumeEnabled,
       Se.Set Beam.ruleBasedUpgradeTiers (Kernel.Prelude.toJSON <$> ruleBasedUpgradeTiers),

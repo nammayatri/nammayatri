@@ -754,6 +754,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
+      SharedLogic.Subscription.BillingModel
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
       SharedLogic.TollDashboard

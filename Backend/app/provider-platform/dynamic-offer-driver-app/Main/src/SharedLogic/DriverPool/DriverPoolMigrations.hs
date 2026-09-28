@@ -69,7 +69,8 @@ migrations =
     MigrationEntry 3 backfillCloudType,
     MigrationEntry 4 backfillEnableForAirport,
     MigrationEntry 5 backfillEnableCashRide,
-    MigrationEntry 6 backfillMerchantOperatingCityId
+    MigrationEntry 6 backfillMerchantOperatingCityId,
+    MigrationEntry 7 backfillRideBillingModel
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -120,6 +121,25 @@ backfillEnabled entries = do
   pure $
     map
       (\e -> e {enabled = HashMap.lookupDefault e.enabled (cast e.driverId :: Id Person.Person) enabledMap})
+      entries
+
+-- | v7: backfill 'rideBillingModel' from driver_information.
+--
+-- Legacy entries default to Nothing, which reads as postpaid
+-- (SharedLogic.Subscription.BillingModel). For a postpaid driver that is already
+-- correct, so this migration only matters for prepaid drivers -- without it they would
+-- keep being gated on 'subscribed' out of the cache until their next pool-data write,
+-- which is the exact bug this column exists to fix.
+backfillRideBillingModel ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillRideBillingModel entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let modelMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.rideBillingModel)) dis
+  pure $
+    map
+      (\e -> e {rideBillingModel = HashMap.lookupDefault e.rideBillingModel (cast e.driverId :: Id Person.Person) modelMap})
       entries
 
 -- | v3: backfill the new 'cloudType' field from the person table.

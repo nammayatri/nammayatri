@@ -94,6 +94,7 @@ import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -655,14 +656,15 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             -- treated as the standing guarantee of eligibility. A stale selection in the ms
             -- window between debit commit and revoke strip is the accepted trade-off, chosen
             -- over one wallet DB read per candidate in the dispatch hot loop.
-            -- Mirrors the pool-time guard in GetNearestDrivers.buildDriverResult: a fleet
-            -- driver on a prepaid merchant is settled at the fleet-owner level and never
-            -- carries its own `subscribed` flag, so re-checking it here would reject at
-            -- dispatch every driver that pooling just admitted.
+            -- Mirrors the pool-time guard in GetNearestDrivers.buildDriverResult and must stay
+            -- identical to it: `subscribed` is a postpaid dues flag, so it is only the authority
+            -- for a postpaid driver. A prepaid driver (including every fleet driver, who settles
+            -- against the fleet owner's wallet) never carries it, so re-checking it here would
+            -- reject at dispatch every driver that pooling just admitted.
             let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-                isSubscribedOrFleetPrepaid d = d.subscribed || (isPrepaidEnabled && isJust d.fleetOwnerId)
+                isBillingEligible d = d.subscribed || isExemptFromPostpaidDuesFlag isPrepaidEnabled d.fleetOwnerId d.rideBillingModel
                 isStillLive =
-                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isSubscribedOrFleetPrepaid d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
+                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isBillingEligible d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.
