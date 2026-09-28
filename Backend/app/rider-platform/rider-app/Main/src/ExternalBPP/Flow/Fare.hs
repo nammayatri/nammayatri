@@ -23,6 +23,14 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Prelude as P
 
+measureFareApiLatency :: MonadFlow m => Text -> m a -> m a
+measureFareApiLatency label action = do
+  startTime <- getCurrentTime
+  result <- action
+  endTime <- getCurrentTime
+  logInfo $ label <> " Latency: " <> show (diffUTCTime endTime startTime) <> " seconds"
+  return result
+
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])
 getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRoute vehicleCategory serviceTier mbParentSearchReqId blacklistedServiceTiers blacklistedFareQuoteTypes getAllSubwayFares isSingleMode = do
   subwayFareDetail <-
@@ -149,15 +157,16 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
               unless alwaysProbe $ void $ CB.incrementProbeCounter ptMode CB.FareAPI merchantOperatingCityId probeWindow
               result <-
                 withTryCatch "probe:getFares" $
-                  CallAPI.getFares
-                    riderId
-                    merchantId
-                    merchantOperatingCityId
-                    integratedBPPConfig
-                    fareRoute.segments
-                    vehicleCategory
-                    serviceTier
-                    subwayFareDetail
+                  measureFareApiLatency ("getFares:probe:" <> show vehicleCategory) $
+                    CallAPI.getFares
+                      riderId
+                      merchantId
+                      merchantOperatingCityId
+                      integratedBPPConfig
+                      fareRoute.segments
+                      vehicleCategory
+                      serviceTier
+                      subwayFareDetail
               case result of
                 Left _ -> do
                   CB.recordFailure ptMode CB.FareAPI merchantOperatingCityId
@@ -191,15 +200,16 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
       let ptMode = CB.vehicleCategoryToPTMode vehicleCategory
       result <-
         withTryCatch "callExternalBPP:getFares" $
-          CallAPI.getFares
-            riderId
-            merchantId
-            merchantOperatingCityId
-            integratedBPPConfig
-            fareRoute.segments
-            vehicleCategory
-            serviceTier
-            subwayFareDetail
+          measureFareApiLatency ("getFares:apiCall:" <> show vehicleCategory <> " canary: " <> show isCanary) $
+            CallAPI.getFares
+              riderId
+              merchantId
+              merchantOperatingCityId
+              integratedBPPConfig
+              fareRoute.segments
+              vehicleCategory
+              serviceTier
+              subwayFareDetail
 
       case result of
         Left _ -> do

@@ -35,6 +35,7 @@ import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRouteFareProduct as FRFSRouteFareProduct
+import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSVehicleServiceTier as FRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -44,7 +45,9 @@ import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.StopFare as StopFare
 import qualified Domain.Types.Trip as DTripTypes
 import EulerHS.Prelude (comparing, toStrict, (<|>))
+import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import Kernel.Beam.Functions
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
@@ -449,6 +452,41 @@ getStartStation = find (\station -> station.stationType == Station.START)
 
 getEndStation :: [DStation] -> Maybe DStation
 getEndStation = find (\station -> station.stationType == Station.END)
+
+enrichRouteStations :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DFRFSSearch.FRFSSearch -> DIBC.IntegratedBPPConfig -> m ()
+enrichRouteStations searchId integratedBPPConfig = do
+  quotes <- QQuote.findAllBySearchId searchId
+
+  forM_ (filter (\quote -> quote.vehicleType == Spec.SUBWAY) quotes) $ \quote ->
+    case decodeFromText =<< quote.routeStationsJson :: Maybe [API.FRFSRouteStationsAPI] of
+      Just routeStations | not (null routeStations) && not (all isEnriched routeStations) -> do
+        let basicRouteDetails = mapMaybe toBasicRouteDetail routeStations
+        if length basicRouteDetails /= length routeStations
+          then logError $ "Skipping route station enrichment for quote " <> quote.id.getId <> ", segment boundaries incomplete"
+          else
+            withTryCatch "enrichRouteStations" (CallAPI.buildStationsPerSegment basicRouteDetails integratedBPPConfig) >>= \case
+              Left err -> logError $ "Failed to enrich route stations for quote " <> quote.id.getId <> ": " <> show err
+              Right stationsPerSegment
+                | all null stationsPerSegment -> logError $ "Route station enrichment resolved no stops for quote " <> quote.id.getId
+                | otherwise -> do
+                  let enriched = zipWith fillStations routeStations stationsPerSegment
+                  QQuote.updateStationsById (Just $ encodeToText enriched) (encodeToText $ concatMap (.stations) enriched) quote.id
+      _ -> pure ()
+  where
+    -- A skeleton carries stop codes and nothing else, so a filled in list is one that has coordinates.
+    isEnriched :: API.FRFSRouteStationsAPI -> Bool
+    isEnriched routeStation = any (isJust . (.lat)) routeStation.stations
+
+    toBasicRouteDetail :: API.FRFSRouteStationsAPI -> Maybe CallAPI.BasicRouteDetail
+    toBasicRouteDetail routeStation = do
+      firstStation <- listToMaybe routeStation.stations
+      lastStation <- listToMaybe (reverse routeStation.stations)
+      Just CallAPI.BasicRouteDetail {routeCode = routeStation.code, startStopCode = firstStation.code, endStopCode = lastStation.code, color = routeStation.color}
+
+    fillStations :: API.FRFSRouteStationsAPI -> [DStation] -> API.FRFSRouteStationsAPI
+    fillStations routeStation stations
+      | null stations = routeStation
+      | otherwise = routeStation {API.stations = map (castStationToAPI integratedBPPConfig.id) stations}
 
 castStationToAPI :: Id DIBC.IntegratedBPPConfig -> DStation -> API.FRFSStationAPI
 castStationToAPI integratedBppConfigId DStation {..} =

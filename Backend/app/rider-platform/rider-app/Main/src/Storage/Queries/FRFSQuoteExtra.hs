@@ -13,6 +13,16 @@ import Storage.Queries.OrphanInstances.FRFSQuote ()
 
 -- Extra code goes here --
 
+updateStationsById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Text -> Text -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateStationsById routeStationsJson stationsJson id = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.routeStationsJson routeStationsJson,
+      Se.Set Beam.stationsJson stationsJson,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 backfillQuotesForCachedQuoteFlow :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Maybe Int -> Maybe HighPrecMoney -> Maybe Bool -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
 backfillQuotesForCachedQuoteFlow riderId discountedTickets eventDiscountAmount isEventOngoing searchId = do
   _now <- getCurrentTime

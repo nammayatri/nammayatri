@@ -60,26 +60,35 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
                   },
             mbProviderRouteId = Nothing
           }
+
   (_, fares) <-
-    Fare.getFares
-      searchReq.riderId
-      merchant.id
-      merchantOperatingCity.id
-      integratedBPPConfig
-      fareRoute
-      searchReq.vehicleType
-      Nothing
-      searchReq.multimodalSearchRequestId
-      blacklistedServiceTiers
-      blacklistedFareQuoteTypes
-      True
-      True
+    JMU.measureLatency
+      ( Fare.getFares
+          searchReq.riderId
+          merchant.id
+          merchantOperatingCity.id
+          integratedBPPConfig
+          fareRoute
+          searchReq.vehicleType
+          Nothing
+          searchReq.multimodalSearchRequestId
+          blacklistedServiceTiers
+          blacklistedFareQuoteTypes
+          True
+          True
+      )
+      ("crisViaRoutes:getFares search: " <> searchReq.id.getId)
   let bestFarePerPath = M.toList $ M.fromListWith mergeSamePath [(mkStopPath fd, (fare, fd.providerRouteId, [])) | fare <- fares, Just fd <- [fare.fareDetails]]
   logDebug $ "CRIS via routes for search " <> searchReq.id.getId <> ": " <> show (map (\(stops, (_, routeId, alternates)) -> (stops, routeId, alternates)) bestFarePerPath)
-  resolvedPaths <- catMaybes <$> mapConcurrently resolveIfServable bestFarePerPath
+  resolvedPaths <-
+    JMU.measureLatency
+      (catMaybes <$> mapConcurrently resolveIfServable bestFarePerPath)
+      ("crisViaRoutes:resolvePaths search: " <> searchReq.id.getId <> " paths: " <> show (length bestFarePerPath))
   let bestFarePerJourney = M.toList $ M.fromListWith mergeSamePath resolvedPaths
   logDebug $ "CRIS journeys for search " <> searchReq.id.getId <> ": " <> show (length bestFarePerJourney) <> " from " <> show (length resolvedPaths) <> " servable of " <> show (length bestFarePerPath) <> " paths"
-  concat <$> mapConcurrently buildRouteQuoteSafely (sortRoutes bestFarePerJourney)
+  JMU.measureLatency
+    (concat <$> mapConcurrently buildRouteQuoteSafely (sortRoutes bestFarePerJourney))
+    ("crisViaRoutes:buildQuotes search: " <> searchReq.id.getId <> " journeys: " <> show (length bestFarePerJourney))
   where
     mkStopPath fareDetails = dropAdjacentDuplicates $ [searchReq.fromStationCode] <> splitVia fareDetails.via <> [searchReq.toStationCode]
 
@@ -161,8 +170,9 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
                   (\segment route -> CallAPI.BasicRouteDetail {routeCode = segment.routeCode, startStopCode = segment.fromStopCode, endStopCode = segment.toStopCode, color = route.color})
                   segments
                   routes
-          stationsPerSegment <- CallAPI.buildStationsPerSegment basicRouteDetails integratedBPPConfig
-          let adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) fare.categories)
+
+          let stationsPerSegment = CallAPI.skeletonStationsPerSegment basicRouteDetails
+              adultPrice = maybe (Price (Money 0) (HighPrecMoney 0.0) INR) (.price) (find (\category -> category.category == ADULT) fare.categories)
               routeStations =
                 zipWith3
                   ( \routeSeqNum route segmentStations ->
