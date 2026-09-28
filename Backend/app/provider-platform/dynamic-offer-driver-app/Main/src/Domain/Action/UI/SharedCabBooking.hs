@@ -11,7 +11,6 @@ import API.Types.UI.SharedCab (SharedCabSession)
 import Domain.Action.UI.SharedCab (DriverAuthInfo, bapInternal, validateSharedCabDriver)
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Types.Id
 import qualified SharedLogic.CallSharedCabBooking as CallBooking
 
 data BookingAction = Cancel | BoardedWithoutCode | Dropped
