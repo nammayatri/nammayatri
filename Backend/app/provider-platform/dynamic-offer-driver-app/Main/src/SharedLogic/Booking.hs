@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified SharedLogic.Allocator as Alloc
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -65,6 +66,7 @@ cancelBooking ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
+    Alloc.SchedulerJobFlow r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
     BeamFlow m r
@@ -92,6 +94,7 @@ cancelBooking' ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
+    Alloc.SchedulerJobFlow r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
     BeamFlow m r

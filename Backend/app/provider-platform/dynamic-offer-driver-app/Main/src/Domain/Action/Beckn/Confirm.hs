@@ -45,6 +45,7 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.AddOn as SAddOn
+import qualified SharedLogic.Allocator as Alloc
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
@@ -306,7 +307,8 @@ validateRequest ::
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    Alloc.SchedulerJobFlow r
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

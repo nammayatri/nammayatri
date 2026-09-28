@@ -81,6 +81,7 @@ import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
@@ -203,6 +204,8 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                   pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
                 | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig driver
+            -- Hoisted out of the ReAllocate-Notify-BAP fork below so a throw there can't leak the FE mirror.
+            fork "FleetEngine: cancel trip on driver cancel" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
             -- the decision above already consumed the live pickup journey; persist it on the ride
             fork "flush pickup journey on cancel" $ PickupStallState.flushPickupJourney ride Nothing
             -- Matrix-row-driven consequences (SharedLogic.CancellationOrchestrator):
