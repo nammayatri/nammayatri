@@ -12,6 +12,7 @@ import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import Domain.Types.Extra.Plan (ServiceNames)
 import Domain.Types.Person (Driver, Gender)
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -58,6 +59,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     blocked :: SetField Bool,
     isDisabledReasonFlag :: SetField (Maybe Bool),
     subscribed :: SetField Bool,
+    rideBillingModel :: SetField (Maybe ServiceNames),
     canSwitchToRental :: SetField Bool,
     canSwitchToInterCity :: SetField Bool,
     canSwitchToIntraCity :: SetField Bool,
@@ -117,6 +119,7 @@ emptyUpdate =
       blocked = Unchanged,
       isDisabledReasonFlag = Unchanged,
       subscribed = Unchanged,
+      rideBillingModel = Unchanged,
       canSwitchToRental = Unchanged,
       canSwitchToInterCity = Unchanged,
       canSwitchToIntraCity = Unchanged,
@@ -255,6 +258,7 @@ applyUpdate now u d =
       DPD.blocked = applyField u.blocked d.blocked,
       DPD.isDisabledReasonFlag = applyField u.isDisabledReasonFlag d.isDisabledReasonFlag,
       DPD.subscribed = applyField u.subscribed d.subscribed,
+      DPD.rideBillingModel = applyField u.rideBillingModel d.rideBillingModel,
       DPD.canSwitchToRental = applyField u.canSwitchToRental d.canSwitchToRental,
       DPD.canSwitchToInterCity = applyField u.canSwitchToInterCity d.canSwitchToInterCity,
       DPD.canSwitchToIntraCity = applyField u.canSwitchToIntraCity d.canSwitchToIntraCity,

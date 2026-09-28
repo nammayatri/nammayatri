@@ -84,7 +84,9 @@ import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -209,7 +211,10 @@ startRideHandler ServiceHandle {..} rideId req = do
   let driverKey = makeStartRideIdKey driverId
   Redis.setExp driverKey ride.id 60
   rateLimitStartRide driverId ride.id -- do we need it for dashboard?
-  unless (driverInfo.subscribed || openMarketAllow || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
+  merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  unless (isExemptFromPostpaidDuesFlag isPrepaidEnabled ((.getId) <$> ride.fleetOwnerId) driverInfo.rideBillingModel) $
+    unless (driverInfo.subscribed || openMarketAllow || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   case req of
     DriverReq driverReq -> do
       let requestor = driverReq.requestor

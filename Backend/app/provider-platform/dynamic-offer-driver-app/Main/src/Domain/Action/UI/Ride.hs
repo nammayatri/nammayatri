@@ -87,6 +87,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
+import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -311,7 +312,17 @@ otpRideCreate driver otpCode booking clientId = do
   when isVehicleServiceNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Service Tier"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
-  unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
+  mFleetOwnerId <- QFDA.findByDriverId driver.id True
+  -- Postpaid-only dues gate: `subscribed` is never set for a prepaid driver, so applying it
+  -- to them would block every OTP ride. Prepaid solvency is enforced by the wallet hold in
+  -- initializeRide below, which is the authority for this ride's funding.
+  -- Uses the same exemption as pooling rather than the explicit model alone, so a fleet
+  -- driver under a prepaid merchant with a YATRI or null model is not admitted to the pool
+  -- and then refused here. The live association is the right one to read: the ride does not
+  -- exist yet, and initializeRide below is handed this very value.
+  let isPrepaidEnabled = fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled
+  unless (isExemptFromPostpaidDuesFlag isPrepaidEnabled (mFleetOwnerId <&> (.fleetOwnerId)) driverInfo.rideBillingModel) $
+    unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
@@ -321,7 +332,6 @@ otpRideCreate driver otpCode booking clientId = do
   -- fee BEFORE creating the ride entity. Doing it here (instead of at StartRide)
   -- ensures we don't leave an orphan ride row when the balance is insufficient.
   AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
-  mFleetOwnerId <- QFDA.findByDriverId driver.id True
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False

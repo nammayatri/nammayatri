@@ -19,6 +19,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import Domain.Types.Extra.Plan (ServiceNames)
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Driver, Gender (..))
@@ -62,6 +63,7 @@ data DriverPoolData = DriverPoolData
     blocked :: Bool,
     isDisabledReasonFlag :: Maybe Bool,
     subscribed :: Bool,
+    rideBillingModel :: Maybe ServiceNames,
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
@@ -206,6 +208,7 @@ defaultDriverPoolData dId =
       blocked = False,
       isDisabledReasonFlag = Nothing,
       subscribed = False,
+      rideBillingModel = Nothing,
       canSwitchToRental = False,
       canSwitchToInterCity = False,
       canSwitchToIntraCity = False,
