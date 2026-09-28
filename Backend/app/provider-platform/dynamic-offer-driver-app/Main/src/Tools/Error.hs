@@ -16,8 +16,6 @@ module Tools.Error (module Tools.Error) where
 
 import Data.Aeson (Value (Null), decode, object, (.=))
 import qualified Data.Text as T
-import qualified Network.HTTP.Types.Status as HTTP
-import Servant.Client (ResponseF (Response))
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -26,6 +24,8 @@ import Kernel.Types.Error as Tools.Error hiding (PersonError, SosError, SosIdDoe
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (..))
 import Kernel.Utils.Common (Meters)
+import qualified Network.HTTP.Types.Status as HTTP
+import Servant.Client (ResponseF (Response))
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 data RatingError
@@ -2345,7 +2345,6 @@ instance IsHTTPError LedgerAdjustmentError where
     LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
 
 instance IsAPIError LedgerAdjustmentError
-
 
 -- | Rider-app \"/internal/sharedCab/*\" API error, carried across verbatim
 -- (4.5 / R11). When such a call fails with a JSON APIError envelope

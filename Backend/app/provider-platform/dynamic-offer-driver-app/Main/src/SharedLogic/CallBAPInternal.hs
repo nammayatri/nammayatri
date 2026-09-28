@@ -14,11 +14,10 @@
 
 module SharedLogic.CallBAPInternal where
 
-
 import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
-import API.Types.UI.SharedCab
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
+import API.Types.UI.SharedCab
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -30,6 +29,8 @@ import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Error (ExternalAPICallError (..))
+import qualified Kernel.Types.Error.BaseError.HTTPError.CallAPIError as CallAPIError
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Dhall (FromDhall)
@@ -38,8 +39,6 @@ import Servant hiding (throwError)
 import qualified SharedLogic.Type as SLT
 import Tools.Error (SharedCabBAPError (..))
 import Tools.Metrics (CoreMetrics)
-import Kernel.Types.Error (ExternalAPICallError (..))
-import qualified Kernel.Types.Error.BaseError.HTTPError.CallAPIError as CallAPIError
 
 data FeedbackAnswer = FeedbackAnswer
   { questionId :: Text,
@@ -558,7 +557,6 @@ notifyFrfsTripStarted apiKey internalUrl tripId = do
   logInfo $ "CallBAPInternal: Notifying FRFS trip started for tripId: " <> tripId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripStartedClient tripId (Just apiKey)) "NotifyFrfsTripStarted" frfsNotifyTripStartedAPI
-
 
 -- Shared-cab driver-app -> rider-app internal proxy client (folded from former
 -- SharedLogic.CallSharedCabBAP; see 04-driver-side-plan.md §4 / rider-app 3.2 contract).

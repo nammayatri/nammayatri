@@ -7,7 +7,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-
 module API.Types.UI.SharedCab where
 
 -- Proxy DTOs for the driver-app `/sharedCab/*` API family.
@@ -18,7 +17,7 @@ module API.Types.UI.SharedCab where
 
 import Data.Aeson (object, withObject, withText, (.:), (.=))
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (id, force)
+import EulerHS.Prelude hiding (force, id)
 import Kernel.Prelude (UTCTime)
 import Kernel.Types.Common (HighPrecMoney)
 
