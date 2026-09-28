@@ -50,7 +50,7 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
   let locationDelay = healthCheckAppCfg.driverAllowedDelayForLocationUpdateInSec
       serviceInterval = healthCheckAppCfg.driverLocationHealthCheckIntervalInSec
       fcmNofificationSendCount = healthCheckAppCfg.fcmNofificationSendCount
-  withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
+  withLock "driver-tracking-healthcheck" serviceInterval $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
     HC.iAmAlive
     key <- incrementCounterAndReturnShard
@@ -59,10 +59,10 @@ driverLastLocationUpdateCheckService healthCheckAppCfg = startService "driverLas
       Just allDrivers -> do
         results <- mapM (flip driverDevicePingService fcmNofificationSendCount) (toList allDrivers)
         let memberScores = catMaybes results
-        void $ Redis.zRem key memberScores
+        unless (null memberScores) $ void $ Redis.zRem key memberScores
         log INFO ("Drivers to ping: " <> show allDrivers)
       Nothing -> log INFO "No drivers to ping"
-    threadDelay (secondsToMcs serviceInterval).getMicroseconds
+  threadDelay (secondsToMcs serviceInterval).getMicroseconds
 
 redisKey :: Text -> Text
 redisKey driverId = "beckn:driver-tracking-healthcheck:drivers-to-ping:" <> driverId
@@ -104,9 +104,10 @@ driverDevicePingService driverId fcmNofificationSendCount = do
             Just _ -> log INFO $ "Driver went offline " <> show driver.id
             Nothing -> log INFO $ "Active drivers with no token" <> show driver.id
 
-withLock :: (Redis.HedisFlow m r, MonadMask m) => Text -> m () -> m ()
-withLock serviceName func =
-  Redis.withLockRedis key 10 (func `catch` (logError . makeLogSomeException))
+withLock :: Redis.HedisFlow m r => Text -> Seconds -> m () -> m ()
+withLock serviceName interval func =
+  whenM (Redis.tryLockRedis key (max 1 interval.getSeconds)) $
+    func `catch` (logError . makeLogSomeException)
   where
     key = "beckn:" <> serviceName <> ":lock"
 
