@@ -557,6 +557,7 @@ library
       SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS
       SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
       SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
+      SharedLogic.Allocator.Jobs.FleetEngine.Retry
       SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload
       SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance
       SharedLogic.Allocator.Jobs.Mandate.Execution

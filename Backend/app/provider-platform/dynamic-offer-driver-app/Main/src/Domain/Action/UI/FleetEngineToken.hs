@@ -19,16 +19,17 @@ import qualified Domain.Types.Person as Person
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FleetEngine as FleetEngine
 
 -- | Driver JWT + vehicleId + providerId — all three needed to initialise the Driver SDK on the phone.
+-- All three are Nothing when Fleet Engine is off for the city (config missing or kill-switch off);
+-- the driver app skips SDK init in that case without treating it as an error.
 data FleetEngineDriverTokenRes = FleetEngineDriverTokenRes
-  { token :: Text,
-    vehicleId :: Text,
-    providerId :: Text
+  { token :: Maybe Text,
+    vehicleId :: Maybe Text,
+    providerId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -44,7 +45,7 @@ getFleetEngineDriverToken ::
   (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   m FleetEngineDriverTokenRes
 getFleetEngineDriverToken (personId, _, merchantOpCityId) = do
-  (token, vehicleId, providerId) <-
-    FleetEngine.mkDriverToken merchantOpCityId personId
-      >>= fromMaybeM (InternalError "Fleet Engine is not configured for this city")
-  pure FleetEngineDriverTokenRes {..}
+  mbTok <- FleetEngine.mkDriverToken merchantOpCityId personId
+  pure $ case mbTok of
+    Nothing -> FleetEngineDriverTokenRes {token = Nothing, vehicleId = Nothing, providerId = Nothing}
+    Just (t, v, p) -> FleetEngineDriverTokenRes {token = Just t, vehicleId = Just v, providerId = Just p}

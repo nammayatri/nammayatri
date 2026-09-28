@@ -142,6 +142,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import Servant (JSON, Post, ReqBody, (:>))
+import qualified SharedLogic.Allocator as Alloc
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
@@ -821,7 +822,8 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -938,7 +940,8 @@ sendRideCompletedUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -990,7 +993,8 @@ sendBookingCancelledUpdateToBAP ::
     CoreMetrics m,
     CacheFlow m r,
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   DM.Merchant ->
@@ -1102,7 +1106,8 @@ sendDriverArrivalUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
