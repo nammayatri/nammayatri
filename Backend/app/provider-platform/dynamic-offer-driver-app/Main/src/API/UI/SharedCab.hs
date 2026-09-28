@@ -7,7 +7,6 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-
 module API.UI.SharedCab
   ( API,
     handler,
@@ -39,11 +38,9 @@ import Tools.Auth
 --   POST /internal/sharedCab/route/end                              -> POST route/end
 --   POST /internal/sharedCab/resume                                 -> POST resume
 --   GET  /internal/sharedCab/trips?driverId&date&..                 -> GET  trips?date
--- NOTE: there is NO /sharedCab/route/change and NO booking lifecycle endpoints
--- (cancel/boardedWithoutCode/dropped) — neither exists in the final internal
--- BAP path list; booking-level mutations (SharedCabApi.cancelBooking etc. in
--- sharedcab-driver-api-types.ts) are handled internally by the rider-app BAP
--- when the driver moves on (select/end), not exposed to the driver app.
+-- NOTE: there is NO /sharedCab/route/change. The booking lifecycle actions
+-- (cancel/boardedWithoutCode/dropped) and R19's cab-full are in
+-- API.UI.SharedCabBooking, not here.
 
 type API =
   "sharedCab"
