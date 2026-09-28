@@ -4,6 +4,7 @@ import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.HashMap.Strict as HashMap
+import Data.List (nubBy)
 import qualified Data.Map as M
 import qualified Data.Set as Set
 import Domain.Types.FRFSQuoteCategoryType
@@ -33,7 +34,6 @@ import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
@@ -105,23 +105,27 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       busRouteMapping <-
         mapConcurrently
           ( \vehicleNumber -> do
-              mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-                maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-              pure $ Kernel.Prelude.listToMaybe mbResult
+              mbResult <- JourneyUtils.getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber
+              pure $ (\(config, metadata) -> (vehicleNumber, config, metadata)) <$> mbResult
           )
           vehicleNumbers
 
       let successfulMappings = catMaybes busRouteMapping
 
-      serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType]) <-
-        HashMap.fromList
-          <$> mapM
-            ( \m -> do
-                frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
-                  CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
-                return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName), m.service_sub_types))
-            )
-            successfulMappings
+      tierShortNames <-
+        forM (nubBy (\(c1, t1) (c2, t2) -> c1.id == c2.id && t1 == t2) (map (\(_, config, metadata) -> (config, metadata.serviceType)) successfulMappings)) $ \(sourceConfig, serviceTier) -> do
+          frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult (filter ((/= sourceConfig.id) . (.id)) integratedBPPConfigs <> [sourceConfig]) $ \config -> do
+            CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier riderConfig.merchantOperatingCityId config.id
+          return ((sourceConfig.id, serviceTier), frfsServiceTier <&> (.shortName))
+
+      let serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType])
+          serviceTypeMap =
+            HashMap.fromList $
+              map
+                ( \(vehicleNumber, config, metadata) ->
+                    (vehicleNumber, (metadata.serviceType, join (Kernel.Prelude.lookup (config.id, metadata.serviceType) tierShortNames), metadata.serviceSubTypes))
+                )
+                successfulMappings
 
       pure $
         map

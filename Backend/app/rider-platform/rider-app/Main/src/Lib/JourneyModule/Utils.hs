@@ -1821,14 +1821,10 @@ getVehicleMetadataFromInMem ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, NandiTypes.VehicleMetadataResponse))
 getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ["CACHED_VEHICLE_METADATA", vehicleNumber] 43200 $ do
-    mbMbResult <-
-      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-        (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
-    pure $
-      mbMbResult
-        >>= \(integratedBPPConfig, mbResult) ->
-          mbResult <&> (\result -> (integratedBPPConfig, result))
+  fmap (either (const Nothing) Just) . withTryCatch "getVehicleMetadataFromInMem" $
+    IM.withInMemCache (["CACHED_VEHICLE_METADATA", vehicleNumber] <> nub (map (.feedKey) integratedBPPConfigs)) 43200 $
+      SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs (\config -> fmap (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing)
+        >>= fromMaybeM (InternalError $ "Vehicle metadata not found: " <> vehicleNumber)
 
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
