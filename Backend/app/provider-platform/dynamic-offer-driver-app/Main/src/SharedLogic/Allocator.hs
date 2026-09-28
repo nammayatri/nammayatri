@@ -21,6 +21,7 @@ import Control.Applicative ((<|>))
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson (withObject, (.:))
 import Data.Singletons.TH
+import Data.Time (Day)
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
@@ -76,6 +77,7 @@ data AllocatorJobType
   | ScheduledRideNotificationsToDriver
   | ScheduleTagActionNotification
   | DriverReferralPayout
+  | DriverReferralPayoutBacklog
   | ScheduledRideAssignedOnUpdate
   | CheckDriverPickupProgress
   | CheckExotelCallStatusAndNotifyBAP
@@ -140,6 +142,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledRideNotificationsToDriver jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideNotificationsToDriver jobData
   restoreAnyJobInfo SScheduleTagActionNotification jobData = AnyJobInfo <$> restoreJobInfo SScheduleTagActionNotification jobData
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
+  restoreAnyJobInfo SDriverReferralPayoutBacklog jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayoutBacklog jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
   restoreAnyJobInfo SCheckDriverPickupProgress jobData = AnyJobInfo <$> restoreJobInfo SCheckDriverPickupProgress jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
@@ -495,6 +498,20 @@ data DriverReferralPayoutJobData = DriverReferralPayoutJobData
 instance JobInfoProcessor 'DriverReferralPayout
 
 type instance JobContent 'DriverReferralPayout = DriverReferralPayoutJobData
+
+data DriverReferralPayoutBacklogJobData = DriverReferralPayoutBacklogJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    cursorDate :: Day,
+    toDate :: Day,
+    statusForRetry :: DS.PayoutStatus,
+    cursorAttempt :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'DriverReferralPayoutBacklog
+
+type instance JobContent 'DriverReferralPayoutBacklog = DriverReferralPayoutBacklogJobData
 
 data ScheduledRideAssignedOnUpdateJobData = ScheduledRideAssignedOnUpdateJobData
   { bookingId :: Id DB.Booking,

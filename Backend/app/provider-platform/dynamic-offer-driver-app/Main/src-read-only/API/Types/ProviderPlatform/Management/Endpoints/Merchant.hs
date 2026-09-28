@@ -505,6 +505,7 @@ data JobName
   | DriverFeeCalculationTrigger
   | SendManualPaymentLinkTrigger
   | ReferralPayoutTrigger
+  | ReferralPayoutBacklogTrigger
   | SupplyDemandCalculation
   | CongestionChargeCalculation
   | ReconciliationTrigger
