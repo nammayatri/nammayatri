@@ -353,12 +353,13 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
 -- @distanceToPickup@. Redis state is kept fully separate from the on-ride buffers by
 -- callers passing a 'pickupLocationUpdatesDriverId' (":pickup"-suffixed) id.
 buildRidePickupInterpolationHandler :: LocationUpdateFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> m (RideInterpolationHandler Person m)
-buildRidePickupInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
+buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
   transportConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let snapToRoad' shouldRectifyDistantPointsFailure =
-        if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId False (fmap getId rideId)
-          else snapToRoadWithService (fmap getId rideId)
+  -- Pickup leg never falls back to another provider: OSRM's value is taken as-is,
+  -- or the pickup distance calculation is marked failed. This avoids paying for
+  -- Google as a fallback on the pickup leg, which has no accuracy requirement
+  -- justifying that cost.
+  let snapToRoad' _shouldRectifyDistantPointsFailure = TMaps.snapToRoadOSRMOnly merchantOpCityId (fmap getId rideId)
   return $
     mkRideInterpolationHandler
       (fromMaybe transportConfig.normalRideBulkLocUpdateBatchSize mbBatchSize)
@@ -373,10 +374,6 @@ buildRidePickupInterpolationHandler merchantId merchantOpCityId rideId isEndRide
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
-  where
-    snapToRoadWithService rideId' req = do
-      resp <- TMaps.snapToRoad merchantId merchantOpCityId rideId' req
-      return ([Google], Right resp)
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m a -> m a
 whenWithLocationUpdatesLock driverId f = do
