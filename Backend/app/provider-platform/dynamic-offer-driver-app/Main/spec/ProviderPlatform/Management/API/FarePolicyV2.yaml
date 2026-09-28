@@ -182,7 +182,7 @@ types:
   FPV2SchedulingCharge:
     - enum: "ProgressiveSchedulingCharge Double, ConstantSchedulingCharge HighPrecMoney"
   FPV2PlatformFeeMethod:
-    - enum: "Subscription, FixedAmount, None, SlabBased, NoCharge"
+    - enum: "Subscription, FixedAmount, None, SlabBased, NoCharge, PlanBased"
   FPV2NightShiftBounds:
     - nightShiftStart: TimeOfDay
     - nightShiftEnd: TimeOfDay
@@ -198,7 +198,7 @@ types:
     - value: Text
     - appliesOn: "[FPV2FareChargeComponent]"
   FPV2ConditionalChargeCategory:
-    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES, BOOKING_DEPOSIT, SCHEDULED_RIDE_MIN_WALLET_BALANCE"
+    - enum: "SAFETY_PLUS_CHARGES, NYREGULAR_SUBSCRIPTION_CHARGE, NO_CHARGES, BOOKING_DEPOSIT, SCHEDULED_RIDE_MIN_WALLET_BALANCE, PURPLE_RIDE_CHARGE, AUTO_INSTANT_CHARGE"
   FPV2ConditionalCharge:
     - chargeCategory: FPV2ConditionalChargeCategory
     - charge: HighPrecMoney

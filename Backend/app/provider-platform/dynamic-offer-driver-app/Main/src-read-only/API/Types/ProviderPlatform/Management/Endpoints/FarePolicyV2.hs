@@ -125,6 +125,8 @@ data FPV2ConditionalChargeCategory
   | NO_CHARGES
   | BOOKING_DEPOSIT
   | SCHEDULED_RIDE_MIN_WALLET_BALANCE
+  | PURPLE_RIDE_CHARGE
+  | AUTO_INSTANT_CHARGE
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -306,6 +308,7 @@ data FPV2PlatformFeeMethod
   | None
   | SlabBased
   | NoCharge
+  | PlanBased
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

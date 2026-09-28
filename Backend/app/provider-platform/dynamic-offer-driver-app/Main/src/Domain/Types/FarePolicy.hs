@@ -39,12 +39,12 @@ import Domain.Types.FarePolicy.FarePolicyInterCityDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
+import Domain.Types.FarePolicy.PlatformFeeMethods as Reexport
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
-import Kernel.Utils.GenericPretty
 import qualified Lib.Types.SpecialLocation as SL
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 
@@ -327,10 +327,6 @@ data CongestionChargeMultiplier
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased | NoCharge
-  deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
-  deriving (PrettyShow) via Showable PlatformFeeMethods
-
 data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -338,7 +334,6 @@ data FarePolicyType = Progressive | Slabs | Rental | InterCity | Ambulance
 $(mkBeamInstancesForEnum ''FarePolicyType)
 $(mkBeamInstancesForJSON ''CongestionChargeMultiplier)
 $(mkBeamInstancesForJSON ''FareRecomputeCapConfig)
-$(mkBeamInstancesForEnum ''PlatformFeeMethods)
 
 data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,

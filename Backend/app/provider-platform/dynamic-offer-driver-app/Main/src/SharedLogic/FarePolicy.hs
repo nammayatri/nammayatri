@@ -611,6 +611,14 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Just Tags.NYREGULAR_SUBSCRIPTION_CHARGE
       DAC.BOOKING_DEPOSIT -> Just Tags.BOOKING_DEPOSIT
       DAC.SCHEDULED_RIDE_MIN_WALLET_BALANCE -> Nothing
+      -- PURPLE_RIDE_CHARGE/AUTO_INSTANT_CHARGE live on the base OneWay policy for
+      -- Domain.Action.UI.Plan.fareCategories (driver-facing plan pricing info) and are
+      -- conditional on ride-specific attributes this generic breakup can't evaluate (rider
+      -- disability tag, instant-booking flag) -- unlike SAFETY_PLUS_CHARGES/
+      -- NYREGULAR_SUBSCRIPTION_CHARGE, which are unconditional add-ons for every ride on the
+      -- policy. Nothing here keeps them out of the rider-facing quote.
+      DAC.PURPLE_RIDE_CHARGE -> Nothing
+      DAC.AUTO_INSTANT_CHARGE -> Nothing
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs

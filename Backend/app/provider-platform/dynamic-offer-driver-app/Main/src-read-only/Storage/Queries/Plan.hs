@@ -152,6 +152,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.subscribedFlagToggleAllowed subscribedFlagToggleAllowed,
       Se.Set Beam.validityInDays validityInDays,
       Se.Set Beam.vehicleCategory (Kernel.Prelude.Just vehicleCategory),
-      Se.Set Beam.vehicleVariant vehicleVariant
+      Se.Set Beam.vehicleVariant vehicleVariant,
+      Se.Set Beam.waivesSpecialRideCharges (Kernel.Prelude.Just waivesSpecialRideCharges)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

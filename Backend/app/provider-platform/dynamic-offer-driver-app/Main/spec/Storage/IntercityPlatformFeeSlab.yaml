@@ -1,0 +1,23 @@
+imports:
+  Text: Data.Text
+  HighPrecMoney: Kernel.Types.Common
+
+IntercityPlatformFeeSlab:
+  tableName: intercity_platform_fee_slab
+  derives: "Generic,Show,Eq,ToJSON,FromJSON"
+  fields:
+    merchantOperatingCityId: Text
+    minDistanceMeters: Int
+    maxDistanceMeters: Maybe Int
+    platformFee: HighPrecMoney
+    cgstPercentage: HighPrecMoney
+    sgstPercentage: HighPrecMoney
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+    minDistanceMeters: PrimaryKey
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
