@@ -533,6 +533,15 @@ clearPerson2Fa personId = do
     ]
     [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
+updatePersonTwoFaExempt :: BeamFlow m r => Id Person -> Bool -> m ()
+updatePersonTwoFaExempt personId exempt = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.twoFaExempt exempt,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
 updatePersonPassword :: BeamFlow m r => Id Person -> DbHash -> m ()
 updatePersonPassword personId newPasswordHash = do
   now <- getCurrentTime

@@ -142,7 +142,6 @@ data AppCfg = AppCfg
     totpStepSize :: Maybe Int,
     totpClockSkew :: Maybe Int,
     twoFaIssuerName :: Text,
-    twoFaExemptRoles :: [Text],
     -- Dashboard routes this server now serves directly that are not part of the
     -- login tree: the internal-auth probe, the Exotel heartbeat, and the CAC shim.
     internalAuthAPIKey :: Text,
@@ -292,7 +291,6 @@ data AppEnv = AppEnv
     totpStepSize :: Maybe Int,
     totpClockSkew :: Maybe Int,
     twoFaIssuerName :: Text,
-    twoFaExemptRoles :: [Text],
     internalAuthAPIKey :: Text,
     exotelToken :: Text,
     -- Read from AUTH_MAP. Absent means "no CAC tokens configured" rather than a

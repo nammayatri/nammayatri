@@ -245,6 +245,7 @@ buildPersonCreateReq req role merchantId = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
+        twoFaExempt = False,
         tokenNo = Nothing,
         vpa = Nothing
       }

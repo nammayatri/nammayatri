@@ -497,7 +497,6 @@ in  { esqDBCfg
     , totpStepSize = Some +30
     , totpClockSkew = Some +2
     , twoFaIssuerName = "Control Centre"
-    , twoFaExemptRoles = [] : List Text
     , hedisCfg = hcfg
     , hedisClusterCfg = hccfg
     , hedisSecondaryClusterCfg = hccfgSecondary

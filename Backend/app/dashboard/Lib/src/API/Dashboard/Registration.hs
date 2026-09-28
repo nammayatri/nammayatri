@@ -16,6 +16,7 @@ module API.Dashboard.Registration where
 
 import qualified Domain.Action.Dashboard.Registration as DReg
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Utils.Common
 import Servant
 import Tools.Auth.Dashboard
@@ -48,6 +49,11 @@ type API =
              :> DashboardAuth 'DASHBOARD_USER
              :> ReqBody '[JSON] DReg.TwoFaAdminResetReq
              :> Post '[JSON] DReg.TwoFaAdminResetRes
+           -- SUPER_ADMIN only (checked in the handler; DashboardAuth has no tier for it).
+           :<|> "twoFaExempt"
+             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> ReqBody '[JSON] DReg.TwoFaExemptReq
+             :> Post '[JSON] APISuccess
            :<|> "twoFaDispatchDeadlineNotifications"
              :> DashboardAuth 'DASHBOARD_USER
              :> Post '[JSON] DReg.DispatchNotificationsRes
@@ -71,6 +77,7 @@ handler =
     :<|> verify2FASetup
     :<|> twoFaStatus
     :<|> twoFaAdminReset
+    :<|> twoFaExempt
     :<|> twoFaDispatchDeadlineNotifications
     :<|> switchMerchant
     :<|> switchMerchantAndCity
@@ -98,6 +105,9 @@ twoFaStatus = withDashboardDbFlowHandlerAPI . DReg.getTwoFaStatus
 
 twoFaAdminReset :: DashboardLoginFlow r => TokenInfo -> DReg.TwoFaAdminResetReq -> FlowHandlerR r DReg.TwoFaAdminResetRes
 twoFaAdminReset token = withDashboardDbFlowHandlerAPI . DReg.adminResetTwoFa token
+
+twoFaExempt :: DashboardLoginFlow r => TokenInfo -> DReg.TwoFaExemptReq -> FlowHandlerR r APISuccess
+twoFaExempt token = withDashboardDbFlowHandlerAPI . DReg.setTwoFaExempt token
 
 twoFaDispatchDeadlineNotifications :: DashboardLoginFlow r => TokenInfo -> FlowHandlerR r DReg.DispatchNotificationsRes
 twoFaDispatchDeadlineNotifications = withDashboardDbFlowHandlerAPI . DReg.dispatchTwoFaDeadlineNotifications

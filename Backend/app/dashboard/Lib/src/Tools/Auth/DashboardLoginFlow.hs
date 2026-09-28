@@ -62,7 +62,6 @@ type DashboardLoginFlow' m r =
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["twoFaIssuerName" ::: Text],
     HasFlowEnv m r '["twoFaMaxOtpVerifyAttempts" ::: Maybe Int],
     HasFlowEnv m r '["twoFaOtpTTLInSecs" ::: Maybe Int],

@@ -50,6 +50,7 @@ data PersonT f = PersonT
     language :: B.C f (Maybe KET.Language),
     secretKey :: B.C f (Maybe Text),
     is2faEnabled :: B.C f Bool,
+    twoFaExempt :: B.C f Bool,
     tokenNoEncrypted :: B.C f (Maybe Text),
     tokenNoHash :: B.C f (Maybe DbHash),
     vpaEncrypted :: B.C f (Maybe Text),

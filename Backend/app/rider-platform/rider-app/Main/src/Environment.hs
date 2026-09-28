@@ -175,7 +175,6 @@ data AppCfg = AppCfg
     totpStepSize :: Maybe Int,
     totpClockSkew :: Maybe Int,
     twoFaIssuerName :: Text,
-    twoFaExemptRoles :: [Text],
     -- Opt-in second connection to atlas_dashboard. Absent = this server never
     -- enters runInDashboardDb and behaves exactly as before.
     esqDashboardDBCfg :: Maybe EsqDBConfig,
@@ -317,7 +316,6 @@ data AppEnv = AppEnv
     totpStepSize :: Maybe Int,
     totpClockSkew :: Maybe Int,
     twoFaIssuerName :: Text,
-    twoFaExemptRoles :: [Text],
     storeRidesTimeLimit :: Int,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
