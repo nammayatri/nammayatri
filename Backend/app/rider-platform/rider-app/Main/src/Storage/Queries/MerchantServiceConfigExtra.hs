@@ -121,6 +121,7 @@ getServiceNameConfigJSON = \case
     Whatsapp.TataCommunicationsConfig cfg -> (Domain.WhatsappService Whatsapp.TataCommunications, toJSON cfg)
     Whatsapp.KarixConfig cfg -> (Domain.WhatsappService Whatsapp.Karix, toJSON cfg)
     Whatsapp.TwilioConfig cfg -> (Domain.WhatsappService Whatsapp.Twilio, toJSON cfg)
+    Whatsapp.CerfConfig cfg -> (Domain.WhatsappService Whatsapp.Cerf, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
     Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)

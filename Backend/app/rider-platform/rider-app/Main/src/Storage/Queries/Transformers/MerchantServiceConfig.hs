@@ -56,6 +56,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.Karix -> Domain.WhatsappServiceConfig . Whatsapp.KarixConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.Twilio -> Domain.WhatsappServiceConfig . Whatsapp.TwilioConfig <$> valueToMaybe configJSON
+    Domain.WhatsappService Whatsapp.Cerf -> Domain.WhatsappServiceConfig . Whatsapp.CerfConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
     Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> valueToMaybe configJSON
     Domain.CallService Call.TataClickToCall -> Domain.CallServiceConfig . Call.TataClickToCallConfig <$> valueToMaybe configJSON
@@ -142,6 +143,7 @@ getServiceNameConfigJson = \case
     Whatsapp.TataCommunicationsConfig cfg -> (Domain.WhatsappService Whatsapp.TataCommunications, toJSON cfg)
     Whatsapp.KarixConfig cfg -> (Domain.WhatsappService Whatsapp.Karix, toJSON cfg)
     Whatsapp.TwilioConfig cfg -> (Domain.WhatsappService Whatsapp.Twilio, toJSON cfg)
+    Whatsapp.CerfConfig cfg -> (Domain.WhatsappService Whatsapp.Cerf, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
     Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)
