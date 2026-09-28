@@ -57,6 +57,10 @@ data PersonE e = Person
     language :: Maybe KET.Language,
     secretKey :: Maybe Text,
     is2faEnabled :: Bool,
+    -- | Per-person 2FA exemption, alongside the role-level Role.twoFaExempt. Only a SUPER_ADMIN
+    -- may flip it (Registration.setTwoFaExempt, keyed by email). When True the person skips 2FA
+    -- even when is2faMandatory=True.
+    twoFaExempt :: Bool,
     tokenNo :: Maybe (EncryptedHashedField e Text),
     vpa :: Maybe (EncryptedHashedField e Text)
   }

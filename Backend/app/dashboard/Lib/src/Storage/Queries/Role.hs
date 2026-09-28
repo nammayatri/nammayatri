@@ -45,6 +45,15 @@ markRoleAsDisabled roleId = do
     ]
     [Se.Is BeamR.id $ Se.Eq $ getId roleId]
 
+updateRoleTwoFaExempt :: BeamFlow m r => Id Role -> Bool -> m ()
+updateRoleTwoFaExempt roleId exempt = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamR.twoFaExempt exempt,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id $ Se.Eq $ getId roleId]
+
 findAllByName :: BeamFlow m r => [Text] -> m [Role]
 findAllByName names = findAllWithKV [Se.Is BeamR.name $ Se.In names]
 

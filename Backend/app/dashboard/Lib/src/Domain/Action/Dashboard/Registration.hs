@@ -46,6 +46,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as STransaction
 import Storage.Beam.BeamFlow
+import Tools.Auth.Capability (isSuperAdmin)
 import qualified Storage.Queries.Entity as QEntity
 import qualified Storage.Queries.EntityAccess as QEntityAccess
 import qualified Storage.Queries.Merchant as QMerchant
@@ -141,6 +142,7 @@ data LoginRes = LoginRes
 data TwoFaStatusRes = TwoFaStatusRes
   { is2faRequired :: Bool,
     is2faEnabled :: Bool,
+    is2faExempt :: Bool,
     enforcementDeadline :: Maybe UTCTime,
     daysRemaining :: Maybe Int,
     mustEnrollNow :: Bool
@@ -187,7 +189,6 @@ login ::
     HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
@@ -274,7 +275,6 @@ switchMerchant ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -293,7 +293,6 @@ switchMerchantAndCity ::
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -311,7 +310,6 @@ generateLoginRes ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     HasFlowEnv m r '["totpStepSize" ::: Maybe Int],
     HasFlowEnv m r '["totpClockSkew" ::: Maybe Int],
     EncFlow m r
@@ -353,7 +351,6 @@ generateLoginResWithoutOtp ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
     HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]],
     EncFlow m r
   ) =>
   DP.Person ->
@@ -398,30 +395,22 @@ lookupRoleAndEntities person merchantId = do
         <> T.intercalate ", " (missingEntityIds <&> (.getId))
   pure (mbRole <&> (.name), filter (not . (.deleted)) personEntities)
 
--- 2FA is required for a person when the deployment enforces it AND the
--- person's role name isn't in the deployment-configured exempt list
--- (twoFaExemptRoles). We compare against Role.name (e.g. "JUSPAY_ADMIN",
--- "FLEET"), NOT DashboardAccessType — the latter is a coarser bucket and
--- would exempt more users than intended.
+-- 2FA is required for a person when the deployment enforces it (is2faMandatory)
+-- AND neither the person (person.twoFaExempt) nor their role (role.twoFaExempt)
+-- is exempt. Both are flipped through POST /user/twoFaExempt, SUPER_ADMIN only.
 is2FARequired ::
   ( BeamFlow m r,
-    HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]]
+    HasFlowEnv m r '["is2faMandatory" ::: Bool]
   ) =>
   DP.Person ->
   m Bool
 is2FARequired person = do
   mandatory <- asks (.is2faMandatory)
-  if not mandatory
+  if not mandatory || person.twoFaExempt
     then pure False
     else do
-      exempt <- asks (.twoFaExemptRoles)
-      if null exempt
-        then pure True
-        else do
-          mbRole <- QRole.findById person.roleId
-          let roleName = maybe "" (.name) mbRole
-          pure $ roleName `notElem` exempt
+      mbRole <- QRole.findById person.roleId
+      pure $ maybe True (not . (.twoFaExempt)) mbRole
 
 check2FA ::
   ( EncFlow m r,
@@ -844,6 +833,7 @@ buildFleetOwner req pid roleId dashboardAccessType merchantId = do
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
+        twoFaExempt = False,
         tokenNo = Nothing,
         vpa = Nothing
       }
@@ -957,6 +947,7 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
+        twoFaExempt = False,
         tokenNo = Nothing,
         vpa = Nothing
       }
@@ -968,8 +959,7 @@ getTwoFaStatus ::
   ( BeamFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["is2faMandatory" ::: Bool],
-    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime],
-    HasFlowEnv m r '["twoFaExemptRoles" ::: [Text]]
+    HasFlowEnv m r '["twoFaEnforcementDeadline" ::: Maybe UTCTime]
   ) =>
   TokenInfo ->
   m TwoFaStatusRes
@@ -983,6 +973,7 @@ getTwoFaStatus tokenInfo = do
           floor (realToFrac (diffUTCTime deadline now) / 86400 :: Double) :: Int
       pastGrace = maybe True (< now) enforcementDeadline
       is2faEnabled = person.is2faEnabled
+      is2faExempt = person.twoFaExempt
       mustEnrollNow = is2faRequired && pastGrace && not is2faEnabled
   pure TwoFaStatusRes {..}
 
@@ -993,6 +984,74 @@ data TwoFaAdminResetReq = TwoFaAdminResetReq
   { targetPersonId :: Id DP.Person
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+-- | One switch for both exemption levels. Exactly one of email (a person) or roleName (every
+-- holder of the role) must be given. Keyed by the natural identifier an operator has to hand,
+-- not by id, so no list/search round-trip is needed first.
+data TwoFaExemptReq = TwoFaExemptReq
+  { email :: Maybe Text,
+    roleName :: Maybe Text,
+    exempt :: Bool
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+-- | What gets written to the transaction audit row. The request body is not stored as-is
+-- because it carries the email (PII); the target id plus the flag is enough to tell a grant
+-- from a revocation and which level it applied to.
+data TwoFaExemptAudit = TwoFaExemptAudit
+  { personId :: Maybe (Id DP.Person),
+    roleId :: Maybe (Id DRole.Role),
+    exempt :: Bool
+  }
+  deriving (Generic, ToJSON)
+
+-- | Flip the 2FA exemption for a person or for a whole role. SUPER_ADMIN only: this is a
+-- deliberate hole in a deployment-wide security control, so the DASHBOARD_ADMIN tier the
+-- route requires is not enough. There is no DashboardAuth tier for SUPER_ADMIN (it is an
+-- admin_tier, not a DashboardAccessType), hence the explicit isSuperAdmin check, done before
+-- any lookup so a non-super-admin cannot probe which emails or role names exist.
+--
+-- Revoking must take effect on the next request, not whenever the session lapses: the
+-- affected persons' cached and registration tokens are dropped so they go back through
+-- login and 2FA. Granting changes nothing about an already-authenticated session.
+setTwoFaExempt ::
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  TokenInfo ->
+  TwoFaExemptReq ->
+  m APISuccess
+setTwoFaExempt tokenInfo req = do
+  unlessM (isSuperAdmin tokenInfo.personId) $
+    throwError AccessDenied
+  affected <- case (req.email, req.roleName) of
+    (Just emailRaw, Nothing) -> do
+      runRequestValidation validateTwoFaExemptEmail emailRaw
+      let email = T.toLower emailRaw
+      person <- QP.findByEmail email >>= fromMaybeM (PersonDoesNotExist email)
+      QP.updatePersonTwoFaExempt person.id req.exempt
+      recordExemptChange TwoFaExemptAudit {personId = Just person.id, roleId = Nothing, exempt = req.exempt}
+      pure [person]
+    (Nothing, Just roleName) -> do
+      role <- QRole.findByName roleName >>= fromMaybeM (RoleNotFound roleName)
+      QRole.updateRoleTwoFaExempt role.id req.exempt
+      recordExemptChange TwoFaExemptAudit {personId = Nothing, roleId = Just role.id, exempt = req.exempt}
+      QP.findAllByRole role.id
+    _ -> throwError $ InvalidRequest "Exactly one of email or roleName must be provided"
+  unless req.exempt $
+    forM_ affected $ \person -> do
+      Auth.cleanCachedTokens person.id
+      QR.deleteAllByPersonId person.id
+  pure Success
+  where
+    recordExemptChange audit = do
+      transaction <- STransaction.buildDashboardAuthTransaction (DT.DashboardTwoFactorExemptChange :: DT.Endpoint DashAuth.DashboardActionType) tokenInfo.personId tokenInfo.merchantId
+      QT.createDashboardTransaction transaction {DT.request = Just $ encodeToText audit}
+
+validateTwoFaExemptEmail :: Validate Text
+validateTwoFaExemptEmail email = validateField "email" email P.email
 
 newtype TwoFaAdminResetRes = TwoFaAdminResetRes
   { message :: Text

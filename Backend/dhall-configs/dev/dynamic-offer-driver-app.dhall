@@ -561,7 +561,6 @@ in  { esqDBCfg
     , totpStepSize = Some +30
     , totpClockSkew = Some +2
     , twoFaIssuerName = "Control Centre"
-    , twoFaExemptRoles = [] : List Text
     , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
     , exotelToken = sec.exotelToken
     , kafkaClickhouseCfg

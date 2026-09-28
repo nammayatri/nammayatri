@@ -42,6 +42,9 @@ data Role = Role
     accessibleRoles :: [Id Role],
     isBppSyncNeeded :: Maybe Bool,
     isDisabled :: Maybe Bool,
+    -- | Role-level 2FA exemption. Only a SUPER_ADMIN may flip it (Registration.setTwoFaExempt,
+    -- keyed by role name). Every holder of the role skips 2FA even when is2faMandatory=True.
+    twoFaExempt :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -53,7 +56,8 @@ data RoleAPIEntity = RoleAPIEntity
     dashboardAccessType :: DashboardAccessType,
     description :: Text,
     isBppSyncNeeded :: Maybe Bool,
-    isDisabled :: Maybe Bool
+    isDisabled :: Maybe Bool,
+    twoFaExempt :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 

@@ -94,8 +94,7 @@ data AppCfg = AppCfg
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
     totpStepSize :: Maybe Int,
     totpClockSkew :: Maybe Int,
-    twoFaIssuerName :: Text, -- Shown as the account name in Google Authenticator / Authy etc.
-    twoFaExemptRoles :: [Text] -- DashboardAccessType names whose users skip 2FA even when is2faMandatory=True
+    twoFaIssuerName :: Text -- Shown as the account name in Google Authenticator / Authy etc.
   }
   deriving (Generic, FromDhall)
 
@@ -156,8 +155,7 @@ data AppEnv = AppEnv
     twoFaMaxOtpVerifyAttempts :: Maybe Int,
     totpStepSize :: Maybe Int,
     totpClockSkew :: Maybe Int,
-    twoFaIssuerName :: Text,
-    twoFaExemptRoles :: [Text]
+    twoFaIssuerName :: Text
   }
   deriving (Generic)
 

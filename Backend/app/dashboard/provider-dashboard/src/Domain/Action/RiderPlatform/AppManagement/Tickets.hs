@@ -202,6 +202,7 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType merchantId = 
         language = Nothing,
         secretKey = Nothing,
         is2faEnabled = False,
+        twoFaExempt = False,
         tokenNo = Nothing,
         vpa = Nothing
       }

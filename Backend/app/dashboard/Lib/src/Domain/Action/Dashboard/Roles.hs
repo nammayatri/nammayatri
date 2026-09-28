@@ -89,6 +89,7 @@ buildRole req = do
         accessibleRoles = [],
         isBppSyncNeeded = req.isBppSyncNeeded,
         isDisabled = Just False,
+        twoFaExempt = False,
         createdAt = now,
         updatedAt = now
       }
