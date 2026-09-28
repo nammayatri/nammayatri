@@ -8,7 +8,6 @@ module API.Action.DashboardAuth.Management.SpecialZoneQueue
 where
 
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue
-import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Management.SpecialZoneQueue
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -119,5 +118,5 @@ getSpecialZoneQueueDriverQueuePosition a6 a5 _a4 a3 a2 a1 = withDashboardFlowHan
 getSpecialZoneQueueDriverQueueHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueHistoryRes)
 getSpecialZoneQueueDriverQueueHistory a4 a3 _a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueHistory a4 a3 a1
 
-getSpecialZoneQueueDriverQueueRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueRequestsRes)
-getSpecialZoneQueueDriverQueueRequests a8 a7 _a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueRequests a8 a7 a5 a4 a3 a2 a1
+getSpecialZoneQueueDriverQueueRequests :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueRequestsRes)
+getSpecialZoneQueueDriverQueueRequests a9 a8 _a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueRequests a9 a8 a6 a5 a4 a3 a2 a1
