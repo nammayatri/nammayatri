@@ -105,11 +105,8 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
-import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified System.Environment as SE
@@ -782,7 +779,6 @@ verify tokenId req mbXForwardedFor = do
   when isNewPerson $
     QP.setIsNewFalse False person.id
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
-  ensureFleetEnabledForDriver updPers
   decPerson <- decrypt updPers
   unless (decPerson.whatsappNotificationEnrollStatus == req.whatsappNotificationEnroll && isJust req.whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
@@ -795,19 +791,6 @@ verify tokenId req mbXForwardedFor = do
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
-
--- | Block driver login when their fleet has been disabled. Also self-heals
---   by setting the FleetDisabled flag if the cascade missed this driver.
-ensureFleetEnabledForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => SP.Person -> m ()
-ensureFleetEnabledForDriver person =
-  when (person.role == SP.DRIVER) $ do
-    mbAssoc <- QFDA.findByDriverId person.id True
-    whenJust mbAssoc $ \assoc -> do
-      mbFleet <- QFOI.findByPrimaryKey (Id assoc.fleetOwnerId)
-      whenJust mbFleet $ \fleet ->
-        unless fleet.enabled $ do
-          QDIExtra.markDisabledForFleetCascade (cast person.id)
-          throwError $ InvalidRequest "Your Fleet has been disabled"
 
 callWhatsappOptApi ::
   ( EsqDBFlow m r,
