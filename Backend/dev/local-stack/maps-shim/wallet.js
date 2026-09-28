@@ -468,6 +468,14 @@ async function creditIfPaid(pool, row) {
     );
     await client.query('COMMIT');
     console.log(`[wallet] credited ${amount} ${row.currency || CURRENCY} to ${driverId.slice(0, 8)}`);
+    /* Back into dispatch NOW, not at the next five-minute refresh. Until
+       2026-09-28 nothing here did this -- only the retired monthly
+       subscription did -- so a driver who topped up with Chargily and went
+       online was still on the unpaid list, and requests went past him until
+       the timer caught up. Toggling offline and online appeared to fix it;
+       it was only the time it took. Not awaited: the credit stands whatever
+       Redis says, and the timer is the fallback. */
+    void restricted.refresh(pool, 'top-up credited');
     return 'completed';
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
