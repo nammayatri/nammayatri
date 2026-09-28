@@ -64,6 +64,24 @@ updateFavouriteDriverForRider favourite riderDetailId driverId = do
         ]
     ]
 
+findAllCorrelationsForRider ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m [Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation])
+findAllCorrelationsForRider riderDetailId = do findAllWithKV [Se.And [Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId)]]
+
+updateBlackListedDriverForRider ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateBlackListedDriverForRider blackListed riderDetailId driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.blackListed blackListed, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.riderDetailId $ Se.Eq (Kernel.Types.Id.getId riderDetailId),
+          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m (Maybe Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation))
@@ -79,7 +97,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.favourite favourite,
+    [ Se.Set Beam.blackListed blackListed,
+      Se.Set Beam.favourite favourite,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
@@ -93,7 +112,8 @@ instance FromTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelat
     pure $
       Just
         Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation
-          { createdAt = createdAt,
+          { blackListed = blackListed,
+            createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             favourite = favourite,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -106,7 +126,8 @@ instance FromTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelat
 instance ToTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation where
   toTType' (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation {..}) = do
     Beam.RiderDriverCorrelationT
-      { Beam.createdAt = createdAt,
+      { Beam.blackListed = blackListed,
+        Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.favourite = favourite,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

@@ -55,6 +55,7 @@ library
       API.IGM
       API.Internal
       API.Internal.Auth
+      API.Internal.BlackListedDrivers
       API.Internal.BulkLocPickupUpdate
       API.Internal.BulkLocUpdate
       API.Internal.Cac
@@ -302,6 +303,7 @@ library
       Domain.Action.DashboardAuth.RideBooking.DriverRegistration
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
+      Domain.Action.Internal.BlackListedDrivers
       Domain.Action.Internal.BulkLocPickupUpdate
       Domain.Action.Internal.BulkLocUpdate
       Domain.Action.Internal.Cac

@@ -17,7 +17,8 @@ instance FromTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelat
     pure $
       Just
         Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation
-          { createdAt = createdAt,
+          { blackListed = blackListed,
+            createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             favourite = favourite,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -30,7 +31,8 @@ instance FromTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelat
 instance ToTType' Beam.RiderDriverCorrelation Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation where
   toTType' (Domain.Types.RiderDriverCorrelation.RiderDriverCorrelation {..}) = do
     Beam.RiderDriverCorrelationT
-      { Beam.createdAt = createdAt,
+      { Beam.blackListed = blackListed,
+        Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.favourite = favourite,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

@@ -178,14 +178,16 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (Redis.withCrossAppRedis . Redis.getList . mkBlockListedDriversForRiderKey) searchReq.riderId
-      let blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider
+      riderCorrelations <- maybe (pure []) QFavDrivers.findAllCorrelationsForRider searchReq.riderId
+      let favDriverIds = filter (.favourite) riderCorrelations <&> (.driverId)
+          dbBlackListedDriverIds = filter (\c -> c.blackListed == Just True) riderCorrelations <&> (.driverId)
+          blockListedDrivers = blockListedDriversForSearch <> blockListedDriversForRider <> map cast dbBlackListedDriverIds
       -- Blocklisted drivers are excluded at LTS-level inside calculateDriverPoolWithActualDist;
       -- previously-attempted drivers are sorted to the tail of LTS candidates (chunking only
       -- pulls them in if fresher drivers run out — replaces the old fillBatch backfill).
       (allDriversNotOnRideBeforeTollFilter, allOnRidePoolResultsBeforeTollFilter) <- withTimeAPI "driverPooling" "calcDriverPool" $ calcDriverPool NormalPool transporterConfig blockListedDrivers previousBatchesDrivers airportEntryFee isAirportRequest
       (allDriversNotOnRide', allOnRideDriverPoolResults) <- filterTollRouteBlockedDrivers searchReq searchTry.id batchNum allDriversNotOnRideBeforeTollFilter allOnRidePoolResultsBeforeTollFilter
-      favDrivers <- maybe (pure []) (`QFavDrivers.findFavDriversForRider` True) searchReq.riderId
-      let newFilteredDriversWithFavourites = assignTagsToDrivers (favDrivers <&> (.driverId)) FavouriteDriver allDriversNotOnRide'
+      let newFilteredDriversWithFavourites = assignTagsToDrivers favDriverIds FavouriteDriver allDriversNotOnRide'
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
           -1 -> do

@@ -14,7 +14,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RiderDriverCorrelationE e = RiderDriverCorrelation
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { blackListed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     favourite :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -35,7 +36,8 @@ instance EncryptedItem RiderDriverCorrelation where
     mobileNumber_ <- encryptItem (mobileNumber entity, salt)
     pure
       RiderDriverCorrelation
-        { createdAt = createdAt entity,
+        { blackListed = blackListed entity,
+          createdAt = createdAt entity,
           driverId = driverId entity,
           favourite = favourite entity,
           merchantId = merchantId entity,
@@ -48,7 +50,8 @@ instance EncryptedItem RiderDriverCorrelation where
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
     pure
       ( RiderDriverCorrelation
-          { createdAt = createdAt entity,
+          { blackListed = blackListed entity,
+            createdAt = createdAt entity,
             driverId = driverId entity,
             favourite = favourite entity,
             merchantId = merchantId entity,
