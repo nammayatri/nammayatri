@@ -348,6 +348,7 @@ let AllocatorJobType =
       | ReconciliationSweep
       | ConnectAccountChargeDeduction
       | BulkUserCohortMappingUpload
+      | FleetEngineRetry
       >
 
 let jobRetryOnExceptionMapx =
@@ -443,6 +444,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.BulkUserCohortMappingUpload
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.FleetEngineRetry, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =
