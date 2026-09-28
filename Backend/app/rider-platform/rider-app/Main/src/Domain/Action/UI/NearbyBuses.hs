@@ -4,6 +4,7 @@ import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.HashMap.Strict as HashMap
+import Data.List (nub)
 import qualified Data.Map as M
 import qualified Data.Set as Set
 import Domain.Types.FRFSQuoteCategoryType
@@ -105,23 +106,27 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       busRouteMapping <-
         mapConcurrently
           ( \vehicleNumber -> do
-              mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-                maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-              pure $ Kernel.Prelude.listToMaybe mbResult
+              mbResult <- JourneyUtils.getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber
+              pure $ (\(_, metadata) -> (vehicleNumber, metadata)) <$> mbResult
           )
           vehicleNumbers
 
       let successfulMappings = catMaybes busRouteMapping
 
-      serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType]) <-
-        HashMap.fromList
-          <$> mapM
-            ( \m -> do
-                frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
-                  CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
-                return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName), m.service_sub_types))
-            )
-            successfulMappings
+      tierShortNames <-
+        forM (nub (map (\(_, metadata) -> metadata.serviceType) successfulMappings)) $ \serviceTier -> do
+          frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
+            CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier riderConfig.merchantOperatingCityId config.id
+          return (serviceTier, frfsServiceTier <&> (.shortName))
+
+      let serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType])
+          serviceTypeMap =
+            HashMap.fromList $
+              map
+                ( \(vehicleNumber, metadata) ->
+                    (vehicleNumber, (metadata.serviceType, join (Kernel.Prelude.lookup metadata.serviceType tierShortNames), metadata.serviceSubTypes))
+                )
+                successfulMappings
 
       pure $
         map

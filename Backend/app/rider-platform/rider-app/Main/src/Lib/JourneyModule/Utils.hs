@@ -1821,7 +1821,7 @@ getVehicleMetadataFromInMem ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, NandiTypes.VehicleMetadataResponse))
 getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ["CACHED_VEHICLE_METADATA", vehicleNumber] 43200 $ do
+  IM.withInMemCache (["CACHED_VEHICLE_METADATA", vehicleNumber] <> sort (nub (map (.feedKey) integratedBPPConfigs))) 43200 $ do
     mbMbResult <-
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
         (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
