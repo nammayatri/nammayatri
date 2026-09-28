@@ -802,6 +802,8 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                 }
         unless isFleetOwner $
           Analytics.incrementOperatorTotalActiveDriversIfFirstDriverSubscription transporterConfig person.id.getId
+        unless isFleetOwner $
+          QDI.setRideBillingModelIfUnset DP.PREPAID_SUBSCRIPTION person.id
         SubscriptionPurchaseSvc.updateSubscriptionPurchase latestPurchase updatedPurchase
         -- Schedule expiry job only if expiry was set (not queued)
         whenJust expiryDate $ \expiry -> do

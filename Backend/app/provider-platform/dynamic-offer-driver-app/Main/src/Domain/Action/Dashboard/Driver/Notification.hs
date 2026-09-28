@@ -46,11 +46,14 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
@@ -97,14 +100,27 @@ triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   -- Mirror the real ride-request eligibility (isDriverModeEligible in
   -- Storage.Queries.Person.GetNearestDrivers): a driver in ONLINE/SILENT mode is
   -- eligible regardless of `active`; `active` only matters when no mode is set.
-  let isDriverOnline = case driverInfo.mode of
+  -- `subscribed` only speaks for a postpaid driver, so reporting "not subscribed" for a
+  -- prepaid one would send ops chasing a flag that is meant to be false for them.
+  -- Same predicate the go-online gate and pooling use, not the bare model: a legacy
+  -- prepaid driver whose ride_billing_model is still null would otherwise be reported
+  -- as "not subscribed", which is exactly the misleading answer noted above.
+  merchant <- CQM.findById driver.merchantId >>= fromMaybeM (MerchantNotFound driver.merchantId.getId)
+  mbFleetAssociation <- QFDA.findByDriverId driver.id True
+  let isPrepaid =
+        isPrepaidDriverWithCatalogueFallback
+          (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled)
+          (mbFleetAssociation <&> (.fleetOwnerId))
+          driverInfo.rideBillingModel
+          driverInfo.servicesEnabledForSubscription
+      isDriverOnline = case driverInfo.mode of
         Just DCommon.ONLINE -> True
         Just DCommon.SILENT -> True
         Nothing -> driverInfo.active
         _ -> False
       mbStaticSkipReason
         | driverInfo.blocked = Just "Driver blocked"
-        | not driverInfo.subscribed = Just "Driver not subscribed"
+        | not isPrepaid && not driverInfo.subscribed = Just "Driver not subscribed"
         | not isDriverOnline = Just "Driver offline"
         | driverInfo.onRide = Just "Driver on ride"
         | otherwise = Nothing

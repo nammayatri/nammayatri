@@ -210,7 +210,10 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   requestor <- findPerson requestorId
   now <- getCurrentTime
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
-  unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
+  -- No `subscribed` gate here on purpose: it is a postpaid-only dues flag, and both
+  -- calls this handler makes already apply it with the prepaid/fleet exemption --
+  -- DRide.otpRideCreate (Ride.hs) and RideStart.driverStartRide (StartRide.hs). A bare
+  -- check here would reject every prepaid OTP ride before either of them ran.
   let rideOtp = specialZoneOtpCode
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   booking <-

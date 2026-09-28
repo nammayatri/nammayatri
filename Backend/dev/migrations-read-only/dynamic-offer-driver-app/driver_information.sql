@@ -398,3 +398,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_new boolean;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enable_cash_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_billing_model text ;

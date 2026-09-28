@@ -747,6 +747,31 @@ updateSubscription subscribed driverId = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.subscribed = LTSSync.Set subscribed}
 
+-- | Sole writer for `ride_billing_model`. Every write must come through here, never a
+-- raw `updateOneWithKV`: dispatch reads the denormalised copy in the LTS
+-- `driver-pool-data:<driverId>` Redis key, so a write that skips the sync leaves the
+-- driver gated on a stale model until the key's (1 year) TTL lapses.
+-- (`updateServicesEnabled` needs no such sync: DriverPoolData carries
+-- rideBillingModel but not servicesEnabledForSubscription, and the pooling guard
+-- reads only the former.)
+updateRideBillingModel :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe P.ServiceNames -> Id Person.Person -> m ()
+updateRideBillingModel rideBillingModel driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.rideBillingModel rideBillingModel,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.rideBillingModel = LTSSync.Set rideBillingModel}
+
+-- | Set the billing model only when the driver does not already have one.
+setRideBillingModelIfUnset :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => P.ServiceNames -> Id Person.Person -> m ()
+setRideBillingModelIfUnset model driverId = do
+  mbDriverInfo <- findById (cast driverId)
+  when (maybe False (isNothing . (.rideBillingModel)) mbDriverInfo) $
+    updateRideBillingModel (Just model) driverId
+
 updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
 updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
   now <- getCurrentTime
