@@ -379,6 +379,18 @@ buildStationsPerSegment basicRouteDetails integratedBPPConfig = do
   where
     mapWithIndexM f xs = zipWithM f [0 ..] xs
 
+skeletonStationsPerSegment :: [BasicRouteDetail] -> [[DStation]]
+skeletonStationsPerSegment basicRouteDetails =
+  let lastStopIndex = length basicRouteDetails - 1
+   in zipWith
+        ( \idx routeDetail ->
+            [ DStation routeDetail.startStopCode "" Nothing Nothing (if idx == (0 :: Int) then START else TRANSIT) Nothing Nothing routeDetail.color,
+              DStation routeDetail.endStopCode "" Nothing Nothing (if idx == lastStopIndex then END else TRANSIT) Nothing Nothing routeDetail.color
+            ]
+        )
+        [0 ..]
+        basicRouteDetails
+
 -- | The first two arguments are the from/to stop codes with their equivalents (see
 -- 'OTPRest.getEquivalentStopCodes'), since a station is only on a route through its platforms.
 mkStations :: [Text] -> [Text] -> [RouteStopMapping] -> StationType -> StationType -> Maybe Text -> Maybe [DStation]

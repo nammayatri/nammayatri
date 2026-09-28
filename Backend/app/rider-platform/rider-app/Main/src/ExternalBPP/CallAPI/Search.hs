@@ -82,6 +82,8 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
             Right res -> pure res
           countSearch $ if null onSearchReq.quotes then Metrics.FRFSBppEmpty else Metrics.FRFSBppSucceeded
           processOnSearch onSearchReq
+          --enriching route stations json and stations json in fork for FRFS Subway
+          fork "Enriching CRIS route stations" $ DOnSearch.enrichRouteStations searchReq.id integratedBPPConfig
         else do
           eOnSearchReq <- withTryCatch "callExternalBPP:directSearchFlow" $ Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId
           onSearchReq <- case eOnSearchReq of
