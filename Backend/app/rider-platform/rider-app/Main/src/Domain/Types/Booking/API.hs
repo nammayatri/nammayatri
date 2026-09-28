@@ -36,7 +36,9 @@ import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DOSC
 import qualified Domain.Types.OfferEntity as DOfferEntity
 import Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as Person
@@ -79,6 +81,7 @@ import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
 import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
@@ -175,7 +178,8 @@ data BookingAPIEntity = BookingAPIEntity
     -- | True while the rider is inside a silent reallocation window: the driver cancelled
     -- and a new one is being found, but the app should keep showing the trip as assigned.
     isSilentReallocation :: Maybe Bool,
-    parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo
+    parentSearchRequestLocationInfo :: Maybe ParentSearchRequestLocationInfo,
+    fleetEngineEnabled :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -395,6 +399,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
          in if null names then Nothing else Just $ T.intercalate " " names
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
+  fleetEngineEnabled <- lookupFleetEngineEnabled booking.merchantId booking.merchantOperatingCityId
   return $
     BookingAPIEntity
       { id = booking.id,
@@ -473,7 +478,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         fareSettlementType = booking.fareSettlementType,
         cardInfo = cardInfo,
         isSilentReallocation = Nothing,
-        parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo
+        parentSearchRequestLocationInfo = booking.parentSearchRequestLocationInfo,
+        fleetEngineEnabled = fleetEngineEnabled
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -482,6 +488,21 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
       startTime <- ride.rideStartTime
       endTime <- ride.rideEndTime
       return $ nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
+
+-- | Looks up the BAP FleetEngine service config for the city and returns its 'enabled' flag.
+-- Nothing when no FE config exists for that city (consumer app treats as SDK-off).
+lookupFleetEngineEnabled ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Bool)
+lookupFleetEngineEnabled merchantId merchantOpCityId = do
+  mbCfg <- QOMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DOSC.FleetEngineService DOSC.GoogleFleetEngine)
+  pure $ case mbCfg of
+    Just sc -> case sc.serviceConfig of
+      DOSC.FleetEngineServiceConfig cfg -> cfg.enabled
+      _ -> Nothing
+    Nothing -> Nothing
 
 mkBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> Id Person.Person -> m BookingAPIDetails
 mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
