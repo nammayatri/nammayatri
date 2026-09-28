@@ -63,6 +63,7 @@ module SharedLogic.SharedCab.Allocation
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Monad.Extra (whenJustM)
 import qualified Data.Aeson as A
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
@@ -71,6 +72,7 @@ import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -82,6 +84,7 @@ import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLoc
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
+import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -92,6 +95,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 --------------------------------------------------------------------------------
 
 -- | Everything the tick, claims and releases need (the release re-triggers the tick, hence LTS).
+-- ServiceFlow: afterClose/claimFirst push the rider on a timer close or a stationary claim (R16/R17).
 type AllocFlow m r =
   ( MonadFlow m,
     Redis.HedisFlow m r,
@@ -101,6 +105,7 @@ type AllocFlow m r =
     Log m,
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
+    ServiceFlow m r,
     Events.EventFlow m r
   )
 
@@ -368,7 +373,7 @@ releaseSharedCabAllocation ::
 releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   closed <- withBookingLock bookingId $ closeLocked cfg bookingId expectedPlate outcome
   afterClose cfg bookingId expectedPlate outcome closed
-  whenJust closed triggerSharedCabAllocation
+  whenJust closed (triggerSharedCabAllocation . fst)
   pure (isJust closed)
 
 -- | R19 rider "skip this cab": the allocation closes as RIDER_SKIPPED and, in the same booking-lock hold, the
@@ -377,11 +382,11 @@ skipSharedCabAllocation :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTick
 skipSharedCabAllocation cfg bookingId plate reason = do
   let outcome = RiderSkipped reason
   closed <- withBookingLock bookingId $ do
-    city <- closeLocked cfg bookingId plate outcome
-    when (isJust city) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [plate] cfg.findingTimeoutSec
-    pure city
+    closedInfo <- closeLocked cfg bookingId plate outcome
+    when (isJust closedInfo) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [plate] cfg.findingTimeoutSec
+    pure closedInfo
   afterClose cfg bookingId plate outcome closed
-  whenJust closed triggerSharedCabAllocation
+  whenJust closed (triggerSharedCabAllocation . fst)
   pure (isJust closed)
 
 -- | The city's engine tunables from rider_config (05 §7), defaults where unset.
@@ -417,17 +422,18 @@ releaseUnboarded plate outcome = do
     closed <- withBookingLock b.id $ closeLocked cfg b.id plate outcome
     afterClose cfg b.id plate outcome closed
     pure closed
-  mapM_ triggerSharedCabAllocation (nub (catMaybes cities))
+  mapM_ triggerSharedCabAllocation (nub (map fst (catMaybes cities)))
 
 -- | Run inside the booking lock: KV read, CAS plate -> null (back to FINDING), clear the alloc key,
--- bump attempts. The city it closed in, or Nothing when another closer won.
+-- bump attempts. The city it closed in (and whether this close is the one that just crossed
+-- maxAttempts, R16), or Nothing when another closer won.
 closeLocked ::
   (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r) =>
   AllocationConfig ->
   Id DFTB.FRFSTicketBooking ->
   Text ->
   AllocationOutcome ->
-  m (Maybe (Id DMOC.MerchantOperatingCity))
+  m (Maybe (Id DMOC.MerchantOperatingCity, Bool))
 closeLocked cfg bookingId expectedPlate outcome =
   QFRFSTicketBooking.findById bookingId >>= \case
     Just b
@@ -438,9 +444,12 @@ closeLocked cfg bookingId expectedPlate outcome =
         attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
         let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
         shared $ Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
-        when (attemptsNow >= cfg.maxAttempts) $
-          logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface TODO (05 §3)"
-        pure (Just b.merchantOperatingCityId)
+        -- R16/R10: push "board any cab" once, exactly on the close that crosses maxAttempts (not on
+        -- every close after -- the engine keeps retrying a FALLBACK booking, this just stops the spam).
+        let fallbackJustTriggered = attemptsBefore < cfg.maxAttempts && attemptsNow >= cfg.maxAttempts
+        when fallbackJustTriggered $
+          logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
+        pure (Just (b.merchantOperatingCityId, fallbackJustTriggered))
     _ -> pure Nothing
 
 eventBlame :: Blame -> Events.Blame
@@ -450,15 +459,22 @@ eventBlame = \case
   BlameNone -> Events.BlameNone
 
 -- | Outside every lock, after a close attempt.
-afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe (Id DMOC.MerchantOperatingCity) -> m ()
+afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe (Id DMOC.MerchantOperatingCity, Bool) -> m ()
 afterClose _ bookingId plate outcome closed =
-  whenJust closed $ \cityId -> do
+  whenJust closed $ \(cityId, fallbackJustTriggered) -> do
     now <- getCurrentTime
     trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
     Events.emit cityId . Events.withTrip trip $
       Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
     Invariants.checkBooking bookingId
     Invariants.checkCab plate
+    -- R17: "missed the cab" -- only the timer outcomes mean the rider didn't board in time; a driver
+    -- cancel, passed-stop no-show, seat loss or session lifecycle close all get their own push (or none).
+    when (outcome `elem` [StandTimeout, MovingTimeout]) $
+      whenJustM (QFRFSTicketBooking.findById bookingId) (Notify.notifyReassigned Notify.TIMEOUT)
+    -- R16/R10: the rider's leg state just flipped to FALLBACK; push "board any cab" once.
+    when fallbackJustTriggered $
+      whenJustM (QFRFSTicketBooking.findById bookingId) Notify.notifyBoardAny
 
 -- | 05 §2/§3 timers: an ALLOCATED booking whose timer ran out, or whose alloc key is gone, goes back
 -- to FINDING; a stand timer is cleared once its cab is seen moving (timer mode follows the cab).
@@ -481,7 +497,7 @@ expireTimers cfg now movingOn live =
             when (st.timerKind == StandTimer && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $
               shared $ Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} cfg.findingTimeoutSec
           pure Nothing
-    whenJust result $ \(outcome, cityId) -> afterClose cfg b.id plate outcome (Just cityId)
+    whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
 
 --------------------------------------------------------------------------------
 -- Driver notification todo
@@ -523,7 +539,8 @@ triggerSharedCabAllocation ::
     Log m,
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
-    Events.EventFlow m r
+    Events.EventFlow m r,
+    ServiceFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()
@@ -540,7 +557,8 @@ runSharedCabAllocationTick ::
     Log m,
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
-    Events.EventFlow m r
+    Events.EventFlow m r,
+    ServiceFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()
@@ -615,6 +633,11 @@ claimFirst cfg booking = go (0 :: Int)
           Invariants.checkBooking booking.bookingId
           Invariants.checkCab c.rcSession.vehicleNumber
           notifyDriverOfAllocation booking c
+          -- R17: a cab claimed while stationary already has its stand timer running (attemptClaim
+          -- armed it at claim, standDeadline = now + standTimerSec) -- push now rather than waiting
+          -- on stop-progress, which only arms the moving timer for a cab that was moving at claim.
+          unless c.rcMoving $
+            whenJustM (QFRFSTicketBooking.findById booking.bookingId) (Notify.notifyArriving c.rcSession.vehicleNumber cfg.standTimerSec)
           pure (Just c)
         Left miss -> do
           logDebug $ "shared-cab claim missed booking=" <> booking.bookingId.getId <> " cab=" <> c.rcSession.vehicleNumber <> " reason=" <> show miss

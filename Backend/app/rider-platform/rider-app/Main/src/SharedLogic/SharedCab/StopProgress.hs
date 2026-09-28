@@ -12,6 +12,7 @@ import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -25,6 +26,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
+import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules
@@ -32,6 +34,7 @@ import qualified Storage.CachedQueries.RoutePolylines as QRoutePolylines
 import qualified Storage.Queries.VehicleTrip as QVT
 
 -- LtsFlow: applyQueuedRoute re-attaches the cab to LTS when a queued route applies.
+-- ServiceFlow: R17's "your cab is here" push, fired once the moving timer arms.
 type StopProgressFlow m r c =
   ( LtsFlow m r c,
     Redis.HedisFlow m r,
@@ -41,7 +44,8 @@ type StopProgressFlow m r c =
     Log m,
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
-    Events.EventFlow m r
+    Events.EventFlow m r,
+    ServiceFlow m r
   )
 
 dropClockKey :: Id DFTB.FRFSTicketBooking -> Text
@@ -144,7 +148,10 @@ movingTimerStep keyTtlSec spc now freshCab plate b = do
             shared $ Redis.setExp (allocKey b.id.getId) cur {expiresAt = Just deadline, timerKind = MovingTimer} keyTtlSec
             pure True
         _ -> pure False
-    when armed $ Invariants.checkBooking b.id
+    when armed $ do
+      Invariants.checkBooking b.id
+      -- R17: the cab just reached the board stop -- "board within Xs" (X = movingTimerSec, the deadline just armed).
+      Notify.notifyArriving plate spc.movingTimerSec b
 
 -- | A degraded boarding has no geofence end (`05` §5): its marker's expiry ends it instead.
 dropStep :: StopProgressFlow m r c => StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()

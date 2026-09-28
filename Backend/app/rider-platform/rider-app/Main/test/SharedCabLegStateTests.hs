@@ -3,6 +3,7 @@
 
 module SharedCabLegStateTests (tests) where
 
+import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
@@ -23,16 +24,30 @@ tests =
         ],
       testGroup
         "07 section 3: state from the 05 section 2 encoding"
-        [ testCase "confirmed, no plate -> FINDING" $ derive (JMState.FRFSBooking DFRFSBooking.CONFIRMED) Nothing False @?= Just FINDING,
-          testCase "ticket ACTIVE, no plate -> FINDING" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False @?= Just FINDING,
-          testCase "ticket ACTIVE, plate set -> ALLOCATED" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True @?= Just ALLOCATED,
-          testCase "INPROGRESS with a live session -> BOARDED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate True @?= Just BOARDED,
-          testCase "INPROGRESS, no session -> DEGRADED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate False @?= Just DEGRADED,
-          testCase "ticket USED -> DROPPED" $ derive (JMState.FRFSTicket DFRFSTicket.USED) plate False @?= Just DROPPED,
-          testCase "feedback pending (all USED) -> DROPPED" $ derive (JMState.Feedback JMState.FEEDBACK_PENDING) plate False @?= Just DROPPED,
-          testCase "ticket CANCELLED -> CANCELLED" $ derive (JMState.FRFSTicket DFRFSTicket.CANCELLED) Nothing False @?= Just CANCELLED,
-          testCase "booking CANCELLED -> CANCELLED" $ derive (JMState.FRFSBooking DFRFSBooking.CANCELLED) Nothing False @?= Just CANCELLED,
-          testCase "not yet confirmed -> no block" $ derive (JMState.FRFSBooking DFRFSBooking.NEW) Nothing False @?= Nothing
+        [ testCase "confirmed, no plate -> FINDING" $ derive (JMState.FRFSBooking DFRFSBooking.CONFIRMED) Nothing False Nothing Nothing @?= Just FINDING,
+          testCase "ticket ACTIVE, no plate -> FINDING" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False Nothing Nothing @?= Just FINDING,
+          testCase "ticket ACTIVE, plate set, no timer -> ALLOCATED" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True Nothing Nothing @?= Just ALLOCATED,
+          testCase "ticket ACTIVE, plate set, timer armed -> ARRIVING" $ derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True Nothing (Just now) @?= Just ARRIVING,
+          testCase "INPROGRESS with a live session -> BOARDED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate True Nothing Nothing @?= Just BOARDED,
+          testCase "INPROGRESS, no session -> DEGRADED" $ derive (JMState.FRFSTicket DFRFSTicket.INPROGRESS) plate False Nothing Nothing @?= Just DEGRADED,
+          testCase "ticket USED -> DROPPED" $ derive (JMState.FRFSTicket DFRFSTicket.USED) plate False Nothing Nothing @?= Just DROPPED,
+          testCase "feedback pending (all USED) -> DROPPED" $ derive (JMState.Feedback JMState.FEEDBACK_PENDING) plate False Nothing Nothing @?= Just DROPPED,
+          testCase "ticket CANCELLED -> CANCELLED" $ derive (JMState.FRFSTicket DFRFSTicket.CANCELLED) Nothing False Nothing Nothing @?= Just CANCELLED,
+          testCase "booking CANCELLED -> CANCELLED" $ derive (JMState.FRFSBooking DFRFSBooking.CANCELLED) Nothing False Nothing Nothing @?= Just CANCELLED,
+          testCase "not yet confirmed -> no block" $ derive (JMState.FRFSBooking DFRFSBooking.NEW) Nothing False Nothing Nothing @?= Nothing
+        ],
+      testGroup
+        "R16: FINDING fallback gate (attempts OR fallbackAfterSec, whichever first)"
+        [ testCase "no plate, gate untripped -> FINDING" $
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-60))) Nothing @?= Just FINDING,
+          testCase "no plate, attempts >= maxAttempts -> FALLBACK" $
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 2 (-60))) Nothing @?= Just FALLBACK,
+          testCase "no plate, attempts under max but findingSince past fallbackAfterSec -> FALLBACK" $
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-700))) Nothing @?= Just FALLBACK,
+          testCase "no plate, one attempt short of max and just inside fallbackAfterSec -> still FINDING" $
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 1 (-300))) Nothing @?= Just FINDING,
+          testCase "plate set: fallback gate is irrelevant, plate always wins" $
+            derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True (Just (gate 2 (-700))) Nothing @?= Just ALLOCATED
         ],
       testGroup
         "I got down: which tickets go USED"
@@ -43,5 +58,11 @@ tests =
         ]
     ]
   where
-    derive = deriveSharedCabState
+    derive = deriveSharedCabState now
     plate = Just "ML05A1234"
+    now :: UTCTime
+    now = UTCTime (fromGregorian 2026 9 29) (secondsToDiffTime 0)
+
+    gate :: Int -> NominalDiffTime -> FallbackGate
+    gate attempts offsetSec =
+      FallbackGate {attempts, maxAttempts = 2, findingSince = addUTCTime offsetSec now, fallbackAfterSec = 600}
