@@ -24,7 +24,7 @@ module Domain.Action.UI.SharedCab where
 -- clearer. Nothing else here writes session/flag/Redis/DB state.
 
 import API.Types.UI.SharedCab
-import Data.Time (addUTCTime, utctDay)
+import Data.Time (utctDay)
 import Data.Time.Calendar (Day)
 import qualified Domain.Types.Common as DCommon
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
