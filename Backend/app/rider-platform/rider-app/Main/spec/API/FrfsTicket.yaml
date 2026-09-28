@@ -606,6 +606,7 @@ apis:
         vehicleType: VehicleCategory
       query:
         hasPasses: Bool
+        enforcePassOverride: Bool
         city: City
         integratedBppConfigId: Id IntegratedBPPConfig
         newServiceTiers: [ServiceTierType]

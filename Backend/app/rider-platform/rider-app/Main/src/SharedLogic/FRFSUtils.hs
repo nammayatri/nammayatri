@@ -507,41 +507,104 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               let adjustedStage = case endIsStageStop of
                     Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
                     _ -> stage -- Use original stage if not found or Nothing
-              fares <- case serviceTier of
-                Just serviceTier' -> do
-                  vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
-                Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
-              forM fares $ \fare -> do
-                vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
-                let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
-                return $
-                  FRFSFare
-                    { farePolicyId = Nothing,
-                      categories =
-                        [ FRFSTicketCategory
-                            { category = ADULT,
-                              price = price,
-                              offeredPrice = price,
-                              bppItemId = getProviderName integratedBPPConfig,
-                              eligibility = True
-                            }
-                        ],
-                      fareDetails = Nothing,
-                      vehicleServiceTier =
-                        FRFSVehicleServiceTier
-                          { serviceTierType = vehicleServiceTier._type,
-                            serviceTierProviderCode = vehicleServiceTier.providerCode,
-                            serviceTierShortName = vehicleServiceTier.shortName,
-                            serviceTierDescription = vehicleServiceTier.description,
-                            serviceTierLongName = vehicleServiceTier.longName,
-                            isAirConditioned = vehicleServiceTier.isAirConditioned
-                          },
-                      fareQuoteType = Nothing
-                    }
+              faresForStage vehicleType serviceTier integratedBPPConfig merchantOperatingCityId adjustedStage
             _ -> return [] -- No stage information available
         _ -> return [] -- Start or end stop not found in trip
     Nothing -> return [] -- Trip details not found
+
+faresForStage :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DMOC.MerchantOperatingCity -> Int -> m [FRFSFare]
+faresForStage vehicleType serviceTier integratedBPPConfig merchantOperatingCityId stageCount = do
+  stageFareRows <- case serviceTier of
+    Just serviceTier' -> do
+      vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
+      maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 stageCount) merchantOperatingCityId vehicleServiceTier.id
+    Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 stageCount) merchantOperatingCityId
+  forM stageFareRows $ \fare -> do
+    vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
+    let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
+    return $
+      FRFSFare
+        { farePolicyId = Nothing,
+          categories =
+            [ FRFSTicketCategory
+                { category = ADULT,
+                  price = price,
+                  offeredPrice = price,
+                  bppItemId = getProviderName integratedBPPConfig,
+                  eligibility = True
+                }
+            ],
+          fareDetails = Nothing,
+          vehicleServiceTier =
+            FRFSVehicleServiceTier
+              { serviceTierType = vehicleServiceTier._type,
+                serviceTierProviderCode = vehicleServiceTier.providerCode,
+                serviceTierShortName = vehicleServiceTier.shortName,
+                serviceTierDescription = vehicleServiceTier.description,
+                serviceTierLongName = vehicleServiceTier.longName,
+                isAirConditioned = vehicleServiceTier.isAirConditioned
+              },
+          fareQuoteType = Nothing
+        }
+
+data RouteStageSpan = RouteStageSpan
+  { routeCode :: Text,
+    fromStopCode :: Text,
+    toStopCode :: Text,
+    stage :: Int
+  }
+  deriving (Generic, Show)
+
+data StageFaresFromTo = StageFaresFromTo
+  { spans :: [RouteStageSpan],
+    selectedStage :: Maybe Int,
+    fares :: [FRFSFare]
+  }
+  deriving (Generic, Show)
+
+getAllStageFaresFromTo ::
+  (Metrics.CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  IntegratedBPPConfig ->
+  Spec.VehicleCategory ->
+  Maybe Spec.ServiceTierType ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  m StageFaresFromTo
+getAllStageFaresFromTo integratedBPPConfig vehicleType serviceTier merchantOperatingCityId fromCode toCode = do
+  fromMappings <- OTPRest.getRouteStopMappingByStopCode fromCode integratedBPPConfig
+  toMappings <- OTPRest.getRouteStopMappingByStopCode toCode integratedBPPConfig
+  let routeSpans = stageSpansBetween fromMappings toMappings
+      mbStage = pickStage routeSpans
+  logDebug $
+    "getAllStageFaresFromTo " <> fromCode <> " -> " <> toCode
+      <> " routes="
+      <> show (length routeSpans)
+      <> " stages="
+      <> show (map (.stage) routeSpans)
+      <> " selectedStage="
+      <> show mbStage
+  selectedFares <- maybe (pure []) (faresForStage vehicleType serviceTier integratedBPPConfig merchantOperatingCityId) mbStage
+  return StageFaresFromTo {spans = routeSpans, selectedStage = mbStage, fares = selectedFares}
+
+stageSpansBetween :: [RouteStopMapping.RouteStopMapping] -> [RouteStopMapping.RouteStopMapping] -> [RouteStageSpan]
+stageSpansBetween fromMappings toMappings = mapMaybe spanForRoute (nub (map (.routeCode) fromMappings))
+  where
+    onRoute code = sortBy (comparing (.sequenceNum)) . filter ((== code) . (.routeCode))
+    spanForRoute code = do
+      from <- listToMaybe (onRoute code fromMappings)
+      to <- listToMaybe (filter ((> from.sequenceNum) . (.sequenceNum)) (onRoute code toMappings))
+      fromStage <- from.stageNumber
+      toStage <- to.stageNumber
+      let diff = abs (toStage - fromStage)
+          adjusted = if to.isStageStop == Just True then diff - 1 else diff
+      return RouteStageSpan {routeCode = code, fromStopCode = from.stopCode, toStopCode = to.stopCode, stage = max 0 adjusted}
+
+pickStage :: [RouteStageSpan] -> Maybe Int
+pickStage routeSpans =
+  fst <$> listToMaybe (sortBy (comparing (\(stageCount, routeCount) -> (negate routeCount, negate stageCount))) counts)
+  where
+    counts = M.toList $ M.fromListWith (+) [(routeSpan.stage, 1 :: Int) | routeSpan <- routeSpans]
 
 getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do

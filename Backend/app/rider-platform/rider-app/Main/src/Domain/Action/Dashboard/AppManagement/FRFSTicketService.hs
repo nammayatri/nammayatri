@@ -76,7 +76,7 @@ getFRFSTicketServiceCustomerFrfsRoute merchantShortId _opCity customerId routeCo
 postFRFSTicketServiceCustomerFrfsSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) -> Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType] -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes)
 postFRFSTicketServiceCustomerFrfsSearch merchantShortId _opCity customerId city integratedBppConfigId newServiceTiers vehicleType req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  DFrfs.postFrfsSearch (Just customerId, merchant.id) city Nothing integratedBppConfigId newServiceTiers vehicleType req
+  DFrfs.postFrfsSearch (Just customerId, merchant.id) city Nothing Nothing integratedBppConfigId newServiceTiers vehicleType req
 
 getFRFSTicketServiceCustomerFrfsSearchQuote :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes])
 getFRFSTicketServiceCustomerFrfsSearchQuote merchantShortId _opCity customerId searchId = do

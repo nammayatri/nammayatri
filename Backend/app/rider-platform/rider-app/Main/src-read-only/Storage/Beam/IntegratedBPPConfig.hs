@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 
 data IntegratedBPPConfigT f = IntegratedBPPConfigT
   { agencyKey :: B.C f Kernel.Prelude.Text,
+    autoOverridePassForFRFS :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     domain :: B.C f Kernel.Prelude.Text,
     feedKey :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
