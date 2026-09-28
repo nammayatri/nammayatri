@@ -168,7 +168,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
                       vehicleCategory
                       serviceTier
                       subwayFareDetail
-                    tnstcSearchDetail
+                      tnstcSearchDetail
               case result of
                 Left _ -> do
                   CB.recordFailure ptMode CB.FareAPI merchantOperatingCityId
@@ -212,7 +212,7 @@ getFares riderId merchantId merchantOperatingCityId integratedBPPConfig fareRout
               vehicleCategory
               serviceTier
               subwayFareDetail
-            tnstcSearchDetail
+              tnstcSearchDetail
 
       case result of
         Left _ -> do

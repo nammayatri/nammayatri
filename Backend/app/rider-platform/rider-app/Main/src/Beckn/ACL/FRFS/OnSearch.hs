@@ -178,7 +178,7 @@ parseFulfillments item fulfillments fulfillmentId = do
   logDebug $ "Categories from OnSearch: " <> show categories
   return $
     Domain.DQuote
-      { tripCategory = Just DQuote.INTRACITY,
+      { tripCategory = Just DIBC.INTRACITY,
         providerServiceId = Nothing,
         providerLayoutId = Nothing,
         providerClassId = Nothing,

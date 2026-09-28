@@ -8,6 +8,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -66,7 +67,7 @@ data FRFSQuoteT f = FRFSQuoteT
     toStationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     toStationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSTripCategory),
+    tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory),
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,

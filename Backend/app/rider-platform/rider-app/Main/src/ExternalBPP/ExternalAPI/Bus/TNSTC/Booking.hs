@@ -5,6 +5,7 @@ module ExternalBPP.ExternalAPI.Bus.TNSTC.Booking
     confirmAdvSeatBooking,
     GetPickupPointsReq (..),
     getPickupPointsCached,
+    boardingPointsAt,
     AddBlockSeatsReq (..),
     GetTotalFareReq (..),
     getPickupPoints,
@@ -15,33 +16,17 @@ where
 
 import qualified Data.Text as T
 import Data.Time (Day)
-import Data.Time.Format (defaultTimeLocale, formatTime)
-import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig)
-import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (callTnstc)
+import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig (..))
+import ExternalBPP.ExternalAPI.Bus.TNSTC.Client (TnstcFlow, arg0, callTnstc, el, fmtDate, op)
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import qualified Text.XML as XML
-import Text.XML.Writer (ToXML (..), XML, element, elementA)
-
-type TnstcFlow m r = (MonadFlow m, EncFlow m r, Metrics.CoreMetrics m, HasField "requestId" r (Maybe Text))
-
-fmtDate :: Day -> Text
-fmtDate = T.pack . formatTime defaultTimeLocale "%d/%m/%Y"
-
-op :: Text -> XML.Name
-op n = XML.Name n (Just setcNamespace) (Just "com")
-
-arg0 :: XML.Name
-arg0 = XML.Name "arg0" Nothing Nothing
-
-el :: Text -> Text -> XML
-el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: Text)
+import Text.XML.Writer (ToXML (..), element)
 
 data GetPickupPointsReq = GetPickupPointsReq
-  { rqppCounterCode :: Text,
+  { rqppCounterCode :: Maybe Text,
     rqppJourneyDate :: Day,
     rqppServiceId :: Text,
     rqppPlaceId :: Text,
@@ -52,7 +37,7 @@ instance ToXML GetPickupPointsReq where
   toXML req =
     element (op "GetAllServicePickupPointsByServiceID") $
       element arg0 $ do
-        el "counterCode" req.rqppCounterCode
+        whenJust req.rqppCounterCode (el "counterCode")
         el "franchiseeUser" "false"
         el "journeyDate" (fmtDate req.rqppJourneyDate)
         el "serviceID" req.rqppServiceId
@@ -61,7 +46,7 @@ instance ToXML GetPickupPointsReq where
 
 data AddBlockSeatsReq = AddBlockSeatsReq
   { rqbsClassId :: Text,
-    rqbsCounterCode :: Text,
+    rqbsCounterCode :: Maybe Text,
     rqbsCreatedBy :: Text,
     rqbsEndPlaceId :: Text,
     rqbsJourneyDate :: Day,
@@ -79,7 +64,7 @@ instance ToXML AddBlockSeatsReq where
     element (op "AddBlockSeats") $
       element arg0 $ do
         el "classID" req.rqbsClassId
-        el "counterCode" req.rqbsCounterCode
+        whenJust req.rqbsCounterCode (el "counterCode")
         el "createdBy" req.rqbsCreatedBy
         el "endPlaceID" req.rqbsEndPlaceId
         el "franchiseeUser" "false"
@@ -99,7 +84,7 @@ data GetTotalFareReq = GetTotalFareReq
     rqtfChildFemale :: Int,
     rqtfClassId :: Text,
     rqtfConcessionTypeId :: Text,
-    rqtfCounterCode :: Text,
+    rqtfCounterCode :: Maybe Text,
     rqtfCreatedBy :: Text,
     rqtfEndPlaceCode :: Text,
     rqtfEndPlaceId :: Text,
@@ -125,7 +110,7 @@ instance ToXML GetTotalFareReq where
         el "childMale" (show req.rqtfChildMale)
         el "classID" req.rqtfClassId
         el "concessionTypeId" req.rqtfConcessionTypeId
-        el "counterCode" req.rqtfCounterCode
+        whenJust req.rqtfCounterCode (el "counterCode")
         el "createdBy" req.rqtfCreatedBy
         el "endPlaceCode" req.rqtfEndPlaceCode
         el "endPlaceID" req.rqtfEndPlaceId
@@ -143,7 +128,7 @@ instance ToXML GetTotalFareReq where
         el "totalNumberOfSeats" (show (length req.rqtfSeatNumbers))
         el "userName" req.rqtfUserName
         el "WSRefNo" req.rqtfWsRefNo
-      elementA (XML.Name "arg1" Nothing Nothing) ([] :: [(XML.Name, Text)]) ("O" :: Text)
+      el "arg1" "O"
 
 -- | ConfirmAdvSeatBooking. Field set follows the vendor's working sample; only serviceID,
 -- createdBy, totalFare, journeyDate, startPlaceID, WSRefNo and addnlAge are actually
@@ -168,7 +153,7 @@ data ConfirmAdvSeatBookingReq = ConfirmAdvSeatBookingReq
     rqcTotalFare :: Text,
     rqcClassId :: Text,
     rqcConcessionTypeId :: Text,
-    rqcCounterCode :: Text,
+    rqcCounterCode :: Maybe Text,
     rqcCreatedBy :: Text,
     rqcEndPlaceCode :: Text,
     rqcEndPlaceId :: Text,
@@ -206,7 +191,7 @@ instance ToXML ConfirmAdvSeatBookingReq where
         el "childMale" (show req.rqcChildMale)
         el "classID" req.rqcClassId
         el "concessionTypeId" req.rqcConcessionTypeId
-        el "counterCode" req.rqcCounterCode
+        whenJust req.rqcCounterCode (el "counterCode")
         el "createdBy" req.rqcCreatedBy
         el "emailId" req.rqcEmailId
         el "endPlaceCode" req.rqcEndPlaceCode
@@ -232,7 +217,7 @@ instance ToXML ConfirmAdvSeatBookingReq where
         el "userName" req.rqcUserName
         el "WSRefNo" req.rqcWsRefNo
       element (XML.Name "arg1" Nothing Nothing) $ do
-        el "counterCode" req.rqcCounterCode
+        whenJust req.rqcCounterCode (el "counterCode")
         el "createdBy" req.rqcCreatedBy
         el "franchiseeUser" "false"
         el "idProofLookupId" req.rqcIdProofLookupId
@@ -253,6 +238,17 @@ getPickupPointsCached config cacheScope req = do
       points <- getPickupPoints config req
       unless (null points) $ Hedis.withCrossAppRedis $ Hedis.setExp key points 3600
       return points
+
+boardingPointsAt :: (TnstcFlow m r, CacheFlow m r) => TNSTCConfig -> Text -> Day -> Text -> Text -> m [TnstcPickupPoint]
+boardingPointsAt config cacheScope journeyDate serviceId placeCode =
+  getPickupPointsCached config cacheScope $
+    GetPickupPointsReq
+      { rqppCounterCode = config.counterCode,
+        rqppJourneyDate = journeyDate,
+        rqppServiceId = serviceId,
+        rqppPlaceId = placeCode,
+        rqppUserName = config.username
+      }
 
 mkPickupPointsKey :: Text -> GetPickupPointsReq -> Text
 mkPickupPointsKey cacheScope req =

@@ -32,7 +32,7 @@ postCrisGetSDKData (mbPersonId, _) mbIntegratedBPPConfigId request = do
   case mbPersonId of
     Just personId -> do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL Nothing
       case integratedBPPConfig.providerConfig of
         DIBC.CRIS config' -> do
           resp <- withTryCatch "getSDKData" $ GetSDKData.getSDKData config' request
@@ -55,7 +55,7 @@ getCrisOtpGeneration ::
 getCrisOtpGeneration (mbPersonId, _) mbIntegratedBPPConfigId = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person Id not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL Nothing
   case integratedBPPConfig.providerConfig of
     DIBC.CRIS config' -> do
       mobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "mobile no. not found")
@@ -90,7 +90,7 @@ postCrisChangeDevice ::
 postCrisChangeDevice (mbPersonId, _) mbIntegratedBPPConfigId req = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person Id not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId person.merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL Nothing
   case integratedBPPConfig.providerConfig of
     DIBC.CRIS config' -> do
       mobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "mobile no. not found")

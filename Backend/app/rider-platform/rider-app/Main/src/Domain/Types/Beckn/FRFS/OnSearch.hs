@@ -56,7 +56,7 @@ data DVehicleServiceTier = DVehicleServiceTier
   deriving (Show)
 
 data DQuote = DQuote
-  { tripCategory :: Maybe Quote.FRFSTripCategory,
+  { tripCategory :: Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory,
     providerServiceId :: Maybe Text,
     providerLayoutId :: Maybe Text,
     providerClassId :: Maybe Text,

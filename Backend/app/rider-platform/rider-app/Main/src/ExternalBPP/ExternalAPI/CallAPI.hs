@@ -164,16 +164,13 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       searchDetail <-
         tnstcSearchDetail
           & fromMaybeM (InvalidRequest "journeyDate is required for TNSTC search")
-      counterCode <-
-        config'.counterCode
-          & fromMaybeM (InternalError "TNSTC counterCode not configured")
       services <-
         TNSTCServices.getAvailableServiceDetails config' $
           TNSTCServices.GetAvailableServiceDetailsReq
             { rqStartPlaceId = startStopCode,
               rqEndPlaceId = endStopCode,
               rqJourneyDate = searchDetail.journeyDate,
-              rqCounterCode = counterCode,
+              rqCounterCode = config'.counterCode,
               rqTotalSeats = searchDetail.quantity,
               rqUserName = config'.username,
               rqUserId = riderId.getId
@@ -351,7 +348,7 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quote
         DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
         CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
         TNSTC config' -> TNSTCOrder.createOrder config' integrationBPPConfig booking quoteCategories (_mRiderName, mRiderNumber)
-      _ -> throwError $ InternalError "Unimplemented!"
+        _ -> throwError $ InternalError "Unimplemented!"
   let countOrder = Metrics.incrementFRFSExternalBppCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (getProviderTag integrationBPPConfig) Metrics.FRFSBppOrder
   case eResp of
     Left err -> do

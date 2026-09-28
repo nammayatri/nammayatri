@@ -156,8 +156,7 @@ data TnstcPickupPoint = TnstcPickupPoint
 
 data TnstcConcessionType = TnstcConcessionType
   { tctConcessionId :: Text,
-    tctConcessionDesc :: Text,
-    tctCategoryLookupId :: Maybe Text
+    tctConcessionDesc :: Text
   }
   deriving (Show, Eq)
 
@@ -226,8 +225,7 @@ parseConcessionTypes cur = mapMaybe toC (cur $// laxElement "GetAllConcessionTyp
       pure
         TnstcConcessionType
           { tctConcessionId = cid,
-            tctConcessionDesc = childText row "concessionDesc",
-            tctCategoryLookupId = nonEmptyText (childText row "categoryLookupID")
+            tctConcessionDesc = childText row "concessionDesc"
           }
 
 parseBlockResult :: Cursor -> TnstcBlockResult

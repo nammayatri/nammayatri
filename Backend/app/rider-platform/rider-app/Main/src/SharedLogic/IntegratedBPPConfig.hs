@@ -27,9 +27,10 @@ findMaybeIntegratedBPPConfig ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   PlatformType ->
+  Maybe FRFSTripCategory ->
   m (Maybe IntegratedBPPConfig)
-findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType =
-  let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType mbTripCategory =
+  let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType mbTripCategory
    in maybe fallback (\id -> findByIdCP id |<|>| fallback) mbIntegratedBPPConfigId
 
 findMaybeIntegratedBPPConfigFromEntity ::
@@ -40,7 +41,7 @@ findMaybeIntegratedBPPConfigFromEntity ::
   PlatformType ->
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromEntity entity merchantOperatingCityId vehicleCategory platformType =
-  let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+  let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType Nothing
    in maybe fallback (\id -> findByIdCP id |<|>| fallback) entity.integratedBppConfigId
 
 findMaybeIntegratedBPPConfigFromAgency ::
@@ -51,7 +52,7 @@ findMaybeIntegratedBPPConfigFromAgency ::
   PlatformType ->
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
-  let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+  let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType Nothing
    in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' |<|>| fallback) agencyId
 
 findIntegratedBPPConfigById ::
@@ -66,9 +67,10 @@ findIntegratedBPPConfig ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   PlatformType ->
+  Maybe FRFSTripCategory ->
   m IntegratedBPPConfig
-findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType =
-  findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType
+findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType mbTripCategory =
+  findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType mbTripCategory
     >>= fromMaybeM IntegratedBPPConfigNotFound
 
 findIntegratedBPPConfigFromEntity ::
@@ -97,6 +99,16 @@ findAllIntegratedBPPConfig ::
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
   getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, configId = Nothing, agencyKey = Nothing, domain = Just (show Spec.FRFS), vehicleCategory = Just vehicleCategory, platformType = Just platformType}) (Just (CQIBC.findAllByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType))
+
+findAllIntegratedBPPConfigByTripCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  Maybe FRFSTripCategory ->
+  m [IntegratedBPPConfig]
+findAllIntegratedBPPConfigByTripCategory merchantOperatingCityId vehicleCategory platformType mbTripCategory =
+  filter (\config -> config.tripCategory == mbTripCategory) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType
 
 fetchFirstIntegratedBPPConfigRightResult ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -206,6 +218,7 @@ getProviderTag IntegratedBPPConfig {providerConfig} =
     DIRECT _ -> "DIRECT"
     ONDC _ -> "ONDC"
     CRIS _ -> "CRIS"
+    TNSTC _ -> "TNSTC"
 
 resolveOndcCity :: IntegratedBPPConfig -> Context.City -> Context.City
 resolveOndcCity IntegratedBPPConfig {providerConfig} city =
@@ -217,10 +230,10 @@ findByIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id IntegratedBPPCon
 findByIdCP configId =
   getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Just configId.getId, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> CQIBC.findById configId))
 
-findByDomainAndCityCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Id MerchantOperatingCity -> Enums.VehicleCategory -> PlatformType -> m (Maybe IntegratedBPPConfig)
-findByDomainAndCityCP domain mocId vc pt = do
+findByDomainAndCityCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Id MerchantOperatingCity -> Enums.VehicleCategory -> PlatformType -> Maybe FRFSTripCategory -> m (Maybe IntegratedBPPConfig)
+findByDomainAndCityCP domain mocId vc pt mbTripCategory = do
   configs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId.getId, configId = Nothing, agencyKey = Nothing, domain = Just domain, vehicleCategory = Just vc, platformType = Just pt}) (Just (CQIBC.findAllByDomainAndCityAndVehicleCategory domain mocId vc pt))
-  pure $ listToMaybe $ sortBy (\a b -> compare b.createdAt a.createdAt) configs
+  pure $ listToMaybe $ sortBy (\a b -> compare b.createdAt a.createdAt) $ filter (\config -> config.tripCategory == mbTripCategory) configs
 
 findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
 findByAgencyIdCP agencyKey =
