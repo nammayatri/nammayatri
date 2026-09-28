@@ -15,6 +15,7 @@ import Kernel.Utils.Common (Seconds (..), generateGUIDText, getCurrentTime, seco
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Kernel.Utils.Logging (logDebug, logError, logInfo)
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
+import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import qualified SharedLogic.FleetOperatorStats as FOS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDS
@@ -33,6 +34,10 @@ processingChangeOnline ::
   Maybe DriverInfo.DriverMode ->
   m ()
 processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
+  when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $
+    DriverOnlineHoursCache.markOfflineToday driverId
+  when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $
+    DriverOnlineHoursCache.markOnlineToday driverId transporterConfig.timeDiffFromUtc
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
     when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $ do
       updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
