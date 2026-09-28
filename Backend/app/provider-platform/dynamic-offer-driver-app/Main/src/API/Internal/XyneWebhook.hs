@@ -44,12 +44,17 @@ bearerHandler = postXyneBearerWebhook
       withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.postXyneBearerWebhook mbAuth rawBody
 
 -- | Bearer-token authenticated read endpoint for Xyne to page through issues
--- that changed after a @since@ cursor, so it can catch up on syncs that were
--- dropped in transit.
+-- created within a @startDate@/@endDate@ window (both optional; @endDate@
+-- inclusive), so it can catch up on syncs that were dropped in transit and
+-- has a real stopping point instead of guessing from an empty page.
+-- @since@ is kept as a deprecated alias for @startDate@ for existing
+-- callers; @startDate@ wins if both are given.
 type IssuesAPI =
   "xyne" :> "webhook" :> "issues"
     :> Header "Authorization" Kernel.Prelude.Text
     :> QueryParam "since" Kernel.Prelude.UTCTime
+    :> QueryParam "startDate" Kernel.Prelude.UTCTime
+    :> QueryParam "endDate" Kernel.Prelude.UTCTime
     :> QueryParam "limit" Int
     :> QueryParam "offset" Int
     :> Get '[JSON] [XyneTypes.XyneInboundReq]
@@ -57,5 +62,5 @@ type IssuesAPI =
 issuesHandler :: FlowServer IssuesAPI
 issuesHandler = getXyneIssues
   where
-    getXyneIssues mbAuth mbSince mbLimit mbOffset =
-      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.getXyneIssues mbSince mbLimit mbOffset mbAuth
+    getXyneIssues mbAuth mbSince mbStartDate mbEndDate mbLimit mbOffset =
+      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.getXyneIssues (mbStartDate <|> mbSince) mbEndDate mbLimit mbOffset mbAuth
