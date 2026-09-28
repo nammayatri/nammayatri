@@ -164,3 +164,12 @@ apis:
         type: SharedCabDriverReq
       response:
         type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/cabFull
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession

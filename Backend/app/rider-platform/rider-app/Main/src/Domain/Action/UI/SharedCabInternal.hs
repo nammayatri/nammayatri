@@ -9,6 +9,7 @@ module Domain.Action.UI.SharedCabInternal
     postSharedCabBookingCancel,
     postSharedCabBookingBoardedWithoutCode,
     postSharedCabBookingDropped,
+    postSharedCabCabFull,
   )
 where
 
@@ -185,6 +186,13 @@ postSharedCabBookingBoardedWithoutCode = driverAction DriverBoarded
 
 postSharedCabBookingDropped :: Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 postSharedCabBookingDropped = driverAction DriverDropped
+
+-- | R19: the cab is full. Walk-ups are set first (Session.markCabFull), then every unboarded allocation goes as
+-- SEAT_LOST, outside the plate lock since the release takes each booking lock.
+postSharedCabCabFull :: Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
+postSharedCabCabFull mbToken req = do
+  checkToken mbToken
+  Session.markCabFull req.driverId req.vehicleNumber >>= releasing AllocTypes.SeatLost >>= checked >>= mkSessionResp
 
 driverAction :: DriverAction -> Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 driverAction action bookingId mbToken req = do

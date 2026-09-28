@@ -73,6 +73,10 @@ tests =
         setWalkup 3 1 active @?= Right active {walkupCount = 1, version = 4},
       testCase "walk-ups above capacity are rejected" $
         setWalkup 3 5 active @?= Left InvalidWalkupCount,
+      testCase "R19 cab full: walk-ups take every seat the boarded riders don't" $
+        fillCab 1 active {walkupCount = 1} @?= active {walkupCount = 3, version = 4},
+      testCase "R19 cab full never lowers the walk-ups" $
+        fillCab 3 active {walkupCount = 2} @?= active {walkupCount = 2, version = 4},
       testCase "END_FOR_NOW leaves the route set" $
         routeSetMoves (Just active) (endSession active) @?= RouteSetMoves ["R1"] [],
       testCase "END_FOR_NOW closes the trip with its own reason" $

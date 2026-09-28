@@ -25,6 +25,16 @@ data SharedCabRouteListResp = SharedCabRouteListResp {routes :: [SharedCabRouteI
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SharedCabSkipReason
+  = FULL
+  | OTHER
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SharedCabSkipReq = SharedCabSkipReq {reason :: SharedCabSkipReason}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SharedCabStop = SharedCabStop {code :: Kernel.Prelude.Text, name :: Kernel.Prelude.Text, point :: Kernel.External.Maps.Types.LatLong, sequenceNum :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

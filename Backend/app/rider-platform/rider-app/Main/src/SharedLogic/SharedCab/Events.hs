@@ -64,6 +64,8 @@ data EventKind
   | Dropped DropBy
   | NoShow
   | SeatLost
+  | -- | walk-up count the driver's "cab full" set (R19)
+    CabFull Int
   | -- | rule, detail
     InvariantViolation Text Text
   deriving (Show, Eq)
@@ -97,6 +99,7 @@ eventName = \case
   Dropped _ -> "dropped"
   NoShow -> "no_show"
   SeatLost -> "seat_lost"
+  CabFull _ -> "cab_full"
   InvariantViolation _ _ -> "invariant_violation"
 
 blameText :: Blame -> Text
@@ -127,6 +130,7 @@ kindFields = \case
   Boarded source -> ["source" .= boardSourceText source]
   Rebound from sibling -> ["fromVehicle" .= from, "siblingRoute" .= sibling]
   Dropped by -> ["by" .= dropByText by]
+  CabFull walkups -> ["walkupCount" .= walkups]
   InvariantViolation rule detail -> ["rule" .= rule, "detail" .= detail]
   _ -> []
 

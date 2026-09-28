@@ -39,7 +39,9 @@ module SharedLogic.SharedCab.Allocation
     cityConfig,
     triggerSharedCabAllocation,
     releaseSharedCabAllocation,
+    skipSharedCabAllocation,
     releaseUnboarded,
+    allocatedPlate,
     withCityTickLease,
     allocationPass,
     readRoutePositions,
@@ -48,6 +50,7 @@ module SharedLogic.SharedCab.Allocation
     planRouteAllocation,
     eligibleCandidates,
     rankCandidates,
+    withoutSkipped,
     isFreshPosition,
     RankedCandidate (..),
     FindingBooking (..),
@@ -55,6 +58,7 @@ module SharedLogic.SharedCab.Allocation
     allocKey,
     attemptsKey,
     bookingLockKey,
+    skippedKey,
   )
 where
 
@@ -112,6 +116,10 @@ allocKey bookingId = "sharedcab:alloc:" <> bookingId
 -- deviation from it.
 attemptsKey :: Text -> Text
 attemptsKey bookingId = "sharedcab:attempts:" <> bookingId
+
+-- | R19: plates the rider skipped for this booking, kept out of its claims for findingTimeoutSec.
+skippedKey :: Text -> Text
+skippedKey bookingId = "sharedcab:skipped:" <> bookingId
 
 -- | 05 §2: `sharedcab:lock:booking:{bookingId}`.
 bookingLockKey :: Text -> Text
@@ -284,6 +292,10 @@ planRouteAllocation ::
 planRouteAllocation now cfg tracking sessions booking =
   rankCandidates (eligibleCandidates now cfg tracking sessions booking)
 
+-- | R19: a cab the rider skipped is never offered to that booking again.
+withoutSkipped :: [Text] -> [RankedCandidate] -> [RankedCandidate]
+withoutSkipped skipped = filter ((`notElem` skipped) . (.rcSession.vehicleNumber))
+
 --------------------------------------------------------------------------------
 -- Phase 2 -- target cab lock, then booking lock (05 §2/§3 order)
 --------------------------------------------------------------------------------
@@ -356,6 +368,19 @@ releaseSharedCabAllocation ::
 releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   closed <- withBookingLock bookingId $ closeLocked cfg bookingId expectedPlate outcome
   afterClose cfg bookingId expectedPlate outcome closed
+  whenJust closed triggerSharedCabAllocation
+  pure (isJust closed)
+
+-- | R19 rider "skip this cab": the allocation closes as RIDER_SKIPPED and, in the same booking-lock hold, the
+-- plate joins the booking's skipped set, so no claim can re-offer it before the set is written.
+skipSharedCabAllocation :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> SkipReason -> m Bool
+skipSharedCabAllocation cfg bookingId plate reason = do
+  let outcome = RiderSkipped reason
+  closed <- withBookingLock bookingId $ do
+    city <- closeLocked cfg bookingId plate outcome
+    when (isJust city) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [plate] cfg.findingTimeoutSec
+    pure city
+  afterClose cfg bookingId plate outcome closed
   whenJust closed triggerSharedCabAllocation
   pure (isJust closed)
 
@@ -557,8 +582,9 @@ allocationPass cityId = do
       forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) ->
         whenJust (lookup routeCode positionsByRoute) $ \positions -> do
           sessions <- Session.activeSessionsOnRoute routeCode
-          forM_ bookings $ \booking ->
-            void $ claimFirst cfg booking (planRouteAllocation now cfg positions sessions booking)
+          forM_ bookings $ \booking -> do
+            skipped <- shared $ Redis.sMembers (skippedKey booking.bookingId.getId)
+            void $ claimFirst cfg booking (withoutSkipped skipped (planRouteAllocation now cfg positions sessions booking))
       pure (live, positionsByRoute)
 
 -- | whenWithLockRedis, on the cross-app key, so the scheduler's ticks and the API's triggers share one lease.

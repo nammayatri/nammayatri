@@ -6,6 +6,9 @@ module SharedLogic.SharedCab.Booking
     markDropped,
     ridersOnBoard,
     liveSeatsOnVehicle,
+    boardedSeatsOnVehicle,
+    recordRiderFix,
+    readRiderFix,
     findingOnRoute,
     shared,
     nonTerminalStatuses,
@@ -24,6 +27,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
+import SharedLogic.SharedCab.Allocation.Types (RiderFix)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable, seatsHeld)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -88,12 +92,34 @@ ridersOnBoard plate = do
 -- | `04` §3: seats app bookings hold on the cab, one per ticket still held (ALLOCATED or BOARDED). A degraded
 -- boarding holds none (`05` §5); its marker is cross-app, like the allocation engine's keys. `plate` is canonical.
 liveSeatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Int
-liveSeatsOnVehicle plate = do
+liveSeatsOnVehicle = seatsOnVehicle (const True)
+
+-- | The seats of the cab's bookings with someone on board: what `liveSeatsOnVehicle` leaves once every unboarded
+-- allocation is released (R19 cab full).
+boardedSeatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m Int
+boardedSeatsOnVehicle = seatsOnVehicle (DFRFSTicket.INPROGRESS `elem`)
+
+-- | Seats held by the plate's counted bookings whose ticket statuses pass `keep`.
+seatsOnVehicle :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ([DFRFSTicket.FRFSTicketStatus] -> Bool) -> Text -> m Int
+seatsOnVehicle keep plate = do
   bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [DFRFSTicketBookingStatus.CONFIRMED]
   counted <- filterM (fmap isNothing . shared . Redis.get @A.Value . ("sharedcab:degraded:" <>) . getId . (.id)) bookings
   if null counted
     then pure 0
-    else seatsHeld . map (.status) <$> QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
+    else do
+      tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
+      pure $ sum [seatsHeld statuses | b <- counted, let statuses = [t.status | t <- tickets, t.frfsTicketBookingId == b.id], keep statuses]
+
+riderFixKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId
+
+-- | R15: the rider's latest position, written from the API's journey poll so the scheduler's tick can judge a
+-- passed stop. The TTL only collects garbage; freshness is judged by `takenAt`.
+recordRiderFix :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> RiderFix -> m ()
+recordRiderFix bookingId riderFix = shared $ Redis.setExp (riderFixKey bookingId) riderFix 3600
+
+readRiderFix :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe RiderFix)
+readRiderFix = shared . Redis.safeGet . riderFixKey
 
 -- | `05` §3: FINDING = CONFIRMED with no cab yet.
 findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]

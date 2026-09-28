@@ -1,5 +1,7 @@
 imports:
   LatLong: Kernel.External.Maps.Types
+  APISuccess: Kernel.Types.APISuccess
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
 
 module: SharedCab
 
@@ -30,6 +32,13 @@ types:
     routeInfo: SharedCabRouteInfo
     cabs: "[SharedCabLiveCab]"
 
+  # R19: FULL = no seat for me (nobody's fault), OTHER = I don't want this cab (counts as my miss)
+  SharedCabSkipReason:
+    enum: "FULL,OTHER"
+
+  SharedCabSkipReq:
+    reason: SharedCabSkipReason
+
 apis:
   - GET:
       endpoint: /sharedCab/routes
@@ -44,3 +53,12 @@ apis:
         routeCode: Text
       response:
         type: SharedCabRouteDetailResp
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/skip
+      auth: TokenAuth
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabSkipReq
+      response:
+        type: APISuccess

@@ -149,10 +149,21 @@ type API =
       :> Post
            ('[JSON])
            SharedLogic.SharedCab.SessionView.SharedCabSession
+      :<|> "sharedCab"
+      :> "cabFull"
+      :> Header
+           "token"
+           Kernel.Prelude.Text
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.SharedCabInternal.SharedCabDriverReq
+      :> Post
+           ('[JSON])
+           SharedLogic.SharedCab.SessionView.SharedCabSession
   )
 
 handler :: Environment.FlowServer API
-handler = getSharedCabRoutes :<|> postSharedCabRouteSelect :<|> getSharedCabSession :<|> postSharedCabSeats :<|> postSharedCabRouteEnd :<|> postSharedCabResume :<|> getSharedCabTrips :<|> postSharedCabBookingCancel :<|> postSharedCabBookingBoardedWithoutCode :<|> postSharedCabBookingDropped
+handler = getSharedCabRoutes :<|> postSharedCabRouteSelect :<|> getSharedCabSession :<|> postSharedCabSeats :<|> postSharedCabRouteEnd :<|> postSharedCabResume :<|> getSharedCabTrips :<|> postSharedCabBookingCancel :<|> postSharedCabBookingBoardedWithoutCode :<|> postSharedCabBookingDropped :<|> postSharedCabCabFull
 
 getSharedCabRoutes :: (Kernel.Prelude.Text -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.SharedCabInternal.SharedCabRoutesResp)
 getSharedCabRoutes a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.getSharedCabRoutes a4 a3 a2 a1
@@ -183,3 +194,6 @@ postSharedCabBookingBoardedWithoutCode a3 a2 a1 = withFlowHandlerAPI $ Domain.Ac
 
 postSharedCabBookingDropped :: (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SharedCabDriverReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
 postSharedCabBookingDropped a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabBookingDropped a3 a2 a1
+
+postSharedCabCabFull :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.SharedCabInternal.SharedCabDriverReq -> Environment.FlowHandler SharedLogic.SharedCab.SessionView.SharedCabSession)
+postSharedCabCabFull a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SharedCabInternal.postSharedCabCabFull a2 a1

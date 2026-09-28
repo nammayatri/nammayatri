@@ -19,8 +19,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (allocKey, cityConfig, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
-import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), TimerKind (..))
-import SharedLogic.SharedCab.Booking (markDropped, withBookingLock)
+import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), Blame (BlameNone), TimerKind (..), passedStopBlame)
+import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
@@ -110,8 +110,12 @@ stepCab cfg spc now live positions route s = do
       onBoard = [b | (b, statuses) <- bookings, DFRFSTicket.INPROGRESS `elem` statuses]
   forM_ awaiting $ \b ->
     if any (boardStopPassed b.fromStationCode) mbCab
-      then -- TODO(7.6): Events no_show when the rider is outside atStopRadiusM (`05` §6.2; needs the journey-stream position).
-        void $ releaseSharedCabAllocation cfg b.id plate PassedStop
+      then do
+        -- R15: the no-show is allocation_closed's blame (`05` §7); a stop missing from the cab's list can't be judged
+        riderFix <- readRiderFix b.id
+        let boardStop = (.coordinate) <$> (find ((== b.fromStationCode) . (.stopCode)) . (.stops) =<< mbCab)
+            blame = maybe BlameNone (\stop -> passedStopBlame cfg.atStopRadiusM cfg.ltsMaxAgeSec now stop riderFix) boardStop
+        void $ releaseSharedCabAllocation cfg b.id plate (PassedStop blame)
       else movingTimerStep cfg.findingTimeoutSec spc now freshCab plate b
   forM_ onBoard $ dropStep spc now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep spc now route ((.position) <$> freshCab) plate

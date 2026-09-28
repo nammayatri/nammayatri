@@ -11,6 +11,9 @@ module SharedLogic.SharedCab.Allocation.Types
   ( AllocationState (..),
     TimerKind (..),
     AllocationOutcome (..),
+    SkipReason (..),
+    RiderFix (..),
+    passedStopBlame,
     timerExpiry,
     isMovingSpeed,
     parseLtsTimestamp,
@@ -26,8 +29,11 @@ where
 
 import qualified Data.Aeson.Types as A
 import qualified Data.Text as T
+import Data.Time.Clock (diffUTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 
 -- | The value stored under Redis key @sharedcab:alloc:{bookingId}@ (05 §2).
 -- Field names match the plan JSON exactly: {vehicleNumber, allocatedAt, expiresAt, attempts}.
@@ -61,8 +67,8 @@ data AllocationOutcome
     MovingTimeout
   | -- | driver cancelled the allocation (05 §3)
     DriverCancelled
-  | -- | tick saw the cab pass the board stop with the booking unboarded (05 §6 item 2)
-    PassedStop
+  | -- | tick saw the cab pass the board stop with the booking unboarded (05 §6 item 2); blame per passedStopBlame (R15)
+    PassedStop Blame
   | -- | capacity guard evicted the latest unboarded allocation (05 §3, §8.7 walk-ups win)
     SeatLost
   | -- | cab route-changed / queued route no longer serves the board stop (05 §11 "Cab changes route")
@@ -71,6 +77,12 @@ data AllocationOutcome
     SessionClosed
   | -- | the alloc key vanished before any release (crash after the CAS, or ticks missed past the key's TTL)
     TimerLost
+  | -- | the rider skipped the cab (R19); that plate is then excluded from the booking's next claims
+    RiderSkipped SkipReason
+  deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+
+-- | R19: a full cab is nobody's fault; any other skip is the rider's.
+data SkipReason = SkipFull | SkipOther
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 -- | The @outcome@ field of the @allocation_closed@ event (05 §7).
@@ -79,11 +91,12 @@ outcomeText = \case
   StandTimeout -> "STAND_TIMEOUT"
   MovingTimeout -> "MOVING_TIMEOUT"
   DriverCancelled -> "DRIVER_CANCELLED"
-  PassedStop -> "PASSED_STOP"
+  PassedStop _ -> "PASSED_STOP"
   SeatLost -> "SEAT_LOST"
   RouteChanged -> "ROUTE_CHANGED"
   SessionClosed -> "SESSION_CLOSED"
   TimerLost -> "TIMER_LOST"
+  RiderSkipped _ -> "RIDER_SKIPPED"
 
 -- | @blame@ field of the @allocation_closed@ event (05 §7) and the foundation for
 -- §8.4: "Timers blame the right party."
@@ -92,7 +105,8 @@ data Blame = BlameDriver | BlameRider | BlameNone
 
 -- | 05 §8.4 blame rules:
 --   * cab time running out at the stand and driver cancels are the driver's miss;
---   * the cab reaching/passing the stop with the rider not there is the rider's no-show;
+--   * the cab reaching/passing the stop with the rider not there is the rider's no-show; passing a rider
+--     who was waiting at the stop is the driver's miss (R15, passedStopBlame);
 --   * capacity-guard eviction and session lifecycle closes are nobody's fault.
 --
 -- RANKED QUESTION (report Q5): PRD §11 treats the 90 s moving timer as "rider didn't board" --
@@ -102,11 +116,13 @@ blameFor = \case
   StandTimeout -> BlameDriver
   DriverCancelled -> BlameDriver
   MovingTimeout -> BlameRider
-  PassedStop -> BlameRider
+  PassedStop blame -> blame
   SeatLost -> BlameNone
   RouteChanged -> BlameNone
   SessionClosed -> BlameNone
   TimerLost -> BlameNone
+  RiderSkipped SkipFull -> BlameNone
+  RiderSkipped SkipOther -> BlameRider
 
 -- | 05 §3: "@attempts@ counts allocations, not candidates. A phase-2 miss increments nothing;
 -- attempts+1 only when a real allocation ends in TIMEOUT / DRIVER_CANCELLED / PASSED_STOP / SEAT_LOST."
@@ -116,11 +132,13 @@ countsTowardAttempts = \case
   StandTimeout -> True
   MovingTimeout -> True
   DriverCancelled -> True
-  PassedStop -> True
+  PassedStop _ -> True
   SeatLost -> True
   RouteChanged -> False
   SessionClosed -> False
   TimerLost -> False
+  RiderSkipped SkipFull -> False
+  RiderSkipped SkipOther -> True
 
 -- | 05 §8.4 literal: "@consecutiveMisses@ counts only DRIVER_CANCELLED and stand TIMEOUT."
 countsTowardDriverMisses :: AllocationOutcome -> Bool
@@ -201,3 +219,20 @@ isMovingSpeed = maybe False (> 1.0)
 parseLtsTimestamp :: Text -> Maybe UTCTime
 parseLtsTimestamp ts =
   maybe (posixSecondsToUTCTime . fromInteger <$> readMaybe (T.unpack ts)) Just (A.parseMaybe A.parseJSON (A.String ts))
+
+-- | The rider's last known position and when it was taken (the journey's rider-location stream).
+data RiderFix = RiderFix
+  { position :: LatLong,
+    takenAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | R15, when the cab passed the board stop unboarded: a fresh fix within `radiusM` of the stop means the
+-- rider was waiting and the driver skipped them; a fresh fix elsewhere means the rider wasn't there; no fix
+-- or a stale one blames nobody.
+passedStopBlame :: Int -> Int -> UTCTime -> LatLong -> Maybe RiderFix -> Blame
+passedStopBlame radiusM maxAgeSec now stop = \case
+  Just riderFix
+    | diffUTCTime now riderFix.takenAt <= fromIntegral maxAgeSec ->
+      if distanceBetweenInMeters riderFix.position stop <= fromIntegral radiusM then BlameDriver else BlameRider
+  _ -> BlameNone

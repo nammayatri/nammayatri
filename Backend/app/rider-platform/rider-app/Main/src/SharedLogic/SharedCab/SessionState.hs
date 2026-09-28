@@ -17,6 +17,7 @@ module SharedLogic.SharedCab.SessionState
     pauseSession,
     resumeSession,
     setWalkup,
+    fillCab,
     endActionReason,
     closedTripStatus,
     routeSetMoves,
@@ -189,6 +190,11 @@ setWalkup expectedVersion count s
   | s.version /= expectedVersion = Left SessionVersionMismatch
   | count < 0 || count > s.capacity = Left InvalidWalkupCount
   | otherwise = Right $ bump s {walkupCount = count}
+
+-- | R19 "cab full": walk-ups take every seat the riders kept on board don't, so `available` reads 0.
+-- Never lowers the walk-up count: declaring the cab full must not free a seat.
+fillCab :: Int -> Session -> Session
+fillCab seatsKept s = bump s {walkupCount = max s.walkupCount (s.capacity - seatsKept)}
 
 endActionReason :: EndRouteAction -> DVT.VehicleTripEndReason
 endActionReason = \case

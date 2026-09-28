@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.Session
     withPlateLock,
     activeSessionsOnRoute,
     setWalkupCount,
+    markCabFull,
     expire,
   )
 where
@@ -248,10 +249,30 @@ setWalkupCount driver rawPlate expectedVersion count = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ ownedSession driver prior
   s' <- liftSession $ setWalkup expectedVersion count s
-  let added = count - s.walkupCount
+  saveWalkups prior s s'
+  where
+    plate = canonicalisePlate rawPlate
+
+-- | R19 driver "cab full": walk-ups fill every seat the boarded riders don't hold. Written under the plate lock
+-- BEFORE the caller releases the unboarded allocations (SEAT_LOST), so while they are still counted `available`
+-- is below zero and no claim can land on the cab in between.
+markCabFull :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m, Events.EventFlow m r) => Text -> Text -> m Session
+markCabFull driver rawPlate = do
+  full <- withPlateLock plate $ do
+    prior <- readSession plate
+    s <- liftSession $ ownedSession driver prior
+    boarded <- Booking.boardedSeatsOnVehicle plate
+    saveWalkups prior s (fillCab boarded s)
+  Events.forSession (Events.CabFull full.walkupCount) full
+  pure full
+  where
+    plate = canonicalisePlate rawPlate
+
+-- | Each walk-up added is also counted on the trip row (offlineBoardings).
+saveWalkups :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Session -> Session -> Session -> m Session
+saveWalkups prior s s' = do
+  let added = s'.walkupCount - s.walkupCount
   when (added > 0) $
     QVT.findById s.vehicleTripId
       >>= traverse_ (\trip -> QVT.updateOfflineBoardings (trip.offlineBoardings + added) trip.id)
   saveSession prior s'
-  where
-    plate = canonicalisePlate rawPlate
