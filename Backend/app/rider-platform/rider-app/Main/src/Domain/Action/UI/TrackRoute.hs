@@ -46,7 +46,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId personCityInfo.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) (fromMaybe DIBC.APPLICATION mbPlatformType)
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId personCityInfo.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing
   logInfo $ "mbSelectedSourceStopId: " <> show mbSelectedSourceStopId <> " and mbSelectedDestinationStopId: " <> show mbSelectedDestinationStopId
   routeIdsToTrack <-
     case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of

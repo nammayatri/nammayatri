@@ -76,6 +76,7 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
           blacklistedFareQuoteTypes
           True
           True
+          Nothing
       )
       ("crisViaRoutes:getFares search: " <> searchReq.id.getId)
   let bestFarePerPath = M.toList $ M.fromListWith mergeSamePath [(mkStopPath fd, (fare, fd.providerRouteId, [])) | fare <- fares, Just fd <- [fare.fareDetails]]
@@ -214,7 +215,17 @@ mkRouteQuote integratedBPPConfig vehicleType providerRouteId routeStations stati
           routeStations = routeStations,
           stations = stations,
           fareDetails = fareDetails,
-          categories = map mkDCategory categories
+          categories = map mkDCategory categories,
+          tripCategory = Just INTRACITY,
+          providerServiceId = Nothing,
+          providerLayoutId = Nothing,
+          providerClassId = Nothing,
+          providerTripCode = Nothing,
+          departureTime = Nothing,
+          arrivalTime = Nothing,
+          arrivalDate = Nothing,
+          availableSeats = Nothing,
+          stopBookingTime = Nothing
         }
 
 mkDVehicleServiceTier :: FRFSVehicleServiceTier -> DVehicleServiceTier

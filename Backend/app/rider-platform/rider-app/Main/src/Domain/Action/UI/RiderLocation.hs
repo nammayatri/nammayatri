@@ -42,7 +42,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   where
     getNearbyBuses :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> Id MerchantOperatingCity -> Environment.Flow [CQMMB.BusDataWithRoutesInfo]
     getNearbyBuses userPos riderConfig merchantOperatingCityId = do
-      integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+      integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
       let redisPrefix = case integratedBPPConfig.providerConfig of
             DIBC.ONDC config -> config.redisPrefix
             DIBC.DIRECT config -> config.redisPrefix

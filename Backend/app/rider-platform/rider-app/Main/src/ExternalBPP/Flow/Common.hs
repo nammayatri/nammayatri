@@ -140,7 +140,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
           itemId = maybe (CallAPI.getProviderName integratedBPPConfig) (.bppItemId) (find (\category -> category.category == ADULT) categories)
           d = providerServiceDetails
        in DQuote
-            { tripCategory = Just DFRFSQuote.INTERCITY,
+            { tripCategory = Just INTERCITY,
               providerServiceId = (.providerServiceId) <$> d,
               providerLayoutId = (.providerLayoutId) <$> d,
               providerClassId = (.providerClassId) <$> d,
@@ -338,7 +338,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                       routesInfo
                       stationsPerSegment
                in DQuote
-                    { tripCategory = Just DFRFSQuote.INTRACITY,
+                    { tripCategory = Just INTRACITY,
                       providerServiceId = Nothing,
                       providerLayoutId = Nothing,
                       providerClassId = Nothing,

@@ -2,18 +2,26 @@
 {-# LANGUAGE TypeApplications #-}
 
 module ExternalBPP.ExternalAPI.Bus.TNSTC.Client
-  ( callTnstc,
+  ( TnstcFlow,
+    callTnstc,
     tnstcSoapAction,
+    fmtDate,
+    op,
+    arg0,
+    el,
   )
 where
 
 import qualified Control.Exception as CE
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time (Day)
+import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types.Extra.IntegratedBPPConfig (TNSTCConfig (..))
 import qualified EulerHS.Language as L
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Bus.TNSTC.Error (TNSTCFault (..))
+import ExternalBPP.ExternalAPI.Bus.TNSTC.Types (setcNamespace)
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
@@ -25,9 +33,24 @@ import Network.SOAP (ResponseParser (..), invokeWS)
 import Network.SOAP.Exception (SOAPFault (..), SOAPParsingError (..))
 import Network.SOAP.Transport.HTTP (runQueryM)
 import Servant.Client.Core (ClientError (..))
+import qualified Text.XML as XML
 import Text.XML.Cursor (Cursor)
-import Text.XML.Writer (ToXML)
+import Text.XML.Writer (ToXML, XML, elementA)
 import Tools.Error
+
+type TnstcFlow m r = (MonadFlow m, EncFlow m r, Metrics.CoreMetrics m, HasField "requestId" r (Maybe Text))
+
+fmtDate :: Day -> Text
+fmtDate = T.pack . formatTime defaultTimeLocale "%d/%m/%Y"
+
+op :: Text -> XML.Name
+op n = XML.Name n (Just setcNamespace) (Just "com")
+
+arg0 :: XML.Name
+arg0 = XML.Name "arg0" Nothing Nothing
+
+el :: Text -> Text -> XML
+el n v = elementA (XML.Name n Nothing Nothing) ([] :: [(XML.Name, Text)]) (v :: Text)
 
 tnstcSoapAction :: TNSTCConfig -> Text -> String
 tnstcSoapAction config opName =
@@ -36,12 +59,7 @@ tnstcSoapAction config opName =
     Just prefix -> T.unpack (prefix <> opName)
 
 callTnstc ::
-  ( ToXML b,
-    MonadFlow m,
-    EncFlow m r,
-    Metrics.CoreMetrics m,
-    HasField "requestId" r (Maybe Text)
-  ) =>
+  (ToXML b, TnstcFlow m r) =>
   TNSTCConfig ->
   Text ->
   b ->

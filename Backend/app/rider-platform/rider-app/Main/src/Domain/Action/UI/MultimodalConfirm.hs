@@ -1206,6 +1206,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   busStationListHackEnabled <- liftIO $ fromMaybe False . (>>= readMaybe) <$> lookupEnv "BUS_STATION_LIST_HACK_ENABLED"
 
   let mkResponse stations routes routeStops bppConfig mbServiceType = do
+        let mbTripCategory = case bppConfig.providerConfig of
+              DIBC.TNSTC _ -> Just DIBC.INTERCITY
+              _ -> Nothing
         frfsServiceTier <- maybe (pure Nothing) (\serviceType -> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceType person.merchantOperatingCityId bppConfig.id) mbServiceType
         gtfsVersion <-
           withTryCatch "getGtfsVersion:mkResponse" (OTPRest.getGtfsVersion bppConfig) >>= \case
@@ -1236,6 +1239,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                               gj = s.geoJson,
                               gi = s.gates,
                               ibc = bppConfig.id,
+                              tc = mbTripCategory,
                               -- The app lists stations and folds platforms under
                               -- them, so it needs to know which kind each stop is
                               -- and, for a platform, which station owns it.
@@ -1751,7 +1755,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
   allLegs <- QJourneyLeg.getJourneyLegs journeyId
   reqJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidLegOrder legOrder)
   validateChangeNeededForStop reqJourneyLeg req.newSourceStation req.newDestinationStation
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (fromMaybe Enums.METRO $ JM.multiModalTravelModeToBecknVehicleCategory reqJourneyLeg.mode) DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (fromMaybe Enums.METRO $ JM.multiModalTravelModeToBecknVehicleCategory reqJourneyLeg.mode) DIBC.MULTIMODAL Nothing
   riderConfig <-
     getConfig (RiderConfigDimensions {merchantOperatingCityId = reqJourneyLeg.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist reqJourneyLeg.merchantOperatingCityId.getId)
@@ -2064,7 +2068,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       now <- getCurrentTime
       fork "RouteServiceability: record rider location" $
         addPoint (Id journeyIdText) (ApiTypes.RiderLocationReq {latLong, currTime = fromMaybe now req.timestamp}) req.vehicleNumber
-    integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+    integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfigByTripCategory person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
     let routeServiceabilityContext =
           RouteServiceabilityContext
@@ -3296,7 +3300,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbAllowClusters 
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-
     fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
-      =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+      =<< SIBC.findAllIntegratedBPPConfigByTripCategory person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
   mappings <- OTPRest.getRouteStopMappingByStopCodeWithClusters mbAllowClusters stopCode integratedBPPConfig
   -- GIMS already expands a station (and, with clusters, its nearby stops) into the platforms each
   -- route calls at, and feed ETAs are keyed by the platform a bus calls at, so a route's own

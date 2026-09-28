@@ -87,7 +87,7 @@ getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfi
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   vehicleType <- fromMaybeM (InvalidRequest "vehicleType is required when requireNearbyBuses is true") req.vehicleType
   let vehicleCategory = castToOnDemandVehicleCategory vehicleType
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType Nothing
   case mbIntegratedBPPConfig of
     Just integratedBPPConfig -> do
       buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig integratedBPPConfig

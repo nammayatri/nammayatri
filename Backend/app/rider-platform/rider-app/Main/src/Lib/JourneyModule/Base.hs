@@ -124,7 +124,7 @@ filterTransitRoutes riderConfig routes = do
               (Just departureTime, Just stopCode, Just routeId) -> do
                 let buffer = 300 -- TODO: MOVE TO CONFIG.
                 let departureTimeWithBuffer = buffer `addUTCTime` departureTime
-                integratedBppConfig <- SIBC.findIntegratedBPPConfig Nothing riderConfig.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+                integratedBppConfig <- SIBC.findIntegratedBPPConfig Nothing riderConfig.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL Nothing
                 routeWithBuses <- CQMMB.getRoutesBuses routeId integratedBppConfig
                 -- Resolved once per leg, not per bus: bus ETAs are keyed by the platform a bus
                 -- calls at, so a station code only matches through the platforms under it.

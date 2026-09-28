@@ -44,3 +44,9 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN pass_override_applicable 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN sort_quotes_by_route_service_tiers boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN trip_category text ;
+

@@ -23,7 +23,7 @@ imports:
   FRFSTicketBookingPaymentCategory: Domain.Types.FRFSTicketBookingPaymentCategory
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
-  FRFSTripCategory: Domain.Types.FRFSQuote
+  FRFSTripCategory: Domain.Types.IntegratedBPPConfig
   FRFSSavedPassenger: Domain.Types.FRFSSavedPassenger
   FRFSRoutes: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
@@ -244,9 +244,6 @@ FRFSQuote:
   types:
     FRFSQuoteType:
       enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
-    FRFSTripCategory:
-      enum: "INTRACITY, INTERCITY"
-      derive: "HttpInstance"
     FRFSFareDetails:
       providerRouteId: Text
       distance: Meters

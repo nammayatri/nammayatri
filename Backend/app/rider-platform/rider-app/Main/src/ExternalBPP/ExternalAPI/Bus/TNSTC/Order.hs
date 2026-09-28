@@ -53,21 +53,12 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
   journeyDate <- search.journeyDate & fromMaybeM (InvalidRequest "journeyDate missing on search")
   serviceId <- quote.providerServiceId & fromMaybeM (InvalidRequest "providerServiceId missing on quote")
   classId <- quote.providerClassId & fromMaybeM (InvalidRequest "providerClassId missing on quote")
-  counterCode <- tnstcConfig.counterCode & fromMaybeM (InternalError "TNSTC counterCode not configured")
-  createdBy <- tnstcConfig.createdBy & fromMaybeM (InternalError "TNSTC createdBy not configured")
-  -- Already carries the "-<userId>" suffix: select stores it that way because TNSTC validates
-  -- the full form here but never echoes the suffix back.
   wsRefNo <- quote.providerRefNo & fromMaybeM (InvalidRequest "providerRefNo missing on quote; select was not completed")
   concessionTypeId <- quote.concessionTypeId & fromMaybeM (InvalidRequest "concessionTypeId missing on quote")
 
   passengerDetails <- QFRFSPassengerDetail.findAllByQuoteId booking.quoteId
-  -- Deliberately re-read rather than using the categories passed in: FRFSStatus hands us
-  -- payment categories when they exist, and paymentCategoryToQuoteCategory drops
-  -- providerBlockIds. Losing the hold ids here would fail the booking after payment.
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let selected = filter (\c -> c.selectedQuantity > 0) quoteCategories
-      -- seatLabels and providerBlockIds were stored index-aligned per category at select, so
-      -- zipping within a category preserves the pairing TNSTC matches positionally.
       pairs = concatMap (\c -> zip (fromMaybe [] c.seatLabels) (fromMaybe [] c.providerBlockIds)) selected
       seatLabels = map fst pairs
       blockIds = map snd pairs
@@ -105,7 +96,7 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
   tripCode <- quote.providerTripCode & fromMaybeM (InvalidRequest $ "providerTripCode missing on quote " <> quote.id.getId)
   startPlaceCode <- tnstcPlaceCode integratedBPPConfig (T.take 3 (T.drop 4 tripCode)) search.fromStationCode
   endPlaceCode <- tnstcPlaceCode integratedBPPConfig (T.take 3 (T.drop 7 tripCode)) search.toStationCode
-  (mbPickup, mbDropOff) <- resolveBoardingPoints tnstcConfig quote passengerDetails journeyDate serviceId counterCode startPlaceCode endPlaceCode
+  (mbPickup, mbDropOff) <- resolveBoardingPoints tnstcConfig quote passengerDetails journeyDate serviceId startPlaceCode endPlaceCode
 
   let describePoint label placeCode mbPoint =
         "TNSTC " <> label <> " unresolved bookingId=" <> booking.id.getId
@@ -157,8 +148,8 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
           rqcTotalFare = showAmt booking.totalPrice.amount,
           rqcClassId = classId,
           rqcConcessionTypeId = concessionTypeId,
-          rqcCounterCode = counterCode,
-          rqcCreatedBy = createdBy,
+          rqcCounterCode = tnstcConfig.counterCode,
+          rqcCreatedBy = tnstcConfig.createdBy,
           rqcEndPlaceCode = endPlaceCode,
           rqcEndPlaceId = search.toStationCode,
           rqcJourneyDate = journeyDate,
@@ -213,11 +204,6 @@ createOrder tnstcConfig integratedBPPConfig booking _quoteCategories (_mRiderNam
           seatLabels
   return ProviderOrder {orderId = pnr, tickets = tickets}
 
--- | Writes the rider's chosen pickup/drop-off point onto the journey leg and its route details.
--- No new columns: `fromStopPlatformCode` / `fromDepartureTime` / `toArrivalTime` already exist
--- there and mean exactly this. TNSTC gives a single time per point, so arrival and departure
--- at that point are the same instant -- which is what the GTFS path does too.
--- | Looks up the rider's chosen pickup and drop-off point in the cached point list.
 resolveBoardingPoints ::
   ( MonadFlow m,
     CacheFlow m r,
@@ -232,20 +218,10 @@ resolveBoardingPoints ::
   Text ->
   Text ->
   Text ->
-  Text ->
   m (Maybe TnstcPickupPoint, Maybe TnstcPickupPoint)
-resolveBoardingPoints tnstcConfig _quote passengerDetails journeyDate serviceId counterCode startPlaceCode endPlaceCode = do
-  let pointsAt placeCode =
-        TNSTCBooking.getPickupPointsCached tnstcConfig _quote.integratedBppConfigId.getId $
-          TNSTCBooking.GetPickupPointsReq
-            { rqppCounterCode = counterCode,
-              rqppJourneyDate = journeyDate,
-              rqppServiceId = serviceId,
-              rqppPlaceId = placeCode,
-              rqppUserName = tnstcConfig.username
-            }
+resolveBoardingPoints tnstcConfig quote passengerDetails journeyDate serviceId startPlaceCode endPlaceCode = do
+  let pointsAt = TNSTCBooking.boardingPointsAt tnstcConfig quote.integratedBppConfigId.getId journeyDate serviceId
       pick placeId = find (\p -> p.tppPlaceId == placeId)
-      _unusedQuote = ()
   let mbPickupId = listToMaybe (mapMaybe (.pickupPointPlaceId) passengerDetails)
       mbDropOffId = listToMaybe (mapMaybe (.dropOffPointPlaceId) passengerDetails)
   mbPickup <- case mbPickupId of
@@ -256,13 +232,6 @@ resolveBoardingPoints tnstcConfig _quote passengerDetails journeyDate serviceId 
     Nothing -> return Nothing
   return (mbPickup, mbDropOff)
 
--- | Writes the rider's chosen pickup/drop-off point onto the journey leg and its route details.
--- No new columns: `fromStopPlatformCode` / `fromDepartureTime` / `toArrivalTime` already exist
--- there and mean exactly this. TNSTC gives a single time per point, so arrival and departure
--- at that point are the same instant -- which is what the GTFS path does too.
--- | The boarding point's time already reaches the ticket via booking.startTime, which
--- buildJourneyAndLeg uses for the leg and route details. Only the platform is left: at leg
--- creation it is read off the waybill trip, which TNSTC has none of.
 storeBoardingDetails ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   DFRFSSearch.FRFSSearch ->
@@ -272,9 +241,8 @@ storeBoardingDetails ::
 storeBoardingDetails search mbPickup mbDropOff = do
   let pickupPlatform = mbPickup >>= (.tppPlatformNo)
       dropOffPlatform = mbDropOff >>= (.tppPlatformNo)
-      legSearchId = Just search.id.getId
-  whenJust pickupPlatform $ \platform -> do
-    mbLeg <- QJourneyLeg.findByLegSearchId legSearchId
+  when (isJust pickupPlatform || isJust dropOffPlatform) $ do
+    mbLeg <- QJourneyLeg.findByLegSearchId (Just search.id.getId)
     whenJust mbLeg $ \leg ->
-      QRouteDetails.updateBoardingPlatforms (Just platform) dropOffPlatform leg.id.getId
-    logInfo $ "TNSTC boarding platform searchId=" <> search.id.getId <> " platform=" <> platform
+      QRouteDetails.updateBoardingPlatforms pickupPlatform dropOffPlatform leg.id.getId
+    logInfo $ "TNSTC boarding platform searchId=" <> search.id.getId <> " pickup=" <> show pickupPlatform <> " dropOff=" <> show dropOffPlatform
