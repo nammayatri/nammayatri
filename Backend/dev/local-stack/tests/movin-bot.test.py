@@ -115,7 +115,7 @@ with open(os.path.join(work, "server.json"), "w", encoding="utf-8") as fh:
 US = "\x1f"
 MR = "favorit0-0000-0000-0000-00000favorit"
 DZ = "algeria0-0000-0000-0000-00000algeria"
-PENDING = US.join(["id-aaa", "Yas Kara", "36664750", "0", "2", "1", MR])
+PENDING = US.join(["id-aaa", "Yas Kara", "36664750", "0", "2", "1", MR, ""])
 
 print("1. A driver appears")
 run_bot(work, PENDING)
@@ -142,10 +142,16 @@ ok("announced again after clearing",
 
 print("\n5. A driver registers in ALGERIA (2026-09-27: never announced before)")
 sent.clear()
-run_bot(work, US.join(["id-dz1", "Amine Test", "0666123456", "0", "0", "0", DZ]))
+run_bot(work, US.join(["id-dz1", "Amine Test", "0666123456", "0", "0", "0", DZ, ""]))
 dz = [m for m in sent if "nouvelle inscription" in m]
 ok("announced", len(dz) == 1, f"{len(dz)} message(s)")
 ok("and says Algeria", bool(dz) and "Algérie" in dz[0], dz[:1])
+
+print("\n5b. A refused driver sends his file again")
+sent.clear()
+run_bot(work, US.join(["id-rs1", "Sidi Test", "36664751", "0", "2", "1", MR, "resubmitted"]))
+rs = [m for m in sent if "renvoyé après refus" in m]
+ok("announced as a resubmission, not a new sign-up", len(rs) == 1, sent[:1])
 
 print("\n6. A passenger reports a driver -- at night too")
 sent.clear()

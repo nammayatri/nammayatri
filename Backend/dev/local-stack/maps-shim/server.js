@@ -30,6 +30,7 @@ const restricted = require('./restricted');
 const deletion = require('./deletion');
 const geo = require('./geo');
 const pushRelay = require('./push-relay');
+const driverPush = require('./driver-push');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -548,6 +549,36 @@ http.createServer((req, res) => {
   // goes on to Google untouched; iPhones go to Apple with the app's words. Not
   // exposed by the edge, and refused from anywhere but loopback. See push-relay.js.
   if (url.pathname.startsWith('/push/')) return pushRelay.handle(req, res, url);
+
+  // The office's own notifications to one driver -- accepted, refused
+  // (2026-09-28). Called by admin-api from its container, so the docker bridge
+  // is let in beside loopback; the edge routes nothing under /internal/ here,
+  // so nothing public reaches it. See driver-push.js.
+  if (url.pathname === '/internal/driver-push') {
+    const from = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+    const local = from === '127.0.0.1' || from === '::1' || /^172\.(1[6-9]|2\d|3[01])\./.test(from);
+    if (!local) return send(res, 403, { error: 'local callers only' });
+    if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > 1024) return void req.destroy();
+      chunks.push(c);
+    });
+    req.on('end', async () => {
+      let body = {};
+      try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { /* checked below */ }
+      const driverId = typeof body.driverId === 'string' ? body.driverId : '';
+      const type = typeof body.type === 'string' ? body.type : '';
+      if (!/^[0-9a-f-]{36}$/i.test(driverId) || !driverPush.TYPES.has(type) || !pool) {
+        return send(res, 400, { error: 'bad request' });
+      }
+      const r = await driverPush.notify(pool, driverId, type);
+      send(res, r.ok ? 200 : 502, r);
+    });
+    return undefined;
+  }
 
   // Which of our countries the caller's IP belongs to, for the sign-in
   // screen's country detection (2026-09-14). The phone asks its own GPS first;

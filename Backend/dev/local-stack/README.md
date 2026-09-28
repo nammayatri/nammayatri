@@ -2006,6 +2006,47 @@ check — so `true` means "inside Algeria", not "a car will come". Tamanrasset i
 `true` and 1,900 km from any driver. Useful for catching a destination abroad,
 useless as a promise.
 
+### The office's own push — `maps-shim/driver-push.js`, since 2026-09-28
+
+Every push before this was the backend's; the relay only forwarded or
+rewrote it. **Nothing the office does reached a phone**: upstream's
+`POST /message/send` pushes to nobody (measured 2026-09-24), and enabling a
+driver sends nothing. So a driver accepted in the console heard nothing — the
+owner found out by being that driver.
+
+    admin-api  --POST /internal/driver-push {driverId, type}-->  maps-shim
+      iPhone token   push-relay's appleNotify (same key, same words)
+      FCM token      FCM v1, data-only, signed with our own Google token
+                     (JWT from transporter_config.fcm_service_account, cached 1 h)
+
+Two types only, both ours: `REGISTRATION_APPROVED` (« Dossier accepté », the
+words the app always had) and `REGISTRATION_REFUSED` (« Dossier refusé —
+ouvrez l'application pour voir pourquoi »; the reason is in the app, never on
+the lock screen). Best effort: the decision is made and recorded first.
+
+**Reachable from admin-api's container, and nowhere else.** The route accepts
+loopback and 172.16.0.0/12 only, and the edge routes nothing under
+`/internal/` to the shim (probed: 404 through `api.movinapp.net`). That needed
+one firewall rule, the same shape as the three already there for 5000, 8013
+and 8016 — **none of which was written down anywhere until now**:
+
+    sudo ufw allow from 172.16.0.0/12 to 172.17.0.1 port 8030 proto tcp \
+      comment 'docker bridge -> host service (maps-shim, admin-api driver push)'
+
+Without it the container's fetch times out and the push is silently skipped
+(admin-api logs `driver push: shim unreachable`). Port 8030 stays closed from
+the internet (probed from outside: no answer). `tests/driver-push.test.js`
+checks the JWT against the key, the FCM message shape and the token cache.
+
+**A refused driver can now send his file again.** The app's « Votre dossier »
+shows the reason and the agent's note (`GET /driver/validation` on admin-api)
+and a « Renvoyer mon dossier » button (`POST /driver/validation/resubmit`),
+which unblocks him — back in the Validation queue, still not enabled — and
+records `resubmitted` in `movin.driver_validation` (website migration 020). Only
+while he has no vehicle linked: the dispatch pool honours `blocked` and ignores
+`enabled`. Both routes are exact `location =` blocks in `edge/nginx.conf`. The
+bot announces it as « dossier renvoyé après refus ».
+
 ### Push: no route, because none is needed
 
 There is no push/notification route on the rider API — only an

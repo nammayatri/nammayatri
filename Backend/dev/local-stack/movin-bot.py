@@ -311,7 +311,12 @@ def check_registrations(_):
              round(extract(epoch from (now() - p.created_at)) / 3600)::int,
              (SELECT count(*) FROM movin.driver_document d WHERE d.driver_id = p.id),
              (SELECT count(*) FROM movin.driver_declaration dd WHERE dd.driver_id = p.id),
-             p.merchant_id
+             p.merchant_id,
+             -- A refused driver who corrected his file and sent it again from
+             -- the app (2026-09-28) is back in this queue; say so.
+             coalesce((SELECT dv.decision FROM movin.driver_validation dv
+                        WHERE dv.driver_id = p.id
+                        ORDER BY dv.decided_at DESC LIMIT 1), '')
         FROM atlas_driver_offer_bpp.person p
         JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id = p.id
        WHERE p.merchant_id IN {MERCHANTS} AND NOT di.enabled AND NOT di.blocked
@@ -319,14 +324,16 @@ def check_registrations(_):
     if rows is None:
         return []
     out = []
-    for pid, name, number, hours, docs, decl, merchant in rows:
+    for pid, name, number, hours, docs, decl, merchant, last in rows:
         land = where(merchant)
+        headline = ("dossier renvoyé après refus" if last == "resubmitted"
+                    else "nouvelle inscription chauffeur")
         hours = int(hours or 0)
         papers = f"{docs} papier(s) reçu(s)" if int(docs or 0) else "aucun papier reçu"
         if int(decl or 0):
             papers += ", véhicule déclaré"
         out.append((f"reg:new:{pid}", "normal",
-                    f"Movin · nouvelle inscription chauffeur\n{land}\n\n{name}\n{number}\n"
+                    f"Movin · {headline}\n{land}\n\n{name}\n{number}\n"
                     f"{papers}\nÀ l'instant\n\nhttps://admin.movinapp.net"))
         if hours >= PATIENCE_H:
             out.append((f"reg:waited:{pid}", "normal",

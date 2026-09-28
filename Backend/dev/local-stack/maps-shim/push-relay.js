@@ -82,14 +82,17 @@ const DRIVER = {
   fr: {
     DRIVER_ASSIGNMENT: ['Votre offre a été acceptée', 'Rejoignez le passager au point de départ.'],
     REGISTRATION_APPROVED: ['Dossier accepté', 'Vous pouvez commencer à travailler.'],
+    REGISTRATION_REFUSED: ['Dossier refusé', 'Ouvrez l’application pour voir pourquoi.'],
   },
   ar: {
     DRIVER_ASSIGNMENT: ['تم قبول عرضك', 'التحق بالراكب في نقطة الانطلاق.'],
     REGISTRATION_APPROVED: ['تمت الموافقة على الملف', 'يمكنك البدء في العمل.'],
+    REGISTRATION_REFUSED: ['تم رفض الملف', 'افتح التطبيق لمعرفة السبب.'],
   },
   en: {
     DRIVER_ASSIGNMENT: ['Your offer was accepted', 'Meet the passenger at the pickup point.'],
     REGISTRATION_APPROVED: ['Application approved', 'You can start working.'],
+    REGISTRATION_REFUSED: ['Application refused', 'Open the app to see why.'],
   },
 };
 
@@ -275,8 +278,12 @@ async function toFirebase(upstreamPath, req, raw, res) {
   }
 }
 
-async function toApple(side, ios, message, res) {
-  const type = readType(message);
+/**
+ * One alert to one iPhone, in its own language. `{status: 200, silent: true}`
+ * for a type the app would not show. Shared by the backend's pushes below and
+ * by driver-push.js, which sends the office's own (2026-09-28).
+ */
+async function appleNotify(side, ios, type) {
   const words = (side === 'driver' ? DRIVER : RIDER)[ios.lang] || RIDER.fr;
   const text = type ? words[type] : null;
   const tail = `…${ios.device.slice(-6)}`;
@@ -284,13 +291,13 @@ async function toApple(side, ios, message, res) {
   // Silent is a success: the app would have drawn nothing either.
   if (!text) {
     console.log(`[push] ios ${side} ${type || 'unknown'} ${ios.lang} ${tail}: silent`);
-    return sendJson(res, 200, { name: `relay/silent/${Date.now()}` });
+    return { status: 200, reason: '', silent: true };
   }
 
   const cfg = apnsConfig();
   if (!cfg) {
     console.error(`[push] ios ${side} ${type} ${tail}: APNs not configured (${lastConfigError})`);
-    return sendJson(res, 503, fcmError(503, 'APNs is not configured on the relay', 'UNAVAILABLE'));
+    return { status: 503, reason: 'not configured', unconfigured: true };
   }
 
   const result = await apnsSend(cfg, ios.device, {
@@ -301,6 +308,15 @@ async function toApple(side, ios, message, res) {
   console.log(
     `[push] ios ${side} ${type} ${ios.lang} ${tail} -> apns ${result.status} ${result.reason}`.trim(),
   );
+  return result;
+}
+
+async function toApple(side, ios, message, res) {
+  const result = await appleNotify(side, ios, readType(message));
+  if (result.silent) return sendJson(res, 200, { name: `relay/silent/${Date.now()}` });
+  if (result.unconfigured) {
+    return sendJson(res, 503, fcmError(503, 'APNs is not configured on the relay', 'UNAVAILABLE'));
+  }
   if (result.status === 200) return sendJson(res, 200, { name: `relay/apns/${Date.now()}` });
 
   // Always a 502, never a 404: FCM's "unregistered" can lead a backend to drop
@@ -355,4 +371,4 @@ function status() {
   return cfg ? { apns: true, topic: cfg.topic } : { apns: false, why: lastConfigError };
 }
 
-module.exports = { handle, status, iosTarget, readType };
+module.exports = { handle, status, iosTarget, readType, appleNotify };
