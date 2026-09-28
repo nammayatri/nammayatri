@@ -40,10 +40,12 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
 
--- | Issues created after a cursor, oldest-first — for external parties (Xyne)
--- to page through and catch up on issues they may have missed. Ordered on
--- 'createdAt' rather than 'updatedAt': 'updatedAt' shifts every time an issue
--- is touched, which would reshuffle rows across pages while offset-paging.
+-- | Issues created within a date range (either end optional), oldest-first
+-- — for external parties (Xyne) to page through and catch up on issues they
+-- may have missed. Ordered on 'createdAt' rather than 'updatedAt':
+-- 'updatedAt' shifts every time an issue is touched, which would reshuffle
+-- rows across pages while offset-paging. 'mbEndDate' is inclusive, matching
+-- 'findAllWithOptions''s 'mbToDate' convention above.
 --
 -- Uses 'findAllWithOptionsDb' (bypasses the KV/mesh read path) rather than
 -- 'findAllWithOptionsKV': this condition list has no primary/secondary key
@@ -54,17 +56,21 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId 
 -- holds zero keys for this table, so it isn't stale-cache data being
 -- served, the KV routing itself misses them. A reconciliation read for an
 -- external party needs Postgres-correct results more than KV-cache speed.
-findAllCreatedAfter :: BeamFlow m r => Maybe UTCTime -> Maybe Int -> Maybe Int -> m [IssueReport]
-findAllCreatedAfter mbSince mbLimit mbOffset = do
+findAllCreatedAfter :: BeamFlow m r => Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> m [IssueReport]
+findAllCreatedAfter mbSince mbEndDate mbLimit mbOffset = do
   let sinceCond = case mbSince of
         Nothing -> []
         Just ts -> [Is BeamIR.createdAt $ GreaterThan (T.utcToLocalTime T.utc ts)]
+      endCond = case mbEndDate of
+        Nothing -> []
+        Just ts -> [Is BeamIR.createdAt $ LessThanOrEq (T.utcToLocalTime T.utc ts)]
   findAllWithOptionsDb
     [ And
         ( [ Is BeamIR.deleted $ Eq False,
             Is BeamIR.scheduledBookingTransactionId $ Eq Nothing
           ]
             <> sinceCond
+            <> endCond
         )
     ]
     (Asc BeamIR.createdAt)

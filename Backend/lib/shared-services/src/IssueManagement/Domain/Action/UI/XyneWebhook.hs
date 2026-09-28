@@ -419,10 +419,14 @@ maxXyneIssuesPageSize :: Int
 maxXyneIssuesPageSize = 100
 
 -- | Bearer-token authenticated read endpoint for Xyne to pull issues created
--- after a cursor, delivered at @/internal/xyne/webhook/issues@. Exists
+-- within a date range, delivered at @/internal/xyne/webhook/issues@. Exists
 -- because some Xyne messages/status syncs are getting dropped in transit;
 -- this lets Xyne page through and catch up on whatever it missed,
--- independent of the webhook-push path.
+-- independent of the webhook-push path. 'mbEndDate' (inclusive) lets a
+-- caller page through a bounded window instead of an open-ended tail, so a
+-- fetch loop has a real stopping point (the window's last page) instead of
+-- having to guess from an empty response, which can also happen mid-range
+-- when a page's issues simply have no messages.
 --
 -- Returns the same 'Xyne.XyneInboundReq' shape used for the real outbound
 -- push (one entry per chat message, 'threadId' = 'IssueReport.id', reusing
@@ -441,15 +445,16 @@ fetchXyneIssues ::
   DUI.ServiceHandle m ->
   Common.Identifier ->
   Maybe UTCTime ->
+  Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
   m [Xyne.XyneInboundReq]
-fetchXyneIssues bearerToken issueHandle identifier mbSince mbLimit mbOffset mbAuthHeader = do
+fetchXyneIssues bearerToken issueHandle identifier mbSince mbEndDate mbLimit mbOffset mbAuthHeader = do
   unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
     throwError $ AuthBlocked "Invalid Authorization header"
   let cappedLimit = min maxXyneIssuesPageSize (fromMaybe maxXyneIssuesPageSize mbLimit)
-  issueReports <- QIR.findAllCreatedAfter mbSince (Just cappedLimit) mbOffset
+  issueReports <- QIR.findAllCreatedAfter mbSince mbEndDate (Just cappedLimit) mbOffset
   concat <$> mapM toXyneInboundReqs issueReports
   where
     toXyneInboundReqs issue = do
