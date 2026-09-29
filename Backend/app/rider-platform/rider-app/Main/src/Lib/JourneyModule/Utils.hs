@@ -2232,8 +2232,9 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
         if SharedCabBooking.isSharedCabBooking booking
           then SharedCabBooking.withBookingLock booking.id $ do
             mbFresh <- QFRFSTicketBooking.findById booking.id
-            whenJust mbFresh $ \fresh ->
-              QFRFSTicketBooking.updateAllocatedVehicle effectiveBus booking.id fresh.vehicleNumber
+            -- a FINDING booking (no plate) holds no bus; the waybill must not seat it on one
+            whenJust (mbFresh >>= (.vehicleNumber)) $ \held ->
+              QFRFSTicketBooking.updateAllocatedVehicle effectiveBus booking.id (Just held)
           else QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
       pure (effectiveBus, effectiveBusTag, busChanged)
   pure

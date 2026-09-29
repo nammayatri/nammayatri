@@ -53,6 +53,7 @@ module SharedLogic.SharedCab.Allocation
     rankCandidates,
     withoutSkipped,
     isSkipped,
+    skippedWhileFinding,
     isFreshPosition,
     RankedCandidate (..),
     FindingBooking (..),
@@ -92,7 +93,7 @@ import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLoc
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
+import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -330,9 +331,23 @@ withoutSkipped skipped = filter (not . (`isSkipped` skipped) . (.rcSession.vehic
 isSkipped :: Text -> [Text] -> Bool
 isSkipped = elem
 
+-- | R44: once the booking is in FALLBACK ("board any cab") the rider's skips stop binding, so a skipped cab that
+-- has since freed up can be offered again.
+skippedWhileFinding :: AllocationConfig -> UTCTime -> Int -> UTCTime -> [Text] -> [Text]
+skippedWhileFinding cfg now attempts findingSince skipped
+  | fallbackReached now cfg.maxAttempts attempts findingSince cfg.fallbackAfterSec = []
+  | otherwise = skipped
+
 --------------------------------------------------------------------------------
 -- Phase 2 -- target cab lock, then booking lock (05 §2/§3 order)
 --------------------------------------------------------------------------------
+
+-- | What a winning close reports to its after-lock work.
+data Closed = Closed
+  { closedCity :: Id DMOC.MerchantOperatingCity,
+    fallbackJustTriggered :: Bool, -- this close crossed maxAttempts (R16)
+    heldBy :: Maybe Text -- the driver the allocation was made to (R45), from its alloc key
+  }
 
 data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
@@ -357,7 +372,9 @@ attemptClaim cfg booking cand = do
         | s.status == ACTIVE && s.routeCode == booking.routeCode -> do
           withBookingLock booking.bookingId $ do
             -- the tick read the skipped set before it waited on these locks; a skip that landed meanwhile is only visible now
-            skipped <- shared $ Redis.sMembers (skippedKey booking.bookingId.getId)
+            now <- getCurrentTime
+            attempts <- readAttempts (attemptsKey booking.bookingId.getId)
+            skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId.getId))
             liveSeats <- liveSeatsOnVehicle plate
             let available = s.capacity - s.walkupCount - liveSeats
             if plate `isSkipped` skipped
@@ -370,8 +387,6 @@ attemptClaim cfg booking cand = do
                       Just b
                         | b.status == CONFIRMED && isNothing b.vehicleNumber -> do
                           QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
-                          now <- getCurrentTime
-                          attempts <- readAttempts (attemptsKey booking.bookingId.getId)
                           -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
                           -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
                           -- The key's TTL is only a garbage-collection backstop.
@@ -379,7 +394,7 @@ attemptClaim cfg booking cand = do
                           shared $
                             Redis.setExp
                               (allocKey booking.bookingId.getId)
-                              AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
+                              AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
                               cfg.findingTimeoutSec
                           pure (Right now)
                         | otherwise -> pure (Left ClaimCasLost)
@@ -414,7 +429,7 @@ releaseSharedCabAllocation ::
 releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
   closed <- withBookingLock bookingId $ closeLocked cfg bookingId expectedPlate outcome
   afterClose cfg bookingId expectedPlate outcome closed
-  whenJust closed (triggerSharedCabAllocation . fst)
+  whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
 -- | R19 rider "skip this cab": the allocation closes as RIDER_SKIPPED and, in the same booking-lock hold, the
@@ -427,7 +442,7 @@ skipSharedCabAllocation cfg bookingId plate reason = do
     when (isJust closedInfo) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [plate] cfg.findingTimeoutSec
     pure closedInfo
   afterClose cfg bookingId plate outcome closed
-  whenJust closed (triggerSharedCabAllocation . fst)
+  whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
 -- | The city's engine tunables from rider_config (05 §7), defaults where unset.
@@ -463,7 +478,7 @@ releaseUnboarded plate outcome = do
     closed <- withBookingLock b.id $ closeLocked cfg b.id plate outcome
     afterClose cfg b.id plate outcome closed
     pure closed
-  mapM_ triggerSharedCabAllocation (nub (map fst (catMaybes cities)))
+  mapM_ triggerSharedCabAllocation (nub (map (.closedCity) (catMaybes cities)))
 
 -- | Run inside the booking lock: KV read, CAS plate -> null (back to FINDING), clear the alloc key,
 -- bump attempts. The city it closed in (and whether this close is the one that just crossed
@@ -474,7 +489,7 @@ closeLocked ::
   Id DFTB.FRFSTicketBooking ->
   Text ->
   AllocationOutcome ->
-  m (Maybe (Id DMOC.MerchantOperatingCity, Bool))
+  m (Maybe Closed)
 closeLocked cfg bookingId expectedPlate outcome =
   QFRFSTicketBooking.findById bookingId >>= \case
     Nothing -> pure Nothing
@@ -485,6 +500,7 @@ closeLocked cfg bookingId expectedPlate outcome =
   where
     close b = do
       QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
+      heldBy <- shared $ (>>= (.driverId)) <$> Redis.safeGet @AllocationState (allocKey bookingId.getId)
       shared $ Redis.del (allocKey bookingId.getId)
       -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
       attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
@@ -500,7 +516,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId.getId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
-      pure (b.merchantOperatingCityId, fallbackJustTriggered)
+      pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered, heldBy}
 
 -- | R16: the close that takes the attempt count over maxAttempts (not one past it).
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
@@ -517,9 +533,9 @@ eventBlame = \case
   BlameNone -> Events.BlameNone
 
 -- | Outside every lock, after a close attempt.
-afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe (Id DMOC.MerchantOperatingCity, Bool) -> m ()
+afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
 afterClose cfg bookingId plate outcome closed =
-  whenJust closed $ \(cityId, fallbackJustTriggered) -> do
+  whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, heldBy} -> do
     now <- getCurrentTime
     trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
     Events.emit cityId . Events.withTrip trip $
@@ -528,7 +544,7 @@ afterClose cfg bookingId plate outcome closed =
     Invariants.checkCab plate
     mbBooking <- QFRFSTicketBooking.findById bookingId
     -- R18: lifetime blame counters (05 §8.4); a bump failure never fails the release.
-    withTryCatch "sharedCabBlameCount" (BlameCount.bump cityId (blameFor outcome) mbBooking plate bookingId now)
+    withTryCatch "sharedCabBlameCount" (BlameCount.bump cityId (blameFor outcome) mbBooking heldBy bookingId now)
       >>= either (\e -> logError $ "shared-cab blame count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     -- R17: "missed the cab" -- only the timer outcomes mean the rider didn't board in time; a driver
     -- cancel, passed-stop no-show, seat loss or session lifecycle close all get their own push (or none).
@@ -668,7 +684,8 @@ allocationPass cityId = do
         whenJust (lookup routeCode positionsByRoute) $ \positions -> do
           sessions <- Session.activeSessionsOnRoute routeCode
           forM_ bookings $ \booking -> do
-            skipped <- shared $ Redis.sMembers (skippedKey booking.bookingId.getId)
+            attempts <- readAttempts (attemptsKey booking.bookingId.getId)
+            skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId.getId))
             void $ claimFirst cfg booking (withoutSkipped skipped (planRouteAllocation now cfg positions sessions booking))
       pure (live, positionsByRoute)
 

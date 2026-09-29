@@ -13,7 +13,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, crossedMaxAttempts, isMissedCabOutcome, isSkipped, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, crossedMaxAttempts, isMissedCabOutcome, isSkipped, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -24,7 +24,7 @@ t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 36000
 
 standing :: AllocationState
-standing = AllocationState {vehicleNumber = "ML05A1234", allocatedAt = t0, expiresAt = Just (addUTCTime 180 t0), attempts = 0, timerKind = StandTimer}
+standing = AllocationState {vehicleNumber = "ML05A1234", driverId = Just "d1", allocatedAt = t0, expiresAt = Just (addUTCTime 180 t0), attempts = 0, timerKind = StandTimer}
 
 -- a board stop, a point ~30 m from it and one ~1.1 km away
 stop, nearStop, farAway :: LatLong
@@ -122,6 +122,13 @@ tests =
       testCase "R17: only the two timer outcomes push the missed-cab copy" $
         map isMissedCabOutcome [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipOther]
           @?= [True, True, False, False, False, False, False, False, False],
+      testCase "R44: skips bind while FINDING, and stop binding in FALLBACK (attempts or clock)" $
+        [ skippedWhileFinding defaultAllocationConfig t0 0 t0 ["A"],
+          skippedWhileFinding defaultAllocationConfig t0 2 t0 ["A"],
+          skippedWhileFinding defaultAllocationConfig (addUTCTime 599 t0) 1 t0 ["A"],
+          skippedWhileFinding defaultAllocationConfig (addUTCTime 600 t0) 1 t0 ["A"]
+        ]
+          @?= [["A"], [], ["A"], []],
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing
     ]

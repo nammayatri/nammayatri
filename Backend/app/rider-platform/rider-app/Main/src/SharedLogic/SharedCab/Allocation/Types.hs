@@ -48,6 +48,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 --     so the counter cannot live here alone across successive allocations).
 data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
+    driverId :: Maybe Text, -- who drove it at claim (the session's driver, read under the plate lock): who a driver miss is charged to
     allocatedAt :: UTCTime,
     expiresAt :: Maybe UTCTime,
     attempts :: Int,

@@ -21,11 +21,10 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (Blame (..))
-import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.SharedCabBlameCountExtra as QBlameExtra
 
 -- | Which counter (subject type + id + merchant) `blame` charges: the rider (from the booking) or
--- the plate's live-session driver. Plain tuples, not the full records -- pure, and the only branch
+-- the driver the allocation was made to (R45: captured at claim, not whoever holds the plate by now). Plain tuples, not the full records -- pure, and the only branch
 -- in `bump`, so this is the falsifiable unit: swap in the wrong `Blame` and the wrong tuple wins.
 subjectFor :: Blame -> Maybe (Text, Id DM.Merchant) -> Maybe (Text, Id DM.Merchant) -> Maybe (DBlame.BlameSubjectType, Text, Id DM.Merchant)
 subjectFor BlameNone _ _ = Nothing
@@ -39,14 +38,13 @@ bump ::
   Id DMOC.MerchantOperatingCity ->
   Blame ->
   Maybe DFTB.FRFSTicketBooking ->
-  Text ->
+  Maybe Text ->
   Id DFTB.FRFSTicketBooking ->
   UTCTime ->
   m ()
-bump cityId blame mbBooking plate bookingId now = do
-  mbSession <- Session.readSession plate
+bump cityId blame mbBooking heldBy bookingId now = do
   let mbRider = (\b -> (b.riderId.getId, b.merchantId)) <$> mbBooking
-      mbDriver = (\s -> (s.driverId, s.merchantId)) <$> mbSession
+      mbDriver = (,) <$> heldBy <*> (mbBooking <&> (.merchantId))
   whenJust (subjectFor blame mbRider mbDriver) $ \(subjectType, subjectId, merchantId) -> do
     newId <- generateGUID
     QBlameExtra.bump

@@ -3,6 +3,7 @@ module SharedLogic.SharedCab.LegState
     SharedCabLegStatus (..),
     FallbackGate (..),
     fallbackDue,
+    fallbackReached,
     fallbackTimeElapsed,
     isSharedCabAgency,
     deriveSharedCabState,
@@ -58,7 +59,11 @@ fallbackTimeElapsed :: UTCTime -> UTCTime -> Int -> Bool
 fallbackTimeElapsed now findingSince fallbackAfterSec = diffUTCTime now findingSince >= fromIntegral fallbackAfterSec
 
 fallbackDue :: UTCTime -> FallbackGate -> Bool
-fallbackDue now g = g.attempts >= g.maxAttempts || fallbackTimeElapsed now g.findingSince g.fallbackAfterSec
+fallbackDue now g = fallbackReached now g.maxAttempts g.attempts g.findingSince g.fallbackAfterSec
+
+-- | R16: FALLBACK by attempts or by the clock, whichever first (also decides when the rider's skips stop binding, R19).
+fallbackReached :: UTCTime -> Int -> Int -> UTCTime -> Int -> Bool
+fallbackReached now maxAttempts attempts findingSince fallbackAfterSec = attempts >= maxAttempts || fallbackTimeElapsed now findingSince fallbackAfterSec
 
 -- | `07` §3 from the `05` §2 encoding: booking/ticket status, the booking's plate, whether that plate has a
 -- live session, the FINDING fallback gate (R10/R16) and the ALLOCATED arrival deadline (R17, allocKey's
