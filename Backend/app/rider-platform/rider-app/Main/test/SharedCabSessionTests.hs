@@ -6,7 +6,7 @@ module SharedCabSessionTests (tests) where
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Text (Text)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
-import "beckn-spec" Domain.Types.FRFSTicketStatus (FRFSTicketStatus (..))
+import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.SharedCab.Events as Events
@@ -73,16 +73,16 @@ tests =
       testCase "R24: the driver's count never goes negative" $
         walkupsToCount DriverCounted active {walkupCount = 3} active @?= 0,
       testCase "R51: INPROGRESS on an ENDED session is stranded" $
-        shouldDropOnDeadSession (Just ENDED) False [INPROGRESS] @?= True,
+        shouldDropOnDeadSession (Just ENDED) False [TS.INPROGRESS] @?= True,
       testCase "R51: INPROGRESS with no session and no live trip is stranded; a live trip means a flush, not an end" $ do
-        shouldDropOnDeadSession Nothing False [INPROGRESS] @?= True
-        shouldDropOnDeadSession Nothing True [INPROGRESS] @?= False,
+        shouldDropOnDeadSession Nothing False [TS.INPROGRESS] @?= True
+        shouldDropOnDeadSession Nothing True [TS.INPROGRESS] @?= False,
       testCase "R51: a live session keeps its riders" $ do
-        shouldDropOnDeadSession (Just ACTIVE) False [INPROGRESS] @?= False
-        shouldDropOnDeadSession (Just PAUSED) False [INPROGRESS] @?= False,
+        shouldDropOnDeadSession (Just ACTIVE) False [TS.INPROGRESS] @?= False
+        shouldDropOnDeadSession (Just PAUSED) False [TS.INPROGRESS] @?= False,
       testCase "R51: an unboarded or already dropped ticket is left alone" $ do
-        shouldDropOnDeadSession (Just ENDED) False [ACTIVE] @?= False
-        shouldDropOnDeadSession (Just ENDED) False [USED] @?= False,
+        shouldDropOnDeadSession (Just ENDED) False [TS.ACTIVE] @?= False
+        shouldDropOnDeadSession (Just ENDED) False [TS.USED] @?= False,
       testCase "second driver on the same plate is rejected" $
         planSelect "d2" "R1" (const False) (Just active) @?= Left SessionHeldByAnotherDriver,
       testCase "second driver can't drive another's session either" $
