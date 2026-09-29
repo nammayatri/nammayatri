@@ -11,10 +11,15 @@
  * whatsapp.js on purpose: an inbox by sender, and `codeFrom()` for the
  * sign-in path.
  *
- * ── Phase 1: the inbox only ─────────────────────────────────────────────────
- * Nothing signs in by it yet. The sign-in path reads `codeFrom()` only once
- * the forwarder has been proved on the real phone and the SIM numbers are
- * known; Moorsyl stays until then (owner's decision, 2026-09-28).
+ * ── Phase 2: the sign-in (built 2026-09-29, dormant until a SIM is set) ─────
+ * server.js starts a sign-in by SMS with `expect()`, which hands the app the
+ * code and the SIM to text it to; the status route and verify read
+ * `codeFrom()`. Which SIM serves which country is `SMS_INBOX_NUMBERS`
+ * (`+222=+22233000000,+213=+213…`) -- one per country, or every text is an
+ * international one the passenger pays for. A country with no SIM there has
+ * no such sign-in: the start answers 503 and the app hides the button (it asks
+ * `countries()` first). Moorsyl stays until this is proved on the real phone
+ * (owner's decision, 2026-09-28).
  *
  * ── The contract with the forwarder ─────────────────────────────────────────
  *   POST /sms/inbox
@@ -41,6 +46,18 @@ const crypto = require('crypto');
 const { normal } = require('./whatsapp');
 
 const TOKEN = process.env.SMS_INBOX_TOKEN || '';
+
+/**
+ * Dialling code → the SIM a passenger of that country texts, `+` and digits.
+ * Malformed pairs are dropped rather than trusted: a wrong number here sends
+ * people's texts to a stranger.
+ */
+const SIMS = new Map(
+  (process.env.SMS_INBOX_NUMBERS || '')
+    .split(',')
+    .map((pair) => pair.split('=').map((x) => x.trim()))
+    .filter(([cc, n]) => /^\+\d{1,4}$/.test(cc || '') && /^\+\d{8,15}$/.test(n || '')),
+);
 
 /** Same window and ceiling as the WhatsApp inbox. */
 const KEEP_MS = 10 * 60 * 1000;
@@ -125,7 +142,10 @@ function deliver(raw, headers) {
     if (from === '') continue;
     const text = pick(m, ['body', 'text', 'message', 'content']);
     const code = CODE.exec(text)?.[1] ?? null;
-    inbox.set(from, { code, at: now });
+    // Only a text with a code is filed: an operator's balance message or a
+    // "c'est fait ?" sent a second later must not bury the code before it
+    // is read.
+    if (code) inbox.set(from, { code, at: now });
     accepted += 1;
     received += 1;
     if (code) { codes += 1; withCode += 1; }
@@ -148,10 +168,24 @@ function codeFrom(number) {
   return m.code;
 }
 
+/** The SIM this country's passengers text, or null: no sign-in by SMS there. */
+const simFor = (dialCode) => SIMS.get(String(dialCode || '')) ?? null;
+
+/** The countries that have a SIM -- what the app asks before offering the button. */
+const countries = () => [...SIMS.keys()];
+
+/** A sign-in is waiting for this code: what the app shows and writes for him. */
+function expect(dialCode, code) {
+  return { number: simFor(dialCode), text: `MOVIN ${code}` };
+}
+
 /** For /healthz. `lastAt` is the phone's pulse; never a secret, never a number. */
 function health() {
   return {
     configured: TOKEN !== '',
+    // Dialling codes only. The SIM numbers are not secret -- the app shows
+    // them -- but a health page is no place to publish them.
+    countries: countries(),
     received,
     withCode,
     rejected,
@@ -160,4 +194,4 @@ function health() {
   };
 }
 
-module.exports = { deliver, codeFrom, health, international };
+module.exports = { deliver, codeFrom, health, international, simFor, countries, expect };

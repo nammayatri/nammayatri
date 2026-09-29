@@ -3699,7 +3699,7 @@ When the compose `env_file` list changes, `docker compose up -d --no-deps
 auth-guard` — a `restart` does not re-read it. And the deployed compose is a
 superset of this one (see its header): patch it in place, never copy it.
 
-### The SMS inbox (2026-09-29) — phase 1
+### The SMS inbox and sign-in by an SMS he sends (2026-09-29)
 
 The client's plan (2026-09-28) is the WhatsApp flow over plain SMS: the
 passenger texts `MOVIN <code>` to a SIM in an Android phone at the office,
@@ -3715,10 +3715,25 @@ code under its sender, local or international (`41234567`, `0555123456`,
 field names, because the forwarder is not ours. An empty list is a
 heartbeat; `/healthz` → `smsInbox.lastAt` is the phone's pulse.
 
-**Phase 1 is the inbox only — nothing signs in by it yet.** Phase 2, once the
-forwarder is proved and the SIM numbers are known (one per country, or every
-text is international): a start that hands out the code and an `sms:` link,
-and the verify accepting `smsInbox.codeFrom()` as it accepts WhatsApp's.
+**Phase 2, the sign-in — built 2026-09-29, dormant until a SIM is set.**
+The WhatsApp flow, route for route:
+
+- `POST {/v2,/ui}/auth/sms-in` — a start with every check a start has; the
+  answer carries `smsIn: {code, number, text}`, the SIM being the one for the
+  caller's country. No SIM for that country → 503 `SMS_IN_UNAVAILABLE`, backend
+  never asked. nginx gives it the `signin` bucket.
+- `GET {/v2,/ui}/auth/{id}/sms-in` → `{confirmed}`; the app polls it.
+- `GET {/v2,/ui}/auth/sms-in/countries` → `{countries: ["+222"]}` — asked by
+  the phone screen before it shows « Confirmer en nous envoyant un SMS ».
+- verify accepts the code only once the office phone has forwarded it FROM
+  the number signing in. Only texts that carry a code are filed, so a « merci »
+  sent after it does not bury it.
+
+**Switching it on is a setting, not a build:** `SMS_INBOX_NUMBERS` in
+docker-compose.yml (`+222=+222XXXXXXXX,+213=+213XXXXXXXXX`), then `docker
+compose up -d --no-deps auth-guard`. The app (since 2026-09-29) shows the
+button in any country listed there and hides it everywhere else. Empty today.
+`tests/auth-guard-sms-in.test.js`.
 
 The token proves the POST came from our phone; it does **not** prove the
 sender. An SMS sender can be forged on some international routes — the

@@ -474,6 +474,11 @@ services:
       # the WhatsApp button. Closing Algeria again is removing +213 here.
       OPEN_COUNTRIES: "+222,+213"
       SMS_COUNTRIES: "+222"
+      # Sign-in by an SMS the passenger SENDS (2026-09-29): which office SIM
+      # each country texts, `+222=+222XXXXXXXX,+213=+213XXXXXXXXX`. Empty = no
+      # such sign-in anywhere, and the app hides its button. Filling it in is
+      # a recreate, not a build. See auth-guard/sms-inbox.js.
+      SMS_INBOX_NUMBERS: ""
       SMS_MODE: "verify"
       VERIFY_SEND_URL: "https://api.moorsyl.com/api/verify/send"
       VERIFY_CHECK_URL: "https://api.moorsyl.com/api/verify/check"
