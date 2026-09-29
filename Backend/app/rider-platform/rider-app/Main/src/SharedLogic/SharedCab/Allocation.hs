@@ -44,6 +44,7 @@ module SharedLogic.SharedCab.Allocation
     releaseUnboarded,
     allocatedPlate,
     closable,
+    claimable,
     withCityTickLease,
     allocationPass,
     readRoutePositions,
@@ -95,6 +96,7 @@ import SharedLogic.SharedCab.Allocation.Types
 import qualified SharedLogic.SharedCab.BlameCount as BlameCount
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
+import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
@@ -227,6 +229,12 @@ plateIfUnboarded mbPlate statuses = do
 closable :: Text -> FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool
 closable expectedPlate status mbPlate statuses =
   status == CONFIRMED && plateIfUnboarded mbPlate statuses == Just expectedPlate
+
+-- | The under-lock gate of a claim: the booking is still live, has no cab, nobody has boarded (a degraded boarding
+-- flips its tickets and sets the marker under the booking lock, after the tick read it as FINDING), and no degrade marker.
+claimable :: FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool -> Bool
+claimable status mbPlate statuses markerAlive =
+  status == CONFIRMED && isNothing mbPlate && not (null statuses) && all (== DFRFSTicket.ACTIVE) statuses && not markerAlive
 
 --------------------------------------------------------------------------------
 -- LTS positions: one HGETALL on route:{routeCode} (05 §3 pseudo-code; 04 §3 join key)
@@ -393,20 +401,23 @@ attemptClaim cfg booking cand = do
                   then pure (Left ClaimSeatsGone)
                   else do
                     QFRFSTicketBooking.findById booking.bookingId >>= \case
-                      Just b
-                        | b.status == CONFIRMED && isNothing b.vehicleNumber -> do
-                          QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
-                          -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
-                          -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
-                          -- The key's TTL is only a garbage-collection backstop.
-                          let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
-                          shared $
-                            Redis.setExp
-                              (allocKey booking.bookingId.getId)
-                              AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
-                              cfg.findingTimeoutSec
-                          pure (Right now)
-                        | otherwise -> pure (Left ClaimCasLost)
+                      Just b -> do
+                        statuses <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId b.id
+                        markerAlive <- Degraded.isMarkerAlive b.id
+                        if claimable b.status b.vehicleNumber statuses markerAlive
+                          then do
+                            QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
+                            -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
+                            -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
+                            -- The key's TTL is only a garbage-collection backstop.
+                            let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
+                            shared $
+                              Redis.setExp
+                                (allocKey booking.bookingId.getId)
+                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
+                                cfg.findingTimeoutSec
+                            pure (Right now)
+                          else pure (Left ClaimCasLost)
                       Nothing -> pure (Left ClaimCasLost)
       _ -> pure (Left ClaimSessionGone)
 

@@ -6,10 +6,10 @@
 -- flips a ticket to USED, or emits a Dropped event.
 --
 -- Candidates (Storage.Queries.FRFSTicketBookingExtra.findSharedCabDegradedCandidates): the city's
--- CONFIRMED SHARED_CAB bookings with no plate, createdAt in [now-3h, now) (h = the city's
--- Config.degradedTimeoutSec), paged newest-first on a createdAt keyset -- bounded, never a full-table
+-- CONFIRMED SHARED_CAB bookings with no plate, updatedAt (stamped at the degrade) in [now-3h, now) (h = the city's
+-- Config.degradedTimeoutSec), paged newest-first on an updatedAt keyset -- bounded, never a full-table
 -- walk. The 3x window is the M8.5 scan-window rule (DegradedSweepSchedule.scanWindowStart): killable from
--- createdAt+h, visible until createdAt+3h, so a sweep-down gap shorter than 2h loses nothing. "INPROGRESS"
+-- degrade+h, visible until degrade+3h, so a sweep-down gap shorter than 2h loses nothing. "INPROGRESS"
 -- (the ticket-state half of the task's candidate filter) is decided by the rule owner inside its locked
 -- fresh re-read, not pre-filtered here.
 module SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
@@ -77,15 +77,16 @@ sweepCity mocId =
       flips <- forM page $ \booking ->
         if not (isSharedCabBooking booking)
           then pure False -- belt: the DB filter is the serviceTierType column; the helper reads routeStationsJson
-          else withTryCatch "sharedCab:degradedSweep" (Degraded.expireDegradedBoardingIfNeeded booking) >>= \case
-            Left err -> False <$ logError ("sharedCab degraded sweep failed for booking " <> booking.id.getId <> ": " <> show err)
-            Right didEnd -> pure didEnd
+          else
+            withTryCatch "sharedCab:degradedSweep" (Degraded.expireDegradedBoardingIfNeeded booking) >>= \case
+              Left err -> False <$ logError ("sharedCab degraded sweep failed for booking " <> booking.id.getId <> ": " <> show err)
+              Right didEnd -> pure didEnd
       let scanned' = scanned + length page
           ended' = ended + length (filter (True ==) flips)
       if length page < pageSize
         then pure (scanned', ended')
         else do
-          -- keyset tie at the page's createdAt boundary: rows sharing it are skipped this sweep,
+          -- keyset tie at the page's updatedAt boundary: rows sharing it are skipped this sweep,
           -- and the next tick's full-window scan picks them up.
-          let cursor = (last page).createdAt
+          let cursor = (last page).updatedAt
           sweepPages windowStart endAt (Just cursor) (scanned', ended')

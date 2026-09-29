@@ -3,10 +3,10 @@
 
 module SharedCabDegradedSweepTests (tests) where
 
-import "mobility-core" Kernel.Types.Id (Id (..))
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
-import qualified "rider-app" Domain.Types.MerchantOperatingCity as DMOC
 import "beckn-spec" Domain.Types.FRFSTicketStatus (FRFSTicketStatus (..))
+import qualified "rider-app" Domain.Types.MerchantOperatingCity as DMOC
+import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Degraded (shouldExpireDegraded)
 import "rider-app" SharedLogic.SharedCab.DegradedSweepSchedule (scanWindowStart, sweepJobGuardKey, sweepLeaseKey, sweepRunKey)
 import Test.Tasty (TestTree, testGroup)
@@ -28,9 +28,9 @@ sweeps :: Int -> Int -> Int -> [UTCTime]
 sweeps cadence downStart downLen =
   [seconds s | s <- [0, cadence .. 12 * 3600], s < downStart || s > downStart + downLen]
 
--- | Falsification model for the scan-window rule (M8.5): a ride created at `createdAt`, degraded at
--- creation (worst case under the rule), marker dead one horizon later. A sweep at time t ends it iff
--- the marker is dead by then AND the createdAt-front (now - 3h) still covers it. The ride is lost iff
+-- | Falsification model for the scan-window rule (M8.5): a ride degraded at `createdAt` (the
+-- degrade time the scan window keys on, booking updatedAt; the booking may be much older), marker dead one horizon later.
+-- A sweep at time t ends it iff the marker is dead by then AND the window front (now - 3h) still covers it. The ride is lost iff
 -- no sweep in `at` satisfies both.
 caught :: UTCTime -> [UTCTime] -> Bool
 caught createdAt at =

@@ -39,13 +39,13 @@ sharedCabDegradedSweepEnabled = False
 
 -- | Sweep cadence, far below the degraded horizon (Config.degradedTimeoutSec is minutes-to-hours):
 -- a ride whose rider never polls ends at most one tick after its marker dies. The scan is bounded
--- (createdAt-front 3x the horizon, keyset-paged), so a tight tick costs about nothing.
+-- (updatedAt-front 3x the horizon, keyset-paged), so a tight tick costs about nothing.
 sweepTickSec :: Int
 sweepTickSec = 120
 
--- | The candidate scan's createdAt front bound: 3x the degraded-expiry horizon h, not one horizon.
--- A ride degraded at booking creation is killable from createdAt+h (marker dead, tickets still
--- INPROGRESS) and stays in the scan until createdAt+3h, so a sweep-down gap shorter than 2h loses
+-- | The candidate scan's updatedAt front bound: 3x the degraded-expiry horizon h, not one horizon.
+-- updatedAt is the degrade time (Boarding.degradedBoarding stamps it), however long the booking sat FINDING before.
+-- A ride degraded at t is killable from t+h (marker dead, tickets still INPROGRESS) and stays in the scan until t+3h, so a sweep-down gap shorter than 2h loses
 -- nothing (M8.5 scan-window rule; h = Config.degradedTimeoutSec, default 60*60 in Config.defaultTunables).
 scanWindowStart :: Int -> UTCTime -> UTCTime
 scanWindowStart horizonSec now = addUTCTime (negate (intToNominalDiffTime (3 * horizonSec))) now

@@ -13,7 +13,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, crossedMaxAttempts, isMissedCabOutcome, isSkipped, skippedWhileFinding, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), claimable, closable, crossedMaxAttempts, isMissedCabOutcome, isSkipped, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -115,6 +115,16 @@ tests =
           closable "P1" BS.CONFIRMED Nothing [TS.ACTIVE]
         ]
           @?= [True, False, False, False, False, False],
+      testCase "H1: a claim needs a live cab-less booking, every ticket unboarded, and no degrade marker" $
+        [ claimable BS.CONFIRMED Nothing [TS.ACTIVE, TS.ACTIVE] False,
+          claimable BS.CONFIRMED Nothing [TS.INPROGRESS] False,
+          claimable BS.CONFIRMED Nothing [TS.ACTIVE, TS.INPROGRESS] False,
+          claimable BS.CONFIRMED Nothing [TS.ACTIVE] True,
+          claimable BS.CONFIRMED (Just "P1") [TS.ACTIVE] False,
+          claimable BS.CANCELLED Nothing [TS.ACTIVE] False,
+          claimable BS.CONFIRMED Nothing [] False
+        ]
+          @?= [True, False, False, False, False, False, False],
       testCase "R19: the claim's under-lock check sees only the plate the rider skipped" $
         map (`isSkipped` ["ML05B2222"]) ["ML05A1111", "ML05B2222"] @?= [False, True],
       testCase "R16: the fallback push fires on the close that crosses maxAttempts, not before or after" $

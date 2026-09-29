@@ -124,15 +124,23 @@ data RiderRow = RiderRow
   deriving (Show, Eq)
 
 -- | Per stop of the route, in route order, the riders still to board there and the boarded riders getting off
--- there; stops with neither are left out, as are rows holding no seat and stops the route does not have.
+-- there; stops with neither are left out, as are rows holding no seat. A rider whose stop the route does not have
+-- (a corridor-sibling or re-bound booking) is not dropped: they go in a trailing "Other stops" group, keyed by the
+-- stop that decides where they show (board stop when waiting, drop stop when boarded), so the driver still sees them.
 groupRidersByStop :: [(Text, Text)] -> [RiderRow] -> [RidersAtStop]
 groupRidersByStop stops rows =
-  [ RidersAtStop {stopName, boarding, alighting}
-    | (code, stopName) <- stops,
-      let boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing} | r <- held, not r.boarded, r.boardStopCode == code],
-      let alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats} | r <- held, r.boarded, r.dropStopCode == code],
-      not (null boarding && null alighting)
-  ]
+  [group stopName (== code) | (code, stopName) <- stops, nonEmpty (group stopName (== code))]
+    ++ [other | let other = group otherStopsName (`notElem` map fst stops), nonEmpty other]
   where
     held = filter ((> 0) . (.seats)) rows
+    group stopName atStop =
+      RidersAtStop
+        { stopName,
+          boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing} | r <- held, not r.boarded, atStop r.boardStopCode],
+          alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats} | r <- held, r.boarded, atStop r.dropStopCode]
+        }
+    nonEmpty g = not (null g.boarding && null g.alighting)
     nameOf code = fromMaybe code (lookup code stops)
+
+otherStopsName :: Text
+otherStopsName = "Other stops"

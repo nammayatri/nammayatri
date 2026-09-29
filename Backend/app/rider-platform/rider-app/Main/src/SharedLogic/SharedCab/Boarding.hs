@@ -25,6 +25,8 @@ module SharedLogic.SharedCab.Boarding
     UnknownCodeStep (..),
     unknownCodeStep,
     forceHonoured,
+    forcedNoLocation,
+    bindingUnmoved,
     tryBoardSharedCab,
     seatCheck,
     canBoard,
@@ -63,6 +65,7 @@ import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
+import qualified Storage.Queries.FRFSTicketBookingExtra as QBookingExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error
 
@@ -109,6 +112,16 @@ unknownCodeStep forceCheckIn
 forceHonoured :: Maybe Bool -> Maybe Text -> Text -> Bool
 forceHonoured forceCheckIn bookingPlate targetPlate =
   forceCheckIn == Just True && maybe True (== targetPlate) bookingPlate
+
+-- | A forced boarding onto a booking with no cab yet had no proximity check and no cab it was allocated to: it counts as a
+-- no-location boarding (8.6), so a driver feeding codes to remote riders shows on the vehicle's counter.
+forcedNoLocation :: Maybe Text -> Bool
+forcedNoLocation = isNothing
+
+-- | The cab the caller resolved the boarding against (pre-lock) is still the one the booking holds (under the lock).
+-- A tick that claimed the booking for another cab in between makes the boarding stale: abort, don't re-bind.
+bindingUnmoved :: Maybe Text -> Maybe Text -> Bool
+bindingUnmoved = (==)
 
 -- ---------------- code resolution (8.1) ----------------
 
@@ -216,10 +229,15 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
     forM_ (filter ((== TicketStatus.ACTIVE) . (.status)) tickets) $ \t ->
       QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS t.scannedByVehicleNumber booking.id t.ticketNumber
     Degraded.markDegradedBoarding degradedTimeoutSec booking.id typedCode
+    -- the sweep's scan window keys on the booking's updatedAt: the degrade time, not createdAt (a booking can wait FINDING for hours)
+    QBookingExtra.touchUpdatedAt booking.id
     Events.forBooking Events.DegradedBoarding booking
   -- M8.5 (outside the booking lock, like the tick seed on session open): this ride's only other clock is
   -- the rider's poll; arm the city's timeout-sweep chain for when the rider never polls again.
-  DegradedSweepSchedule.ensureDegradedSweep booking.merchantId booking.merchantOperatingCityId
+  -- A failure here must not fail a boarding that already committed: the rider's retry would be refused (marker alive).
+  withTryCatch "sharedCabSeedSweep" (DegradedSweepSchedule.ensureDegradedSweep booking.merchantId booking.merchantOperatingCityId) >>= \case
+    Left e -> logError $ "sharedCab: couldn't seed the degraded sweep for booking " <> booking.id.getId <> ": " <> show e
+    Right () -> pure ()
 
 -- ---------------- commit (8.1 + 8.3) ----------------
 
@@ -257,6 +275,8 @@ commitBoarding journeyLeg booking target mbOld =
           -- fresh read under the booking lock: the R11 owner was verified pre-lock; re-verify state + our own occupancy.
           freshBooking <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
           unless (freshBooking.status == DBookingStatus.CONFIRMED) $ throwError BoardingFailed
+          -- the cab this boarding was resolved against (isRebind/forced/proximity) must still be the booking's, or the CAS below would no-op after the tickets flipped
+          unless (bindingUnmoved booking.vehicleNumber freshBooking.vehicleNumber) $ throwError BoardingFailed
           unless (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (length eligible)) $
             throwError CabFull
           -- Ticket FIRST: INPROGRESS — never postFrfsTicketVerify, which marks USED and the journey
@@ -264,11 +284,11 @@ commitBoarding journeyLeg booking target mbOld =
           -- FLIP ONLY the eligible set (BLOCKER-3): CANCELLED/USED tickets stay put.
           forM_ eligible $ \t ->
             QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS (Just fresh.vehicleNumber) booking.id t.ticketNumber
-          -- CAS vehicleNumber (spec/Storage/FrfsTicket.yaml:656-666). Expected = what we read at
-          -- request time; a racing allocate/close makes this write a no-op.
+          -- CAS vehicleNumber (spec/Storage/FrfsTicket.yaml:656-666). Expected = the fresh read above, so a race
+          -- past it (another writer, none can pass the booking lock) is a no-op rather than a re-bind.
           -- TODO(M8.1 completion): KV read-back + "who won" check per the yaml comment —
           -- frfs_ticket_booking is KV-enabled in prod (05 §2, review R8).
-          QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id booking.vehicleNumber
+          QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id freshBooking.vehicleNumber
           -- Ride the driver's ACTIVE run row: driver trips/history joins on this (04 §3a).
           QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
           -- Old cab's seat release = derived (05 decision 6): the booking row now counts against the new
@@ -344,7 +364,7 @@ tryBoardSharedCab journey journeyLeg booking mbPersonId req = do
           forced = forceHonoured req.forceCheckIn booking.vehicleNumber target.vehicleNumber
       mbCase <-
         if forced
-          then pure $ Right (Nothing, False)
+          then pure $ Right (Nothing, forcedNoLocation booking.vehicleNumber)
           else checkRiderNearSharedCab tunables.boardProximityM target journey booking isRebind
       case mbCase of
         Left (mbDist, reason) -> pure $ SharedCabProximityHold mbDist reason

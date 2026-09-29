@@ -17,8 +17,9 @@ import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 -- Extra code goes here --
 
 -- | M8.5 sweep (05 §5; caller SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep): this city's CONFIRMED
--- shared-cab bookings with no cab, created in [windowStart, upperBound), paged newest-first on a createdAt
--- keyset (mbCursor = the previous page's oldest createdAt). Bounded by design: the caller passes a fixed
+-- shared-cab bookings with no cab, updated in [windowStart, upperBound), paged newest-first on an updatedAt
+-- keyset (mbCursor = the previous page's oldest updatedAt). updatedAt is the degrade time: degradedBoarding touches
+-- the booking (touchUpdatedAt), and nothing else writes a cab-less CONFIRMED booking after it, whereas createdAt can be hours older. Bounded by design: the caller passes a fixed
 -- page limit and fronts the window at 3x the degraded horizon, so nothing walks the whole table.
 findSharedCabDegradedCandidates ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -35,15 +36,21 @@ findSharedCabDegradedCandidates merchantOperatingCityId windowStart upperBound m
             Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
             Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
             Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
-            Se.Is Beam.createdAt $ Se.GreaterThanOrEq windowStart,
-            Se.Is Beam.createdAt $ Se.LessThan upperBound
+            Se.Is Beam.updatedAt $ Se.GreaterThanOrEq windowStart,
+            Se.Is Beam.updatedAt $ Se.LessThan upperBound
           ]
-            <> [Se.Is Beam.createdAt $ Se.LessThan (fromJust mbCursor) | isJust mbCursor]
+            <> [Se.Is Beam.updatedAt $ Se.LessThan (fromJust mbCursor) | isJust mbCursor]
         )
     ]
-    (Se.Desc Beam.createdAt)
+    (Se.Desc Beam.updatedAt)
     limit
     Nothing
+
+-- | Stamps the booking's updatedAt (the degrade time the sweep window keys on).
+touchUpdatedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FRFSTicketBooking -> m ()
+touchUpdatedAt bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.updatedAt now] [Se.Is Beam.id $ Se.Eq bookingId.getId]
 
 updateFRFSTicketBookingVehicleDataById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

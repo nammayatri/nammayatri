@@ -1,6 +1,7 @@
 module SharedLogic.SharedCab.Session
   ( selectRoute,
     endDropBy,
+    stranded,
     changeRoute,
     applyQueuedRoute,
     endRoute,
@@ -155,15 +156,24 @@ endDropBy = \case
   DVT.OPS_FORCED -> Events.DroppedByTick
   _ -> Events.DroppedByDriver
 
--- | Every end path: close the trip, end the session, then take the cab off its LTS route.
+-- | The riders whose drop failed: still INPROGRESS after `finish`.
+stranded :: [(b, Either e ())] -> [b]
+stranded results = [b | (b, Left _) <- results]
+
+-- | Every end path: drop the riders still on board, close the trip, end the session, then take the cab off its LTS route.
+-- The drops come first (booking lock inside the plate lock), each caught on its own: one lock timeout must not strand the
+-- others, and must not stop the end itself -- the driver or the expiry job could then never end the run. A rider whose
+-- drop failed is logged and stays INPROGRESS on the ended session; the rider's own "I got down" (markDropped) still ends it.
+-- (Dropping after saving ENDED lost them all on the first failure: an ENDED session is never stepped again.)
 finish :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
 finish reason s = do
+  onBoard <- ridersOnBoard s.vehicleNumber
+  results <- forM onBoard $ \b -> (b,) <$> withTryCatch "sharedCab:dropOnFinish" (Booking.markDropped (endDropBy reason) b)
+  forM_ (stranded results) $ \b -> logError $ "sharedCab: rider still on board after the session ended, booking=" <> b.id.getId <> " plate=" <> s.vehicleNumber
   now <- getCurrentTime
   closeLiveTrip s.vehicleNumber reason now
   ended <- saveSession (Just s) (endSession s)
   detach s
-  -- an ENDED session is never stepped again, so nobody would drop the riders still on it (booking lock inside the plate lock)
-  ridersOnBoard s.vehicleNumber >>= mapM_ (Booking.markDropped (endDropBy reason))
   ended <$ Events.forSession (Events.Ended (show reason)) s
 
 -- | Open a session, or change route if this driver already has one (idempotent for the same route).

@@ -2,7 +2,7 @@
 
 module SharedCabBoardingTests (tests) where
 
-import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), canBoard, forceHonoured, seatCheck, unknownCodeStep)
+import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), bindingUnmoved, canBoard, forceHonoured, forcedNoLocation, seatCheck, unknownCodeStep)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -37,6 +37,19 @@ tests =
           testCase "re-bind to another cab: never forced from home" $
             forceHonoured (Just True) (Just "ML05A9999") "ML05A1234" @?= False,
           testCase "no force asked" $
-            forceHonoured Nothing Nothing "ML05A1234" @?= False
+            forceHonoured Nothing Nothing "ML05A1234" @?= False,
+          testCase "MED-5: only a forced boarding with no cab counts as a no-location boarding" $
+            map forcedNoLocation [Nothing, Just "ML05A1234"] @?= [True, False]
+        ],
+      testGroup
+        "H2: binding under the booking lock"
+        [ testCase "a cab claimed since the pre-lock read aborts the boarding" $
+            [ bindingUnmoved Nothing Nothing,
+              bindingUnmoved Nothing (Just "ML05B2222"),
+              bindingUnmoved (Just "ML05A1234") (Just "ML05A1234"),
+              bindingUnmoved (Just "ML05A1234") (Just "ML05B2222"),
+              bindingUnmoved (Just "ML05A1234") Nothing
+            ]
+              @?= [True, False, True, False, False]
         ]
     ]
