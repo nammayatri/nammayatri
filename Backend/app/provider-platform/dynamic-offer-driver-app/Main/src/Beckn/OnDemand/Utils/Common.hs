@@ -644,7 +644,8 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                         Spec.personName = mbDInfo >>= Just . (.name),
                         Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
                         Spec.personCreds = mbDriver <&> \driver -> mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats
-                      }
+                      },
+                agentRating = show <$> (mbDriverStats >>= (.rating))
               },
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do
@@ -1337,7 +1338,8 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                         Spec.personName = mbDInfo >>= Just . (.name),
                         Spec.personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
                         Spec.personCreds = mbDriver <&> \driver -> mkAgentCreds now isOndcScheduledRideSupportEnabled driver mbDriverStats
-                      }
+                      },
+                agentRating = show <$> (mbDriverStats >>= (.rating))
               },
         fulfillmentVehicle =
           mbVehicle >>= \vehicle -> do

@@ -160,13 +160,14 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
           nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
           key = multipleRouteKey booking.transactionId
           shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
+          isOndcScheduledRideSupportEnabled = fromMaybe False transportConfig.enableOndcScheduledRideSupport
       multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case multipleRoutes of
         Just routes -> do
-          isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck
+          isRouteDeviated <- checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking shouldPerformSafetyCheck isOndcScheduledRideSupportEnabled
           updateRouteDeviationDetails isRouteDeviated alreadyDeviated
         Nothing -> do
-          isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking
+          isRouteDeviated <- checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking isOndcScheduledRideSupportEnabled
           updateRouteDeviationDetails isRouteDeviated alreadyDeviated
   where
     updateRouteDeviationDetails :: LocationUpdateFlow m r c => Bool -> Bool -> m Bool
@@ -180,15 +181,15 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
       let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
       return (alreadyDeviated, rideDetails.safetyAlertTriggered)
 
-checkMultipleRoutesForDeviation :: LocationUpdateFlow m r c => [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> m Bool
-checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled = do
+checkMultipleRoutesForDeviation :: LocationUpdateFlow m r c => [RI.RouteAndDeviationInfo] -> [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> Bool -> m Bool
+checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking safetyCheckEnabled isOndcScheduledRideSupportEnabled = do
   let rideId = ride.id
   logInfo $ "Checking for deviation in multiple routes for rideId: " <> getId rideId
   let updatedRoutesInfo = map checkRouteForDeviation routes
   logInfo $ "Updated routes info for rideId: " <> getId rideId <> " is: " <> show updatedRoutesInfo
   setExp (multipleRouteKey booking.transactionId) updatedRoutesInfo 14400
   fork "Performing safety check" $
-    when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck ride booking
+    when (safetyCheckEnabled && all (\route -> RI.safetyDeviation $ RI.deviationInfo route) updatedRoutesInfo) $ performSafetyCheck ride booking isOndcScheduledRideSupportEnabled
   return $ all (\route -> RI.deviation $ RI.deviationInfo route) updatedRoutesInfo
   where
     checkRouteForDeviation :: RI.RouteAndDeviationInfo -> RI.RouteAndDeviationInfo
@@ -228,8 +229,8 @@ checkMultipleRoutesForDeviation routes batchWaypoints routeDeviationThreshold ni
                           }
                     }
 
-checkForDeviationInSingleRoute :: LocationUpdateFlow m r c => [LatLong] -> Meters -> Meters -> Ride -> Booking -> m Bool
-checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking = do
+checkForDeviationInSingleRoute :: LocationUpdateFlow m r c => [LatLong] -> Meters -> Meters -> Ride -> Booking -> Bool -> m Bool
+checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking isOndcScheduledRideSupportEnabled = do
   let rideId = ride.id
   logInfo $ "Checking for deviation in single route for rideId: " <> getId rideId
   let key = searchRequestKey booking.transactionId
@@ -242,7 +243,7 @@ checkForDeviationInSingleRoute batchWaypoints routeDeviationThreshold nightSafet
                   deviationInfo = RI.DeviationInfo {deviation = False, safetyDeviation = False}
                 }
             ]
-      checkMultipleRoutesForDeviation multipleRoutesEntity batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking False
+      checkMultipleRoutesForDeviation multipleRoutesEntity batchWaypoints routeDeviationThreshold nightSafetyRouteDeviationThreshold ride booking False isOndcScheduledRideSupportEnabled
     Nothing -> do
       logWarning $ "Ride route info not found for rideId: " <> getId rideId
       return False
@@ -393,8 +394,8 @@ whenWithLocationUpdatesLock driverId f = do
   where
     lockKey = "DriverLocationUpdate:DriverId-" <> driverId.getId
 
-performSafetyCheck :: LocationUpdateFlow m r c => Ride -> Booking -> m ()
-performSafetyCheck ride booking = do
+performSafetyCheck :: LocationUpdateFlow m r c => Ride -> Booking -> Bool -> m ()
+performSafetyCheck ride booking isOndcScheduledRideSupportEnabled = do
   let rideId = ride.id
   logInfo $ "Performing safety check for rideId: " <> getId rideId
   when (not ride.safetyAlertTriggered) $ do
@@ -403,7 +404,7 @@ performSafetyCheck ride booking = do
         & fromMaybeM (BookingFieldNotPresent "riderId")
     riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound ride.id.getId)
     void $ QRide.updateSafetyAlertTriggered ride.id
-    when riderDetails.nightSafetyChecks $ do
+    when (riderDetails.nightSafetyChecks || isOndcScheduledRideSupportEnabled) $ do
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
       BP.sendSafetyAlertToBAP booking ride Enums.DEVIATION driver vehicle
