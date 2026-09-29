@@ -24,6 +24,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSReschedule as FRFSReschedule
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import SharedLogic.SharedCab.RefundDecision (cancelRefund, isSharedCabBooking, readRefundDecision)
 import Storage.CachedQueries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -100,7 +101,10 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
           void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
         return Nothing
       _ -> do
-        onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking
+        -- a shared-cab cancel runs on the policy's decision, and never without one (no fall-through to the tier table)
+        mbDecision <- if isSharedCabBooking booking then readRefundDecision booking.id else pure Nothing
+        mbSharedCabRefund <- either (const $ throwError $ InternalError "Shared-cab cancel did not pass the refund policy") pure $ cancelRefund (isSharedCabBooking booking) (initiator == UserInitiated) mbDecision
+        onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking mbSharedCabRefund
         mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq
         let updatedBooking = booking {DBooking.bppOrderId = Just onCancelReq.bppOrderId}
         return $ fmap (\(a, b, c) -> (a, b, c, updatedBooking)) mbSideEffectData

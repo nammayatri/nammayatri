@@ -3,6 +3,7 @@
 module SharedLogic.SharedCab.Cancel
   ( CancelStage (..),
     withSharedCabCancel,
+    guardRiderCancel,
   )
 where
 
@@ -19,7 +20,7 @@ import SharedLogic.SharedCab.Booking (readRiderFix, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, setRefundDecision)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, isSharedCabBooking, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -43,6 +44,12 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
     Events.forBooking (Events.BookingCancelled (byText by) (refundText refund) mbReason) booking
   Invariants.checkBooking booking.id
+
+-- | The rider's cancel of a booking through any endpoint: a shared-cab one goes through the policy, others run as is.
+guardRiderCancel :: CancelStage -> DFTB.FRFSTicketBooking -> Flow () -> Flow ()
+guardRiderCancel stage booking cancelAction
+  | isSharedCabBooking booking = withSharedCabCancel ByRider stage Nothing (const $ pure ()) booking cancelAction
+  | otherwise = cancelAction
 
 decide :: CancelBy -> DFTB.FRFSTicketBooking -> Flow Refund
 decide by booking = do

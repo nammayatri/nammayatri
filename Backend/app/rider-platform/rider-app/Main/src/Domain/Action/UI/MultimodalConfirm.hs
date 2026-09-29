@@ -1580,10 +1580,8 @@ postMultimodalOrderCancel (_, _) journeyId legOrder = do
 -- | R54: a shared-cab leg's rider cancel goes through the refund policy (`SharedLogic.SharedCab.RefundPolicy`).
 withSharedCabCancelGuard :: SharedCabCancel.CancelStage -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow () -> Environment.Flow ()
 withSharedCabCancelGuard stage mbBooking cancelAction = case mbBooking of
-  Just booking
-    | SharedCabBooking.isSharedCabBooking booking ->
-      SharedCabCancel.withSharedCabCancel SharedCabRefund.ByRider stage Nothing (const $ pure ()) booking cancelAction
-  _ -> cancelAction
+  Just booking -> SharedCabCancel.guardRiderCancel stage booking cancelAction
+  Nothing -> cancelAction
 
 -- | "I got down" and journey complete end a boarded shared-cab ticket (USED) before the leg is marked finished. A
 -- ticket that never boarded is cancelled under the refund policy instead (R54); True when it was, so the caller

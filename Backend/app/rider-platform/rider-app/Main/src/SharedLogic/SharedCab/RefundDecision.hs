@@ -5,6 +5,7 @@ module SharedLogic.SharedCab.RefundDecision
     isSharedCabBooking,
     refundAmounts,
     refundWithheld,
+    cancelRefund,
     setRefundDecision,
     readRefundDecision,
     clearRefundDecision,
@@ -37,6 +38,17 @@ refundAmounts baseFare = \case
 -- refund-pending (that mark is what makes the payment service refund the order in full).
 refundWithheld :: HighPrecMoney -> HighPrecMoney -> Bool
 refundWithheld cancellationCharges refundAmount = cancellationCharges > 0 && refundAmount <= 0
+
+-- | The refund a cancel of `booking` runs with, given whether it is shared cab, whether the rider started it, and the
+-- policy decision the guard published. Nothing means "use the bus/metro tier table", which only a booking that is not
+-- shared cab ever gets: a rider cancel that skipped the policy guard is refused (Left), a system (technical) cancel
+-- refunds in full.
+cancelRefund :: Bool -> Bool -> Maybe Refund -> Either () (Maybe Refund)
+cancelRefund isSharedCab riderInitiated mbDecision
+  | not isSharedCab = Right Nothing
+  | Just refund <- mbDecision = Right (Just refund)
+  | riderInitiated = Left ()
+  | otherwise = Right (Just FullRefund)
 
 refundKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 refundKey bookingId = "sharedcab:refund:" <> bookingId.getId

@@ -101,6 +101,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -116,6 +117,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
 --------------------------------------------------------------------------------
 -- Redis key contract
@@ -607,7 +609,9 @@ cancelForNoShows b = do
   void $ QFRFSTicketBooking.updateStatusById CANCELLED b.id
   void $ QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED b.id
   void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) b.id
-  QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just 0) (Just (fromMaybe b.totalPrice.amount b.overriddenAmount)) (Just False) b.id
+  QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just 0) (Just (fromMaybe b.totalPrice.amount b.overriddenAmount)) (Just True) b.id
+  -- the journey-level part of a cancel (legs Finished, journey CANCELLED), as a rider cancel does
+  QJourneyLeg.findByLegSearchId (Just b.searchId.getId) >>= mapM_ (FRFSCancelJourney.cancelJourneyById . (.journeyId))
 
 -- | R16: the close that takes the attempt count over maxAttempts (not one past it).
 crossedMaxAttempts :: Int -> Int -> Int -> Bool

@@ -10,7 +10,7 @@ import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (RiderFix (..))
 import "rider-app" SharedLogic.SharedCab.DriverAction (SharedCabDriverActionError (..), requireReason)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..))
-import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), refundAmounts, refundWithheld)
+import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, refundAmounts, refundWithheld)
 import "rider-app" SharedLogic.SharedCab.RefundPolicy
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -116,6 +116,18 @@ tests =
           testCase "full does not" $ uncurry refundWithheld (refundAmounts 40 FullRefund) @?= False,
           testCase "a free booking has nothing to withhold" $ refundWithheld 0 0 @?= False,
           testCase "a partial refund still refunds" $ refundWithheld 10 30 @?= False
+        ],
+      testGroup
+        "every cancel path resolves its refund: none reaches the tier table for shared cab"
+        [ testCase "not shared cab: no override, whatever else is set (bus/metro keep their tiers)" $
+            [cancelRefund False rider' d | rider' <- [True, False], d <- [Nothing, Just FullRefund, Just NoRefund]] @?= replicate 6 (Right Nothing),
+          testCase "shared cab never resolves to the tier table, for any initiator or decision" $
+            [cancelRefund True rider' d == Right Nothing | rider' <- [True, False], d <- [Nothing, Just FullRefund, Just NoRefund]] @?= replicate 6 False,
+          testCase "shared cab, rider cancel that skipped the policy guard: refused" $ cancelRefund True True Nothing @?= Left (),
+          testCase "shared cab, system cancel with no decision: full refund" $ cancelRefund True False Nothing @?= Right (Just FullRefund),
+          testCase "shared cab, the guard's decision wins (no refund)" $ cancelRefund True True (Just NoRefund) @?= Right (Just NoRefund),
+          testCase "shared cab, the guard's decision wins (full refund)" $ cancelRefund True True (Just FullRefund) @?= Right (Just FullRefund),
+          testCase "shared cab, a system cancel keeps a published decision" $ cancelRefund True False (Just NoRefund) @?= Right (Just NoRefund)
         ],
       testGroup
         "driver cancel reason"
