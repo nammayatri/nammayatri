@@ -62,14 +62,14 @@ updateOtpByIdForPartnerOrgId (Id rtId) (Id orgId) authValueHash authExpiry = do
         ]
     ]
 
-updateMerchantOperatingCityIdByPersonId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
-updateMerchantOperatingCityIdByPersonId (Id personId) (Id merchantOperatingCityId) = do
+updateMerchantOperatingCityIdByIds :: (MonadFlow m, EsqDBFlow m r) => [Id RegistrationToken] -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityIdByIds rtIds (Id merchantOperatingCityId) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamRT.merchantOperatingCityId (Just merchantOperatingCityId),
       Se.Set BeamRT.updatedAt now
     ]
-    [Se.Is BeamRT.entityId (Se.Eq personId)]
+    [Se.Is BeamRT.id (Se.In $ getId <$> rtIds)]
 
 updateOtpAndToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id RegistrationToken -> Text -> RegToken -> Int -> UTCTime -> m ()
 updateOtpAndToken (Id rtId) newOtp newToken newAttempts now = do
