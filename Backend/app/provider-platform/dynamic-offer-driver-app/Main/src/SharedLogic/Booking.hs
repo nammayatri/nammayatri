@@ -181,14 +181,9 @@ removeBookingFromRedis booking = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   let localStartTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) booking.startTime
       redisKey = createRedisKeyForServiceTier localStartTime booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier
-      -- Backward-compat: also clear the pre-migration variant key so a cancelled/assigned booking
-      -- written under the old scheme doesn't linger and resurface in reads. Drop once all such
-      -- bookings have expired.
-      legacyRedisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory (castServiceTierToVariant booking.vehicleServiceTier)
       redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
       member = createMember booking
   void $ Redis.zRem redisKey [member]
-  when (legacyRedisKey /= redisKey) $ void $ Redis.zRem legacyRedisKey [member]
   void $ Redis.hDel redisKeyForHset [booking.id.getId]
 
 -- Creates a Redis sorted set member string containing booking metadata.
@@ -199,22 +194,14 @@ createMember booking = booking.id.getId <> "|" <> (pack . show $ booking.fromLoc
 
 -- Generates Redis key for sorted set storage of scheduled bookings.
 -- Format: "ScheduledBookings:cityId:YYYY-MM-DD:<serviceTier>:tripType"
--- The key part is the booking's service tier (current scheme). Time parameter should be in local
--- timezone to group bookings by local date.
+-- Time parameter should be in local timezone to group bookings by local date.
 createRedisKeyForServiceTier :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> ServiceTierType -> Text
-createRedisKeyForServiceTier time mocId tripCategory serviceTier = createRedisKeyWith time mocId tripCategory (show serviceTier)
-
--- Backward-compat key keyed on vehicle variant (the pre-migration scheme).
-createRedisKey :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> VehicleVariant -> Text
-createRedisKey time mocId tripCategory vehicleVariant = createRedisKeyWith time mocId tripCategory (show vehicleVariant)
-
-createRedisKeyWith :: UTCTime -> Id MerchantOperatingCity -> TripCategory -> String -> Text
-createRedisKeyWith time mocId tripCategory keyPart =
+createRedisKeyForServiceTier time mocId tripCategory serviceTier =
   let (year, month, day) = toGregorian $ utctDay time
       date = printf "%04d-%02d-%02d" year month day
       cityId = unpack mocId.getId
       tripType = createTripType tripCategory
-   in (pack $ "ScheduledBookings:" <> cityId <> ":" <> date <> ":" <> keyPart <> ":" <> tripType)
+   in (pack $ "ScheduledBookings:" <> cityId <> ":" <> date <> ":" <> show serviceTier <> ":" <> tripType)
 
 createTripType :: TripCategory -> [Char]
 createTripType (OneWay _) = "OneWay"
@@ -245,13 +232,9 @@ calculateSortedSetScore time = realToFrac (utcTimeToPOSIXSeconds time)
 createRedisKeysForCombinations :: UTCTime -> Id MerchantOperatingCity -> [TripCategory] -> [ServiceTierType] -> [Text]
 createRedisKeysForCombinations time mocId tripCategories serviceTiers =
   nub
-    [ key
+    [ createRedisKeyForServiceTier time mocId tripCategory serviceTier
       | tripCategory <- tripCategories,
-        serviceTier <- serviceTiers,
-        key <-
-          [ createRedisKeyForServiceTier time mocId tripCategory serviceTier,
-            createRedisKey time mocId tripCategory (castServiceTierToVariant serviceTier)
-          ]
+        serviceTier <- serviceTiers
     ]
 
 -- Stores a scheduled booking in Redis for efficient querying by drivers.
@@ -269,12 +252,8 @@ addScheduledBookingInRedis booking = do
         endOfBookingDay = UTCTime (addDays 1 bookingLocalDay) 0
         expirationSeconds = max 0 $ ceiling $ diffUTCTime endOfBookingDay localNow
         redisKey = createRedisKeyForServiceTier localStartTime booking.merchantOperatingCityId booking.tripCategory booking.vehicleServiceTier
-        -- Backward-compat: dual-write the pre-migration variant key so instances still reading the old
-        -- scheme (during a rolling deploy) continue to see this booking. Drop once fully rolled out.
-        legacyRedisKey = createRedisKey localStartTime booking.merchantOperatingCityId booking.tripCategory (castServiceTierToVariant booking.vehicleServiceTier)
         redisKeyForHset = createRedisKeyForHset localStartTime booking.merchantOperatingCityId
         member = createMember booking
         score = ceiling $ calculateSortedSetScore localStartTime
     void $ Redis.zAddExp redisKey member score expirationSeconds
-    when (legacyRedisKey /= redisKey) $ void $ Redis.zAddExp legacyRedisKey member score expirationSeconds
     void $ Redis.hSetExp redisKeyForHset booking.id.getId booking expirationSeconds
