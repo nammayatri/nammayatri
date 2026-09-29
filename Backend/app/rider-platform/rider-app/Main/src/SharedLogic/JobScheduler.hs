@@ -81,6 +81,7 @@ data RiderJobType
   | SilentReallocationExpiry
   | SharedCabAllocationTick
   | SharedCabSessionExpiry
+  | SharedCabDegradedSweep
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -132,6 +133,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
   restoreAnyJobInfo SSharedCabAllocationTick jobData = AnyJobInfo <$> restoreJobInfo SSharedCabAllocationTick jobData
   restoreAnyJobInfo SSharedCabSessionExpiry jobData = AnyJobInfo <$> restoreJobInfo SSharedCabSessionExpiry jobData
+  restoreAnyJobInfo SSharedCabDegradedSweep jobData = AnyJobInfo <$> restoreJobInfo SSharedCabDegradedSweep jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -519,6 +521,15 @@ data SharedCabSessionExpiryJobData = SharedCabSessionExpiryJobData
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
+-- | Self-rescheduling per-city sweep that ends degraded rides (05 §5) whose rider never polls back
+-- (M8.5; the TODO at SharedLogic.SharedCab.Degraded.expireDegradedBoardingIfNeeded). Seeded by
+-- SharedLogic.SharedCab.DegradedSweepSchedule when a ride boards degraded.
+data SharedCabDegradedSweepJobData = SharedCabDegradedSweepJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
 instance JobInfoProcessor 'SharedCabAllocationTick
 
 type instance JobContent 'SharedCabAllocationTick = SharedCabAllocationTickJobData
@@ -526,3 +537,7 @@ type instance JobContent 'SharedCabAllocationTick = SharedCabAllocationTickJobDa
 instance JobInfoProcessor 'SharedCabSessionExpiry
 
 type instance JobContent 'SharedCabSessionExpiry = SharedCabSessionExpiryJobData
+
+instance JobInfoProcessor 'SharedCabDegradedSweep
+
+type instance JobContent 'SharedCabDegradedSweep = SharedCabDegradedSweepJobData

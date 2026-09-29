@@ -53,6 +53,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
+import qualified SharedLogic.SharedCab.DegradedSweepSchedule as DegradedSweepSchedule
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
@@ -202,7 +203,7 @@ checkRiderNearSharedCab boardProximityM session journey booking isRebind = do
 -- ticket still held, is refused; an allocated one gives its cab back first (plate CAS -> null, alloc key cleared),
 -- so a degraded ride never counts as a seat on the cab it was allocated to.
 degradedBoarding :: Int -> DBooking.FRFSTicketBooking -> Text -> Environment.Flow ()
-degradedBoarding degradedTimeoutSec booking typedCode =
+degradedBoarding degradedTimeoutSec booking typedCode = do
   withBookingLock booking.id $ do
     fresh <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
     tickets <- QTicket.findAllByTicketBookingId booking.id
@@ -216,6 +217,9 @@ degradedBoarding degradedTimeoutSec booking typedCode =
       QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS t.scannedByVehicleNumber booking.id t.ticketNumber
     Degraded.markDegradedBoarding degradedTimeoutSec booking.id typedCode
     Events.forBooking Events.DegradedBoarding booking
+  -- M8.5 (outside the booking lock, like the tick seed on session open): this ride's only other clock is
+  -- the rider's poll; arm the city's timeout-sweep chain for when the rider never polls again.
+  DegradedSweepSchedule.ensureDegradedSweep booking.merchantId booking.merchantOperatingCityId
 
 -- ---------------- commit (8.1 + 8.3) ----------------
 

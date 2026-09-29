@@ -4,6 +4,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.JourneyLeg as DJL
+import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -14,6 +15,35 @@ import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.OrphanInstances.FRFSTicketBooking ()
 
 -- Extra code goes here --
+
+-- | M8.5 sweep (05 §5; caller SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep): this city's CONFIRMED
+-- shared-cab bookings with no cab, created in [windowStart, upperBound), paged newest-first on a createdAt
+-- keyset (mbCursor = the previous page's oldest createdAt). Bounded by design: the caller passes a fixed
+-- page limit and fronts the window at 3x the degraded horizon, so nothing walks the whole table.
+findSharedCabDegradedCandidates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [FRFSTicketBooking]
+findSharedCabDegradedCandidates merchantOperatingCityId windowStart upperBound mbCursor limit = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
+            Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
+            Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
+            Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
+            Se.Is Beam.createdAt $ Se.GreaterThanOrEq windowStart,
+            Se.Is Beam.createdAt $ Se.LessThan upperBound
+          ]
+            <> [Se.Is Beam.createdAt $ Se.LessThan (fromJust mbCursor) | isJust mbCursor]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    Nothing
 
 updateFRFSTicketBookingVehicleDataById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

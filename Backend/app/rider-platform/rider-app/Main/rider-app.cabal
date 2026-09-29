@@ -626,6 +626,7 @@ library
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
       SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
+      SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
       SharedLogic.Scheduler.Jobs.SharedCabSessionExpiry
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
@@ -641,6 +642,7 @@ library
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Degraded
+      SharedLogic.SharedCab.DegradedSweepSchedule
       SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.DriverAction
       SharedLogic.SharedCab.Events
@@ -2170,6 +2172,7 @@ test-suite rider-app-test
       SharedCabBlameCountTests
       SharedCabBoardingTests
       SharedCabConfigTests
+      SharedCabDegradedSweepTests
       SharedCabDegradedTests
       SharedCabDemandTests
       SharedCabDriverActionTests
