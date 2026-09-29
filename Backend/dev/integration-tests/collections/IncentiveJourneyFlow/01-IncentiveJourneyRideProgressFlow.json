@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Incentive Journey Ride Progress Flow",
-    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (one RideCompleted GTE 2, 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY, the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays 500 coins. Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply row.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
+    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (one RideCompleted GTE 2, 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY, the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays cash ₹1. Milestone 1 pays a YATRI_SUBSCRIPTION waive-off instead of coins. Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply row.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -274,6 +274,41 @@
       }
     },
     {
+      "name": "Set Driver Payout VPA (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/payout/payout/vpa/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"personId\": \"{{driver_id}}\",\n  \"vpa\": \"gareeb@okaxis\",\n  \"verify\": false,\n  \"vpaStatus\": \"MANUALLY_ADDED\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Payout VPA set 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Payout VPA:', pm.response.text());"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Create Cohort (Dashboard)",
       "request": {
         "method": "POST",
@@ -348,7 +383,7 @@
       ]
     },
     {
-      "name": "Create Milestone 1 RideCompleted GTE 1 Coins 10 (Dashboard)",
+      "name": "Create Milestone 1 RideCompleted GTE 1 SubscriptionWaiveOff (Dashboard)",
       "request": {
         "method": "POST",
         "header": [
@@ -366,7 +401,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"name\": \"Complete 1 ride\",\n  \"description\": \"First ride; progress starts at 0\",\n  \"order\": 1,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"Coins\",\n  \"rewardValue\": 10,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": null,\n  \"timeBounds\": null\n}"
+          "raw": "{\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"name\": \"Complete 1 ride\",\n  \"description\": \"First ride; progress starts at 0\",\n  \"order\": 1,\n  \"conditionType\": \"RideCompleted\",\n  \"conditionOperator\": \"GTE\",\n  \"conditionValue\": 1,\n  \"areaType\": \"Default\",\n  \"specialLocationIds\": null,\n  \"vehicleCategory\": null,\n  \"serviceTierType\": null,\n  \"rewardType\": \"SubscriptionWaiveOff\",\n  \"rewardValue\": null,\n  \"rewardExpirationAt\": null,\n  \"subscriptionWaiveOff\": {\n    \"percentage\": 100,\n    \"daysValidFor\": 1,\n    \"serviceName\": \"YATRI_SUBSCRIPTION\",\n    \"waiveOffMode\": \"WITHOUT_OFFER\"\n  },\n  \"timeBounds\": null\n}"
         }
       },
       "event": [
@@ -477,7 +512,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"cohortId\": \"{{ij_cohort_id}}\",\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"startDate\": \"{{_test_start_date}}\",\n  \"streakRange\": 1,\n  \"enabled\": true,\n  \"maxWaiveOffCount\": 1,\n  \"streakEndRewardType\": \"Coins\",\n  \"streakEndRewardValue\": 500,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null\n}"
+          "raw": "{\n  \"cohortId\": \"{{ij_cohort_id}}\",\n  \"journeyId\": \"{{ij_journey_id}}\",\n  \"startDate\": \"{{_test_start_date}}\",\n  \"streakRange\": 1,\n  \"enabled\": true,\n  \"maxWaiveOffCount\": 1,\n  \"streakEndRewardType\": \"Cash\",\n  \"streakEndRewardValue\": 1,\n  \"streakEndRewardExpirationAt\": null,\n  \"streakEndSubscriptionWaiveOff\": null\n}"
         }
       },
       "event": [
@@ -1663,6 +1698,7 @@
               "var journeyId = pm.environment.get('ij_journey_id');",
               "var journey2Id = pm.environment.get('ij_journey_2_id');",
               "var autoJourneyId = pm.environment.get('ij_auto_journey_id');",
+              "var lastJourneyNames = [];",
               "var url = base + '/incentive/journey/list';",
               "function byName(hit, name) {",
               "  return (hit.milestones || []).find(function (m) { return m.name === name; });",
@@ -1680,16 +1716,17 @@
               "    if (!err && res.code === 200) {",
               "      var d = res.json();",
               "      var journeys = d.journeys || [];",
+              "      lastJourneyNames = journeys.map(function (j) { return j.name; });",
               "      var hit = journeys.find(function (j) { return j.journeyId === journeyId; });",
               "      var hit2 = journeys.find(function (j) { return j.journeyId === journey2Id; });",
               "      var hitAuto = journeys.find(function (j) { return j.journeyId === autoJourneyId; });",
-              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); var autoM = hitAuto && byName(hitAuto, 'Complete 1 auto-apply ride'); if (!(isDone(m1) && m2 && !isDone(m2) && earn && !isDone(earn) && hit2 && two && !isDone(two) && two.currentValue === 1 && hitAuto && isDone(autoM) && autoM.currentValue === 1)) return false; pm.test('Milestone 1 completed after first ride', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 2 still open after first ride', function () { pm.expect(isDone(m2)).to.be.false; }); pm.test('Earnings milestone still open', function () { pm.expect(isDone(earn)).to.be.false; }); pm.test('Journey 2 still open at 1 ride', function () { pm.expect(isDone(two)).to.be.false; pm.expect(two.currentValue).to.eql(1); }); pm.test('Auto-apply journey completed on ride 1 without a user mapping', function () { pm.expect(isDone(autoM)).to.be.true; pm.expect(autoM.currentValue).to.eql(1); pm.expect(autoM.rewardValue).to.eql(30); }); console.log('IJ ride1 m1', m1.status, m1.currentValue, 'm2', m2.status, m2.currentValue, 'j2', two.currentValue, 'auto', autoM.status); return true;})())) {",
+              "      if (hit && ((function () { var m1 = byName(hit, 'Complete 1 ride'); var m2 = byName(hit, 'Complete 1 more ride'); var earn = byName(hit, 'Earn target'); var two = hit2 && byName(hit2, 'Complete 2 rides'); var autoM = hitAuto && byName(hitAuto, 'Complete 1 auto-apply ride'); if (!(isDone(m1) && m2 && !isDone(m2) && earn && !isDone(earn) && hit2 && two && !isDone(two) && two.currentValue === 1 && hitAuto && isDone(autoM) && autoM.currentValue === 1)) return false; pm.test('Milestone 1 completed after first ride', function () { pm.expect(isDone(m1)).to.be.true; }); pm.test('Milestone 1 reward is subscription waive-off', function () { pm.expect(m1.rewardType).to.eql('SubscriptionWaiveOff'); pm.expect(m1.subscriptionWaiveOff && m1.subscriptionWaiveOff.percentage).to.eql(100); pm.expect(m1.subscriptionWaiveOff.serviceName).to.eql('YATRI_SUBSCRIPTION'); pm.expect(m1.subscriptionWaiveOff.waiveOffMode).to.eql('WITHOUT_OFFER'); }); pm.test('Milestone 2 still open after first ride', function () { pm.expect(isDone(m2)).to.be.false; }); pm.test('Earnings milestone still open', function () { pm.expect(isDone(earn)).to.be.false; }); pm.test('Journey 2 still open at 1 ride', function () { pm.expect(isDone(two)).to.be.false; pm.expect(two.currentValue).to.eql(1); }); pm.test('Auto-apply journey completed on ride 1 without a user mapping', function () { pm.expect(isDone(autoM)).to.be.true; pm.expect(autoM.currentValue).to.eql(1); pm.expect(autoM.rewardValue).to.eql(30); }); console.log('IJ ride1 m1', m1.status, m1.currentValue, 'm2', m2.status, m2.currentValue, 'j2', two.currentValue, 'auto', autoM.status); return true;})())) {",
               "        return;",
               "      }",
               "    }",
               "    if (attempt >= MAX_ATTEMPTS) {",
-              "      pm.test('Ride 1 did not complete only the first milestone', function () {",
-              "        throw new Error('Ride 1 did not complete only the first milestone after ' + MAX_ATTEMPTS + ' polls \u2014 is kafka-ride-events-consumer-exe (RIDE_EVENTS_CONSUMER) running?');",
+              "      pm.test('Ride 1 poll did not reach the expected journeys', function () {",
+              "        throw new Error('Ride 1 poll failed after ' + MAX_ATTEMPTS + ' polls. Journeys in list: ' + (lastJourneyNames.join(', ') || '(none)') + '. Expected journey 1 milestone 1 completed, milestone 2 open, journey 2 at 1 ride, and auto-apply journey completed. If the auto-apply journey is missing, Create AutoApplyCohortMapping did not match this driver.');",
               "      });",
               "      return;",
               "    }",
@@ -2549,7 +2586,7 @@
       }
     },
     {
-      "name": "GET coins balance after streak-end",
+      "name": "GET coins balance after streak-end cash",
       "event": [
         {
           "listen": "test",
@@ -2559,8 +2596,8 @@
               "pm.test('Coins transactions 200', function () { pm.response.to.have.status(200); });",
               "var before = parseInt(pm.environment.get('ij_coins_before') || '0', 10);",
               "var d = pm.response.json();",
-              "pm.test('Streak-end reward added 500 coins', function () {",
-              "  pm.expect(d.coinBalance).to.be.at.least(before + 500);",
+              "pm.test('Streak-end cash does not add coins', function () {",
+              "  pm.expect(d.coinBalance).to.eql(before);",
               "});",
               "console.log('IJ coins after waive', d.coinBalance, 'before', before);"
             ]

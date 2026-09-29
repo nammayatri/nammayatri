@@ -52,6 +52,12 @@ let internalEndPointMap =
       , { mapKey = "http://localhost:${uiDevPort}"
         , mapValue = "http://localhost:${uiDevPort}"
         }
+      , { mapKey = "https://localhost:${riderAppPort}/beckn/cab/v1"
+        , mapValue = "http://localhost:${riderAppPort}/beckn/cab/v1"
+        }
+      , { mapKey = "https://localhost:${riderAppPort}"
+        , mapValue = "http://localhost:${riderAppPort}"
+        }
       ]
 
 let SchedulerType = < RedisBased | DbBased >
