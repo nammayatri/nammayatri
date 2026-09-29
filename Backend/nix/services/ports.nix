@@ -74,6 +74,7 @@
   producer-healthcheck = 8115;
   driver-offer-allocator-metrics = 8056;
   rider-app-scheduler-metrics = 8057;
+  kafka-ride-events-consumer-metrics = 9995;
 
   # Dev tools
   caddy-reverse-proxy = 9090;

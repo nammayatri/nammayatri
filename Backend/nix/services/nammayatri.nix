@@ -380,6 +380,8 @@ in
       backendProcs =
         cabalExecutables ++ [
           "rider-producer-exe"
+          "kafka-ride-events-consumer-exe"
+          "ride-events-stream-groups"
           "nammayatri-init"
           "log-cleaner"
           "cache-restore"
@@ -551,8 +553,62 @@ in
                   redis-cli -p ${toString ports.redis} XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM
                   redis-cli -p ${toString ports.redis} XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
                   redis-cli -p ${toString ports.redis} XGROUP CREATE Available_Chakras myGroup_Chakras 0 MKSTREAM
+                  # Ride-events Redis streams (RIDE_EVENTS_CONSUMER).
+                  # Publisher (dynamic-offer-driver-app) prefixes keys with
+                  # "dynamic-offer-driver-app:"; the consumer's streamPrefix in
+                  # ride-events-consumer.dhall spells that prefix out. Groups must
+                  # exist before the first XREADGROUP, hence MKSTREAM here.
+                  # NOTE: hedis' cluster client cannot follow MOVED for XGROUP, so
+                  # in-process ensureConsumerGroups only covers shards on the seed
+                  # node. Always provision with redis-cli -c (see ride-events-stream-groups).
+                  for i in $(seq 0 9); do
+                    redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "dynamic-offer-driver-app:ride_events_stream_$i" ride-events-consumers 0 MKSTREAM || true
+                    redis-cli -p ${toString ports.redis} XGROUP CREATE "dynamic-offer-driver-app:ride_events_stream_$i" ride-events-consumers 0 MKSTREAM || true
+                  done
                 '';
               };
+            };
+
+            # Keep ride-events consumer groups alive on every cluster slot.
+            # Without a group, XREADGROUP returns NOGROUP and RideEndedEvent
+            # never reaches DriverCoinsAndJourney → incentive_journey_stats stays
+            # empty and IncentiveJourneyFlow polls time out. One-shot init is not
+            # enough: deleting a stream key (common during local debugging) or a
+            # partial init leaves some shards ungrouped forever, because the
+            # Haskell reconciler's Hedis.xGroupCreate cannot follow MOVED.
+            ride-events-stream-groups = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "ride-events-stream-groups";
+                runtimeInputs = with pkgs; [ redis coreutils procps ];
+                text = ''
+                  self_pid=$$
+                  stale=$(pgrep -f '/ride-events-stream-groups/bin/ride-events-stream-groups' | grep -vx "$self_pid" || true)
+                  if [ -n "$stale" ]; then
+                    echo "ride-events-stream-groups: reaping stale instances: $stale"
+                    # shellcheck disable=SC2086
+                    kill -TERM $stale 2>/dev/null || true
+                    sleep 1
+                    still=$(pgrep -f '/ride-events-stream-groups/bin/ride-events-stream-groups' | grep -vx "$self_pid" || true)
+                    if [ -n "$still" ]; then
+                      # shellcheck disable=SC2086
+                      kill -KILL $still 2>/dev/null || true
+                    fi
+                  fi
+                  while true; do
+                    for i in $(seq 0 9); do
+                      key="dynamic-offer-driver-app:ride_events_stream_$i"
+                      redis-cli -p ${toString ports.redis-cluster-n1} -c XGROUP CREATE "$key" ride-events-consumers 0 MKSTREAM >/dev/null 2>&1 || true
+                      redis-cli -p ${toString ports.redis} XGROUP CREATE "$key" ride-events-consumers 0 MKSTREAM >/dev/null 2>&1 || true
+                    done
+                    sleep 30
+                  done
+                '';
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+              };
+              shutdown.signal = 9;
             };
 
             # Periodic log cleaner: truncates .log files exceeding 100MB
@@ -1080,7 +1136,39 @@ in
             kafka-consumers-exe = {
               environment = {
                 CONSUMER_TYPE = "LOCATION_UPDATE";
+                # SystemConfigsOverride defaults its schema to atlas_app, but the
+                # consumers connect as the driver-app DB user. Without this the
+                # kv_configs lookup gets "permission denied for schema atlas_app",
+                # KBT.Tables is never set, and every DB read fails with
+                # "Tables not found in setMeshConfig".
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
               };
+            };
+
+            # Ride-events consumer: same binary as kafka-consumers-exe, but
+            # CONSUMER_TYPE = RIDE_EVENTS_CONSUMER. This is the process that
+            # turns RideEndedEvent (published by dynamic-offer-driver-app
+            # EndRide to the ride_events_stream_* Redis streams) into journey
+            # milestone progress / driver coins. Without it, rides end but
+            # milestones never advance. Reads its own dhall config
+            # (ride-events-consumer.dhall) based on CONSUMER_TYPE.
+            kafka-ride-events-consumer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "kafka-consumers-exe")
+              ];
+              environment = {
+                CONSUMER_TYPE = "RIDE_EVENTS_CONSUMER";
+                METRICS_PORT = toString ports.kafka-ride-events-consumer-metrics;
+                # See kafka-consumers-exe above.
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "mock-registry".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
             };
 
             # Local Prometheus-compatible TSDB for integration-test metrics.
