@@ -86,8 +86,10 @@ getSession rawPlate =
 -- R21: the route set is an index, the session key is truth. A member is kept only while its session is ACTIVE
 -- and still on this route; anything else is stale (a crash between `saveSession`'s session write and set moves, or
 -- an expired key) and is repaired lazily: the session is re-read once, and the SREM is skipped only if the plate
--- meanwhile flapped back onto this route ACTIVE, so an A->B->A move can't be undone by a stale read.
-activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m [Session]
+-- meanwhile flapped back onto this route ACTIVE, so an A->B->A move can't be undone by a stale read. The re-read and
+-- SREM run under the plate lock (no caller holds one, and it isn't re-entrant), so a switch's SADD can't slip between
+-- them; a repair that can't get the lock is skipped, the next read retries.
+activeSessionsOnRoute :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> m [Session]
 activeSessionsOnRoute route = do
   plates <- shared $ Redis.sMembers (routeKey route)
   catMaybes <$> mapM keepOrRepair plates
@@ -97,6 +99,9 @@ activeSessionsOnRoute route = do
         Just s | s.status == ACTIVE && s.routeCode == route -> pure (Just s)
         _ -> repair plate >> pure Nothing
     repair plate =
+      withTryCatch "sharedCab:repairRouteSet" (withPlateLock plate (reread plate))
+        >>= either (\e -> logWarning $ "sharedCab: route-set repair of " <> plate <> " on " <> route <> " skipped: " <> show e) pure
+    reread plate =
       readSession plate >>= \case
         Just s | s.status == ACTIVE && s.routeCode == route -> pure ()
         _ -> void $ shared $ Redis.srem (routeKey route) [plate]
