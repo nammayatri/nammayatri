@@ -566,10 +566,9 @@ afterClose cfg bookingId plate outcome closed =
     -- R18: lifetime blame counters (05 §8.4); a bump failure never fails the release.
     withTryCatch "sharedCabBlameCount" (BlameCount.bump cityId (blameFor outcome) mbBooking heldBy bookingId now)
       >>= either (\e -> logError $ "shared-cab blame count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
-    -- R17: "missed the cab" -- only the timer outcomes mean the rider didn't board in time; a driver
-    -- cancel, passed-stop no-show, seat loss or session lifecycle close all get their own push (or none).
-    when (isMissedCabOutcome outcome) $
-      mapM_ (Notify.notifyReassigned Notify.TIMEOUT) mbBooking
+    -- R17/F7: the cab is gone; every close but the rider's own skip tells them. Once per release: only the CAS winner is here.
+    forM_ (Notify.reassignReasonFor outcome) $ \reason ->
+      mapM_ (Notify.notifyReassigned reason) mbBooking
     -- R16/R10: the rider's leg state just flipped to FALLBACK; push "board any cab" once.
     when fallbackJustTriggered $
       whenM (claimFallbackPush cfg bookingId) $

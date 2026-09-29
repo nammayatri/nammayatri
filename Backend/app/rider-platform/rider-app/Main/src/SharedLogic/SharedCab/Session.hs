@@ -14,16 +14,20 @@ module SharedLogic.SharedCab.Session
     setWalkupCount,
     markCabFull,
     expire,
+    dropStrandedRider,
   )
 where
 
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
 import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
+import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Events as Events
@@ -32,6 +36,8 @@ import SharedLogic.SharedCab.LtsAttach
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.SessionState
+import qualified Storage.Queries.FRFSTicket as QTicket
+import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error (SharedCabSessionError (..))
 
@@ -127,10 +133,14 @@ closeLiveTrip plate reason now =
 
 -- | LTS moves before anything is persisted; if it fails, the select/change fails and the session stays as it was.
 switchTo :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
-switchTo reason newRoute s = do
+switchTo reason newRoute s = switchAs reason s.driverId newRoute s
+
+-- | `switchTo` under `driver` (F14 takeover): the old driver's LTS ride ends, the new driver's begins.
+switchAs :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Text -> Session -> m Session
+switchAs reason driver newRoute s = do
   now <- getCurrentTime
   tripId <- generateGUID
-  let s' = switchRoute newRoute tripId s
+  let s' = if driver == s.driverId then switchRoute newRoute tripId s else takeOver driver newRoute tripId s
   withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s') <* Events.forSession (Events.RouteChanged s.routeCode) s'
 
 -- | The live-trip index (1575) allows one ACTIVE/PAUSED row per plate, so the old run closes before the new one is
@@ -183,10 +193,41 @@ selectRoute ::
   Maybe SelectRouteMode ->
   OpenSessionReq ->
   m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
-selectRoute mode req = withPlateLock plate $ do
+selectRoute mode req = do
+  evidence <- takeoverEvidence req.driverId plate
+  withPlateLock plate $ selectLocked mode req evidence
+  where
+    plate = canonicalisePlate req.vehicleNumber
+
+-- | F14: what LTS says of another driver's live session on the plate, read BEFORE the plate lock (no network under it):
+-- the route it was read on, and the plate's ping there (Nothing = LTS unreadable). Unread when there's nothing to take over.
+takeoverEvidence :: LtsFlow m r c => Text -> Text -> m (Maybe (Text, Maybe (Maybe Ping)))
+takeoverEvidence driver plate =
+  readSession plate >>= \case
+    Just s | isLive s && s.driverId /= driver && s.status == ACTIVE -> do
+      now <- getCurrentTime
+      ping <-
+        withTryCatch "sharedCab:takeoverPing" (LTS.vehicleTrackingOnRoute (LTS.ByRoute s.routeCode)) >>= \case
+          Left err -> Nothing <$ logWarning ("sharedCab: takeover ping read failed for " <> plate <> ": " <> show err)
+          Right vehicles -> pure . Just $ listToMaybe [readPing now (v.vehicleInfo.timestamp >>= parseLtsTimestamp) | v <- vehicles, canonicalisePlate v.vehicleNumber == plate]
+      pure (Just (s.routeCode, ping))
+    _ -> pure Nothing
+
+selectLocked :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) => Maybe SelectRouteMode -> OpenSessionReq -> Maybe (Text, Maybe (Maybe Ping)) -> m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
+selectLocked mode req evidence = do
   prior <- readSession plate
-  liftSession (planSelect req.driverId req.routeCode prior) >>= \case
+  now0 <- getCurrentTime
+  let takeoverOk s = canTakeOver takeoverStaleAfter endSilentAfter now0 s (maybe Nothing (\(route, ping) -> if route == s.routeCode then ping else Nothing) evidence)
+  liftSession (planSelect req.driverId req.routeCode takeoverOk prior) >>= \case
     KeepRoute s -> pure (Right s)
+    TakeOver s -> do
+      onBoard <- ridersOnBoard plate
+      case mode of
+        _ | null onBoard || s.routeCode == req.routeCode -> Right <$> switchAs DVT.ROUTE_CHANGED req.driverId req.routeCode s
+        Just Force -> do
+          s' <- switchAs DVT.ROUTE_CHANGED req.driverId req.routeCode s
+          Right s' <$ mapM_ (Notify.notifyRouteChange req.routeCode) onBoard
+        _ -> pure (Left onBoard)
     ChangeRoute s -> do
       onBoard <- ridersOnBoard plate
       case mode of
@@ -284,7 +325,7 @@ setWalkupCount driver rawPlate expectedVersion count = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ ownedSession driver prior
   s' <- liftSession $ setWalkup expectedVersion count s
-  saveWalkups prior s s'
+  saveWalkups DriverCounted prior s s'
   where
     plate = canonicalisePlate rawPlate
 
@@ -297,17 +338,39 @@ markCabFull driver rawPlate = do
     prior <- readSession plate
     s <- liftSession $ ownedSession driver prior
     boarded <- Booking.boardedSeatsOnVehicle plate
-    saveWalkups prior s (fillCab boarded s)
+    saveWalkups CabFull prior s (fillCab boarded s)
   Events.forSession (Events.CabFull full.walkupCount) full
   pure full
   where
     plate = canonicalisePlate rawPlate
 
--- | Each walk-up added is also counted on the trip row (offlineBoardings).
-saveWalkups :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Session -> Session -> Session -> m Session
-saveWalkups prior s s' = do
-  let added = s'.walkupCount - s.walkupCount
+-- | Walk-ups the driver counted are also counted on the trip row (offlineBoardings); a cab-full fill is not (R24: the
+-- CabFull event records it).
+saveWalkups :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => WalkupSource -> Maybe Session -> Session -> Session -> m Session
+saveWalkups source prior s s' = do
+  let added = walkupsToCount source s s'
   when (added > 0) $
     QVT.findById s.vehicleTripId
       >>= traverse_ (\trip -> QVT.updateOfflineBoardings (trip.offlineBoardings + added) trip.id)
   saveSession prior s'
+
+-- | R51: end a rider `finish` couldn't drop. True when this call dropped it. The plate lock serialises with `finish` and a
+-- re-open; the booking is re-decided on a fresh read inside it (plate -> booking lock order, `markDropped` takes the latter).
+dropStrandedRider :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, MonadMask m, Events.EventFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Bool
+dropStrandedRider booking = case canonicalisePlate <$> booking.vehicleNumber of
+  Nothing -> pure False
+  Just plate ->
+    ifStranded (isStranded plate booking) . withPlateLock plate $ do
+      fresh <- QBooking.findById booking.id
+      case fresh of
+        Just b | b.vehicleNumber == booking.vehicleNumber -> ifStranded (isStranded plate b) (True <$ Booking.markDropped Events.DroppedByTick b)
+        _ -> pure False
+  where
+    ifStranded cond act = cond >>= \c -> if c then act else pure False
+    isStranded plate b
+      | b.status /= DBookingStatus.CONFIRMED = pure False
+      | otherwise = do
+        mbSession <- readSession plate
+        hasLiveTrip <- if isNothing mbSession then isJust <$> QVT.findActiveByVehicleNumber plate else pure False
+        statuses <- map (.status) <$> QTicket.findAllByTicketBookingId b.id
+        pure $ shouldDropOnDeadSession ((.status) <$> mbSession) hasLiveTrip statuses

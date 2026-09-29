@@ -29,12 +29,35 @@ findSharedCabDegradedCandidates ::
   Maybe UTCTime ->
   Maybe Int ->
   m [FRFSTicketBooking]
-findSharedCabDegradedCandidates merchantOperatingCityId windowStart upperBound mbCursor limit = do
+findSharedCabDegradedCandidates = sharedCabCandidates False
+
+-- | R51: the same window and paging over the bookings that HAVE a cab. A boarding writes the booking's updatedAt (the vehicle
+-- data update), so it dates the ride; the sweep asks whether that cab's run is over while the rider is still INPROGRESS.
+findSharedCabPlatedCandidates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [FRFSTicketBooking]
+findSharedCabPlatedCandidates = sharedCabCandidates True
+
+sharedCabCandidates ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Id MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  m [FRFSTicketBooking]
+sharedCabCandidates plated merchantOperatingCityId windowStart upperBound mbCursor limit = do
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId.getId,
             Se.Is Beam.serviceTierType $ Se.Eq (Just Spec.SHARED_CAB),
-            Se.Is Beam.vehicleNumber $ Se.Eq Nothing,
+            Se.Is Beam.vehicleNumber $ if plated then Se.Not (Se.Eq Nothing) else Se.Eq Nothing,
             Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED,
             Se.Is Beam.updatedAt $ Se.GreaterThanOrEq windowStart,
             Se.Is Beam.updatedAt $ Se.LessThan upperBound

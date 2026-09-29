@@ -29,8 +29,9 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.DegradedSweepSchedule
 import qualified SharedLogic.SharedCab.Events as Events
+import qualified SharedLogic.SharedCab.Session as Session
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Queries.FRFSTicketBooking as QBooking
+import qualified Storage.Queries.FRFSTicketBookingExtra as QBooking
 
 -- | Candidates per page; a page is read-only, the rule owner re-reads under the booking lock.
 pageSize :: Int
@@ -39,6 +40,8 @@ pageSize = 200
 sharedCabDegradedSweep ::
   ( MonadFlow m,
     Redis.HedisFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
     Events.EventFlow m r,
     MonadMask m,
     JobCreator r m
@@ -59,6 +62,8 @@ sharedCabDegradedSweep Job {jobInfo} = do
 sweepCity ::
   ( MonadFlow m,
     Redis.HedisFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
     Events.EventFlow m r,
     MonadMask m
   ) =>
@@ -69,16 +74,23 @@ sweepCity mocId =
     horizonSec <- (.degradedTimeoutSec) <$> Config.getTunables mocId
     now <- getCurrentTime
     let windowStart = scanWindowStart horizonSec now
-    (scanned, ended) <- sweepPages windowStart now Nothing (0, 0)
-    logInfo $ "sharedCab degraded sweep: city=" <> mocId.getId <> " scanned=" <> show scanned <> " ended=" <> show ended
+    (scanned, ended) <- sweepPages QBooking.findSharedCabDegradedCandidates Degraded.expireDegradedBoardingIfNeeded windowStart now Nothing (0, 0)
+    (scannedP, endedP) <- sweepPages QBooking.findSharedCabPlatedCandidates Session.dropStrandedRider windowStart now Nothing (0, 0)
+    logInfo $
+      "sharedCab degraded sweep: city=" <> mocId.getId <> " scanned=" <> show scanned <> " ended=" <> show ended
+        <> " plated scanned="
+        <> show scannedP
+        <> " dropped="
+        <> show endedP
   where
-    sweepPages windowStart endAt mbCursor (scanned, ended) = do
-      page <- QBooking.findSharedCabDegradedCandidates mocId windowStart endAt mbCursor (Just pageSize)
+    -- Each candidate is re-decided by its rule owner under the locks; a failure is logged and the next tick retries it.
+    sweepPages fetch decide windowStart endAt mbCursor (scanned, ended) = do
+      page <- fetch mocId windowStart endAt mbCursor (Just pageSize)
       flips <- forM page $ \booking ->
         if not (isSharedCabBooking booking)
           then pure False -- belt: the DB filter is the serviceTierType column; the helper reads routeStationsJson
           else
-            withTryCatch "sharedCab:degradedSweep" (Degraded.expireDegradedBoardingIfNeeded booking) >>= \case
+            withTryCatch "sharedCab:degradedSweep" (decide booking) >>= \case
               Left err -> False <$ logError ("sharedCab degraded sweep failed for booking " <> booking.id.getId <> ": " <> show err)
               Right didEnd -> pure didEnd
       let scanned' = scanned + length page
@@ -89,4 +101,4 @@ sweepCity mocId =
           -- keyset tie at the page's updatedAt boundary: rows sharing it are skipped this sweep,
           -- and the next tick's full-window scan picks them up.
           let cursor = (last page).updatedAt
-          sweepPages windowStart endAt (Just cursor) (scanned', ended')
+          sweepPages fetch decide windowStart endAt (Just cursor) (scanned', ended')

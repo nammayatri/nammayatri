@@ -9,6 +9,13 @@ module SharedLogic.SharedCab.SessionState
     SelectPlan (..),
     RouteSetMoves (..),
     planSelect,
+    canTakeOver,
+    takeoverStaleAfter,
+    endSilentAfter,
+    takeOver,
+    WalkupSource (..),
+    walkupsToCount,
+    shouldDropOnDeadSession,
     ownedSession,
     newSession,
     switchRoute,
@@ -39,6 +46,7 @@ import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 import qualified Data.Text as T
 import Data.Time (diffUTCTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.Types.FRFSTicketStatus as TicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -109,7 +117,7 @@ data OpenSessionReq = OpenSessionReq
 data EndRouteAction = StartReturn | EndRoute | EndForNow
   deriving (Show, Eq)
 
-data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session
+data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session | TakeOver Session
   deriving (Show, Eq)
 
 -- | Route sets list only ACTIVE sessions, so `addTo` is re-asserted on every write (heals a lost member).
@@ -122,14 +130,36 @@ data RouteSetMoves = RouteSetMoves
 isLive :: Session -> Bool
 isLive s = s.status /= ENDED
 
-planSelect :: Text -> Text -> Maybe Session -> Either SharedCabSessionError SelectPlan
-planSelect driver route = \case
+-- | `takeoverOk` says whether another driver's live session is abandoned (`canTakeOver`).
+planSelect :: Text -> Text -> (Session -> Bool) -> Maybe Session -> Either SharedCabSessionError SelectPlan
+planSelect driver route takeoverOk = \case
   Just s
     | not (isLive s) -> Right OpenSession
-    | s.driverId /= driver -> Left SessionHeldByAnotherDriver
+    | s.driverId /= driver -> if takeoverOk s then Right (TakeOver s) else Left SessionHeldByAnotherDriver
     | s.routeCode == route -> Right (KeepRoute s)
     | otherwise -> Right (ChangeRoute s)
   Nothing -> Right OpenSession
+
+-- | F14: a second driver on the plate may take a live session over once its driver is gone: PAUSED, or its plate's LTS ping
+-- silent for `staleAfter` (no ping on the route = silent since the session began). Nothing (LTS unread) or an unreadable ping is
+-- no evidence, so a live cab is never taken; `endAfter` is the expiry job's, past which an unreadable ping stops shielding.
+canTakeOver :: NominalDiffTime -> NominalDiffTime -> UTCTime -> Session -> Maybe (Maybe Ping) -> Bool
+canTakeOver staleAfter endAfter now s evidence
+  | s.status == PAUSED = True
+  | otherwise = case evidence of
+    Nothing -> False
+    Just ping -> maybe False (\lastSeen -> diffUTCTime now lastSeen >= staleAfter) (lastSeenFor endAfter now s.startedAt ping)
+
+takeoverStaleAfter :: NominalDiffTime
+takeoverStaleAfter = 3 * 60
+
+-- rider_config.noLocationEndMin default: the expiry job ends a session this long silent.
+endSilentAfter :: NominalDiffTime
+endSilentAfter = 60 * 60
+
+-- | The new driver inherits the plate's run: riders and walk-ups stay, the trip and LTS attach are the new driver's.
+takeOver :: Text -> Text -> Id DVT.VehicleTrip -> Session -> Session
+takeOver driver route tripId s = (switchRoute route tripId s) {driverId = driver}
 
 ownedSession :: Text -> Maybe Session -> Either SharedCabSessionError Session
 ownedSession driver = \case
@@ -195,6 +225,25 @@ setWalkup expectedVersion count s
 -- Never lowers the walk-up count: declaring the cab full must not free a seat.
 fillCab :: Int -> Session -> Session
 fillCab seatsKept s = bump s {walkupCount = max s.walkupCount (s.capacity - seatsKept)}
+
+-- | Which walk-ups count as offline boardings: a cab-full fill is the driver saying "no seats left", not people who boarded,
+-- so it must not inflate the metric (R24).
+data WalkupSource = DriverCounted | CabFull
+  deriving (Show, Eq)
+
+walkupsToCount :: WalkupSource -> Session -> Session -> Int
+walkupsToCount source before after = case source of
+  DriverCounted -> max 0 (after.walkupCount - before.walkupCount)
+  CabFull -> 0
+
+-- | R51: a rider still INPROGRESS on a plate whose run is over (session ENDED, or none and no live trip) is stranded
+-- (Session.finish's per-rider drop failed); the sweep ends them.
+shouldDropOnDeadSession :: Maybe SessionStatus -> Bool -> [TicketStatus.FRFSTicketStatus] -> Bool
+shouldDropOnDeadSession mbStatus hasLiveTrip statuses =
+  TicketStatus.INPROGRESS `elem` statuses && case mbStatus of
+    Just ENDED -> True
+    Just _ -> False
+    Nothing -> not hasLiveTrip
 
 endActionReason :: EndRouteAction -> DVT.VehicleTripEndReason
 endActionReason = \case

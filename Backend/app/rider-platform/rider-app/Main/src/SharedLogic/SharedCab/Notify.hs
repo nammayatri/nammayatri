@@ -7,6 +7,7 @@ module SharedLogic.SharedCab.Notify
     notifyAssigned,
     notifyArriving,
     notifyReassigned,
+    reassignReasonFor,
     notifyBoardAny,
     notifyRouteChange,
     notifyDropConfirm,
@@ -21,6 +22,7 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Notifications (createNotificationReq, dynamicNotifyPerson)
 
@@ -34,7 +36,9 @@ data SharedCabNotificationType
   | SHARED_CAB_DROP_CONFIRM
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
-data ReassignReason = SEAT_LOST | TIMEOUT
+-- | TIMEOUT: the rider's own timer ran out. SEAT_LOST: a walk-up took the seat. CAB_PULLED: the cab went away (driver cancel,
+-- route change, session paused/ended, cab passed the stop).
+data ReassignReason = SEAT_LOST | TIMEOUT | CAB_PULLED
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data SharedCabNotificationEntityData = SharedCabNotificationEntityData
@@ -111,6 +115,19 @@ notifyArriving plate deadlineSec = send SHARED_CAB_ARRIVING Nothing Nothing (Jus
 -- | The allocation was released (seat lost to a walk-up, or its timer ran out); the booking is FINDING again.
 notifyReassigned :: (ServiceFlow m r, MonadFlow m) => ReassignReason -> DFTB.FRFSTicketBooking -> m ()
 notifyReassigned reason = send SHARED_CAB_REASSIGNED Nothing (Just reason) Nothing []
+
+-- | F7: the push a released allocation owes the rider. The rider's own skip owes none.
+reassignReasonFor :: AllocationOutcome -> Maybe ReassignReason
+reassignReasonFor = \case
+  StandTimeout -> Just TIMEOUT
+  MovingTimeout -> Just TIMEOUT
+  SeatLost -> Just SEAT_LOST
+  DriverCancelled -> Just CAB_PULLED
+  PassedStop _ -> Just CAB_PULLED
+  RouteChanged -> Just CAB_PULLED
+  SessionClosed -> Just CAB_PULLED
+  TimerLost -> Just CAB_PULLED
+  RiderSkipped _ -> Nothing
 
 -- | R10: allocation gave up; any cab on the route will do.
 notifyBoardAny :: (ServiceFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> m ()

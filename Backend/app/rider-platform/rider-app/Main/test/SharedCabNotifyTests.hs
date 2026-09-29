@@ -4,6 +4,7 @@
 module SharedCabNotifyTests (tests) where
 
 import "aeson" Data.Aeson (Value (String), toJSON)
+import "rider-app" SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), Blame (..), SkipReason (..))
 import "rider-app" SharedLogic.SharedCab.Notify
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -30,5 +31,8 @@ tests =
           @?= [("boardStop", "Malki"), ("dropStop", "Laitumkhrah"), ("vehicleNumber", "ML05A1234")],
       testCase "a stop code stands in for a missing name; no plate, no param" $
         templateParams (Nothing, "MLK") (Just "Laitumkhrah", "LTK") Nothing
-          @?= [("boardStop", "MLK"), ("dropStop", "Laitumkhrah")]
+          @?= [("boardStop", "MLK"), ("dropStop", "Laitumkhrah")],
+      testCase "F7: every release but the rider's own skip owes the rider a push" $
+        map reassignReasonFor [StandTimeout, MovingTimeout, SeatLost, DriverCancelled, PassedStop BlameRider, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipFull, RiderSkipped SkipOther]
+          @?= map Just [TIMEOUT, TIMEOUT, SEAT_LOST, CAB_PULLED, CAB_PULLED, CAB_PULLED, CAB_PULLED, CAB_PULLED] <> [Nothing, Nothing]
     ]
