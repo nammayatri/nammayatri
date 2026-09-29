@@ -46,3 +46,8 @@ ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_time_a
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_days_ahead integer ;
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN max_reschedule_count integer ;
 ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN is_reschedule_allowed boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN cancellation_delay_threshold_seconds integer ;
+ALTER TABLE atlas_app.frfs_vehicle_service_tier ADD COLUMN use_live_for_cancellation_and_rescheduling boolean ;

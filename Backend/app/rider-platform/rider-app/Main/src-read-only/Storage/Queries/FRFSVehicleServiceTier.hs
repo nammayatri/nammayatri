@@ -85,6 +85,7 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type _type,
+      Se.Set Beam.cancellationDelayThresholdSeconds cancellationDelayThresholdSeconds,
       Se.Set Beam.cancellationWindowSeconds cancellationWindowSeconds,
       Se.Set Beam.description description,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
@@ -101,6 +102,7 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
       Se.Set Beam.providerCode providerCode,
       Se.Set Beam.shortName shortName,
       Se.Set Beam.trainType trainType,
+      Se.Set Beam.useLiveForCancellationAndRescheduling useLiveForCancellationAndRescheduling,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -111,6 +113,7 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
       Just
         Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier
           { _type = _type,
+            cancellationDelayThresholdSeconds = cancellationDelayThresholdSeconds,
             cancellationWindowSeconds = cancellationWindowSeconds,
             description = description,
             id = Kernel.Types.Id.Id id,
@@ -128,6 +131,7 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
             providerCode = providerCode,
             shortName = shortName,
             trainType = trainType,
+            useLiveForCancellationAndRescheduling = useLiveForCancellationAndRescheduling,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -136,6 +140,7 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
   toTType' (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {..}) = do
     Beam.FRFSVehicleServiceTierT
       { Beam._type = _type,
+        Beam.cancellationDelayThresholdSeconds = cancellationDelayThresholdSeconds,
         Beam.cancellationWindowSeconds = cancellationWindowSeconds,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
@@ -153,6 +158,7 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
         Beam.providerCode = providerCode,
         Beam.shortName = shortName,
         Beam.trainType = trainType,
+        Beam.useLiveForCancellationAndRescheduling = useLiveForCancellationAndRescheduling,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
