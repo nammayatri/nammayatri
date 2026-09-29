@@ -146,6 +146,8 @@ payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher =
 
     retryPayout payoutRequestId = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
+      when (isJust payoutRequest.batchId) $
+        throwError $ InvalidRequest "Retry is not supported for bulk payouts"
       PayoutRequest.retryPayoutWith canRetry cfg.executePayoutRetry payoutRequest
       pure Success
 

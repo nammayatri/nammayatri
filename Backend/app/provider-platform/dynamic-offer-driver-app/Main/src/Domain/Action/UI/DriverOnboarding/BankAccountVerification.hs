@@ -20,6 +20,7 @@ module Domain.Action.UI.DriverOnboarding.BankAccountVerification
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM
@@ -100,7 +101,8 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
       when (resp.accountExists) $ do
         mbExistingAccount <- runInReplica $ QDBA.findByPrimaryKey personId
         case mbExistingAccount of
-          Just _ -> QDBA.updateBankVerificationDetails driverBankAccount.ifscCode driverBankAccount.nameAtBank personId
+          -- A re-verified account replaces the account number too.
+          Just _ -> QDBA.updateBankVerificationDetails (mfilter (not . T.null) (T.strip <$> resp.bankAccountNumber)) driverBankAccount.ifscCode driverBankAccount.nameAtBank personId
           Nothing -> QDBA.create driverBankAccount
       let driverBankAccountDetails =
             DDI.DriverBankAccountDetails

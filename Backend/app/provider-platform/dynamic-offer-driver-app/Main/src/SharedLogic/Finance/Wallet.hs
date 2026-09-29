@@ -117,6 +117,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
     walletCreditRefs,
+    counterpartyFromRole,
     getWalletAccountByOwner,
     getControlAccountByOwner,
     getWalletAndControlAccountsByOwner,
@@ -169,7 +170,6 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
-    counterpartyFromRole,
     releaseWalletEntriesReservation,
     settleWalletEntries,
     postOwnerPayoutLiability,
@@ -177,6 +177,8 @@ module SharedLogic.Finance.Wallet
     settleWalletPayoutLedger,
     WalletPayoutEligibility (..),
     emptyWalletPayoutEligibility,
+    PayoutableBalance (..),
+    computePayoutableBalance,
     getPayoutEligibilityData,
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
@@ -1147,6 +1149,40 @@ getPayoutEligibilityData counterpartyType ownerId accountId walletBalance cutoff
         processingPayoutBalance,
         redeemableEntryIds = map (.id) eligibility.redeemableEntries,
         merchantTransferAmount
+      }
+
+-- | What a wallet payout may pay right now, and how it was arrived at.
+data PayoutableBalance = PayoutableBalance
+  { payoutableBalance :: HighPrecMoney,
+    walletBalance :: HighPrecMoney,
+    rideHoldBalance :: HighPrecMoney,
+    offerHoldBalance :: HighPrecMoney,
+    mbAccountId :: Maybe (Id Account),
+    eligibility :: WalletPayoutEligibility
+  }
+
+-- | Payable amount shared by instant, adhoc and bulk payouts so they cannot drift: redeemable
+--   balance minus PENDING ride holds and offer holds, neither of which reduces the wallet balance.
+computePayoutableBalance ::
+  (BeamFlow m r, CacheFlow m r) =>
+  CounterpartyType ->
+  Text -> -- owner id
+  UTCTime -> -- payout cutoff time
+  UTCTime -> -- current time
+  m PayoutableBalance
+computePayoutableBalance counterparty ownerId cutoff now = do
+  mbAccount <- getWalletAccountByOwner counterparty ownerId
+  let mbAccountId = (.id) <$> mbAccount
+  walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
+  eligibility <- case mbAccountId of
+    Nothing -> pure emptyWalletPayoutEligibility
+    Just accountId -> getPayoutEligibilityData counterparty ownerId accountId walletBalance cutoff now
+  rideHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
+  offerHoldBalance <- getWalletOfferHoldTotal ownerId
+  pure
+    PayoutableBalance
+      { payoutableBalance = max 0 (eligibility.redeemableBalance - rideHoldBalance - offerHoldBalance),
+        ..
       }
 
 -- | TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability: legacy payouts reserved

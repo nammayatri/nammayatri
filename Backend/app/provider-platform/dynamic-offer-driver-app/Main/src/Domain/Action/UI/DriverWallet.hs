@@ -77,8 +77,9 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutReques
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
-import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensurePayoutsEnabled, loadPayoutContext, runWalletPayout)
+import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensureInstantPayoutAllowed, ensurePayoutsEnabled, instantPayoutAllowedFor, loadPayoutContext)
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Payout.Bulk.Driver (runInstantPayout)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
@@ -130,13 +131,35 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbActiveFleetAssoc <- QFDA.findByDriverId driverId True
-  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
-  let (counterparty, ownerId, mbConcernedIndividualId) =
-        case mbAssocFleetOwnerId of
-          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
-          Nothing -> (counterpartyFromRole person.role, driverId.getId, Nothing)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  -- Per city: FLEET_ACCOUNT (default) shows the fleet owner's account filtered to this driver's rides,
+  -- OWN_ACCOUNT only the driver's own account, HIDDEN nothing.
+  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
+      walletView = fromMaybe DTConf.FLEET_ACCOUNT transporterConfig.driverWalletConfig.fleetLinkedDriverWalletView
+      ownAccount = (counterpartyFromRole person.role, driverId.getId, Nothing)
+      (counterparty, ownerId, mbConcernedIndividualId) =
+        case mbAssocFleetOwnerId of
+          Just fleetOwnerId | walletView == DTConf.FLEET_ACCOUNT -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
+          _ -> ownAccount
+  let canWithdraw = instantPayoutAllowedFor transporterConfig.driverWalletConfig person.role
   now <- getCurrentTime
+  if isJust mbAssocFleetOwnerId && walletView == DTConf.HIDDEN
+    then pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
+    else walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+
+-- | The wallet read itself, once it has been decided whose account to read.
+walletTransactionsFor ::
+  Bool -> -- whether the app may offer this person an instant payout
+  FAccount.CounterpartyType ->
+  Text ->
+  Kernel.Prelude.Maybe Text ->
+  DTConf.TransporterConfig ->
+  Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
+  Environment.Flow DriverWallet.WalletSummaryResponse
+walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
@@ -145,7 +168,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
   case (mbWalletAcc, mbControlAcc) of
-    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig 0}
+    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
     _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
@@ -173,7 +196,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
             processingPayoutBalance = eligibility.processingPayoutBalance,
             holdBalance = Just holdBalance,
             netEarningsBalance,
-            payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig redeemableBalance,
+            payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig redeemableBalance,
             additions,
             deductions,
             agg
@@ -200,10 +223,12 @@ emptyWalletSummary =
       agg = []
     }
 
-buildWalletPayoutConfig :: DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
-buildWalletPayoutConfig walletConfig redeemableBalance =
+-- | @payoutEnabled@ drives the withdraw button, so it is off for roles 'postWalletPayout' would
+--   refuse (@instantPayoutExcludedRoles@).
+buildWalletPayoutConfig :: Bool -> DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
+buildWalletPayoutConfig canWithdraw walletConfig redeemableBalance =
   DriverWallet.WalletPayoutConfig
-    { payoutEnabled = walletConfig.enableWalletPayout,
+    { payoutEnabled = walletConfig.enableWalletPayout && canWithdraw,
       payoutCutOffDays = walletConfig.payoutCutOffDays,
       minimumPayoutAmount = walletConfig.minimumWalletPayoutAmount,
       payoutFee = computePayoutFee (mfilter (\cfg -> cfg.feeBearer == Just DTConf.DRIVER_BEARER) walletConfig.payoutFee) redeemableBalance
@@ -532,7 +557,8 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
       offset = mbOffset
 
   refreshNonTerminalWalletPayouts driverId
-  items <- PayoutItems.getPayoutItems driverId.getId mbFrom mbTo statuses limit offset
+  -- EXCLUDED rows are for admins (the driver gets a push); dropped in the query so limit/offset stay right.
+  items <- PayoutItems.getPayoutItems driverId.getId mbFrom mbTo statuses [PR.EXCLUDED] limit offset
 
   let apiItems = map toHistoryItem items
       totalPaidOut = sum [fromMaybe 0 i.amount | i <- items, isPaidOut i.status]
@@ -548,7 +574,7 @@ getWalletPayoutHistory (mbPersonId, _merchantId, _mocId) mbFrom mbTo mbStatuses 
       }
   where
     refreshNonTerminalWalletPayouts driverId = do
-      pending <- QPayoutRequestExtra.findByBeneficiaryWithFilters driverId.getId Nothing Nothing [PR.INITIATED, PR.PROCESSING] Nothing Nothing
+      pending <- QPayoutRequestExtra.findByBeneficiaryWithFilters driverId.getId Nothing Nothing [PR.INITIATED, PR.PROCESSING] [] Nothing Nothing
       forM_ pending $ \pr ->
         whenJust pr.payoutTransactionId $ \payoutOrderId -> do
           mbOrder <- QPayoutOrder.findById (Id payoutOrderId)
@@ -587,6 +613,7 @@ postWalletPayout ::
 postWalletPayout (mbPersonId, merchantId, mocId) = do
   ctx <- loadPayoutContext mbPersonId merchantId mocId
   ensurePayoutsEnabled ctx
+  ensureInstantPayoutAllowed ctx
   let params =
         WalletPayoutParams
           { payoutType = PR.INSTANT,
@@ -594,7 +621,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
             enforceDailyLimit = True,
             throwOnBelowMinimum = True
           }
-  runWalletPayout ctx params
+  runInstantPayout ctx params
   pure APISuccess.Success
 
 --------------------------------------------------------------------------------

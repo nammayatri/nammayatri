@@ -18,6 +18,7 @@ module Tools.Payout
     getPayoutServiceFlowForMerchant,
     getCreatePayoutServiceFlow,
     getPayoutStatusServiceFlow,
+    getPayoutServiceConfig,
     PayoutServiceNameOption (..),
   )
 where
@@ -107,6 +108,24 @@ runWithServiceConfigAndName func mkReq payoutServiceName merchantOperatingCityId
       Payout.StripeConfig _ -> do
         let mConnectedAccountId = mbPersonBankAccount <&> (.accountId)
         func vsc (mkReq Nothing mConnectedAccountId serviceReq)
+      -- HDFC CBX has no single-order API, so refuse rather than build a request that cannot succeed.
+      Payout.HdfcCbxConfig _ -> throwError $ InvalidRequest "HDFC CBX has no single-order API; use submitBulkPayout"
+
+-- | Raw payout service config for a city. The HDFC CBX bulk calls take it directly.
+getPayoutServiceConfig ::
+  ServiceFlow m r =>
+  DMSC.ServiceName ->
+  Id DMOC.MerchantOperatingCity ->
+  m Payout.PayoutServiceConfig
+getPayoutServiceConfig payoutServiceName merchantOperatingCityId = do
+  merchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName}) Nothing
+      >>= fromMaybeM (uncurry (MerchantServiceConfigNotFound merchantOperatingCityId.getId) (showPayoutServiceType payoutServiceName))
+  case merchantServiceConfig.serviceConfig of
+    DMSC.PayoutServiceConfig vsc -> pure vsc
+    DMSC.RentalPayoutServiceConfig vsc -> pure vsc
+    DMSC.RidePayoutServiceConfig vsc -> pure vsc
+    _ -> throwError $ InternalError "Unknown Service Config"
 
 showPayoutServiceType :: DMSC.ServiceName -> (Text, Text)
 showPayoutServiceType serviceName = do
@@ -141,7 +160,7 @@ getPayoutServiceFlowForMerchant ::
   PayoutServiceNameOption ->
   (PT.PayoutService -> DMSC.ServiceName) ->
   Id DMOC.MerchantOperatingCity ->
-  m Payout.PayoutServiceFlow
+  m (Payout.PayoutServiceFlow, DMSC.ServiceName)
 getPayoutServiceFlowForMerchant getCfg payoutServiceNameOption serviceType merchantOperatingCityId = do
   payoutServiceNameRaw <- case payoutServiceNameOption of
     MerchantServiceUsageConfigOption -> do
@@ -153,9 +172,9 @@ getPayoutServiceFlowForMerchant getCfg payoutServiceNameOption serviceType merch
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       pure $ fromMaybe (serviceType PT.Juspay) subscriptionConfig.payoutServiceName
   case payoutServiceNameRaw of
-    DMSC.PayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
-    DMSC.RentalPayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
-    DMSC.RidePayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
+    DMSC.PayoutService payoutService -> pure (Payout.castPayoutServiceFlow payoutService, payoutServiceNameRaw)
+    DMSC.RentalPayoutService payoutService -> pure (Payout.castPayoutServiceFlow payoutService, payoutServiceNameRaw)
+    DMSC.RidePayoutService payoutService -> pure (Payout.castPayoutServiceFlow payoutService, payoutServiceNameRaw)
     _ -> throwError $ InternalError "Unknown Service Name"
 
 -- flow differentiate between Stripe and Juspay
@@ -178,7 +197,7 @@ getPayoutServiceFlow getCfg payoutServiceNameOption serviceType clientSdkVersion
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       pure $ fromMaybe (serviceType PT.Juspay) subscriptionConfig.payoutServiceName
-  -- PersonBankAccount required only for Stripe service
+  -- PersonBankAccount required only for the Stripe and bulk (HDFC CBX) services
   (payoutServiceFlow, mbPersonBankAccount) <- case payoutServiceNameRaw of
     DMSC.PayoutService payoutService -> fetchPersonBankAccount payoutService
     DMSC.RentalPayoutService payoutService -> fetchPersonBankAccount payoutService
@@ -199,6 +218,9 @@ getPayoutServiceFlow getCfg payoutServiceNameOption serviceType clientSdkVersion
               Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
               Nothing -> pure personId
           Just <$> (QDBA.findByPrimaryKey effectiveOwnerId >>= fromMaybeM (InvalidRequest "Driver bank account not found"))
+        -- HDFC is paid to account + IFSC, so the row must exist. Usability is checked at eligibility
+        -- ('usableBankDetails'), which excludes the beneficiary instead of failing here.
+        Payout.BulkFlow -> Just <$> (QDBA.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "Driver bank account not found"))
         Payout.JuspayFlow -> pure Nothing
       pure (payoutServiceFlow, mbPersonBankAccount)
 
@@ -220,6 +242,8 @@ modifyServiceName serviceName paymentMode clientSdkVersion merchantOpCityId =
       case Payout.castPayoutServiceFlow payoutService of
         Payout.JuspayFlow -> decidePayoutService serviceName clientSdkVersion merchantOpCityId
         Payout.StripeFlow -> pure . serviceType $ modifyPayoutServiceByMode payoutService paymentMode
+        -- HDFC CBX has no live/test split, so the mode does not change it.
+        Payout.BulkFlow -> pure . serviceType $ payoutService
 
 -- relevant only for Stripe
 modifyPayoutServiceByMode :: PT.PayoutService -> DMPM.PaymentMode -> PT.PayoutService
@@ -228,6 +252,7 @@ modifyPayoutServiceByMode Payout.Stripe DMPM.TEST = Payout.StripeTest
 modifyPayoutServiceByMode Payout.StripeTest _ = Payout.StripeTest
 modifyPayoutServiceByMode Payout.Juspay _ = Payout.Juspay
 modifyPayoutServiceByMode Payout.AAJuspay _ = Payout.AAJuspay
+modifyPayoutServiceByMode Payout.HdfcCbx _ = Payout.HdfcCbx
 
 -- relevant only for Juspay
 decidePayoutService :: ServiceFlow m r => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName

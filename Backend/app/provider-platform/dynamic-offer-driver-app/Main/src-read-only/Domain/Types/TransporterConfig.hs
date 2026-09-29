@@ -488,8 +488,10 @@ data DriverWalletConfig = DriverWalletConfig
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
     fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    fleetLinkedDriverWalletView :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FleetLinkedDriverWalletView,
     forceOnlineLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,
+    instantPayoutExcludedRoles :: Kernel.Prelude.Maybe [Domain.Types.Person.Role],
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minWalletAmountForScheduledRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -505,6 +507,8 @@ data DriverWalletConfig = DriverWalletConfig
 
 data FeedbackNotificationConfig = FeedbackNotificationConfig {allowNotificationOnEmptyBadge :: Kernel.Prelude.Bool, enableFeedbackNotification :: Kernel.Prelude.Bool, feedbackNotificationDelayInSec :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data FleetLinkedDriverWalletView = FLEET_ACCOUNT | OWN_ACCOUNT | HIDDEN deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data GstBreakup = GstBreakup
   { cgstPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -680,6 +684,8 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ChargeFrequency)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommissionAggregationFrequency)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ConnectChargeBearer)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FleetLinkedDriverWalletView)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentChargeBearer)
 

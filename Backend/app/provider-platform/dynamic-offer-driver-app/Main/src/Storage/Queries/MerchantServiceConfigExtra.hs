@@ -28,6 +28,10 @@ findByServiceAndCity serviceName merchantOperatingCityId = do
 findAllMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
 findAllMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId]
 
+-- | Every city's config for one service; used at startup to build the HDFC CBX mTLS managers.
+findAllByServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceName -> m [MerchantServiceConfig]
+findAllByServiceName serviceName = findAllWithKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName]
+
 findOne :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = findAllWithOptionsKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName] (Se.Desc BeamMSC.createdAt) (Just 1) Nothing <&> listToMaybe
 

@@ -18,3 +18,24 @@ ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN time_of_da
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN vehicle_category text ;
 ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD PRIMARY KEY ( merchant_operating_city_id, payout_category);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN reschedule_buffer_minutes integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN items_per_batch_limit integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN interval_hours integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN interval_days integer ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN default_payout_rail text ;
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN buffer_check_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN bulk_status_check_interval_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.scheduled_payout_config ADD COLUMN bulk_status_check_batch_limit integer ;

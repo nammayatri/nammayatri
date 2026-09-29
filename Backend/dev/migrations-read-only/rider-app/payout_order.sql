@@ -112,3 +112,10 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN merchant_top_up_amount double prec
 
 ALTER TABLE atlas_app.payout_order DROP CONSTRAINT payout_order_pkey;
 ALTER TABLE atlas_app.payout_order ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN settlement_ref_type text ;
+ALTER TABLE atlas_app.payout_order ADD COLUMN settlement_ref text ;
+ALTER TABLE atlas_app.payout_order ADD COLUMN batch_id character varying(36) ;

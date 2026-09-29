@@ -107,6 +107,7 @@ data AllocatorJobType
   | ReconciliationSweep
   | ScheduledBatchPayout
   | PayoutStatusCheck
+  | BulkPayoutStatusCheck
   | SettlementReportIngestion
   | PgSettlementIngestion
   | CheckPickupZoneArrival
@@ -189,6 +190,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SReconciliationSweep jobData = AnyJobInfo <$> restoreJobInfo SReconciliationSweep jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
+  restoreAnyJobInfo SBulkPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SBulkPayoutStatusCheck jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SPgSettlementIngestion jobData = AnyJobInfo <$> restoreJobInfo SPgSettlementIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
@@ -716,6 +718,18 @@ type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'PayoutStatusCheck
 
 type instance JobContent 'PayoutStatusCheck = PSC.PayoutStatusCheckJobData
+
+-- | One city's bulk payout status-check job. The city is in the job data so 'createJobInWithCheck'
+--   finds an existing job for it; what to call and when lives on the payout_batch rows.
+data BulkPayoutStatusCheckJobData = BulkPayoutStatusCheckJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BulkPayoutStatusCheck
+
+type instance JobContent 'BulkPayoutStatusCheck = BulkPayoutStatusCheckJobData
 
 data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
   { merchantId :: Id DM.Merchant,

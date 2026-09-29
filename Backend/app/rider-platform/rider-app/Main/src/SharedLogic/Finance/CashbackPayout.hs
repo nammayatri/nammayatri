@@ -104,7 +104,9 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
       payoutCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
       submission =
         PayoutRequest.PayoutSubmission
-          { beneficiaryId = person.id.getId,
+          { -- rider cashback is never paid in a bulk batch
+            batchId = Nothing,
+            beneficiaryId = person.id.getId,
             entityName = DLP.RIDE_OFFER_CASHBACK,
             entityId = person.id.getId,
             entityRefId = Nothing,
@@ -171,3 +173,14 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+    -- Only the bulk (HDFC CBX) rail returns this. Handled anyway (hold kept, no failure push) so a
+    -- future rail that returns it is not treated as a failure.
+    PayoutRequest.PayoutAmbiguous pr err ->
+      logError $
+        "Cashback payout outcome unknown for person="
+          <> person.id.getId
+          <> " payoutRequestId="
+          <> pr.id.getId
+          <> ": "
+          <> err
+          <> " -- hold left in place, needs manual reconciliation"

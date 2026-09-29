@@ -78,6 +78,7 @@ toPaymentState FAILED = ST.FAILED
 toPaymentState CANCELLED = ST.CANCELLED
 toPaymentState CASH_PAID = ST.CASH_PAID
 toPaymentState CASH_PENDING = ST.CASH_PENDING
+toPaymentState EXCLUDED = ST.CANCELLED
 
 getStatusMessage :: PayoutRequestStatus -> Text
 getStatusMessage INITIATED = "Payout scheduled"
@@ -89,6 +90,7 @@ getStatusMessage RETRYING = "Retrying payment..."
 getStatusMessage FAILED = "Payment failed/cancelled"
 getStatusMessage CASH_PAID = "Payment marked as cash paid"
 getStatusMessage CASH_PENDING = "Payment marked as cash pending"
+getStatusMessage EXCLUDED = "Payout excluded"
 
 toPaymentEvent :: PayoutRequestStatus -> ST.PaymentEvent
 toPaymentEvent INITIATED = ST.INITIATE
@@ -100,3 +102,4 @@ toPaymentEvent RETRYING = ST.RETRY
 toPaymentEvent FAILED = ST.FAIL
 toPaymentEvent CASH_PAID = ST.CREDIT
 toPaymentEvent CASH_PENDING = ST.INITIATE
+toPaymentEvent EXCLUDED = ST.CANCEL

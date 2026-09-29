@@ -9,17 +9,22 @@ imports:
   PayoutSuccess: Lib.Payment.API.Payout.Types
   PayoutHistoryRes: Lib.Payment.API.Payout.Types
   PayoutOrderResp: Lib.Payment.API.Payout.Types
+  PayoutBatchStatus: Lib.Payment.Domain.Types.PayoutBatch
+  PayoutBatchOrigin: Lib.Payment.Domain.Types.PayoutBatch
+  PayoutBatchRail: Lib.Payment.Domain.Types.PayoutBatch
   EntityName: Lib.Payment.Domain.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
   Driver: Dashboard.Common
   Ride: Dashboard.Common
   Summary: Dashboard.Common
   LocalTime: Data.Time
+  Day: Data.Time
 
 importPackageOverrides:
   Lib.Payment.Domain.Types.PayoutRequest: payment
   Lib.Payment.API.Payout.Types: payment
   Lib.Payment.Domain.Types.Common: payment
+  Lib.Payment.Domain.Types.PayoutBatch: payment
 
 module: Payout
 # requestorId/actorInfo applied for each api by default
@@ -68,6 +73,33 @@ apis:
         payoutOrderId: Text
       response:
         type: PayoutOrderResp
+
+  # Read-only view of the scheduled payout config; VIEW_DIFF previews the query params merged over the
+  # stored config. A separate GET so it can return a diff and sit behind the read capability.
+  - GET:
+      endpoint: /payout/scheduledPayoutConfig
+      auth: ApiAuthV2
+      # Enum params are Text, parsed in the handler: the generated parser wants JSON-quoted values
+      # (?command=%22VIEW%22), which a UI or curl does not send.
+      query:
+        command: Text
+        payoutCategory: Text
+        isEnabled: Bool
+        frequency: Text
+        timeOfDay: Text
+        dayOfWeek: Int
+        dayOfMonth: Int
+        intervalHours: Int
+        intervalDays: Int
+        rescheduleBufferMinutes: Int
+        bufferCheckEnabled: Bool
+        minimumPayoutAmount: HighPrecMoney
+        batchSize: Int
+      response:
+        type: ScheduledPayoutConfigViewResp
+      migrate:
+        capability: finance.payout.read
+    # Must stay before /payout/{payoutRequestId}, which would otherwise match this path.
 
   - GET:
       endpoint: /payout/{payoutRequestId}
@@ -138,6 +170,97 @@ apis:
       response:
         type: APISuccess
 
+
+  - GET:
+      endpoint: /adhoc/lookup
+      auth: ApiAuthV2
+      # personId, or mobileNumber (mobileCountryCode defaults to the city's country code). personId wins when both are sent.
+      query:
+        personId: Text
+        mobileNumber: Text
+        mobileCountryCode: Text
+      response:
+        type: AdhocPayoutLookupResp
+      migrate:
+        capability: finance.payout.read
+
+  - POST:
+      endpoint: /adhoc/initiate
+      auth: ApiAuthV2
+      request:
+        type: AdhocPayoutInitiateReq
+      response:
+        type: AdhocPayoutInitiateResp
+      migrate:
+        capability: finance.payout.write
+
+  - GET:
+      endpoint: /batch/list
+      auth: ApiAuthV2
+      # Execution-date range, inclusive (one date: fromDate = toDate).
+      mandatoryQuery:
+        fromDate: Day
+        toDate: Day
+      query:
+        limit: Int
+        offset: Int
+        status: PayoutBatchStatus
+        origin: PayoutBatchOrigin
+        payoutRail: PayoutBatchRail
+      response:
+        type: PayoutBatchListRes
+      migrate:
+        capability: finance.payout.read
+
+  - GET:
+      endpoint: /batch/{batchId}/orders
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      response:
+        type: PayoutBatchOrdersRes
+      migrate:
+        capability: finance.payout.read
+
+  - GET:
+      endpoint: /excluded
+      auth: ApiAuthV2
+      # The city's local days, inclusive (one day: from = to).
+      query:
+        limit: Int
+        offset: Int
+        from: Day
+        to: Day
+      response:
+        type: PayoutExcludedRes
+      migrate:
+        capability: finance.payout.read
+
+  # Gives held money back to the wallet when it is known not to have gone out. If any id is refused,
+  # nothing moves. HDFC bulk only; Juspay/Stripe requests are refused.
+  - POST:
+      endpoint: /payout/releaseHold
+      auth: ApiAuthV2
+      request:
+        type: PayoutReleaseHoldReq
+      response:
+        type: PayoutReleaseHoldResp
+      migrate:
+        capability: finance.payout.write
+
+  # Puts a batch stuck in MANUAL_REVIEW_REQUIRED back for one more status check.
+  - POST:
+      endpoint: /batch/{batchId}/recheck
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      request:
+        type: PayoutBatchRecheckReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.payout.write
+
 types:
   PayoutReferralHistoryRes:
     - history: [ReferralHistoryItem]
@@ -168,5 +291,155 @@ types:
     - remark: Maybe Text
     - orderType: Maybe Text
     - timeDiffFromUtc: Maybe Seconds
+    - intervalHours: Maybe Int
+    - intervalDays: Maybe Int
+    - rescheduleBufferMinutes: Maybe Int
+    - bufferCheckEnabled: Maybe Bool
+    - itemsPerBatchLimit: Maybe Int
+    - defaultPayoutRail: Maybe PayoutBatchRail
+    - bulkStatusCheckIntervalMinutes: Maybe Int
+    - bulkStatusCheckBatchLimit: Maybe Int
   ScheduledPayoutFrequency:
-    - enum: "DAILY, WEEKLY, MONTHLY"
+    - enum: "DAILY, WEEKLY, MONTHLY, HOURLY, EVERY_N_DAYS"
+    - derive: "Read, HttpInstance"
+  PayoutConfigCommand:
+    - enum: "VIEW, VIEW_DIFF"
+    - derive: "Read, HttpInstance"
+  ScheduledPayoutConfigViewResp:
+    - configs: [ScheduledPayoutConfigAPIEntity]
+    - diff: Maybe [ScheduledPayoutConfigFieldDiff]
+    - scheduleEffect: Maybe ScheduledPayoutScheduleEffect
+  ScheduledPayoutConfigAPIEntity:
+    - payoutCategory: EntityName
+    - isEnabled: Bool
+    - frequency: ScheduledPayoutFrequency
+    - dayOfWeek: Maybe Int
+    - dayOfMonth: Maybe Int
+    - timeOfDay: Text
+    - intervalHours: Maybe Int
+    - intervalDays: Maybe Int
+    - batchSize: Int
+    - itemsPerBatchLimit: Maybe Int
+    - minimumPayoutAmount: HighPrecMoney
+    - maxRetriesPerDriver: Int
+    - defaultPayoutRail: Maybe PayoutBatchRail
+    - timeDiffFromUtc: Seconds
+    - rescheduleBufferMinutes: Maybe Int
+    - bufferCheckEnabled: Maybe Bool
+    - bulkStatusCheckIntervalMinutes: Maybe Int
+    - bulkStatusCheckBatchLimit: Maybe Int
+    - vehicleCategory: Maybe VehicleCategory
+    - orderType: Text
+    - remark: Maybe Text
+    - updatedAt: UTCTime
+  ScheduledPayoutConfigFieldDiff:
+    - field: Text
+    - from: Maybe Text
+    - to: Maybe Text
+  ScheduledPayoutScheduleEffect:
+    - currentNextRunAt: UTCTime
+    - proposedNextRunAt: UTCTime
+    - queuedJobAt: Maybe UTCTime
+    - action: ScheduledPayoutRescheduleAction
+    - bufferMinutes: Maybe Int
+  ScheduledPayoutRescheduleAction:
+    - enum: "MOVE_JOB, LEAVE_INSIDE_BUFFER, NO_QUEUED_JOB, NOT_MOVED"
+  AdhocPayoutLookupResp:
+    - personId: Text
+    - personName: Maybe Text
+    - role: Text
+    - merchantOperatingCityId: Text
+    - walletBalance: HighPrecMoney
+    - nonRedeemableAmount: HighPrecMoney
+    - payoutableBalance: HighPrecMoney
+    - minimumPayoutAmount: HighPrecMoney
+    - isEligible: Bool
+    - ineligibilityReason: Maybe Text
+    - payoutServiceFlow: Text
+    - bankAccountStatus: Text
+  AdhocPayoutInitiateReq:
+    - personIds: [Text]
+    - derive: "'HideSecrets"
+  AdhocPayoutInitiateResp:
+    - results: [AdhocPayoutResultItem]
+  AdhocPayoutResultItem:
+    - personId: Text
+    - status: AdhocPayoutItemStatus
+    - reason: Maybe Text
+    - payoutOrderId: Maybe Text
+  AdhocPayoutItemStatus:
+    - enum: "INITIATED, SKIPPED, FAILED"
+
+  PayoutBatchListRes:
+    - batches: [PayoutBatchListItem]
+    - hasMore: Bool
+  PayoutExcludedRes:
+    - items: [PayoutExcludedItem]
+    - hasMore: Bool
+  PayoutExcludedItem:
+    - personId: Text
+    - personName: Maybe Text
+    - role: Text
+    - amount: HighPrecMoney
+    - reason: Text
+    - excludedAt: UTCTime
+    - payoutRequestId: Text
+    - batchId: Maybe Text
+  PayoutBatchListItem:
+    - id: Text
+    - origin: PayoutBatchOrigin
+    - status: PayoutBatchStatus
+    - payoutRail: PayoutBatchRail
+    - executionDate: Day
+    - clientRefNo: Text
+    - partnerBatchRef: Maybe Text
+    - itemCount: Int
+    - totalAmount: HighPrecMoney
+    - excludedCount: Int
+    - failureReason: Maybe Text
+    - failureCode: Maybe Text
+    - statusCheckRound: Int
+    - nextStatusCallAt: Maybe UTCTime
+    - statusNoDataReplies: Int
+    - submittedAt: Maybe UTCTime
+    - resolvedAt: Maybe UTCTime
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  PayoutBatchOrdersRes:
+    - orders: [PayoutOrderListItem]
+    - excluded: [PayoutExcludedItem]
+  PayoutOrderListItem:
+    - orderId: Text
+    - shortId: Maybe Text
+    - payoutRequestId: Maybe Text
+    - customerId: Text
+    - beneficiaryName: Maybe Text
+    - beneficiaryPhone: Maybe Text
+    - beneficiaryRole: Text
+    - status: Text
+    - transferStatus: Maybe Text
+    - amount: HighPrecMoney
+    - responseMessage: Maybe Text
+    - responseCode: Maybe Text
+    - settlementRef: Maybe Text
+    - settlementRefType: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  # 'HideSecrets: the request is audited in full (ids and the admin's reason, nothing secret).
+  PayoutReleaseHoldReq:
+    - payoutRequestIds: [Text]
+    - reason: Text
+    - derive: "'HideSecrets"
+  PayoutReleaseHoldResp:
+    - results: [PayoutReleaseHoldItem]
+  PayoutReleaseHoldItem:
+    - payoutRequestId: Text
+    - result: PayoutReleaseHoldResult
+    - message: Maybe Text
+  PayoutReleaseHoldResult:
+    - enum: "RELEASED, NOTHING_HELD, RELEASE_FAILED"
+  PayoutBatchRecheckReq:
+    - reason: Text
+    - derive: "'HideSecrets"

@@ -81,6 +81,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             maxWalletPayoutsPerDay = Nothing,
             minWalletAmountForCashRides = Nothing,
             minWalletAmountForScheduledRides = Nothing,
+            fleetLinkedDriverWalletView = Nothing,
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
             payoutFee = Nothing,
@@ -99,7 +100,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             connectAccountChargeBearer = Nothing,
             connectAccountChargeTimeOfDay = Nothing,
             connectAccountChargeDayOfWeek = Nothing,
-            connectAccountChargeDayOfMonth = Nothing
+            connectAccountChargeDayOfMonth = Nothing,
+            instantPayoutExcludedRoles = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 
