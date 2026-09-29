@@ -54,6 +54,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    postDriverBulkPlanPreview,
+    postDriverBulkPlanSwitch,
     getDriverStats,
     getDriverEarnings,
     getDriverFyEarnings,
@@ -373,6 +375,16 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId opCity apiTokenInfo req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverBulkSubscriptionServiceUpdate) req)
+
+postDriverBulkPlanPreview :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Common.PersonIdsReq -> Environment.Flow Common.BulkPlanPreviewRes)
+postDriverBulkPlanPreview merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.driverDSL.postDriverBulkPlanPreview)) req
+
+postDriverBulkPlanSwitch :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Text -> Common.PersonIdsReq -> Environment.Flow Common.BulkPlanSwitchRes)
+postDriverBulkPlanSwitch merchantShortId opCity apiTokenInfo planId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (\dsl planId_ reqBody -> dsl.driverDSL.postDriverBulkPlanSwitch ("XXX00XXX", reqBody) planId_) planId req
 
 getDriverStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Flow Common.DriverStatsRes
 getDriverStats merchantShortId opCity apiTokenInfo entityId fromDate toDate = do
