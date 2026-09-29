@@ -132,6 +132,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
       mkSharedCab st =
         SharedCabLeg.SharedCabLegStatus
           { state = st,
+            bookingId = booking.id.getId,
             vehicleNumber = booking.vehicleNumber,
             vehicleModel = Nothing,
             driverName = Nothing,

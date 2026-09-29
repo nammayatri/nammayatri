@@ -32,6 +32,8 @@ data FallbackGate = FallbackGate
 
 data SharedCabLegStatus = SharedCabLegStatus
   { state :: SharedCabState,
+    -- | The FRFS ticket booking id, for booking-level calls such as R19 skip.
+    bookingId :: Text,
     vehicleNumber :: Maybe Text,
     vehicleModel :: Maybe Text,
     driverName :: Maybe Text,
