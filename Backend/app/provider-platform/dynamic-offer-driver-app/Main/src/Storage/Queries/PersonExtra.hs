@@ -148,11 +148,20 @@ findAllByMerchantIdAndOpCityAndRoles merchant opCity roles limit offset =
 findAllByPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Person]
 findAllByPersonIds ids = findAllWithDb [Se.Is BeamP.id $ Se.In ids]
 
+findAllByPersonIdsAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Text] -> m [Person]
+findAllByPersonIdsAndMerchantId (Id merchantId) ids = findAllWithDb [Se.And [Se.Is BeamP.id $ Se.In ids, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
+
 findPersonIdsByPhoneNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> m [Person]
 findPersonIdsByPhoneNumber phoneNumbers = do
   phoneNumbersHashes <- mapM getDbHash phoneNumbers
   let mbhashes = Just <$> phoneNumbersHashes
   findAllWithDb [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes]
+
+findPersonIdsByPhoneNumberAndMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Id Merchant -> [Text] -> m [Person]
+findPersonIdsByPhoneNumberAndMerchantId (Id merchantId) phoneNumbers = do
+  phoneNumbersHashes <- mapM getDbHash phoneNumbers
+  let mbhashes = Just <$> phoneNumbersHashes
+  findAllWithDb [Se.And [Se.Is BeamP.mobileNumberHash $ Se.In mbhashes, Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
 findByEmail :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe Person)
 findByEmail email = findOneWithKV [Se.Is BeamP.email $ Se.Eq email]
