@@ -170,7 +170,8 @@ emptyAgent :: Agent
 emptyAgent =
   Agent
     { agentContact = Nothing,
-      agentPerson = Nothing
+      agentPerson = Nothing,
+      agentRating = Nothing
     }
 
 -- | An empty 'Item' with all fields set to @Nothing@.

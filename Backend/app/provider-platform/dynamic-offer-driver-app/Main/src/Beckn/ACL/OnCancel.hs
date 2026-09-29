@@ -296,7 +296,8 @@ tfAgent _booking driverName driverGender driverPhone = do
   Just $
     Spec.Agent
       { agentContact = Common.tfContact driverPhone,
-        agentPerson = Just $ emptyPerson {Spec.personName = driverName, Spec.personGender = driverGender}
+        agentPerson = Just $ emptyPerson {Spec.personName = driverName, Spec.personGender = driverGender},
+        agentRating = Nothing
       }
 
 tfCustomer :: DRB.Booking -> Text -> Maybe Spec.Customer
