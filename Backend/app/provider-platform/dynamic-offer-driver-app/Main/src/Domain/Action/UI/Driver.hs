@@ -3721,6 +3721,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
     let payoutVpaValid = case payoutServiceFlow of
           IPayout.JuspayFlow -> isJust mbVpa
           IPayout.StripeFlow -> True
+          IPayout.BulkFlow -> isJust mbPersonBankAccount
     unless payoutVpaValid $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
     when payoutVpaValid $ do
       pendingDriverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING]
@@ -3805,7 +3806,8 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           customerName = person.firstName,
           customerVpa = vpa,
           transferAmount = amount, -- for now keep it the same
-          payoutServiceFlow
+          payoutServiceFlow,
+          batchId = Nothing
         }
 
 isPlanVehCategoryOrCityChanged :: Id DMOC.MerchantOperatingCity -> Maybe DPlan.DriverPlan -> Maybe Vehicle -> (Bool, Bool)

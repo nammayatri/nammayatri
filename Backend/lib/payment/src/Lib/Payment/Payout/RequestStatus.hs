@@ -78,6 +78,9 @@ toPaymentState FAILED = ST.FAILED
 toPaymentState CANCELLED = ST.CANCELLED
 toPaymentState CASH_PAID = ST.CASH_PAID
 toPaymentState CASH_PENDING = ST.CASH_PENDING
+-- Nothing was sent for an excluded beneficiary: the payout intent ended, so the state machine
+-- records it as cancelled rather than carrying a state of its own no transition uses.
+toPaymentState EXCLUDED = ST.CANCELLED
 
 getStatusMessage :: PayoutRequestStatus -> Text
 getStatusMessage INITIATED = "Payout scheduled"
@@ -89,6 +92,7 @@ getStatusMessage RETRYING = "Retrying payment..."
 getStatusMessage FAILED = "Payment failed/cancelled"
 getStatusMessage CASH_PAID = "Payment marked as cash paid"
 getStatusMessage CASH_PENDING = "Payment marked as cash pending"
+getStatusMessage EXCLUDED = "Payout excluded"
 
 toPaymentEvent :: PayoutRequestStatus -> ST.PaymentEvent
 toPaymentEvent INITIATED = ST.INITIATE
@@ -100,3 +104,6 @@ toPaymentEvent RETRYING = ST.RETRY
 toPaymentEvent FAILED = ST.FAIL
 toPaymentEvent CASH_PAID = ST.CREDIT
 toPaymentEvent CASH_PENDING = ST.INITIATE
+-- CANCEL, not FAIL: nothing was attempted, so the payout intent ended rather than failed.
+-- PaymentEvent has no "never started" verb; CANCEL is the closest without widening that enum too.
+toPaymentEvent EXCLUDED = ST.CANCEL

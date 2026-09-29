@@ -12,7 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout) where
+module SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
+  ( sendScheduledBatchPayout,
+    computeNextRunTime,
+  )
+where
 
 import qualified Data.Time as Time
 import qualified Data.Time.Calendar.WeekDate as Time
@@ -26,7 +30,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Kernel.External.Payout.Interface as Payout
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -38,10 +42,14 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), WalletPayoutParams (..), runWalletPayout)
+import SharedLogic.Payout.Bulk.Cycle (runBulkPayoutCycle)
+import SharedLogic.Payout.Bulk.Eligibility (checkBulkPayoutEligibility)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -52,10 +60,6 @@ import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payout as TPayout
 
---------------------------------------------------------------------------------
--- Job entry point
---------------------------------------------------------------------------------
-
 sendScheduledBatchPayout ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -63,7 +67,9 @@ sendScheduledBatchPayout ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    ServiceFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
@@ -87,11 +93,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
         then do
           logInfo $ "Scheduled payout disabled for " <> show category
           pure Complete
-        else processCategory config jobData
-
---------------------------------------------------------------------------------
--- Category dispatch
---------------------------------------------------------------------------------
+        else processCategory id.getId config jobData
 
 processCategory ::
   ( EncFlow m r,
@@ -100,18 +102,21 @@ processCategory ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    ServiceFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
   ) =>
+  Text -> -- stable scheduler job id for this run (Handler.hs mutex key); identifies the payout_run
   DSPC.ScheduledPayoutConfig ->
   ScheduledBatchPayoutJobData ->
   m ExecutionResult
-processCategory config jobData = do
+processCategory jobId config jobData = do
   case config.payoutCategory of
-    DPayment.DRIVER_WALLET_TRANSACTION -> processWalletPayouts config jobData
+    DPayment.DRIVER_WALLET_TRANSACTION -> processWalletPayouts jobId config jobData
     DPayment.DRIVER_DAILY_STATS -> do
       logInfo "REFERRAL: not yet implemented in unified framework. Use the legacy DriverReferralPayout job."
       pure Complete
@@ -122,10 +127,6 @@ processCategory config jobData = do
       logWarning $ "Unsupported payout category for scheduled batch: " <> show other
       pure Complete
 
---------------------------------------------------------------------------------
--- Wallet payout handler (reuses DriverWallet.hs helpers)
---------------------------------------------------------------------------------
-
 processWalletPayouts ::
   ( EncFlow m r,
     CacheFlow m r,
@@ -133,16 +134,19 @@ processWalletPayouts ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    ServiceFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
   ) =>
+  Text ->
   DSPC.ScheduledPayoutConfig ->
   ScheduledBatchPayoutJobData ->
   m ExecutionResult
-processWalletPayouts config jobData = do
+processWalletPayouts _jobId config jobData = do
   let merchantId = jobData.merchantId
       merchantOpCityId = jobData.merchantOperatingCityId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -158,22 +162,15 @@ processWalletPayouts config jobData = do
 
       -- Process drivers
       mbLastDriverId <- Redis.get driverCursorKey
-      payoutServiceFlow <- TPayout.getPayoutServiceFlowForMerchant (.createPayoutOrder) (TPayout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService merchantOpCityId
+      (payoutServiceFlow, payoutServiceName) <- TPayout.getPayoutServiceFlowForMerchant (.createPayoutOrder) (TPayout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService merchantOpCityId
       let isPayoutVpaRequired = case payoutServiceFlow of
             Payout.JuspayFlow -> True
             Payout.StripeFlow -> False
+            Payout.BulkFlow -> False -- HDFC CBX is account-and-IFSC based, not VPA based
       eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId config.batchSize mbLastDriverId isPayoutVpaRequired
       unless (null eligibleDriverInfos) $ do
         let lastDriverId = (.driverId) $ last eligibleDriverInfos
         Redis.setExp driverCursorKey lastDriverId 86400
-        for_ eligibleDriverInfos $ \driverInfo -> do
-          fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $ do
-            processOneWalletPayout
-              config
-              transporterConfig
-              merchantId
-              merchantOpCityId
-              driverInfo.driverId driverInfo.payoutVpa (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
 
       -- Process fleet owners
       mbLastFleetId <- Redis.get fleetCursorKey
@@ -201,14 +198,43 @@ processWalletPayouts config jobData = do
       unless (null eligibleFleetInfos) $ do
         let lastFleetId = (.fleetOwnerPersonId) $ last eligibleFleetInfos
         Redis.setExp fleetCursorKey lastFleetId 86400
-        for_ eligibleFleetInfos $ \fleetInfo -> do
-          fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $ do
-            processOneWalletPayout
-              config
-              transporterConfig
-              merchantId
-              merchantOpCityId
-              fleetInfo.fleetOwnerPersonId fleetInfo.payoutVpa (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
+
+      case payoutServiceFlow of
+        Payout.BulkFlow -> do
+          -- No live per-driver API call happens on this path (HDFC CBX has none), so it runs
+          -- synchronously rather than via 'fork': everyone eligible this tick has to be known
+          -- before the batch they go into can be opened.
+          -- One IN query for the tick's page rather than a person lookup per beneficiary. Someone
+          -- whose person row is gone is skipped, as the per-person lookup used to.
+          let pageIds = map (.driverId.getId) eligibleDriverInfos <> map (.fleetOwnerPersonId.getId) eligibleFleetInfos
+          persons <- QPerson.findAllByPersonIds pageIds
+          checks <- forM persons $ \person -> checkBulkPayoutEligibility config transporterConfig person
+          let candidates = [candidate | Right candidate <- checks]
+          -- Batches resolve on their own afterwards: the submission schedules the first status
+          -- check on the batch row, and the always-on status-check job takes it from there.
+          unless (null candidates) $
+            void $ runBulkPayoutCycle config payoutServiceName merchantId merchantOpCityId DPayoutBatch.SCHEDULED PR.SCHEDULED transporterConfig candidates
+        _ -> do
+          for_ eligibleDriverInfos $ \driverInfo ->
+            fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $
+              processOneWalletPayout
+                config
+                transporterConfig
+                merchantId
+                merchantOpCityId
+                driverInfo.driverId
+                driverInfo.payoutVpa
+                (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
+          for_ eligibleFleetInfos $ \fleetInfo ->
+            fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $
+              processOneWalletPayout
+                config
+                transporterConfig
+                merchantId
+                merchantOpCityId
+                fleetInfo.fleetOwnerPersonId
+                fleetInfo.payoutVpa
+                (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
 
       if null eligibleDriverInfos && null eligibleFleetInfos
         then do
@@ -270,10 +296,6 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()
 
---------------------------------------------------------------------------------
--- Next run time computation
---------------------------------------------------------------------------------
-
 computeNextRunTime ::
   (MonadFlow m) =>
   DSPC.ScheduledPayoutConfig ->
@@ -313,6 +335,14 @@ computeNextRunTime config = do
                       if month == 12 then (year + 1, 1) else (year, month + 1)
                  in Time.fromGregorian nextYear nextMonth (min targetDom 28)
       pure $ Time.addUTCTime (negate timeDiff) (Time.UTCTime nextDate targetTimeOfDay)
+    DSPC.HOURLY ->
+      -- rolling: now + N hours (ignores timeOfDay). intervalHours validated to 1..23 at upsert.
+      pure $ Time.addUTCTime (fromIntegral (fromMaybe 1 config.intervalHours) * 3600) now
+    DSPC.EVERY_N_DAYS -> do
+      -- timeOfDay-anchored, drift-free: today + N days @ timeOfDay. intervalDays validated >= 2 at upsert.
+      let n = max 1 (fromMaybe 1 config.intervalDays)
+          nextLocalDay = Time.addDays (fromIntegral n) localDay
+      pure $ Time.addUTCTime (negate timeDiff) (Time.UTCTime nextLocalDay targetTimeOfDay)
 
 -- | Parse "HH:MM" into (hours, minutes). Defaults to (2, 0) on failure.
 parseTimeOfDay :: Text -> (Int, Int)

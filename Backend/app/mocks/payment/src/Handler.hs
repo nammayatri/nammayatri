@@ -37,6 +37,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
@@ -81,6 +82,9 @@ instance HasSchemaName BeamPOO.PayoutOrderT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPR.PayoutRequestT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamPB.PayoutBatchT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPOT.PayoutTransactionT where

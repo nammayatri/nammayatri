@@ -15,7 +15,9 @@
 -}
 
 module Domain.Action.UI.DriverWallet
-  ( getWalletBalance,
+  ( initiateWalletPayout,
+    PayoutPrefetch (..),
+    getWalletBalance,
     getWalletTransactions,
     getWalletTransactionHistory,
     postWalletPayout,
@@ -35,21 +37,29 @@ import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import qualified Domain.Action.UI.Payout as UIPayout
 import Domain.Action.UI.Plan hiding (mkDriverFee)
+import qualified Domain.Types.DriverBankAccount as DDBA
 import Domain.Types.DriverInformation as DI
+import Domain.Types.Extra.Plan
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Payout.Interface as IPayout
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Id (Id (..))
+import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
@@ -70,14 +80,18 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
+import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
-import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensurePayoutsEnabled, loadPayoutContext, runWalletPayout)
+import SharedLogic.Finance.WalletPayout (PayoutContext (..), WalletPayoutParams (..), computePayoutFee, ensureInstantPayoutAllowed, ensurePayoutsEnabled, instantPayoutAllowedFor, loadPayoutContext, resolvePayoutVpa, runWalletPayout)
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -88,6 +102,8 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
+import qualified Tools.Notifications as Notify
+import qualified Tools.Payout as Payout
 
 instance Kernel.Types.HideSecrets.HideSecrets DriverWallet.TopUpRequest where
   hideSecrets = Kernel.Prelude.identity
@@ -130,13 +146,41 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbActiveFleetAssoc <- QFDA.findByDriverId driverId True
-  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
-  let (counterparty, ownerId, mbConcernedIndividualId) =
-        case mbAssocFleetOwnerId of
-          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
-          Nothing -> (counterpartyFromRole person.role, driverId.getId, Nothing)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  -- Whose account a fleet-linked driver sees is per city. Absent (FLEET_ACCOUNT) is main's
+  -- behaviour: the fleet owner's account, filtered to the rides this driver did. OWN_ACCOUNT shows
+  -- only the driver's own account -- their own balance, entries and payouts, none of the fleet's
+  -- earnings. HIDDEN shows nothing.
+  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
+      walletView = fromMaybe DTConf.FLEET_ACCOUNT transporterConfig.driverWalletConfig.fleetLinkedDriverWalletView
+      ownAccount = (counterpartyFromRole person.role, driverId.getId, Nothing)
+      (counterparty, ownerId, mbConcernedIndividualId) =
+        case mbAssocFleetOwnerId of
+          Just fleetOwnerId | walletView == DTConf.FLEET_ACCOUNT -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
+          _ -> ownAccount
+  -- The conditions 'postWalletPayout' enforces, so the button never offers a refusal: a
+  -- fleet-linked driver cannot self-initiate, nor can a role the city bars from instant payouts.
+  let canWithdraw =
+        isNothing mbAssocFleetOwnerId
+          && instantPayoutAllowedFor transporterConfig.driverWalletConfig person.role
   now <- getCurrentTime
+  if isJust mbAssocFleetOwnerId && walletView == DTConf.HIDDEN
+    then pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
+    else walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+
+-- | The wallet read itself, once it has been decided whose account to read.
+walletTransactionsFor ::
+  Bool -> -- whether the app may offer this person an instant payout
+  FAccount.CounterpartyType ->
+  Text ->
+  Kernel.Prelude.Maybe Text ->
+  DTConf.TransporterConfig ->
+  Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
+  Environment.Flow DriverWallet.WalletSummaryResponse
+walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
@@ -145,7 +189,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
   case (mbWalletAcc, mbControlAcc) of
-    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig 0}
+    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
     _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
@@ -173,7 +217,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
             processingPayoutBalance = eligibility.processingPayoutBalance,
             holdBalance = Just holdBalance,
             netEarningsBalance,
-            payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig redeemableBalance,
+            payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig redeemableBalance,
             additions,
             deductions,
             agg
@@ -200,10 +244,12 @@ emptyWalletSummary =
       agg = []
     }
 
-buildWalletPayoutConfig :: DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
-buildWalletPayoutConfig walletConfig redeemableBalance =
+-- | @payoutEnabled@ is what the app shows the withdraw button on, and withdraw is the instant path,
+--   so it is off wherever 'postWalletPayout' would refuse: a barred role, or a bulk-only partner.
+buildWalletPayoutConfig :: Bool -> DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
+buildWalletPayoutConfig canWithdraw walletConfig redeemableBalance =
   DriverWallet.WalletPayoutConfig
-    { payoutEnabled = walletConfig.enableWalletPayout,
+    { payoutEnabled = walletConfig.enableWalletPayout && canWithdraw,
       payoutCutOffDays = walletConfig.payoutCutOffDays,
       minimumPayoutAmount = walletConfig.minimumWalletPayoutAmount,
       payoutFee = computePayoutFee (mfilter (\cfg -> cfg.feeBearer == Just DTConf.DRIVER_BEARER) walletConfig.payoutFee) redeemableBalance
@@ -586,7 +632,12 @@ postWalletPayout ::
   )
 postWalletPayout (mbPersonId, merchantId, mocId) = do
   ctx <- loadPayoutContext mbPersonId merchantId mocId
+  -- §1.2: a fleet-linked driver is not a beneficiary and cannot self-initiate a payout.
+  -- (Any residual balance they're still owed is swept by the scheduled batch payout job instead.)
+  -- Called for the guard, not the value: §1.2 -- a fleet-linked driver cannot self-initiate.
+  void $ resolveWalletScope ctx.driverId ctx.person.role >>= fromMaybeM (InvalidRequest "Payouts are not available while linked to a fleet owner")
   ensurePayoutsEnabled ctx
+  ensureInstantPayoutAllowed ctx
   let params =
         WalletPayoutParams
           { payoutType = PR.INSTANT,
@@ -596,6 +647,154 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
           }
   runWalletPayout ctx params
   pure APISuccess.Success
+
+-- | Claim a payout for one beneficiary and hand back the order it created.
+--
+--   Distinct from 'runWalletPayout', which serves the driver-facing endpoint and returns nothing:
+--   the bulk (HDFC CBX) path needs the 'PayoutOrder' back so a file can be assembled out of
+--   everything claimed in a cycle, and needs the batch it is being claimed into. Used by the bulk
+--   claim and by adhoc payouts.
+--
+--   Money is held, not reserved. 'postOwnerPayoutLiability' moves the amount
+--   OwnerLiability -> OwnerPayoutLiability immediately, so the wallet balance already excludes it
+--   and a second sweep cannot see the same money as payable. That is what closes the double-pay
+--   hole the old model left: it reserved the *entries* but computed the amount from the balance, so
+--   an unsettled balance could be claimed twice. The entry ids are stashed for the settlement path
+--   rather than flipped to PROCESSING, and 'ledgerEntryIds' is deliberately left empty in the
+--   submission so 'submitPayoutRequest' does not reserve them as well.
+-- | What a caller has already resolved before taking the wallet lock, so 'initiateWalletPayout'
+--   does not redo it while holding the lock: the payout route (flow, service name, bank account) and
+--   the decrypted phone number, which is a call to the encryption service.
+data PayoutPrefetch = PayoutPrefetch
+  { route :: (IPayout.PayoutServiceFlow, DEMSC.ServiceName, Maybe DDBA.DriverBankAccount),
+    customerPhone :: Maybe Text
+  }
+
+initiateWalletPayout ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    Finance.HasActorInfo m r,
+    EsqDBFlow m r,
+    BeamFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  PayoutContext ->
+  HighPrecMoney -> -- payoutable balance
+  PR.PayoutType -> -- INSTANT, SCHEDULED or ADHOC
+  Maybe UTCTime -> -- coverageFrom
+  Maybe UTCTime -> -- coverageTo
+  [Text] -> -- redeemable entry ids, stashed for the settlement path
+  HighPrecMoney -> -- merchant transfer amount (VAT input + discounts)
+
+  -- | The batch this payout is claimed into on the bulk path, where the batch is opened before its
+  --   members. Nothing everywhere else -- there is no batch.
+  Maybe (Id DPayoutBatch.PayoutBatch) ->
+  -- | Resolved by the caller outside the lock (the bulk claim); Nothing resolves it here.
+  Maybe PayoutPrefetch ->
+  -- | What to run once the order is persisted, e.g. scheduling a per-order status check. Taken as a
+  --   parameter rather than resolved here so this function needs no job-creator constraint, which
+  --   would otherwise cascade through the whole bulk claim path. Ignored on the bulk rail -- see
+  --   'onOrderCreated' below.
+  (DPayoutOrder.PayoutOrder -> m ()) ->
+  m (Maybe DPayoutOrder.PayoutOrder)
+initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount mbBatchId mbPrefetch afterOrderCreated = do
+  phoneNo <- maybe (mapM decrypt ctx.person.mobileNumber) (pure . (.customerPhone)) mbPrefetch
+  merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
+  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <-
+    maybe
+      (Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId ctx.person.id)
+      (pure . (.route))
+      mbPrefetch
+  vpa <- case payoutServiceFlow of
+    IPayout.JuspayFlow -> Just <$> resolvePayoutVpa ctx
+    IPayout.StripeFlow -> pure Nothing
+    IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; bank account + IFSC resolved in Tools.Payout
+  let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
+      -- Floor (not round-half-up) to whole cents so the disbursed amount never exceeds the wallet
+      -- balance; otherwise the settlement debit can overdraw it by a sub-cent rounding delta.
+      netAmount = SPayment.floorToTwoDecimalPlaces (payoutableBalance - fee)
+      -- HDFC CBX resolves a whole file at a time and has no per-order status API, so an order on
+      -- that rail must not get a per-order status-check job -- it could never be answered. Every
+      -- other rail keeps main's hook.
+      -- Gated here as well as at the call sites: HDFC CBX resolves a whole file at a time and has
+      -- no per-order status API, so an order on that rail must never get a per-order status-check
+      -- job -- it could never be answered. A caller that passes one anyway is ignored.
+      onOrderCreated = case payoutServiceFlow of
+        IPayout.BulkFlow -> \_ -> pure ()
+        _ -> afterOrderCreated
+      submission =
+        PayoutRequest.PayoutSubmission
+          { batchId = mbBatchId,
+            beneficiaryId = ctx.driverId.getId,
+            entityName = DPayment.DRIVER_WALLET_TRANSACTION,
+            entityId = ctx.driverId.getId,
+            entityRefId = Nothing,
+            amount = netAmount,
+            currency = ctx.transporterConfig.currency,
+            payoutFee = if fee > 0 then Just fee else Nothing,
+            transferAmount = Just merchantTransferAmount,
+            merchantId = ctx.merchantId.getId,
+            merchantOpCityId = ctx.mocId.getId,
+            city = show merchantOperatingCity.city,
+            vpa = vpa,
+            bankName = mbPersonBankAccount >>= (.bankName),
+            bankAccountLast4 = mbPersonBankAccount >>= (.bankAccountLast4),
+            customerName = Just ctx.person.firstName,
+            customerPhone = phoneNo,
+            customerEmail = ctx.person.email,
+            remark = "Settlement for wallet",
+            orderType = "FULFILL_ONLY",
+            scheduledAt = Nothing,
+            payoutType = Just payoutType,
+            coverageFrom = coverageFrom,
+            coverageTo = coverageTo,
+            -- Empty on purpose: the hold below is what removes this money from the payable
+            -- balance. Passing ids here would additionally flip them UNSETTLED -> PROCESSING,
+            -- which is the model the hold replaces.
+            ledgerEntryIds = [],
+            payoutServiceFlow
+          }
+      payoutCall = Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount
+
+  if netAmount > 0.0
+    then do
+      result <- PayoutRequest.submitPayoutRequest submission payoutCall onOrderCreated
+      case result of
+        PayoutRequest.PayoutInitiated pr po -> do
+          let counterparty = counterpartyFromRole ctx.person.role
+              ownerPayoutCtx = buildDriverChargeCtx counterparty ctx.driverId.getId ctx.merchantId.getId ctx.mocId.getId ctx.transporterConfig.currency pr.id.getId (fromMaybe False ctx.transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+              metadata =
+                LedgerEntryMetadata
+                  { driverPayable = Just (negate netAmount),
+                    payoutOrderId = Nothing,
+                    reason = Nothing,
+                    subscriptionAllocations = Nothing,
+                    d2cReferralEarnings = Nothing,
+                    d2dReferralEarnings = Nothing,
+                    dailyStatsId = Nothing
+                  }
+          -- The hold is the gross net amount: HDFC CBX charges no payout fee, and on the rails that
+          -- do, 'fee' has already been taken out of netAmount above.
+          postOwnerPayoutLiability ownerPayoutCtx netAmount (Just metadata)
+            >>= either (\err -> logError $ "Failed to hold payout amount for payoutRequest " <> pr.id.getId <> ": " <> show err) (const (pure ()))
+          PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId redeemableEntryIds
+          -- Forked: callers hold the per-beneficiary wallet lock around this, and it should not wait
+          -- on FCM.
+          fork ("WalletPayoutInitiatedNotify:" <> pr.id.getId) $
+            Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
+          pure (Just po)
+        PayoutRequest.PayoutProcessing pr status -> do
+          logInfo $ "Wallet payout already in flight for " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> " | status: " <> show status
+          pure Nothing
+        PayoutRequest.PayoutFailed _ err -> do
+          logError $ "Wallet payout failed for driver " <> ctx.driverId.getId <> ": " <> err
+          pure Nothing
+        PayoutRequest.PayoutAmbiguous _ err -> do
+          logError $ "Wallet payout outcome unknown for driver " <> ctx.driverId.getId <> ": " <> err <> " -- needs manual reconciliation"
+          pure Nothing
+    else pure Nothing
 
 --------------------------------------------------------------------------------
 -- postWalletTopup (finance ledger: platform Asset -> driver RideCredit, reference WalletTopup)

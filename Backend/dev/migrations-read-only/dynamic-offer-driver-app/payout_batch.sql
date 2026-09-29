@@ -1,0 +1,26 @@
+CREATE TABLE atlas_driver_offer_bpp.payout_batch ();
+
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN client_ref_no text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN excluded_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN execution_date date NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN failure_code text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN failure_reason text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN item_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN next_status_call_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN origin text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN partner_batch_ref text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN payout_rail text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN payout_service_name text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN resolved_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN status_check_calls integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN status_check_round integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN status_no_data_replies integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN submitted_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN total_amount numeric(30,2) NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.payout_batch ADD PRIMARY KEY ( id);

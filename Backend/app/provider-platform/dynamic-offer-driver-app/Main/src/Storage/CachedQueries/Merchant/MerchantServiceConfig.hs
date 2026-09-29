@@ -17,6 +17,7 @@ module Storage.CachedQueries.Merchant.MerchantServiceConfig
   ( create,
     findAllMerchantOpCityId,
     findByServiceAndCity,
+    findAllHdfcCbxPayoutConfigs,
     findOne,
     clearCache,
     clearCacheById,
@@ -29,12 +30,39 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig
+import Kernel.External.Payout.HdfcCbx.Config (HdfcCbxConfig)
+import qualified Kernel.External.Payout.Interface as Payout
+import qualified Kernel.External.Payout.Types as PT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.MerchantServiceConfig as Queries
+import qualified Storage.Queries.MerchantServiceConfigExtra as QueriesExtra
 import Storage.Queries.Transformers.MerchantServiceConfig (getServiceName)
+
+-- | Every HDFC CBX payout config the deployment holds, across cities and payout categories.
+--
+--   Read once at startup to build the mutually-authenticated managers those calls run on; adding
+--   a config or rotating a certificate therefore needs a restart.
+findAllHdfcCbxPayoutConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [HdfcCbxConfig]
+findAllHdfcCbxPayoutConfigs = do
+  -- The same partner can be configured under any of the payout categories.
+  rows <-
+    concat
+      <$> mapM
+        QueriesExtra.findAllByServiceName
+        [ PayoutService PT.HdfcCbx,
+          RentalPayoutService PT.HdfcCbx,
+          RidePayoutService PT.HdfcCbx
+        ]
+  pure $ mapMaybe hdfcCbxConfigOf rows
+  where
+    hdfcCbxConfigOf row = case row.serviceConfig of
+      PayoutServiceConfig (Payout.HdfcCbxConfig cfg) -> Just cfg
+      RentalPayoutServiceConfig (Payout.HdfcCbxConfig cfg) -> Just cfg
+      RidePayoutServiceConfig (Payout.HdfcCbxConfig cfg) -> Just cfg
+      _ -> Nothing
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 create = Queries.create

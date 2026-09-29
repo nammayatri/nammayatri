@@ -272,6 +272,7 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   let payoutVpaValid = case payoutServiceFlow of
         IPayout.JuspayFlow -> isJust req.customerVpa
         IPayout.StripeFlow -> True
+        IPayout.BulkFlow -> isJust mbPersonBankAccount
   unless payoutVpaValid $ throwError (InvalidRequest "customerVpa required")
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
@@ -283,6 +284,7 @@ mkCreatePayoutServiceReq :: Currency -> IPayout.PayoutServiceFlow -> API.Types.U
 mkCreatePayoutServiceReq currency payoutServiceFlow API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} =
   Payout.CreatePayoutServiceReq
     { transferAmount = amount, -- for now keep it the same
+      batchId = Nothing,
       ..
     }
 

@@ -321,6 +321,7 @@ startRideHandler ServiceHandle {..} rideId req = do
               let payoutRequest =
                     DPR.PayoutRequest
                       { id = payoutRequestId,
+                        batchId = Nothing,
                         entityName = Just DPayment.SPECIAL_ZONE_PAYOUT,
                         entityId = ride.id.getId,
                         entityRefId = Just booking.id.getId,
