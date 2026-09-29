@@ -49,8 +49,6 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.AddOn as SAddOn
-import SharedLogic.Booking
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
@@ -193,7 +191,6 @@ handler merchantId req validatedReq = do
           (SML.distanceBucketLabel distanceEdges booking.estimatedDistance)
           pickupZone
           dropZone
-        when booking.isScheduled $ void $ addScheduledBookingInRedis booking
         return (booking, Nothing, Nothing)
   -- Special zone driver demand pipeline: fires for BOTH estimate-based (normal Select → Init)
   -- and quote-based (special zone OTP direct Init) flows. Moved here from Select.hs because
