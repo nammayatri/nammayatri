@@ -158,7 +158,7 @@ dispatchRideRevenue sapCfg token params totals = do
   let currency = merchantOperatingCity.currency
   results <-
     forM (mkJVSpecs params.merchantId params.merchantOperatingCityId currency totals) $
-      postJV sapCfg token params currency SJE.RevenueRecognition
+      postJV sapCfg token params currency
   pure $ and results
 
 -- | One JVSpec per matrix event, in dispatch order.
@@ -172,28 +172,28 @@ mkJVSpecs ::
 mkJVSpecs mId mocid currency totals =
   [ -- 1/3. Ride fare rev-rec (online or offline)
     -- Online: Dr BUYER_APP_RECEIVABLE / Cr RIDE_FARE_REVENUE + GST
-    -- Online: Dr DRIVER_BALANCE / Cr RIDE_FARE_REVENUE + GST
-    mkSpec onlineRideRevRecLabel JET.Booking (rideFareRevRecLegs buyerAppReceivableAcct onlineTotals) onlineTotals.txnCount onlineRows,
+    -- Offline: Dr DRIVER_BALANCE / Cr RIDE_FARE_REVENUE + GST
+    mkSpec onlineRideRevRecLabel SJE.RideFareRevenue JET.Booking (rideFareRevRecLegs buyerAppReceivableAcct onlineTotals) onlineTotals.txnCount onlineRows,
     -- 2. Buyer-app settlement: Dr BANK / Cr BUYER_APP_RECEIVABLE
-    mkSpec buyerAppSettlementLabel JET.Booking [JVLeg bankAcct Debit settleTotals.settledAmount, JVLeg buyerAppReceivableAcct Credit settleTotals.settledAmount] settleTotals.txnCount settleRows,
-    mkSpec offlineCashRideLabel JET.Booking (rideFareRevRecLegs driverBalanceAcct offlineTotals) offlineTotals.txnCount offlineRows,
+    mkSpec buyerAppSettlementLabel SJE.BuyerAppSettlement JET.Booking [JVLeg bankAcct Debit settleTotals.settledAmount, JVLeg buyerAppReceivableAcct Credit settleTotals.settledAmount] settleTotals.txnCount settleRows,
+    mkSpec offlineCashRideLabel SJE.RideFareRevenue JET.Booking (rideFareRevRecLegs driverBalanceAcct offlineTotals) offlineTotals.txnCount offlineRows,
     -- 4. Driver earning accrual: Dr RIDE_FARE_REVENUE / Cr DRIVER_BALANCE
-    mkSpec driverEarningAccrualLabel JET.Booking [JVLeg rideFareRevenueAcct Debit accrualTotals.accrualAmount, JVLeg driverBalanceAcct Credit accrualTotals.accrualAmount] accrualTotals.txnCount accrualRows,
+    mkSpec driverEarningAccrualLabel SJE.DriverEarningAccrual JET.Booking [JVLeg rideFareRevenueAcct Debit accrualTotals.accrualAmount, JVLeg driverBalanceAcct Credit accrualTotals.accrualAmount] accrualTotals.txnCount accrualRows,
     -- 5. Payout: two balanced JVs. Phase-1 both use the same WalletPayout total
     --    (clearing is a same-day wash). Intended sources:
     --      PayoutToClearing      = ledger WalletPayout (driver liability debit on SUCCESS)
     --      PayoutClearingToBank  = pg_payout_settlement_report (PG/bank file; WS4 ingest, idealy separate scheduler job should be created)
-    mkSpec payoutToClearingLabel JET.Payout [JVLeg driverBalanceAcct Debit payoutTotals.payoutAmount, JVLeg payoutClearingAcct Credit payoutTotals.payoutAmount] payoutTotals.txnCount payoutRows,
+    mkSpec payoutToClearingLabel SJE.DriverPayout JET.Payout [JVLeg driverBalanceAcct Debit payoutTotals.payoutAmount, JVLeg payoutClearingAcct Credit payoutTotals.payoutAmount] payoutTotals.txnCount payoutRows,
     -- Same amount as JV1 until WS4 wires pg_payout_settlement_report.
     -- JV2: Dr PAYOUT_CLEARING / Cr BANK
-    mkSpec payoutClearingToBankLabel JET.Payout [JVLeg payoutClearingAcct Debit payoutTotals.payoutAmount, JVLeg bankAcct Credit payoutTotals.payoutAmount] payoutTotals.txnCount payoutRows,
+    mkSpec payoutClearingToBankLabel SJE.DriverPayout JET.Payout [JVLeg payoutClearingAcct Debit payoutTotals.payoutAmount, JVLeg bankAcct Credit payoutTotals.payoutAmount] payoutTotals.txnCount payoutRows,
     -- 6. TDS: deduction Dr DRIVER_BALANCE / Cr TDS_PAYABLE; reimbursement Dr TDS_RECEIVABLE / Cr DRIVER_BALANCE
-    mkSpec tdsDeductionLabel JET.Booking [JVLeg driverBalanceAcct Debit tdsTotals.deductionAmount, JVLeg tdsPayableAcct Credit tdsTotals.deductionAmount] tdsTotals.deductionCount deductionRows,
-    mkSpec tdsReimbursementLabel JET.TdsReimbursementRequest [JVLeg tdsReceivableAcct Debit tdsTotals.reimbursementAmount, JVLeg driverBalanceAcct Credit tdsTotals.reimbursementAmount] tdsTotals.reimbursementCount reimbursementRows,
+    mkSpec tdsDeductionLabel SJE.TDS JET.Booking [JVLeg driverBalanceAcct Debit tdsTotals.deductionAmount, JVLeg tdsPayableAcct Credit tdsTotals.deductionAmount] tdsTotals.deductionCount deductionRows,
+    mkSpec tdsReimbursementLabel SJE.TDS JET.TdsReimbursementRequest [JVLeg tdsReceivableAcct Debit tdsTotals.reimbursementAmount, JVLeg driverBalanceAcct Credit tdsTotals.reimbursementAmount] tdsTotals.reimbursementCount reimbursementRows,
     -- 7. Subscription revenue recognised: Dr DEFERRED_REVENUE / Cr SUBSCRIPTION_REVENUE
     --    Ride vs expiry use the same legs, different description labels.
-    mkSpec subscriptionRideRevenueLabel JET.SubscriptionPurchase (subscriptionRevenueLegs rideSubTotals) rideSubTotals.txnCount rideSubRows,
-    mkSpec subscriptionExpiryRevenueLabel JET.SubscriptionPurchase (subscriptionRevenueLegs expirySubTotals) expirySubTotals.txnCount expirySubRows
+    mkSpec subscriptionRideRevenueLabel SJE.RevenueRecognition JET.SubscriptionPurchase (subscriptionRevenueLegs rideSubTotals) rideSubTotals.txnCount rideSubRows,
+    mkSpec subscriptionExpiryRevenueLabel SJE.RevenueRecognition JET.SubscriptionPurchase (subscriptionRevenueLegs expirySubTotals) expirySubTotals.txnCount expirySubRows
   ]
   where
     (onlineTotals, onlineRows) = totals.onlineRideRevRec
@@ -204,12 +204,13 @@ mkJVSpecs mId mocid currency totals =
     (tdsTotals, deductionRows, reimbursementRows) = totals.tds
     (rideSubTotals, rideSubRows) = totals.subscriptionRideRevenue
     (expirySubTotals, expirySubRows) = totals.subscriptionExpiryRevenue
-    mkSpec label refType legs txnCount rows =
+    mkSpec label txnType refType legs txnCount rows =
       JVSpec
         { label,
           legs,
+          transactionType = txnType,
           txnCount,
-          saveRows = \sapEntryId sapBatchId -> saveRevenueRecognitionTransactions mId mocid sapEntryId sapBatchId label refType currency rows
+          saveRows = \sapEntryId sapBatchId -> saveRevenueRecognitionTransactions mId mocid sapEntryId sapBatchId label refType txnType currency rows
         }
 
 rideFareRevRecLegs :: Text -> RideFareRevRecTotals -> [JVLeg]
@@ -252,10 +253,11 @@ saveRevenueRecognitionTransactions ::
   Text ->
   Text ->
   JET.ReferenceType ->
+  SJE.TransactionType ->
   Currency ->
-  [RevenueRecognitionTransactionRow] ->
+  [RideRevenueTransactionRow] ->
   m ()
-saveRevenueRecognitionTransactions mId mocId sapEntryId batchId label refType currency =
+saveRevenueRecognitionTransactions mId mocId sapEntryId batchId label refType txnType currency =
   saveJournalEntryTransactions mId mocId sapEntryId batchId currency $ \row ->
     JournalTxnRowFields
       { debitAmount = row.amount,
@@ -263,7 +265,7 @@ saveRevenueRecognitionTransactions mId mocId sapEntryId batchId label refType cu
         description = label,
         referenceId = Just row.referenceId,
         referenceType = Just refType,
-        transactionType = SJE.RevenueRecognition,
+        transactionType = txnType,
         status = row.txnStatus
       }
 

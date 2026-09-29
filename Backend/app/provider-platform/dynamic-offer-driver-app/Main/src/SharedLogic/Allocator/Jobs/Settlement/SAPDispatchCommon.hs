@@ -647,10 +647,11 @@ data JVLeg = JVLeg
     amount :: HighPrecMoney
   }
 
--- | One JV event: legs + label + txn count + success callback.
+-- | One JV event: legs + label + txn type + txn count + success callback.
 data JVSpec m = JVSpec
   { label :: Text,
     legs :: [JVLeg],
+    transactionType :: SJE.TransactionType,
     txnCount :: Int,
     saveRows :: Id SJE.SapJournalEntry -> Text -> m () -- called on SUCCESS with (sapEntryId, batchId)
   }
@@ -706,10 +707,9 @@ postJV ::
   Text ->
   SAPDispatchJobParams ->
   Currency ->
-  SJE.TransactionType ->
   JVSpec m ->
   m Bool
-postJV sapCfg token params currency txnType spec = do
+postJV sapCfg token params currency spec = do
   let SAPDispatchJobParams
         { merchantId = mId,
           merchantOperatingCityId = mocid,
@@ -717,6 +717,7 @@ postJV sapCfg token params currency txnType spec = do
           startTime = fromTime,
           endTime = toTime
         } = params
+      txnType = spec.transactionType
   if not (any ((/= 0) . (.amount)) spec.legs)
     then do
       logInfo $ "No non-zero items for " <> spec.label <> ", skipping"
