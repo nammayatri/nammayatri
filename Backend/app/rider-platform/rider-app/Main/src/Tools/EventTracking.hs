@@ -4,6 +4,8 @@ module Tools.EventTracking
   ( TrackingEvent (..),
     trackEvent,
     trackVehicleRideCompletedEvents,
+    trackPTBookingUsedEvents,
+    trackPTBookingConfirmedEvents,
   )
 where
 
@@ -32,6 +34,10 @@ data TrackingEvent
   | VehicleRideCompleted Text Text Int HighPrecMoney -- riderId, categorySlug (cab|auto|bike), catRideCount, fare
   | VehicleFirstRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
   | VehicleFifthRideCompleted Text Text HighPrecMoney -- riderId, categorySlug, fare
+  | PTBookingConfirmed Text Text (Maybe Text) Int HighPrecMoney -- riderId, vehicleType, serviceTierType, purchaseCount, fare
+  | PTFirstBookingConfirmed Text Text (Maybe Text) HighPrecMoney -- riderId, vehicleType, serviceTierType, fare
+  | PTBookingUsed Text Text (Maybe Text) Int HighPrecMoney -- riderId, vehicleType, serviceTierType, purchaseCount, fare
+  | PTFirstBookingUsed Text Text (Maybe Text) HighPrecMoney -- riderId, vehicleType, serviceTierType, fare
   | OfferCashbackCredited Text Text HighPrecMoney -- riderId, payoutRequestId, amount
 
 trackEvent ::
@@ -136,6 +142,16 @@ eventToAction = \case
     (riderId, "ny_" <> slug <> "_user_5_ride_completed", object ["fare" .= fare])
   OfferCashbackCredited riderId payoutRequestId amount ->
     (riderId, "ny_user_offer_cashback_credited", object ["payout_request_id" .= payoutRequestId, "amount" .= amount])
+  PTBookingConfirmed riderId vehicleType tier purchaseCount fare ->
+    (riderId, "pt_booking_confirmed", object (["vehicleType" .= vehicleType, "purchaseCount" .= purchaseCount, "fare" .= fare] <> serviceTier tier))
+  PTFirstBookingConfirmed riderId vehicleType tier fare ->
+    (riderId, "pt_first_booking_confirmed", object (["vehicleType" .= vehicleType, "fare" .= fare] <> serviceTier tier))
+  PTBookingUsed riderId vehicleType tier purchaseCount fare ->
+    (riderId, "pt_booking_used", object (["vehicleType" .= vehicleType, "purchaseCount" .= purchaseCount, "fare" .= fare] <> serviceTier tier))
+  PTFirstBookingUsed riderId vehicleType tier fare ->
+    (riderId, "pt_first_booking_used", object (["vehicleType" .= vehicleType, "fare" .= fare] <> serviceTier tier))
+  where
+    serviceTier = maybe [] (\tier -> ["serviceTierType" .= tier])
 
 -- | Per-vehicle ride-completion events (+ first/fifth milestones). No-op for
 -- unsupported categories. Does not fork; call it from within a fork.
@@ -164,3 +180,36 @@ vehicleCategorySlug = \case
   BecknEnums.AUTO_RICKSHAW -> Just "auto"
   BecknEnums.MOTORCYCLE -> Just "bike"
   _ -> Nothing
+
+trackPTBookingUsedEvents ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  Text ->
+  Maybe Text ->
+  HighPrecMoney ->
+  Int ->
+  m ()
+trackPTBookingUsedEvents merchantId merchantOperatingCityId riderId vehicleType serviceTierType fare purchaseCount = do
+  let eventRiderId = getId riderId
+  trackEvent merchantId merchantOperatingCityId (PTBookingUsed eventRiderId vehicleType serviceTierType purchaseCount fare)
+  when (purchaseCount == 1) $
+    trackEvent merchantId merchantOperatingCityId (PTFirstBookingUsed eventRiderId vehicleType serviceTierType fare)
+
+trackPTBookingConfirmedEvents ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id DP.Person ->
+  Text ->
+  Maybe Text ->
+  HighPrecMoney ->
+  Int ->
+  Bool ->
+  m ()
+trackPTBookingConfirmedEvents merchantId merchantOperatingCityId riderId vehicleType serviceTierType fare purchaseCount isFirstPurchase = do
+  let eventRiderId = getId riderId
+  trackEvent merchantId merchantOperatingCityId (PTBookingConfirmed eventRiderId vehicleType serviceTierType purchaseCount fare)
+  when isFirstPurchase $
+    trackEvent merchantId merchantOperatingCityId (PTFirstBookingConfirmed eventRiderId vehicleType serviceTierType fare)
