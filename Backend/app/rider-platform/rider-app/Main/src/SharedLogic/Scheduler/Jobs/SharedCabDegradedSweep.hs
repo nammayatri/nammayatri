@@ -17,6 +17,7 @@ module SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep
   )
 where
 
+import qualified Domain.Types.FRFSTicketStatus as TicketStatus
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -31,6 +32,7 @@ import SharedLogic.SharedCab.DegradedSweepSchedule
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Session as Session
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBookingExtra as QBooking
 
 -- | Candidates per page; a page is read-only, the rule owner re-reads under the booking lock.
@@ -74,8 +76,8 @@ sweepCity mocId =
     horizonSec <- (.degradedTimeoutSec) <$> Config.getTunables mocId
     now <- getCurrentTime
     let windowStart = scanWindowStart horizonSec now
-    (scanned, ended) <- sweepPages QBooking.findSharedCabDegradedCandidates Degraded.expireDegradedBoardingIfNeeded windowStart now Nothing (0, 0)
-    (scannedP, endedP) <- sweepPages QBooking.findSharedCabPlatedCandidates Session.dropStrandedRider windowStart now Nothing (0, 0)
+    (scanned, ended) <- sweepPages QBooking.findSharedCabDegradedCandidates pure Degraded.expireDegradedBoardingIfNeeded windowStart now Nothing (0, 0)
+    (scannedP, endedP) <- sweepPages QBooking.findSharedCabPlatedCandidates onBoardOnly Session.dropStrandedRider windowStart now Nothing (0, 0)
     logInfo $
       "sharedCab degraded sweep: city=" <> mocId.getId <> " scanned=" <> show scanned <> " ended=" <> show ended
         <> " plated scanned="
@@ -83,10 +85,17 @@ sweepCity mocId =
         <> " dropped="
         <> show endedP
   where
+    -- R51: a dropped ride stays booking-CONFIRMED, so the plated page holds every finished ride in the window. One batched
+    -- ticket read keeps only bookings with a rider still INPROGRESS; only those cost the session read and the locked re-decide.
+    onBoardOnly page = do
+      tickets <- QTicket.findAllByTicketBookingIds (map (.id) page)
+      let boarded = [t.frfsTicketBookingId | t <- tickets, t.status == TicketStatus.INPROGRESS]
+      pure [b | b <- page, b.id.getId `elem` map (.getId) boarded]
     -- Each candidate is re-decided by its rule owner under the locks; a failure is logged and the next tick retries it.
-    sweepPages fetch decide windowStart endAt mbCursor (scanned, ended) = do
+    sweepPages fetch narrow decide windowStart endAt mbCursor (scanned, ended) = do
       page <- fetch mocId windowStart endAt mbCursor (Just pageSize)
-      flips <- forM page $ \booking ->
+      candidates <- narrow page
+      flips <- forM candidates $ \booking ->
         if not (isSharedCabBooking booking)
           then pure False -- belt: the DB filter is the serviceTierType column; the helper reads routeStationsJson
           else
@@ -101,4 +110,4 @@ sweepCity mocId =
           -- keyset tie at the page's updatedAt boundary: rows sharing it are skipped this sweep,
           -- and the next tick's full-window scan picks them up.
           let cursor = (last page).updatedAt
-          sweepPages fetch decide windowStart endAt (Just cursor) (scanned', ended')
+          sweepPages fetch narrow decide windowStart endAt (Just cursor) (scanned', ended')
