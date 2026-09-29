@@ -68,8 +68,9 @@ import qualified Storage.Queries.Role as QRole
 import qualified Storage.Queries.Transaction as QT
 -- isSuperAdmin lives here rather than in Domain.Action.Dashboard.Capability: that module has no
 -- export list, so it re-exports only what it defines, not what it imports.
-import Tools.Auth.Capability (isSuperAdmin)
+
 import qualified Tools.Auth.ApiAuth as ApiAuth
+import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
 import Tools.Auth.Merchant

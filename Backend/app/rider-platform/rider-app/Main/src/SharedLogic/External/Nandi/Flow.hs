@@ -5,6 +5,7 @@ import Data.Aeson (Value (..))
 import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (parseEither)
 import qualified Data.Text as T
+import Data.Time (Day)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
@@ -42,9 +43,9 @@ getRoutesByRouteIds :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDur
 getRoutesByRouteIds baseUrl gtfsId routeIds = do
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRoutesByRouteIds gtfsId routeIds) "getRoutesByRouteIds" NandiAPI.nandiRoutesByRouteIdsAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTES_BY_ROUTE_IDS_API") baseUrl)
 
-getRouteBusSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Maybe Text -> m BusScheduleDetails
-getRouteBusSchedule baseUrl gtfsId routeId mbVehicleNumber = do
-  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusRouteSchedule gtfsId routeId mbVehicleNumber) "getRouteBusSchedule" NandiAPI.nandiBusRouteScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_ROUTE_SCHEDULE_API") baseUrl)
+getRouteBusSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Maybe Text -> Maybe Day -> m BusScheduleDetails
+getRouteBusSchedule baseUrl gtfsId routeId mbVehicleNumber mbMaxDutyDate = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiBusRouteSchedule gtfsId routeId mbVehicleNumber mbMaxDutyDate) "getRouteBusSchedule" NandiAPI.nandiBusRouteScheduleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_BUS_ROUTE_SCHEDULE_API") baseUrl)
 
 getBusTripSchedule :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => BaseUrl -> Text -> Text -> Int -> Text -> m BusScheduleDetails
 getBusTripSchedule baseUrl gtfsId waybillNo tripNumber routeId = do
@@ -304,6 +305,14 @@ operatorOperators baseUrl gtfsId role =
 operatorWaybillStatus :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillStatusReq -> m RowsAffectedResp
 operatorWaybillStatus baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorWaybillStatus gtfsId req) "operatorWaybillStatus" NandiAPI.operatorWaybillStatusAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_WAYBILL_STATUS_API") baseUrl)
+
+operatorGetScheduleTripRepeat :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m ScheduleTripRepeatConfig
+operatorGetScheduleTripRepeat baseUrl gtfsId scheduleTripId =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorScheduleTripRepeat gtfsId scheduleTripId) "operatorGetScheduleTripRepeat" NandiAPI.operatorGetScheduleTripRepeatAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GET_SCHEDULE_TRIP_REPEAT_API") baseUrl)
+
+operatorSetScheduleTripRepeat :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> SetScheduleTripRepeatReq -> m ScheduleTripRepeatConfig
+operatorSetScheduleTripRepeat baseUrl gtfsId scheduleTripId req =
+  withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorScheduleTripRepeat gtfsId scheduleTripId req) "operatorSetScheduleTripRepeat" NandiAPI.operatorSetScheduleTripRepeatAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_SET_SCHEDULE_TRIP_REPEAT_API") baseUrl)
 
 operatorWaybillFleet :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> UpdateWaybillFleetReq -> m RowsAffectedResp
 operatorWaybillFleet baseUrl gtfsId req =
