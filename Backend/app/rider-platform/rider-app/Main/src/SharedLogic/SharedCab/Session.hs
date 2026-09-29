@@ -204,7 +204,7 @@ selectRoute mode req = do
 takeoverEvidence :: LtsFlow m r c => Text -> Text -> m (Maybe (Text, Maybe (Maybe Ping)))
 takeoverEvidence driver plate =
   readSession plate >>= \case
-    Just s | isLive s && s.driverId /= driver && s.status == ACTIVE -> do
+    Just s | s.driverId /= driver && s.status == ACTIVE -> do
       now <- getCurrentTime
       ping <-
         withTryCatch "sharedCab:takeoverPing" (LTS.vehicleTrackingOnRoute (LTS.ByRoute s.routeCode)) >>= \case
