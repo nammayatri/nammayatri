@@ -33,7 +33,8 @@
 --     alloc key TTL (findingTimeoutSec) bounds it and the close path treats a missing alloc key as
 --     attempts=0. There is no transactional bridge KV x Redis x Kafka.
 module SharedLogic.SharedCab.Allocation
-  ( -- entrypoints (M7.2 wire sites: the job module + booking create/release callers)
+  ( InternalEndpointFlow,
+    -- entrypoints (M7.2 wire sites: the job module + booking create/release callers)
     runSharedCabAllocationTick,
     sharedCabAllocationEnabled,
     cityConfig,
@@ -110,6 +111,9 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 -- | Everything the tick, claims and releases need (the release re-triggers the tick, hence LTS).
 -- ServiceFlow: afterClose/claimFirst push the rider on a timer close or a stationary claim (R16/R17).
+-- | Calling the driver-app internal API (the allocation push) needs the endpoint map.
+type InternalEndpointFlow m r = HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+
 type AllocFlow m r =
   ( MonadFlow m,
     Redis.HedisFlow m r,
@@ -631,7 +635,7 @@ triggerSharedCabAllocation ::
     Metrics.CoreMetrics m,
     Events.EventFlow m r,
     ServiceFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    InternalEndpointFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()
@@ -650,7 +654,7 @@ runSharedCabAllocationTick ::
     Metrics.CoreMetrics m,
     Events.EventFlow m r,
     ServiceFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    InternalEndpointFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()

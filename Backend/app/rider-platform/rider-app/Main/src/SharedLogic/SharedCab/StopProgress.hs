@@ -19,7 +19,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation (allocKey, cityConfig, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocKey, cityConfig, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
 import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), Blame (BlameNone), TimerKind (..), passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -45,7 +45,8 @@ type StopProgressFlow m r c =
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
     Events.EventFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    InternalEndpointFlow m r
   )
 
 dropClockKey :: Id DFTB.FRFSTicketBooking -> Text
