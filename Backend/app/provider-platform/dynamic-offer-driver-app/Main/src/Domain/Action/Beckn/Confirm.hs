@@ -220,6 +220,8 @@ handler merchant req validatedQuote = do
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      -- Listed on the driver board only once the rider has confirmed, not at init.
+      when uBooking.isScheduled $ SBooking.addScheduledBookingInRedis uBooking
       -- Static offer Confirm: customer is committed at this gate (demand fulfilled).
       -- Driver gets matched later via the new search batch; supply tracking happens
       -- through that flow's StartRide. SETNX-idempotent on bookingId.
