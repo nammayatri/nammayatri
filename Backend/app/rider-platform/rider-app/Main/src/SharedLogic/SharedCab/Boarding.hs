@@ -22,6 +22,8 @@ module SharedLogic.SharedCab.Boarding
   ( SharedCabBoardOutcome (..),
     BoardingSummary (..),
     boardingCodeMatches,
+    UnknownCodeStep (..),
+    unknownCodeStep,
     tryBoardSharedCab,
     seatCheck,
     canBoard,
@@ -66,8 +68,8 @@ import Tools.Error
 data SharedCabBoardOutcome
   = -- | Boarding committed: ticket INPROGRESS, booking pointed at the cab, event emitted.
     SharedCabBoarded BoardingSummary
-  | -- | 8.5 (05 §5): the typed code matched no ACTIVE cab — boarded in degraded mode: ticket
-    -- INPROGRESS, degrade marker set, no session / driver card / seat effect. Never blocked.
+  | -- | 8.5 (05 §5): the typed code matched no ACTIVE cab and the rider confirmed (forceCheckIn) —
+    -- boarded in degraded mode: ticket INPROGRESS, degrade marker set, no session / driver card / seat effect.
     SharedCabDegraded
   | -- | Soft proximity miss: caller turns this into `boardingConfirmationRequired = True`
     -- (a forceCheckIn retry is only honoured for the *allocated* cab — 05 §4 item 3).
@@ -89,6 +91,16 @@ boardingCodeMatches :: Text -> Text -> Bool
 boardingCodeMatches code plate
   | T.length code <= 4 = canonicalisePlate code `T.isSuffixOf` canonicalisePlate plate
   | otherwise = canonicalisePlate code == canonicalisePlate plate
+
+-- | An unknown code never boards on its own: a typo would otherwise consume the ticket (INPROGRESS blocks cancel).
+-- The rider is asked to confirm an unlisted cab; the retry with forceCheckIn is the explicit confirm.
+data UnknownCodeStep = AskToConfirmUnlisted | BoardUnlisted
+  deriving (Show, Eq)
+
+unknownCodeStep :: Maybe Bool -> UnknownCodeStep
+unknownCodeStep forceCheckIn
+  | forceCheckIn == Just True = BoardUnlisted
+  | otherwise = AskToConfirmUnlisted
 
 -- ---------------- code resolution (8.1) ----------------
 
@@ -307,8 +319,10 @@ tryBoardSharedCab journey journeyLeg booking mbPersonId req = do
   code <- req.vehicleNumber & fromMaybeM BoardingFailed
   matches <- resolveCabByCode booking code
   case matches of
-    -- 05 §5 degraded boarding: an unknown code still boards (flagged), it is never blocked.
-    [] -> degradedBoarding tunables.degradedTimeoutSec booking code >> pure (Just SharedCabDegraded)
+    -- 05 §5 degraded boarding, only on an explicit confirm; otherwise the same hold response as the proximity miss.
+    [] -> case unknownCodeStep req.forceCheckIn of
+      AskToConfirmUnlisted -> pure . Just $ SharedCabProximityHold Nothing "UNLISTED_CAB"
+      BoardUnlisted -> degradedBoarding tunables.degradedTimeoutSec booking code >> pure (Just SharedCabDegraded)
     [target] -> Just <$> boardMatched tunables target
     _ -> throwError BoardingCodeAmbiguous -- two match: ask for the full plate (05 §4)
   where

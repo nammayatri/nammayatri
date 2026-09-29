@@ -1,5 +1,6 @@
 module SharedLogic.SharedCab.Session
   ( selectRoute,
+    endDropBy,
     changeRoute,
     applyQueuedRoute,
     endRoute,
@@ -148,6 +149,12 @@ replaceLiveTrip reason now prior s' = do
         )
         >>= either (\e -> logError $ "sharedCab: couldn't undo the trip switch for " <> s'.vehicleNumber <> ": " <> show e) pure
 
+endDropBy :: DVT.VehicleTripEndReason -> Events.DropBy
+endDropBy = \case
+  DVT.SESSION_TIMEOUT -> Events.DroppedByTick
+  DVT.OPS_FORCED -> Events.DroppedByTick
+  _ -> Events.DroppedByDriver
+
 -- | Every end path: close the trip, end the session, then take the cab off its LTS route.
 finish :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Session -> m Session
 finish reason s = do
@@ -155,6 +162,8 @@ finish reason s = do
   closeLiveTrip s.vehicleNumber reason now
   ended <- saveSession (Just s) (endSession s)
   detach s
+  -- an ENDED session is never stepped again, so nobody would drop the riders still on it (booking lock inside the plate lock)
+  ridersOnBoard s.vehicleNumber >>= mapM_ (Booking.markDropped (endDropBy reason))
   ended <$ Events.forSession (Events.Ended (show reason)) s
 
 -- | Open a session, or change route if this driver already has one (idempotent for the same route).
@@ -210,8 +219,7 @@ applyQueuedRoute rawPlate = withPlateLock plate $ do
   where
     plate = canonicalisePlate rawPlate
 
--- | Refused while riders are on board unless `forced` (`04` §7: forced riders fall to the degraded timeout).
--- Forced riders are told: a return trip is a route change, an end asks them to confirm their drop.
+-- | Refused while riders are on board unless `forced`: `finish` then drops them. A return trip is a route change, riders are told.
 endRoute :: (ServiceFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m) => Text -> Text -> Bool -> EndRouteAction -> m Session
 endRoute driver rawPlate forced action = withPlateLock plate $ do
   s <- readSession plate >>= liftSession . ownedSession driver
@@ -223,8 +231,7 @@ endRoute driver rawPlate forced action = withPlateLock plate $ do
       s' <- switchTo DVT.RETURN returnRoute s
       s' <$ mapM_ (Notify.notifyRouteChange returnRoute) onBoard
     _ -> do
-      s' <- finish (endActionReason action) s
-      s' <$ mapM_ Notify.notifyDropConfirm onBoard
+      finish (endActionReason action) s
   where
     plate = canonicalisePlate rawPlate
 

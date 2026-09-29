@@ -8,6 +8,8 @@ import Data.Text (Text)
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.Types.Id (Id (..))
+import qualified "rider-app" SharedLogic.SharedCab.Events as Events
+import "rider-app" SharedLogic.SharedCab.Session (endDropBy)
 import "rider-app" SharedLogic.SharedCab.SessionState
 import qualified "rider-app" SharedLogic.SharedCab.SessionView as View
 import Test.Tasty (TestTree, testGroup)
@@ -108,7 +110,11 @@ tests =
               ],
       testCase "ridersByStop: a booking holding no seat, an unknown stop and an empty cab produce nothing" $ do
         View.ridersByStop routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 1 "Z" "Y" False] @?= []
-        View.ridersByStop routeStops [] @?= []
+        View.ridersByStop routeStops [] @?= [],
+      testCase "expiry and ops ends drop the riders as the tick" $
+        map endDropBy [DVT.SESSION_TIMEOUT, DVT.OPS_FORCED] @?= [Events.DroppedByTick, Events.DroppedByTick],
+      testCase "a driver's end drops the riders as the driver" $
+        map endDropBy [DVT.END_ROUTE, DVT.END_FOR_NOW, DVT.RETURN] @?= replicate 3 Events.DroppedByDriver
     ]
 
 routeStops :: [(Text, Text)]
