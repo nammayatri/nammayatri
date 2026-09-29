@@ -148,6 +148,7 @@ updateByPrimaryKey (Domain.Types.PersonStats.PersonStats {..}) = do
       Se.Set Beam.referralEarnings (Kernel.Prelude.Just referralEarnings),
       Se.Set Beam.referredByEarnings (Kernel.Prelude.Just referredByEarnings),
       Se.Set Beam.referredByEarningsPayoutStatus referredByEarningsPayoutStatus,
+      Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
       Se.Set Beam.ticketsBookedInEvent ticketsBookedInEvent,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.userCancelledRides userCancelledRides,

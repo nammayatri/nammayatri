@@ -7,6 +7,7 @@ import qualified Domain.Types.VehicleTrip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -26,7 +27,7 @@ instance FromTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            missedPickups = missedPickups,
+            missedPickups = Kernel.Prelude.fromMaybe 0 missedPickups,
             movingAt = movingAt,
             offlineBoardings = offlineBoardings,
             reachedEndAt = reachedEndAt,
@@ -50,7 +51,7 @@ instance ToTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.missedPickups = missedPickups,
+        Beam.missedPickups = Kernel.Prelude.Just missedPickups,
         Beam.movingAt = movingAt,
         Beam.offlineBoardings = offlineBoardings,
         Beam.reachedEndAt = reachedEndAt,

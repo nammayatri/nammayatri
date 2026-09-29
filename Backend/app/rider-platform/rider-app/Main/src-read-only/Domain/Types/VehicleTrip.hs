@@ -23,7 +23,7 @@ data VehicleTrip = VehicleTrip
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
-    missedPickups :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    missedPickups :: Kernel.Prelude.Int,
     movingAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     offlineBoardings :: Kernel.Prelude.Int,
     reachedEndAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

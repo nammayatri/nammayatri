@@ -48,3 +48,8 @@ ALTER TABLE atlas_app.person_stats ADD COLUMN backlog_payout_amount double preci
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person_stats ADD COLUMN is_backfilled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person_stats ADD COLUMN shared_cab_no_shows integer  default 0;

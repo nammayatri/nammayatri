@@ -234,4 +234,8 @@ CREATE INDEX CONCURRENTLY frfs_ticket_booking_idx_override_applied_entity_id ON 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN vehicle_trip_id character varying(36) ;
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN no_show_count integer  default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN shared_cab_no_shows integer  default 0;

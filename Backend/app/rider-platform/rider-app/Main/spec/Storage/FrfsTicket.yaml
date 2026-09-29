@@ -479,11 +479,11 @@ FRFSTicketBooking:
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
     vehicleTripId: Maybe (Id VehicleTrip)
-    noShowCount: Maybe Int
+    sharedCabNoShows: Int
 
   default:
     customerCancelled: "false"
-    noShowCount: "0"
+    sharedCabNoShows: "0"
 
   beamFields:
     fromStationCode:
@@ -505,6 +505,7 @@ FRFSTicketBooking:
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Text
     clientBundleVersion: Maybe Text
+    sharedCabNoShows: Maybe Int
 
   types:
     CashbackStatus:
@@ -520,6 +521,7 @@ FRFSTicketBooking:
     toStationPoint: Kernel.External.Maps.Types.LatLong <$> toStationLat <*> toStationLon|E
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    sharedCabNoShows: Kernel.Prelude.fromMaybe 0|I
 
   toTType:
     price: (.amount)|I
@@ -531,6 +533,7 @@ FRFSTicketBooking:
     toStationLon: (.lon) <$> toStationPoint|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    sharedCabNoShows: Kernel.Prelude.Just|I
 
 
   sqlType:
@@ -662,6 +665,14 @@ FRFSTicketBooking:
     updateAllocatedVehicle:
       kvFunction: updateOneWithKV
       params: [vehicleNumber]
+      where:
+        and:
+          - id
+          - vehicleNumber: expectedVehicleNumber
+    # Same CAS as updateAllocatedVehicle, plus the rider no-show counter: one KV write under the booking lock.
+    releaseAllocatedVehicle:
+      kvFunction: updateOneWithKV
+      params: [vehicleNumber, sharedCabNoShows]
       where:
         and:
           - id

@@ -96,7 +96,7 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.missedPickups missedPickups,
+      Se.Set Beam.missedPickups (Kernel.Prelude.Just missedPickups),
       Se.Set Beam.movingAt movingAt,
       Se.Set Beam.offlineBoardings offlineBoardings,
       Se.Set Beam.reachedEndAt reachedEndAt,

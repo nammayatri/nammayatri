@@ -25,7 +25,7 @@ VehicleTrip:
     endedAt: Maybe UTCTime
     endReason: Maybe VehicleTripEndReason
     offlineBoardings: Int
-    missedPickups: Maybe Int
+    missedPickups: Int
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -40,6 +40,15 @@ VehicleTrip:
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripStatus>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VehicleTripEndReason>
+
+  beamType:
+    missedPickups: Maybe Int
+
+  fromTType:
+    missedPickups: Kernel.Prelude.fromMaybe 0|I
+
+  toTType:
+    missedPickups: Kernel.Prelude.Just|I
 
   sqlType:
     serviceTierType: text

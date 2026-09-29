@@ -403,7 +403,7 @@ skippedWhileFinding cfg now attempts findingSince skipped
 data Closed = Closed
   { closedCity :: Id DMOC.MerchantOperatingCity,
     fallbackJustTriggered :: Bool, -- this close crossed maxAttempts (R16)
-    heldBy :: Maybe Text -- the driver the allocation was made to (R45), from its alloc key
+    heldTrip :: Maybe Text -- the trip the allocation was made to (R45), from its alloc key
   }
 
 data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
@@ -454,7 +454,7 @@ attemptClaim cfg booking cand = do
                             shared $
                               Redis.setExp
                                 (allocKey booking.bookingId.getId)
-                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = StandTimer}
+                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = StandTimer}
                                 cfg.findingTimeoutSec
                             pure (Right now)
                           else pure (Left ClaimCasLost)
@@ -559,8 +559,11 @@ closeLocked cfg bookingId expectedPlate outcome =
       if closable expectedPlate b.status b.vehicleNumber statuses then Just <$> close b else pure Nothing
   where
     close b = do
-      QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
-      heldBy <- shared $ (>>= (.driverId)) <$> Redis.safeGet @AllocationState (allocKey bookingId.getId)
+      -- the rider no-show counter rides the same KV write that clears the plate, under this booking lock
+      case blameFor outcome of
+        BlameRider -> QFRFSTicketBooking.releaseAllocatedVehicle Nothing (Misses.noShowsAfter BlameRider b.sharedCabNoShows) b.id (Just expectedPlate)
+        _ -> QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
+      heldTrip <- shared $ (>>= (.vehicleTripId)) <$> Redis.safeGet @AllocationState (allocKey bookingId.getId)
       shared $ Redis.del (allocKey bookingId.getId)
       when (skipsPlateOnClose outcome) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [expectedPlate] cfg.findingTimeoutSec
       -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
@@ -577,7 +580,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId.getId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
-      pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered, heldBy}
+      pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered, heldTrip}
 
 -- | R16: the close that takes the attempt count over maxAttempts (not one past it).
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
@@ -596,17 +599,16 @@ eventBlame = \case
 -- | Outside every lock, after a close attempt.
 afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
 afterClose cfg bookingId plate outcome closed =
-  whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, heldBy} -> do
+  whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, heldTrip} -> do
     now <- getCurrentTime
-    mbSession <- Session.readSession plate
-    let trip = getId . (.vehicleTripId) <$> mbSession
+    trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
     Events.emit cityId . Events.withTrip trip $
       Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
     Invariants.checkBooking bookingId
     Invariants.checkCab plate
     mbBooking <- QFRFSTicketBooking.findById bookingId
     -- R18: miss / no-show counters (05 §8.4); a bump failure never fails the release.
-    withTryCatch "sharedCabMisses" (Misses.record (blameFor outcome) bookingId heldBy ((\s -> (s.driverId, s.vehicleTripId)) <$> mbSession))
+    withTryCatch "sharedCabMisses" (Misses.record (blameFor outcome) (mbBooking <&> (.riderId)) (Id <$> heldTrip))
       >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     -- R17/F7: the cab is gone; every close but the rider's own skip tells them. Once per release: only the CAS winner is here.
     forM_ (Notify.reassignReasonFor outcome) $ \reason ->

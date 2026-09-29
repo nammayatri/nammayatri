@@ -81,6 +81,18 @@ findByQuoteId quoteId = do findOneWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Typ
 findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findBySearchId searchId = do findOneWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
+releaseAllocatedVehicle ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+releaseAllocatedVehicle vehicleNumber sharedCabNoShows id expectedVehicleNumber = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.vehicleNumber vehicleNumber,
+      Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.vehicleNumber $ Se.Eq expectedVehicleNumber]]
+
 updateAllocatedVehicle ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
@@ -318,7 +330,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
-      Se.Set Beam.noShowCount noShowCount,
       Se.Set Beam.ondcOnInitReceived ondcOnInitReceived,
       Se.Set Beam.ondcOnInitReceivedAt ondcOnInitReceivedAt,
       Se.Set Beam.osBuildVersion osBuildVersion,
@@ -345,6 +356,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.seatSelectionType seatSelectionType,
       Se.Set Beam.serviceTierType serviceTierType,
+      Se.Set Beam.sharedCabNoShows (Kernel.Prelude.Just sharedCabNoShows),
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
