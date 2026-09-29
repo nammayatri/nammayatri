@@ -396,9 +396,13 @@ parseRoutesFromInMemoryServer ::
   Bool ->
   m [Route.Route]
 parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOperatingCityId isPolylineRequired = do
-  let routeIds = map (.id) routes
-  routePolylines <- if isPolylineRequired then QRoutePolylines.getByRouteIdsAndCity routeIds merchantOperatingCityId else pure []
-  let polylineMap = HM.fromList $ map (\polyline -> (polyline.routeId, polyline.polyline)) routePolylines
+  -- Prefer GIMS's encodedPolyline (route_internal); fall back to rider-db route_polylines only for routes it lacks.
+  let routeIdsWithoutPolyline = map (.id) $ filter (isNothing . (.encodedPolyline)) routes
+  routePolylines <- if isPolylineRequired then QRoutePolylines.getByRouteIdsAndCity routeIdsWithoutPolyline merchantOperatingCityId else pure []
+  let polylineMap =
+        HM.fromList $
+          map (\polyline -> (polyline.routeId, polyline.polyline)) routePolylines
+            <> [(route.id, route.encodedPolyline) | isPolylineRequired, route <- routes, isJust route.encodedPolyline]
   now <- getCurrentTime
   return $
     map
