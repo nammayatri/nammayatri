@@ -7,6 +7,7 @@ where
 -- Extra code goes here --
 
 import Control.Applicative ((<|>))
+import qualified Dashboard.Common as Common
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
 import qualified Database.Beam as B
@@ -65,6 +66,15 @@ import Storage.Queries.Ride ()
 import Storage.Queries.Vehicle ()
 import qualified Storage.Queries.Vehicle.Internal as Int
 import qualified Storage.Queries.VehicleRegistrationCertificate ()
+
+updateAcceptedPolicies :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe Common.AcceptedPolicies -> m ()
+updateAcceptedPolicies (Id personId) acceptedPolicies = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.acceptedPolicies acceptedPolicies,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
 
 getDriversByIdIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Person]
 getDriversByIdIn personIds = findAllWithKV [Se.Is BeamP.id $ Se.In $ getId <$> personIds]

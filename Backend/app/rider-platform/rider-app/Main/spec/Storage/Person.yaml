@@ -20,6 +20,7 @@ imports:
   ServiceTierType: Domain.Types.ServiceTierType
   VehicleCategory : BecknV2.OnDemand.Enums
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
+  AcceptedPolicies: Dashboard.Common
 
 Person:
   tableName: person
@@ -129,6 +130,7 @@ Person:
     paymentMode: Maybe PaymentMode
     operatorBadgeToken: Maybe Text
     clientId: Maybe Text
+    acceptedPolicies: Maybe AcceptedPolicies
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>

@@ -203,6 +203,7 @@ library
     , esqueleto
     , euler-hs
     , extra
+    , hashable
     , http-types
     , lens
     , memory

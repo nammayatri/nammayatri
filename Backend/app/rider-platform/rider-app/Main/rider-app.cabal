@@ -226,6 +226,7 @@ library
       Domain.Action.Dashboard.Notification
       Domain.Action.Dashboard.Offer
       Domain.Action.Dashboard.Payout
+      Domain.Action.Dashboard.PolicyDocument
       Domain.Action.Dashboard.Rewards
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.AddBaggage
@@ -356,6 +357,7 @@ library
       Domain.Action.UI.PersonStats
       Domain.Action.UI.PickupInstructions
       Domain.Action.UI.Places
+      Domain.Action.UI.PolicyDocument
       Domain.Action.UI.PriceBreakup
       Domain.Action.UI.Profile
       Domain.Action.UI.Quote
@@ -698,6 +700,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.PickupRoute
       Storage.CachedQueries.PlaceBasedServiceConfig
+      Storage.CachedQueries.PolicyAndComplianceDocument
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.RiderPreferences
       Storage.CachedQueries.RoutePolylines
@@ -802,6 +805,7 @@ library
       Storage.Queries.PersonPTStatsExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
+      Storage.Queries.PolicyAndComplianceDocumentExtra
       Storage.Queries.PopularLocationExtra
       Storage.Queries.PurchasedPassExtra
       Storage.Queries.PurchasedPassPaymentExtra
@@ -943,6 +947,7 @@ library
       API.Action.Dashboard.Management.Notification
       API.Action.Dashboard.Management.Offer
       API.Action.Dashboard.Management.Payout
+      API.Action.Dashboard.Management.PolicyDocument
       API.Action.Dashboard.Management.Rewards
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.SearchTry
@@ -998,6 +1003,7 @@ library
       API.Action.DashboardAuth.Management.Notification
       API.Action.DashboardAuth.Management.Offer
       API.Action.DashboardAuth.Management.Payout
+      API.Action.DashboardAuth.Management.PolicyDocument
       API.Action.DashboardAuth.Management.Rewards
       API.Action.DashboardAuth.Management.Ride
       API.Action.DashboardAuth.Management.SearchTry
@@ -1060,6 +1066,7 @@ library
       API.Action.UI.PassDetails
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
+      API.Action.UI.PolicyDocument
       API.Action.UI.PriceBreakup
       API.Action.UI.Rewards
       API.Action.UI.RidePayment
@@ -1155,6 +1162,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Notification
       API.Types.RiderPlatform.Management.Endpoints.Offer
       API.Types.RiderPlatform.Management.Endpoints.Payout
+      API.Types.RiderPlatform.Management.Endpoints.PolicyDocument
       API.Types.RiderPlatform.Management.Endpoints.Rewards
       API.Types.RiderPlatform.Management.Endpoints.Ride
       API.Types.RiderPlatform.Management.Endpoints.SearchTry
@@ -1170,6 +1178,7 @@ library
       API.Types.RiderPlatform.Management.Notification
       API.Types.RiderPlatform.Management.Offer
       API.Types.RiderPlatform.Management.Payout
+      API.Types.RiderPlatform.Management.PolicyDocument
       API.Types.RiderPlatform.Management.Rewards
       API.Types.RiderPlatform.Management.Ride
       API.Types.RiderPlatform.Management.SearchTry
@@ -1213,6 +1222,7 @@ library
       API.Types.UI.PassDetails
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
+      API.Types.UI.PolicyDocument
       API.Types.UI.PriceBreakup
       API.Types.UI.Rewards
       API.Types.UI.RidePayment
@@ -1353,6 +1363,7 @@ library
       Domain.Types.PickupInstructions
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
+      Domain.Types.PolicyAndComplianceDocument
       Domain.Types.PopularLocation
       Domain.Types.PTCircuitBreakerHistory
       Domain.Types.PurchasedPass
@@ -1527,6 +1538,7 @@ library
       Storage.Beam.PickupInstructions
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
+      Storage.Beam.PolicyAndComplianceDocument
       Storage.Beam.PopularLocation
       Storage.Beam.PTCircuitBreakerHistory
       Storage.Beam.PurchasedPass
@@ -1733,6 +1745,7 @@ library
       Storage.Queries.OrphanInstances.PersonPTStats
       Storage.Queries.OrphanInstances.PersonStats
       Storage.Queries.OrphanInstances.PlaceBasedServiceConfig
+      Storage.Queries.OrphanInstances.PolicyAndComplianceDocument
       Storage.Queries.OrphanInstances.PopularLocation
       Storage.Queries.OrphanInstances.PurchasedPass
       Storage.Queries.OrphanInstances.PurchasedPassPayment
@@ -1786,6 +1799,7 @@ library
       Storage.Queries.PickupInstructions
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
+      Storage.Queries.PolicyAndComplianceDocument
       Storage.Queries.PopularLocation
       Storage.Queries.PTCircuitBreakerHistory
       Storage.Queries.PurchasedPass

@@ -16,6 +16,7 @@ import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Notification
 import qualified API.Types.RiderPlatform.Management.Offer
 import qualified API.Types.RiderPlatform.Management.Payout
+import qualified API.Types.RiderPlatform.Management.PolicyDocument
 import qualified API.Types.RiderPlatform.Management.Rewards
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.SearchTry
@@ -43,6 +44,7 @@ data ManagementAPIs = ManagementAPIs
     notificationDSL :: API.Types.RiderPlatform.Management.Notification.NotificationAPIs,
     offerDSL :: API.Types.RiderPlatform.Management.Offer.OfferAPIs,
     payoutDSL :: API.Types.RiderPlatform.Management.Payout.PayoutAPIs,
+    policyDocumentDSL :: API.Types.RiderPlatform.Management.PolicyDocument.PolicyDocumentAPIs,
     rewardsDSL :: API.Types.RiderPlatform.Management.Rewards.RewardsAPIs,
     rideDSL :: API.Types.RiderPlatform.Management.Ride.RideAPIs,
     searchTryDSL :: API.Types.RiderPlatform.Management.SearchTry.SearchTryAPIs,
@@ -65,6 +67,7 @@ mkManagementAPIs merchantId city token = do
   let notificationDSL = API.Types.RiderPlatform.Management.Notification.mkNotificationAPIs notificationClientDSL
   let offerDSL = API.Types.RiderPlatform.Management.Offer.mkOfferAPIs offerClientDSL
   let payoutDSL = API.Types.RiderPlatform.Management.Payout.mkPayoutAPIs payoutClientDSL
+  let policyDocumentDSL = API.Types.RiderPlatform.Management.PolicyDocument.mkPolicyDocumentAPIs policyDocumentClientDSL
   let rewardsDSL = API.Types.RiderPlatform.Management.Rewards.mkRewardsAPIs rewardsClientDSL
   let rideDSL = API.Types.RiderPlatform.Management.Ride.mkRideAPIs rideClientDSL
   let searchTryDSL = API.Types.RiderPlatform.Management.SearchTry.mkSearchTryAPIs searchTryClientDSL
@@ -73,7 +76,7 @@ mkManagementAPIs merchantId city token = do
   let systemDSL = API.Types.RiderPlatform.Management.System.mkSystemAPIs systemClientDSL
   (ManagementAPIs {..})
   where
-    alertIncidentClientDSL :<|> bookingClientDSL :<|> customerClientDSL :<|> fRFSAlertsClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> offerClientDSL :<|> payoutClientDSL :<|> rewardsClientDSL :<|> rideClientDSL :<|> searchTryClientDSL :<|> sosClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
+    alertIncidentClientDSL :<|> bookingClientDSL :<|> customerClientDSL :<|> fRFSAlertsClientDSL :<|> fRFSTicketClientDSL :<|> invoiceClientDSL :<|> mediaClientDSL :<|> merchantClientDSL :<|> nammaTagClientDSL :<|> notificationClientDSL :<|> offerClientDSL :<|> payoutClientDSL :<|> policyDocumentClientDSL :<|> rewardsClientDSL :<|> rideClientDSL :<|> searchTryClientDSL :<|> sosClientDSL :<|> sosMediaClientDSL :<|> systemClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.ManagementDSLAPI) merchantId city token
 
 callManagementAPI ::
   forall m r b c.
