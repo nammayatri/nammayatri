@@ -72,7 +72,20 @@ const inbox = new Map();
 let received = 0;
 let withCode = 0;
 let rejected = 0;
+let outgoing = 0;
 let lastAt = null;
+
+/**
+ * A text the office phone SENT, not one it received. The client's forwarder
+ * reads the whole SMS database and posts both, with `direction` telling them
+ * apart and `sender` holding the OTHER party for an outgoing one (its first
+ * real sample, 2026-09-29: `direction: 'outgoing'`, `sender` = the number it
+ * was sent to). Believing one would let anything the office phone sends sign
+ * in the person it was sent to -- so only what came IN is proof. A message
+ * with no `direction` at all is taken as received: that is what a forwarder
+ * that only reads the inbox sends.
+ */
+const OUTGOING = /^(outgoing|outbox|sent|out)$/i;
 
 function prune(now) {
   for (const [from, m] of inbox) if (now - m.at > KEEP_MS) inbox.delete(from);
@@ -138,6 +151,11 @@ function deliver(raw, headers) {
   let codes = 0;
   for (const m of list) {
     if (m == null || typeof m !== 'object') continue;
+    if (OUTGOING.test(String(m.direction ?? m.type ?? ''))) {
+      outgoing += 1;
+      console.log('[sms-inbox] outgoing message ignored');
+      continue;
+    }
     const from = international(pick(m, ['from', 'sender', 'address', 'number', 'phone']));
     if (from === '') continue;
     const text = pick(m, ['body', 'text', 'message', 'content']);
@@ -189,6 +207,7 @@ function health() {
     received,
     withCode,
     rejected,
+    outgoing,
     waiting: inbox.size,
     lastAt: lastAt && new Date(lastAt).toISOString(),
   };

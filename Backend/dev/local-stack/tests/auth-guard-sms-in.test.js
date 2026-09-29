@@ -109,9 +109,21 @@ const forward = (from, body, token = TOKEN) =>
   await forward('41234567', 'MOVIN 000000');
   check('a wrong code from the right number confirms nothing', (await status()) === false);
 
+  // The client's forwarder posts what the office phone SENT too, with the
+  // recipient in `sender` -- its real sample, 2026-09-29. Never a proof.
+  await call('POST', '/sms/inbox', { source: 'chatty-sms', count: 1, messages: [
+    { id: 13, uid: 'x', body: `Movin ${code}`, direction: 'outgoing', timestamp: 1790688560,
+      status: null, subject: null, thread: '+22241234567', sender: '+22241234567' },
+  ] }, { authorization: `Bearer ${TOKEN}` });
+  check('a text the office phone SENT to him confirms nothing', (await status()) === false);
+
   // The phone writes a local sender the way the network gave it.
-  await forward('41234567', `movin ${code}`);
-  check('right number (local form), right code -> confirmed', (await status()) === true);
+  // The client's exact shape, received this time.
+  await call('POST', '/sms/inbox', { source: 'chatty-sms', count: 1, messages: [
+    { id: 14, uid: 'y', body: `Movin ${code}`, direction: 'incoming', timestamp: 1790688600,
+      status: null, subject: null, thread: '41234567', sender: '41234567' },
+  ] }, { authorization: `Bearer ${TOKEN}` });
+  check("the client's real shape, incoming, local sender -> confirmed", (await status()) === true);
 
   // A second text a moment later must not bury the code.
   await forward('41234567', 'Merci !');
@@ -133,6 +145,7 @@ const forward = (from, body, token = TOKEN) =>
   const h = await call('GET', '/healthz');
   check('healthz lists the countries with a SIM, never the number',
     JSON.stringify(h.json.smsInbox.countries) === '["+222"]' && !h.text.includes('33000000'), h.json.smsInbox);
+  check('healthz counts the outgoing one it ignored', h.json.smsInbox.outgoing === 1, h.json.smsInbox);
 
   guard.kill();
   fake.close();

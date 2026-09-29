@@ -3732,8 +3732,17 @@ The WhatsApp flow, route for route:
 **Switching it on is a setting, not a build:** `SMS_INBOX_NUMBERS` in
 docker-compose.yml (`+222=+222XXXXXXXX,+213=+213XXXXXXXXX`), then `docker
 compose up -d --no-deps auth-guard`. The app (since 2026-09-29) shows the
-button in any country listed there and hides it everywhere else. Empty today.
-`tests/auth-guard-sms-in.test.js`.
+button in any country listed there and hides it everywhere else.
+**Set 2026-09-29: Algeria only**, `+213=+213783079161` — the client's office
+phone. No Mauritanian SIM yet (a `+222` text to an Algerian SIM would be
+international), so Mauritania keeps Moorsyl and WhatsApp.
+
+**Only what the office phone RECEIVED counts.** The client's forwarder posts
+its sent messages too — its first real sample was `direction: 'outgoing'`,
+with `sender` holding the number it was sent TO — so `direction` outgoing /
+sent / outbox is dropped (`smsInbox.outgoing` on `/healthz` counts them).
+Believing one would sign in whoever the office phone texts.
+`tests/auth-guard-sms-in.test.js` uses his exact message shape.
 
 The token proves the POST came from our phone; it does **not** prove the
 sender. An SMS sender can be forged on some international routes — the

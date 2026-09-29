@@ -478,7 +478,9 @@ services:
       # each country texts, `+222=+222XXXXXXXX,+213=+213XXXXXXXXX`. Empty = no
       # such sign-in anywhere, and the app hides its button. Filling it in is
       # a recreate, not a build. See auth-guard/sms-inbox.js.
-      SMS_INBOX_NUMBERS: ""
+      # 2026-09-29: Algeria's SIM, the office phone (the client's number). No
+      # Mauritanian SIM yet -- a +222 text to it would be international.
+      SMS_INBOX_NUMBERS: "+213=+213783079161"
       SMS_MODE: "verify"
       VERIFY_SEND_URL: "https://api.moorsyl.com/api/verify/send"
       VERIFY_CHECK_URL: "https://api.moorsyl.com/api/verify/check"
