@@ -1,0 +1,17 @@
+imports:
+  Text: Data.Text
+
+module: BlackListDriver
+types:
+  BlackListDriverReq:
+    blackListed: Bool
+
+apis:
+  - POST:
+      endpoint: /driver/blackList/{driverId}
+      params:
+        driverId: Text
+      request:
+        type: BlackListDriverReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

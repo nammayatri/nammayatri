@@ -286,6 +286,7 @@ library
       Domain.Action.UI.AssetReleaseInternal
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
+      Domain.Action.UI.BlackListDriver
       Domain.Action.UI.Booking
       Domain.Action.UI.BookingDeposit
       Domain.Action.UI.Cac
@@ -1023,6 +1024,7 @@ library
       API.Action.UI.AssetReleaseInternal
       API.Action.UI.AttractionRecommend
       API.Action.UI.BBPS
+      API.Action.UI.BlackListDriver
       API.Action.UI.BookingDeposit
       API.Action.UI.Cac
       API.Action.UI.CancellationChargesWaiveOff
@@ -1179,6 +1181,7 @@ library
       API.Types.UI.AssetReleaseInternal
       API.Types.UI.AttractionRecommend
       API.Types.UI.BBPS
+      API.Types.UI.BlackListDriver
       API.Types.UI.BookingDeposit
       API.Types.UI.CancellationChargesWaiveOff
       API.Types.UI.CancellationReasons

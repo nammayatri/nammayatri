@@ -307,6 +307,46 @@ removeFavouriteDriver apiKey internalUrl merchantId phoneNumber countryCode driv
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (removeFavouriteDriversClient merchantId driverId (Just apiKey) (GetFavouriteDriverInfoReq phoneNumber countryCode)) "RemoveFavouriteDriver" removeFavouriteDriverApi
 
+data BlackListDriverReq = BlackListDriverReq
+  { customerMobileNumber :: Text,
+    customerMobileCountryCode :: Text,
+    blackListed :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type BlackListDriverAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "driverId" Text
+    :> "blackListDriver"
+    :> Header "token" Text
+    :> ReqBody '[JSON] BlackListDriverReq
+    :> Post '[JSON] APISuccess
+
+blackListDriverClient :: Text -> Text -> Maybe Text -> BlackListDriverReq -> EulerClient APISuccess
+blackListDriverClient = client blackListDriverApi
+
+blackListDriverApi :: Proxy BlackListDriverAPI
+blackListDriverApi = Proxy
+
+blackListDriver ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  Bool ->
+  m APISuccess
+blackListDriver apiKey internalUrl merchantId phoneNumber countryCode driverId blackListed = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (blackListDriverClient merchantId driverId (Just apiKey) (BlackListDriverReq phoneNumber countryCode blackListed)) "BlackListDriver" blackListDriverApi
+
 type CustomerCancellationDuesSyncAPI =
   "internal"
     :> Capture "merchantId" Text
