@@ -6,7 +6,8 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COLLECTION="$HERE/01-FleetRegistrationGate.json"
+# Collection moved to integration-tests/DbDependent/ (it seeds/reads Postgres directly); env stays in Local/.
+COLLECTION="$HERE/../../DbDependent/FleetRegistrationGateFlow/01-FleetRegistrationGate.json"
 ENV_FILE="$HERE/Local/Local_NY_Bangalore.postman_environment.json"
 ENV_OUT="/tmp/freg-env-out.json"
 

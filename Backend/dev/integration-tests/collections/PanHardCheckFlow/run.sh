@@ -31,7 +31,8 @@ sed -e "s/\${MOCK_SERVER_PORT:8080}/${MOCK_SERVER_PORT}/g" \
     -e "s/\${DRIVER_APP_PORT:8016}/${DRIVER_APP_PORT}/g" \
     "$ENV_FILE" > "$RESOLVED_ENV"
 
-newman run "$SCRIPT_DIR/01-PanHardCheck.json" \
+# Collection moved to integration-tests/DbDependent/ (it reads/writes Postgres directly); env stays in Local/.
+newman run "$SCRIPT_DIR/../../DbDependent/PanHardCheckFlow/01-PanHardCheck.json" \
   -e "$RESOLVED_ENV" \
   --bail \
   --timeout-request 60000 \
