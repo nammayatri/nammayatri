@@ -1195,10 +1195,28 @@ getLegRouteInfo mbFallback journeyRouteDetailsWithTrackingStatuses integratedBPP
       fromStationCode' <- resolveRequiredField "FromStationCode" journeyRouteDetail.fromStopCode (mbFallback >>= fallbackFromStationCode)
       toStationCode' <- resolveRequiredField "ToStationCode" journeyRouteDetail.toStopCode (mbFallback >>= fallbackToStationCode)
       routeCode' <- resolveRequiredField "RouteCode" (journeyRouteDetail.routeGtfsId <&> gtfsIdtoDomainCode) (mbFallback >>= fallbackRouteCode)
-      mbFromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig
-      when (isNothing mbFromStation) $ logError $ "From Station not found in getLegRouteInfo: " <> show fromStationCode'
-      mbToStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig
-      when (isNothing mbToStation) $ logError $ "To Station not found in getLegRouteInfo: " <> show toStationCode'
+      -- A stop id captured on the booking can stop resolving later (merged away by a stop
+      -- cleanup, with no alias yet) - GIMS then 404s instead of answering Nothing. Uncaught,
+      -- that exception used to blow past this function's own Maybe-based fallback (below) and
+      -- take the whole journey down with it (buildJourneyApiEntity's outer withTryCatch would
+      -- drop it from My Rides entirely). Catching it here restores the fallback this function
+      -- already has: mbFallback's booked name/point via buildStationAPI.
+      mbFromStation <-
+        withTryCatch "getStationByGtfsIdAndStopCode:from:getLegRouteInfo" (OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig) >>= \case
+          Left err -> do
+            logError $ "From Station lookup failed in getLegRouteInfo for " <> show fromStationCode' <> ", falling back to the booked stop: " <> show err
+            pure Nothing
+          Right mbStation -> do
+            when (isNothing mbStation) $ logError $ "From Station not found in getLegRouteInfo: " <> show fromStationCode'
+            pure mbStation
+      mbToStation <-
+        withTryCatch "getStationByGtfsIdAndStopCode:to:getLegRouteInfo" (OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig) >>= \case
+          Left err -> do
+            logError $ "To Station lookup failed in getLegRouteInfo for " <> show toStationCode' <> ", falling back to the booked stop: " <> show err
+            pure Nothing
+          Right mbStation -> do
+            when (isNothing mbStation) $ logError $ "To Station not found in getLegRouteInfo: " <> show toStationCode'
+            pure mbStation
       mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode'
       when (isNothing mbRoute) $ logError $ "Route not found in getLegRouteInfo: " <> show routeCode'
       let originStop = buildStationAPI mbFromStation fromStationCode' (mbFallback >>= fallbackFromStationName) (mbFallback >>= fallbackFromStationAddress) (mbFallback >>= fallbackFromStationPoint)
