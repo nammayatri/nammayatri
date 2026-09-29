@@ -225,9 +225,12 @@ another service first. See the driver API section of the local-stack README.
 **Two countries at once since 2026-09-13.** The pilot moved Algeria →
 Mauritania on 2026-09-03 by *replacing* one with the other; the client then
 chose to run both. Mauritania is live; Algeria is built, priced and routed,
-and since 2026-09-27 **open to sign-in by WhatsApp only** — it has no SMS
-provider, so the guard refuses a `+213` SMS start (`OPEN_COUNTRIES` /
-`SMS_COUNTRIES` in `docker-compose.yml`). The whole design — one rider merchant, one driver merchant per
+and since 2026-09-27 **open to sign-in by WhatsApp**, and since 2026-09-29
+also by an SMS the person **sends** to the office SIM (+213 783 07 91 61,
+`SMS_INBOX_NUMBERS`; `auth-guard/sms-inbox.js`). We never text Algeria — no SMS
+provider — so the guard refuses a `+213` SMS start (`OPEN_COUNTRIES` /
+`SMS_COUNTRIES` in `docker-compose.yml`). The bot alerts when the office phone
+goes silent for 15 min. The whole design — one rider merchant, one driver merchant per
 country, and the search-lock race that design exposed — is in the local-stack
 README, section *Two countries*. Read it before touching merchants, tariffs,
 the registry or the map.

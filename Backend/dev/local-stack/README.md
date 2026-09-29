@@ -3269,8 +3269,10 @@ A `+222` number, eight digits, searching Tevragh Zeina → Ksar:
 
 The client reversed the 3 September *replacement*: the stack now serves **both**
 countries at once. Mauritania is live; Algeria is built, priced and routed, and
-**open to sign-in by WhatsApp only since 2026-09-27** — it has no SMS provider
-(see *Sign-in: accepted by the backend, gated by the guard*).
+**open to sign-in since 2026-09-27** — by WhatsApp, and since 2026-09-29 also
+by an SMS the person SENDS to the office SIM. We never text Algeria: it has no
+SMS provider (see *Sign-in: accepted by the backend, gated by the guard*, and
+*The SMS inbox and sign-in by an SMS he sends*).
 
 ### The design: one merchant per country — on the driver side only
 
@@ -3356,7 +3358,9 @@ Both are in `docker-compose.yml` under `auth-guard`, and a change is
 `docker compose up -d --no-deps --force-recreate auth-guard` — no build, no
 APK. A country missing from `OPEN_COUNTRIES` answers `403 COUNTRY_NOT_OPEN`.
 
-**Algeria opened on 2026-09-27, by WhatsApp only.** Moorsyl is Mauritanian, so
+**Algeria opened on 2026-09-27, by WhatsApp** — and since 2026-09-29 also by
+an SMS he sends us (below, *The SMS inbox*), which is not an SMS start and is
+not refused here. Moorsyl is Mauritanian, so
 a `+213` SMS start answers `403 SMS_NOT_AVAILABLE` *before* the backend is
 asked — no person row, no send, nothing off the SMS budget — and the app
 (built after that date) says « Appuyez sur « Continuer avec WhatsApp » ». A
@@ -3689,8 +3693,8 @@ Proved live the same day through the public edge with a delivery signed by
 the real app secret: verify before the message → 400; after → 200 with a
 token. `tests/auth-guard-whatsapp.test.js` covers unsigned, forged,
 wrong-number and wrong-code deliveries. A closed country's WhatsApp start is
-refused like an SMS one; **Algeria is open by WhatsApp only** since the same
-evening (`SMS_COUNTRIES`, above).
+refused like an SMS one; **Algeria is open by WhatsApp** since the same
+evening (`SMS_COUNTRIES`, above), and by an SMS he sends us since 2026-09-29.
 
 Secrets: `/opt/ny/secrets/whatsapp.env` (root, 600) holds the verify token,
 the app secret, the access token, the phone number id and the number.
