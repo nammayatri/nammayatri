@@ -123,12 +123,19 @@ function deliver(raw, headers) {
     if (m == null || typeof m !== 'object') continue;
     const from = international(pick(m, ['from', 'sender', 'address', 'number', 'phone']));
     if (from === '') continue;
-    const code = CODE.exec(pick(m, ['body', 'text', 'message', 'content']))?.[1] ?? null;
+    const text = pick(m, ['body', 'text', 'message', 'content']);
+    const code = CODE.exec(text)?.[1] ?? null;
     inbox.set(from, { code, at: now });
     accepted += 1;
     received += 1;
     if (code) { codes += 1; withCode += 1; }
-    console.log(`[sms-inbox] message from ${mask(from)}${code ? ' (with a sign-in code)' : ''}`);
+    // Field NAMES only when no text was found -- the forwarder is not ours,
+    // and its first real messages (2026-09-29) arrived with no code; this
+    // tells a naming mismatch from a message that simply had none.
+    const why = code ? ' (with a sign-in code)'
+      : text ? ' (text, no code)'
+      : ` (no text; fields: ${Object.keys(m).join(',').slice(0, 120)})`;
+    console.log(`[sms-inbox] message from ${mask(from)}${why}`);
   }
   if (list.length === 0) console.log('[sms-inbox] heartbeat');
   return [200, { ok: true, accepted, withCode: codes }];
