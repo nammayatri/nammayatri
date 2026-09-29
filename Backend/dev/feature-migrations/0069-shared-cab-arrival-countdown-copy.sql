@@ -3,18 +3,21 @@
 -- copy is reworded to also read right for the R17 "missed the cab" timeout case (0067 wrote it for
 -- SEAT_LOST only). Idempotent: safe to re-run.
 
--- Existing rows from 0067 (this is an UPDATE, not an INSERT -- those rows already exist).
+-- Existing rows from 0067 (this is an UPDATE, not an INSERT -- those rows already exist). ENGLISH only, like 0067:
+-- other languages' copy is theirs to sign off. No city scoping: 0067 seeded exactly the shared-cab cities.
 UPDATE atlas_app.merchant_push_notification
 SET title = 'Your cab is here',
     body = 'Cab {#vehicleLast4#} is at {#boardStop#}. Board within {#boardDeadlineSec#}s and enter the code inside.',
     updated_at = CURRENT_TIMESTAMP
-WHERE key = 'SHARED_CAB_ARRIVING';
+WHERE key = 'SHARED_CAB_ARRIVING'
+  AND language = 'ENGLISH';
 
 UPDATE atlas_app.merchant_push_notification
 SET title = 'You missed your cab',
     body = 'We are finding you another cab to {#dropStop#}.',
     updated_at = CURRENT_TIMESTAMP
-WHERE key = 'SHARED_CAB_REASSIGNED';
+WHERE key = 'SHARED_CAB_REASSIGNED'
+  AND language = 'ENGLISH';
 
 -- Cities onboarded after 0067 ran (same WHERE EXISTS / NOT EXISTS guard as 0067).
 INSERT INTO atlas_app.merchant_push_notification (
