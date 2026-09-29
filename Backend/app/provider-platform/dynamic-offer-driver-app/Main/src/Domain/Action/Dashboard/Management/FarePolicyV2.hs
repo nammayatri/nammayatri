@@ -388,7 +388,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
       policy <- fromApiPolicy (NewPolicyCtx tempId merchantOpCity.currency merchantOpCity.distanceUnit merchant.id merchantOpCity.id) Nothing now apiPolicy
       pure (policy, Nothing, serviceTier, tripCategory)
     (Nothing, Nothing) -> throwError (InvalidRequest "either farePolicyId or an inline policy is required")
-  let emptyCongestion = FarePolicyD.CongestionChargeDetails Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  let emptyCongestion = FarePolicyD.CongestionChargeDetails Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
       fullFarePolicy = FarePolicyD.farePolicyToFullFarePolicy merchant.id serviceTier tripCategory mbCancellation emptyCongestion Nothing domainPolicy Nothing
   trips <- forM req.sampleTrips $ \trip -> do
     let params =

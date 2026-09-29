@@ -1,0 +1,21 @@
+CREATE TABLE atlas_driver_offer_bpp.fare_adjustment ();
+
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN areas text ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN base_fare_scale_pct double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN congestion_scale_pct double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN created_by text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN mode text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN per_km_rate_scale_pct double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN per_min_rate_scale_pct double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN reason text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN rollout_percentage integer ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN valid_from timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN valid_till timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN vehicle_service_tiers text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.fare_adjustment ADD PRIMARY KEY ( id);

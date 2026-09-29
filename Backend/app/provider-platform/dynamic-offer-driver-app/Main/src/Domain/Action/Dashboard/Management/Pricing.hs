@@ -374,7 +374,9 @@ mkEstimateExplain estimate =
       smartTipSuggestion = estimate.smartTipSuggestion,
       smartTipReason = estimate.smartTipReason,
       shadowSurgeMultiplier = estimate.shadowSurgeMultiplier,
-      shadowSurgeVersion = estimate.shadowSurgeVersion
+      shadowSurgeVersion = estimate.shadowSurgeVersion,
+      fareAdjustmentId = estimate.fareAdjustmentId,
+      fareAdjustmentArm = estimate.fareAdjustmentArm
     }
 
 deriveEngine :: Maybe Text -> Text
@@ -382,6 +384,7 @@ deriveEngine = \case
   Nothing -> "NoDecision"
   Just v
     | "SurgeConfig" `T.isPrefixOf` v -> "SurgeConfig"
+    | "FareAdjustment" `T.isPrefixOf` v -> "FareAdjustment"
     | v == "Static" -> "Static"
     | otherwise -> "JsonLogic"
 

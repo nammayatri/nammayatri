@@ -195,3 +195,9 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN shadow_surge_multiplier t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN negative_fare_suggestion double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN fare_adjustment_id text ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN fare_adjustment_arm text ;

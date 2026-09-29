@@ -813,9 +813,14 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               else (recalcDistance, finalDuration)
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
-      -- Recompute congestion charge at end ride if config enabled
+      -- Recompute congestion charge at end ride if config enabled. A ride whose
+      -- congestion was REPLACED by a FareAdjustment (dpVersion "FareAdjustment:*")
+      -- must keep it: the surge/json-logic recompute never ran at search time for
+      -- that ride, so re-running it here would overwrite the adjusted multiplier
+      -- with an outcome from an engine the ride was never priced by.
+      let congestionPricedByAdjustment = maybe False ("FareAdjustment" `Text.isPrefixOf`) farePolicy.dpVersion
       (farePolicyWithCongestion, endRideCongestionCharge) <-
-        if recalcDistance <= 0
+        if recalcDistance <= 0 && not congestionPricedByAdjustment
           then do
             logInfo $ "Zero chargeable distance, skipping congestion charge for ride: " <> ride.id.getId
             return (farePolicy, Just 0)

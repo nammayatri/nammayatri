@@ -52,6 +52,8 @@ Estimate:
       congestionMultiplier : Maybe Centesimal
       shadowSurgeMultiplier : Maybe Centesimal
       shadowSurgeVersion : Maybe Int
+      fareAdjustmentId : Maybe Text
+      fareAdjustmentArm : Maybe Text
       distanceUnit: DistanceUnit
       businessDiscount: Maybe HighPrecMoney
       personalDiscount: Maybe HighPrecMoney

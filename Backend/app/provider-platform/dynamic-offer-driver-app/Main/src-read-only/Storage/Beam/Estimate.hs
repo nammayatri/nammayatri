@@ -30,6 +30,8 @@ data EstimateT f = EstimateT
     eligibleForUpgrade :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    fareAdjustmentArm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fareAdjustmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fareParamsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     farePolicyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

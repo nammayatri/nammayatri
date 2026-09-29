@@ -260,6 +260,7 @@ library
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.PlanManagement
       Domain.Action.Dashboard.Management.Pricing
+      Domain.Action.Dashboard.Management.PricingAdjustment
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.ScheduledBooking
@@ -668,6 +669,7 @@ library
       SharedLogic.External.LocationTrackingService.API.StartRide
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
+      SharedLogic.FareAdjustment
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
@@ -824,6 +826,7 @@ library
       Storage.CachedQueries.DriverBlockReason
       Storage.CachedQueries.DriverReferral
       Storage.CachedQueries.Exophone
+      Storage.CachedQueries.FareAdjustment
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
@@ -1190,6 +1193,7 @@ library
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.PlanManagement
       API.Action.Dashboard.Management.Pricing
+      API.Action.Dashboard.Management.PricingAdjustment
       API.Action.Dashboard.Management.Revenue
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.ScheduledBooking
@@ -1260,6 +1264,7 @@ library
       API.Action.DashboardAuth.Management.Payout
       API.Action.DashboardAuth.Management.PlanManagement
       API.Action.DashboardAuth.Management.Pricing
+      API.Action.DashboardAuth.Management.PricingAdjustment
       API.Action.DashboardAuth.Management.Revenue
       API.Action.DashboardAuth.Management.Ride
       API.Action.DashboardAuth.Management.ScheduledBooking
@@ -1422,6 +1427,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Payout
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
       API.Types.ProviderPlatform.Management.Endpoints.Pricing
+      API.Types.ProviderPlatform.Management.Endpoints.PricingAdjustment
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
@@ -1448,6 +1454,7 @@ library
       API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.PlanManagement
       API.Types.ProviderPlatform.Management.Pricing
+      API.Types.ProviderPlatform.Management.PricingAdjustment
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.ScheduledBooking
@@ -1585,6 +1592,7 @@ library
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.Faq
+      Domain.Types.FareAdjustment
       Domain.Types.FareAlertSubscription
       Domain.Types.FarePolicyChangeRequest
       Domain.Types.FareProduct
@@ -1779,6 +1787,7 @@ library
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.Faq
+      Storage.Beam.FareAdjustment
       Storage.Beam.FareAlertSubscription
       Storage.Beam.FarePolicyChangeRequest
       Storage.Beam.FareProduct
@@ -1978,6 +1987,7 @@ library
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.Faq
+      Storage.Queries.FareAdjustment
       Storage.Queries.FareAlertSubscription
       Storage.Queries.FarePolicyChangeRequest
       Storage.Queries.FareProduct

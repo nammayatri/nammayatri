@@ -609,7 +609,11 @@ calculateFareParametersHandler params = do
         fp.congestionChargePerMin >>= \congestionChargePerMin ->
           let duration = params.estimatedRideDuration <|> params.actualRideDuration
            in duration >>= \dur -> Just $ HighPrecMoney (realToFrac (fromIntegral dur / 60 * congestionChargePerMin))
-      congestionChargeResult = congestionChargeByPerMin <|> congestionChargeByMultiplier
+      -- both components apply when both are set (a SurgeConfig row may output a
+      -- multiplier AND a per-minute charge); historically per-min silently won
+      congestionChargeResult = case (congestionChargeByPerMin, congestionChargeByMultiplier) of
+        (Just perMin, Just byMultiplier) -> Just (perMin + byMultiplier)
+        (perMin, byMultiplier) -> perMin <|> byMultiplier
       congestionChargeResultWithAddition = fromMaybe 0.0 congestionChargeResult + fp.additionalCongestionCharge
       finalCongestionCharge = capComponent CongestionChargeComponent $ fromMaybe 0.0 (params.estimatedCongestionCharge <|> Just congestionChargeResultWithAddition)
       insuranceChargeResult = capComponentMb InsuranceChargeComponent $ countInsuranceChargeForDistance fp.distanceUnit params.actualDistance fp.perDistanceUnitInsuranceCharge

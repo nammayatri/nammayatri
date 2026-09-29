@@ -242,7 +242,9 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           mbActualQARFromLocGeohash = Nothing,
           mbActualQARCity = Nothing,
           shadowSurgeMultiplier = Nothing,
-          shadowSurgeVersion = Nothing
+          shadowSurgeVersion = Nothing,
+          fareAdjustmentId = Nothing,
+          fareAdjustmentArm = Nothing
         }
     computePerKmFromPolicy fp farePolicy = do
       let fullFarePolicy =

@@ -57,6 +57,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.DynamicPricing
+import qualified SharedLogic.FareAdjustment as SFA
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as FareProduct
 import qualified SharedLogic.Merchant as SMerchant
@@ -301,14 +302,28 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
   now <- getCurrentTime
   let _bookingStartTime = fromMaybe now mbBookingStartTime
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
+  -- fare adjustments (dev/docs/fare-adjustments-plan.md): the arm was decided
+  -- and pinned at search time (Beckn.Search); here the pin is replayed against
+  -- THIS fare product's scope. Later evaluations of the same transaction find
+  -- the same pin, so activation/abort only ever affect new searches.
+  pinnedAdjustments <- SFA.resolvePinnedFareAdjustments (txnId >>= surgePricingContextId)
+  mbFareAdjustment <- SFA.resolveMatchingAdjustment fareProduct.merchantOperatingCityId pinnedAdjustments fareProduct.vehicleServiceTier fareProduct.tripCategory fareProduct.area
+  -- a treatment adjustment that targets congestion REPLACES the surge/static
+  -- outcome (settled decision), so the congestion model must not run at all;
+  -- shadow surge evaluation is skipped with it for the affected traffic
+  let adjustmentReplacesCongestion = case mbFareAdjustment of
+        Just (adjustment, SFA.Treatment) -> SFA.adjustmentTargetsCongestion adjustment
+        _ -> False
   congestionChargeStartTime <- getCurrentTime
   congestionChargeMultiplierFromModel <-
-    case fareProduct.tripCategory of
-      DTC.OneWay v | v /= MeterRide -> do
-        maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
-      DTC.CrossCity v _ | v /= MeterRide -> do
-        maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
-      _ -> return Nothing
+    if adjustmentReplacesCongestion
+      then pure Nothing
+      else case fareProduct.tripCategory of
+        DTC.OneWay v | v /= MeterRide -> do
+          maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
+        DTC.CrossCity v _ | v /= MeterRide -> do
+          maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
+        _ -> return Nothing
   congestionChargeEndTime <- getCurrentTime
   let congestionChargeDuration = diffUTCTime congestionChargeEndTime congestionChargeStartTime
   logInfo $ "getFullFarePolicy: getCongestionChargeMultiplierFromModel took " <> show congestionChargeDuration
@@ -337,7 +352,10 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           Nothing -> pure (Nothing, farePolicy'.congestionChargeMultiplier, Just "Static", Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       let farePolicy = updateCongestionChargeMultiplier farePolicy' updatedCongestionChargeMultiplier mbDriverExtraFeeBounds
       logDebug $ "farePolicy after updating driverExtraFeeBounds: " <> show farePolicy <> " and mbDriverExtraFeeBounds: " <> show mbDriverExtraFeeBounds
-      let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity (congestionChargeMultiplierFromModel >>= (.shadowSurgeMultiplier)) (congestionChargeMultiplierFromModel >>= (.shadowSurgeVersion))
+      -- the matched adjustment's identity + arm ride in via CongestionChargeDetails
+      -- (like the shadow-surge fields), so farePolicyToFullFarePolicy carries them
+      -- onto the policy and buildEstimate persists them for arm-vs-arm comparison
+      let congestionChargeDetails = FarePolicyD.CongestionChargeDetails version supplyDemandRatioToLoc supplyDemandRatioFromLoc updatedCongestionChargePerMin smartTipSuggestion smartTipReason mbActualQARFromLocGeohash mbActualQARCity (congestionChargeMultiplierFromModel >>= (.shadowSurgeMultiplier)) (congestionChargeMultiplierFromModel >>= (.shadowSurgeVersion)) ((\(adjustment, _) -> adjustment.id.getId) <$> mbFareAdjustment) ((\(_, arm) -> SFA.armText arm) <$> mbFareAdjustment)
       (mbFareSettlementType, mbParkingFeeExemptionEnabled) <- getSpecialZoneFareFlags mbSpecialZoneId
       -- Driver cancellation block needs a double opt-in: the service tier enables it,
       -- and the fare policy can explicitly opt out with Just False for finer scopes.
@@ -345,7 +363,13 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
             if (mbVehicleServiceTierItem >>= (.driverCancellationNotAllowed)) == Just True && farePolicy.driverCancellationNotAllowed /= Just False
               then Just True
               else Nothing
-      let fullFarePolicy = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed, FarePolicyD.disableDownwardRecompute = fareProduct.disableDownwardRecompute}
+      let fullFarePolicyBeforeAdjustment = (FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleServiceTier fareProduct.tripCategory cancellationFarePolicy congestionChargeDetails mbcongestionChargeData farePolicy fareProduct.disableRecompute) {FarePolicyD.mbArea = Just fareProduct.area, FarePolicyD.fareSettlementType = mbFareSettlementType, FarePolicyD.parkingFeeExemptionEnabled = mbParkingFeeExemptionEnabled, FarePolicyD.driverCancellationNotAllowed = resolvedDriverCancellationNotAllowed, FarePolicyD.disableDownwardRecompute = fareProduct.disableDownwardRecompute}
+      -- overlay the pinned fare adjustment: treatment scales the progressive
+      -- fields (and congestion when targeted); both arms stamp id + arm so the
+      -- estimate stream carries the experiment's control population too. The
+      -- scaled policy is what gets cached per estimate/quote id downstream, so
+      -- end-ride recompute replays these scales without re-deciding anything.
+      fullFarePolicy <- SFA.applyFareAdjustmentToPolicy mbFareAdjustment fullFarePolicyBeforeAdjustment
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do
           if vehicleServiceTierItem.vehicleCategory == Just DVC.CAR && isJust mbBaseVaraintCarPrice && not (fromMaybe True vehicleServiceTierItem.baseVehicleServiceTier)

@@ -22,6 +22,6 @@ data FareAlertSubscription = FareAlertSubscription
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data FareAlertType = AREA_VEHICLES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data FareAlertType = AREA_VEHICLES | ADJUSTMENTS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FareAlertType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FareAlertType)

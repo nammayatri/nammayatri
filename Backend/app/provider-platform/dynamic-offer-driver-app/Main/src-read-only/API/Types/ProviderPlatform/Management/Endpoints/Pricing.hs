@@ -43,7 +43,9 @@ data PricingEstimateExplainRes = PricingEstimateExplainRes
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     shadowSurgeMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
-    shadowSurgeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    shadowSurgeVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    fareAdjustmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fareAdjustmentArm :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -289,7 +289,9 @@ _:
               echo -e "\033[32mUsing local Namma-DSL path, skipping update check"
             else
               latest_commit_hash=$(curl -s "https://api.github.com/repos/nammayatri/namma-dsl/commits/main" | jq -r '.sha' || true)
-              if [[ -z $latest_commit_hash ]];
+              # a rate-limited/failed API response has no .sha, so jq -r prints the
+              # LITERAL string "null" — treat it like a failed check, not a mismatch
+              if [[ -z $latest_commit_hash || "$latest_commit_hash" == "null" ]];
               then
                 echo -e "\033[33mNot able to get status of Namma-DSL"
               else

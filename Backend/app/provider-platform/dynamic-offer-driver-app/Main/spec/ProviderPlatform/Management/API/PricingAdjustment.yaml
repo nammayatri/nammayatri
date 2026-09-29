@@ -1,0 +1,145 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+  Area: Lib.Types.SpecialLocation
+  ServiceTierType: Dashboard.Common
+  FareAdjustment: Dashboard.Common
+
+module: PricingAdjustment
+
+# Fare adjustments (dev/docs/fare-adjustments-plan.md): scale-only overlays on
+# the resolved fare policy. EXPERIMENT = rolloutPercentage of riders
+# (deterministic salted phone hash, arm pinned per transaction, both arms
+# stamped on estimates); SPIKE = 100% of scope between validFrom/validTill,
+# auto-expiring at evaluation time. OneWay + Progressive policies only; scales
+# hard-capped to +-50%; at most one non-terminal adjustment may intersect a
+# (tiers x areas) slice. Separate module from Pricing because the status enums
+# share constructor names (DRAFT/ACTIVE).
+apis:
+  - GET: # all adjustments of the city, newest first; elapsed ACTIVE windows read as EXPIRED
+      endpoint: /list
+      auth: ApiAuthV2
+      response:
+        type: PricingAdjustmentListRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - POST: # create a DRAFT adjustment; caps + scope coverage validated here AND at activation
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: PricingAdjustmentReq
+      response:
+        type: PricingAdjustmentRes
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - POST: # edit in place; DRAFT only
+      endpoint: /{adjustmentId}/update
+      auth: ApiAuthV2
+      params:
+        adjustmentId: Id FareAdjustment
+      request:
+        type: PricingAdjustmentReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - POST: # DRAFT -> ACTIVE (overlap-checked) / DRAFT|ACTIVE -> ENDED; affects NEW searches only
+      endpoint: /{adjustmentId}/status
+      auth: ApiAuthV2
+      params:
+        adjustmentId: Id FareAdjustment
+      request:
+        type: PricingAdjustmentStatusReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.dynamic_logic.write
+  - POST: # before/after headline numbers of the tier's Default-area OneWay progressive policy under the given scales
+      endpoint: /preview
+      auth: ApiAuthV2
+      request:
+        type: PricingAdjustmentPreviewReq
+      response:
+        type: PricingAdjustmentPreviewRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+  - GET: # arm-vs-arm readout over the adjustment's live window (estimate stream)
+      endpoint: /{adjustmentId}/results
+      auth: ApiAuthV2
+      params:
+        adjustmentId: Id FareAdjustment
+      response:
+        type: PricingAdjustmentResultsRes
+      migrate:
+        capability: system-config.dynamic_logic.read
+
+types:
+  PricingAdjustmentMode:
+    - enum: "EXPERIMENT, SPIKE"
+  PricingAdjustmentStatus:
+    - enum: "DRAFT, ACTIVE, ENDED, EXPIRED"
+  PricingAdjustment:
+    - adjustmentId: Id FareAdjustment
+    - vehicleServiceTiers: "[ServiceTierType]"
+    # pickup areas the adjustment applies to; empty/absent = all areas
+    - areas: Maybe [Area]
+    - mode: PricingAdjustmentMode
+    - status: PricingAdjustmentStatus
+    - baseFareScalePct: Maybe Double
+    - perKmRateScalePct: Maybe Double
+    - perMinRateScalePct: Maybe Double
+    - congestionScalePct: Maybe Double
+    - rolloutPercentage: Maybe Int
+    - validFrom: Maybe UTCTime
+    - validTill: Maybe UTCTime
+    - reason: Text
+    - createdBy: Text
+    - createdAt: UTCTime
+  PricingAdjustmentListRes:
+    - adjustments: "[PricingAdjustment]"
+  PricingAdjustmentReq:
+    - vehicleServiceTiers: "[ServiceTierType]"
+    - areas: Maybe [Area]
+    - mode: PricingAdjustmentMode
+    - baseFareScalePct: Maybe Double
+    - perKmRateScalePct: Maybe Double
+    - perMinRateScalePct: Maybe Double
+    - congestionScalePct: Maybe Double
+    - rolloutPercentage: Maybe Int
+    - validFrom: Maybe UTCTime
+    - validTill: Maybe UTCTime
+    - reason: Text
+    - createdBy: Maybe Text
+    - derive: "'HideSecrets"
+  PricingAdjustmentRes:
+    - adjustmentId: Id FareAdjustment
+    - status: PricingAdjustmentStatus
+  PricingAdjustmentStatusReq:
+    - status: PricingAdjustmentStatus
+    - derive: "'HideSecrets"
+  PricingAdjustmentPreviewReq:
+    - vehicleServiceTier: ServiceTierType
+    - baseFareScalePct: Maybe Double
+    - perKmRateScalePct: Maybe Double
+    - perMinRateScalePct: Maybe Double
+    - congestionScalePct: Maybe Double
+    - derive: "'HideSecrets"
+  PricingAdjustmentSnapshot:
+    - baseFare: HighPrecMoney
+    - firstPerKmRate: HighPrecMoney
+    - firstPerMinRate: Maybe HighPrecMoney
+    - congestionMultiplier: Maybe Centesimal
+  PricingAdjustmentPreviewRes:
+    - before: PricingAdjustmentSnapshot
+    - after: PricingAdjustmentSnapshot
+  PricingAdjustmentArmStat:
+    - serviceTier: ServiceTierType
+    # "treatment" / "control"; Nothing groups legacy rows without an arm stamp
+    - arm: Maybe Text
+    - estimates: Int
+    - avgMultiplier: Maybe Double
+    - avgMaxFare: HighPrecMoney
+  PricingAdjustmentResultsRes:
+    - windowFrom: UTCTime
+    - windowTill: UTCTime
+    - rows: "[PricingAdjustmentArmStat]"

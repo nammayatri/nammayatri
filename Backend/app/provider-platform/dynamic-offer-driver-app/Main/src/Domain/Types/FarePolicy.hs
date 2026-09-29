@@ -381,6 +381,12 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     -- for applied-vs-candidate comparison); Nothing when no shadow config ran
     shadowSurgeMultiplier :: Maybe Centesimal,
     shadowSurgeVersion :: Maybe Int,
+    -- which FareAdjustment (experiment/spike) governed this pricing and which
+    -- arm the rider landed in ("treatment"/"control"); flows in via
+    -- CongestionChargeDetails and is persisted on the estimate so arm-vs-arm
+    -- comparison runs off the estimate stream
+    fareAdjustmentId :: Maybe Text,
+    fareAdjustmentArm :: Maybe Text,
     perDistanceUnitInsuranceCharge :: Maybe HighPrecMoney,
     cardCharge :: Maybe CardCharge,
     vatChargeConfig :: Maybe FareChargeConfig,
@@ -424,7 +430,11 @@ data CongestionChargeDetails = CongestionChargeDetails
     mbActualQARFromLocGeohash :: Maybe Double,
     mbActualQARCity :: Maybe Double,
     shadowSurgeMultiplier :: Maybe Centesimal,
-    shadowSurgeVersion :: Maybe Int
+    shadowSurgeVersion :: Maybe Int,
+    -- which FareAdjustment (experiment/spike) governed this pricing and which
+    -- arm the rider landed in ("treatment"/"control")
+    fareAdjustmentId :: Maybe Text,
+    fareAdjustmentArm :: Maybe Text
   }
   deriving (Generic, Show)
 

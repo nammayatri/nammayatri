@@ -38,6 +38,8 @@ data EstimateT f = EstimateT
     dpVersion :: C f (Maybe Text),
     shadowSurgeMultiplier :: C f (Maybe Double),
     shadowSurgeVersion :: C f (Maybe Int),
+    fareAdjustmentId :: C f (Maybe Text),
+    fareAdjustmentArm :: C f (Maybe Text),
     vehicleServiceTier :: C f DServiceTierType.ServiceTierType,
     tripCategory :: C f DTrip.TripCategory,
     minFare :: C f Common.HighPrecMoney,
@@ -65,6 +67,8 @@ estimateTTable =
       dpVersion = "dp_version",
       shadowSurgeMultiplier = "shadow_surge_multiplier",
       shadowSurgeVersion = "shadow_surge_version",
+      fareAdjustmentId = "fare_adjustment_id",
+      fareAdjustmentArm = "fare_adjustment_arm",
       vehicleServiceTier = "vehicle_service_tier",
       tripCategory = "trip_category",
       minFare = "min_fare",
@@ -287,6 +291,35 @@ pricingStatsByGeohash cityId from to =
               CH.&&. estimate.createdAt >=. CH.DateTime from
               CH.&&. estimate.createdAt <=. CH.DateTime to
               CH.&&. CH.isNotNull estimate.fromLocGeohash
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
+
+-- arm-vs-arm readout for one FareAdjustment (dev/docs/fare-adjustments-plan.md):
+-- estimates stamped with the adjustment id, grouped by tier and arm
+-- ("treatment"/"control"; spikes only ever produce treatment rows). Control
+-- rows exist because control estimates are stamped too at pricing time.
+pricingAdjustmentComparison ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m [(DServiceTierType.ServiceTierType, Maybe Text, Int, Maybe Double, Common.HighPrecMoney)]
+pricingAdjustmentComparison cityId adjustmentId from to =
+  CH.findAll $
+    CH.select_
+      ( \estimate -> do
+          let total = CH.count_ estimate.id
+              avgMultiplier = CH.avg_ estimate.congestionMultiplier
+              avgMaxFare = CH.avg_ estimate.maxFare
+          CH.groupBy (estimate.vehicleServiceTier, estimate.fareAdjustmentArm) $ \(tier, arm) -> (tier, arm, total, avgMultiplier, avgMaxFare)
+      )
+      $ CH.filter_
+        ( \estimate ->
+            estimate.merchantOperatingCityId CH.==. cityId
+              CH.&&. estimate.createdAt >=. CH.DateTime from
+              CH.&&. estimate.createdAt <=. CH.DateTime to
+              CH.&&. estimate.fareAdjustmentId CH.==. Just adjustmentId
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
 

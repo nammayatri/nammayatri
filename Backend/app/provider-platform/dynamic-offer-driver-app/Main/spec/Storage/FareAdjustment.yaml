@@ -1,0 +1,99 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceTierType: Domain.Types.Common
+  Area: Lib.Types.SpecialLocation
+
+# Fare adjustments (dev/docs/fare-adjustments-plan.md): an overlay on the
+# RESOLVED fare policy — never a mutation of the rate card — so expiry/abort
+# needs zero cleanup and the standing peak/non-peak timeBounds structure keeps
+# resolving untouched. Two modes:
+#   EXPERIMENT — rolloutPercentage of riders (deterministic salted hash of the
+#     customer phone) get the scaled price; control riders are stamped too so
+#     arm-vs-arm comparison has its control population.
+#   SPIKE — 100% of scope between validFrom and validTill (auto-expires at
+#     evaluation time; no sweeper needed for correctness).
+# Scale-only (±X%), OneWay + Progressive fare policies only (v1). At most one
+# non-terminal adjustment may intersect a (city x tiers x areas) slice —
+# activation rejects ANY overlap so measurement is never contaminated.
+FareAdjustment:
+  tableName: fare_adjustment
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  types:
+    FareAdjustmentMode:
+      enum: "EXPERIMENT, SPIKE"
+    FareAdjustmentStatus:
+      enum: "DRAFT, ACTIVE, ENDED, EXPIRED"
+
+  fields:
+    id: Id FareAdjustment
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleServiceTiers: "[ServiceTierType]"
+    # pickup areas the adjustment applies to; Nothing = all areas
+    areas: Maybe [Area]
+    mode: FareAdjustmentMode
+    status: FareAdjustmentStatus
+    # every scale is a percent in [-50, 50]; at least one must be set
+    baseFareScalePct: Maybe Double
+    perKmRateScalePct: Maybe Double
+    perMinRateScalePct: Maybe Double
+    # replaces the surge/static congestion outcome for affected traffic:
+    # effective multiplier = (static multiplier or 1.0) x (1 + pct/100)
+    congestionScalePct: Maybe Double
+    # EXPERIMENT only, 1..99; treatment share of riders
+    rolloutPercentage: Maybe Int
+    # SPIKE: both required, window <= 24h. EXPERIMENT: validTill is the
+    # auto-conclude deadline (<= 60d from activation).
+    validFrom: Maybe UTCTime
+    validTill: Maybe UTCTime
+    reason: Text
+    createdBy: Text
+
+  constraints:
+    id: PrimaryKey
+
+  # vehicleServiceTiers / areas are each stored as ONE JSON text value via the
+  # tType codecs below — same rationale as surge_config.rows: the KV drainer
+  # serializes list columns element-wise into a Postgres array literal, so any
+  # whole-list beam instance diverges from what the drainer writes and the
+  # column becomes unreadable. With beamType Text every write path moves the
+  # same opaque string.
+  beamType:
+    vehicleServiceTiers: Text
+    areas: Maybe Text
+
+  toTType:
+    vehicleServiceTiers: Kernel.Utils.Text.encodeToText vehicleServiceTiers|E
+    areas: (Kernel.Utils.Text.encodeToText <$> areas)|E
+
+  fromTType:
+    vehicleServiceTiers: (fromMaybe [] (Kernel.Utils.Text.decodeFromText vehicleServiceTiers))|E
+    areas: (areas >>= Kernel.Utils.Text.decodeFromText)|E
+
+  sqlType:
+    vehicleServiceTiers: text
+    areas: text
+
+  queries:
+    # full history — dashboard list + audit only, never the pricing hot path
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        merchantOperatingCityId
+
+    # hot-path fetch: status in the WHERE narrows the read to the handful of
+    # live rows. Plain SQL filter — status stays OFF the KV secondary-key list
+    # (mutable column, deny-listed); the table is not KV-enabled so this runs
+    # against Postgres.
+    findAllByCityAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, status]
+
+    updateStatusById:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where:
+        id

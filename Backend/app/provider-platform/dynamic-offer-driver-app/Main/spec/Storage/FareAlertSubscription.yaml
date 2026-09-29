@@ -11,7 +11,7 @@ FareAlertSubscription:
 
   types:
     FareAlertType:
-      enum: "AREA_VEHICLES"
+      enum: "AREA_VEHICLES, ADJUSTMENTS"
 
   fields:
     id: Id FareAlertSubscription

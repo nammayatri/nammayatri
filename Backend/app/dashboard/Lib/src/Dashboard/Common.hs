@@ -84,6 +84,8 @@ data FarePolicyChangeRequest
 
 data SurgeConfig
 
+data FareAdjustment
+
 -- Single-constructor enums need hand-written string JSON: generic aeson only
 -- string-encodes sums with two or more nullary constructors, so a lone
 -- constructor round-trips as [] and rejects the "AREA_VEHICLES" string the UI

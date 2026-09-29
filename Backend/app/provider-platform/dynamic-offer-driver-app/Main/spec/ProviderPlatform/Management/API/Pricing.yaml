@@ -189,6 +189,9 @@ types:
     - smartTipReason: Maybe Text
     - shadowSurgeMultiplier: Maybe Centesimal
     - shadowSurgeVersion: Maybe Int
+    # which FareAdjustment (experiment/spike) governed this estimate + arm
+    - fareAdjustmentId: Maybe Text
+    - fareAdjustmentArm: Maybe Text
   PricingCustomerSearchRes:
     - searchRequestId: Text
     - searchCreatedAt: UTCTime

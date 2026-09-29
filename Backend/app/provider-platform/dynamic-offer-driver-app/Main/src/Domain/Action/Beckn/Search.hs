@@ -96,6 +96,7 @@ import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.BlockedRouteDetector
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import qualified SharedLogic.FareAdjustment as SFA
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
@@ -344,6 +345,12 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- pure [] -- getConfigVersionMapForStickiness (cast merchantOpCityId) -- TODO: isn't used much, so fo
   (_, mbVersion) <- withTimeAPI "search" "getAppDynamicLogic" $ getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
+  -- fare adjustments: decide the arm for every live adjustment ONCE per
+  -- transaction (deterministic salted hash of the phone) and pin it BEFORE
+  -- fare policies resolve — the resolution below and every later phase replay
+  -- the pin. Idempotent, so re-running (or a shadow search) rewrites the same
+  -- decisions.
+  withTimeAPI "search" "decideAndPinFareAdjustments" $ SFA.decideAndPinFareAdjustments merchantOpCityId sReq.customerPhoneNum sReq.transactionId
   allFarePoliciesProduct <- withTimeAPI "search" "getAllFarePolicies" $ combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "search" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap dpInputsSharing) possibleTripOption.tripCategories)
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
@@ -1019,6 +1026,8 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         smartTipReason = fullFarePolicy.smartTipReason,
         shadowSurgeMultiplier = fullFarePolicy.shadowSurgeMultiplier,
         shadowSurgeVersion = fullFarePolicy.shadowSurgeVersion,
+        fareAdjustmentId = fullFarePolicy.fareAdjustmentId,
+        fareAdjustmentArm = fullFarePolicy.fareAdjustmentArm,
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId,
         mbActualQARCityPast = (.mbActualQARCityPast) =<< fullFarePolicy.congestionChargeData,
@@ -1390,6 +1399,8 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
         navigationInstruction = Nothing,
         shadowSurgeMultiplier = Nothing,
         shadowSurgeVersion = Nothing,
+        fareAdjustmentId = Nothing,
+        fareAdjustmentArm = Nothing,
         negativeFareSuggestion = Nothing,
         ..
       }

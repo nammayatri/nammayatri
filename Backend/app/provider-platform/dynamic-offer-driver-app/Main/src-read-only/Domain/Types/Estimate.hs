@@ -29,6 +29,8 @@ data Estimate = Estimate
     eligibleForUpgrade :: Kernel.Prelude.Bool,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    fareAdjustmentArm :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fareAdjustmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
