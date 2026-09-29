@@ -106,7 +106,8 @@ mkVehicleV2 quote =
 mkAgentV2 :: DQuote.DriverQuote -> Bool -> Spec.Agent
 mkAgentV2 quote isValueAddNP =
   emptyAgent
-    { Spec.agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP
+    { Spec.agentPerson = Just $ mkAgentPersonV2 quote isValueAddNP,
+      Spec.agentRating = show . (.getCenti) <$> quote.driverRating
     }
 
 mkAgentPersonV2 :: DQuote.DriverQuote -> Bool -> Spec.Person
