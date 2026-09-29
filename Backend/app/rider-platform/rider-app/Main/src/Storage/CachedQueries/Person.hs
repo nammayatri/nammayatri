@@ -35,6 +35,8 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as YTypes
 import qualified Storage.Queries.Person as Queries
 import qualified Storage.Queries.PersonStats as QPS
+import qualified Storage.Queries.RegistrationToken as QRT
+import Tools.Auth (authTokenCacheKey)
 
 findCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> m (Maybe PersonCityInformation)
 findCityInfoById personId = do
@@ -46,6 +48,16 @@ updateCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -
 updateCityInfoById personId city merchantOperatingCityId = do
   Queries.updateCityInfoById personId city merchantOperatingCityId
   clearCityInfoCache personId
+  refreshRegistrationTokensCity personId merchantOperatingCityId
+
+-- | The cross-cloud proxy resolves the owning cloud from the token's city, so keep
+--   the person's tokens (and their auth cache in both clouds) on the new city.
+refreshRegistrationTokensCity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
+refreshRegistrationTokensCity personId merchantOperatingCityId = do
+  regTokens <- QRT.findAllByPersonId personId
+  QRT.updateMerchantOperatingCityIdByPersonId personId merchantOperatingCityId
+  forM_ regTokens $ \regToken ->
+    Hedis.runInMultiCloudRedisWrite $ Hedis.del (authTokenCacheKey regToken.token)
 
 updateCustomerTags :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe [YTypes.TagNameValueExpiry] -> Id Person -> m ()
 updateCustomerTags tags personId = do
