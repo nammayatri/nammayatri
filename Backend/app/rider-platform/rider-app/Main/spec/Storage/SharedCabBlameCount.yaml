@@ -1,0 +1,65 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+# R18: lifetime blame counters (05 §8.4), bumped from Allocation.afterClose on every allocation
+# release that blameFor charges to someone. One row per (subjectType, subjectId, city): subjectId
+# is the rider's person id for RIDER_NO_SHOW, the driver's id for DRIVER_MISS. No enforcement reads
+# these yet -- product sets thresholds later.
+SharedCabBlameCount:
+  tableName: shared_cab_blame_count
+
+  fields:
+    id: Id SharedCabBlameCount
+    subjectType: BlameSubjectType
+    subjectId: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    count: Int
+    lastAt: UTCTime
+    lastBookingId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    BlameSubjectType:
+      enum: "RIDER_NO_SHOW, DRIVER_MISS"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BlameSubjectType>
+
+  sqlType:
+    subjectType: text
+
+  constraints:
+    id: PrimaryKey
+
+  # Out of KV (ddl 1581, disableForKV like vehicle_trip 1576): the atomic upsert bump (Queries.SharedCabBlameCountExtra)
+  # is raw SQL against Postgres, which KV would bypass.
+  extraIndexes:
+    - columns: [subjectType, subjectId, merchantOperatingCityId]
+    - columns: [merchantOperatingCityId, subjectType, count]
+
+  queries:
+    # Ops: the city's worst offenders of one kind (no API yet, query directly).
+    findTopByMerchantOperatingCityIdAndSubjectType:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - subjectType
+      orderBy:
+        field: count
+        order: desc
+      limit: 100
+
+  default:
+    count: "0"
+    createdAt: "CURRENT_TIMESTAMP"
+    updatedAt: "CURRENT_TIMESTAMP"
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE

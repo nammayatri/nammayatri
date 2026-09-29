@@ -80,6 +80,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
+import qualified SharedLogic.SharedCab.BlameCount as BlameCount
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
@@ -468,13 +469,17 @@ afterClose _ bookingId plate outcome closed =
       Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
     Invariants.checkBooking bookingId
     Invariants.checkCab plate
+    mbBooking <- QFRFSTicketBooking.findById bookingId
+    -- R18: lifetime blame counters (05 §8.4); a bump failure never fails the release.
+    withTryCatch "sharedCabBlameCount" (BlameCount.bump cityId (blameFor outcome) mbBooking plate bookingId now)
+      >>= either (\e -> logError $ "shared-cab blame count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     -- R17: "missed the cab" -- only the timer outcomes mean the rider didn't board in time; a driver
     -- cancel, passed-stop no-show, seat loss or session lifecycle close all get their own push (or none).
     when (outcome `elem` [StandTimeout, MovingTimeout]) $
-      whenJustM (QFRFSTicketBooking.findById bookingId) (Notify.notifyReassigned Notify.TIMEOUT)
+      mapM_ (Notify.notifyReassigned Notify.TIMEOUT) mbBooking
     -- R16/R10: the rider's leg state just flipped to FALLBACK; push "board any cab" once.
     when fallbackJustTriggered $
-      whenJustM (QFRFSTicketBooking.findById bookingId) Notify.notifyBoardAny
+      mapM_ Notify.notifyBoardAny mbBooking
 
 -- | 05 §2/§3 timers: an ALLOCATED booking whose timer ran out, or whose alloc key is gone, goes back
 -- to FINDING; a stand timer is cleared once its cab is seen moving (timer mode follows the cab).
