@@ -987,7 +987,8 @@ data RouteInfoNandi = RouteInfoNandi
     endPoint :: Kernel.External.Maps.Types.LatLong,
     stopCount :: Maybe Int,
     serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    color :: Maybe Text
+    color :: Maybe Text,
+    encodedPolyline :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
