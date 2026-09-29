@@ -127,6 +127,7 @@ reassignReasonFor = \case
   RouteChanged -> Just CAB_PULLED
   SessionClosed -> Just CAB_PULLED
   TimerLost -> Just CAB_PULLED
+  CabSilent -> Just CAB_PULLED
   RiderSkipped _ -> Nothing
 
 -- | R10: allocation gave up; any cab on the route will do.
