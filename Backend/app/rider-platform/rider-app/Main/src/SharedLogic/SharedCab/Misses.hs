@@ -6,6 +6,9 @@ module SharedLogic.SharedCab.Misses
   ( Charge (..),
     chargeFor,
     noShowsAfter,
+    NoShowAction (..),
+    afterNoShow,
+    actionAfterClose,
     record,
   )
 where
@@ -33,6 +36,22 @@ chargeFor BlameDriver _ mbTrip = ChargeTrip <$> mbTrip
 noShowsAfter :: Blame -> Int -> Int
 noShowsAfter BlameRider n = n + 1
 noShowsAfter _ n = n
+
+data NoShowAction = Reallocate | AutoCancel
+  deriving (Show, Eq)
+
+-- | R54: once the booking's no-shows reach the cap it is cancelled (no refund) instead of going back to FINDING.
+afterNoShow :: Int -> Int -> NoShowAction
+afterNoShow maxNoShows noShows
+  | noShows >= maxNoShows = AutoCancel
+  | otherwise = Reallocate
+
+-- | What a close that blamed `blame` does to a booking with `noShows` already booked: only the rider's own no-show can
+-- cancel it, and only if it takes the count to the cap.
+actionAfterClose :: Blame -> Int -> Int -> NoShowAction
+actionAfterClose blame maxNoShows noShows = case blame of
+  BlameRider -> afterNoShow maxNoShows (noShowsAfter BlameRider noShows)
+  _ -> Reallocate
 
 -- | Called from `afterClose`, outside every allocation lock: each bump is one atomic SQL increment, not a read-modify-write.
 record :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Blame -> Maybe (Id DP.Person) -> Maybe (Id DVT.VehicleTrip) -> m ()

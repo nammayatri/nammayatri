@@ -22,6 +22,7 @@ tests =
               standTimerSec = 180,
               movingTimerSec = 90,
               maxAttempts = 2,
+              maxNoShows = 2,
               fallbackAfterSec = 600,
               noCabGraceSec = 120,
               findingTimeoutSec = 1200,

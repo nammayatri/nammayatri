@@ -170,6 +170,8 @@ data AllocationConfig = AllocationConfig
     movingTimerSec :: Int,
     -- | after this many counted closes -> PRD R10 fallback surface (05 §7 maxAttempts 2)
     maxAttempts :: Int,
+    -- | a booking whose rider no-shows reach this many is cancelled, not reallocated (R54)
+    maxNoShows :: Int,
     -- | FINDING older than this -> R10 fallback irrespective of attempts (05 §7 fallbackAfterMin 10)
     fallbackAfterSec :: Int,
     -- | last cab leaves between search and book (05 §7 noCabGraceMin 2, decision 9 race)
@@ -198,6 +200,7 @@ defaultAllocationConfig =
       standTimerSec = 180,
       movingTimerSec = 90,
       maxAttempts = 2,
+      maxNoShows = 2,
       fallbackAfterSec = 10 * 60,
       noCabGraceSec = 2 * 60,
       findingTimeoutSec = 20 * 60,

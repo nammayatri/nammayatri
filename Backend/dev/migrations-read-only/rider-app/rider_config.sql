@@ -929,3 +929,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_board_attempts_per10_mi
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_events_topic text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_no_shows integer ;

@@ -178,6 +178,7 @@ RiderConfig:
     sharedCabStandTimerSec: Maybe Int
     sharedCabMovingTimerSec: Maybe Int
     sharedCabMaxAttempts: Maybe Int
+    sharedCabMaxNoShows: Maybe Int
     sharedCabFallbackAfterSec: Maybe Int
     sharedCabNoCabGraceSec: Maybe Int
     sharedCabFindingTimeoutSec: Maybe Int

@@ -113,6 +113,7 @@ import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
@@ -404,6 +405,7 @@ skippedWhileFinding cfg now attempts findingSince skipped
 data Closed = Closed
   { closedCity :: Id DMOC.MerchantOperatingCity,
     fallbackJustTriggered :: Bool, -- this close crossed maxAttempts (R16)
+    autoCancelled :: Bool, -- this close was the rider's last allowed no-show: the booking is cancelled, not FINDING (R54)
     heldTrip :: Maybe Text -- the trip the allocation was made to (R45), from its alloc key
   }
 
@@ -518,6 +520,7 @@ cityConfig cityId = do
         standTimerSec = t.standTimerSec,
         movingTimerSec = t.movingTimerSec,
         maxAttempts = t.maxAttempts,
+        maxNoShows = t.maxNoShows,
         fallbackAfterSec = t.fallbackAfterSec,
         noCabGraceSec = t.noCabGraceSec,
         findingTimeoutSec = t.findingTimeoutSec,
@@ -571,6 +574,13 @@ closeLocked cfg bookingId expectedPlate outcome =
         BlameRider -> QFRFSTicketBooking.releaseAllocatedVehicle Nothing (Misses.noShowsAfter BlameRider b.sharedCabNoShows) b.id (Just expectedPlate)
         _ -> QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
       heldTrip <- shared $ (>>= (.vehicleTripId)) <$> Redis.safeGet @AllocationState (allocKey bookingId.getId)
+      if Misses.actionAfterClose (blameFor outcome) cfg.maxNoShows b.sharedCabNoShows == Misses.AutoCancel
+        then do
+          cancelForNoShows b
+          clearAllocationKeys bookingId
+          pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered = False, autoCancelled = True, heldTrip}
+        else reallocate b heldTrip
+    reallocate b heldTrip = do
       shared $ Redis.del (allocKey bookingId.getId)
       when (skipsPlateOnClose outcome) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [expectedPlate] cfg.findingTimeoutSec
       -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
@@ -587,7 +597,17 @@ closeLocked cfg bookingId expectedPlate outcome =
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId.getId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
-      pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered, heldTrip}
+      pure Closed {closedCity = b.merchantOperatingCityId, fallbackJustTriggered, autoCancelled = False, heldTrip}
+
+-- | R54: the rider's last allowed no-show. Cancelled by the system, fare kept: the payment is left charged (nothing marks
+-- it refund-pending). Runs in the tick's own env, so it writes only what the leg state and the ticket need; the
+-- payment, recon and journey side effects of a rider cancel are skipped on purpose. Inside the booking lock.
+cancelForNoShows :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFTB.FRFSTicketBooking -> m ()
+cancelForNoShows b = do
+  void $ QFRFSTicketBooking.updateStatusById CANCELLED b.id
+  void $ QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED b.id
+  void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) b.id
+  QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just 0) (Just (fromMaybe b.totalPrice.amount b.overriddenAmount)) (Just False) b.id
 
 -- | R16: the close that takes the attempt count over maxAttempts (not one past it).
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
@@ -606,7 +626,7 @@ eventBlame = \case
 -- | Outside every lock, after a close attempt.
 afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe Closed -> m ()
 afterClose cfg bookingId plate outcome closed =
-  whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, heldTrip} -> do
+  whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, autoCancelled, heldTrip} -> do
     now <- getCurrentTime
     trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
     Events.emit cityId . Events.withTrip trip $
@@ -618,8 +638,13 @@ afterClose cfg bookingId plate outcome closed =
     withTryCatch "sharedCabMisses" (Misses.record (blameFor outcome) (mbBooking <&> (.riderId)) (Id <$> heldTrip))
       >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     -- R17/F7: the cab is gone; every close but the rider's own skip tells them. Once per release: only the CAS winner is here.
-    forM_ (Notify.reassignReasonFor outcome) $ \reason ->
-      mapM_ (Notify.notifyReassigned reason) mbBooking
+    -- R54: the last allowed no-show cancelled the booking; that push replaces the reassign one.
+    if autoCancelled
+      then do
+        Events.emit cityId $ Events.bookingEvent (Events.BookingCancelled "system" "none" (Just "max_no_shows")) bookingId.getId (Just plate) Nothing now
+        mapM_ (\b -> Notify.notifyBookingCancelled b.sharedCabNoShows b) mbBooking
+      else forM_ (Notify.reassignReasonFor outcome) $ \reason ->
+        mapM_ (Notify.notifyReassigned reason) mbBooking
     -- R16/R10: the rider's leg state just flipped to FALLBACK; push "board any cab" once.
     when fallbackJustTriggered $
       whenM (claimFallbackPush cfg bookingId) $

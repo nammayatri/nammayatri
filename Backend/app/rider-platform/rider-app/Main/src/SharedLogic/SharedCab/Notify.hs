@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.Notify
     notifyReassigned,
     reassignReasonFor,
     notifyBoardAny,
+    notifyBookingCancelled,
     notifyRouteChange,
     notifyDropConfirm,
   )
@@ -34,6 +35,7 @@ data SharedCabNotificationType
   | SHARED_CAB_BOARD_ANY
   | SHARED_CAB_ROUTE_CHANGE
   | SHARED_CAB_DROP_CONFIRM
+  | SHARED_CAB_BOOKING_CANCELLED
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
 -- | TIMEOUT: the rider's own timer ran out. SEAT_LOST: a walk-up took the seat. CAB_PULLED: the cab went away (driver cancel,
@@ -133,6 +135,10 @@ reassignReasonFor = \case
 -- | R10: allocation gave up; any cab on the route will do.
 notifyBoardAny :: (ServiceFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> m ()
 notifyBoardAny = send SHARED_CAB_BOARD_ANY Nothing Nothing Nothing []
+
+-- | R54: the rider's last allowed no-show cancelled the booking (no refund). `missedCabs` fills {#missedCabs#}.
+notifyBookingCancelled :: (ServiceFlow m r, MonadFlow m) => Int -> DFTB.FRFSTicketBooking -> m ()
+notifyBookingCancelled missedCabs = send SHARED_CAB_BOOKING_CANCELLED Nothing Nothing Nothing [("missedCabs", show missedCabs)]
 
 -- | R13: the rider's cab is switching to `routeCode` before reaching their drop stop.
 notifyRouteChange :: (ServiceFlow m r, MonadFlow m) => Text -> DFTB.FRFSTicketBooking -> m ()
