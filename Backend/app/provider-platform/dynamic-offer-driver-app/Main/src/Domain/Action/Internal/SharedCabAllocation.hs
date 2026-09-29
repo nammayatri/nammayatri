@@ -33,7 +33,10 @@ data SharedCabAllocationReq = SharedCabAllocationReq
   { bookingId :: Id DBooking.Booking,
     driverId :: Id DP.Person,
     seats :: Maybe Int,
-    boardingCode :: Maybe Text
+    boardingCode :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    boardStopCode :: Maybe Text,
+    etaSeconds :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -48,7 +51,10 @@ sharedCabAllocationFCM req apiKey = do
           { bookingId = req.bookingId.getId,
             driverId = req.driverId.getId,
             seats = req.seats,
-            boardingCode = req.boardingCode
+            boardingCode = req.boardingCode,
+            vehicleNumber = req.vehicleNumber,
+            boardStopCode = req.boardStopCode,
+            etaSeconds = req.etaSeconds
           }
   notifySharedCabAllocation person.merchantOperatingCityId person.id person.deviceToken (fromMaybe ENGLISH person.language) entityData
   pure Success

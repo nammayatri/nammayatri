@@ -607,7 +607,10 @@ notifyDriverOfAllocation booking cand =
           { bookingId = booking.bookingId.getId,
             driverId = s.driverId,
             seats = Just booking.seats,
-            boardingCode = Nothing
+            boardingCode = Nothing,
+            vehicleNumber = Just s.vehicleNumber,
+            boardStopCode = Just booking.boardStopCode,
+            etaSeconds = Just cand.rcEtaToBoardStopSec
           }
 
 --------------------------------------------------------------------------------

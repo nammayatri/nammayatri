@@ -1458,7 +1458,10 @@ data SharedCabAllocationReq = SharedCabAllocationReq
   { bookingId :: Text,
     driverId :: Text,
     seats :: Maybe Int,
-    boardingCode :: Maybe Text
+    boardingCode :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    boardStopCode :: Maybe Text,
+    etaSeconds :: Maybe Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

@@ -699,7 +699,10 @@ data SharedCabAllocationEntityData = SharedCabAllocationEntityData
   { bookingId :: Text,
     driverId :: Text,
     seats :: Maybe Int,
-    boardingCode :: Maybe Text
+    boardingCode :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    boardStopCode :: Maybe Text,
+    etaSeconds :: Maybe Int
   }
   deriving (Generic, ToJSON, Eq, FromJSON, Show)
 
@@ -728,7 +731,10 @@ notifySharedCabAllocation merchantOpCityId personId mbDeviceToken lang entityDat
     (createFCMReq "SHARED_CAB_ALLOCATION" entityData.bookingId FCM.Product identity)
     (Just entityData)
     [ ("seats", maybe "" show entityData.seats),
-      ("boardingCode", fromMaybe "" entityData.boardingCode)
+      ("boardingCode", fromMaybe "" entityData.boardingCode),
+      ("vehicleNumber", fromMaybe "" entityData.vehicleNumber),
+      ("boardStopCode", fromMaybe "" entityData.boardStopCode),
+      ("etaSeconds", maybe "" show entityData.etaSeconds)
     ]
     Nothing
 
