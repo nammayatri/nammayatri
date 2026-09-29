@@ -79,7 +79,7 @@ data VehicleCategory = METRO | SUBWAY | BUS
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
-data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | ELECTRIC_V | ELECTRIC_V_PMI | AC_EMU_FIRST_CLASS | PREMIUM | SHUTTLE
+data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS | ASHOK_LEYLAND_AC | MIDI_AC | VOLVO_AC | ELECTRIC_V | ELECTRIC_V_PMI | AC_EMU_FIRST_CLASS | PREMIUM | SHUTTLE | ULTRA_DELUXE | DELUXE | DELUXE_3X2 | CLASSIC | AC_SLEEPER | AC_SLEEPER_SEATER | NON_AC_SLEEPER | NON_AC_SLEEPER_SEATER | MULTI_AXLE_AC_SEMI_SLEEPER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, ToParamSchema)
 
 instance FromJSON ServiceTierType where
@@ -111,6 +111,23 @@ instance FromJSON ServiceTierType where
     (String "Premium") -> pure PREMIUM
     (String "SHUTTLE") -> pure SHUTTLE
     (String "Shuttle") -> pure SHUTTLE
+    (String "ULTRA_DELUXE") -> pure ULTRA_DELUXE
+    (String "ULTRA DELUXE") -> pure ULTRA_DELUXE
+    (String "DELUXE") -> pure DELUXE
+    (String "DELUXE_3X2") -> pure DELUXE_3X2
+    (String "DELUXE 3X2") -> pure DELUXE_3X2
+    (String "CLASSIC") -> pure CLASSIC
+    (String "AC_SLEEPER") -> pure AC_SLEEPER
+    (String "AC SLEEPER") -> pure AC_SLEEPER
+    (String "AC_SLEEPER_SEATER") -> pure AC_SLEEPER_SEATER
+    (String "AC SLEEPER SEATER") -> pure AC_SLEEPER_SEATER
+    (String "NON_AC_SLEEPER") -> pure NON_AC_SLEEPER
+    (String "NON AC SLEEPER") -> pure NON_AC_SLEEPER
+    (String "NON_AC_SLEEPER_SEATER") -> pure NON_AC_SLEEPER_SEATER
+    (String "NON AC SLEEPER SEATER") -> pure NON_AC_SLEEPER_SEATER
+    (String "MULTI_AXLE_AC_SEMI_SLEEPER") -> pure MULTI_AXLE_AC_SEMI_SLEEPER
+    (String "MULTI AXLE AC SEMI SLEEPER") -> pure MULTI_AXLE_AC_SEMI_SLEEPER
+    (String "AIR CONDITIONED") -> pure AC
     _ -> parseFail "Invalid Service Tier Type"
 
 instance ToSchema ServiceTierType where

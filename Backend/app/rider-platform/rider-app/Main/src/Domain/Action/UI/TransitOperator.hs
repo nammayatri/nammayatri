@@ -41,7 +41,7 @@ resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory = do
 
   let opCityId = merchantOpCity.id
   bppConfig <-
-    SIBC.findIntegratedBPPConfig Nothing opCityId vehicleCategory DIBC.MULTIMODAL
+    SIBC.findIntegratedBPPConfig Nothing opCityId vehicleCategory DIBC.MULTIMODAL Nothing
 
   baseUrl <- MM.getOTPRestServiceReq bppConfig.merchantId opCityId
   pure (baseUrl, bppConfig.feedKey)
