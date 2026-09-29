@@ -51,3 +51,8 @@ ALTER TABLE atlas_app.payout_request ADD COLUMN ledger_entry_ids text[] ;
 
 ALTER TABLE atlas_app.payout_request ADD COLUMN bank_name text ;
 ALTER TABLE atlas_app.payout_request ADD COLUMN bank_account_last4 text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_request ADD COLUMN batch_id character varying(36) ;

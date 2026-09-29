@@ -455,6 +455,7 @@ awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig ve
       vpa <- case payoutServiceFlow of
         IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
         IPayout.StripeFlow -> pure Nothing
+        IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; bank account + IFSC already verified in Tools.Payout.getCreatePayoutServiceFlow
       merchantOperatingCity <-
         CQMOC.findById (cast merchantOpCityId)
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -472,6 +473,7 @@ awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig ve
               vpa
               payoutConfig.orderType
               payoutServiceFlow
+              Nothing
               Nothing
           entityName = DPayment.INCENTIVE_JOURNEY_CASHBACK
           createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount

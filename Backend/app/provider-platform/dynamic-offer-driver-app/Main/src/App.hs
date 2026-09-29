@@ -35,6 +35,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
+import Kernel.External.Payout.HdfcCbx.Manager (prepareHdfcCbxHttpManagers)
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
@@ -71,6 +72,7 @@ import Network.Wai.Handler.Warp
 import qualified SharedLogic.DriverSupplyMetrics as DSM
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import "utils" Utils.Common.Events as UE
@@ -153,11 +155,15 @@ runDynamicOfferDriverApp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
+        -- HDFC CBX calls run on a mutually-authenticated connection, so every configured city's
+        -- certificate becomes a named manager here; the call sites look them up by the same name.
+        hdfcCbxManagers <- prepareHdfcCbxHttpManagers 60000 =<< CQMSC.findAllHdfcCbxPayoutConfigs
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
+                Just (Nothing, hdfcCbxManagers),
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
                 Just (Just 20000, prepareIdfyHttpManager 20000),
                 Just (Just 10000, prepareInternalScriptsHttpManager 10000),

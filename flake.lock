@@ -4021,15 +4021,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1790582664,
-        "narHash": "sha256-LN/RPTAVC5PDMyxPOicMqZf3EUcJlRjhWvvM7GLzmCI=",
+        "lastModified": 1790632759,
+        "narHash": "sha256-siiIp3HVgHmgoGu7gFu5FPpBiL+lF5kwfEUwoqfA/uE=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "800f8b9444c4533c36251d7b323ee11a17aa7574",
+        "rev": "e183e836e4ce27eea0ef2e327d918a16da57c599",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "hdfc-cbx-payout-support",
         "repo": "shared-kernel",
         "type": "github"
       }

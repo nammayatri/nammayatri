@@ -12,6 +12,12 @@ module Domain.Action.ProviderPlatform.Management.Payout
     postPayoutPayoutVpaUpdate,
     postPayoutPayoutVpaRefundRegistration,
     postPayoutPayoutScheduledPayoutConfigUpsert,
+    getPayoutPayoutScheduledPayoutConfig,
+    getPayoutAdhocLookup,
+    postPayoutAdhocInitiate,
+    getPayoutBatchList,
+    getPayoutBatchOrders,
+    getPayoutExcluded,
   )
 where
 
@@ -25,15 +31,20 @@ import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified "payment" Lib.Payment.API.Payout.Types as PayoutTypes
+import qualified "payment" Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified "payment" Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
 import qualified "lib-dashboard" SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Merchant
 
 instance Common.HideSecrets ApiPayout.UpdateScheduledPayoutConfigReq where
+  hideSecrets = identity
+
+instance Common.HideSecrets ApiPayout.AdhocPayoutInitiateReq where
   hideSecrets = identity
 
 buildPayoutManagementServerTransaction ::
@@ -185,3 +196,91 @@ getPayoutPayoutOrder ::
 getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId (Just apiTokenInfo.personId.getId)
+
+getPayoutAdhocLookup ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo UserActionType ->
+  Text ->
+  Environment.Flow ApiPayout.AdhocPayoutLookupResp
+getPayoutAdhocLookup merchantShortId opCity apiTokenInfo personId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutAdhocLookup) (Just apiTokenInfo.personId.getId) personId
+
+postPayoutAdhocInitiate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo UserActionType ->
+  ApiPayout.AdhocPayoutInitiateReq ->
+  Environment.Flow ApiPayout.AdhocPayoutInitiateResp
+postPayoutAdhocInitiate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ do
+    ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutAdhocInitiate) (Just apiTokenInfo.personId.getId) req
+
+getPayoutBatchList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo UserActionType ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DPayoutBatch.PayoutBatchOrigin ->
+  Maybe DPayoutBatch.PayoutBatchRail ->
+  Maybe DPayoutBatch.PayoutBatchStatus ->
+  Maybe UTCTime ->
+  Environment.Flow ApiPayout.PayoutBatchListRes
+getPayoutBatchList merchantShortId opCity apiTokenInfo from limit offset origin payoutRail status to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutBatchList) from limit offset origin payoutRail status to (Just apiTokenInfo.personId.getId)
+
+getPayoutBatchOrders ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo UserActionType ->
+  Text ->
+  Environment.Flow ApiPayout.PayoutBatchOrdersRes
+getPayoutBatchOrders merchantShortId opCity apiTokenInfo batchId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutBatchOrders) batchId (Just apiTokenInfo.personId.getId)
+
+getPayoutExcluded ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo UserActionType ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe UTCTime ->
+  Environment.Flow ApiPayout.PayoutExcludedRes
+getPayoutExcluded merchantShortId opCity apiTokenInfo from limit offset to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutExcluded) from limit offset to (Just apiTokenInfo.personId.getId)
+
+-- | Read-only, so no transaction row: VIEW and VIEW_DIFF proxy straight through, and the commit stays
+--   on the upsert above. Written in this module's import style -- the generated stub qualifies
+--   @Kernel.Prelude@ and @API.Client.ProviderPlatform.Management@, neither of which is in scope here.
+getPayoutPayoutScheduledPayoutConfig ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo UserActionType ->
+  Maybe Int ->
+  Maybe Bool ->
+  -- command, frequency and payoutCategory are Text on the wire and parsed against their enums in
+  -- the BPP handler: the generated enum query-param instances only accept a JSON-quoted value.
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  Maybe Kernel.Types.Common.HighPrecMoney ->
+  Maybe Text ->
+  Maybe Int ->
+  Maybe Text ->
+  Environment.Flow ApiPayout.ScheduledPayoutConfigViewResp
+getPayoutPayoutScheduledPayoutConfig merchantShortId opCity apiTokenInfo batchSize bufferCheckEnabled command dayOfMonth dayOfWeek frequency intervalDays intervalHours isEnabled minimumPayoutAmount payoutCategory rescheduleBufferMinutes timeOfDay = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutScheduledPayoutConfig) batchSize bufferCheckEnabled command dayOfMonth dayOfWeek frequency intervalDays intervalHours isEnabled minimumPayoutAmount payoutCategory rescheduleBufferMinutes timeOfDay (Just apiTokenInfo.personId.getId)

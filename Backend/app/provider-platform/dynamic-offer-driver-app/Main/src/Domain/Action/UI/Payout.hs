@@ -321,6 +321,7 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
       pure case webhookFlow of
         TPayout.StripeFlow -> service -- we should keep differentiation between Stripe and StripeTest, depending to which webhook triggered
         TPayout.JuspayFlow -> subscriptionService
+        TPayout.BulkFlow -> service -- HDFC CBX has no live/test split and no webhook (see design doc Part 2 A1); kept for exhaustiveness
 
 payoutSettlementAction ::
   (PayoutSettlementFlow m r) =>
@@ -626,6 +627,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       let payoutVpaValid = case payoutServiceFlow of
             TPayout.JuspayFlow -> isJust mbVpa
             TPayout.StripeFlow -> True
+            TPayout.BulkFlow -> True
       case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (True, True) -> do
           uid <- generateGUID
@@ -633,7 +635,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
-          let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid pendingAmount transporterConfig.currency phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) mbVpa payoutConfig.orderType payoutServiceFlow Nothing
+          let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid pendingAmount transporterConfig.currency phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) mbVpa payoutConfig.orderType payoutServiceFlow Nothing Nothing
           let entityName = DPayment.BACKLOG
               createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchOpCity person.id mbPersonBankAccount
           merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)

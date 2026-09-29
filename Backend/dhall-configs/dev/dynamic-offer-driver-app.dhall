@@ -335,6 +335,7 @@ let AllocatorJobType =
       | Reconciliation
       | ScheduledBatchPayout
       | PayoutStatusCheck
+      | BulkPayoutStatusCheck
       | SettlementReportIngestion
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
@@ -422,6 +423,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.Reconciliation, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledBatchPayout, mapValue = True }
       , { mapKey = AllocatorJobType.PayoutStatusCheck, mapValue = True }
+      , { mapKey = AllocatorJobType.BulkPayoutStatusCheck, mapValue = True }
       , { mapKey = AllocatorJobType.ConnectAccountChargeDeduction
         , mapValue = True
         }
