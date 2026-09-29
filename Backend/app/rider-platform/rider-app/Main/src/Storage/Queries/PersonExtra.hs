@@ -24,6 +24,15 @@ import Storage.Queries.OrphanInstances.Person ()
 
 -- Extra code goes here --
 
+updateAcceptedPolicies :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe Text -> m ()
+updateAcceptedPolicies (Id personId) acceptedPolicies = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.acceptedPolicies acceptedPolicies,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
 findByPId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.Person.Person))
 findByPId (Kernel.Types.Id.Id id) = do findOneWithKV [Se.Is BeamP.id $ Se.Eq id]
 

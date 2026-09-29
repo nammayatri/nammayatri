@@ -241,6 +241,7 @@ data DriverError
   | DriverAirportAlreadyBlocked
   | AvailableForRidesNotEnabled
   | AvailableForRidesDailyLimitExceeded Int
+  | UnacceptedMandatoryPolicies [Text]
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -267,6 +268,7 @@ instance IsBaseError DriverError where
   toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
   toMessage AvailableForRidesNotEnabled = Just "Available for rides is not enabled for this city."
   toMessage (AvailableForRidesDailyLimitExceeded dailyLimit) = Just $ "Available for rides can be used at most " <> show dailyLimit <> " times a day."
+  toMessage (UnacceptedMandatoryPolicies types) = Just $ "Cannot go online: unaccepted mandatory policies: " <> T.intercalate ", " types
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -291,6 +293,7 @@ instance IsHTTPError DriverError where
     DriverAirportAlreadyBlocked -> "DRIVER_AIRPORT_ALREADY_BLOCKED"
     AvailableForRidesNotEnabled -> "AVAILABLE_FOR_RIDES_NOT_ENABLED"
     AvailableForRidesDailyLimitExceeded _ -> "AVAILABLE_FOR_RIDES_DAILY_LIMIT_EXCEEDED"
+    UnacceptedMandatoryPolicies _ -> "UNACCEPTED_MANDATORY_POLICIES"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -313,6 +316,7 @@ instance IsHTTPError DriverError where
     DriverAirportAlreadyBlocked -> E403
     AvailableForRidesNotEnabled -> E400
     AvailableForRidesDailyLimitExceeded _ -> E429
+    UnacceptedMandatoryPolicies _ -> E403
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload

@@ -29,6 +29,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
       Just
         Domain.Types.Person.Person
           { aadhaarVerified = aadhaarVerified,
+            acceptedPolicies = acceptedPolicies,
             androidId = androidId,
             authBlocked = authBlocked,
             backendAppVersion = backendAppVersion,
@@ -121,6 +122,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
   toTType' (Domain.Types.Person.Person {..}) = do
     Beam.PersonT
       { Beam.aadhaarVerified = aadhaarVerified,
+        Beam.acceptedPolicies = acceptedPolicies,
         Beam.androidId = androidId,
         Beam.authBlocked = authBlocked,
         Beam.backendAppVersion = backendAppVersion,

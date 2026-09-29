@@ -81,6 +81,7 @@ Person:
     clientId: Maybe Text
     nyClubConsent: Maybe Bool
     operatorBadgeToken: Maybe Text
+    acceptedPolicies: Maybe Text
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>

@@ -81,6 +81,7 @@ library
       Domain.Action.ProviderPlatform.Management.Notification
       Domain.Action.ProviderPlatform.Management.Payout
       Domain.Action.ProviderPlatform.Management.PlanManagement
+      Domain.Action.ProviderPlatform.Management.PolicyDocument
       Domain.Action.ProviderPlatform.Management.Pricing
       Domain.Action.ProviderPlatform.Management.Revenue
       Domain.Action.ProviderPlatform.Management.Ride
@@ -133,6 +134,7 @@ library
       Domain.Action.RiderPlatform.Management.Notification
       Domain.Action.RiderPlatform.Management.Offer
       Domain.Action.RiderPlatform.Management.Payout
+      Domain.Action.RiderPlatform.Management.PolicyDocument
       Domain.Action.RiderPlatform.Management.Rewards
       Domain.Action.RiderPlatform.Management.Ride
       Domain.Action.RiderPlatform.Management.SearchTry
@@ -205,6 +207,7 @@ library
       API.Action.ProviderPlatform.Management.Notification
       API.Action.ProviderPlatform.Management.Payout
       API.Action.ProviderPlatform.Management.PlanManagement
+      API.Action.ProviderPlatform.Management.PolicyDocument
       API.Action.ProviderPlatform.Management.Pricing
       API.Action.ProviderPlatform.Management.Revenue
       API.Action.ProviderPlatform.Management.Ride
@@ -261,6 +264,7 @@ library
       API.Action.RiderPlatform.Management.Notification
       API.Action.RiderPlatform.Management.Offer
       API.Action.RiderPlatform.Management.Payout
+      API.Action.RiderPlatform.Management.PolicyDocument
       API.Action.RiderPlatform.Management.Rewards
       API.Action.RiderPlatform.Management.Ride
       API.Action.RiderPlatform.Management.SearchTry

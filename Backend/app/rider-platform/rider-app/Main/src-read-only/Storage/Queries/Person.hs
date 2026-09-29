@@ -190,6 +190,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.aadhaarVerified aadhaarVerified,
+      Se.Set Beam.acceptedPolicies acceptedPolicies,
       Se.Set Beam.androidId androidId,
       Se.Set Beam.authBlocked authBlocked,
       Se.Set Beam.backendAppVersion backendAppVersion,

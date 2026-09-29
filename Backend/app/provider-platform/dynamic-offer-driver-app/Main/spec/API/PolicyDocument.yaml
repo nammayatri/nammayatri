@@ -1,0 +1,60 @@
+imports:
+  PolicyAndComplianceDocument: Domain.Types.PolicyAndComplianceDocument
+
+module: PolicyDocument
+
+types:
+  PolicyDocumentResp:
+    id: Id PolicyAndComplianceDocument
+    policyType: Text
+    version: Text
+    url: Text
+    isMandatory: Bool
+    enabled: Bool
+    metadata: Maybe Text
+    createdAt: UTCTime
+
+  PolicyDocumentWithAcceptance:
+    id: Id PolicyAndComplianceDocument
+    policyType: Text
+    version: Text
+    url: Text
+    isMandatory: Bool
+    enabled: Bool
+    metadata: Maybe Text
+    createdAt: UTCTime
+    accepted: Bool
+
+  PolicyTypeGroup:
+    policyType: Text
+    entries: "[PolicyDocumentWithAcceptance]"
+
+  PolicyListResp:
+    groups: "[PolicyTypeGroup]"
+
+  PolicyLatestResp:
+    documents: "[PolicyDocumentResp]"
+
+  PolicyAcceptReq:
+    policyDocId: Id PolicyAndComplianceDocument
+
+apis:
+  - GET:
+      endpoint: /policy/latest
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: PolicyLatestResp
+
+  - GET:
+      endpoint: /policy/list
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: PolicyListResp
+
+  - POST:
+      endpoint: /policy/accept
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: PolicyAcceptReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

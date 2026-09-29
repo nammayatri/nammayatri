@@ -655,7 +655,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         nyClubConsent = Just False,
         reactBundleVersion = mbReactBundleVersion,
         cloudType = mbCloudType,
-        operatorBadgeToken = Nothing
+        operatorBadgeToken = Nothing,
+        acceptedPolicies = Nothing
       }
 
 makeSession ::

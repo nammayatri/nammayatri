@@ -91,7 +91,8 @@ postPersonCreate merchantShortId opCity req = do
             nyClubConsent = Just False,
             reactBundleVersion = Nothing,
             cloudType = Nothing, -- FIXME just to make it compiled
-            operatorBadgeToken = Nothing
+            operatorBadgeToken = Nothing,
+            acceptedPolicies = Nothing
           }
   QP.create person
   pure $ API.Types.UnifiedDashboard.Management.Person.CreatePersonResp {personId = Kernel.Types.Id.cast personId}

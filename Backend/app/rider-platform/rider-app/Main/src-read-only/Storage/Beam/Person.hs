@@ -24,6 +24,7 @@ import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
+    acceptedPolicies :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     androidId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     authBlocked :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

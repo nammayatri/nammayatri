@@ -20,7 +20,8 @@ import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
-  { alternateMobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
+  { acceptedPolicies :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    alternateMobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -79,7 +80,8 @@ instance EncryptedItem Person where
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber entity
     pure
       Person
-        { alternateMobileNumber = alternateMobileNumber_,
+        { acceptedPolicies = acceptedPolicies entity,
+          alternateMobileNumber = alternateMobileNumber_,
           backendAppVersion = backendAppVersion entity,
           backendConfigVersion = backendConfigVersion entity,
           clientBundleVersion = clientBundleVersion entity,
@@ -130,7 +132,8 @@ instance EncryptedItem Person where
     mobileNumber_ <- fmap fst <$> decryptItem (mobileNumber entity)
     pure
       ( Person
-          { alternateMobileNumber = alternateMobileNumber_,
+          { acceptedPolicies = acceptedPolicies entity,
+            alternateMobileNumber = alternateMobileNumber_,
             backendAppVersion = backendAppVersion entity,
             backendConfigVersion = backendConfigVersion entity,
             clientBundleVersion = clientBundleVersion entity,

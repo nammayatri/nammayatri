@@ -129,6 +129,7 @@ Person:
     paymentMode: Maybe PaymentMode
     operatorBadgeToken: Maybe Text
     clientId: Maybe Text
+    acceptedPolicies: Maybe Text
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <Role>
