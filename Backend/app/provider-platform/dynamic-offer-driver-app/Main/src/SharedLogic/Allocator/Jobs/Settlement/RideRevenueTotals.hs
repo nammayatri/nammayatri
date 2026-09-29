@@ -6,7 +6,7 @@ module SharedLogic.Allocator.Jobs.Settlement.RideRevenueTotals
     PayoutTotals (..),
     TdsTotals (..),
     SubscriptionRevenueTotals (..),
-    RevenueRecognitionTransactionRow (..),
+    RideRevenueTransactionRow (..),
     fetchRideRevenueTotals,
   )
 where
@@ -34,7 +34,7 @@ import qualified Storage.Beam.Common as BeamCommon
 -- ---------------------------------------------------------------------------
 
 -- | One source business transaction that contributed to an aggregated SAP JV.
-data RevenueRecognitionTransactionRow = RevenueRecognitionTransactionRow
+data RideRevenueTransactionRow = RideRevenueTransactionRow
   { amount :: HighPrecMoney,
     referenceId :: Text, -- bookingId / payoutId / DTT.referenceId
     txnStatus :: Text -- show SETTLED / "Deducted" / ...
@@ -108,14 +108,14 @@ data SubscriptionRevenueTotals = SubscriptionRevenueTotals
 
 -- | Aggregates + per-event source rows.
 data RideRevenueTotals = RideRevenueTotals
-  { onlineRideRevRec :: (RideFareRevRecTotals, [RevenueRecognitionTransactionRow]),
-    buyerAppSettlement :: (BuyerAppSettlementTotals, [RevenueRecognitionTransactionRow]),
-    offlineCashRide :: (RideFareRevRecTotals, [RevenueRecognitionTransactionRow]),
-    driverEarningAccrual :: (DriverEarningAccrualTotals, [RevenueRecognitionTransactionRow]),
-    payout :: (PayoutTotals, [RevenueRecognitionTransactionRow]),
-    tds :: (TdsTotals, [RevenueRecognitionTransactionRow], [RevenueRecognitionTransactionRow]),
-    subscriptionRideRevenue :: (SubscriptionRevenueTotals, [RevenueRecognitionTransactionRow]),
-    subscriptionExpiryRevenue :: (SubscriptionRevenueTotals, [RevenueRecognitionTransactionRow])
+  { onlineRideRevRec :: (RideFareRevRecTotals, [RideRevenueTransactionRow]),
+    buyerAppSettlement :: (BuyerAppSettlementTotals, [RideRevenueTransactionRow]),
+    offlineCashRide :: (RideFareRevRecTotals, [RideRevenueTransactionRow]),
+    driverEarningAccrual :: (DriverEarningAccrualTotals, [RideRevenueTransactionRow]),
+    payout :: (PayoutTotals, [RideRevenueTransactionRow]),
+    tds :: (TdsTotals, [RideRevenueTransactionRow], [RideRevenueTransactionRow]),
+    subscriptionRideRevenue :: (SubscriptionRevenueTotals, [RideRevenueTransactionRow]),
+    subscriptionExpiryRevenue :: (SubscriptionRevenueTotals, [RideRevenueTransactionRow])
   }
   deriving (Generic, Show, Eq)
 
@@ -163,7 +163,7 @@ fetchRideFareRevRecTotals ::
   UTCTime ->
   Text ->
   Text ->
-  m (RideFareRevRecTotals, [RevenueRecognitionTransactionRow])
+  m (RideFareRevRecTotals, [RideRevenueTransactionRow])
 fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
   rawRows <- findRideFareITTRowsByLedgerTaxRefs merchantOpCityId fromTime toTime taxRefA taxRefB
   let (totals, txnRowsRev) = foldl' go (RideFareRevRecTotals 0 0 0 0 0 0, []) rawRows
@@ -178,7 +178,7 @@ fetchRideFareRevRecTotals merchantOpCityId fromTime toTime taxRefA taxRefB = do
                 grossAmount = acc.grossAmount + gross,
                 txnCount = acc.txnCount + 1
                },
-            RevenueRecognitionTransactionRow {amount = gross, referenceId = refId, txnStatus = show st} : rs
+            RideRevenueTransactionRow {amount = gross, referenceId = refId, txnStatus = show st} : rs
           )
 
 -- | List RideFare/Output ITT rows whose booking also has a SETTLED tax ledger
@@ -248,7 +248,7 @@ fetchBuyerAppSettlementTotals ::
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m (BuyerAppSettlementTotals, [RevenueRecognitionTransactionRow])
+  m (BuyerAppSettlementTotals, [RideRevenueTransactionRow])
 fetchBuyerAppSettlementTotals merchantOpCityId _fromTime _toTime = do
   logError $
     "fetchBuyerAppSettlementTotals not implemented (depends on WS2); returning zeros for mocId=" <> merchantOpCityId.getId
@@ -266,7 +266,7 @@ fetchDriverEarningAccrualTotals ::
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m (DriverEarningAccrualTotals, [RevenueRecognitionTransactionRow])
+  m (DriverEarningAccrualTotals, [RideRevenueTransactionRow])
 fetchDriverEarningAccrualTotals merchantOpCityId fromTime toTime = do
   rawRows <- findBaseRideOwnerLiabilityRows merchantOpCityId fromTime toTime
   let (totals, txnRowsRev) = foldl' go (DriverEarningAccrualTotals 0 0, []) rawRows
@@ -274,7 +274,7 @@ fetchDriverEarningAccrualTotals merchantOpCityId fromTime toTime = do
   where
     go (acc, rs) (refId, amt, st) =
       ( acc {accrualAmount = acc.accrualAmount + amt, txnCount = acc.txnCount + 1},
-        RevenueRecognitionTransactionRow {amount = amt, referenceId = refId, txnStatus = show st} : rs
+        RideRevenueTransactionRow {amount = amt, referenceId = refId, txnStatus = show st} : rs
       )
 
 -- | List BaseRide legs that credit OwnerLiability.
@@ -333,7 +333,7 @@ fetchPayoutTotals ::
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m (PayoutTotals, [RevenueRecognitionTransactionRow])
+  m (PayoutTotals, [RideRevenueTransactionRow])
 fetchPayoutTotals merchantOpCityId fromTime toTime = do
   -- SETTLED WalletPayoutSettlement legs (OwnerPayoutLiability → PlatformAsset on webhook SUCCESS) plus
   -- legacy WalletPayout debits (payouts initiated before the OwnerPayoutLiability hold; only those carry
@@ -347,7 +347,7 @@ fetchPayoutTotals merchantOpCityId fromTime toTime = do
     isLegacyPayoutDebit le = isJust (le.metadataV2 >>= (.payoutOrderId))
     go (acc, rs) le =
       ( acc {payoutAmount = acc.payoutAmount + le.amount, txnCount = acc.txnCount + 1},
-        RevenueRecognitionTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs
+        RideRevenueTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs
       )
 
 -- ---------------------------------------------------------------------------
@@ -361,7 +361,7 @@ fetchTdsTotals ::
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m (TdsTotals, [RevenueRecognitionTransactionRow], [RevenueRecognitionTransactionRow])
+  m (TdsTotals, [RideRevenueTransactionRow], [RideRevenueTransactionRow])
 fetchTdsTotals merchantOpCityId fromTime toTime = do
   -- List Deducted TDS from direct_tax_transaction.
   -- No ledger join: unlike RideFare ITT (shared online/cash rows — needs GST/VAT
@@ -387,7 +387,7 @@ fetchTdsTotals merchantOpCityId fromTime toTime = do
         mkRow dtt : rs
       )
     mkRow dtt =
-      RevenueRecognitionTransactionRow
+      RideRevenueTransactionRow
         { amount = dtt.tdsAmount,
           referenceId = dtt.referenceId,
           txnStatus = show dtt.tdsTreatment
@@ -404,7 +404,7 @@ fetchSubscriptionRevenueTotals ::
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
   UTCTime ->
-  m (SubscriptionRevenueTotals, [RevenueRecognitionTransactionRow])
+  m (SubscriptionRevenueTotals, [RideRevenueTransactionRow])
 fetchSubscriptionRevenueTotals referenceType merchantOpCityId fromTime toTime = do
   rawRows <-
     QLedgerEntryExtra.findSettledByReferenceTypeAndDateRange
@@ -419,5 +419,5 @@ fetchSubscriptionRevenueTotals referenceType merchantOpCityId fromTime toTime = 
   where
     go (acc, rs) le =
       ( acc {recognizedAmount = acc.recognizedAmount + le.amount, txnCount = acc.txnCount + 1},
-        RevenueRecognitionTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs
+        RideRevenueTransactionRow {amount = le.amount, referenceId = le.referenceId, txnStatus = show le.status} : rs
       )

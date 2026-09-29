@@ -13,7 +13,7 @@ SapJournalEntry:
 
   types:
     TransactionType:
-      enum: "SubscriptionPurchase, Order, Refund, Chargeback, RevenueRecognition"
+      enum: "SubscriptionPurchase, Order, Refund, Chargeback, RevenueRecognition, RideFareRevenue, BuyerAppSettlement, DriverEarningAccrual, DriverPayout, TDS"
       derive: "HttpInstance"
     JournalEntryStatus:
       enum: "SUCCESS, FAILED"

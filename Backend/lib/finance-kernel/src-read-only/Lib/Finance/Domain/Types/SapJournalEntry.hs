@@ -45,7 +45,18 @@ data SapJournalEntry = SapJournalEntry
 
 data JournalEntryStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data TransactionType = SubscriptionPurchase | Order | Refund | Chargeback | RevenueRecognition deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data TransactionType
+  = SubscriptionPurchase
+  | Order
+  | Refund
+  | Chargeback
+  | RevenueRecognition
+  | RideFareRevenue
+  | BuyerAppSettlement
+  | DriverEarningAccrual
+  | DriverPayout
+  | TDS
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JournalEntryStatus)
 
