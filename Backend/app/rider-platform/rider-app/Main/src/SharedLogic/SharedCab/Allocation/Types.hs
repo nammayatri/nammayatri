@@ -78,6 +78,8 @@ data AllocationOutcome
     SessionClosed
   | -- | the alloc key vanished before any release (crash after the CAS, or ticks missed past the key's TTL)
     TimerLost
+  | -- | R38: the allocated cab sent no LTS fix for silentReleaseMult x ltsMaxAgeSec; nobody's fault
+    CabSilent
   | -- | the rider skipped the cab (R19); that plate is then excluded from the booking's next claims
     RiderSkipped SkipReason
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
@@ -97,6 +99,7 @@ outcomeText = \case
   RouteChanged -> "ROUTE_CHANGED"
   SessionClosed -> "SESSION_CLOSED"
   TimerLost -> "TIMER_LOST"
+  CabSilent -> "CAB_SILENT"
   RiderSkipped _ -> "RIDER_SKIPPED"
 
 -- | @blame@ field of the @allocation_closed@ event (05 §7) and the foundation for
@@ -122,6 +125,7 @@ blameFor = \case
   RouteChanged -> BlameNone
   SessionClosed -> BlameNone
   TimerLost -> BlameNone
+  CabSilent -> BlameNone
   RiderSkipped SkipFull -> BlameNone
   RiderSkipped SkipOther -> BlameRider
 
@@ -138,6 +142,7 @@ countsTowardAttempts = \case
   RouteChanged -> False
   SessionClosed -> False
   TimerLost -> False
+  CabSilent -> False
   RiderSkipped SkipFull -> False
   RiderSkipped SkipOther -> True
 

@@ -55,6 +55,10 @@ module SharedLogic.SharedCab.Allocation
     rankCandidates,
     withoutSkipped,
     isSkipped,
+    skipsPlateOnClose,
+    standTimerOnClaim,
+    silentCab,
+    silentReleaseMult,
     skippedWhileFinding,
     isFreshPosition,
     RankedCandidate (..),
@@ -83,12 +87,14 @@ import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -272,7 +278,8 @@ data RankedCandidate = RankedCandidate
   { rcSession :: Session,
     rcEtaToBoardStopSec :: Int,
     rcUpcomingStop :: LT.UpcomingStop,
-    rcMoving :: Bool -- per its fresh LTS position: decides the claim's timer mode (05 §2)
+    rcMoving :: Bool, -- per its fresh LTS position: decides the claim's timer mode (05 §2)
+    rcAtStop :: Bool -- within atStopRadiusM of the board stop: only then is a stationary cab waiting for the rider (R32)
   }
   deriving (Show, Generic)
 
@@ -303,7 +310,7 @@ eligibleCandidates ::
   FindingBooking ->
   [RankedCandidate]
 eligibleCandidates now cfg tracking sessions booking =
-  [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed}
+  [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed, rcAtStop = distanceBetweenInMeters (LatLong veh.vehicleInfo.latitude veh.vehicleInfo.longitude) stop.stop.coordinate <= fromIntegral cfg.atStopRadiusM}
     | s <- sessions,
       -- route sets hold ACTIVE plates only (SessionState.routeSetMoves), but this read is
       -- lock-free; status is the truth (04 §3), so re-check.
@@ -316,6 +323,27 @@ eligibleCandidates now cfg tracking sessions booking =
       let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
       etaSec <= cfg.allocationWindowSec
   ]
+
+-- | R32: the stand timer ("start moving or lose the booking") belongs to a stationary cab waiting at the board stop.
+-- A stationary cab still minutes away (traffic, a red light) gets no timer; stop-progress arms the moving timer at the stop.
+standTimerOnClaim :: RankedCandidate -> Bool
+standTimerOnClaim c = not c.rcMoving && c.rcAtStop
+
+-- | R31: a cab the rider failed to board in time is skipped for this booking too, or the same stationary cab is
+-- re-claimed at once and its stand timer blames the driver for the rider's miss.
+skipsPlateOnClose :: AllocationOutcome -> Bool
+skipsPlateOnClose = isMissedCabOutcome
+
+-- | R38: an allocated cab is released once its last LTS fix is older than this many ltsMaxAgeSec.
+silentReleaseMult :: Int
+silentReleaseMult = 5
+
+-- | R38: the cab has sent nothing for silentReleaseMult x ltsMaxAgeSec (or LTS lost it) while the route's other cabs are
+-- reporting. When nobody on the route is fresh it reads as an LTS outage (05 §8.9), which decides nothing.
+silentCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
+silentCab now maxAgeSec plate tracking =
+  any (isFreshPosition now maxAgeSec . (.vehicleInfo)) tracking
+    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (find ((== plate) . (.vehicleNumber)) tracking)
 
 -- | //TODO(§3 + §10 stale feed): a queued route must still serve the board stop; deciding that
 -- needs the queued route's stop list from OTPRest. Tolerant here (one-tick window; Phase 2
@@ -414,7 +442,7 @@ attemptClaim cfg booking cand = do
                             shared $
                               Redis.setExp
                                 (allocKey booking.bookingId.getId)
-                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
+                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = if standTimerOnClaim cand then Just standDeadline else Nothing, attempts, timerKind = StandTimer}
                                 cfg.findingTimeoutSec
                             pure (Right now)
                           else pure (Left ClaimCasLost)
@@ -522,6 +550,7 @@ closeLocked cfg bookingId expectedPlate outcome =
       QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
       heldBy <- shared $ (>>= (.driverId)) <$> Redis.safeGet @AllocationState (allocKey bookingId.getId)
       shared $ Redis.del (allocKey bookingId.getId)
+      when (skipsPlateOnClose outcome) $ shared $ Redis.sAddExp (skippedKey bookingId.getId) [expectedPlate] cfg.findingTimeoutSec
       -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
       attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
       let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
@@ -582,13 +611,14 @@ expireTimers ::
   AllocationConfig ->
   UTCTime ->
   (Text -> Text -> Bool) -> -- plate moving on route, per fresh LTS positions
+  (Text -> Text -> Bool) -> -- plate silent on route (R38)
   [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] ->
   m ()
-expireTimers cfg now movingOn live =
+expireTimers cfg now movingOn silentOn live =
   forM_ [(b, plate) | entry@(b, _) <- live, Just plate <- [allocatedPlate entry]] $ \(b, plate) -> do
     result <- withBookingLock b.id $ do
       mbState <- shared $ Redis.safeGet (allocKey b.id.getId)
-      case timerExpiry now mbState of
+      case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
         Nothing -> do
           whenJust mbState $ \st ->
@@ -702,7 +732,8 @@ allocationPass cityId = do
             any (\vt -> vt.vehicleNumber == plate && isFreshPosition now cfg.ltsMaxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed) $
               fromMaybe [] (lookup route positionsByRoute)
       -- expired timers first: the seats they free are claimable in this same tick
-      expireTimers cfg now movingOn live
+      let silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (fromMaybe [] (lookup route positionsByRoute))
+      expireTimers cfg now movingOn silentOn live
       findings <- forM (mapMaybe (\entry -> (fst entry,) <$> findingOf entry) live) $ \(b, fb) -> do
         since <- readFindingSince fb.bookingId fb.findingSince
         pure (b, fb {findingSince = since})
@@ -750,11 +781,12 @@ claimFirst cfg booking = go (0 :: Int)
             Events.bookingEvent (Events.AllocationCreated (Just (c.rcEtaToBoardStopSec `div` 60)) rank) booking.bookingId.getId (Just c.rcSession.vehicleNumber) (Just booking.routeCode) now
           Invariants.checkBooking booking.bookingId
           Invariants.checkCab c.rcSession.vehicleNumber
-          notifyDriverOfAllocation booking c
+          -- forked: a slow driver-app must not stall the city's tick (R50); it takes no lock and logs its own failures
+          fork "sharedCabNotifyDriver" (notifyDriverOfAllocation booking c)
           -- R17: a cab claimed while stationary already has its stand timer running (attemptClaim
           -- armed it at claim, standDeadline = now + standTimerSec) -- push now rather than waiting
           -- on stop-progress, which only arms the moving timer for a cab that was moving at claim.
-          unless c.rcMoving $
+          when (standTimerOnClaim c) $
             whenJustM (QFRFSTicketBooking.findById booking.bookingId) (Notify.notifyArriving c.rcSession.vehicleNumber cfg.standTimerSec)
           pure (Just c)
         Left miss -> do

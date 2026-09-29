@@ -6,14 +6,16 @@ module SharedCabAllocationTests (tests) where
 import qualified "rider-app" API.Types.UI.SharedCab as API
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
+import Data.Time.Format.ISO8601 (iso8601Show)
 import "rider-app" Domain.Action.UI.SharedCab (skipReason)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as BS
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), claimable, closable, crossedMaxAttempts, isMissedCabOutcome, isSkipped, skippedWhileFinding, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (FindingBooking (..), RankedCandidate (..), claimable, closable, crossedMaxAttempts, eligibleCandidates, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -60,8 +62,31 @@ candidate plate =
           },
       rcEtaToBoardStopSec = 60,
       rcUpcomingStop = LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) t0 LT.Upcoming Nothing,
-      rcMoving = True
+      rcMoving = True,
+      rcAtStop = False
     }
+
+-- a cab at `pos` doing `speed` m/s whose last fix was `agoSec` before t0, with S1 as its upcoming board stop
+cabFix :: Text -> LatLong -> Maybe Double -> Int -> LT.VehicleTrackingOnRouteResp
+cabFix plate pos speed agoSec =
+  LT.VehicleTrackingOnRouteResp
+    plate
+    LT.VehicleInfo
+      { startTime = Nothing,
+        scheduleRelationship = Nothing,
+        tripId = Nothing,
+        latitude = pos.lat,
+        longitude = pos.lon,
+        speed,
+        timestamp = Just (T.pack (iso8601Show (addUTCTime (fromIntegral (negate agoSec)) t0))),
+        upcomingStops = Just [LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) (addUTCTime 120 t0) LT.Upcoming Nothing]
+      }
+
+finding :: FindingBooking
+finding = FindingBooking {bookingId = Id "b", riderId = Id "r", routeCode = "R1", boardStopCode = "S1", dropStopCode = "S9", seats = 1, findingSince = t0}
+
+claimedAs :: LT.VehicleTrackingOnRouteResp -> [(Bool, Bool, Bool)]
+claimedAs veh = [(standTimerOnClaim c, c.rcMoving, c.rcAtStop) | c <- eligibleCandidates t0 defaultAllocationConfig [veh] [(candidate "P1").rcSession] finding]
 
 tests :: TestTree
 tests =
@@ -139,6 +164,25 @@ tests =
           skippedWhileFinding defaultAllocationConfig (addUTCTime 600 t0) 1 t0 ["A"]
         ]
           @?= [["A"], [], ["A"], []],
+      testCase "R32: only a stationary cab within atStopRadiusM of the board stop gets the stand timer" $
+        map claimedAs [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5, cabFix "P1" farAway Nothing 5]
+          @?= [[(True, False, True)], [(False, False, False)], [(False, True, True)], [(False, False, False)]],
+      testCase "R31: a missed cab is skipped for the booking, no other close is" $
+        map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, CabSilent, RiderSkipped SkipOther]
+          @?= [True, True, False, False, False, False, False, False, False, False],
+      testCase "R38: a silent cab is released only past silentReleaseMult x ltsMaxAgeSec, and only while the route is otherwise reporting" $
+        let quiet ago = silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) ago, cabFix "P2" nearStop (Just 5) 3]
+            limit = silentReleaseMult * 60
+         in [ quiet 10,
+              quiet limit,
+              quiet (limit + 1),
+              silentCab t0 60 "P1" [cabFix "P2" nearStop (Just 5) 3],
+              silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) (limit + 1), cabFix "P2" nearStop (Just 5) (limit + 1)],
+              silentCab t0 60 "P1" []
+            ]
+              @?= [False, False, True, True, False, False],
+      testCase "R38: a silent-cab release is nobody's fault and not an attempt" $
+        (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing
     ]
