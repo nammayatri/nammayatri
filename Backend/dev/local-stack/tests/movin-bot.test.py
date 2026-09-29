@@ -27,6 +27,8 @@ BOT = os.path.join(HERE, "..", "movin-bot.py")
 
 sent = []
 fails = []
+# What the guard's /healthz answers; None is a guard that does not answer.
+GUARD = None
 
 
 class Telegram(http.server.BaseHTTPRequestHandler):
@@ -40,6 +42,18 @@ class Telegram(http.server.BaseHTTPRequestHandler):
             out = {"ok": True, "result": []}
         raw = json.dumps(out).encode()
         self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(raw)))
+        self.end_headers()
+        self.wfile.write(raw)
+
+    def do_GET(self):                                         # noqa: N802
+        if self.path == "/guard" and GUARD is not None:
+            raw = json.dumps(GUARD).encode()
+            self.send_response(200)
+        else:
+            raw = b"{}"
+            self.send_response(404)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
@@ -199,6 +213,43 @@ ok("suspension: reason, end, Algeria",
        for m in b), b)
 ok("closure: reason, Mauritania",
    any(all(x in m for x in ("compte chauffeur fermé", "Fraude", "Mauritanie")) for m in b), b)
+
+print("\n8b. The office SMS phone goes quiet, then comes back (2026-09-29)")
+from datetime import datetime, timedelta, timezone          # noqa: E402
+
+
+def pulse(minutes_ago, countries=("+213",)):
+    at = datetime.now(timezone.utc) - timedelta(minutes=minutes_ago)
+    return {"smsInbox": {"countries": list(countries),
+                         "lastAt": at.isoformat().replace("+00:00", "Z")}}
+
+
+def phone_msgs():
+    return [m for m in sent if "téléphone SMS" in m]
+
+
+sent.clear()
+GUARD = pulse(5)
+run_bot(work, "")
+ok("a heartbeat 5 min ago is not an outage", not phone_msgs(), phone_msgs())
+GUARD = pulse(20)
+run_bot(work, "")
+down = phone_msgs()
+ok("20 min of silence: said once, loud, naming Algeria and the way round",
+   len(down) == 1 and "ne répond plus" in down[0] and "Algérie" in down[0]
+   and "WhatsApp" in down[0], down)
+run_bot(work, "")
+ok("and not again while it stays silent", len(phone_msgs()) == 1, phone_msgs())
+GUARD = pulse(0)
+run_bot(work, "")
+back = phone_msgs()
+ok("back: said once", len(back) == 2 and "répond de nouveau" in back[1], back)
+run_bot(work, "")
+ok("and nothing more once it is back", len(phone_msgs()) == 2, phone_msgs())
+GUARD = pulse(60, countries=())
+run_bot(work, "")
+ok("no country on a SIM: a silent phone matters to nobody", len(phone_msgs()) == 2, phone_msgs())
+GUARD = None
 
 print("\n9. The database does not answer")
 sent.clear()

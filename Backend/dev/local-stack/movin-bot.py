@@ -85,9 +85,9 @@ DZ = "algeria0-0000-0000-0000-00000algeria"
 # A driver's country is his merchant; a passenger's is his number (the
 # console's own rule, apps/api/src/shared/country.ts in the website repo).
 COUNTRY = {
-    MR: {"code": "MR", "label": "🇲🇷 Mauritanie", "cur": "MRU",
+    MR: {"code": "MR", "label": "🇲🇷 Mauritanie", "cur": "MRU", "dial": "+222",
          "mobile": r"^[2-4][0-46-9][0-9]{6}$"},
-    DZ: {"code": "DZ", "label": "🇩🇿 Algérie", "cur": "DA",
+    DZ: {"code": "DZ", "label": "🇩🇿 Algérie", "cur": "DA", "dial": "+213",
          "mobile": r"^0[5-7][0-9]{8}$"},
 }
 MERCHANTS = f"('{MR}', '{DZ}')"
@@ -382,6 +382,55 @@ def check_sms_gateway(state):
     state["sms:lasterror"] = err
     return [("sms:gateway:" + str(abs(hash(err)) % 10**8), "loud",
              f"Movin · la passerelle SMS a refusé un envoi\n\n{str(err)[:300]}")]
+
+
+# Minutes of silence before the office SMS phone is called gone. Its
+# forwarder sends a heartbeat (an empty list) every 5 minutes, so 15 is three
+# missed in a row -- a phone briefly out of signal is not an outage.
+SMS_PHONE_SILENT_MIN = num("BOT_SMS_PHONE_SILENT_MIN", 15)
+
+
+def check_sms_phone(state):
+    """2b · The office SMS phone (2026-09-29). Where a country signs in by
+    texting that SIM, a phone that is off, flat or offline means everyone who
+    picks « Confirmer en nous envoyant un SMS » waits for nothing -- and the
+    server cannot tell, only notice the silence. Said once when it goes quiet,
+    and once when it is back."""
+    h = http_json(GUARD_HEALTH)
+    if not h:
+        return []
+    inbox = h.get("smsInbox") or {}
+    countries = inbox.get("countries") or []
+    if not countries:
+        state.pop("smsphone:down", None)
+        state.pop("smsphone:nopulse", None)
+        return []                     # no country depends on the phone
+    t = now()
+    last = inbox.get("lastAt")
+    if last:
+        state.pop("smsphone:nopulse", None)
+        heard = datetime.fromisoformat(last.replace("Z", "+00:00"))
+    else:
+        # The guard restarted and nothing has come since: count from the first
+        # time the bot noticed, not from the epoch.
+        heard = datetime.fromisoformat(state.setdefault("smsphone:nopulse", t.isoformat()))
+    silent = (t - heard).total_seconds() / 60
+    labels = {c["dial"]: c["label"] for c in COUNTRY.values()}
+    names = ", ".join(labels.get(c, c) for c in countries)
+    if silent >= SMS_PHONE_SILENT_MIN:
+        state["smsphone:down"] = heard.isoformat()
+        return [("smsphone:silent", "loud",
+                 f"Movin · le téléphone SMS de l'agence ne répond plus\n\n"
+                 f"Aucun message ni signe de vie depuis {int(silent)} min "
+                 f"(dernier : {heard.astimezone().strftime('%H:%M')}).\n\n"
+                 f"{names} : ceux qui choisissent « Confirmer en nous envoyant un "
+                 f"SMS » attendront pour rien. Vérifier la batterie, le réseau, "
+                 f"internet et l'application de transfert. WhatsApp fonctionne "
+                 f"toujours.")]
+    if state.pop("smsphone:down", None):
+        return [("smsphone:back:" + str(last), "loud",
+                 "Movin · le téléphone SMS de l'agence répond de nouveau ✅")]
+    return []
 
 
 def check_wallet(_):
@@ -778,7 +827,8 @@ def check_reports(_):
 
 
 CHECKS = [
-    check_registrations, check_sms_budget, check_sms_gateway, check_wallet,
+    check_registrations, check_sms_budget, check_sms_gateway, check_sms_phone,
+    check_wallet,
     check_deletions, check_no_rides, check_zero_estimates,
     check_stale_positions, check_nobody_online, check_containers, check_api,
     check_disk, check_certs, check_backups, check_low_ratings,
