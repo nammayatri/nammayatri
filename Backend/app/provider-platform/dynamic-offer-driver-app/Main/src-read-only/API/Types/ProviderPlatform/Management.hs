@@ -29,6 +29,7 @@ import qualified API.Types.ProviderPlatform.Management.NammaTag
 import qualified API.Types.ProviderPlatform.Management.Notification
 import qualified API.Types.ProviderPlatform.Management.Payout
 import qualified API.Types.ProviderPlatform.Management.PlanManagement
+import qualified API.Types.ProviderPlatform.Management.PolicyDocument
 import qualified API.Types.ProviderPlatform.Management.Pricing
 import qualified API.Types.ProviderPlatform.Management.PricingAdjustment
 import qualified API.Types.ProviderPlatform.Management.Revenue
@@ -76,6 +77,7 @@ data ManagementUserActionType
   | NOTIFICATION API.Types.ProviderPlatform.Management.Notification.NotificationUserActionType
   | PAYOUT API.Types.ProviderPlatform.Management.Payout.PayoutUserActionType
   | PLAN_MANAGEMENT API.Types.ProviderPlatform.Management.PlanManagement.PlanManagementUserActionType
+  | POLICY_DOCUMENT API.Types.ProviderPlatform.Management.PolicyDocument.PolicyDocumentUserActionType
   | PRICING API.Types.ProviderPlatform.Management.Pricing.PricingUserActionType
   | PRICING_ADJUSTMENT API.Types.ProviderPlatform.Management.PricingAdjustment.PricingAdjustmentUserActionType
   | REVENUE API.Types.ProviderPlatform.Management.Revenue.RevenueUserActionType
@@ -120,6 +122,7 @@ instance Text.Show.Show ManagementUserActionType where
     NOTIFICATION e -> "NOTIFICATION/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
     PLAN_MANAGEMENT e -> "PLAN_MANAGEMENT/" <> show e
+    POLICY_DOCUMENT e -> "POLICY_DOCUMENT/" <> show e
     PRICING e -> "PRICING/" <> show e
     PRICING_ADJUSTMENT e -> "PRICING_ADJUSTMENT/" <> show e
     REVENUE e -> "REVENUE/" <> show e
@@ -357,6 +360,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PLAN_MANAGEMENT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( POLICY_DOCUMENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "POLICY_DOCUMENT/" r,
                    ( v1,
                      r2
                      ) <-

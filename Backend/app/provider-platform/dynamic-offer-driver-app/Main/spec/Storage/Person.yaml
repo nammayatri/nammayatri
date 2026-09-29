@@ -13,6 +13,7 @@ imports:
   MediaFile: IssueManagement.Domain.Types.MediaFile
   DeviceType: Kernel.Types.Version
   TagNameValueExpiry: Lib.Yudhishthira.Types
+  AcceptedPolicies: Dashboard.Common
 
 
 Person:
@@ -81,6 +82,7 @@ Person:
     clientId: Maybe Text
     nyClubConsent: Maybe Bool
     operatorBadgeToken: Maybe Text
+    acceptedPolicies: Maybe AcceptedPolicies
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>

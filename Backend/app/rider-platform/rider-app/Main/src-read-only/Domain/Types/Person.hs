@@ -4,6 +4,7 @@
 module Domain.Types.Person where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified Dashboard.Common
 import Data.Aeson
 import qualified Data.Time
 import qualified Data.Time.Calendar
@@ -29,6 +30,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PersonE e = Person
   { aadhaarVerified :: Kernel.Prelude.Bool,
+    acceptedPolicies :: Kernel.Prelude.Maybe Dashboard.Common.AcceptedPolicies,
     androidId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     authBlocked :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -132,6 +134,7 @@ instance EncryptedItem Person where
     pure
       Person
         { aadhaarVerified = aadhaarVerified entity,
+          acceptedPolicies = acceptedPolicies entity,
           androidId = androidId entity,
           authBlocked = authBlocked entity,
           backendAppVersion = backendAppVersion entity,
@@ -227,6 +230,7 @@ instance EncryptedItem Person where
     pure
       ( Person
           { aadhaarVerified = aadhaarVerified entity,
+            acceptedPolicies = acceptedPolicies entity,
             androidId = androidId entity,
             authBlocked = authBlocked entity,
             backendAppVersion = backendAppVersion entity,

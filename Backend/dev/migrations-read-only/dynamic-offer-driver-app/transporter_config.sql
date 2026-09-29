@@ -1199,3 +1199,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_cool_off
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN auto_approve_on_admin_upload boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_legal_compliance_documents boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_go_online_policy_blocker boolean  default false;

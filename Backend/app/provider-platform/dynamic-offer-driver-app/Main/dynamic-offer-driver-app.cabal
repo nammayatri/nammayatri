@@ -259,6 +259,7 @@ library
       Domain.Action.Dashboard.Management.Notification
       Domain.Action.Dashboard.Management.Payout
       Domain.Action.Dashboard.Management.PlanManagement
+      Domain.Action.Dashboard.Management.PolicyDocument
       Domain.Action.Dashboard.Management.Pricing
       Domain.Action.Dashboard.Management.PricingAdjustment
       Domain.Action.Dashboard.Management.Revenue
@@ -424,6 +425,7 @@ library
       Domain.Action.UI.PickupInstructions
       Domain.Action.UI.PlaceNameCache
       Domain.Action.UI.Plan
+      Domain.Action.UI.PolicyDocument
       Domain.Action.UI.PriceBreakup
       Domain.Action.UI.QueueRank
       Domain.Action.UI.Rating
@@ -858,6 +860,7 @@ library
       Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
+      Storage.CachedQueries.PolicyAndComplianceDocument
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
       Storage.CachedQueries.RideRelatedNotificationConfig
@@ -1025,6 +1028,7 @@ library
       Storage.Queries.Person.Internal
       Storage.Queries.PersonExtra
       Storage.Queries.PlanExtra
+      Storage.Queries.PolicyAndComplianceDocumentExtra
       Storage.Queries.PurchaseHistoryExtra
       Storage.Queries.QueriesExtra.BookingLite
       Storage.Queries.QueriesExtra.RideLite
@@ -1192,6 +1196,7 @@ library
       API.Action.Dashboard.Management.Notification
       API.Action.Dashboard.Management.Payout
       API.Action.Dashboard.Management.PlanManagement
+      API.Action.Dashboard.Management.PolicyDocument
       API.Action.Dashboard.Management.Pricing
       API.Action.Dashboard.Management.PricingAdjustment
       API.Action.Dashboard.Management.Revenue
@@ -1263,6 +1268,7 @@ library
       API.Action.DashboardAuth.Management.Notification
       API.Action.DashboardAuth.Management.Payout
       API.Action.DashboardAuth.Management.PlanManagement
+      API.Action.DashboardAuth.Management.PolicyDocument
       API.Action.DashboardAuth.Management.Pricing
       API.Action.DashboardAuth.Management.PricingAdjustment
       API.Action.DashboardAuth.Management.Revenue
@@ -1321,6 +1327,7 @@ library
       API.Action.UI.Penalty
       API.Action.UI.PersonDefaultEmergencyContact
       API.Action.UI.PickupInstructions
+      API.Action.UI.PolicyDocument
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
@@ -1426,6 +1433,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Notification
       API.Types.ProviderPlatform.Management.Endpoints.Payout
       API.Types.ProviderPlatform.Management.Endpoints.PlanManagement
+      API.Types.ProviderPlatform.Management.Endpoints.PolicyDocument
       API.Types.ProviderPlatform.Management.Endpoints.Pricing
       API.Types.ProviderPlatform.Management.Endpoints.PricingAdjustment
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
@@ -1453,6 +1461,7 @@ library
       API.Types.ProviderPlatform.Management.Notification
       API.Types.ProviderPlatform.Management.Payout
       API.Types.ProviderPlatform.Management.PlanManagement
+      API.Types.ProviderPlatform.Management.PolicyDocument
       API.Types.ProviderPlatform.Management.Pricing
       API.Types.ProviderPlatform.Management.PricingAdjustment
       API.Types.ProviderPlatform.Management.Revenue
@@ -1501,6 +1510,7 @@ library
       API.Types.UI.Penalty
       API.Types.UI.PersonDefaultEmergencyContact
       API.Types.UI.PickupInstructions
+      API.Types.UI.PolicyDocument
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
@@ -1666,6 +1676,7 @@ library
       Domain.Types.PlaceNameCache
       Domain.Types.Plan
       Domain.Types.PlanTranslation
+      Domain.Types.PolicyAndComplianceDocument
       Domain.Types.PurchaseHistory
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
@@ -1861,6 +1872,7 @@ library
       Storage.Beam.PlaceNameCache
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
+      Storage.Beam.PolicyAndComplianceDocument
       Storage.Beam.PurchaseHistory
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
@@ -2125,6 +2137,7 @@ library
       Storage.Queries.OrphanInstances.PayoutConfig
       Storage.Queries.OrphanInstances.Person
       Storage.Queries.OrphanInstances.Plan
+      Storage.Queries.OrphanInstances.PolicyAndComplianceDocument
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
@@ -2163,6 +2176,7 @@ library
       Storage.Queries.PlaceNameCache
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
+      Storage.Queries.PolicyAndComplianceDocument
       Storage.Queries.PurchaseHistory
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
