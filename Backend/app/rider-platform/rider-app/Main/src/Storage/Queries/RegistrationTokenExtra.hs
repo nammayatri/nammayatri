@@ -1,5 +1,6 @@
 module Storage.Queries.RegistrationTokenExtra where
 
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPOrg
 import Domain.Types.Person
 import Domain.Types.RegistrationToken
@@ -60,6 +61,15 @@ updateOtpByIdForPartnerOrgId (Id rtId) (Id orgId) authValueHash authExpiry = do
           Se.Is BeamRT.createdViaPartnerOrgId $ Se.Eq (Just orgId)
         ]
     ]
+
+updateMerchantOperatingCityIdByIds :: (MonadFlow m, EsqDBFlow m r) => [Id RegistrationToken] -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityIdByIds rtIds (Id merchantOperatingCityId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamRT.merchantOperatingCityId (Just merchantOperatingCityId),
+      Se.Set BeamRT.updatedAt now
+    ]
+    [Se.Is BeamRT.id (Se.In $ getId <$> rtIds)]
 
 updateOtpAndToken :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id RegistrationToken -> Text -> RegToken -> Int -> UTCTime -> m ()
 updateOtpAndToken (Id rtId) newOtp newToken newAttempts now = do
