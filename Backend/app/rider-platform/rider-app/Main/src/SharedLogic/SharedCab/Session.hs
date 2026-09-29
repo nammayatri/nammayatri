@@ -213,7 +213,7 @@ takeoverEvidence driver plate =
       pure (Just (s.routeCode, ping))
     _ -> pure Nothing
 
-selectLocked :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) => Maybe SelectRouteMode -> OpenSessionReq -> Maybe (Text, Maybe (Maybe Ping)) -> m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
+selectLocked :: (ServiceFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) => Maybe SelectRouteMode -> OpenSessionReq -> Maybe (Text, Maybe (Maybe Ping)) -> m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
 selectLocked mode req evidence = do
   prior <- readSession plate
   now0 <- getCurrentTime
