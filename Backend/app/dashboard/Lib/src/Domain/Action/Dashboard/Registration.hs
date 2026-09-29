@@ -406,11 +406,15 @@ is2FARequired ::
   m Bool
 is2FARequired person = do
   mandatory <- asks (.is2faMandatory)
-  if not mandatory || person.twoFaExempt
+  if not mandatory
     then pure False
-    else do
-      mbRole <- QRole.findById person.roleId
-      pure $ maybe True (not . (.twoFaExempt)) mbRole
+    else not <$> isTwoFaExempt person
+
+-- | Exempt at either level: the person's own flag, or their role's.
+isTwoFaExempt :: BeamFlow m r => DP.Person -> m Bool
+isTwoFaExempt person
+  | person.twoFaExempt = pure True
+  | otherwise = maybe False (.twoFaExempt) <$> QRole.findById person.roleId
 
 check2FA ::
   ( EncFlow m r,
@@ -966,6 +970,7 @@ getTwoFaStatus ::
 getTwoFaStatus tokenInfo = do
   person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
   is2faRequired <- is2FARequired person
+  is2faExempt <- isTwoFaExempt person
   enforcementDeadline <- asks (.twoFaEnforcementDeadline)
   now <- getCurrentTime
   let daysRemaining =
@@ -973,7 +978,6 @@ getTwoFaStatus tokenInfo = do
           floor (realToFrac (diffUTCTime deadline now) / 86400 :: Double) :: Int
       pastGrace = maybe True (< now) enforcementDeadline
       is2faEnabled = person.is2faEnabled
-      is2faExempt = person.twoFaExempt
       mustEnrollNow = is2faRequired && pastGrace && not is2faEnabled
   pure TwoFaStatusRes {..}
 
