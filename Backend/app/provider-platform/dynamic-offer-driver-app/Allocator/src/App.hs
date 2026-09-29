@@ -29,6 +29,7 @@ import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
+import Kernel.External.Payout.HdfcCbx.Manager (prepareHdfcCbxHttpManagers)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
@@ -65,6 +66,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDri
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCollection)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
+import SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck (runBulkPayoutStatusCheck)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.Payout.PayoutStatusCheck (payoutStatusCheckJob)
@@ -95,6 +97,7 @@ import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Tools.ActorInfo as ActorInfo
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -188,6 +191,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
           & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
           & putJobHandlerInListWrapper flowRt env payoutStatusCheckJob
+          & putJobHandlerInListWrapper flowRt env runBulkPayoutStatusCheck
           & putJobHandlerInListWrapper flowRt env runReconciliationJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSchedulerJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSweepJob
@@ -246,12 +250,22 @@ runDriverOfferAllocator configModifier = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
+        -- A bad HDFC config must not stop the allocator from starting; HDFC payouts fail later instead.
+        hdfcCbxConfigsResult <- try CQMSC.findAllHdfcCbxPayoutConfigs
+        hdfcCbxConfigs <- case hdfcCbxConfigsResult of
+          Left (err :: SomeException) -> do
+            logError $ "HDFC CBX payout configs could not be loaded at startup; HDFC payouts will fail until a restart: " <> show err
+            pure []
+          Right configs -> pure configs
+        hdfcCbxManagers <- prepareHdfcCbxHttpManagers 60000 hdfcCbxConfigs
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt handlerEnv allSubscriberIds),
-                Just (Just 20000, prepareIdfyHttpManager 20000)
+                Just (Just 20000, prepareIdfyHttpManager 20000),
+                -- Payout jobs run here, and HDFC CBX needs mTLS on every call.
+                Just (Nothing, hdfcCbxManagers)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))

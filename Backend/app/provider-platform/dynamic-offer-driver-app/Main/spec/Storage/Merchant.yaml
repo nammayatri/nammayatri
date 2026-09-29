@@ -16,6 +16,7 @@ imports:
   Seconds: Kernel.Types.Common
   TripCategory: Domain.Types.Common
   EntityName: Lib.Payment.Domain.Types.Common
+  PayoutBatchRail: Lib.Payment.Domain.Types.PayoutBatch
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
   CloudType: Kernel.Types.Version
@@ -1082,6 +1083,10 @@ TransporterConfig:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
       enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
+    # FLEET_ACCOUNT: the fleet owner's account, filtered to this driver's rides.
+    # OWN_ACCOUNT: the driver's own account. HIDDEN: an empty wallet.
+    FleetLinkedDriverWalletView:
+      enum: "FLEET_ACCOUNT, OWN_ACCOUNT, HIDDEN"
     # The components of the ten-slot fare partition, plus the payment charge, that
     # a surface may club together rather than itemise. Listing a component means
     # "show it as one row"; omitting it means "show its parts separately".
@@ -1113,12 +1118,17 @@ TransporterConfig:
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
       minWalletAmountForScheduledRides: Maybe HighPrecMoney
+      # Wallet summary a fleet-linked driver sees. Absent = FLEET_ACCOUNT.
+      fleetLinkedDriverWalletView: Maybe FleetLinkedDriverWalletView
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
       enableWalletGatedTierCheck: Maybe Bool
+      # Roles barred from instant wallet payout in this city (scheduled, bulk and adhoc are unaffected).
+      # FLEET_OWNER also covers FLEET_BUSINESS. Absent: nobody is barred.
+      instantPayoutExcludedRoles: Maybe [Role]
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double
@@ -2522,7 +2532,7 @@ ScheduledPayoutConfig:
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
   types:
     ScheduledPayoutFrequency:
-      enum: "DAILY, WEEKLY, MONTHLY"
+      enum: "DAILY, WEEKLY, MONTHLY, HOURLY, EVERY_N_DAYS"
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -2539,6 +2549,16 @@ ScheduledPayoutConfig:
     remark: Maybe Text
     orderType: Text
     timeDiffFromUtc: Seconds
+    itemsPerBatchLimit: Maybe Int
+    defaultPayoutRail: Maybe PayoutBatchRail
+    intervalHours: Maybe Int
+    intervalDays: Maybe Int
+    rescheduleBufferMinutes: Maybe Int
+    bufferCheckEnabled: Maybe Bool
+    # Minutes the bulk status-check job waits when nothing is due (DRIVER_WALLET_TRANSACTION row). Absent: 5.
+    bulkStatusCheckIntervalMinutes: Maybe Int
+    # Most batches one status-check run takes (1..500); the rest go in the next run. Absent: 50.
+    bulkStatusCheckBatchLimit: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
   constraints:

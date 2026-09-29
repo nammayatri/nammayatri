@@ -36,11 +36,12 @@ getPayoutItems ::
   Maybe UTCTime -> -- from
   Maybe UTCTime -> -- to
   [PayoutRequestStatus] -> -- status filter (empty = all)
+  [PayoutRequestStatus] -> -- statuses to leave out (empty = none)
   Maybe Int -> -- limit
   Maybe Int -> -- offset
   m [PayoutItem]
-getPayoutItems beneficiaryId mbFrom mbTo statuses limit offset = do
-  payoutRequests <- QPR.findByBeneficiaryWithFilters beneficiaryId mbFrom mbTo statuses limit offset
+getPayoutItems beneficiaryId mbFrom mbTo statuses excludedStatuses limit offset = do
+  payoutRequests <- QPR.findByBeneficiaryWithFilters beneficiaryId mbFrom mbTo statuses excludedStatuses limit offset
   pure $ map toPayoutItem payoutRequests
 
 -- | How the money actually reached the beneficiary. Cash is settled at a booth

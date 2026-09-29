@@ -29,19 +29,23 @@ findActiveConnectAccountsByCity cityId limit offset =
     (Just limit)
     (Just offset)
 
+-- | The account number is replaced only when given (re-verification); the HDFC CBX rail pays to it.
 updateBankVerificationDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Id DP.Person ->
   m ()
-updateBankVerificationDetails ifscCode nameAtBank driverId = do
+updateBankVerificationDetails mbAccountNumber ifscCode nameAtBank driverId = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.ifscCode ifscCode,
-      Se.Set Beam.nameAtBank nameAtBank,
-      Se.Set Beam.updatedAt now
-    ]
+    ( [ Se.Set Beam.ifscCode ifscCode,
+        Se.Set Beam.nameAtBank nameAtBank,
+        Se.Set Beam.updatedAt now
+      ]
+        <> [Se.Set Beam.accountId accountNumber | Just accountNumber <- [mbAccountNumber]]
+    )
     [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
 
 -- Wrapper for src-read-only function with LTS sync

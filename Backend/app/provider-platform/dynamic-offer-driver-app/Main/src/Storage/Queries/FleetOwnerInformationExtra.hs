@@ -33,6 +33,10 @@ updateFleetOwnerBlockedStatus blocked blockReasonFlag fleetOwnerPersonId = do
     [Se.Set Beam.blocked blocked, Se.Set Beam.blockReasonFlag blockReasonFlag, Se.Set Beam.updatedAt now]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (getId fleetOwnerPersonId)]
 
+findAllByFleetOwnerPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+findAllByFleetOwnerPersonIds [] = pure []
+findAllByFleetOwnerPersonIds personIds = findAllWithKV [Se.Is Beam.fleetOwnerPersonId $ Se.In personIds]
+
 findByVerifiedAndEnabled ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

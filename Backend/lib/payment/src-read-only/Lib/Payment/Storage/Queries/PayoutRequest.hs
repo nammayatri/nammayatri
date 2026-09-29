@@ -12,6 +12,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Payment.Domain.Types.Common
+import qualified Lib.Payment.Domain.Types.PayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as Beam
@@ -22,6 +23,11 @@ create = createWithKV
 
 createMany :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest] -> m ())
 createMany = traverse_ create
+
+findAllByBatchId ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch) -> m [Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest])
+findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
 
 findByEntity ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -83,6 +89,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest {..}) =
     [ Se.Set Beam.amount amount,
       Se.Set Beam.bankAccountLast4 bankAccountLast4,
       Se.Set Beam.bankName bankName,
+      Se.Set Beam.batchId (Kernel.Types.Id.getId <$> batchId),
       Se.Set Beam.beneficiaryId beneficiaryId,
       Se.Set Beam.cashMarkedAt cashMarkedAt,
       Se.Set Beam.cashMarkedById cashMarkedById,
@@ -122,6 +129,7 @@ instance FromTType' Beam.PayoutRequest Lib.Payment.Domain.Types.PayoutRequest.Pa
           { amount = amount,
             bankAccountLast4 = bankAccountLast4,
             bankName = bankName,
+            batchId = Kernel.Types.Id.Id <$> batchId,
             beneficiaryId = beneficiaryId,
             cashMarkedAt = cashMarkedAt,
             cashMarkedById = cashMarkedById,
@@ -160,6 +168,7 @@ instance ToTType' Beam.PayoutRequest Lib.Payment.Domain.Types.PayoutRequest.Payo
       { Beam.amount = amount,
         Beam.bankAccountLast4 = bankAccountLast4,
         Beam.bankName = bankName,
+        Beam.batchId = Kernel.Types.Id.getId <$> batchId,
         Beam.beneficiaryId = beneficiaryId,
         Beam.cashMarkedAt = cashMarkedAt,
         Beam.cashMarkedById = cashMarkedById,

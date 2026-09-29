@@ -250,6 +250,11 @@ refundRegistrationAmount ::
   Payout.PayoutServiceFlow ->
   m (Maybe PayoutRequest.PayoutResult)
 refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow = do
+  -- A registration refund is a single payout with no batch, which the bulk (HDFC CBX) rail cannot
+  -- send. Refuse before anything is written, so no payout request is left stuck in PROCESSING.
+  when (payoutServiceFlow == Payout.BulkFlow) $
+    throwError $ InvalidRequest "Registration refunds are not supported on the bulk payout rail"
+
   -- 1. Look up the PaymentOrder
   order <- QOrder.findById orderId >>= maybe (throwError $ InvalidRequest $ "Registration order not found: " <> orderId.getId) pure
 
@@ -269,6 +274,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       vpa <- case (order.vpa, payoutServiceFlow) of
         (Just v, _) -> pure (Just v)
         (Nothing, Payout.StripeFlow) -> pure Nothing
+        (Nothing, Payout.BulkFlow) -> pure Nothing -- not reached: bulk is refused above
         (Nothing, Payout.JuspayFlow) -> do
           logError $ "No VPA found on registration order " <> orderId.getId <> ", cannot refund"
           throwError $ InvalidRequest "No VPA captured for this registration order"
@@ -276,7 +282,8 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       -- 5. Build submission and call payout
       let submission =
             PayoutRequest.PayoutSubmission
-              { beneficiaryId = order.personId.getId,
+              { batchId = Nothing,
+                beneficiaryId = order.personId.getId,
                 entityName = DCommon.REGISTRATION_REFUND,
                 entityId = orderId.getId,
                 entityRefId = Nothing,

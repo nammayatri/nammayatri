@@ -90,9 +90,11 @@ getConfigJSON = \case
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
     Payout.StripeConfig cfg -> toJSON cfg
+    Payout.HdfcCbxConfig cfg -> toJSON cfg
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
     Payout.StripeConfig cfg -> toJSON cfg
+    Payout.HdfcCbxConfig cfg -> toJSON cfg
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -100,6 +102,7 @@ getConfigJSON = \case
   Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
     Payout.StripeConfig cfg -> toJSON cfg
+    Payout.HdfcCbxConfig cfg -> toJSON cfg
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -267,6 +270,7 @@ getPayoutServiceConfigJson = \case
     Just Stripe.Live -> Payout.Stripe
     Just Stripe.Test -> Payout.StripeTest
     Nothing -> Payout.Stripe
+  Payout.HdfcCbxConfig _ -> Payout.HdfcCbx
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON for serviceName: " <> show serviceName <> " Error:" <> err)) return $ case serviceName of
@@ -375,3 +379,4 @@ mkPayoutServiceConfig configJSON = \case
   Payout.AAJuspay -> Payout.JuspayConfig <$> eitherValue configJSON
   Payout.Stripe -> Payout.StripeConfig <$> eitherValue configJSON
   Payout.StripeTest -> Payout.StripeConfig <$> eitherValue configJSON
+  Payout.HdfcCbx -> Payout.HdfcCbxConfig <$> eitherValue configJSON

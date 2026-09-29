@@ -18,6 +18,13 @@ module Domain.Action.UI.Payout
     payoutProcessingLockKey,
     processPreviousPayoutAmount,
     PayoutSettlementFlow,
+    CallPayoutServiceAction,
+    SettlementHooks (..),
+    defaultSettlementHooks,
+    payoutSettlementAction,
+    payoutSettlementActionWith,
+    settleDriverWalletPayoutLedger,
+    settleDriverWalletPayoutLedgerFor,
     refreshPayoutOrderWithSettlement,
     stripePayoutWebhookHandler,
     stripeTestPayoutWebhookHandler,
@@ -37,6 +44,7 @@ import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.ScheduledPayout as DSP
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
@@ -321,6 +329,7 @@ fetchPaymentServiceConfig merchantShortId mbOpCity mbServiceName service = do
       pure case webhookFlow of
         TPayout.StripeFlow -> service -- we should keep differentiation between Stripe and StripeTest, depending to which webhook triggered
         TPayout.JuspayFlow -> subscriptionService
+        TPayout.BulkFlow -> service -- HDFC CBX has no webhook; here only for exhaustiveness
 
 payoutSettlementAction ::
   (PayoutSettlementFlow m r) =>
@@ -331,9 +340,38 @@ payoutSettlementAction ::
   Text ->
   CallPayoutServiceAction m ->
   m ()
-payoutSettlementAction merchantId merchantOperatingCityId payoutStatus amount payoutOrderId callPayoutServiceAction = do
+payoutSettlementAction = payoutSettlementActionWith defaultSettlementHooks
+
+-- | Overridable parts of the shared settlement. The HDFC CBX bulk path passes its own push.
+newtype SettlementHooks m = SettlementHooks
+  { -- | Tell the driver how a wallet payout ended. Runs inside the settlement, after the ledger.
+    notifyWalletPayout :: Person.Person -> DPayoutOrder.PayoutOrder -> IPayout.PayoutOrderStatus -> HighPrecMoney -> m ()
+  }
+
+defaultSettlementHooks :: (PayoutSettlementFlow m r) => SettlementHooks m
+defaultSettlementHooks =
+  SettlementHooks
+    { notifyWalletPayout = \person _payoutOrder updPayoutStatus amount -> do
+        let (notificationTitle, notificationMessage, notificationType) =
+              if isPayoutOrderSuccess updPayoutStatus
+                then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+                else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+    }
+
+payoutSettlementActionWith ::
+  (PayoutSettlementFlow m r) =>
+  SettlementHooks m ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  IPayout.PayoutOrderStatus ->
+  HighPrecMoney ->
+  Text ->
+  CallPayoutServiceAction m ->
+  m ()
+payoutSettlementActionWith hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrderId callPayoutServiceAction = do
   payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
-  runPayoutSettlement merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+  runPayoutSettlementWith hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
 
 runPayoutSettlement ::
   (PayoutSettlementFlow m r) =>
@@ -344,13 +382,25 @@ runPayoutSettlement ::
   DPayoutOrder.PayoutOrder ->
   CallPayoutServiceAction m ->
   m ()
-runPayoutSettlement merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction =
+runPayoutSettlement = runPayoutSettlementWith defaultSettlementHooks
+
+runPayoutSettlementWith ::
+  (PayoutSettlementFlow m r) =>
+  SettlementHooks m ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  IPayout.PayoutOrderStatus ->
+  HighPrecMoney ->
+  DPayoutOrder.PayoutOrder ->
+  CallPayoutServiceAction m ->
+  m ()
+runPayoutSettlementWith hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction =
   case payoutOrder.entityName of
     Just DPayment.SPECIAL_ZONE_PAYOUT ->
       settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAction
     _ ->
       unless (isPayoutOrderSuccess payoutOrder.status) $
-        settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
+        settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction
 
 settleSpecialZonePayout ::
   (PayoutSettlementFlow m r) =>
@@ -390,6 +440,7 @@ settleSpecialZonePayout merchantOperatingCityId payoutOrder callPayoutServiceAct
 
 settlePayoutEntities ::
   (PayoutSettlementFlow m r) =>
+  SettlementHooks m ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   IPayout.PayoutOrderStatus ->
@@ -397,14 +448,13 @@ settlePayoutEntities ::
   DPayoutOrder.PayoutOrder ->
   CallPayoutServiceAction m ->
   m ()
-settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction = do
+settlePayoutEntities hooks merchantId merchantOperatingCityId payoutStatus amount payoutOrder callPayoutServiceAction = do
   payoutConfig <- getPayoutConfigForCustomer merchantOperatingCityId payoutOrder.customerId
   when (isPayoutOrderSuccess payoutStatus) do
     person' <- QP.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
     let isFleetOwnerRole = isFleetRole person'.role
     unless isFleetOwnerRole do
-      driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
-      QDriverStats.updateTotalPayoutAmountPaid (Just (fromMaybe 0 driverStats.totalPayoutAmountPaid + amount)) (Id payoutOrder.customerId)
+      addPayoutToDriverStatsOnce payoutOrder amount
       updateDFeeStatusForPayoutRegistrationRefund payoutOrder.customerId
   case payoutOrder.entityName of
     Just DPayment.DRIVER_DAILY_STATS -> do
@@ -481,52 +531,10 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
       Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
         (updPayoutStatus, _) <- callPayoutServiceAction payoutOrder.orderId driverId payoutConfig
         person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        let counterparty = counterpartyFromRole person.role
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-        whenJust mbPayoutReq $ \payoutReq -> do
-          let walletCtx = buildDriverChargeCtx counterparty driverId.getId payoutOrder.merchantId merchantOperatingCityId.getId transporterConfig.currency payoutReq.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-              holdMetadata =
-                LedgerEntryMetadata
-                  { driverPayable = Just (-1 * amount),
-                    payoutOrderId = Nothing,
-                    reason = Nothing,
-                    subscriptionAllocations = Nothing,
-                    d2cReferralEarnings = Nothing,
-                    d2dReferralEarnings = Nothing,
-                    dailyStatsId = Nothing
-                  }
-          when (isPayoutOrderSuccess updPayoutStatus) $ do
-            payoutEntryIds <-
-              settleWalletPayoutLedger walletCtx amount (Just holdMetadata) PayoutSucceeded
-                >>= fromEitherM (\err -> InternalError ("Failed to settle wallet payout: " <> show err))
-            -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
-            -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
-            -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
-            chargeEntryIds <- case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
-              Nothing -> pure []
-              Just (payoutFeeCfg, payoutBearer) -> do
-                let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
-                postOnceByReference walletReferencePGPayoutCharges walletCtx (recordStripeChargeLedger walletCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges)
-                  >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
-            markEntriesAsClaimed (payoutEntryIds <> chargeEntryIds)
-            entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
-            settleWalletEntries entryIds payoutReq.id.getId
-            PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
-          when (isPayoutOrderFailed updPayoutStatus) $ do
-            void $
-              settleWalletPayoutLedger walletCtx amount (Just holdMetadata) (PayoutFailed ("Payout failed: " <> show updPayoutStatus))
-                >>= fromEitherM (\err -> InternalError ("Failed to reverse wallet payout: " <> show err))
-            -- TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability:
-            -- those reserved wallet entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
-            entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
-            releaseWalletEntriesReservation entryIds
-            PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
-
-        let (notificationTitle, notificationMessage, notificationType) =
-              if isPayoutOrderSuccess updPayoutStatus
-                then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
-                else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
-        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
+        whenJust mbPayoutReq $ \payoutReq ->
+          settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder person transporterConfig payoutReq amount updPayoutStatus
+        hooks.notifyWalletPayout person payoutOrder updPayoutStatus amount
     _ -> pure ()
   where
     updateDFeeStatusForPayoutRegistrationRefund driverId = do
@@ -552,6 +560,92 @@ settlePayoutEntities merchantId merchantOperatingCityId payoutStatus amount payo
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
       callPayoutServiceAction payoutOrder.orderId dailyStats.driverId payoutConfig
 
+-- | Ledger step of a finished driver wallet payout: on success the hold is paid out, on failure it
+--   goes back to the wallet. Shared with the HDFC CBX bulk path; callers hold the running-balance lock.
+settleDriverWalletPayoutLedger ::
+  (PayoutSettlementFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DPayoutOrder.PayoutOrder ->
+  Person.Person ->
+  DTC.TransporterConfig ->
+  DPR.PayoutRequest ->
+  HighPrecMoney ->
+  IPayout.PayoutOrderStatus ->
+  m ()
+settleDriverWalletPayoutLedger merchantOperatingCityId payoutOrder =
+  settleDriverWalletPayoutLedgerFor merchantOperatingCityId payoutOrder.merchantId
+
+-- | 'settleDriverWalletPayoutLedger' for a payout known by its merchant rather than its order.
+settleDriverWalletPayoutLedgerFor ::
+  (PayoutSettlementFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Text -> -- merchantId
+  Person.Person ->
+  DTC.TransporterConfig ->
+  DPR.PayoutRequest ->
+  HighPrecMoney ->
+  IPayout.PayoutOrderStatus ->
+  m ()
+settleDriverWalletPayoutLedgerFor merchantOperatingCityId merchantId person transporterConfig payoutReq amount updPayoutStatus = do
+  let driverId = person.id
+      counterparty = counterpartyFromRole person.role
+  let walletCtx = buildDriverChargeCtx counterparty driverId.getId merchantId merchantOperatingCityId.getId transporterConfig.currency payoutReq.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+      holdMetadata =
+        LedgerEntryMetadata
+          { driverPayable = Just (-1 * amount),
+            payoutOrderId = Nothing,
+            reason = Nothing,
+            subscriptionAllocations = Nothing,
+            d2cReferralEarnings = Nothing,
+            d2dReferralEarnings = Nothing,
+            dailyStatsId = Nothing
+          }
+  when (isPayoutOrderSuccess updPayoutStatus) $ do
+    payoutEntryIds <-
+      settleWalletPayoutLedger walletCtx amount (Just holdMetadata) PayoutSucceeded
+        >>= fromEitherM (\err -> InternalError ("Failed to settle wallet payout: " <> show err))
+    -- Stripe payout charge (opt-in via payoutFee.feeBearer). Q = fixed + rate% of the payout
+    -- amount; posts SellerExpense → SellerLiability, plus OwnerLiability → SellerRevenue when
+    -- the driver bears it. Uses a driver-counterparty ctx so the funding leg hits the driver wallet.
+    chargeEntryIds <- case transporterConfig.driverWalletConfig.payoutFee >>= \cfg -> (cfg,) <$> cfg.feeBearer of
+      Nothing -> pure []
+      Just (payoutFeeCfg, payoutBearer) -> do
+        let payoutChargeAmount = computeStripePayoutFee payoutFeeCfg amount
+        postOnceByReference walletReferencePGPayoutCharges walletCtx (recordStripeChargeLedger walletCtx (payoutBearerToFunder payoutBearer) payoutChargeAmount walletReferencePGPayoutCharges)
+          >>= fromEitherM (\e -> InternalError ("Failed to post PG payout charge: " <> show e))
+    markEntriesAsClaimed (payoutEntryIds <> chargeEntryIds)
+    entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+    settleWalletEntries entryIds payoutReq.id.getId
+    PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
+  when (isPayoutOrderFailed updPayoutStatus) $ do
+    void $
+      settleWalletPayoutLedger walletCtx amount (Just holdMetadata) (PayoutFailed ("Payout failed: " <> show updPayoutStatus))
+        >>= fromEitherM (\err -> InternalError ("Failed to reverse wallet payout: " <> show err))
+    -- TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability:
+    -- those reserved wallet entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
+    entryIds <- map Id <$> PayoutRequest.getPayoutLedgerEntryIds payoutReq
+    releaseWalletEntriesReservation entryIds
+    PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
+
+-- | Adds a payout to driver_stats once per order, since a settle can run more than once for it. The
+--   key is in the master cloud's Redis so a webhook and a status check in different clouds agree.
+addPayoutToDriverStatsOnce :: (PayoutSettlementFlow m r) => DPayoutOrder.PayoutOrder -> HighPrecMoney -> m ()
+addPayoutToDriverStatsOnce payoutOrder amount = do
+  let key = "payoutDriverStatsCounted:" <> payoutOrder.orderId
+      oneDay = 24 * 3600
+  isFirstTime <- Redis.runInMasterCloudRedisCell $ Redis.setNxExpire key oneDay True
+  if not isFirstTime
+    then logInfo ("Payout already added to driver_stats: " <> payoutOrder.orderId)
+    else do
+      result <- try $ do
+        driverStats <- QDriverStats.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
+        QDriverStats.updateTotalPayoutAmountPaid (Just (fromMaybe 0 driverStats.totalPayoutAmountPaid + amount)) (Id payoutOrder.customerId)
+      case result of
+        Right () -> pure ()
+        Left (err :: SomeException) -> do
+          Redis.runInMasterCloudRedisCell $ Redis.del key -- so the next settle adds it
+          throwM err
+
 -- | Poll Juspay and run the same settlement as the webhook when payout_order is not
 -- already SUCCESS; otherwise return the order as-is.
 refreshPayoutOrderWithSettlement ::
@@ -559,7 +653,8 @@ refreshPayoutOrderWithSettlement ::
   DPayoutOrder.PayoutOrder ->
   m DPayoutOrder.PayoutOrder
 refreshPayoutOrderWithSettlement payoutOrder =
-  if isPayoutOrderSuccess payoutOrder.status
+  -- HDFC bulk orders (with a batch) cannot be polled one by one; only the batch status check updates them.
+  if isPayoutOrderSuccess payoutOrder.status || isJust payoutOrder.batchId
     then pure payoutOrder
     else case payoutOrder.entityName of
       Nothing -> pure payoutOrder
@@ -626,6 +721,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       let payoutVpaValid = case payoutServiceFlow of
             TPayout.JuspayFlow -> isJust mbVpa
             TPayout.StripeFlow -> True
+            TPayout.BulkFlow -> False
       case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
         (True, True) -> do
           uid <- generateGUID
@@ -633,7 +729,7 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
-          let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid pendingAmount transporterConfig.currency phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) mbVpa payoutConfig.orderType payoutServiceFlow Nothing
+          let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid pendingAmount transporterConfig.currency phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) mbVpa payoutConfig.orderType payoutServiceFlow Nothing Nothing
           let entityName = DPayment.BACKLOG
               createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchOpCity person.id mbPersonBankAccount
           merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)

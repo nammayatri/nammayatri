@@ -224,6 +224,7 @@ scheduledPayoutToPayoutRequest sp =
   PayoutRequest.PayoutRequest
     { id = cast sp.id,
       entityName = Nothing,
+      batchId = Nothing,
       entityId = sp.rideId,
       entityRefId = Just sp.bookingId,
       beneficiaryId = sp.driverId,
@@ -285,3 +286,5 @@ statusToLifecycle = \case
   PayoutRequest.CANCELLED -> ReconT.Cancelled
   PayoutRequest.CASH_PAID -> ReconT.Cancelled
   PayoutRequest.CASH_PENDING -> ReconT.Cancelled
+  -- Never sent to a partner, so there is no PG leg to reconcile and nothing settled.
+  PayoutRequest.EXCLUDED -> ReconT.Cancelled

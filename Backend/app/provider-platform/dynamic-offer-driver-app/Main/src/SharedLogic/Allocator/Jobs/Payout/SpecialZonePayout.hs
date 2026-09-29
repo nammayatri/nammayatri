@@ -156,17 +156,28 @@ executeSpecialZonePayout payoutRequest = do
       void $ RideEnd.driverEndRide shandle ride.id driverReq
 
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion merchantOpCityId person.id
-  let payoutCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
-  mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
-  case mbPayoutOrder of
-    Just payoutOrder ->
-      logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
-    Nothing -> do
-      mbUpdatedPayoutReq <- QPR.findById payoutRequest.id
-      whenJust mbUpdatedPayoutReq $ \updatedPayoutReq ->
-        when (updatedPayoutReq.status `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
-          SharedRide.safeRevertVehicleBalanceForPayout updatedPayoutReq
+  (ridePayoutFlow, _) <- TP.getPayoutServiceFlowForMerchant (.createPayoutOrder) TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService merchantOpCityId
+  if ridePayoutFlow == IPayout.BulkFlow
+    then do
+      -- Not supported on the bulk (HDFC CBX) rail: fail the request and give the vehicle balance
+      -- back, rather than leave the request stuck with the balance taken.
+      let reason = "Special-zone payouts are not supported on the bulk payout rail"
+      logError $ reason <> " | payoutRequest " <> payoutRequest.id.getId
+      PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just reason) payoutRequest
+      QPR.updateStatusWithReasonById DPR.AUTO_PAY_FAILED (Just reason) payoutRequest.id
+      SharedRide.safeRevertVehicleBalanceForPayout payoutRequest
+    else do
+      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion merchantOpCityId person.id
+      let payoutCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
+      mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
+      case mbPayoutOrder of
+        Just payoutOrder ->
+          logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
+        Nothing -> do
+          mbUpdatedPayoutReq <- QPR.findById payoutRequest.id
+          whenJust mbUpdatedPayoutReq $ \updatedPayoutReq ->
+            when (updatedPayoutReq.status `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
+              SharedRide.safeRevertVehicleBalanceForPayout updatedPayoutReq
   pure Complete
 
 -- ---------------------------------------------------------------------------
@@ -311,6 +322,7 @@ executeOldSpecialZonePayout scheduledPayout = do
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> isJust mbVpa
             IPayout.StripeFlow -> True
+            IPayout.BulkFlow -> isJust mbPersonBankAccount
       if not payoutVpaValid
         then do
           logWarning $ "No payout bank account for ride: " <> scheduledPayout.rideId
@@ -328,7 +340,7 @@ executeOldSpecialZonePayout scheduledPayout = do
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
               let entityName = DLP.SPECIAL_ZONE_PAYOUT
-                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" payoutServiceFlow Nothing
+                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" payoutServiceFlow Nothing Nothing
               case merchantId of
                 Nothing -> do
                   logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id

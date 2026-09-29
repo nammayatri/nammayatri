@@ -37,6 +37,7 @@ module Lib.Payment.Domain.Action
     mkCreatePayoutOrderReq,
     payoutStatusService,
     payoutStatusUpdates,
+    updatePayoutRequestStatusFromOrder,
     cancelPaymentIntentService,
     verifyVPAService,
     mkCreatePayoutServiceReq,
@@ -120,6 +121,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
@@ -2711,7 +2713,9 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
     remark :: Text,
     customerName :: Text,
     customerVpa :: Maybe Text,
-    payoutServiceFlow :: PT.PayoutServiceFlow
+    payoutServiceFlow :: PT.PayoutServiceFlow,
+    -- | Set only by the HDFC bulk flow, whose batch is created before its orders.
+    batchId :: Maybe (Id DPayoutBatch.PayoutBatch)
   }
 
 mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
@@ -2734,6 +2738,9 @@ createPayoutService ::
   (Payment.PayoutOrder -> m ()) -> -- runs once the order is persisted (e.g. schedule a status check job)
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
 createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig afterPayoutOrderCreated = do
+  -- HDFC CBX is paid only through a batch file; an order with no batch would never reach it.
+  when (createPayoutServiceReq.payoutServiceFlow == PT.BulkFlow && isNothing createPayoutServiceReq.batchId) $
+    throwError (InvalidRequest "This payout cannot be sent through a bulk payout partner")
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
@@ -2777,6 +2784,9 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       let transferStatus = case createPayoutServiceReq.payoutServiceFlow of
             PT.JuspayFlow -> Nothing
             PT.StripeFlow -> Just Payout.TRANSFER_INITIATED
+            -- On bulk, transferStatus only mirrors the partner's settlement status, and there is
+            -- none before the file is even sent.
+            PT.BulkFlow -> Nothing
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -2804,6 +2814,9 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             pgBaseFee = Nothing,
             pgGst = Nothing,
             merchantTopUpAmount = Nothing,
+            batchId = req.batchId,
+            settlementRef = Nothing, -- set by updateBulkSettled once the partner reports it
+            settlementRefType = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
@@ -2909,8 +2922,9 @@ mkCreatePayoutServiceReq ::
   Text ->
   Payout.PayoutServiceFlow ->
   Maybe HighPrecMoney -> -- explicit transferAmount (Nothing = use 0)
+  Maybe (Id DPayoutBatch.PayoutBatch) -> -- owning batch (bulk flow only)
   CreatePayoutServiceReq
-mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType payoutServiceFlow mbTransferAmount =
+mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType payoutServiceFlow mbTransferAmount batchId =
   CreatePayoutServiceReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
