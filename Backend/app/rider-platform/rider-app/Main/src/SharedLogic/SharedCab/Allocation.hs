@@ -57,6 +57,7 @@ module SharedLogic.SharedCab.Allocation
     isSkipped,
     skipsPlateOnClose,
     standTimerOnClaim,
+    claimTimerSec,
     silentCab,
     silentReleaseMult,
     skippedWhileFinding,
@@ -326,9 +327,19 @@ eligibleCandidates now cfg tracking sessions booking =
   ]
 
 -- | R32: the stand timer ("start moving or lose the booking") belongs to a stationary cab waiting at the board stop.
--- A stationary cab still minutes away (traffic, a red light) gets no timer; stop-progress arms the moving timer at the stop.
+-- A stationary cab still minutes away (traffic, a red light) gets no stand timer; stop-progress arms the moving timer at the stop.
 standTimerOnClaim :: RankedCandidate -> Bool
 standTimerOnClaim c = not c.rcMoving && c.rcAtStop
+
+-- | The timer a claim arms, in seconds: a moving cab none (stop-progress arms the moving timer at the stop), a stationary
+-- cab at the stop the stand timer, and a stationary cab away from the stop a bounded wait of allocationWindowSec, the ETA
+-- it was admitted under, so a parked cab that keeps pinging cannot hold the rider until the alloc key's TTL. The stand timer
+-- is cleared once the cab is seen moving, like any other.
+claimTimerSec :: AllocationConfig -> RankedCandidate -> Maybe Int
+claimTimerSec cfg c
+  | c.rcMoving = Nothing
+  | c.rcAtStop = Just cfg.standTimerSec
+  | otherwise = Just cfg.allocationWindowSec
 
 -- | R31: a cab the rider failed to board in time is skipped for this booking too, or the same stationary cab is
 -- re-claimed at once and its stand timer blames the driver for the rider's miss.
@@ -436,14 +447,14 @@ attemptClaim cfg booking cand = do
                         if claimable b.status b.vehicleNumber statuses markerAlive
                           then do
                             QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
-                            -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
+                            -- 05 §2 timer mode: a stationary cab gets a timer (see claimTimerSec),
                             -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
                             -- The key's TTL is only a garbage-collection backstop.
-                            let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
+                            let deadline = (\sec -> addUTCTime (intToNominalDiffTime sec) now) <$> claimTimerSec cfg cand
                             shared $
                               Redis.setExp
                                 (allocKey booking.bookingId.getId)
-                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = if standTimerOnClaim cand then Just standDeadline else Nothing, attempts, timerKind = StandTimer}
+                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = StandTimer}
                                 cfg.findingTimeoutSec
                             pure (Right now)
                           else pure (Left ClaimCasLost)

@@ -15,7 +15,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (FindingBooking (..), RankedCandidate (..), claimable, closable, crossedMaxAttempts, eligibleCandidates, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (FindingBooking (..), RankedCandidate (..), claimTimerSec, claimable, closable, crossedMaxAttempts, eligibleCandidates, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -167,6 +167,9 @@ tests =
       testCase "R32: only a stationary cab within atStopRadiusM of the board stop gets the stand timer" $
         map claimedAs [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5, cabFix "P1" farAway Nothing 5]
           @?= [[(True, False, True)], [(False, False, False)], [(False, True, True)], [(False, False, False)]],
+      testCase "M5: a stationary cab gets a bounded wait, at the stop the stand timer and away the allocation window; a moving cab none" $
+        map (\veh -> [claimTimerSec defaultAllocationConfig c | c <- eligibleCandidates t0 defaultAllocationConfig [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
+          @?= [[Just defaultAllocationConfig.standTimerSec], [Just defaultAllocationConfig.allocationWindowSec], [Nothing]],
       testCase "R31: a missed cab is skipped for the booking, no other close is" $
         map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, CabSilent, RiderSkipped SkipOther]
           @?= [True, True, False, False, False, False, False, False, False, False],
