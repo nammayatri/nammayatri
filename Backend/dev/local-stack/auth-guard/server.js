@@ -89,6 +89,7 @@ const http = require('http');
 const fs = require('fs');
 const crypto = require('crypto');
 const whatsapp = require('./whatsapp');
+const smsInbox = require('./sms-inbox');
 
 const PORT = Number(process.env.PORT || 8031);
 
@@ -965,10 +966,19 @@ async function handle(req, res) {
     return res.end(text);
   }
 
+  // The office phone's forwarder: the texts people send to Movin's SIM
+  // (2026-09-29). Answered here, forwarded nowhere. See sms-inbox.js.
+  if (pathname === '/sms/inbox') {
+    if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'method not allowed' });
+    const [status, out] = smsInbox.deliver(await readBody(req), req.headers);
+    return send(res, status, out);
+  }
+
   if (pathname === '/healthz') {
     return send(res, 200, {
       ok: true,
       whatsapp: whatsapp.health(),
+      smsInbox: smsInbox.health(),
       routes: ROUTES.map((r) => ({
         prefix: r.prefix,
         upstream: r.upstream,

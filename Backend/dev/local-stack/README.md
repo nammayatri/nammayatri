@@ -424,6 +424,7 @@ caller and each a `location =`, never a prefix:
 | `/rider/report` | admin-api | « Signaler » mid-ride (2026-09-27) |
 | `/driver/sanction` | admin-api | a suspended driver's countdown and reason (2026-09-27) |
 | `/whatsapp/webhook` | auth-guard | Meta's webhook (2026-09-27) — see *WhatsApp* below |
+| `/sms/inbox` | auth-guard | the office phone's SMS forwarder (2026-09-29) — see *The SMS inbox* below |
 
 admin-api's `/internal/*` is deliberately **not** among them: it is how the
 guard reports a driver's rating (see *Ratings*), and it answers the box only.
@@ -3698,6 +3699,34 @@ When the compose `env_file` list changes, `docker compose up -d --no-deps
 auth-guard` — a `restart` does not re-read it. And the deployed compose is a
 superset of this one (see its header): patch it in place, never copy it.
 
+### The SMS inbox (2026-09-29) — phase 1
+
+The client's plan (2026-09-28) is the WhatsApp flow over plain SMS: the
+passenger texts `MOVIN <code>` to a SIM in an Android phone at the office,
+and that phone's forwarder (the client's own, "chatty-sms") POSTs what it
+received to us. It would replace Moorsyl — which **stays** until this is
+proved on the real phone (owner's decision).
+
+`POST /sms/inbox`, `Authorization: Bearer <SMS_INBOX_TOKEN>`, body
+`{"source":"chatty-sms","count":n,"messages":[{"from":…,"body":…}]}`. The
+guard answers it itself (`auth-guard/sms-inbox.js`) and files each message's
+code under its sender, local or international (`41234567`, `0555123456`,
+`+222…`, `00213…` all resolve). Sender and text are read under several
+field names, because the forwarder is not ours. An empty list is a
+heartbeat; `/healthz` → `smsInbox.lastAt` is the phone's pulse.
+
+**Phase 1 is the inbox only — nothing signs in by it yet.** Phase 2, once the
+forwarder is proved and the SIM numbers are known (one per country, or every
+text is international): a start that hands out the code and an `sms:` link,
+and the verify accepting `smsInbox.codeFrom()` as it accepts WhatsApp's.
+
+The token proves the POST came from our phone; it does **not** prove the
+sender. An SMS sender can be forged on some international routes — the
+weakness WhatsApp's signature does not have, and the reason this is the
+client's call, told to him on 2026-09-28. `tests/auth-guard-sms-inbox.test.js`.
+
+Secret: `/opt/ny/secrets/sms-inbox.env` (root, 600), `SMS_INBOX_TOKEN`.
+
 ## What a person may send — the bounds, audited 2026-09-27
 
 **No SQL is built from user input anywhere we own.** All 67 queries in
@@ -3709,7 +3738,7 @@ shape, and these are the bounds, outermost first:
 
 | Where | Bound |
 |---|---|
-| nginx | 1 MB per request by default; tighter per route (16 KB declaration and report, 256 KB WhatsApp, 512 KB avatar, 8 MB driver register, 10 MB documents) |
+| nginx | 1 MB per request by default; tighter per route (16 KB declaration and report, 256 KB WhatsApp and SMS inbox, 512 KB avatar, 8 MB driver register, 10 MB documents) |
 | the database | every typed text field upstream stores is `varchar(255)` and refuses more |
 | auth-guard | a driver's reply to an office message ≤ 1000 characters (`message_report.reply` is the one unbounded `text`); must be JSON with a string `reply` |
 | maps-shim `/avatar/` | JPEG or PNG by **the file's first bytes**, not by its header; ≤ 512 KB |

@@ -510,6 +510,11 @@ services:
         required: false
       - path: /opt/ny/secrets/whatsapp.env
         required: false
+      # sms-inbox.env, 2026-09-29: SMS_INBOX_TOKEN, the bearer the office
+      # phone's forwarder sends to /sms/inbox. Optional: without it the
+      # inbox answers 503. See auth-guard/sms-inbox.js.
+      - path: /opt/ny/secrets/sms-inbox.env
+        required: false
       # The exempt test numbers and their private code. Optional: without it
       # no number is exempt, which is the safe way for it to be missing.
       - path: /opt/ny/secrets/test-accounts.env
