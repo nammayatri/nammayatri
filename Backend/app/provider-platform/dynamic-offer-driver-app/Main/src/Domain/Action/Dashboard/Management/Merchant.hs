@@ -200,6 +200,7 @@ import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SharedCabReconcilerJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import SharedLogic.Allocator.Jobs.SharedCab.Reconciler (seedSharedCabReconcilerChain)
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
@@ -583,7 +584,10 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
             Just jobData -> do
               merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
               merchantOpCityId <- CQMOC.getMerchantOpCityId (Just jobData.merchantOperatingCityId) merchant Nothing
-              createJobIn @_ @'SharedCabReconciler (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: SharedCabReconcilerJobData)
+              -- R26: the seed is idempotent (DB-existence + SETNX guard inside)
+              -- — a second trigger or a redeploy re-running this can not start
+              -- a second self-re-enqueuing reconciler chain for the city.
+              seedSharedCabReconcilerChain (Just merchant.id) merchantOpCityId diffTimeS jobData
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

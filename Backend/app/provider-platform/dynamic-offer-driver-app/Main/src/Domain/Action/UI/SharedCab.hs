@@ -22,6 +22,10 @@ module Domain.Action.UI.SharedCab where
 -- decodes to null. updateSharedCabSessionActive (the designated writer, also the
 -- LTS choke point) does every write; the 4.2B reconciler is otherwise the only
 -- clearer. Nothing else here writes session/flag/Redis/DB state.
+-- (R26) both flag writes below go through SharedLogic.SharedCab.Flag
+-- (set-/clearSharedCabSessionActive) — the single exported wrapper around
+-- updateSharedCabSessionActive inside the cross-app master Redis cell; this
+-- module no longer calls the query fn directly.
 
 import API.Types.UI.SharedCab
 import Data.Time (utctDay)
@@ -41,6 +45,7 @@ import Kernel.Utils.Common
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as SharedCabBAP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
+import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
 import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -95,7 +100,7 @@ setSharedCabSessionActiveBeforeSelect driverId = do
   mbDriverInfo <- QDriverInformationExtra.findById (cast driverId)
   case mbDriverInfo of
     Just driverInfo | driverInfo.sharedCabSessionActive -> pure ()
-    _ -> QDriverInformationExtra.updateSharedCabSessionActive True driverId
+    _ -> SharedCabFlag.setSharedCabSessionActive driverId
 
 selectSharedCabRoute :: DriverAuthInfo -> SelectRouteReq -> Flow SelectRouteResp
 selectSharedCabRoute (personId, _merchantId, merchantOpCityId) req = do
@@ -151,7 +156,7 @@ endSharedCabRoute (personId, _merchantId, _merchantOpCityId) req = do
   -- (RETURN/CHANGE) keeps the driver excluded; any error above already threw and
   -- left the flag alone. The 4.2B reconciler is otherwise the only clearer.
   when (isNothing mbSession) $
-    QDriverInformationExtra.updateSharedCabSessionActive False personId
+    SharedCabFlag.clearSharedCabSessionActive personId
   pure mbSession
 
 resumeSharedCab :: DriverAuthInfo -> Flow SharedCabSession
