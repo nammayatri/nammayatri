@@ -4,10 +4,12 @@
 module SharedCabSessionTests (tests) where
 
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
+import Data.Text (Text)
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.SessionState
+import qualified "rider-app" SharedLogic.SharedCab.SessionView as View
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import "rider-app" Tools.Error (SharedCabSessionError (..))
@@ -93,5 +95,29 @@ tests =
       testCase "reverse route returns on its forward" $
         returnRouteOf "SC-MAWLAI-R" @?= Right "SC-MAWLAI-F",
       testCase "a route without a direction suffix has no return" $
-        returnRouteOf "SC-MAWLAI" @?= Left NoReturnRoute
+        returnRouteOf "SC-MAWLAI" @?= Left NoReturnRoute,
+      testCase "ridersByStop: waiting riders board at their stop, boarded riders alight at theirs, in route order" $
+        View.ridersByStop
+          routeStops
+          [ row "b1" "Asha" 2 "A" "C" False,
+            row "b2" "Ravi" 1 "A" "B" True,
+            row "b3" "Mei" 1 "B" "C" False
+          ]
+          @?= [ View.RidersAtStop "Alpha" [boarding "b1" "Asha" 2 "Charlie"] [],
+                View.RidersAtStop "Bravo" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1]
+              ],
+      testCase "ridersByStop: a booking holding no seat, an unknown stop and an empty cab produce nothing" $ do
+        View.ridersByStop routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 1 "Z" "Y" False] @?= []
+        View.ridersByStop routeStops [] @?= []
     ]
+
+routeStops :: [(Text, Text)]
+routeStops = [("A", "Alpha"), ("B", "Bravo"), ("C", "Charlie")]
+
+row :: Text -> Text -> Int -> Text -> Text -> Bool -> View.RiderRow
+row bookingId firstName seats boardStopCode dropStopCode boarded =
+  View.RiderRow {bookingId, firstName, seats, boardStopCode, dropStopCode, boarded, fare = 10}
+
+boarding :: Text -> Text -> Int -> Text -> View.BoardingRider
+boarding bookingId firstName seats dropStop =
+  View.BoardingRider {bookingId, firstName, seats, dropStop, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing}

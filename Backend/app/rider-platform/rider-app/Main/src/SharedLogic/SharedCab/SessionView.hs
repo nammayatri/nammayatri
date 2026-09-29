@@ -109,3 +109,30 @@ data EndRouteReq = EndRouteReq
     force :: Maybe Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | One live booking on the plate, resolved: `seats` is what its tickets still hold, `boarded` whether someone is
+-- on board. Stop fields are stop codes.
+data RiderRow = RiderRow
+  { bookingId :: Text,
+    firstName :: Text,
+    seats :: Int,
+    boardStopCode :: Text,
+    dropStopCode :: Text,
+    boarded :: Bool,
+    fare :: HighPrecMoney
+  }
+  deriving (Show, Eq)
+
+-- | Per stop of the route, in route order, the riders still to board there and the boarded riders getting off
+-- there; stops with neither are left out, as are rows holding no seat and stops the route does not have.
+ridersByStop :: [(Text, Text)] -> [RiderRow] -> [RidersAtStop]
+ridersByStop stops rows =
+  [ RidersAtStop {stopName, boarding, alighting}
+    | (code, stopName) <- stops,
+      let boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing} | r <- held, not r.boarded, r.boardStopCode == code],
+      let alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats} | r <- held, r.boarded, r.dropStopCode == code],
+      not (null boarding && null alighting)
+  ]
+  where
+    held = filter ((> 0) . (.seats)) rows
+    nameOf code = fromMaybe code (lookup code stops)

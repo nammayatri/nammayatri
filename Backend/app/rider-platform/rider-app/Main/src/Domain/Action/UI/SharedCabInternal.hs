@@ -18,6 +18,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -35,13 +36,16 @@ import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.Invariants as Invariants
+import SharedLogic.SharedCab.LegState (seatsHeld)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified SharedLogic.SharedCab.SessionView as View
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.VehicleTrip as QVT
 import Tools.Error
 
@@ -233,8 +237,31 @@ sessionRoute integratedBppConfig code = do
         nextStops = map (.stopName) stops
       }
 
--- | Until the tick lands: movement is MOVING, next stops (and so demand ahead) are the whole route, riders are
--- empty. `available` is derived, never counted down: capacity less walk-ups less seats live bookings hold (bookings
+-- | The plate's live bookings as rider rows: seats from the tickets still held, first names in one person query.
+liveRiderRows :: Text -> Environment.Flow [View.RiderRow]
+liveRiderRows plate = do
+  bookings <- Booking.liveBookingsForVehicle plate
+  if null bookings
+    then pure []
+    else do
+      tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+      persons <- QPersonExtra.findAllByIds (map (.riderId) bookings)
+      let nameOf b = fromMaybe "" $ listToMaybe [n | p <- persons, p.id == b.riderId, Just n <- [p.firstName]]
+          statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
+      pure
+        [ View.RiderRow
+            { bookingId = b.id.getId,
+              firstName = nameOf b,
+              seats = seatsHeld (statusesOf b),
+              boardStopCode = b.fromStationCode,
+              dropStopCode = b.toStationCode,
+              boarded = DFRFSTicket.INPROGRESS `elem` statusesOf b,
+              fare = b.totalPrice.amount
+            }
+          | b <- bookings
+        ]
+
+-- | Until the tick lands: movement is MOVING, next stops (and so demand ahead) are the whole route. `available` is derived, never counted down: capacity less walk-ups less seats live bookings hold (bookings
 -- re-attach by plate after a Redis flush, 04 §3; walk-ups restart at 0 and the driver re-taps them).
 mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
 mkSessionResp s = do
@@ -244,6 +271,7 @@ mkSessionResp s = do
   demand <- Demand.demandByStop s.merchantOperatingCityId.getId s.routeCode (map (.stopCode) stops)
   queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
   bookedSeats <- Booking.liveSeatsOnVehicle s.vehicleNumber
+  riders <- liveRiderRows s.vehicleNumber
   pure
     View.SharedCabSession
       { route,
@@ -255,7 +283,7 @@ mkSessionResp s = do
         walkupCount = s.walkupCount,
         available = max 0 (s.capacity - s.walkupCount - bookedSeats),
         version = s.version,
-        ridersByStop = [],
+        ridersByStop = View.ridersByStop [(st.stopCode, st.stopName) | st <- stops] riders,
         demandAhead =
           [ View.DemandAtStop {stopName = stop.stopName, waiting = d.waiting, searching = d.searching, windowMin = Demand.searchWindowMin}
             | stop <- stops,
