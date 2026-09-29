@@ -1807,7 +1807,9 @@ validateDocumentApprovalChecks documentType mbReqDocNum reqDriverId mbExistDocDa
       Nothing -> throwError DriverAlreadyLinked
   where
     findDocumentByNumber docNum = case documentType of
-      DVC.DriverLicense -> fmap DLApproveData <$> QDL.findByDLNumber docNum
+      DVC.DriverLicense -> do
+        driverPerson <- QPerson.findById reqDriverId >>= fromMaybeM (PersonDoesNotExist reqDriverId.getId)
+        fmap DLApproveData <$> QDL.findByDLNumber docNum driverPerson.merchantId
       DVC.PanCard -> do
         panHash <- getDbHash docNum
         panList <- QPan.findAllByEncryptedPanNumber panHash
@@ -1868,7 +1870,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
     let driverId = dlImage.personId
     mbDlResolved <-
       QDL.findByImageId imageId
-        |<|>| maybe (pure Nothing) QDL.findByDLNumber req.driverLicenseNumber
+        |<|>| maybe (pure Nothing) (\dlNum -> QDL.findByDLNumber dlNum merchantId) req.driverLicenseNumber
         |<|>| QDL.findByDriverId driverId
     -- Common approve-time checks: number mismatch, document linked to another driver, driver already linked
     validateDocumentApprovalChecks DVC.DriverLicense req.driverLicenseNumber driverId (DLApproveData <$> mbDlResolved)

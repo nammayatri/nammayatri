@@ -227,7 +227,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
           throwError DigiLockerInvalidDriverAge
       Nothing -> logWarning $ "PullDocument - Could not parse DOB: " <> dobText
 
-  mbExistingDL <- QDLE.findByDLNumber dlNumber
+  mbExistingDL <- QDLE.findByDLNumber dlNumber person.merchantId
   whenJust mbExistingDL $ \existingDL -> do
     when (existingDL.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
       throwError $ DocumentUnderManualReview "DL"
