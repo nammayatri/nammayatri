@@ -111,14 +111,15 @@ cacheFarePolicyByQuoteId quoteId fp = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) expTime
 
-cacheFarePolicyByScheduledQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> UTCTime -> FarePolicyD.FullFarePolicy -> m ()
-cacheFarePolicyByScheduledQuoteId quoteId pickupTime fp = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+-- Scheduled rides are dispatched, accepted and ended long after search, so keep the fare policy
+-- until a day past the return time (round trip) or the start time (one way).
+cacheFarePolicyByScheduledEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> UTCTime -> Maybe UTCTime -> FarePolicyD.FullFarePolicy -> m ()
+cacheFarePolicyByScheduledEstOrQuoteId estOrQuoteId startTime mbReturnTime fp = do
   now <- getCurrentTime
-  let untilPickupWithBuffer = round (diffUTCTime pickupTime now) + scheduledQuoteFarePolicyBufferSecs
-  Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) (max expTime untilPickupWithBuffer)
+  let expTime = round (diffUTCTime (fromMaybe startTime mbReturnTime) now) + scheduledFarePolicyBufferSecs
+  Hedis.setExp (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) (max scheduledFarePolicyBufferSecs expTime)
   where
-    scheduledQuoteFarePolicyBufferSecs = 15 * 60
+    scheduledFarePolicyBufferSecs = 86400
 
 -- 30 Mins, Assuming that all searchTries would be done by then. Correct logic would be searchRequestExpirationTime * searchRepeatLimit
 cacheFarePolicyByEstimateId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
