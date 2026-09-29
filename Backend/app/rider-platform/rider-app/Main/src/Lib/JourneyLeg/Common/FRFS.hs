@@ -106,9 +106,6 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
     JMStateTypes.FRFSTicket DFRFSTicket.INPROGRESS -> SharedCabDegraded.expireDegradedBoardingIfNeeded booking
     _ -> pure False
   let bookingStatus' = if degradeExpired then JMStateTypes.FRFSTicket DFRFSTicket.USED else bookingStatus
-  -- R15: where the rider is while a cab is on its way decides the blame if it passes the stop
-  when (isJust booking.vehicleNumber) $
-    whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
   -- R20 deferred: readSession self-heals on the driver poll.
   mbSession <- maybe (pure Nothing) SharedCabSession.readSession booking.vehicleNumber
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
@@ -116,17 +113,19 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   -- deadline (allocKey's expiresAt, set once the stand or moving timer is armed) both live in the
   -- cross-app Redis cell the allocation tick writes to (SharedLogic.SharedCab.Allocation/Booking.shared).
   cfg <- SharedCabAllocation.cityConfig booking.merchantOperatingCityId
+  findingSince <- SharedCabAllocation.readFindingSince booking.id booking.createdAt
   attempts <- SharedCabBooking.shared $ fromMaybe 0 <$> Redis.safeGet (SharedCabAllocation.attemptsKey booking.id.getId)
   mbAllocState <- SharedCabBooking.shared $ Redis.safeGet @AllocationState (SharedCabAllocation.allocKey booking.id.getId)
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
       arrivalDeadline = mbAllocState >>= (.expiresAt)
-      boardDeadlineSec = arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
+      mbState = SharedCabLeg.deriveSharedCabState now bookingStatus' booking.vehicleNumber hasLiveSession (Just fallbackGate) arrivalDeadline
+      boardDeadlineSec = guard (mbState == Just SharedCabLeg.ARRIVING) *> arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
       fallbackGate =
         SharedCabLeg.FallbackGate
           { attempts,
             maxAttempts = cfg.maxAttempts,
-            findingSince = booking.createdAt,
+            findingSince,
             fallbackAfterSec = cfg.fallbackAfterSec
           }
       mkSharedCab st =
@@ -142,6 +141,9 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             cabsComing,
             boardDeadlineSec
           }
+  -- R15: where the rider is while a cab is on its way decides the blame if it passes the stop
+  when (mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]) $
+    whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
   pure $
     JT.Single
       JT.JourneyLegStateData
@@ -157,7 +159,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkSharedCab <$> SharedCabLeg.deriveSharedCabState now bookingStatus' booking.vehicleNumber hasLiveSession (Just fallbackGate) arrivalDeadline
+          sharedCab = mkSharedCab <$> mbState
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode

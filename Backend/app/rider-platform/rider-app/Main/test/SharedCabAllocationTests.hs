@@ -13,7 +13,7 @@ import qualified "rider-app" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, isSkipped, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, crossedMaxAttempts, isMissedCabOutcome, isSkipped, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -117,6 +117,11 @@ tests =
           @?= [True, False, False, False, False, False],
       testCase "R19: the claim's under-lock check sees only the plate the rider skipped" $
         map (`isSkipped` ["ML05B2222"]) ["ML05A1111", "ML05B2222"] @?= [False, True],
+      testCase "R16: the fallback push fires on the close that crosses maxAttempts, not before or after" $
+        map (uncurry (crossedMaxAttempts 2)) [(0, 1), (1, 2), (2, 3), (0, 0)] @?= [False, True, False, False],
+      testCase "R17: only the two timer outcomes push the missed-cab copy" $
+        map isMissedCabOutcome [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipOther]
+          @?= [True, True, False, False, False, False, False, False, False],
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing
     ]

@@ -2,6 +2,8 @@ module SharedLogic.SharedCab.LegState
   ( SharedCabState (..),
     SharedCabLegStatus (..),
     FallbackGate (..),
+    fallbackDue,
+    fallbackTimeElapsed,
     isSharedCabAgency,
     deriveSharedCabState,
     isDroppable,
@@ -21,7 +23,7 @@ data SharedCabState = FINDING | ALLOCATED | ARRIVING | FALLBACK | BOARDED | DEGR
 
 -- | FINDING fallback trigger inputs (R16, `05` §3/§7 fallbackAfterSec): a booking still FINDING falls
 -- back to "board any cab" once it has burned through maxAttempts closed allocations, or has simply
--- been FINDING for too long (fallbackAfterSec), whichever comes first.
+-- been FINDING for too long (fallbackAfterSec, from its latest entry into FINDING), whichever comes first.
 data FallbackGate = FallbackGate
   { attempts :: Int,
     maxAttempts :: Int,
@@ -51,6 +53,13 @@ data SharedCabLegStatus = SharedCabLegStatus
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
 
+-- | The FINDING stint's clock: has it run fallbackAfterSec (the allocation tick pushes "board any cab" on this same test).
+fallbackTimeElapsed :: UTCTime -> UTCTime -> Int -> Bool
+fallbackTimeElapsed now findingSince fallbackAfterSec = diffUTCTime now findingSince >= fromIntegral fallbackAfterSec
+
+fallbackDue :: UTCTime -> FallbackGate -> Bool
+fallbackDue now g = g.attempts >= g.maxAttempts || fallbackTimeElapsed now g.findingSince g.fallbackAfterSec
+
 -- | `07` §3 from the `05` §2 encoding: booking/ticket status, the booking's plate, whether that plate has a
 -- live session, the FINDING fallback gate (R10/R16) and the ALLOCATED arrival deadline (R17, allocKey's
 -- expiresAt when the stand or moving timer is armed). Nothing before the booking is confirmed.
@@ -69,9 +78,9 @@ deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGa
   where
     waiting
       | isJust mbVehicleNumber = if isJust arrivalDeadline then ARRIVING else ALLOCATED
-      | fallbackDue = FALLBACK
+      | fallbackDue' = FALLBACK
       | otherwise = FINDING
-    fallbackDue = maybe False (\g -> g.attempts >= g.maxAttempts || diffUTCTime now g.findingSince >= fromIntegral g.fallbackAfterSec) fallbackGate
+    fallbackDue' = maybe False (fallbackDue now) fallbackGate
 
 -- | Tickets the rider still holds; cancelled or finished ones are left alone when the rider gets down.
 isDroppable :: DFRFSTicket.FRFSTicketStatus -> Bool

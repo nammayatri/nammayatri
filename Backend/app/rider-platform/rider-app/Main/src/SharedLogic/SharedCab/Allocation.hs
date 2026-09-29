@@ -61,6 +61,11 @@ module SharedLogic.SharedCab.Allocation
     attemptsKey,
     bookingLockKey,
     skippedKey,
+    findingSinceKey,
+    fallbackPushedKey,
+    readFindingSince,
+    crossedMaxAttempts,
+    isMissedCabOutcome,
   )
 where
 
@@ -87,6 +92,7 @@ import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLoc
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
+import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -128,6 +134,14 @@ attemptsKey bookingId = "sharedcab:attempts:" <> bookingId
 -- | R19: plates the rider skipped for this booking, kept out of its claims for findingTimeoutSec.
 skippedKey :: Text -> Text
 skippedKey bookingId = "sharedcab:skipped:" <> bookingId
+
+-- | When the booking's current FINDING stint began (createdAt until the first release): the fallbackAfterSec clock.
+findingSinceKey :: Text -> Text
+findingSinceKey bookingId = "sharedcab:findingsince:" <> bookingId
+
+-- | Claimed once per FINDING stint by whoever pushes "board any cab" (the attempts crossing or the time crossing).
+fallbackPushedKey :: Text -> Text
+fallbackPushedKey bookingId = "sharedcab:fallbackpushed:" <> bookingId
 
 -- | 05 §2: `sharedcab:lock:booking:{bookingId}`.
 bookingLockKey :: Text -> Text
@@ -372,6 +386,13 @@ attemptClaim cfg booking cand = do
                       Nothing -> pure (Left ClaimCasLost)
       _ -> pure (Left ClaimSessionGone)
 
+readFindingSince :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> UTCTime -> m UTCTime
+readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.safeGet (findingSinceKey bookingId.getId)
+
+-- | True for the caller that wins the once-per-stint right to push "board any cab".
+claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => AllocationConfig -> Id DFTB.FRFSTicketBooking -> m Bool
+claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId.getId) cfg.findingTimeoutSec
+
 readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Int
 readAttempts key = shared $ fromMaybe 0 <$> Redis.safeGet key
 
@@ -471,10 +492,23 @@ closeLocked cfg bookingId expectedPlate outcome =
       shared $ Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
       -- R16/R10: push "board any cab" once, exactly on the close that crosses maxAttempts (not on
       -- every close after -- the engine keeps retrying a FALLBACK booking, this just stops the spam).
-      let fallbackJustTriggered = attemptsBefore < cfg.maxAttempts && attemptsNow >= cfg.maxAttempts
+      let fallbackJustTriggered = crossedMaxAttempts cfg.maxAttempts attemptsBefore attemptsNow
+      -- a new FINDING stint: its fallbackAfterSec clock restarts, and its time-fallback push is owed again unless the
+      -- attempts already put the rider in FALLBACK (that push stays claimed)
+      now <- getCurrentTime
+      shared $ Redis.setExp (findingSinceKey bookingId.getId) now cfg.findingTimeoutSec
+      when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId.getId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
       pure (b.merchantOperatingCityId, fallbackJustTriggered)
+
+-- | R16: the close that takes the attempt count over maxAttempts (not one past it).
+crossedMaxAttempts :: Int -> Int -> Int -> Bool
+crossedMaxAttempts maxAttempts before now = before < maxAttempts && now >= maxAttempts
+
+-- | R17: only the timer outcomes mean the rider didn't board in time.
+isMissedCabOutcome :: AllocationOutcome -> Bool
+isMissedCabOutcome = (`elem` [StandTimeout, MovingTimeout])
 
 eventBlame :: Blame -> Events.Blame
 eventBlame = \case
@@ -484,7 +518,7 @@ eventBlame = \case
 
 -- | Outside every lock, after a close attempt.
 afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> Maybe (Id DMOC.MerchantOperatingCity, Bool) -> m ()
-afterClose _ bookingId plate outcome closed =
+afterClose cfg bookingId plate outcome closed =
   whenJust closed $ \(cityId, fallbackJustTriggered) -> do
     now <- getCurrentTime
     trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
@@ -498,11 +532,12 @@ afterClose _ bookingId plate outcome closed =
       >>= either (\e -> logError $ "shared-cab blame count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     -- R17: "missed the cab" -- only the timer outcomes mean the rider didn't board in time; a driver
     -- cancel, passed-stop no-show, seat loss or session lifecycle close all get their own push (or none).
-    when (outcome `elem` [StandTimeout, MovingTimeout]) $
+    when (isMissedCabOutcome outcome) $
       mapM_ (Notify.notifyReassigned Notify.TIMEOUT) mbBooking
     -- R16/R10: the rider's leg state just flipped to FALLBACK; push "board any cab" once.
     when fallbackJustTriggered $
-      mapM_ Notify.notifyBoardAny mbBooking
+      whenM (claimFallbackPush cfg bookingId) $
+        mapM_ Notify.notifyBoardAny mbBooking
 
 -- | 05 §2/§3 timers: an ALLOCATED booking whose timer ran out, or whose alloc key is gone, goes back
 -- to FINDING; a stand timer is cleared once its cab is seen moving (timer mode follows the cab).
@@ -625,13 +660,24 @@ allocationPass cityId = do
               fromMaybe [] (lookup route positionsByRoute)
       -- expired timers first: the seats they free are claimable in this same tick
       expireTimers cfg now movingOn live
-      forM_ (groupAllOn (.routeCode) (mapMaybe findingOf live)) $ \(routeCode, bookings) ->
+      findings <- forM (mapMaybe (\entry -> (fst entry,) <$> findingOf entry) live) $ \(b, fb) -> do
+        since <- readFindingSince fb.bookingId fb.findingSince
+        pure (b, fb {findingSince = since})
+      pushTimeFallbacks cfg now findings
+      forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
         whenJust (lookup routeCode positionsByRoute) $ \positions -> do
           sessions <- Session.activeSessionsOnRoute routeCode
           forM_ bookings $ \booking -> do
             skipped <- shared $ Redis.sMembers (skippedKey booking.bookingId.getId)
             void $ claimFirst cfg booking (withoutSkipped skipped (planRouteAllocation now cfg positions sessions booking))
       pure (live, positionsByRoute)
+
+-- | R16/R10 by the clock: a FINDING booking that has been FINDING for fallbackAfterSec is shown FALLBACK by the leg
+-- state, so it gets its "board any cab" push here, once per stint. Allocation carries on afterwards. Outside every lock.
+pushTimeFallbacks :: AllocFlow m r => AllocationConfig -> UTCTime -> [(DFTB.FRFSTicketBooking, FindingBooking)] -> m ()
+pushTimeFallbacks cfg now findings =
+  forM_ [b | (b, fb) <- findings, fallbackTimeElapsed now fb.findingSince cfg.fallbackAfterSec] $ \b ->
+    whenM (claimFallbackPush cfg b.id) $ Notify.notifyBoardAny b
 
 -- | whenWithLockRedis, on the cross-app key, so the scheduler's ticks and the API's triggers share one lease.
 withCityLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int -> m () -> m ()

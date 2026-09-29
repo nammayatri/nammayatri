@@ -46,6 +46,8 @@ tests =
             derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 0 (-700))) Nothing @?= Just FALLBACK,
           testCase "no plate, one attempt short of max and just inside fallbackAfterSec -> still FINDING" $
             derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) Nothing False (Just (gate 1 (-300))) Nothing @?= Just FINDING,
+          testCase "the clock is inclusive: exactly fallbackAfterSec is due, a second less is not (the tick's push uses the same test)" $
+            map (\off -> fallbackTimeElapsed now (addUTCTime off now) 600) [-600, -599] @?= [True, False],
           testCase "plate set: fallback gate is irrelevant, plate always wins" $
             derive (JMState.FRFSTicket DFRFSTicket.ACTIVE) plate True (Just (gate 2 (-700))) Nothing @?= Just ALLOCATED
         ],
