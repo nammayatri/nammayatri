@@ -8,8 +8,8 @@ import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Text (Text)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import "rider-app" Domain.Action.UI.SharedCab (skipReason)
-import qualified "rider-app" Domain.Types.FRFSTicketBookingStatus as BS
-import qualified "rider-app" Domain.Types.FRFSTicketStatus as TS
+import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as BS
+import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
