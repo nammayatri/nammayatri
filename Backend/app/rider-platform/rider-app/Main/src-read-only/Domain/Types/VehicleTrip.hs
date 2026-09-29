@@ -23,6 +23,7 @@ data VehicleTrip = VehicleTrip
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    missedPickups :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     movingAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     offlineBoardings :: Kernel.Prelude.Int,
     reachedEndAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -42,10 +43,10 @@ data VehicleTripEndReason
   | END_FOR_NOW
   | SESSION_TIMEOUT
   | OPS_FORCED
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data VehicleTripStatus = ACTIVE | PAUSED | COMPLETED | ABANDONED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data VehicleTripStatus = ACTIVE | PAUSED | COMPLETED | ABANDONED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleTripStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleTripStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleTripEndReason))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleTripEndReason)

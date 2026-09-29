@@ -1,11 +1,13 @@
 module Storage.Queries.FRFSTicketBookingExtra where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Database.Beam as B
 import Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.JourneyLeg as DJL
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -202,3 +204,21 @@ findAllConfirmedByWaybillNo waybillNo = do
           Se.Is Beam.status $ Se.Eq DFRFSTicketBookingStatus.CONFIRMED
         ]
     ]
+
+newtype BookingDB f = BookingDB {booking :: f (B.TableEntity Beam.FRFSTicketBookingT)}
+  deriving (Generic, B.Database be)
+
+bookingDB :: B.DatabaseSettings be BookingDB
+bookingDB = B.defaultDbSettings `B.withDbModification` B.dbModification {booking = Beam.frfsTicketBookingTable}
+
+-- | Raw SQL on purpose: frfs_ticket_booking is in kv_configs.disableForKV (ddl 1361), so the row lives in
+-- Postgres and this reaches it directly; `SET col = COALESCE(col, 0) + 1` never loses a concurrent increment.
+incrementNoShowCount :: (MonadFlow m, EsqDBFlow m r) => Id FRFSTicketBooking -> m ()
+incrementNoShowCount bookingId = do
+  now <- getCurrentTime
+  dbConf <- getMasterBeamConfig
+  void . L.runDB dbConf . L.updateRows $
+    B.update
+      (booking bookingDB)
+      (\r -> (Beam.noShowCount r B.<-. B.just_ (B.coalesce_ [B.current_ (Beam.noShowCount r)] (B.val_ 0) + 1)) <> (Beam.updatedAt r B.<-. B.val_ now))
+      (\r -> Beam.id r B.==. B.val_ (getId bookingId))

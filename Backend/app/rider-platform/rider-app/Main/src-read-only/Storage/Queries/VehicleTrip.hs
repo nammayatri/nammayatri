@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.VehicleTrip where
+module Storage.Queries.VehicleTrip (module Storage.Queries.VehicleTrip, module ReExport) where
 
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleTrip
@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.VehicleTrip as Beam
+import Storage.Queries.VehicleTripExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleTrip.VehicleTrip -> m ())
 create = createWithKV
@@ -40,7 +41,7 @@ findActiveByVehicleNumber vehicleNumber = do
 
 findAllByDriverIdAndStartedAtRange ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m ([Domain.Types.VehicleTrip.VehicleTrip]))
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> m [Domain.Types.VehicleTrip.VehicleTrip])
 findAllByDriverIdAndStartedAtRange limit offset driverId from to = do
   findAllWithOptionsKV
     [ Se.And
@@ -55,7 +56,7 @@ findAllByDriverIdAndStartedAtRange limit offset driverId from to = do
 
 findAllLiveByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleTrip.VehicleTrip]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleTrip.VehicleTrip])
 findAllLiveByMerchantOperatingCityId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -79,9 +80,7 @@ updateReachedEndAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Pre
 updateReachedEndAt reachedEndAt id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.reachedEndAt reachedEndAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.VehicleTrip.VehicleTripStatus -> Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m ())
-updateStatus status id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.VehicleTrip.VehicleTrip -> m (Maybe Domain.Types.VehicleTrip.VehicleTrip))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -97,6 +96,7 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.missedPickups missedPickups,
       Se.Set Beam.movingAt movingAt,
       Se.Set Beam.offlineBoardings offlineBoardings,
       Se.Set Beam.reachedEndAt reachedEndAt,
@@ -108,51 +108,3 @@ updateByPrimaryKey (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
       Se.Set Beam.vehicleNumber vehicleNumber
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
-  fromTType' (Beam.VehicleTripT {..}) = do
-    pure $
-      Just
-        Domain.Types.VehicleTrip.VehicleTrip
-          { capacity = capacity,
-            createdAt = createdAt,
-            driverId = driverId,
-            endReason = endReason,
-            endedAt = endedAt,
-            id = Kernel.Types.Id.Id id,
-            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            movingAt = movingAt,
-            offlineBoardings = offlineBoardings,
-            reachedEndAt = reachedEndAt,
-            routeCode = routeCode,
-            serviceTierType = serviceTierType,
-            startedAt = startedAt,
-            status = status,
-            updatedAt = updatedAt,
-            vehicleNumber = vehicleNumber
-          }
-
-instance ToTType' Beam.VehicleTrip Domain.Types.VehicleTrip.VehicleTrip where
-  toTType' (Domain.Types.VehicleTrip.VehicleTrip {..}) = do
-    Beam.VehicleTripT
-      { Beam.capacity = capacity,
-        Beam.createdAt = createdAt,
-        Beam.driverId = driverId,
-        Beam.endReason = endReason,
-        Beam.endedAt = endedAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
-        Beam.movingAt = movingAt,
-        Beam.offlineBoardings = offlineBoardings,
-        Beam.reachedEndAt = reachedEndAt,
-        Beam.routeCode = routeCode,
-        Beam.serviceTierType = serviceTierType,
-        Beam.startedAt = startedAt,
-        Beam.status = status,
-        Beam.updatedAt = updatedAt,
-        Beam.vehicleNumber = vehicleNumber
-      }

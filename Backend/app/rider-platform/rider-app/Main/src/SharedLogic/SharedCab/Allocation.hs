@@ -101,13 +101,13 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
-import qualified SharedLogic.SharedCab.BlameCount as BlameCount
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
+import qualified SharedLogic.SharedCab.Misses as Misses
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -598,15 +598,16 @@ afterClose :: AllocFlow m r => AllocationConfig -> Id DFTB.FRFSTicketBooking -> 
 afterClose cfg bookingId plate outcome closed =
   whenJust closed $ \Closed {closedCity = cityId, fallbackJustTriggered, heldBy} -> do
     now <- getCurrentTime
-    trip <- fmap (getId . (.vehicleTripId)) <$> Session.readSession plate
+    mbSession <- Session.readSession plate
+    let trip = getId . (.vehicleTripId) <$> mbSession
     Events.emit cityId . Events.withTrip trip $
       Events.bookingEvent (Events.AllocationClosed (outcomeText outcome) (eventBlame (blameFor outcome))) bookingId.getId (Just plate) Nothing now
     Invariants.checkBooking bookingId
     Invariants.checkCab plate
     mbBooking <- QFRFSTicketBooking.findById bookingId
-    -- R18: lifetime blame counters (05 §8.4); a bump failure never fails the release.
-    withTryCatch "sharedCabBlameCount" (BlameCount.bump cityId (blameFor outcome) mbBooking heldBy bookingId now)
-      >>= either (\e -> logError $ "shared-cab blame count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
+    -- R18: miss / no-show counters (05 §8.4); a bump failure never fails the release.
+    withTryCatch "sharedCabMisses" (Misses.record (blameFor outcome) bookingId heldBy ((\s -> (s.driverId, s.vehicleTripId)) <$> mbSession))
+      >>= either (\e -> logError $ "shared-cab miss count bump failed for booking " <> bookingId.getId <> ": " <> show e) pure
     -- R17/F7: the cab is gone; every close but the rider's own skip tells them. Once per release: only the CAS winner is here.
     forM_ (Notify.reassignReasonFor outcome) $ \reason ->
       mapM_ (Notify.notifyReassigned reason) mbBooking

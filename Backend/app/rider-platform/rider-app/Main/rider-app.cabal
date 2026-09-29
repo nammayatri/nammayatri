@@ -637,7 +637,6 @@ library
       SharedLogic.SharedCab.Allocation
       SharedLogic.SharedCab.Allocation.Types
       SharedLogic.SharedCab.AllocationSchedule
-      SharedLogic.SharedCab.BlameCount
       SharedLogic.SharedCab.Boarding
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Config
@@ -650,6 +649,7 @@ library
       SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
       SharedLogic.SharedCab.LtsAttach
+      SharedLogic.SharedCab.Misses
       SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.RateLimit
@@ -852,7 +852,6 @@ library
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
-      Storage.Queries.SharedCabBlameCountExtra
       Storage.Queries.StationsExtraInformationExtra
       Storage.Queries.SvpJourneyExtra
       Storage.Queries.TicketBookingExtra
@@ -890,6 +889,7 @@ library
       Storage.Queries.TranslationsExtra
       Storage.Queries.UiRiderConfigExtra
       Storage.Queries.VehicleRouteMappingExtra
+      Storage.Queries.VehicleTripExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.ActorInfo
@@ -1411,7 +1411,6 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
-      Domain.Types.SharedCabBlameCount
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
       Domain.Types.StationsExtraInformation
@@ -1587,7 +1586,6 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
-      Storage.Beam.SharedCabBlameCount
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.StationsExtraInformation
@@ -1783,7 +1781,6 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
-      Storage.Queries.OrphanInstances.SharedCabBlameCount
       Storage.Queries.OrphanInstances.StationsExtraInformation
       Storage.Queries.OrphanInstances.SvpJourney
       Storage.Queries.OrphanInstances.TicketBooking
@@ -1794,6 +1791,7 @@ library
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.UiRiderConfig
       Storage.Queries.OrphanInstances.VehicleRouteMapping
+      Storage.Queries.OrphanInstances.VehicleTrip
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
       Storage.Queries.ParkingTransaction
@@ -1849,7 +1847,6 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
-      Storage.Queries.SharedCabBlameCount
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.StationsExtraInformation
@@ -2169,7 +2166,6 @@ test-suite rider-app-test
   other-modules:
       FRFS.DirectQR
       SharedCabAllocationTests
-      SharedCabBlameCountTests
       SharedCabBoardingTests
       SharedCabConfigTests
       SharedCabDegradedSweepTests
@@ -2180,6 +2176,7 @@ test-suite rider-app-test
       SharedCabExpiryTests
       SharedCabInvariantsTests
       SharedCabLegStateTests
+      SharedCabMissesTests
       SharedCabNotifyTests
       SharedCabPlateTests
       SharedCabSessionTests

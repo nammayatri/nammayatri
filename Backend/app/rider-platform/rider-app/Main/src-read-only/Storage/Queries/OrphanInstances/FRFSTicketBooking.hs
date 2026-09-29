@@ -20,8 +20,8 @@ import qualified Storage.Beam.FRFSTicketBooking as Beam
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
-    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
+    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
+    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -75,6 +75,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             multimodalSearchRequestId = multimodalSearchRequestId,
+            noShowCount = noShowCount,
             ondcOnInitReceived = ondcOnInitReceived,
             ondcOnInitReceivedAt = ondcOnInitReceivedAt,
             osBuildVersion = osBuildVersion,
@@ -174,6 +175,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.multimodalSearchRequestId = multimodalSearchRequestId,
+        Beam.noShowCount = noShowCount,
         Beam.ondcOnInitReceived = ondcOnInitReceived,
         Beam.ondcOnInitReceivedAt = ondcOnInitReceivedAt,
         Beam.osBuildVersion = osBuildVersion,
@@ -209,7 +211,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.toStationLat = (.lat) <$> toStationPoint,
         Beam.toStationLon = (.lon) <$> toStationPoint,
         Beam.toStopIdx = toStopIdx,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) totalPrice,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) totalPrice,
         Beam.price = (.amount) totalPrice,
         Beam.tripId = tripId,
         Beam.validTill = validTill,

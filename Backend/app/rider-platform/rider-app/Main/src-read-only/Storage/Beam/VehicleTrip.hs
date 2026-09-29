@@ -22,6 +22,7 @@ data VehicleTripT f = VehicleTripT
     integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    missedPickups :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     movingAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     offlineBoardings :: (B.C f Kernel.Prelude.Int),
     reachedEndAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),

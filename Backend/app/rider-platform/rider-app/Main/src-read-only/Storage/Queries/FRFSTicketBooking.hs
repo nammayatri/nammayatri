@@ -32,7 +32,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus merchantOperatingCityId serviceTierType status = do
   findAllWithKV
     [ Se.And
@@ -44,7 +44,7 @@ findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus merchantOperatingCit
 
 findAllByRouteCodeAndServiceTierTypeAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByRouteCodeAndServiceTierTypeAndStatus routeCode serviceTierType status = do
   findAllWithKV
     [ Se.And
@@ -54,12 +54,12 @@ findAllByRouteCodeAndServiceTierTypeAndStatus routeCode serviceTierType status =
         ]
     ]
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findAllByVehicleNumberAndServiceTierTypeAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType -> [Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus] -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByVehicleNumberAndServiceTierTypeAndStatus vehicleNumber serviceTierType status = do
   findAllWithKV
     [ Se.And
@@ -245,7 +245,7 @@ updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.T
 updateTotalPriceById totalPrice id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.updatedAt _now
     ]
@@ -318,6 +318,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
+      Se.Set Beam.noShowCount noShowCount,
       Se.Set Beam.ondcOnInitReceived ondcOnInitReceived,
       Se.Set Beam.ondcOnInitReceivedAt ondcOnInitReceivedAt,
       Se.Set Beam.osBuildVersion osBuildVersion,
@@ -353,7 +354,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
       Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
       Se.Set Beam.toStopIdx toStopIdx,
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.tripId tripId,
       Se.Set Beam.validTill validTill,

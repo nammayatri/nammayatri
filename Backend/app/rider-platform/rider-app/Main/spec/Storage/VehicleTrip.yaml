@@ -25,6 +25,7 @@ VehicleTrip:
     endedAt: Maybe UTCTime
     endReason: Maybe VehicleTripEndReason
     offlineBoardings: Int
+    missedPickups: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -117,8 +118,10 @@ VehicleTrip:
 
   default:
     offlineBoardings: "0"
+    missedPickups: "0"
     createdAt: "CURRENT_TIMESTAMP"
     updatedAt: "CURRENT_TIMESTAMP"
 
   extraOperations:
     - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE

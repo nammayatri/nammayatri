@@ -479,9 +479,11 @@ FRFSTicketBooking:
     clientBundleVersion: Maybe Version
     isSpotBooking: Maybe Bool
     vehicleTripId: Maybe (Id VehicleTrip)
+    noShowCount: Maybe Int
 
   default:
     customerCancelled: "false"
+    noShowCount: "0"
 
   beamFields:
     fromStationCode:
