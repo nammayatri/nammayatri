@@ -151,6 +151,7 @@ transformToSearchReq req subscriptionId =
             isSourceManuallyMoved = details.isSourceManuallyMoved,
             isDestinationManuallyMoved = details.isDestinationManuallyMoved,
             isReallocationEnabled = details.isReallocationEnabled,
+            isSilentReallocationEnabled = Nothing,
             fareParametersInRateCard = details.fareParametersInRateCard,
             quotesUnifiedFlow = details.quotesUnifiedFlow,
             driverIdentifier = details.driverIdentifier,

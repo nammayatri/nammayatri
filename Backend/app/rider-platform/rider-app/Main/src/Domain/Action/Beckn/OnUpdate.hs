@@ -501,7 +501,7 @@ onUpdate = \case
     fork "estimateRepetition: cancel payment intent" $
       void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
     -- Silent reallocation window: for a driver-initiated cancel before arrival on an
-    -- auto-assign search, hold the reallocation push for the configured window so a new
+    -- auto-assign search whose client opted in at search time, hold the reallocation push for the configured window so a new
     -- driver can pick the trip up while the rider still sees a driver on the way.
     -- ride/list keeps returning the old booking (flagged) while the Redis key lives; the
     -- expiry job sends the held push if nobody was assigned in time.
@@ -512,6 +512,7 @@ onUpdate = \case
             && cancellationSource == DBCR.ByDriver
             && isNothing ride.driverArrivalTime
             && searchReq.autoAssignEnabledV2 == Just True
+            && searchReq.isSilentReallocationEnabled == Just True
     if silentWindowEligible
       then do
         now <- getCurrentTime

@@ -292,6 +292,7 @@ extractSearchDetails now = \case
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         isReallocationEnabled = Nothing,
+        isSilentReallocationEnabled = Nothing,
         fareParametersInRateCard = Nothing,
         quotesUnifiedFlow = Nothing,
         placeNameSource = Nothing,
@@ -318,6 +319,7 @@ extractSearchDetails now = \case
         startTime = fromMaybe now startTime,
         returnTime = Nothing,
         isReallocationEnabled = Nothing,
+        isSilentReallocationEnabled = Nothing,
         fareParametersInRateCard = Nothing,
         quotesUnifiedFlow = Nothing,
         placeNameSource = Nothing,
@@ -474,6 +476,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       mbEnableSyncSearch
       mbIsWhatsappRequest
       (Just routeCacheUsed)
+      isSilentReallocationEnabled
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -790,8 +793,9 @@ buildSearchRequest ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId discoveredDropSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId busLocationData fromSpecialLocationId toSpecialLocationId discoveredSpecialLocationId discoveredDropSpecialLocationId mbEnableSyncSearch mbIsWhatsappRequest mbRouteCacheUsed mbIsSilentReallocationEnabled = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -867,6 +871,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         betterPointWalkFromDrop = Nothing,
         betterPointRideDistanceSaved = Nothing,
         routeCacheUsed = mbRouteCacheUsed,
+        isSilentReallocationEnabled = mbIsSilentReallocationEnabled,
         ..
       }
   where

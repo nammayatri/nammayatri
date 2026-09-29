@@ -91,6 +91,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 enforceTollRoute = Nothing,
                 startTime = journeyLegData.fromDepartureTime,
                 isReallocationEnabled = Just True,
+                isSilentReallocationEnabled = Nothing,
                 fareParametersInRateCard = Just True,
                 quotesUnifiedFlow = Just True,
                 sessionToken = Nothing,

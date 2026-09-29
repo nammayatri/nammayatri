@@ -106,6 +106,7 @@ data OneWaySearchReq = OneWaySearchReq
     enforceTollRoute :: Maybe Bool,
     startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
+    isSilentReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     sessionToken :: Maybe Text,
@@ -154,6 +155,7 @@ data RentalSearchReq = RentalSearchReq
     estimatedRentalDuration :: Seconds,
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    isSilentReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
@@ -172,6 +174,7 @@ data EasyBookingSearchReq = EasyBookingSearchReq
     isSpecialLocation :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    isSilentReallocationEnabled :: Maybe Bool,
     numberOfLuggages :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -188,6 +191,7 @@ data InterCitySearchReq = InterCitySearchReq
     sessionToken :: Maybe Text,
     quotesUnifiedFlow :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    isSilentReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     placeNameSource :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
@@ -229,6 +233,7 @@ data SearchDetails = SearchDetails
     returnTime :: Maybe UTCTime,
     hasStops :: Maybe Bool,
     isReallocationEnabled :: Maybe Bool,
+    isSilentReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
     quotesUnifiedFlow :: Maybe Bool,
     placeNameSource :: Maybe Text,

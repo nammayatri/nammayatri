@@ -539,3 +539,9 @@ ALTER TABLE atlas_app.search_request ADD COLUMN discovered_drop_special_location
 
 ALTER TABLE atlas_app.search_request ADD COLUMN negative_fare_adjustment_amount double precision ;
 ALTER TABLE atlas_app.search_request ADD COLUMN negative_fare_adjustment integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN is_silent_reallocation_enabled boolean ;
