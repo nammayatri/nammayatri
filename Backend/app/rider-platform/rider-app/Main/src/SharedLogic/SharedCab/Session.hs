@@ -338,7 +338,7 @@ markCabFull driver rawPlate = do
     prior <- readSession plate
     s <- liftSession $ ownedSession driver prior
     boarded <- Booking.boardedSeatsOnVehicle plate
-    saveWalkups CabFull prior s (fillCab boarded s)
+    saveWalkups CabFullFill prior s (fillCab boarded s)
   Events.forSession (Events.CabFull full.walkupCount) full
   pure full
   where

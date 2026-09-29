@@ -68,7 +68,7 @@ tests =
         takeOver "d2" "R1" (Id "trip2") active @?= active {driverId = "d2", vehicleTripId = Id "trip2", version = 4},
       testCase "R24: a cab-full fill counts no offline boardings, a driver count does" $ do
         let full = fillCab 1 active
-        walkupsToCount CabFull active full @?= 0
+        walkupsToCount CabFullFill active full @?= 0
         walkupsToCount DriverCounted active full @?= 3,
       testCase "R24: the driver's count never goes negative" $
         walkupsToCount DriverCounted active {walkupCount = 3} active @?= 0,

@@ -228,13 +228,13 @@ fillCab seatsKept s = bump s {walkupCount = max s.walkupCount (s.capacity - seat
 
 -- | Which walk-ups count as offline boardings: a cab-full fill is the driver saying "no seats left", not people who boarded,
 -- so it must not inflate the metric (R24).
-data WalkupSource = DriverCounted | CabFull
+data WalkupSource = DriverCounted | CabFullFill
   deriving (Show, Eq)
 
 walkupsToCount :: WalkupSource -> Session -> Session -> Int
 walkupsToCount source before after = case source of
   DriverCounted -> max 0 (after.walkupCount - before.walkupCount)
-  CabFull -> 0
+  CabFullFill -> 0
 
 -- | R51: a rider still INPROGRESS on a plate whose run is over (session ENDED, or none and no live trip) is stranded
 -- (Session.finish's per-rider drop failed); the sweep ends them.
