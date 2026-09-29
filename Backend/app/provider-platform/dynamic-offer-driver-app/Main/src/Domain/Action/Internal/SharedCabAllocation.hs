@@ -27,7 +27,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import Tools.Notifications
 
 data SharedCabAllocationReq = SharedCabAllocationReq
@@ -44,7 +43,6 @@ sharedCabAllocationFCM req apiKey = do
   merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
-  _booking <- runInReplica $ QBookingLite.findByIdLite req.bookingId >>= fromMaybeM (BookingNotFound req.bookingId.getId)
   let entityData =
         SharedCabAllocationEntityData
           { bookingId = req.bookingId.getId,

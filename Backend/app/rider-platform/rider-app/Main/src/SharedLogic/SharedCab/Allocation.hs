@@ -73,6 +73,7 @@ where
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Monad.Extra (whenJustM)
 import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
@@ -84,8 +85,10 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
 import qualified SharedLogic.SharedCab.BlameCount as BlameCount
@@ -97,6 +100,7 @@ import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
@@ -116,7 +120,8 @@ type AllocFlow m r =
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
     ServiceFlow m r,
-    Events.EventFlow m r
+    Events.EventFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   )
 
 -- | Unprefixed keys in the master cloud cell: the tick runs in the scheduler, whose key prefix differs from
@@ -582,25 +587,28 @@ expireTimers cfg now movingOn live =
 -- Driver notification todo
 --------------------------------------------------------------------------------
 
--- | 05 §3 Phase-2 tail: "FCM the driver". The FCM itself belongs to driver-app, triggered over
--- its internal notify endpoint (04-plan §5.3 + build step 4) which does not exist yet. This is
--- the single call site that task wires.
+-- | 05 §3 Phase-2 tail: "FCM the driver" via the driver-app internal endpoint. Log-only on failure:
+-- a missed push must never fail (or roll back) a claim. Called after attemptClaim released its locks.
 notifyDriverOfAllocation ::
-  (MonadFlow m, Log m) =>
+  AllocFlow m r =>
   FindingBooking ->
   RankedCandidate ->
   m ()
 notifyDriverOfAllocation booking cand =
-  -- //TODO(driver-app build step 4): POST the driver-app internal notify with
-  -- {driverId = cand.rcSession.driverId, vehicleNumber, bookingId, boardStopCode, seats,
-  --  etaSeconds = cand.rcEtaToBoardStopSec} + sound flag.
-  logInfo $
-    "notifyDriverOfAllocation TODO driver="
-      <> cand.rcSession.driverId
-      <> " booking="
-      <> booking.bookingId.getId
-      <> " etaSec="
-      <> show cand.rcEtaToBoardStopSec
+  withTryCatch "sharedCabNotifyDriver" call >>= \case
+    Left e -> logWarning $ "notifyDriverOfAllocation failed driver=" <> cand.rcSession.driverId <> " booking=" <> booking.bookingId.getId <> ": " <> show e
+    Right _ -> pure ()
+  where
+    call = do
+      let s = cand.rcSession
+      merchant <- CQM.findById s.merchantId >>= fromMaybeM (MerchantNotFound s.merchantId.getId)
+      void . CallBPPInternal.sharedCabAllocationFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl $
+        CallBPPInternal.SharedCabAllocationReq
+          { bookingId = booking.bookingId.getId,
+            driverId = s.driverId,
+            seats = Just booking.seats,
+            boardingCode = Nothing
+          }
 
 --------------------------------------------------------------------------------
 -- Tick (05 §3): "one tick per city (Redis lease) + trigger on booking create / release"
