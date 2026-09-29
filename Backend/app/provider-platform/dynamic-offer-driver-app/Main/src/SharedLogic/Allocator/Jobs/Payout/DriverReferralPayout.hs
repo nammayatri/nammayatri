@@ -294,43 +294,49 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
   pendingRefundFees <- QDF.findPendingRegistrationRefunds (Just 50) (cast merchantOpCityId) DPlan.YATRI_SUBSCRIPTION
   for_ pendingRefundFees $ \driverFee -> do
     let driverId = driverFee.driverId
-    driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    when (isNothing driverInfo.payoutRegAmountRefunded) $ do
-      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion person.merchantOperatingCityId person.id
-      let payoutVpaValid = case payoutServiceFlow of
-            IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
-            IPayout.StripeFlow -> True
-      when payoutVpaValid $ do
-        fork ("processing registration refund for DriverId: " <> driverId.getId) $ do
-          let refundLockKey = "PayoutRegRefund:DriverId-" <> driverId.getId
-          gotLock <- Redis.tryLockRedis refundLockKey 300
-          when gotLock $ do
-            mbVehicle <- QV.findById driverId
-            let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
-            let mbPayoutConfig = find (\pc -> pc.vehicleCategory == vehicleCategory) payoutConfigList
-            whenJust mbPayoutConfig $ \payoutConfig -> do
-              merchantOperatingCity <- CQMOC.findById (cast driverFee.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound driverFee.merchantOperatingCityId.getId)
-              uid <- generateGUID
-              now <- getCurrentTime
-              let registrationFee = driverFee.platformFee
-                  registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
-              when (registrationAmount > 0) $ do
-                -- Claim: mark fee as REFUND_PENDING and record refunded amount
-                QDF.updateStatus DF.REFUND_PENDING driverFee.id now
-                QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
-                -- Attempt payout; rollback on failure
-                phoneNo <- mapM decrypt person.mobileNumber
-                let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType payoutServiceFlow Nothing
-                    entityName = DLP.REGISTRATION_REFUND
-                    createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
-                logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
-                result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
-                case result of
-                  Right _ -> pure ()
-                  Left err -> do
-                    -- Rollback: revert fee to CLEARED, clear refunded amount
-                    logError $ "Registration refund payout failed for driverId: " <> driverId.getId <> " | error: " <> show err
-                    rollbackNow <- getCurrentTime
-                    QDF.updateStatus DF.CLEARED driverFee.id rollbackNow
-                    QDI.updatePayoutRegAmountRefunded Nothing driverId
+    mbDriverInfo <- QDI.findById driverId
+    case mbDriverInfo of
+      Nothing -> logError $ "Skipping registration refund, driverInformation not found for driverId: " <> driverId.getId <> " | driverFeeId: " <> driverFee.id.getId
+      Just driverInfo ->
+        when (isNothing driverInfo.payoutRegAmountRefunded) $ do
+          mbPerson <- QPerson.findById driverId
+          case mbPerson of
+            Nothing -> logError $ "Skipping registration refund, person not found for driverId: " <> driverId.getId <> " | driverFeeId: " <> driverFee.id.getId
+            Just person -> do
+              (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion person.merchantOperatingCityId person.id
+              let payoutVpaValid = case payoutServiceFlow of
+                    IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
+                    IPayout.StripeFlow -> True
+              when payoutVpaValid $ do
+                fork ("processing registration refund for DriverId: " <> driverId.getId) $ do
+                  let refundLockKey = "PayoutRegRefund:DriverId-" <> driverId.getId
+                  gotLock <- Redis.tryLockRedis refundLockKey 300
+                  when gotLock $ do
+                    mbVehicle <- QV.findById driverId
+                    let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
+                    let mbPayoutConfig = find (\pc -> pc.vehicleCategory == vehicleCategory) payoutConfigList
+                    whenJust mbPayoutConfig $ \payoutConfig -> do
+                      merchantOperatingCity <- CQMOC.findById (cast driverFee.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound driverFee.merchantOperatingCityId.getId)
+                      uid <- generateGUID
+                      now <- getCurrentTime
+                      let registrationFee = driverFee.platformFee
+                          registrationAmount = sum [registrationFee.cgst, registrationFee.sgst, registrationFee.fee]
+                      when (registrationAmount > 0) $ do
+                        -- Claim: mark fee as REFUND_PENDING and record refunded amount
+                        QDF.updateStatus DF.REFUND_PENDING driverFee.id now
+                        QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
+                        -- Attempt payout; rollback on failure
+                        phoneNo <- mapM decrypt person.mobileNumber
+                        let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType payoutServiceFlow Nothing
+                            entityName = DLP.REGISTRATION_REFUND
+                            createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
+                        logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
+                        result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
+                        case result of
+                          Right _ -> pure ()
+                          Left err -> do
+                            -- Rollback: revert fee to CLEARED, clear refunded amount
+                            logError $ "Registration refund payout failed for driverId: " <> driverId.getId <> " | error: " <> show err
+                            rollbackNow <- getCurrentTime
+                            QDF.updateStatus DF.CLEARED driverFee.id rollbackNow
+                            QDI.updatePayoutRegAmountRefunded Nothing driverId
