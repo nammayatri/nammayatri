@@ -256,7 +256,7 @@ upsertPersonAndGetToken pOrgId regPOCfg fromStationMOCId mId mbRegCoordinates re
 
   when (isCreatedNow && person.merchantOperatingCityId /= fromStationMOCId) $ do
     moc <- B.runInReplica $ CQMOC.findById fromStationMOCId >>= fromMaybeM (MerchantOperatingCityNotFound fromStationMOCId.getId)
-    CQP.updateCityInfoById person.id moc.city moc.id
+    CQP.updateCityInfoById person.id mId moc.city moc.id
 
   (regToken, _) <- getRegToken person.id pOrgId regPOCfg mId True
 

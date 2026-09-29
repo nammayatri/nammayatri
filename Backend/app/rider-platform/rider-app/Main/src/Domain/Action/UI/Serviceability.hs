@@ -279,7 +279,7 @@ upsertPersonCityInformation personId merchantId shouldUpdatePerson mbCity = when
             ( MerchantOperatingCityNotFound $
                 "merchantId:- " <> merchantId.getId <> " ,city:- " <> show city'
             )
-      CQP.updateCityInfoById personId city' merchantOperatingCity.id
+      CQP.updateCityInfoById personId merchantId city' merchantOperatingCity.id
 
 enforceTollRouteRedisKey :: Id Person.Person -> Text
 enforceTollRouteRedisKey personId = "EnforceTollRoute:Person:" <> personId.getId
