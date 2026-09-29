@@ -251,7 +251,8 @@ liveRiderRows stopPoints plate = do
       tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
       persons <- QPersonExtra.findAllByIds (map (.riderId) bookings)
       now <- getCurrentTime
-      let -- NY sign-up often stores the whole name in firstName; show one word, render a blank as a placeholder.
+      let pointsByCode = Map.fromList stopPoints
+          -- NY sign-up often stores the whole name in firstName; show one word, render a blank as a placeholder.
           nameOf b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
       forM bookings $ \b -> do
@@ -264,11 +265,11 @@ liveRiderRows stopPoints plate = do
           Just st | isJust st.expiresAt -> pure st.expiresAt
           Just _ -> do
             ttl <- Booking.shared $ Redis.ttl key
-            pure $ if ttl > 0 then Just (addUTCTime (intToNominalDiffTime (fromIntegral ttl)) now) else Nothing
+            pure $ if ttl > 0 then Just (addUTCTime (fromInteger ttl) now) else Nothing
           Nothing -> pure Nothing
         mbFix <- Booking.readRiderFix b.id
-        let minutesAway = case (mbFix, lookup b.fromStationCode stopPoints) of
-              (Just fix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters fix.position stopPoint))
+        let minutesAway = case (mbFix, Map.lookup b.fromStationCode pointsByCode) of
+              (Just lastFix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters lastFix.position stopPoint))
               _ -> Nothing
         pure
           View.RiderRow
