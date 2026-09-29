@@ -16,6 +16,7 @@ where
 import qualified API.Types.UI.SharedCabInternal as API
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
+import qualified Data.Text as T
 import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -26,6 +27,7 @@ import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -238,28 +240,49 @@ sessionRoute integratedBppConfig code = do
       }
 
 -- | The plate's live bookings as rider rows: seats from the tickets still held, first names in one person query.
-liveRiderRows :: Text -> Environment.Flow [View.RiderRow]
-liveRiderRows plate = do
+-- Status/ETA/deadline come from the booking's real state: its allocation key holds ARRIVING and its stand/moving
+-- timer, its last rider fix (vs the board stop) holds minutesAway. `stopPoints` is the session route's stopCode -> point.
+liveRiderRows :: [(Text, LatLong)] -> Text -> Environment.Flow [View.RiderRow]
+liveRiderRows stopPoints plate = do
   bookings <- Booking.liveBookingsForVehicle plate
   if null bookings
     then pure []
     else do
       tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
       persons <- QPersonExtra.findAllByIds (map (.riderId) bookings)
-      let nameOf b = fromMaybe "" $ listToMaybe [n | p <- persons, p.id == b.riderId, Just n <- [p.firstName]]
+      now <- getCurrentTime
+      let -- NY sign-up often stores the whole name in firstName; show one word, render a blank as a placeholder.
+          nameOf b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
-      pure
-        [ View.RiderRow
+      forM bookings $ \b -> do
+        let statuses = statusesOf b
+            boarded = DFRFSTicket.INPROGRESS `elem` statuses
+            key = Allocation.allocKey b.id.getId
+        mbAlloc <- Booking.shared $ Redis.safeGet @AllocTypes.AllocationState key
+        -- the allocation's armed timer (stand/moving); else the key's own TTL is the allocation's outer bound
+        expiresAt <- case mbAlloc of
+          Just st | isJust st.expiresAt -> pure st.expiresAt
+          Just _ -> do
+            ttl <- Booking.shared $ Redis.ttl key
+            pure $ if ttl > 0 then Just (addUTCTime (intToNominalDiffTime (fromIntegral ttl)) now) else Nothing
+          Nothing -> pure Nothing
+        mbFix <- Booking.readRiderFix b.id
+        let minutesAway = case (mbFix, lookup b.fromStationCode stopPoints) of
+              (Just fix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters fix.position stopPoint))
+              _ -> Nothing
+        pure
+          View.RiderRow
             { bookingId = b.id.getId,
               firstName = nameOf b,
-              seats = seatsHeld (statusesOf b),
+              seats = seatsHeld statuses,
               boardStopCode = b.fromStationCode,
               dropStopCode = b.toStationCode,
-              boarded = DFRFSTicket.INPROGRESS `elem` statusesOf b,
-              fare = b.totalPrice.amount
+              boarded,
+              fare = b.totalPrice.amount,
+              riderStatus = View.riderStatusOf boarded (isJust mbAlloc),
+              minutesAway,
+              expiresAt
             }
-          | b <- bookings
-        ]
 
 -- | Until the tick lands: movement is MOVING, next stops (and so demand ahead) are the whole route. `available` is derived, never counted down: capacity less walk-ups less seats live bookings hold (bookings
 -- re-attach by plate after a Redis flush, 04 §3; walk-ups restart at 0 and the driver re-taps them).
@@ -271,7 +294,7 @@ mkSessionResp s = do
   demand <- Demand.demandByStop s.merchantOperatingCityId.getId s.routeCode (map (.stopCode) stops)
   queuedRoute <- traverse (sessionRoute integratedBppConfig) s.queuedRouteCode
   bookedSeats <- Booking.liveSeatsOnVehicle s.vehicleNumber
-  riders <- liveRiderRows s.vehicleNumber
+  riders <- liveRiderRows [(stop.stopCode, stop.stopPoint) | stop <- stops] s.vehicleNumber
   pure
     View.SharedCabSession
       { route,

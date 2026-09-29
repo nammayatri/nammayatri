@@ -4,6 +4,10 @@
 -- whose guard lapsed. One run per city per tick (claimSweepRun kills duplicate chains), the sweep body
 -- under a city lease whose TTL outlives a sweep (a crashed holder frees it on TTL), and every run
 -- re-enqueues the next in `finally`, so a partial failure never kills the chain.
+-- Amends (batch5-core L2/L3): the lease holds an owner token -- a sweep that outlives its TTL cannot free a
+-- later holder's lease -- and a run whose scan window came up empty in both passes lets the chain lapse:
+-- every candidate that could need the chain is by definition in the window, and the next degrade or session
+-- open (R51 Session.selectRoute) re-seeds it.
 -- Keys are unprefixed (cross-app master cell, Booking.shared): the API seeds, the scheduler runs.
 module SharedLogic.SharedCab.DegradedSweepSchedule
   ( sharedCabDegradedSweepEnabled,
@@ -73,11 +77,20 @@ claimSweepRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperating
 claimSweepRun mocId = setNx (sweepRunKey mocId) (sweepTickSec - 5)
 
 -- | One sweep body at a time per city: a shard-duplicated run that finds the lease held skips silently.
--- The TTL (10x the tick) comfortably outlives a sweep; it only bounds a crashed holder.
-withSweepLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DMOC.MerchantOperatingCity -> m () -> m ()
-withSweepLease mocId action =
-  whenM (shared $ Redis.tryLockRedis (sweepLeaseKey mocId) (10 * sweepTickSec)) $
-    action `finally` shared (Redis.unlockRedis (sweepLeaseKey mocId))
+-- The TTL (10x the tick) comfortably outlives a sweep; it only bounds a crashed holder. The lease carries an
+-- owner token and the unlock checks it first (mobility's tryLockRedis/unlockRedis are ownerless, so own the
+-- release): a sweep that outlives its TTL can no longer free a later holder's lease -- the remaining
+-- check-then-unlock window is milliseconds, not the TTL. Nothing when the lease was already held.
+withSweepLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DMOC.MerchantOperatingCity -> m a -> m (Maybe a)
+withSweepLease mocId action = do
+  owner <- generateGUIDText
+  let key = Redis.buildLockResourceName (sweepLeaseKey mocId)
+  acquired <- shared $ Redis.setNxExpire key (10 * sweepTickSec) owner
+  if not acquired
+    then pure Nothing
+    else (Just <$> action) `finally` shared do
+      current <- Redis.safeGet key
+      when (current == Just owner) $ Redis.unlockRedis (sweepLeaseKey mocId)
 
 scheduleNextSweep :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 scheduleNextSweep merchantId mocId = do

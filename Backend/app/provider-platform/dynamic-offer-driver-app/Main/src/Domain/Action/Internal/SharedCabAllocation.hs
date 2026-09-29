@@ -42,10 +42,15 @@ data SharedCabAllocationReq = SharedCabAllocationReq
 
 sharedCabAllocationFCM :: SharedCabAllocationReq -> Maybe Text -> Flow APISuccess
 sharedCabAllocationFCM req apiKey = do
-  person <- runInReplica $ QPerson.findById req.driverId >>= fromMaybeM (PersonNotFound req.driverId.getId)
-  merchant <- QM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError $ AuthBlocked "Invalid BPP internal api key"
+  -- Auth first: an unknown driver, an unknown merchant and a wrong key all answer AuthBlocked, so an
+  -- unauthenticated caller cannot probe for existing driver ids (PersonNotFound vs AuthBlocked).
+  verified <- do
+    mbPerson <- runInReplica $ QPerson.findById req.driverId
+    mbMerchant <- maybe (pure Nothing) (QM.findById . (.merchantId)) mbPerson
+    pure $ case (mbPerson, mbMerchant) of
+      (Just p, Just m) | Just m.internalApiKey == apiKey -> Just p
+      _ -> Nothing
+  person <- fromMaybeM (AuthBlocked "Invalid BPP internal api key") verified
   let entityData =
         SharedCabAllocationEntityData
           { bookingId = req.bookingId.getId,

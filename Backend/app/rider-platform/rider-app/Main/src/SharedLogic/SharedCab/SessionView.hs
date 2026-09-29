@@ -25,8 +25,20 @@ data SessionRoute = SessionRoute
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-data RiderStatus = AT_STOP | MINUTES_AWAY
+data RiderStatus = AT_STOP | MINUTES_AWAY | ARRIVING | BOARDED
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | The real states a rider row can be in, in precedence order: a flipped ticket wins (the cab carries them
+-- already), an open allocation (`sharedcab:alloc:{bookingId}`) is next, else they are simply walking over.
+riderStatusOf :: Bool -> Bool -> RiderStatus
+riderStatusOf boarded allocated
+  | boarded = BOARDED
+  | allocated = ARRIVING
+  | otherwise = MINUTES_AWAY
+
+-- | ~5 km/h on foot (5000 m / 60 min), rounded up so the driver never under-waits by the conversion.
+walkMinutesAway :: Double -> Int
+walkMinutesAway meters = ceiling (meters / (5000 / 60))
 
 data BoardingRider = BoardingRider
   { bookingId :: Text,
@@ -111,7 +123,8 @@ data EndRouteReq = EndRouteReq
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | One live booking on the plate, resolved: `seats` is what its tickets still hold, `boarded` whether someone is
--- on board. Stop fields are stop codes.
+-- on board. Stop fields are stop codes. `riderStatus`, `minutesAway` and `expiresAt` carry the booking's real
+-- allocation/walk state (SharedCabInternal.liveRiderRows fills them; groupRidersByStop only relays them).
 data RiderRow = RiderRow
   { bookingId :: Text,
     firstName :: Text,
@@ -119,7 +132,10 @@ data RiderRow = RiderRow
     boardStopCode :: Text,
     dropStopCode :: Text,
     boarded :: Bool,
-    fare :: HighPrecMoney
+    fare :: HighPrecMoney,
+    riderStatus :: RiderStatus,
+    minutesAway :: Maybe Int,
+    expiresAt :: Maybe UTCTime
   }
   deriving (Show, Eq)
 
@@ -136,7 +152,7 @@ groupRidersByStop stops rows =
     group stopName atStop =
       RidersAtStop
         { stopName,
-          boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing} | r <- held, not r.boarded, atStop r.boardStopCode],
+          boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = r.riderStatus, minutesAway = r.minutesAway, expiresAt = r.expiresAt} | r <- held, not r.boarded, atStop r.boardStopCode],
           alighting = [AlightingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats} | r <- held, r.boarded, atStop r.dropStopCode]
         }
     nonEmpty g = not (null g.boarding && null g.alighting)

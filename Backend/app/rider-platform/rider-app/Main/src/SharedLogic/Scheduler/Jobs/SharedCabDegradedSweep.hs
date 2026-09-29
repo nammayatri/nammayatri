@@ -55,12 +55,20 @@ sharedCabDegradedSweep Job {jobInfo} = do
   claimed <- claimSweepRun merchantOperatingCityId
   -- a duplicate chain finds this run claimed and ends; the gate going off ends the chain too
   if claimed && sharedCabDegradedSweepEnabled
-    then sweepCity merchantOperatingCityId `finally` scheduleNextSweep merchantId merchantOperatingCityId
+    then do
+      swept <- withTryCatch "sharedCabDegradedSweep" (sweepCity merchantOperatingCityId)
+      case swept of
+        -- an empty window in both passes is the full candidate space for now: let the chain lapse; a new
+        -- degrade or session open re-seeds it. A crash, or another city's shard holding the lease, reschedules.
+        Right (Just (0, 0)) -> logInfo "sharedCab degraded sweep: chain ends (scan window empty; a new degrade or session open re-seeds it)"
+        _ -> scheduleNextSweep merchantId merchantOperatingCityId
     else logInfo "sharedCab degraded sweep: chain ends (another chain ran this tick, or the sweep is gated off)"
   pure Complete
 
 -- | The city's window, under its lease. Per-candidate failure is logged and skipped (the next tick
 -- retries it); the byte count is the number of rides the rule owner actually ended this sweep.
+-- The (degraded, plated) candidate counts come back so the chain can lapse on an empty window; Nothing when
+-- another shard holds the lease.
 sweepCity ::
   ( MonadFlow m,
     Redis.HedisFlow m r,
@@ -70,7 +78,7 @@ sweepCity ::
     MonadMask m
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  m ()
+  m (Maybe (Int, Int))
 sweepCity mocId =
   withSweepLease mocId $ do
     horizonSec <- (.degradedTimeoutSec) <$> Config.getTunables mocId
@@ -84,6 +92,7 @@ sweepCity mocId =
         <> show scannedP
         <> " dropped="
         <> show endedP
+    pure (scanned, scannedP)
   where
     -- R51: a dropped ride stays booking-CONFIRMED, so the plated page holds every finished ride in the window. One batched
     -- ticket read keeps only bookings with a rider still INPROGRESS; only those cost the session read and the locked re-decide.

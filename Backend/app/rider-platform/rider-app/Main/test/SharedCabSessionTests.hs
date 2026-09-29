@@ -5,7 +5,7 @@ module SharedCabSessionTests (tests) where
 
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Text (Text)
-import Data.Time (UTCTime (..), fromGregorian)
+import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.Types.Id (Id (..))
@@ -141,6 +141,16 @@ tests =
                 View.RidersAtStop "Charlie" [] [View.AlightingRider "b4" "Lu" 1],
                 View.RidersAtStop "Other stops" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1]
               ],
+      testCase "R41: real-state status: a flipped ticket beats an allocation, an allocation beats walking" $
+        map (uncurry View.riderStatusOf) [(True, True), (True, False), (False, True), (False, False)]
+          @?= [View.BOARDED, View.BOARDED, View.ARRIVING, View.MINUTES_AWAY],
+      testCase "R41: ~5 km/h on foot, rounded up (833 m ~ 10 min, 5 km ~ 60)" $
+        map View.walkMinutesAway [0, 60, 833, 5000] @?= [0, 1, 10, 60],
+      testCase "R41: the group relays the row's ARRIVING status, walking ETA and deadline" $
+        let deadline = Just (addUTCTime 90 t0)
+            arriving = (row "b1" "Asha" 1 "A" "C" False) {View.riderStatus = View.ARRIVING, View.minutesAway = Just 3, View.expiresAt = deadline}
+         in View.groupRidersByStop routeStops [arriving]
+              @?= [View.RidersAtStop "Alpha" [View.BoardingRider "b1" "Asha" 1 "Charlie" 10 View.ARRIVING (Just 3) deadline] []],
       testCase "H3: finish reports exactly the riders whose drop failed" $
         stranded [("b1", Right ()), ("b2", Left ("timeout" :: Text)), ("b3", Right ()), ("b4", Left "timeout")] @?= ["b2", "b4"],
       testCase "expiry and ops ends drop the riders as the tick" $
@@ -154,7 +164,7 @@ routeStops = [("A", "Alpha"), ("B", "Bravo"), ("C", "Charlie")]
 
 row :: Text -> Text -> Int -> Text -> Text -> Bool -> View.RiderRow
 row bookingId firstName seats boardStopCode dropStopCode boarded =
-  View.RiderRow {bookingId, firstName, seats, boardStopCode, dropStopCode, boarded, fare = 10}
+  View.RiderRow {bookingId, firstName, seats, boardStopCode, dropStopCode, boarded, fare = 10, riderStatus = View.MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing}
 
 boarding :: Text -> Text -> Int -> Text -> View.BoardingRider
 boarding bookingId firstName seats dropStop =

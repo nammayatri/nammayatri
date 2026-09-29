@@ -223,9 +223,15 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
     markerAlive <- Degraded.isMarkerAlive booking.id
     mbAllocatedPlate <- Degraded.planDegrade fresh.status fresh.vehicleNumber (map (.status) tickets) markerAlive & fromMaybeM BoardingFailed
     whenJust mbAllocatedPlate $ \plate -> do
-      -- TODO(7.6): Events allocation_closed {outcome: degraded, blame: none} for the released allocation.
       QBooking.updateAllocatedVehicle Nothing booking.id (Just plate)
       shared . void $ Redis.del (allocKey booking.id)
+      -- TODO(7.6): Events allocation_closed {outcome: degraded, blame: none} for the released allocation.
+      -- -- done here, in the same locked block: this bypass path skips Allocation.closeLocked, so it closes
+      -- the event trail itself. The driver's card stops offering the rider because the seat count drops; a
+      -- dedicated release push does not exist on the driver app (F3 covers allocation_created only).
+      now <- getCurrentTime
+      Events.emit booking.merchantOperatingCityId $
+        Events.bookingEvent (Events.AllocationClosed "DEGRADED" Events.BlameNone) booking.id.getId (Just plate) booking.routeCode now
     forM_ (filter ((== TicketStatus.ACTIVE) . (.status)) tickets) $ \t ->
       QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS t.scannedByVehicleNumber booking.id t.ticketNumber
     Degraded.markDegradedBoarding degradedTimeoutSec booking.id typedCode

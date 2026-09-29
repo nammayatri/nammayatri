@@ -15,7 +15,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (FindingBooking (..), RankedCandidate (..), claimTimerSec, claimable, closable, crossedMaxAttempts, eligibleCandidates, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (FindingBooking (..), RankedCandidate (..), claimTimerSec, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -187,5 +187,12 @@ tests =
       testCase "R38: a silent-cab release is nobody's fault and not an attempt" $
         (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
       testCase "garbage is not a timestamp" $
-        parseLtsTimestamp "yesterday" @?= Nothing
+        parseLtsTimestamp "yesterday" @?= Nothing,
+      testCase "a clock-skewed fix from the future is not fresh" $ do
+        let fromTheFutureAgo = (-10) -- cabFix puts `agoSec` before t0
+        ( isFreshPosition t0 60 (cabFix "P1" nearStop (Just 5) fromTheFutureAgo).vehicleInfo,
+          isFreshPosition t0 60 (cabFix "P1" nearStop (Just 5) 10).vehicleInfo,
+          silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) fromTheFutureAgo]
+          )
+          @?= (False, True, False)
     ]

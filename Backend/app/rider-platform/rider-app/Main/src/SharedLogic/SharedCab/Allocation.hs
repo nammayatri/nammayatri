@@ -111,6 +111,7 @@ import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
 import qualified SharedLogic.SharedCab.Misses as Misses
 import qualified SharedLogic.SharedCab.Notify as Notify
+import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -296,7 +297,8 @@ data RankedCandidate = RankedCandidate
 isFreshPosition :: UTCTime -> Int -> LT.VehicleInfo -> Bool
 isFreshPosition now maxAgeSec vi = case vi.timestamp >>= parseLtsTimestamp of
   Nothing -> False -- silent-by-absence must not read as fresh
-  Just ts -> diffUTCTime now ts <= fromIntegral maxAgeSec
+  -- a skewed-clock fix from the future must not be fresh either: its negative age would clear every gate forever
+  Just ts -> let age = diffUTCTime now ts in 0 <= age && age <= fromIntegral maxAgeSec
 
 -- | 05 §3 eligibility, per booking:
 --   * cab not past the board stop (§6 item 1) -- LTS keeps the stop listed as Upcoming while
@@ -356,10 +358,11 @@ silentReleaseMult = 5
 
 -- | R38: the cab has sent nothing for silentReleaseMult x ltsMaxAgeSec (or LTS lost it) while the route's other cabs are
 -- reporting. When nobody on the route is fresh it reads as an LTS outage (05 §8.9), which decides nothing.
+-- Plates compare canonical (LTS today already stores the canonical busNumber; don't lean on that).
 silentCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
 silentCab now maxAgeSec plate tracking =
   any (isFreshPosition now maxAgeSec . (.vehicleInfo)) tracking
-    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (find ((== plate) . (.vehicleNumber)) tracking)
+    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (find ((== canonicalisePlate plate) . canonicalisePlate . (.vehicleNumber)) tracking)
 
 -- | //TODO(§3 + §10 stale feed): a queued route must still serve the board stop; deciding that
 -- needs the queued route's stop list from OTPRest. Tolerant here (one-tick window; Phase 2
@@ -780,7 +783,7 @@ allocationPass cityId = do
           Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
           Right positions -> pure (Just (routeCode, positions))
       let movingOn plate route =
-            any (\vt -> vt.vehicleNumber == plate && isFreshPosition now cfg.ltsMaxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed) $
+            any (\vt -> canonicalisePlate vt.vehicleNumber == canonicalisePlate plate && isFreshPosition now cfg.ltsMaxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed) $
               fromMaybe [] (lookup route positionsByRoute)
       -- expired timers first: the seats they free are claimable in this same tick
       let silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (fromMaybe [] (lookup route positionsByRoute))
