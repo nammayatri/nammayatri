@@ -12,26 +12,33 @@ import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Lib.Payment.Domain.Types.Common
+import qualified Lib.Payment.Domain.Types.PayoutBatch
 import Tools.Beam.UtilsTH
 
 data ScheduledPayoutConfigT f = ScheduledPayoutConfigT
-  { batchSize :: (B.C f Kernel.Prelude.Int),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    dayOfMonth :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    dayOfWeek :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    frequency :: (B.C f Domain.Types.ScheduledPayoutConfig.ScheduledPayoutFrequency),
-    isEnabled :: (B.C f Kernel.Prelude.Bool),
-    maxRetriesPerDriver :: (B.C f Kernel.Prelude.Int),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    minimumPayoutAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    orderType :: (B.C f Kernel.Prelude.Text),
-    payoutCategory :: (B.C f Lib.Payment.Domain.Types.Common.EntityName),
-    remark :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    timeDiffFromUtc :: (B.C f Kernel.Types.Common.Seconds),
-    timeOfDay :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory))
+  { batchSize :: B.C f Kernel.Prelude.Int,
+    bufferCheckEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    dayOfMonth :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    dayOfWeek :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    defaultPayoutRail :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchRail),
+    frequency :: B.C f Domain.Types.ScheduledPayoutConfig.ScheduledPayoutFrequency,
+    intervalDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    intervalHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    isEnabled :: B.C f Kernel.Prelude.Bool,
+    itemsPerBatchLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxRetriesPerDriver :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minimumPayoutAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    orderType :: B.C f Kernel.Prelude.Text,
+    payoutCategory :: B.C f Lib.Payment.Domain.Types.Common.EntityName,
+    remark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rescheduleBufferMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
+    timeOfDay :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +48,6 @@ instance B.Table ScheduledPayoutConfigT where
 
 type ScheduledPayoutConfig = ScheduledPayoutConfigT Identity
 
-$(enableKVPG (''ScheduledPayoutConfigT) [('merchantOperatingCityId), ('payoutCategory)] [])
+$(enableKVPG ''ScheduledPayoutConfigT ['merchantOperatingCityId, 'payoutCategory] [])
 
-$(mkTableInstances (''ScheduledPayoutConfigT) "scheduled_payout_config")
+$(mkTableInstances ''ScheduledPayoutConfigT "scheduled_payout_config")

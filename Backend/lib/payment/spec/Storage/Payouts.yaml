@@ -1,5 +1,6 @@
 imports:
   UTCTime: Kernel.Prelude
+  Day: Data.Time
   ShortId: Kernel.Types.Id
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -7,6 +8,7 @@ imports:
   PayoutOrderStatus : Kernel.External.Payout.Juspay.Types.Payout
   AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
   TransferStatus: Kernel.External.Payout.Interface.Types
+  SettlementRefType: Kernel.External.Payout.Interface.Types
   EntityName : Lib.Payment.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
@@ -43,6 +45,9 @@ PayoutOrder:
     pgBaseFee : Maybe HighPrecMoney
     pgGst : Maybe HighPrecMoney
     merchantTopUpAmount : Maybe HighPrecMoney
+    batchId : Maybe (Id PayoutBatch)
+    settlementRef : Maybe Text
+    settlementRefType : Maybe SettlementRefType
   beamFields:
     amount:
       currency: Maybe Currency
@@ -65,6 +70,7 @@ PayoutOrder:
     orderId: PrimaryKey
     customerId: "!SecondaryKey"
     entityIds: "!SecondaryKey"
+    batchId: "!SecondaryKey"
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -72,6 +78,9 @@ PayoutOrder:
     findByOrderId:
       kvFunction: findOneWithKV
       where: orderId
+    findAllByBatchId:
+      kvFunction: findAllWithKV
+      where: batchId
     updatePayoutOrderStatus:
       kvFunction: updateOneWithKV
       params: [status]
@@ -87,6 +96,15 @@ PayoutOrder:
     updateRetriedOrderId:
       kvFunction: updateOneWithKV
       params: [retriedOrderId]
+      where: orderId
+    # Bulk outcomes: one write per item per status call, instead of one per column group.
+    updateBulkSettled:
+      kvFunction: updateOneWithKV
+      params: [status, transferStatus, settlementRef, settlementRefType, responseCode, responseMessage]
+      where: orderId
+    updateBulkStatusAndRespInfo:
+      kvFunction: updateOneWithKV
+      params: [status, transferStatus, responseCode, responseMessage]
       where: orderId
 
   extraOperations:
@@ -148,11 +166,11 @@ PayoutRequest:
 
   types:
     PayoutRequestStatus:
-      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING"
+      enum: "INITIATED,PROCESSING,CREDITED,AUTO_PAY_FAILED,RETRYING,FAILED,CANCELLED,CASH_PAID,CASH_PENDING,EXCLUDED"
       derive: "HttpInstance"
 
     PayoutType:
-      enum: "INSTANT,SCHEDULED"
+      enum: "INSTANT,SCHEDULED,ADHOC"
       derive: "HttpInstance"
   fields:
     id: Id PayoutRequest
@@ -160,6 +178,7 @@ PayoutRequest:
     entityId: Text
     entityRefId: Maybe Text
     beneficiaryId: Text
+    batchId: Maybe (Id PayoutBatch)
     amount: Maybe HighPrecMoney
     status: PayoutRequestStatus
     retryCount: Maybe Int
@@ -230,5 +249,114 @@ PayoutRequest:
       kvFunction: updateOneWithKV
       params: [cashMarkedById, cashMarkedByName, cashMarkedAt]
       where: id
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+PayoutBatch:
+  tableName: payout_batch
+  derives: "Generic"
+
+  types:
+    PayoutBatchOrigin:
+      # Only two things construct a batch: the scheduled sweep and an admin adhoc request.
+      enum: "SCHEDULED,ADHOC"
+      derive: "HttpInstance"
+    PayoutBatchStatus:
+      # Reservations are held in every state except COMPLETED and SUBMIT_FAILED, where they have
+      # been settled or released per item. MANUAL_REVIEW_REQUIRED is the one stopped state that
+      # still holds money -- that is what makes it a request for a human rather than a resolution.
+      #
+      # CREATED         row written just before the submit call. Also where a batch stays if the
+      #                 process dies mid-call, which is why it is polled like SUBMIT_UNKNOWN
+      # SUBMITTED       the partner has it; status checks are running
+      # SUBMIT_UNKNOWN  we do not know whether the submission landed; the batch-ref lookup asks
+      # AWAITING_PARTNER_APPROVAL  every pending item sits in the partner's checker queue
+      # COMPLETED       every transaction terminal -- paid or failed, none still moving
+      # SUBMIT_FAILED   the request never reached the partner's banking layer; reservations released
+      # MANUAL_REVIEW_REQUIRED  stopped asking, money still held: the plan ran out, the partner
+      #                 already holds this reference, or it refused the file outright
+      enum: "CREATED,SUBMITTED,SUBMIT_UNKNOWN,AWAITING_PARTNER_APPROVAL,COMPLETED,SUBMIT_FAILED,MANUAL_REVIEW_REQUIRED"
+      derive: "HttpInstance"
+    PayoutBatchRail:
+      # The rail the batch was submitted on. The partner may execute an item on another rail
+      # (HDFC turns NEFT into an intra-bank transfer when the beneficiary banks with them); that
+      # is read per item from the response, not from here.
+      enum: "NEFT,RTGS,IMPS,A2A"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id PayoutBatch
+    merchantId: Text
+    merchantOperatingCityId: Text
+    # Which payout service config submitted this batch, as text. The status-check job loads
+    # credentials with it, so a city switching partner mid-flight cannot strand its batches.
+    payoutServiceName: Text
+    origin: PayoutBatchOrigin
+    status: PayoutBatchStatus
+    payoutRail: PayoutBatchRail
+    # Date we ask the partner to execute the file on (HDFC wire field: reqdexctndt). Stamped when the
+    # batch is opened and preserved across resends; with clientRefNo it forms the batch's external identity.
+    executionDate: Day
+    # Our file reference, sent to the partner on submit, status check and batch-ref lookup.
+    clientRefNo: Text
+    partnerBatchRef: Maybe Text
+    itemCount: Int
+    totalAmount: HighPrecMoney
+    # Written once at creation: beneficiaries over the minimum payout with no usable bank account.
+    excludedCount: Int
+    submittedAt: Maybe UTCTime
+    # Status-check cursor. statusCheckRound is the 1-based position in the plan; statusCheckCalls is
+    # the calls already made in that check; nextStatusCallAt is set exactly while the job still
+    # owes this batch a call, and is the only thing the job's due scan looks at.
+    statusCheckRound: Int
+    statusCheckCalls: Int
+    nextStatusCallAt: Maybe UTCTime
+    statusNoDataReplies: Int
+    failureReason: Maybe Text
+    # The partner's own code for whatever last went wrong on this batch -- a refusal, or a call
+    # that could not be made at all. Paired with failureReason, which carries their text. Both are
+    # cleared on a successful call, so they describe the most recent attempt rather than
+    # accumulating, and a batch that is merely waiting says why on the row instead of only in a log.
+    failureCode: Maybe Text
+    resolvedAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    itemCount: "0"
+    totalAmount: "0"
+    excludedCount: "0"
+    statusCheckRound: "0"
+    statusCheckCalls: "0"
+    statusNoDataReplies: "0"
+
+  sqlType:
+    id: character varying(36)
+    totalAmount: numeric(30,2)
+    createdAt: timestamp with time zone
+    updatedAt: timestamp with time zone
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    # One write per partner call, so the cursor and the status can never disagree.
+    updateAfterSubmit:
+      kvFunction: updateOneWithKV
+      params: [status, partnerBatchRef, submittedAt, statusCheckRound, statusCheckCalls, nextStatusCallAt, failureReason, failureCode]
+      where: id
+    updateAfterStatusCall:
+      kvFunction: updateOneWithKV
+      params: [status, resolvedAt, failureReason, failureCode, statusCheckRound, statusCheckCalls, nextStatusCallAt, statusNoDataReplies]
+      where: id
+    updateFailure:
+      kvFunction: updateOneWithKV
+      params: [status, failureReason, failureCode, resolvedAt, nextStatusCallAt]
+      where: id
+
+  # Indexes are hand-written in dev/ddl-migrations/dynamic-offer-driver-app/0893-hdfc-bulk-payout-indexes.sql:
+  # the generator sorts index columns, which cannot express (merchant_operating_city_id, created_at).
+  extraOperations:
+  - EXTRA_QUERY_FILE
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

@@ -211,6 +211,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Common.PayoutRequest
       Domain.Action.Common.VehicleDetails
+      Domain.Action.Dashboard.AdhocPayout
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
@@ -274,6 +275,7 @@ library
       Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
+      Domain.Action.Dashboard.PayoutBatch
       Domain.Action.Dashboard.PayoutRequest
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
@@ -559,6 +561,7 @@ library
       SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate
       SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection
       SharedLogic.Allocator.Jobs.Overlay.SendOverlay
+      SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck
       SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge
       SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout
       SharedLogic.Allocator.Jobs.Payout.PayoutStatusCheck
@@ -720,6 +723,15 @@ library
       SharedLogic.OTP
       SharedLogic.ParkingFeeExemption
       SharedLogic.Payment
+      SharedLogic.Payout.Bulk.Claim
+      SharedLogic.Payout.Bulk.Cycle
+      SharedLogic.Payout.Bulk.Eligibility
+      SharedLogic.Payout.Bulk.Order
+      SharedLogic.Payout.Bulk.Resolve
+      SharedLogic.Payout.Bulk.Submit
+      SharedLogic.Payout.Bulk.Types
+      SharedLogic.Payout.BulkStatusCheck
+      SharedLogic.Payout.RetimeScheduledBatchPayout
       SharedLogic.PayoutStatusCheck
       SharedLogic.Person
       SharedLogic.PersonBankAccount

@@ -101,6 +101,7 @@ data AllocatorJobType
   | ReconciliationSweep
   | ScheduledBatchPayout
   | PayoutStatusCheck
+  | BulkPayoutStatusCheck
   | SettlementReportIngestion
   | CheckPickupZoneArrival
   | TriggerSpecialZoneNotify
@@ -166,6 +167,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SReconciliationSweep jobData = AnyJobInfo <$> restoreJobInfo SReconciliationSweep jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
+  restoreAnyJobInfo SBulkPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SBulkPayoutStatusCheck jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
@@ -660,6 +662,15 @@ type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'PayoutStatusCheck
 
 type instance JobContent 'PayoutStatusCheck = PSC.PayoutStatusCheckJobData
+
+-- | The bulk payout status-check job covers every city and every batch in flight, so it carries
+--   no data: what to call and when is on the payout_batch rows themselves.
+data BulkPayoutStatusCheckJobData = BulkPayoutStatusCheckJobData
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BulkPayoutStatusCheck
+
+type instance JobContent 'BulkPayoutStatusCheck = BulkPayoutStatusCheckJobData
 
 data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
   { merchantId :: Id DM.Merchant,

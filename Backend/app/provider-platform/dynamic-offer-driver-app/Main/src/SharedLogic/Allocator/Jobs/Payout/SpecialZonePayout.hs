@@ -309,6 +309,7 @@ executeOldSpecialZonePayout scheduledPayout = do
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> isJust mbVpa
             IPayout.StripeFlow -> True
+            IPayout.BulkFlow -> isJust mbPersonBankAccount
       if not payoutVpaValid
         then do
           logWarning $ "No payout bank account for ride: " <> scheduledPayout.rideId
@@ -326,7 +327,7 @@ executeOldSpecialZonePayout scheduledPayout = do
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
               let entityName = DLP.SPECIAL_ZONE_PAYOUT
-                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" payoutServiceFlow Nothing
+                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" payoutServiceFlow Nothing Nothing
               case merchantId of
                 Nothing -> do
                   logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id

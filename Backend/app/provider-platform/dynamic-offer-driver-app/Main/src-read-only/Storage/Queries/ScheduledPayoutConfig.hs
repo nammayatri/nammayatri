@@ -25,12 +25,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOpCityIdAndIsEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig])
 findAllByMerchantOpCityIdAndIsEnabled merchantOperatingCityId isEnabled = do
   findAllWithKV
     [ Se.And
@@ -66,15 +66,21 @@ updateByPrimaryKey (Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig {..
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.batchSize batchSize,
+      Se.Set Beam.bufferCheckEnabled bufferCheckEnabled,
       Se.Set Beam.dayOfMonth dayOfMonth,
       Se.Set Beam.dayOfWeek dayOfWeek,
+      Se.Set Beam.defaultPayoutRail defaultPayoutRail,
       Se.Set Beam.frequency frequency,
+      Se.Set Beam.intervalDays intervalDays,
+      Se.Set Beam.intervalHours intervalHours,
       Se.Set Beam.isEnabled isEnabled,
+      Se.Set Beam.itemsPerBatchLimit itemsPerBatchLimit,
       Se.Set Beam.maxRetriesPerDriver maxRetriesPerDriver,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.minimumPayoutAmount minimumPayoutAmount,
       Se.Set Beam.orderType orderType,
       Se.Set Beam.remark remark,
+      Se.Set Beam.rescheduleBufferMinutes rescheduleBufferMinutes,
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
       Se.Set Beam.timeOfDay timeOfDay,
       Se.Set Beam.updatedAt _now,
@@ -88,11 +94,16 @@ instance FromTType' Beam.ScheduledPayoutConfig Domain.Types.ScheduledPayoutConfi
       Just
         Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig
           { batchSize = batchSize,
+            bufferCheckEnabled = bufferCheckEnabled,
             createdAt = createdAt,
             dayOfMonth = dayOfMonth,
             dayOfWeek = dayOfWeek,
+            defaultPayoutRail = defaultPayoutRail,
             frequency = frequency,
+            intervalDays = intervalDays,
+            intervalHours = intervalHours,
             isEnabled = isEnabled,
+            itemsPerBatchLimit = itemsPerBatchLimit,
             maxRetriesPerDriver = maxRetriesPerDriver,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -100,6 +111,7 @@ instance FromTType' Beam.ScheduledPayoutConfig Domain.Types.ScheduledPayoutConfi
             orderType = orderType,
             payoutCategory = payoutCategory,
             remark = remark,
+            rescheduleBufferMinutes = rescheduleBufferMinutes,
             timeDiffFromUtc = timeDiffFromUtc,
             timeOfDay = timeOfDay,
             updatedAt = updatedAt,
@@ -110,11 +122,16 @@ instance ToTType' Beam.ScheduledPayoutConfig Domain.Types.ScheduledPayoutConfig.
   toTType' (Domain.Types.ScheduledPayoutConfig.ScheduledPayoutConfig {..}) = do
     Beam.ScheduledPayoutConfigT
       { Beam.batchSize = batchSize,
+        Beam.bufferCheckEnabled = bufferCheckEnabled,
         Beam.createdAt = createdAt,
         Beam.dayOfMonth = dayOfMonth,
         Beam.dayOfWeek = dayOfWeek,
+        Beam.defaultPayoutRail = defaultPayoutRail,
         Beam.frequency = frequency,
+        Beam.intervalDays = intervalDays,
+        Beam.intervalHours = intervalHours,
         Beam.isEnabled = isEnabled,
+        Beam.itemsPerBatchLimit = itemsPerBatchLimit,
         Beam.maxRetriesPerDriver = maxRetriesPerDriver,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
@@ -122,6 +139,7 @@ instance ToTType' Beam.ScheduledPayoutConfig Domain.Types.ScheduledPayoutConfig.
         Beam.orderType = orderType,
         Beam.payoutCategory = payoutCategory,
         Beam.remark = remark,
+        Beam.rescheduleBufferMinutes = rescheduleBufferMinutes,
         Beam.timeDiffFromUtc = timeDiffFromUtc,
         Beam.timeOfDay = timeOfDay,
         Beam.updatedAt = updatedAt,

@@ -3,8 +3,11 @@ module SharedLogic.Finance.WalletPayout
     WalletPayoutParams (..),
     loadPayoutContext,
     ensurePayoutsEnabled,
+    instantPayoutAllowedFor,
+    ensureInstantPayoutAllowed,
     computePayoutFee,
     runWalletPayout,
+    resolvePayoutVpa,
   )
 where
 
@@ -104,6 +107,24 @@ ensurePayoutsEnabled ctx =
   unless ctx.transporterConfig.driverWalletConfig.enableWalletPayout $
     throwError $ InvalidRequest "Payouts are disabled"
 
+-- | Whether this role may take an instant (on-demand) payout under the city's wallet config.
+--   'instantPayoutExcludedRoles' bars roles per city without touching 'enableWalletPayout', which the
+--   scheduled sweep also reads. FLEET_BUSINESS is a fleet owner everywhere else in the wallet, so a
+--   config that bars FLEET_OWNER bars it too.
+instantPayoutAllowedFor :: DTConf.DriverWalletConfig -> DP.Role -> Bool
+instantPayoutAllowedFor walletConfig role = asFleetOwner role `notElem` map asFleetOwner (fromMaybe [] walletConfig.instantPayoutExcludedRoles)
+  where
+    asFleetOwner DP.FLEET_BUSINESS = DP.FLEET_OWNER
+    asFleetOwner r = r
+
+-- | Instant payouts only: scheduled, bulk and adhoc payouts never pass through here. A city where
+--   payouts must be started only by an admin or the scheduled sweep (e.g. one paying through HDFC
+--   CBX, which has no single-order API) lists the self-service roles in 'instantPayoutExcludedRoles'.
+ensureInstantPayoutAllowed :: (MonadFlow m) => PayoutContext -> m ()
+ensureInstantPayoutAllowed ctx =
+  unless (instantPayoutAllowedFor ctx.transporterConfig.driverWalletConfig ctx.person.role) $
+    throwError InstantPayoutNotAllowed
+
 ensurePayoutLimitNotReached ::
   (BeamFlow m r) =>
   PayoutContext ->
@@ -177,13 +198,18 @@ initiateWalletPayout ctx payoutType WalletPayoutPlan {..} = do
   vpa <- case payoutServiceFlow of
     IPayout.JuspayFlow -> Just <$> resolvePayoutVpa ctx
     IPayout.StripeFlow -> pure Nothing
+    -- No VPA on the bulk (HDFC CBX) rail: it pays to an account number and IFSC, resolved by
+    -- Tools.Payout.getCreatePayoutServiceFlow above.
+    IPayout.BulkFlow -> pure Nothing
   let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
       -- Floor (not round-half-up) to whole cents so the disbursed amount never exceeds the
       -- wallet balance; otherwise the hold can overdraw the wallet by a sub-cent rounding delta.
       netAmount = SPayment.floorToTwoDecimalPlaces (payoutableBalance - fee)
       submission =
         PayoutRequest.PayoutSubmission
-          { beneficiaryId = ctx.driverId.getId,
+          { -- A driver-initiated payout is not part of a sweep batch; only the bulk claim sets this.
+            batchId = Nothing,
+            beneficiaryId = ctx.driverId.getId,
             entityName = DPayment.DRIVER_WALLET_TRANSACTION,
             entityId = ctx.driverId.getId,
             entityRefId = Nothing,
@@ -237,3 +263,7 @@ initiateWalletPayout ctx payoutType WalletPayoutPlan {..} = do
         logInfo $ "Wallet payout already in flight for " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> " | status: " <> show status
       PayoutRequest.PayoutFailed _ err ->
         logError $ "Wallet payout failed for " <> ctx.driverId.getId <> ": " <> err
+      -- Unreachable on this rail: only the bulk (HDFC CBX) flow returns an ambiguous outcome.
+      -- Handled anyway so the hold is not treated as failed on an outcome we do not know.
+      PayoutRequest.PayoutAmbiguous pr err ->
+        logError $ "Wallet payout outcome unknown for " <> ctx.driverId.getId <> " | payoutRequestId: " <> pr.id.getId <> ": " <> err <> " -- hold left in place, needs manual reconciliation"

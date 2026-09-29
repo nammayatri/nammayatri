@@ -10,12 +10,14 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
 import qualified Lib.Payment.Domain.Types.Common
+import qualified Lib.Payment.Domain.Types.PayoutBatch
 import qualified Tools.Beam.UtilsTH
 
 data PayoutRequest = PayoutRequest
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     bankAccountLast4 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    batchId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutBatch.PayoutBatch),
     beneficiaryId :: Kernel.Prelude.Text,
     cashMarkedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     cashMarkedById :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -59,9 +61,10 @@ data PayoutRequestStatus
   | CANCELLED
   | CASH_PAID
   | CASH_PENDING
+  | EXCLUDED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PayoutType = INSTANT | SCHEDULED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PayoutType = INSTANT | SCHEDULED | ADHOC deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
 

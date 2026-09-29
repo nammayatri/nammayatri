@@ -88,6 +88,7 @@ data PayoutDashboardHandlerConfig m = PayoutDashboardHandlerConfig
     handleDeleteVpa :: DeleteVpaReq -> m PayoutSuccess,
     handleUpdateVpa :: UpdateVpaReq -> m PayoutSuccess,
     handleRefundRegistrationAmount :: RefundRegAmountReq -> m PayoutSuccess,
+    validateOwnership :: PayoutRequest -> m (),
     merchantCity :: Context.City,
     -- | Run once per request; returns a per-row enricher that closes over
     -- request-level constants (merchant / operating city / transporter tz).
@@ -126,6 +127,7 @@ payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher =
   where
     getPayoutById payoutRequestId = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
+      cfg.validateOwnership payoutRequest
       refreshed <- cfg.refreshPayoutRequest payoutRequest
       buildPayoutResp refreshed
 
@@ -146,16 +148,19 @@ payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher =
 
     retryPayout payoutRequestId = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
+      cfg.validateOwnership payoutRequest
       PayoutRequest.retryPayoutWith canRetry cfg.executePayoutRetry payoutRequest
       pure Success
 
     cancelPayout payoutRequestId req = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
+      cfg.validateOwnership payoutRequest
       PayoutRequest.cancelPayoutWithin (2 * 60 * 60) req.reason payoutRequest
       pure @m Success
 
     markCash payoutRequestId req = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
+      cfg.validateOwnership payoutRequest
       case req.status of
         CASH_PENDING -> PayoutRequest.markCashPending req.agentId req.agentName req.message payoutRequest
         CASH_PAID -> PayoutRequest.markCashPaid req.agentId req.agentName req.message payoutRequest

@@ -117,6 +117,9 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
     walletCreditRefs,
+    WalletScope (..),
+    counterpartyFromRole,
+    resolveWalletScope,
     getWalletAccountByOwner,
     getControlAccountByOwner,
     getWalletAndControlAccountsByOwner,
@@ -169,7 +172,6 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
-    counterpartyFromRole,
     releaseWalletEntriesReservation,
     settleWalletEntries,
     postOwnerPayoutLiability,
@@ -177,6 +179,7 @@ module SharedLogic.Finance.Wallet
     settleWalletPayoutLedger,
     WalletPayoutEligibility (..),
     emptyWalletPayoutEligibility,
+    releaseWalletEntries,
     getPayoutEligibilityData,
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
@@ -242,6 +245,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import Storage.Queries.FleetOwnerInformation as QFOI
 import Tools.Error (MerchantPaymentMethodError (..), TransporterError (TransporterConfigNotFound))
 
@@ -542,6 +546,23 @@ todayRangeUTC timeDiff now =
 getProcessingPayoutBalance :: (BeamFlow m r) => CounterpartyType -> Text -> m HighPrecMoney
 getProcessingPayoutBalance counterpartyType ownerId =
   maybe 0 (.balance) <$> findAccountsByCounterparty (Just counterpartyType) (Just ownerId) PayoutLiability
+
+-- | The finance-account scope a driver-facing endpoint should read/write.
+data WalletScope = WalletScope
+  { counterparty :: CounterpartyType,
+    ownerId :: Text
+  }
+
+resolveWalletScope ::
+  (BeamFlow m r) =>
+  Id DP.Person ->
+  DP.Role ->
+  m (Maybe WalletScope)
+resolveWalletScope personId role = do
+  mbActiveFleetAssoc <- QFDA.findByDriverId personId True
+  pure $ case mbActiveFleetAssoc of
+    Just _ -> Nothing
+    Nothing -> Just $ WalletScope {counterparty = counterpartyFromRole role, ownerId = personId.getId}
 
 -- | Build a FinanceCtx from booking + ride data.
 --   Resolves merchant name, shortId, address, supplier info, and TDS rate reason from DB.
@@ -1195,6 +1216,13 @@ settleWalletPayoutLedger ::
   PayoutOutcome ->
   m (Either FinanceError [Id LedgerEntry])
 settleWalletPayoutLedger = settlePayoutLedger runFinance walletPayoutLedgerRefs
+
+-- | Release ledger entries reserved (PROCESSING) for a failed payout attempt back to UNSETTLED.
+releaseWalletEntries ::
+  (BeamFlow m r, Finance.HasActorInfo m r) =>
+  [Id LedgerEntry] -> -- entry IDs to release
+  m ()
+releaseWalletEntries = markEntriesAsUnsettled
 
 -- | True when the merchant has enabled PAN-Aadhaar-link based TDS (the cohort
 -- model). Keyed off the cohort config being present (individualNotLinked).

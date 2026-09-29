@@ -268,6 +268,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       vpa <- case (order.vpa, payoutServiceFlow) of
         (Just v, _) -> pure (Just v)
         (Nothing, Payout.StripeFlow) -> pure Nothing
+        (Nothing, Payout.BulkFlow) -> pure Nothing -- no VPA on the bulk/HDFC path; bank account + IFSC already verified in Tools.Payout.getCreatePayoutServiceFlow
         (Nothing, Payout.JuspayFlow) -> do
           logError $ "No VPA found on registration order " <> orderId.getId <> ", cannot refund"
           throwError $ InvalidRequest "No VPA captured for this registration order"
@@ -275,7 +276,8 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       -- 5. Build submission and call payout
       let submission =
             PayoutRequest.PayoutSubmission
-              { beneficiaryId = order.personId.getId,
+              { batchId = Nothing,
+                beneficiaryId = order.personId.getId,
                 entityName = DCommon.REGISTRATION_REFUND,
                 entityId = orderId.getId,
                 entityRefId = Nothing,

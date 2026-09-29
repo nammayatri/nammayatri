@@ -103,7 +103,9 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
       payoutCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
       submission =
         PayoutRequest.PayoutSubmission
-          { beneficiaryId = person.id.getId,
+          { -- rider cashback is never part of a bulk batch; the field exists for the HDFC CBX rail
+            batchId = Nothing,
+            beneficiaryId = person.id.getId,
             entityName = DLP.RIDE_OFFER_CASHBACK,
             entityId = person.id.getId,
             entityRefId = Nothing,
@@ -158,3 +160,16 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
     PayoutRequest.PayoutFailed _ err -> do
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+    -- Unreachable on this rail: only the bulk (HDFC CBX) flow distinguishes an ambiguous
+    -- transport failure from a confirmed rejection. Handled rather than left to a catch-all so
+    -- the hold is not reversed on an outcome we do not actually know, and so a future rail that
+    -- does return it cannot silently fall through to "failed".
+    PayoutRequest.PayoutAmbiguous pr err ->
+      logError $
+        "Cashback payout outcome unknown for person="
+          <> person.id.getId
+          <> " payoutRequestId="
+          <> pr.id.getId
+          <> ": "
+          <> err
+          <> " -- hold left in place, needs manual reconciliation"

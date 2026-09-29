@@ -18,6 +18,7 @@ module Tools.Payout
     getPayoutServiceFlowForMerchant,
     getCreatePayoutServiceFlow,
     getPayoutStatusServiceFlow,
+    getPayoutServiceConfig,
     PayoutServiceNameOption (..),
   )
 where
@@ -60,7 +61,33 @@ createPayoutOrder ::
   Maybe DDBA.DriverBankAccount ->
   DPayment.CreatePayoutServiceReq ->
   m Payout.CreatePayoutOrderResp
-createPayoutOrder = runWithServiceConfigAndName Payout.createPayoutOrder DPayment.mkCreatePayoutOrderReq
+createPayoutOrder payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq = do
+  vsc <- getPayoutServiceConfig payoutServiceName merchantOperatingCityId
+  case vsc of
+    Payout.HdfcCbxConfig _ ->
+      pure
+        Payout.CreatePayoutOrderResp
+          { orderId = serviceReq.orderId,
+            status = Payout.INITIATED,
+            -- No settlement statement exists yet: the column is the partner's settlement mirror, and
+            -- the partner has not been called.
+            transferStatus = Nothing,
+            orderType = Just serviceReq.orderType,
+            transferId = Nothing,
+            idAssignedByServiceProvider = Nothing,
+            udf1 = Nothing,
+            udf2 = Nothing,
+            udf3 = Nothing,
+            udf4 = Nothing,
+            udf5 = Nothing,
+            amount = serviceReq.amount,
+            refunds = Nothing,
+            payments = Nothing,
+            fulfillments = Nothing,
+            customerId = Just serviceReq.customerId,
+            merchantTopUpAmount = Nothing
+          }
+    _ -> runWithServiceConfigAndName Payout.createPayoutOrder DPayment.mkCreatePayoutOrderReq payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq
 
 payoutOrderStatus ::
   ServiceFlow m r =>
@@ -107,6 +134,28 @@ runWithServiceConfigAndName func mkReq payoutServiceName merchantOperatingCityId
       Payout.StripeConfig _ -> do
         let mConnectedAccountId = mbPersonBankAccount <&> (.accountId)
         func vsc (mkReq Nothing mConnectedAccountId serviceReq)
+      -- HDFC CBX has no single-order API -- it only supports bulk submission/status-check
+      -- (Kernel.External.Payout.Interface.submitBulkPayout/checkBulkPayoutStatus). Honest rather
+      -- than clever: reject here instead of building a request that can never succeed.
+      Payout.HdfcCbxConfig _ -> throwError $ InvalidRequest "HDFC CBX has no single-order API; use submitBulkPayout"
+
+-- | Resolve the raw 'Payout.PayoutServiceConfig' for a merchant operating city + service name,
+--   without dispatching a single-order call. Needed for the HDFC CBX bulk path (submitBulkPayout
+--   / checkBulkPayoutStatus take the config directly; there is no per-order request to build).
+getPayoutServiceConfig ::
+  ServiceFlow m r =>
+  DMSC.ServiceName ->
+  Id DMOC.MerchantOperatingCity ->
+  m Payout.PayoutServiceConfig
+getPayoutServiceConfig payoutServiceName merchantOperatingCityId = do
+  merchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = Nothing, serviceName = Just payoutServiceName}) Nothing
+      >>= fromMaybeM (uncurry (MerchantServiceConfigNotFound merchantOperatingCityId.getId) (showPayoutServiceType payoutServiceName))
+  case merchantServiceConfig.serviceConfig of
+    DMSC.PayoutServiceConfig vsc -> pure vsc
+    DMSC.RentalPayoutServiceConfig vsc -> pure vsc
+    DMSC.RidePayoutServiceConfig vsc -> pure vsc
+    _ -> throwError $ InternalError "Unknown Service Config"
 
 showPayoutServiceType :: DMSC.ServiceName -> (Text, Text)
 showPayoutServiceType serviceName = do
@@ -141,7 +190,7 @@ getPayoutServiceFlowForMerchant ::
   PayoutServiceNameOption ->
   (PT.PayoutService -> DMSC.ServiceName) ->
   Id DMOC.MerchantOperatingCity ->
-  m Payout.PayoutServiceFlow
+  m (Payout.PayoutServiceFlow, DMSC.ServiceName)
 getPayoutServiceFlowForMerchant getCfg payoutServiceNameOption serviceType merchantOperatingCityId = do
   payoutServiceNameRaw <- case payoutServiceNameOption of
     MerchantServiceUsageConfigOption -> do
@@ -153,9 +202,9 @@ getPayoutServiceFlowForMerchant getCfg payoutServiceNameOption serviceType merch
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       pure $ fromMaybe (serviceType PT.Juspay) subscriptionConfig.payoutServiceName
   case payoutServiceNameRaw of
-    DMSC.PayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
-    DMSC.RentalPayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
-    DMSC.RidePayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
+    DMSC.PayoutService payoutService -> pure (Payout.castPayoutServiceFlow payoutService, payoutServiceNameRaw)
+    DMSC.RentalPayoutService payoutService -> pure (Payout.castPayoutServiceFlow payoutService, payoutServiceNameRaw)
+    DMSC.RidePayoutService payoutService -> pure (Payout.castPayoutServiceFlow payoutService, payoutServiceNameRaw)
     _ -> throwError $ InternalError "Unknown Service Name"
 
 -- flow differentiate between Stripe and Juspay
@@ -199,6 +248,11 @@ getPayoutServiceFlow getCfg payoutServiceNameOption serviceType clientSdkVersion
               Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
               Nothing -> pure personId
           Just <$> (QDBA.findByPrimaryKey effectiveOwnerId >>= fromMaybeM (InvalidRequest "Driver bank account not found"))
+        -- Account number and IFSC are what HDFC is given, so the row has to exist. Whether it was
+        -- verified is deliberately not asked: the bank never sees that flag, and the fields it does
+        -- see are checked for usability on the eligibility pass ('usableBankDetails'), which puts a
+        -- beneficiary with unusable details on the excluded worklist instead of failing here.
+        Payout.BulkFlow -> Just <$> (QDBA.findByPrimaryKey personId >>= fromMaybeM (InvalidRequest "Driver bank account not found"))
         Payout.JuspayFlow -> pure Nothing
       pure (payoutServiceFlow, mbPersonBankAccount)
 
@@ -220,6 +274,9 @@ modifyServiceName serviceName paymentMode clientSdkVersion merchantOpCityId =
       case Payout.castPayoutServiceFlow payoutService of
         Payout.JuspayFlow -> decidePayoutService serviceName clientSdkVersion merchantOpCityId
         Payout.StripeFlow -> pure . serviceType $ modifyPayoutServiceByMode payoutService paymentMode
+        -- HDFC CBX has no live/test-mode split and no client-SDK-version-based upgrade path;
+        -- unchanged by mode, unlike Stripe.
+        Payout.BulkFlow -> pure . serviceType $ payoutService
 
 -- relevant only for Stripe
 modifyPayoutServiceByMode :: PT.PayoutService -> DMPM.PaymentMode -> PT.PayoutService
@@ -228,6 +285,7 @@ modifyPayoutServiceByMode Payout.Stripe DMPM.TEST = Payout.StripeTest
 modifyPayoutServiceByMode Payout.StripeTest _ = Payout.StripeTest
 modifyPayoutServiceByMode Payout.Juspay _ = Payout.Juspay
 modifyPayoutServiceByMode Payout.AAJuspay _ = Payout.AAJuspay
+modifyPayoutServiceByMode Payout.HdfcCbx _ = Payout.HdfcCbx
 
 -- relevant only for Juspay
 decidePayoutService :: ServiceFlow m r => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
