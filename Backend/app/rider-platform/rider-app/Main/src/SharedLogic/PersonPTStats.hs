@@ -17,6 +17,7 @@ module SharedLogic.PersonPTStats
     mkPurchaseEvent,
     recordPurchase,
     reversePurchase,
+    findRow,
   )
 where
 
@@ -73,21 +74,23 @@ mkPurchaseEvent person vehicleType vehicleServiceTierType productType passTypeId
 recordPurchase ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   PurchaseEvent ->
-  m ()
+  m (Int, Bool)
 recordPurchase ev = do
   now <- getCurrentTime
   Redis.withWaitAndLockRedis (lockKey ev.staticPersonId) 10 100 $ do
     mbRow <- findRow ev
     case mbRow of
       Just row -> do
+        let newCount = row.purchaseCount + 1
         QPersonPTStats.updateCounts
           (liftM2 (+) row.ticketCount ev.quantity)
-          (row.purchaseCount + 1)
+          newCount
           now
           ev.personId
           row.id
         when (isNothing row.personCreatedAt) $
           QPersonPTStats.updatePersonCreatedAtById (Just ev.personCreatedAt) row.id
+        pure (newCount, False)
       Nothing -> do
         newId <- generateGUID
         QPersonPTStats.create
@@ -108,6 +111,7 @@ recordPurchase ev = do
               createdAt = now,
               updatedAt = now
             }
+        pure (1, True)
 
 reversePurchase ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>

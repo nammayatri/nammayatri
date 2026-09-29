@@ -1154,7 +1154,7 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
                         Nothing
                         purchasedPass.merchantId
                         purchasedPass.merchantOperatingCityId
-                    SPUS.recordPurchase purchaseEvent
+                    void $ SPUS.recordPurchase purchaseEvent
                 case recordStatsResult of
                   Right () -> pure ()
                   Left err -> logError $ "Failed to record PersonPTStats for purchasedPass " <> purchasedPass.id.getId <> ": " <> show err

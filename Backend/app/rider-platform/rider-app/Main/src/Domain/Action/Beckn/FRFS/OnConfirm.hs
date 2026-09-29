@@ -91,6 +91,7 @@ import qualified Storage.Queries.PersonStats as QPS
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Text.Regex as TR
 import Tools.Error
+import qualified Tools.EventTracking as ET
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
@@ -352,22 +353,6 @@ onConfirm merchant booking' quoteCategories dOrder = do
             -- Update journey expiry time based on maximum ticket validity using the created tickets
             whenJust mbJourneyId $ \journeyId -> do
               QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
-            recordStatsResult <-
-              withTryCatch "onConfirm:recordPersonPTStats" $ do
-                purchaseEvent <-
-                  SPUS.mkPurchaseEvent
-                    person
-                    (Just booking.vehicleType)
-                    booking.serviceTierType
-                    DPUS.TICKET
-                    Nothing
-                    (Just fareParameters.totalQuantity)
-                    booking.merchantId
-                    booking.merchantOperatingCityId
-                SPUS.recordPurchase purchaseEvent
-            case recordStatsResult of
-              Right () -> pure ()
-              Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
             mRiderNumber <- mapM ENC.decrypt person.mobileNumber
             buildReconTable merchant booking fareParameters dOrder tickets mRiderNumber integratedBPPConfig
             void $ sendTicketBookedSMS mRiderNumber person.mobileCountryCode fareParameters
@@ -401,6 +386,37 @@ onConfirm merchant booking' quoteCategories dOrder = do
                       whenJust mbJourney $ \journey ->
                         when (isJust journey.paymentOrderShortId && journey.isPaymentSuccess /= Just True) $
                           QJourney.updatePaymentOrderShortId journey.paymentOrderShortId (Just True) journeyId
+            -- pt_first_booking_confirmed is per stats dimension, not per rider: findRow keys on
+            -- (staticPersonId, vehicleType, serviceTierType, productType, passTypeId), so the same
+            -- rider fires it again on their first AC booking after an ORDINARY one, and again on
+            -- their first METRO booking after a BUS one.
+            unless (booking.status == Booking.CONFIRMED || isJust booking.parentBookingId) $ do
+              recordStatsResult <-
+                withTryCatch "onConfirm:recordPersonPTStats" $ do
+                  purchaseEvent <-
+                    SPUS.mkPurchaseEvent
+                      person
+                      (Just booking.vehicleType)
+                      booking.serviceTierType
+                      DPUS.TICKET
+                      Nothing
+                      (Just fareParameters.totalQuantity)
+                      booking.merchantId
+                      booking.merchantOperatingCityId
+                  SPUS.recordPurchase purchaseEvent
+              case recordStatsResult of
+                Right (purchaseCount, isFirstPurchase) ->
+                  fork "event_tracking: pt_booking_confirmed" $
+                    ET.trackPTBookingConfirmedEvents
+                      booking.merchantId
+                      booking.merchantOperatingCityId
+                      booking.riderId
+                      (show booking.vehicleType)
+                      (show <$> booking.serviceTierType)
+                      booking.totalPrice.amount
+                      purchaseCount
+                      isFirstPurchase
+                Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
             return ()
       if isNothing booking.overrideAppliedEntityId
         then postConfirmWork
