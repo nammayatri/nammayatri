@@ -81,6 +81,7 @@ import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -89,6 +90,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
+import qualified Domain.Types.PersonPTStats as DPUS
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as RD
 import qualified Domain.Types.RouteStopMapping as DRSM
@@ -140,6 +142,7 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.PersonPTStats as SPUS
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -176,6 +179,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import qualified Tools.Error as StationError
+import qualified Tools.EventTracking as ET
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Metrics.BAPMetrics as BAPMetrics
 import Tools.MultiModal as MM
@@ -3047,6 +3051,13 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
               DTrip.Subway -> Spec.SUBWAY
               _ -> Spec.BUS
 
+      -- Defaults to True on a read failure, which skips the event
+      boardedBefore <-
+        withTryCatch "postMultimodalOrderSublegSetOnboardedVehicleDetails:allTicketsUsed" (allTicketsUsed booking.id) >>= \case
+          Right used -> pure used
+          Left err -> do
+            logError $ "Failed to read ticket status for booking " <> booking.id.getId <> ", skipping pt_booking_used: " <> show err
+            pure True
       void $
         withTryCatch
           "postMultimodalOrderSublegSetOnboardedVehicleDetails:postFrfsTicketVerify"
@@ -3055,6 +3066,36 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
                 let verifyReq = FRFSTicketServiceAPI.FRFSTicketVerifyReq {FRFSTicketServiceAPI.qrData = qrData}
                 void $ FRFSTicketService.postFrfsTicketVerify (mbPersonId, merchantId) (Just integratedBPPConfig.platformType) merchantOperatingCity.city frfsVehicleCategory verifyReq
           )
+
+      -- Both used events need every ticket on the booking to reach USED, so a rider who books and
+      -- never checks in fires neither. pt_first_booking_used additionally needs purchaseCount == 1:
+      -- a rider who buys two bookings before boarding either one never fires it, because the count
+      -- is already 2 by the first check-in.
+      unless boardedBefore $
+        fork "event_tracking: pt_booking_used" $ do
+          boardedNow <- allTicketsUsed booking.id
+          when boardedNow $ do
+            person <- QP.findById journey.riderId >>= fromMaybeM (PersonNotFound journey.riderId.getId)
+            statsEvent <-
+              SPUS.mkPurchaseEvent
+                person
+                (Just booking.vehicleType)
+                booking.serviceTierType
+                DPUS.TICKET
+                Nothing
+                Nothing
+                booking.merchantId
+                booking.merchantOperatingCityId
+            mbPurchaseCount <- fmap (.purchaseCount) <$> SPUS.findRow statsEvent
+            whenJust mbPurchaseCount $ \purchaseCount ->
+              ET.trackPTBookingUsedEvents
+                journey.merchantId
+                journey.merchantOperatingCityId
+                journey.riderId
+                (show booking.vehicleType)
+                (show <$> booking.serviceTierType)
+                booking.totalPrice.amount
+                purchaseCount
 
       QJourneyLeg.updateByPrimaryKey $
         journeyLeg
@@ -3083,6 +3124,10 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
       generateJourneyInfoResponse journey updatedLegs
   where
+    allTicketsUsed bookingId = do
+      tickets <- QFRFSTicket.findAllByTicketBookingId bookingId
+      pure $ not (null tickets) && all (\ticket -> ticket.status == DFRFSTicketStatus.USED) tickets
+
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
 
