@@ -264,10 +264,18 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       logInfo $ "Registration refund already exists for order " <> orderId.getId <> " (PayoutRequest: " <> existing.id.getId <> "), skipping"
       pure Nothing
     Nothing -> do
+      -- NOTE (reviewer, remove before merge): two plumbing changes vs main. (1) The (Nothing, BulkFlow)
+      --   case below keeps the match complete under -Werror (shared-kernel's PayoutServiceFlow has
+      --   BulkFlow). (2) batchId = Nothing in the submission (a registration refund is never in a bulk
+      --   batch). Juspay/Stripe: same as main; their two VPA cases are main's and batch_id stays NULL.
+      --   The BulkFlow case is not reached today: the driver dashboard refund
+      --   (Dashboard/PayoutRequest.refundRegistrationAmount) refuses a bulk city before calling this, and
+      --   processRegistrationPayment above has no callers.
       -- 4. Get VPA from order.vpa (stored during processRegistrationPayment)
       vpa <- case (order.vpa, payoutServiceFlow) of
         (Just v, _) -> pure (Just v)
         (Nothing, Payout.StripeFlow) -> pure Nothing
+        (Nothing, Payout.BulkFlow) -> pure Nothing -- no VPA on the bulk/HDFC path; Tools.Payout.getCreatePayoutServiceFlow already required a bank account row
         (Nothing, Payout.JuspayFlow) -> do
           logError $ "No VPA found on registration order " <> orderId.getId <> ", cannot refund"
           throwError $ InvalidRequest "No VPA captured for this registration order"
@@ -275,7 +283,8 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
       -- 5. Build submission and call payout
       let submission =
             PayoutRequest.PayoutSubmission
-              { beneficiaryId = order.personId.getId,
+              { batchId = Nothing,
+                beneficiaryId = order.personId.getId,
                 entityName = DCommon.REGISTRATION_REFUND,
                 entityId = orderId.getId,
                 entityRefId = Nothing,

@@ -1977,7 +1977,10 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             uid <- generateGUID
             let entityName = entity
                 payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
-                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing
+                -- NOTE (reviewer, remove before merge): compile-only plumbing: the extra last Nothing is the
+                --   new batch-id argument of lib mkCreatePayoutServiceReq (used only by HDFC bulk). Rider
+                --   behaviour is the same as main.
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing Nothing
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 

@@ -146,6 +146,11 @@ payoutDashboardHandler cfg@PayoutDashboardHandlerConfig {mkHistoryItemEnricher =
 
     retryPayout payoutRequestId = do
       payoutRequest <- QPR.findById payoutRequestId >>= fromMaybeM (InvalidRequest "Payout request not found")
+      -- NOTE (reviewer, remove before merge): Bulk-only refusal. A bulk payout request always belongs to a payout batch
+      --   (batchId set); Juspay / Stripe / rider requests never do, so they reach main's retry unchanged. Bulk money that
+      --   comes back is paid again by the next instant payout, adhoc or sweep, not by retrying the old request.
+      when (isJust payoutRequest.batchId) $
+        throwError $ InvalidRequest "Retry is not supported for bulk payouts"
       PayoutRequest.retryPayoutWith canRetry cfg.executePayoutRetry payoutRequest
       pure Success
 

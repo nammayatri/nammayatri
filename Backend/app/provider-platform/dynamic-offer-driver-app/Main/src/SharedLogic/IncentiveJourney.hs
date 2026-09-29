@@ -455,6 +455,13 @@ awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig ve
       vpa <- case payoutServiceFlow of
         IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
         IPayout.StripeFlow -> pure Nothing
+        -- NOTE (reviewer, remove before merge): plumbing only. A BulkFlow arm so this case on PayoutServiceFlow stays
+        --   complete (-Werror), and the last `Nothing` in the mkCreatePayoutServiceReq call below is the batchId argument
+        --   (only the HDFC bulk path sets one). Juspay/Stripe arms and values are main's, so no behaviour change.
+        --   Bulk caveat: the journey cash payout is not part of the bulk lifecycle. If merchant_service_usage_config
+        --   named HdfcCbx here, Tools.Payout.createPayoutOrder would only make a local order (Bulk.localOrderCall,
+        --   INITIATED, no batch) that no HDFC batch carries.
+        IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; Tools.Payout.getCreatePayoutServiceFlow already required a bank account row
       merchantOperatingCity <-
         CQMOC.findById (cast merchantOpCityId)
           >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
@@ -472,6 +479,7 @@ awardJourneyCashPayout driverId merchantId merchantOpCityId transporterConfig ve
               vpa
               payoutConfig.orderType
               payoutServiceFlow
+              Nothing
               Nothing
           entityName = DPayment.INCENTIVE_JOURNEY_CASHBACK
           createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount

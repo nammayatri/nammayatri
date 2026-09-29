@@ -37,6 +37,12 @@ module Lib.Payment.Domain.Action
     mkCreatePayoutOrderReq,
     payoutStatusService,
     payoutStatusUpdates,
+    -- NOTE (reviewer, remove before merge): newly exported; the function body is the same as on main.
+    --   The bulk settle (driver SharedLogic/Payout/Bulk/Driver.hs) calls it so a bulk payout_request
+    --   moves to CREDITED / AUTO_PAY_FAILED (with one history row) through the same shared code as
+    --   Juspay/Stripe. Shared with Juspay/Stripe -- no behaviour change: payoutStatusUpdates calls it
+    --   as on main.
+    updatePayoutRequestStatusFromOrder,
     cancelPaymentIntentService,
     verifyVPAService,
     mkCreatePayoutServiceReq,
@@ -119,6 +125,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPayoutRequest
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
@@ -2666,7 +2673,16 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
     remark :: Text,
     customerName :: Text,
     customerVpa :: Maybe Text,
-    payoutServiceFlow :: PT.PayoutServiceFlow
+    payoutServiceFlow :: PT.PayoutServiceFlow,
+    -- NOTE (reviewer, remove before merge): new field, filled from the last argument of
+    --   mkCreatePayoutServiceReq and written to payout_order.batch_id by createPayoutService below.
+    --   Juspay/Stripe: no behaviour change. Only bulk orders carry a batch: every rider and driver
+    --   caller passes Nothing, and lib Payout/Request.hs passes the request's batchId, which is NULL
+    --   outside bulk. The value never reaches the Juspay/Stripe API.
+
+    -- | Only the HDFC bulk flow sets this: the batch is created before its orders, so the
+    --   order carries its batch from birth. Every other flow has no batch and passes Nothing.
+    batchId :: Maybe (Id DPayoutBatch.PayoutBatch)
   }
 
 mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
@@ -2732,6 +2748,14 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       let transferStatus = case createPayoutServiceReq.payoutServiceFlow of
             PT.JuspayFlow -> Nothing
             PT.StripeFlow -> Just Payout.TRANSFER_INITIATED
+            -- NOTE (reviewer, remove before merge): the BulkFlow case keeps this match complete
+            --   (shared-kernel's PayoutServiceFlow has BulkFlow). Bulk-only: the Juspay (Nothing) and
+            --   Stripe (TRANSFER_INITIATED) cases above are main's.
+            -- Nothing, deliberately: on a bulk rail transferStatus mirrors the partner's settlement
+            -- status and nothing else. Stamping TRANSFER_INITIATED at creation -- before the file has
+            -- even been submitted -- would make the column mean both "we wrote a row" and "settlement
+            -- is under way", so neither could be read.
+            PT.BulkFlow -> Nothing
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -2759,6 +2783,16 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             pgBaseFee = Nothing,
             pgGst = Nothing,
             merchantTopUpAmount = Nothing,
+            -- NOTE (reviewer, remove before merge): three new payout_order columns for the bulk flow:
+            --   batch_id (the HDFC file this order is in) and settlement_ref / settlement_ref_type (the
+            --   bank reference HDFC reports). Only bulk code writes them later, through
+            --   QPayoutOrder.updateBulkSettled (lib Bulk/Resolve.hs, the driver app's bulk settle in
+            --   SharedLogic/Payout/Bulk/Driver.hs, and WalletPayout.failBulkOrderIfAny). Juspay/Stripe: no
+            --   behaviour change; all three stay NULL for their orders. Deploy: payout_order is in both
+            --   apps, so the generated ALTERs for the driver and the rider must run before this code is live.
+            batchId = req.batchId,
+            settlementRef = Nothing, -- set later via QPayoutOrder.updateBulkSettled once the partner reports it
+            settlementRefType = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
@@ -2851,6 +2885,9 @@ updatePayoutRequestStatusFromOrder order orderStatus = do
         when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` protectedStatuses) $
           RequestStatus.updatePayoutRequestStatusWithHistory newStatus (Just $ "Payout order status: " <> show orderStatus) payoutRequest
 
+-- NOTE (reviewer, remove before merge): one new last argument (the owning batch), only so a bulk
+--   order can carry CreatePayoutServiceReq.batchId. Every other caller (rider and driver) passes
+--   Nothing, so Juspay/Stripe/rider requests are built as on main.
 mkCreatePayoutServiceReq ::
   Text ->
   HighPrecMoney ->
@@ -2864,8 +2901,9 @@ mkCreatePayoutServiceReq ::
   Text ->
   Payout.PayoutServiceFlow ->
   Maybe HighPrecMoney -> -- explicit transferAmount (Nothing = use 0)
+  Maybe (Id DPayoutBatch.PayoutBatch) -> -- owning batch (bulk flow only; Nothing everywhere else)
   CreatePayoutServiceReq
-mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType payoutServiceFlow mbTransferAmount =
+mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType payoutServiceFlow mbTransferAmount batchId =
   CreatePayoutServiceReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,

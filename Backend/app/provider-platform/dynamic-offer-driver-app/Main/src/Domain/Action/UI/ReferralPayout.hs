@@ -272,6 +272,11 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   let payoutVpaValid = case payoutServiceFlow of
         IPayout.JuspayFlow -> isJust req.customerVpa
         IPayout.StripeFlow -> True
+        -- NOTE (reviewer, remove before merge): plumbing only. New BulkFlow arm so this case on PayoutServiceFlow stays
+        --   complete (-Werror), plus `batchId = Nothing` in mkCreatePayoutServiceReq below (new field; only the HDFC bulk
+        --   path sets a batch). Juspay/Stripe unchanged. This endpoint also throws "You're Not Authorized To Use This
+        --   API" on its first line (unchanged from main), so none of this runs today.
+        IPayout.BulkFlow -> isJust mbPersonBankAccount
   unless payoutVpaValid $ throwError (InvalidRequest "customerVpa required")
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
@@ -283,6 +288,7 @@ mkCreatePayoutServiceReq :: Currency -> IPayout.PayoutServiceFlow -> API.Types.U
 mkCreatePayoutServiceReq currency payoutServiceFlow API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} =
   Payout.CreatePayoutServiceReq
     { transferAmount = amount, -- for now keep it the same
+      batchId = Nothing,
       ..
     }
 

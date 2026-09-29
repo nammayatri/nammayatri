@@ -117,6 +117,10 @@ module SharedLogic.Finance.Wallet
     walletReferenceCustomerCancellationGST,
     walletReferenceWalletIncentive,
     walletCreditRefs,
+    -- NOTE (reviewer, remove before merge): export-list changes only. counterpartyFromRole is listed here (main lists
+    --   it further down; same function). For PayoutableBalance / computePayoutableBalance see the NOTE at the
+    --   definition.
+    counterpartyFromRole,
     getWalletAccountByOwner,
     getControlAccountByOwner,
     getWalletAndControlAccountsByOwner,
@@ -169,7 +173,6 @@ module SharedLogic.Finance.Wallet
     walletReferenceCancellationOverdueBenefitRefundTax,
     splitGrossByVatPct,
     getRedeemableEntryIds,
-    counterpartyFromRole,
     releaseWalletEntriesReservation,
     settleWalletEntries,
     postOwnerPayoutLiability,
@@ -177,6 +180,8 @@ module SharedLogic.Finance.Wallet
     settleWalletPayoutLedger,
     WalletPayoutEligibility (..),
     emptyWalletPayoutEligibility,
+    PayoutableBalance (..),
+    computePayoutableBalance,
     getPayoutEligibilityData,
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
@@ -1147,6 +1152,49 @@ getPayoutEligibilityData counterpartyType ownerId accountId walletBalance cutoff
         processingPayoutBalance,
         redeemableEntryIds = map (.id) eligibility.redeemableEntries,
         merchantTransferAmount
+      }
+
+-- NOTE (reviewer, remove before merge): one payable-amount formula. Main does these reads inline in
+--   SharedLogic.Finance.WalletPayout.findWalletPayoutAmount; this is the same code: wallet account, wallet balance,
+--   getPayoutEligibilityData, PENDING ride holds, offer holds, and max 0 (redeemable - rideHold - offerHold).
+--   Callers: findWalletPayoutAmount (instant payout, Juspay/Stripe sweep), Bulk/Eligibility.readPayoutSnapshot (HDFC
+--   sweep and adhoc claim) and the adhoc eligibility lookup (Dashboard/AdhocPayout.hs). So every rail pays the amount
+--   main's Juspay/Stripe would. Shared with Juspay/Stripe -- no behaviour change: same calls, same order, same result;
+--   the record also returns the parts for the existing log line.
+
+-- | What a wallet payout may pay right now, and how it was arrived at.
+data PayoutableBalance = PayoutableBalance
+  { payoutableBalance :: HighPrecMoney,
+    walletBalance :: HighPrecMoney,
+    rideHoldBalance :: HighPrecMoney,
+    offerHoldBalance :: HighPrecMoney,
+    mbAccountId :: Maybe (Id Account),
+    eligibility :: WalletPayoutEligibility
+  }
+
+-- | The payable amount for every wallet payout path -- instant, adhoc and the bulk sweep -- so
+--   they cannot drift apart. The redeemable balance minus PENDING ride holds (which do not reduce
+--   the wallet balance) and offer holds (Redis-only until accept).
+computePayoutableBalance ::
+  (BeamFlow m r, CacheFlow m r) =>
+  CounterpartyType ->
+  Text -> -- owner id
+  UTCTime -> -- payout cutoff time
+  UTCTime -> -- current time
+  m PayoutableBalance
+computePayoutableBalance counterparty ownerId cutoff now = do
+  mbAccount <- getWalletAccountByOwner counterparty ownerId
+  let mbAccountId = (.id) <$> mbAccount
+  walletBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
+  eligibility <- case mbAccountId of
+    Nothing -> pure emptyWalletPayoutEligibility
+    Just accountId -> getPayoutEligibilityData counterparty ownerId accountId walletBalance cutoff now
+  rideHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
+  offerHoldBalance <- getWalletOfferHoldTotal ownerId
+  pure
+    PayoutableBalance
+      { payoutableBalance = max 0 (eligibility.redeemableBalance - rideHoldBalance - offerHoldBalance),
+        ..
       }
 
 -- | TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability: legacy payouts reserved

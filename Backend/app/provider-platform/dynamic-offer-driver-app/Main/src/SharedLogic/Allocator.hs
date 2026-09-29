@@ -101,6 +101,11 @@ data AllocatorJobType
   | ReconciliationSweep
   | ScheduledBatchPayout
   | PayoutStatusCheck
+  | -- NOTE (reviewer, remove before merge): new job type for the HDFC bulk status check (one job per city; handler in
+    --   SharedLogic/Allocator/Jobs/Payout/BulkPayoutStatusCheck.hs, registered in Allocator/src/App.hs). Adding it in
+    --   the middle is safe: AllocatorJobType derives no Enum, and a job's type is stored and read by its name (Show /
+    --   Read / JSON). Juspay/Stripe keep main's per-order PayoutStatusCheck job, untouched.
+    BulkPayoutStatusCheck
   | SettlementReportIngestion
   | CheckPickupZoneArrival
   | TriggerSpecialZoneNotify
@@ -166,6 +171,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SReconciliationSweep jobData = AnyJobInfo <$> restoreJobInfo SReconciliationSweep jobData
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SPayoutStatusCheck jobData
+  restoreAnyJobInfo SBulkPayoutStatusCheck jobData = AnyJobInfo <$> restoreJobInfo SBulkPayoutStatusCheck jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
@@ -660,6 +666,25 @@ type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
 instance JobInfoProcessor 'PayoutStatusCheck
 
 type instance JobContent 'PayoutStatusCheck = PSC.PayoutStatusCheckJobData
+
+-- NOTE (reviewer, remove before merge): one status-check job per city, with job data {merchantId,
+--   merchantOperatingCityId}. createJobInWithCheck (SharedLogic/Payout/Bulk/Driver.hs) looks for a Pending job of the
+--   same type with exactly the same job_data JSON (scheduler getJobByTypeTimeAndData), so having the city in the data
+--   gives "at most one pending job per city". New job type, so there is no older job data to stay compatible with.
+--   Bulk-only: no Juspay/Stripe job uses this type.
+
+-- | One city's bulk payout status-check job. The city is in the job data (as for
+--   'ScheduledBatchPayoutJobData') so that 'createJobInWithCheck' finds an existing job for the same
+--   city. What to call and when is on the payout_batch rows themselves.
+data BulkPayoutStatusCheckJobData = BulkPayoutStatusCheckJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BulkPayoutStatusCheck
+
+type instance JobContent 'BulkPayoutStatusCheck = BulkPayoutStatusCheckJobData
 
 data ConnectAccountChargeDeductionJobData = ConnectAccountChargeDeductionJobData
   { merchantId :: Id DM.Merchant,

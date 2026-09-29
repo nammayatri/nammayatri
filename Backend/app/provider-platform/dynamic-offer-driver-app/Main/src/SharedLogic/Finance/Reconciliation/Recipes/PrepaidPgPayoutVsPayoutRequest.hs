@@ -224,6 +224,9 @@ scheduledPayoutToPayoutRequest sp =
   PayoutRequest.PayoutRequest
     { id = cast sp.id,
       entityName = Nothing,
+      -- NOTE (reviewer, remove before merge): plumbing only. PayoutRequest has a new batchId field (the HDFC bulk batch);
+      --   a request built here from a scheduled (special-zone) payout has no batch, so Nothing. No recon change.
+      batchId = Nothing,
       entityId = sp.rideId,
       entityRefId = Just sp.bookingId,
       beneficiaryId = sp.driverId,
@@ -285,3 +288,9 @@ statusToLifecycle = \case
   PayoutRequest.CANCELLED -> ReconT.Cancelled
   PayoutRequest.CASH_PAID -> ReconT.Cancelled
   PayoutRequest.CASH_PENDING -> ReconT.Cancelled
+  -- NOTE (reviewer, remove before merge): new arm because PayoutRequestStatus has a new value EXCLUDED (HDFC bulk: not
+  --   paid this run for missing bank details) and this case must stay complete (-Werror). Only the bulk claim writes
+  --   EXCLUDED (Bulk.recordExclusion), so a Juspay/Stripe request never reaches this arm; their mapping is unchanged.
+  -- Never submitted to a partner, so there is no PG leg to reconcile against: terminal, and
+  -- correctly contributes nothing to the settled sum.
+  PayoutRequest.EXCLUDED -> ReconT.Cancelled

@@ -5,10 +5,17 @@ module Lib.Payment.Payout.Request
     PayoutRequestStatus (..),
     PayoutSubmission (..),
     PayoutResult (..),
-    PayoutExecutionResult (..),
+    -- NOTE (reviewer, remove before merge): exports vs main. ExecutionOutcome takes the place of
+    --   main's PayoutExecutionResult, which nothing outside this file used. buildPayoutRequest and
+    --   executePayoutRequestWithOutcome are new exports so the driver wallet payout can do
+    --   request -> hold -> partner call. The new imports are only for batchId and the bulk-only
+    --   rejection check.
+    ExecutionOutcome (..),
+    buildPayoutRequest,
     createPayoutRequest,
     submitPayoutRequest,
     executePayoutRequest,
+    executePayoutRequestWithOutcome,
     isPayoutExecutable,
     ensurePayoutExecutable,
     getPayoutRequestById,
@@ -35,7 +42,7 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error (GenericError (InvalidRequest))
+import Kernel.Types.Error (ExternalAPICallError (..), GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (CacheFlow, Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
 import qualified Lib.Finance.Core.Types as Finance
@@ -43,16 +50,26 @@ import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DCommon
+import Lib.Payment.Domain.Types.PayoutBatch (PayoutBatch)
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import Lib.Payment.Domain.Types.PayoutRequest
 import Lib.Payment.Payout.RequestStatus (getStatusMessage, recordHistory, toPaymentState, updatePayoutRequestStatusWithHistory)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
+import Servant.Client (ClientError (..))
 
 -- | Flat data record supplied by the domain to request a payout.
 --   The lib uses this to construct both the PayoutRequest and CreatePayoutOrderReq.
 data PayoutSubmission = PayoutSubmission
   { beneficiaryId :: Text,
+    -- NOTE (reviewer, remove before merge): batchId is copied to payout_request.batch_id and
+    --   payout_order.batch_id. Only the HDFC bulk callers set it (the bulk claim and the instant
+    --   payout in a bulk city, Bulk.Driver.runInstantBulkPayout). Juspay/Stripe wallet payouts, rider
+    --   cashback and Registration pass Nothing, so those rows keep the new columns NULL.
+
+    -- | Set only by the HDFC bulk flow, where a payout belongs to a partner batch. Every other
+    --   payout (Juspay, Stripe, rider cashback, registration refund) has no batch and passes Nothing.
+    batchId :: Maybe (Id PayoutBatch),
     entityName :: DCommon.EntityName,
     entityId :: Text,
     entityRefId :: Maybe Text,
@@ -80,22 +97,27 @@ data PayoutSubmission = PayoutSubmission
   }
   deriving (Show, Generic)
 
+-- NOTE (reviewer, remove before merge): PayoutAmbiguous is the one new constructor. Only BulkFlow
+--   (HDFC) returns it, when the error is not a clear rejection (see executePayoutRequestInternal).
+--   A Juspay/Stripe error is still PayoutFailed with main's text. No caller of submitPayoutRequest
+--   passes BulkFlow today (rider cashback is always JuspayFlow; the dashboard registration refund
+--   refuses a bulk city), so it is not produced yet. Rider cashback's case arm for it only keeps the
+--   match complete; Registration passes the result through.
+
 -- | Result of a payout submission or execution.
+--   PayoutFailed is a *confirmed* rejection (bank responded; nothing was paid).
+--   PayoutAmbiguous: the order call failed without a clear rejection; the request is left
+--   PROCESSING. Only BulkFlow returns it, and for bulk that call is local (Bulk.localOrderCall
+--   writes the order; no bank is contacted), so nothing was sent.
 data PayoutResult
   = PayoutInitiated PayoutRequest PayoutOrder.PayoutOrder
   | PayoutProcessing PayoutRequest PayoutRequestStatus
   | PayoutFailed PayoutRequest Text
-
--- | Outcome of a single execution attempt on an existing PayoutRequest.
-data PayoutExecutionResult
-  = PayoutExecuted PayoutOrder.PayoutOrder
-  | PayoutNotExecutable PayoutRequestStatus
-  | PayoutExecutionFailed Text
+  | PayoutAmbiguous PayoutRequest Text
 
 -- ---------------------------------------------------------------------------
 -- CRUD
 -- ---------------------------------------------------------------------------
-
 createPayoutRequest ::
   (PaymentBeamFlow.BeamFlow m r, FinanceBeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   PayoutRequest ->
@@ -246,7 +268,8 @@ clearPayoutLedgerEntryIds = Redis.del . makePayoutEntryIdsKey
 
 -- | Submit a payout request: creates the PayoutRequest (INITIATED),
 --   then immediately executes via the external payout service (→ PROCESSING).
---   This is the single entry point for instant payouts.
+--   Used by rider cashback and the registration refund. The driver wallet payout creates the
+--   request itself and calls 'executePayoutRequestWithOutcome', so it can write its hold in between.
 --
 --   Domain provides:
 --     1. A 'PayoutSubmission' (flat data)
@@ -268,12 +291,24 @@ submitPayoutRequest submission payoutCall afterPayoutOrderCreated = do
 
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
-  -- 2. Execute
-  executionResult <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
-  case executionResult of
-    PayoutExecuted po -> pure $ PayoutInitiated payoutRequest po
-    PayoutNotExecutable status -> pure $ PayoutProcessing payoutRequest status
-    PayoutExecutionFailed err -> pure $ PayoutFailed payoutRequest err
+  -- NOTE (reviewer, remove before merge): same as main for Juspay/Stripe: Executed -> PayoutInitiated,
+  --   ConfirmedFailure -> PayoutFailed (same "Payout service error: ..." text), NotExecutable ->
+  --   PayoutProcessing, and no ledger write here. AmbiguousFailure -> PayoutAmbiguous is the only
+  --   addition (BulkFlow only). Rider cashback still calls the partner first and holds after, as on main.
+  -- 2. Execute. Ledger entries are not reserved here, as on main: the caller's
+  -- OwnerPayoutLiability hold is what takes the amount out of the payable balance.
+  outcome <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
+  pure $ case outcome of
+    Executed po -> PayoutInitiated payoutRequest po
+    ConfirmedFailure msg -> PayoutFailed payoutRequest msg
+    AmbiguousFailure msg -> PayoutAmbiguous payoutRequest msg
+    -- Already in flight or otherwise not executable. Main reports this as PayoutProcessing and
+    -- its consumer (CashbackPayout) matches on it, so keep that mapping.
+    NotExecutable status -> PayoutProcessing payoutRequest status
+
+-- NOTE (reviewer, remove before merge): same behaviour as main: Just order on success, Nothing
+--   otherwise; only the outcome type's names differ. Its only caller is the driver's
+--   SpecialZonePayout job, which calls it as on main.
 
 -- | Execute a previously created PayoutRequest by calling the external payout service.
 --   Builds 'CreatePayoutOrderReq' from the stored fields in PayoutRequest.
@@ -293,14 +328,64 @@ executePayoutRequest ::
   (PayoutOrder.PayoutOrder -> m ()) ->
   m (Maybe PayoutOrder.PayoutOrder)
 executePayoutRequest currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated = do
-  executionResult <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
-  pure $ case executionResult of
-    PayoutExecuted po -> Just po
-    _ -> Nothing
+  outcome <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
+  pure $ case outcome of
+    Executed po -> Just po
+    ConfirmedFailure _ -> Nothing
+    AmbiguousFailure _ -> Nothing
+    NotExecutable _ -> Nothing
+
+-- NOTE (reviewer, remove before merge): this is executePayoutRequestInternal, exported. Its only
+--   caller is the driver's WalletPayout.initiateWalletPayoutWith: create the request -> write the
+--   hold -> this call -> give the money back if the payout was not sent. Juspay/Stripe difference
+--   from main (driver wallet only): main called the partner first and wrote the hold after. Here a
+--   refused payout leaves a hold plus a reversal ("Payout not sent: ..."), and a failed hold sends
+--   nothing. Net money is the same as main.
+
+-- | Create the order and call the partner for a request that already exists, and say what
+--   happened, so the caller can give back its hold when the payout was not sent. Used by the driver
+--   wallet payout, which writes its hold between creating the request and calling the partner.
+executePayoutRequestWithOutcome ::
+  ( EncFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
+    FinanceBeamFlow.BeamFlow m r,
+    Finance.HasActorInfo m r
+  ) =>
+  Maybe HighPrecMoney -> -- explicit transferAmount override (Nothing = use amount)
+  Currency ->
+  Payout.PayoutServiceFlow ->
+  PayoutRequest ->
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
+  (PayoutOrder.PayoutOrder -> m ()) ->
+  m ExecutionOutcome
+executePayoutRequestWithOutcome = executePayoutRequestInternal
 
 -- ---------------------------------------------------------------------------
 -- Internal helpers
 -- ---------------------------------------------------------------------------
+
+-- NOTE (reviewer, remove before merge): Executed / ConfirmedFailure / NotExecutable are main's
+--   PayoutExecuted / PayoutExecutionFailed / PayoutNotExecutable under new names. AmbiguousFailure
+--   is new and only BulkFlow returns it. isConfirmedRejection is only checked on the BulkFlow path,
+--   so Juspay/Stripe never reach it.
+
+-- | Outcome of an execution attempt, distinguishing a confirmed rejection (nothing was paid)
+--   from a failure without a clear rejection (BulkFlow only; its order call is local, so nothing
+--   reached the bank).
+data ExecutionOutcome
+  = Executed PayoutOrder.PayoutOrder
+  | ConfirmedFailure Text
+  | AmbiguousFailure Text
+  | NotExecutable PayoutRequestStatus
+
+-- | True only for FailureResponse -- the partner actually returned a decodable non-2xx we
+--   understood as a rejection, so we know nothing was paid.
+isConfirmedRejection :: SomeException -> Bool
+isConfirmedRejection e = case fromException e of
+  Just (extErr :: ExternalAPICallError) -> case extErr.clientError of
+    FailureResponse _ _ -> True
+    _ -> False
+  Nothing -> False
 
 -- | Internal: call Juspay via createPayoutService, manage status transitions.
 executePayoutRequestInternal ::
@@ -315,12 +400,12 @@ executePayoutRequestInternal ::
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
   (PayoutOrder.PayoutOrder -> m ()) ->
-  m PayoutExecutionResult
+  m ExecutionOutcome
 executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
-      pure $ PayoutNotExecutable payoutRequest.status
+      pure $ NotExecutable payoutRequest.status
     else do
       orderId <- generateGUID
       createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow mbTransferAmount
@@ -334,15 +419,40 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
 
       result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing afterPayoutOrderCreated
       case result of
-        Left (err :: SomeException) -> do
-          logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
-          updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
-          pure $ PayoutExecutionFailed $ "Payout service error: " <> show err
+        -- NOTE (reviewer, remove before merge): the first guard (not BulkFlow) is main's single Left
+        --   branch unchanged: AUTO_PAY_FAILED, "Payout service error: <err>", the same log line. So every
+        --   Juspay/Stripe error, even one after the partner accepted (e.g. our own DB write failing), is a
+        --   ConfirmedFailure, and the driver wallet payout gives its hold back; main never held here, so
+        --   net money matches. The other two guards are bulk-only: the "partner call" is
+        --   Bulk.localOrderCall (no HTTP), so any error is ours, and the driver wallet payout gives the
+        --   money back for both results.
+        Left (err :: SomeException)
+          -- Only the bulk rail splits a confirmed rejection from an ambiguous one. Every other
+          -- rail keeps main's behaviour exactly: AUTO_PAY_FAILED and a plain failure. No rail
+          -- writes the ledger here -- the caller's OwnerPayoutLiability hold is settled or
+          -- reversed by the settlement flow, and marking PROCESSING instead of failed would
+          -- strand a Juspay payout.
+          | payoutServiceFlow /= Payout.BulkFlow -> do
+            let msg = "Payout service error: " <> show err
+            logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
+            updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
+            pure $ ConfirmedFailure msg
+          | isConfirmedRejection err -> do
+            -- The partner returned a decodable non-2xx rejection.
+            let msg = "Payout service error: " <> show err
+            logError $ "Payout service call rejected for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
+            updateStatusWithHistoryById AUTO_PAY_FAILED (Just msg) payoutRequest
+            pure $ ConfirmedFailure msg
+          | otherwise -> do
+            let msg = "Payout service call outcome unknown: " <> show err
+            logError $ "Payout service call for PayoutRequest " <> payoutRequest.id.getId <> " errored ambiguously (may have reached the bank): " <> show err <> " -- leaving request PROCESSING, needs manual reconciliation"
+            updateStatusWithHistoryById PROCESSING (Just msg) payoutRequest
+            pure $ AmbiguousFailure msg
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
           QPR.updatePayoutTransactionIdById (Just payoutOrderIdText) payoutRequest.id
           updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
-          pure $ maybe (PayoutNotExecutable PROCESSING) PayoutExecuted mbPayoutOrder
+          pure $ maybe (NotExecutable PROCESSING) Executed mbPayoutOrder
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.
@@ -351,6 +461,14 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount
   vpa <- case payoutServiceFlow of
     Payout.JuspayFlow -> Just <$> fromMaybeM (InvalidRequest $ "VPA is required for payout but missing in PayoutRequest " <> pr.id.getId) pr.customerVpa
     Payout.StripeFlow -> pure $ pr.customerVpa
+    -- NOTE (reviewer, remove before merge): the BulkFlow case (shared-kernel's PayoutServiceFlow has
+    --   BulkFlow) and the pr.batchId argument below are bulk-only. The Juspay and Stripe cases are
+    --   main's, and pr.batchId is NULL for them.
+    -- Bulk partners (HDFC CBX) pay to an account number + IFSC, not a VPA. Bulk does come through
+    -- here (the bulk claim and the bulk instant payout, via executePayoutRequestWithOutcome); the
+    -- app's createPayoutOrder then writes a local order for the batch (Bulk.localOrderCall) instead
+    -- of calling the partner.
+    Payout.BulkFlow -> pure Nothing
   pure $
     DPayment.mkCreatePayoutServiceReq
       orderId
@@ -365,6 +483,11 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount
       (fromMaybe "FULFILL_ONLY" pr.orderType)
       payoutServiceFlow
       mbTransferAmount
+      pr.batchId
+
+-- NOTE (reviewer, remove before merge): main's buildPayoutRequest plus copying batchId (Nothing
+--   for Juspay/Stripe). It is exported (internal on main) so the driver wallet payout can create the
+--   request, write the hold, then call executePayoutRequestWithOutcome.
 
 -- | Build a PayoutRequest from a PayoutSubmission.
 buildPayoutRequest ::
@@ -381,6 +504,7 @@ buildPayoutRequest submission = do
         entityId = submission.entityId,
         entityRefId = submission.entityRefId,
         beneficiaryId = submission.beneficiaryId,
+        batchId = submission.batchId,
         amount = Just submission.amount,
         status = INITIATED,
         retryCount = Nothing,

@@ -9,17 +9,22 @@ imports:
   PayoutSuccess: Lib.Payment.API.Payout.Types
   PayoutHistoryRes: Lib.Payment.API.Payout.Types
   PayoutOrderResp: Lib.Payment.API.Payout.Types
+  PayoutBatchStatus: Lib.Payment.Domain.Types.PayoutBatch
+  PayoutBatchOrigin: Lib.Payment.Domain.Types.PayoutBatch
+  PayoutBatchRail: Lib.Payment.Domain.Types.PayoutBatch
   EntityName: Lib.Payment.Domain.Types.Common
   VehicleCategory: Domain.Types.VehicleCategory
   Driver: Dashboard.Common
   Ride: Dashboard.Common
   Summary: Dashboard.Common
   LocalTime: Data.Time
+  Day: Data.Time
 
 importPackageOverrides:
   Lib.Payment.Domain.Types.PayoutRequest: payment
   Lib.Payment.API.Payout.Types: payment
   Lib.Payment.Domain.Types.Common: payment
+  Lib.Payment.Domain.Types.PayoutBatch: payment
 
 module: Payout
 # requestorId/actorInfo applied for each api by default
@@ -68,6 +73,43 @@ apis:
         payoutOrderId: Text
       response:
         type: PayoutOrderResp
+
+  # The read side of the config that scheduledPayoutConfig/upsert (below) commits. Deliberately a separate GET: a diff cannot be
+  # expressed in the POST's APISuccess response, and both commands are reads, so they sit behind the
+  # read capability while COMMIT keeps the write one. VIEW_DIFF's query params are the proposed values,
+  # merged over the stored config exactly as the upsert merges them.
+  - GET:
+      endpoint: /payout/scheduledPayoutConfig
+      auth: ApiAuthV2
+      # The three enum-valued params are taken as Text and parsed in the handler. HttpInstance's
+      # From/ToHttpApiData goes through eitherDecode, so an enum query param only parses when it is
+      # JSON-quoted -- ?command=%22VIEW%22 rather than ?command=VIEW. That is the house behaviour for
+      # every dashboard enum param, but it is not what a UI or a curl sends, and the resulting error
+      # ("not a valid json value at 'VIEW'") says nothing about what was wanted. Text here, parsed
+      # against the enum's Read instance, accepts the bare name and names the valid values on
+      # failure. The enums stay enums everywhere else -- in the response and in the upsert body --
+      # where JSON encoding is right.
+      query:
+        command: Text
+        payoutCategory: Text
+        isEnabled: Bool
+        frequency: Text
+        timeOfDay: Text
+        dayOfWeek: Int
+        dayOfMonth: Int
+        intervalHours: Int
+        intervalDays: Int
+        rescheduleBufferMinutes: Int
+        bufferCheckEnabled: Bool
+        minimumPayoutAmount: HighPrecMoney
+        batchSize: Int
+      response:
+        type: ScheduledPayoutConfigViewResp
+      migrate:
+        capability: finance.payout.read
+    # Declared BEFORE /payout/{payoutRequestId} on purpose: servant matches routes in declaration
+    # order, and that single dynamic segment matches this static path too -- with it first, this
+    # endpoint answered "Payout request not found" for the literal string "scheduledPayoutConfig".
 
   - GET:
       endpoint: /payout/{payoutRequestId}
@@ -138,6 +180,74 @@ apis:
       response:
         type: APISuccess
 
+
+  - GET:
+      endpoint: /adhoc/lookup
+      auth: ApiAuthV2
+      mandatoryQuery:
+        personId: Text
+      response:
+        type: AdhocPayoutLookupResp
+      migrate:
+        capability: finance.payout.read
+
+  - POST:
+      endpoint: /adhoc/initiate
+      # Same as scheduledPayoutConfig/upsert above: the direct-dashboard audit skips the
+      # request body, so the driver app needs no HideSecrets instance for it. Provider-dashboard
+      # still stores the request in its own transaction row.
+      auditRequestBody: false
+      auth: ApiAuthV2
+      request:
+        type: AdhocPayoutInitiateReq
+      response:
+        type: AdhocPayoutInitiateResp
+      migrate:
+        capability: finance.payout.write
+
+  - GET:
+      endpoint: /batch/list
+      auth: ApiAuthV2
+      # Execution-date range, inclusive (one date: fromDate = toDate).
+      mandatoryQuery:
+        fromDate: Day
+        toDate: Day
+      query:
+        limit: Int
+        offset: Int
+        status: PayoutBatchStatus
+        origin: PayoutBatchOrigin
+        payoutRail: PayoutBatchRail
+      response:
+        type: PayoutBatchListRes
+      migrate:
+        capability: finance.payout.read
+
+  - GET:
+      endpoint: /batch/{batchId}/orders
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      response:
+        type: PayoutBatchOrdersRes
+      migrate:
+        capability: finance.payout.read
+
+  - GET:
+      endpoint: /excluded
+      auth: ApiAuthV2
+      # The city's local days, inclusive (one day: from = to); the handler turns them into
+      # timestamps with the city's timeDiffFromUtc.
+      query:
+        limit: Int
+        offset: Int
+        from: Day
+        to: Day
+      response:
+        type: PayoutExcludedRes
+      migrate:
+        capability: finance.payout.read
+
 types:
   PayoutReferralHistoryRes:
     - history: [ReferralHistoryItem]
@@ -168,5 +278,139 @@ types:
     - remark: Maybe Text
     - orderType: Maybe Text
     - timeDiffFromUtc: Maybe Seconds
+    - intervalHours: Maybe Int
+    - intervalDays: Maybe Int
+    - rescheduleBufferMinutes: Maybe Int
+    - bufferCheckEnabled: Maybe Bool
+    - itemsPerBatchLimit: Maybe Int
+    - defaultPayoutRail: Maybe PayoutBatchRail
+    - bulkStatusCheckIntervalMinutes: Maybe Int
+    - bulkStatusCheckBatchLimit: Maybe Int
   ScheduledPayoutFrequency:
-    - enum: "DAILY, WEEKLY, MONTHLY"
+    - enum: "DAILY, WEEKLY, MONTHLY, HOURLY, EVERY_N_DAYS"
+    # Needed now that it is a query param on the config GET: HttpInstance adds ToParamSchema and the
+    # From/ToHttpApiData the router and the OpenAPI generation both require. Additive only.
+    - derive: "Read, HttpInstance"
+  PayoutConfigCommand:
+    - enum: "VIEW, VIEW_DIFF"
+    - derive: "Read, HttpInstance"
+  ScheduledPayoutConfigViewResp:
+    - configs: [ScheduledPayoutConfigAPIEntity]
+    - diff: Maybe [ScheduledPayoutConfigFieldDiff]
+    - scheduleEffect: Maybe ScheduledPayoutScheduleEffect
+  ScheduledPayoutConfigAPIEntity:
+    - payoutCategory: EntityName
+    - isEnabled: Bool
+    - frequency: ScheduledPayoutFrequency
+    - dayOfWeek: Maybe Int
+    - dayOfMonth: Maybe Int
+    - timeOfDay: Text
+    - intervalHours: Maybe Int
+    - intervalDays: Maybe Int
+    - batchSize: Int
+    - itemsPerBatchLimit: Maybe Int
+    - minimumPayoutAmount: HighPrecMoney
+    - maxRetriesPerDriver: Int
+    - defaultPayoutRail: Maybe PayoutBatchRail
+    - timeDiffFromUtc: Seconds
+    - rescheduleBufferMinutes: Maybe Int
+    - bufferCheckEnabled: Maybe Bool
+    - bulkStatusCheckIntervalMinutes: Maybe Int
+    - bulkStatusCheckBatchLimit: Maybe Int
+    - vehicleCategory: Maybe VehicleCategory
+    - orderType: Text
+    - remark: Maybe Text
+    - updatedAt: UTCTime
+  ScheduledPayoutConfigFieldDiff:
+    - field: Text
+    - from: Maybe Text
+    - to: Maybe Text
+  ScheduledPayoutScheduleEffect:
+    - currentNextRunAt: UTCTime
+    - proposedNextRunAt: UTCTime
+    - queuedJobAt: Maybe UTCTime
+    - action: ScheduledPayoutRescheduleAction
+    - bufferMinutes: Maybe Int
+  ScheduledPayoutRescheduleAction:
+    - enum: "MOVE_JOB, LEAVE_INSIDE_BUFFER, NO_QUEUED_JOB, NOT_MOVED"
+  AdhocPayoutLookupResp:
+    - personId: Text
+    - personName: Maybe Text
+    - role: Text
+    - merchantOperatingCityId: Text
+    - walletBalance: HighPrecMoney
+    - nonRedeemableAmount: HighPrecMoney
+    - payoutableBalance: HighPrecMoney
+    - minimumPayoutAmount: HighPrecMoney
+    - isEligible: Bool
+    - ineligibilityReason: Maybe Text
+    - payoutServiceFlow: Text
+    - bankAccountStatus: Text
+  AdhocPayoutInitiateReq:
+    - personIds: [Text]
+  AdhocPayoutInitiateResp:
+    - results: [AdhocPayoutResultItem]
+  AdhocPayoutResultItem:
+    - personId: Text
+    - status: AdhocPayoutItemStatus
+    - reason: Maybe Text
+    - payoutOrderId: Maybe Text
+  AdhocPayoutItemStatus:
+    - enum: "INITIATED, SKIPPED, FAILED"
+
+  PayoutBatchListRes:
+    - batches: [PayoutBatchListItem]
+    - hasMore: Bool
+  PayoutExcludedRes:
+    - items: [PayoutExcludedItem]
+    - hasMore: Bool
+  PayoutExcludedItem:
+    - personId: Text
+    - personName: Maybe Text
+    - role: Text
+    - amount: HighPrecMoney
+    - reason: Text
+    - excludedAt: UTCTime
+    - payoutRequestId: Text
+    - batchId: Maybe Text
+  PayoutBatchListItem:
+    - id: Text
+    - origin: PayoutBatchOrigin
+    - status: PayoutBatchStatus
+    - payoutRail: PayoutBatchRail
+    - executionDate: Day
+    - clientRefNo: Text
+    - partnerBatchRef: Maybe Text
+    - itemCount: Int
+    - totalAmount: HighPrecMoney
+    - excludedCount: Int
+    - failureReason: Maybe Text
+    - failureCode: Maybe Text
+    - statusCheckRound: Int
+    - nextStatusCallAt: Maybe UTCTime
+    - statusNoDataReplies: Int
+    - submittedAt: Maybe UTCTime
+    - resolvedAt: Maybe UTCTime
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  PayoutBatchOrdersRes:
+    - orders: [PayoutOrderListItem]
+    - excluded: [PayoutExcludedItem]
+  PayoutOrderListItem:
+    - orderId: Text
+    - shortId: Maybe Text
+    - payoutRequestId: Maybe Text
+    - customerId: Text
+    - beneficiaryName: Maybe Text
+    - beneficiaryPhone: Maybe Text
+    - beneficiaryRole: Text
+    - status: Text
+    - transferStatus: Maybe Text
+    - amount: HighPrecMoney
+    - responseMessage: Maybe Text
+    - responseCode: Maybe Text
+    - settlementRef: Maybe Text
+    - settlementRefType: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime

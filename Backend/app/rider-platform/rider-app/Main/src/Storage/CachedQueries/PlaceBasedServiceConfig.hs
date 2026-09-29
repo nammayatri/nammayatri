@@ -142,6 +142,9 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
         Just Stripe.Live -> Payout.Stripe
         Just Stripe.Test -> Payout.StripeTest
         Nothing -> Payout.Stripe
+    -- NOTE (reviewer, remove before merge): compile-only plumbing: case arm for the new HdfcCbxConfig
+    --   constructor. The rider has no HDFC config, so rider behaviour is the same as main.
+    Payout.HdfcCbxConfig _ -> PayoutService Payout.HdfcCbx
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit

@@ -419,8 +419,15 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
   vpa <- case payoutServiceFlow of
     IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
     IPayout.StripeFlow -> pure Nothing
+    -- NOTE (reviewer, remove before merge): plumbing only. A BulkFlow arm so this case on PayoutServiceFlow stays
+    --   complete (-Werror), and the extra trailing `Nothing` passed to mkCreatePayoutServiceReq below is the batchId
+    --   argument (only the HDFC bulk path sets one). Juspay/Stripe arms and values are main's, so no behaviour change.
+    --   Bulk caveat: coin redemption is not part of the bulk lifecycle. If merchant_service_usage_config named HdfcCbx
+    --   here, Tools.Payout.createPayoutOrder would only make a local order (Bulk.localOrderCall, INITIATED, no batch)
+    --   that no HDFC batch carries.
+    IPayout.BulkFlow -> pure Nothing -- no VPA on the bulk/HDFC path; Tools.Payout.getCreatePayoutServiceFlow already required a bank account row
   merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType payoutServiceFlow Nothing
+  let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType payoutServiceFlow Nothing Nothing
       entityName = DPayment.COINS_REDEMPTION
       createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
   void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated

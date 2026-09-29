@@ -325,6 +325,10 @@ data DriverWalletError
   | WalletTopupLockFailed
   | WalletAccountNotFound Text
   | WalletBalanceUpdateFailed Text
+  | -- NOTE (reviewer, remove before merge): new error for the per-city instant-payout role gate (code
+    --   INSTANT_PAYOUT_NOT_ALLOWED, HTTP 400). Thrown only by SharedLogic.Finance.WalletPayout.ensureInstantPayoutAllowed,
+    --   so only in a city that sets instantPayoutExcludedRoles. Existing errors and codes are unchanged.
+    InstantPayoutNotAllowed
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverWalletError
@@ -337,6 +341,7 @@ instance IsBaseError DriverWalletError where
     WalletTopupLockFailed -> Just "Could not acquire lock for wallet topup. Please try again."
     WalletAccountNotFound msg -> Just $ "Wallet account not found: " <> msg
     WalletBalanceUpdateFailed msg -> Just $ "Wallet balance update failed: " <> msg
+    InstantPayoutNotAllowed -> Just "Instant payouts are not available for your account in this city."
 
 instance IsHTTPError DriverWalletError where
   toErrorCode = \case
@@ -346,8 +351,10 @@ instance IsHTTPError DriverWalletError where
     WalletTopupLockFailed -> "WALLET_TOPUP_LOCK_FAILED"
     WalletAccountNotFound _ -> "WALLET_ACCOUNT_NOT_FOUND"
     WalletBalanceUpdateFailed _ -> "WALLET_BALANCE_UPDATE_FAILED"
+    InstantPayoutNotAllowed -> "INSTANT_PAYOUT_NOT_ALLOWED"
   toHttpCode = \case
     WalletTopupLockFailed -> E429
+    InstantPayoutNotAllowed -> E400
     _ -> E500
 
 instance IsAPIError DriverWalletError

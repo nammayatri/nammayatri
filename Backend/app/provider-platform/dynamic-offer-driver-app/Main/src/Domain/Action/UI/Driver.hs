@@ -3721,6 +3721,12 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
     let payoutVpaValid = case payoutServiceFlow of
           IPayout.JuspayFlow -> isJust mbVpa
           IPayout.StripeFlow -> True
+          -- NOTE (reviewer, remove before merge): plumbing only. BulkFlow arm so this case on PayoutServiceFlow stays
+          --   complete (-Werror; the shared kernel has BulkFlow for HDFC CBX). Juspay/Stripe arms are main's, so no
+          --   behaviour change for them. Bulk caveat: this deposit refund is not part of the bulk lifecycle. If this
+          --   service's subscription config named HdfcCbx, Tools.Payout.createPayoutOrder would only make a local order
+          --   (Bulk.localOrderCall, INITIATED, no batch) that no HDFC batch carries.
+          IPayout.BulkFlow -> isJust mbPersonBankAccount
     unless payoutVpaValid $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
     when payoutVpaValid $ do
       pendingDriverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING]
@@ -3805,7 +3811,10 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           customerName = person.firstName,
           customerVpa = vpa,
           transferAmount = amount, -- for now keep it the same
-          payoutServiceFlow
+          payoutServiceFlow,
+          -- NOTE (reviewer, remove before merge): new required field of CreatePayoutServiceReq; only the HDFC bulk path
+          --   sets a batch. Nothing = no batch = main's order, so no Juspay/Stripe behaviour change.
+          batchId = Nothing
         }
 
 isPlanVehCategoryOrCityChanged :: Id DMOC.MerchantOperatingCity -> Maybe DPlan.DriverPlan -> Maybe Vehicle -> (Bool, Bool)

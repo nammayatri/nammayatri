@@ -12,10 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (sendScheduledBatchPayout) where
+-- NOTE (reviewer, remove before merge): the scheduled sweep job shared by every payout partner (exists on main).
+--   Differences from main:
+--   1. A BulkFlow branch in processWalletPayouts (HDFC: collect the page, check eligibility, run one bulk cycle).
+--   2. The Juspay/Stripe per-person path is main's: each person gets a forked processOneWalletPayout ->
+--      WalletPayout.runWalletPayout, only wrapped in `unless (payoutServiceFlow == Payout.BulkFlow)` and re-indented.
+--      The hold-before-partner-call change for Juspay/Stripe is in WalletPayout.hs, not here.
+--   3. computeNextRunTime is exported (used by the config upsert / preview and the re-time code) and handles HOURLY /
+--      EVERY_N_DAYS.
+module SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout
+  ( sendScheduledBatchPayout,
+    computeNextRunTime,
+  )
+where
 
 import qualified Data.Time as Time
 import qualified Data.Time.Calendar.WeekDate as Time
+import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.Plan
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -26,7 +39,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Kernel.External.Payout.Interface as Payout
-import Kernel.External.Types (SchedulerFlow)
+import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -38,10 +51,14 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
+import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), WalletPayoutParams (..), runWalletPayout)
+import SharedLogic.Payout.Bulk.Driver (runBulkPayoutCycle)
+import SharedLogic.Payout.Bulk.Eligibility (checkBulkPayoutEligibility)
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -52,18 +69,21 @@ import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Payout as TPayout
 
---------------------------------------------------------------------------------
--- Job entry point
---------------------------------------------------------------------------------
-
+-- NOTE (reviewer, remove before merge): plumbing. The extra constraints (PayoutSettlementFlow, ServiceFlow,
+--   PaymentBeamFlow.BeamFlow) on this function, processCategory and processWalletPayouts are what the bulk branch's
+--   runBulkPayoutCycle needs (its bulk handle includes the settle step and the HDFC calls). The allocator's
+--   environment already satisfies them; no Juspay/Stripe behaviour change.
 sendScheduledBatchPayout ::
-  ( EncFlow m r,
+  ( UIPayout.PayoutSettlementFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    ServiceFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
@@ -89,18 +109,17 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
           pure Complete
         else processCategory config jobData
 
---------------------------------------------------------------------------------
--- Category dispatch
---------------------------------------------------------------------------------
-
 processCategory ::
-  ( EncFlow m r,
+  ( UIPayout.PayoutSettlementFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    ServiceFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
@@ -122,18 +141,17 @@ processCategory config jobData = do
       logWarning $ "Unsupported payout category for scheduled batch: " <> show other
       pure Complete
 
---------------------------------------------------------------------------------
--- Wallet payout handler (reuses DriverWallet.hs helpers)
---------------------------------------------------------------------------------
-
 processWalletPayouts ::
-  ( EncFlow m r,
+  ( UIPayout.PayoutSettlementFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     Finance.HasActorInfo m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
+    ServiceFlow m r,
     BeamFlow m r,
+    PaymentBeamFlow.BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
@@ -158,22 +176,36 @@ processWalletPayouts config jobData = do
 
       -- Process drivers
       mbLastDriverId <- Redis.get driverCursorKey
-      payoutServiceFlow <- TPayout.getPayoutServiceFlowForMerchant (.createPayoutOrder) (TPayout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService merchantOpCityId
+      -- NOTE (reviewer, remove before merge): getPayoutServiceFlowForMerchant also returns the service name; only the
+      --   bulk branch below uses it. isPayoutVpaRequired gets a BulkFlow arm (False: HDFC pays to an account number +
+      --   IFSC). The JuspayFlow / StripeFlow arms are unchanged, so Juspay/Stripe cities run the same eligible-person
+      --   queries as main.
+      (payoutServiceFlow, payoutServiceName) <- TPayout.getPayoutServiceFlowForMerchant (.createPayoutOrder) (TPayout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService merchantOpCityId
       let isPayoutVpaRequired = case payoutServiceFlow of
             Payout.JuspayFlow -> True
             Payout.StripeFlow -> False
+            Payout.BulkFlow -> False -- HDFC CBX is account-and-IFSC based, not VPA based
       eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId config.batchSize mbLastDriverId isPayoutVpaRequired
       unless (null eligibleDriverInfos) $ do
         let lastDriverId = (.driverId) $ last eligibleDriverInfos
         Redis.setExp driverCursorKey lastDriverId 86400
-        for_ eligibleDriverInfos $ \driverInfo -> do
-          fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $ do
-            processOneWalletPayout
-              config
-              transporterConfig
-              merchantId
-              merchantOpCityId
-              driverInfo.driverId driverInfo.payoutVpa (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
+        -- NOTE (reviewer, remove before merge): Juspay/Stripe path = main's: the same fork and processOneWalletPayout
+        --   arguments, only wrapped in `unless BulkFlow` and re-indented (same for the fleet-owner loop below). The flow
+        --   is read once per run for the whole city, so a Juspay/Stripe city never takes the bulk branch and an HDFC city
+        --   never forks per-person payouts. The cursor keys and paging are shared and unchanged.
+        -- Juspay/Stripe: fork each driver's payout right away, as main does. The bulk rail instead
+        -- collects the whole page first (below), because it pays everyone in one batch.
+        unless (payoutServiceFlow == Payout.BulkFlow) $
+          for_ eligibleDriverInfos $ \driverInfo ->
+            fork ("ScheduledWalletPayout:Driver:" <> driverInfo.driverId.getId) $
+              processOneWalletPayout
+                config
+                transporterConfig
+                merchantId
+                merchantOpCityId
+                driverInfo.driverId
+                driverInfo.payoutVpa
+                (driverInfo.payoutVpaStatus == Just DI.MANUALLY_ADDED)
 
       -- Process fleet owners
       mbLastFleetId <- Redis.get fleetCursorKey
@@ -201,14 +233,36 @@ processWalletPayouts config jobData = do
       unless (null eligibleFleetInfos) $ do
         let lastFleetId = (.fleetOwnerPersonId) $ last eligibleFleetInfos
         Redis.setExp fleetCursorKey lastFleetId 86400
-        for_ eligibleFleetInfos $ \fleetInfo -> do
-          fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $ do
-            processOneWalletPayout
-              config
-              transporterConfig
-              merchantId
-              merchantOpCityId
-              fleetInfo.fleetOwnerPersonId fleetInfo.payoutVpa (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
+        unless (payoutServiceFlow == Payout.BulkFlow) $
+          for_ eligibleFleetInfos $ \fleetInfo ->
+            fork ("ScheduledWalletPayout:Fleet:" <> fleetInfo.fleetOwnerPersonId.getId) $
+              processOneWalletPayout
+                config
+                transporterConfig
+                merchantId
+                merchantOpCityId
+                fleetInfo.fleetOwnerPersonId
+                fleetInfo.payoutVpa
+                (fleetInfo.payoutVpaStatus == Just DFOI.MANUALLY_ADDED)
+
+      -- NOTE (reviewer, remove before merge): bulk-only branch (HDFC CBX): the whole page (drivers and fleet owners) goes
+      --   through the read-only eligibility pass (Bulk/Eligibility.checkBulkPayoutEligibility), then one bulk cycle
+      --   (Bulk/Driver.runBulkPayoutCycle: open batch -> claim -> submit). Juspay/Stripe never enter it.
+      when (payoutServiceFlow == Payout.BulkFlow) $ do
+        -- No live per-driver API call happens on this path (HDFC CBX has none), so it runs
+        -- synchronously rather than via 'fork': everyone eligible this tick has to be known
+        -- before the batch they go into can be opened.
+        -- One IN query for the tick's page rather than a person lookup per beneficiary. Someone
+        -- whose person row is gone is skipped.
+        let pageIds = map (.driverId.getId) eligibleDriverInfos <> map (.fleetOwnerPersonId.getId) eligibleFleetInfos
+        persons <- QPerson.findAllByPersonIds pageIds
+        checks <- forM persons $ \person -> checkBulkPayoutEligibility config transporterConfig person
+        let candidates = [candidate | Right candidate <- checks]
+        -- Batches resolve on their own afterwards: the submission schedules the first status
+        -- check on the batch row, and the city's status-check job, made when the batch was
+        -- opened, takes it from there.
+        unless (null candidates) $
+          void $ runBulkPayoutCycle config payoutServiceName merchantId merchantOpCityId DPayoutBatch.SCHEDULED PR.SCHEDULED transporterConfig candidates
 
       if null eligibleDriverInfos && null eligibleFleetInfos
         then do
@@ -270,10 +324,6 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()
 
---------------------------------------------------------------------------------
--- Next run time computation
---------------------------------------------------------------------------------
-
 computeNextRunTime ::
   (MonadFlow m) =>
   DSPC.ScheduledPayoutConfig ->
@@ -313,6 +363,18 @@ computeNextRunTime config = do
                       if month == 12 then (year + 1, 1) else (year, month + 1)
                  in Time.fromGregorian nextYear nextMonth (min targetDom 28)
       pure $ Time.addUTCTime (negate timeDiff) (Time.UTCTime nextDate targetTimeOfDay)
+    -- NOTE (reviewer, remove before merge): two new frequencies, HOURLY and EVERY_N_DAYS (new values of the spec enum
+    --   ScheduledPayoutFrequency). The DAILY / WEEKLY / MONTHLY arms above are main's, so a Juspay/Stripe city that keeps
+    --   its frequency gets the same next run time as on main. Their fallbacks (WEEKLY with no day = Monday, MONTHLY day
+    --   capped at 28) still serve existing rows; new saves are validated at upsert.
+    DSPC.HOURLY ->
+      -- rolling: now + N hours (ignores timeOfDay). intervalHours validated to 1..23 at upsert.
+      pure $ Time.addUTCTime (fromIntegral (fromMaybe 1 config.intervalHours) * 3600) now
+    DSPC.EVERY_N_DAYS -> do
+      -- timeOfDay-anchored, drift-free: today + N days @ timeOfDay. intervalDays validated >= 2 at upsert.
+      let n = max 1 (fromMaybe 1 config.intervalDays)
+          nextLocalDay = Time.addDays (fromIntegral n) localDay
+      pure $ Time.addUTCTime (negate timeDiff) (Time.UTCTime nextLocalDay targetTimeOfDay)
 
 -- | Parse "HH:MM" into (hours, minutes). Defaults to (2, 0) on failure.
 parseTimeOfDay :: Text -> (Int, Int)

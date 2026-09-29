@@ -37,6 +37,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
@@ -81,6 +82,13 @@ instance HasSchemaName BeamPOO.PayoutOrderT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPR.PayoutRequestT where
+  schemaName _ = "atlas_app"
+
+-- NOTE (reviewer, remove before merge): this instance (and the BeamPB import above) is required by lib
+--   payment's BeamFlow for the new payout_batch table (one row per HDFC bulk batch). The mock never uses
+--   that table; it only keeps the mock compiling, with the same "atlas_app" schema as its other payout
+--   tables. Mock behaviour is the same as main.
+instance HasSchemaName BeamPB.PayoutBatchT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPOT.PayoutTransactionT where

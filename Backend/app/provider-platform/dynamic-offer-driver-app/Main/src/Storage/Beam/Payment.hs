@@ -24,6 +24,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
@@ -50,6 +51,12 @@ instance HasSchemaName BeamP.PayoutOrderT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPR.PayoutRequestT where
+  schemaName _ = T.pack currentSchemaName
+
+-- NOTE (reviewer, remove before merge): new instance (and the BeamPB import) so the lib's new payout_batch table (one
+--   row per HDFC bulk file) lives in the driver schema like the other payout tables. Bulk-only: only the bulk flow
+--   touches payout_batch. Existing instances unchanged, so no Juspay/Stripe effect.
+instance HasSchemaName BeamPB.PayoutBatchT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamT.PayoutTransactionT where

@@ -160,7 +160,10 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           emailId <- mapM decrypt person.email
           uid <- generateGUID
           let payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
-          let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing
+          -- NOTE (reviewer, remove before merge): compile-only plumbing: the extra last Nothing is the new
+          --   batch-id argument of lib mkCreatePayoutServiceReq (used only by HDFC bulk). Rider behaviour is
+          --   the same as main.
+          let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing Nothing
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
           let createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)

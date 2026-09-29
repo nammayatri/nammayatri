@@ -309,6 +309,13 @@ executeOldSpecialZonePayout scheduledPayout = do
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> isJust mbVpa
             IPayout.StripeFlow -> True
+            -- NOTE (reviewer, remove before merge): plumbing only. A BulkFlow arm so this case on PayoutServiceFlow
+            --   stays complete (-Werror), and the extra trailing `Nothing` passed to mkCreatePayoutServiceReq below is the
+            --   batchId argument (only the HDFC bulk path sets one). Juspay/Stripe arms and values are main's, so no
+            --   behaviour change. Bulk caveat: the special-zone payout is not part of the bulk lifecycle. If
+            --   merchant_service_usage_config named HdfcCbx for RidePayoutService, Tools.Payout.createPayoutOrder would
+            --   only make a local order (Bulk.localOrderCall, INITIATED, no batch) that no HDFC batch carries.
+            IPayout.BulkFlow -> isJust mbPersonBankAccount
       if not payoutVpaValid
         then do
           logWarning $ "No payout bank account for ride: " <> scheduledPayout.rideId
@@ -326,7 +333,7 @@ executeOldSpecialZonePayout scheduledPayout = do
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
               let entityName = DLP.SPECIAL_ZONE_PAYOUT
-                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" payoutServiceFlow Nothing
+                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" payoutServiceFlow Nothing Nothing
               case merchantId of
                 Nothing -> do
                   logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id

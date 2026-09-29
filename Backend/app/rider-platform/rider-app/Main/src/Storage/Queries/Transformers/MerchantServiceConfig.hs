@@ -118,6 +118,9 @@ mkPayoutServiceConfig configJSON = \case
   Payout.AAJuspay -> Payout.JuspayConfig <$> valueToMaybe configJSON
   Payout.Stripe -> Payout.StripeConfig <$> valueToMaybe configJSON
   Payout.StripeTest -> Payout.StripeConfig <$> valueToMaybe configJSON
+  -- NOTE (reviewer, remove before merge): compile-only plumbing: case arm for the new HdfcCbx service.
+  --   The rider has no HDFC config row, so rider behaviour is the same as main.
+  Payout.HdfcCbx -> Payout.HdfcCbxConfig <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -225,3 +228,6 @@ getPayoutServiceConfigJson = \case
     Just Stripe.Live -> (Payout.Stripe, toJSON cfg)
     Just Stripe.Test -> (Payout.StripeTest, toJSON cfg)
     Nothing -> (Payout.Stripe, toJSON cfg)
+  -- NOTE (reviewer, remove before merge): compile-only plumbing: case arm for the new HdfcCbxConfig
+  --   constructor. Rider behaviour is the same as main.
+  Payout.HdfcCbxConfig cfg -> (Payout.HdfcCbx, toJSON cfg)

@@ -77,8 +77,12 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutReques
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
-import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensurePayoutsEnabled, loadPayoutContext, runWalletPayout)
+-- NOTE (reviewer, remove before merge): vs main this import adds ensureInstantPayoutAllowed and
+--   instantPayoutAllowedFor (the per-city instant-payout role gate) and drops runWalletPayout: postWalletPayout calls
+--   runInstantPayout (SharedLogic.Payout.Bulk.Driver, imported below), which runs runWalletPayout for Juspay/Stripe.
+import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensureInstantPayoutAllowed, ensurePayoutsEnabled, instantPayoutAllowedFor, loadPayoutContext)
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.Payout.Bulk.Driver (runInstantPayout)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
@@ -130,13 +134,49 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbActiveFleetAssoc <- QFDA.findByDriverId driverId True
-  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
-  let (counterparty, ownerId, mbConcernedIndividualId) =
-        case mbAssocFleetOwnerId of
-          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
-          Nothing -> (counterpartyFromRole person.role, driverId.getId, Nothing)
+  -- NOTE (reviewer, remove before merge): two additions in this wallet screen; neither does anything unless a city
+  --   sets its field.
+  --   (a) A per-city view for a fleet-linked driver: optional DriverWalletConfig.fleetLinkedDriverWalletView. Absent =
+  --       FLEET_ACCOUNT = main's branch (the fleet owner's account, filtered to this driver's rides); OWN_ACCOUNT shows
+  --       the driver's own account; HIDDEN shows an empty wallet. transporterConfig is read before the choice (main
+  --       reads it just after this block) because the choice needs it. walletTransactionsFor is main's body, plus
+  --       canWithdraw.
+  --   (b) canWithdraw: the withdraw button (payoutEnabled) is also off when the city bars this role from instant
+  --       payouts, so the app never offers a payout that postWalletPayout would refuse.
+  --   Shared with Juspay/Stripe -- no behaviour change unless a city sets either field.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  -- Whose account a fleet-linked driver sees is per city. Absent (FLEET_ACCOUNT) is main's
+  -- behaviour: the fleet owner's account, filtered to the rides this driver did. OWN_ACCOUNT shows
+  -- only the driver's own account -- their own balance, entries and payouts, none of the fleet's
+  -- earnings. HIDDEN shows nothing.
+  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
+      walletView = fromMaybe DTConf.FLEET_ACCOUNT transporterConfig.driverWalletConfig.fleetLinkedDriverWalletView
+      ownAccount = (counterpartyFromRole person.role, driverId.getId, Nothing)
+      (counterparty, ownerId, mbConcernedIndividualId) =
+        case mbAssocFleetOwnerId of
+          Just fleetOwnerId | walletView == DTConf.FLEET_ACCOUNT -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
+          _ -> ownAccount
+  -- The condition 'postWalletPayout' enforces beyond main's, so the button never offers a refusal:
+  -- a role the city bars from instant payouts.
+  let canWithdraw = instantPayoutAllowedFor transporterConfig.driverWalletConfig person.role
   now <- getCurrentTime
+  if isJust mbAssocFleetOwnerId && walletView == DTConf.HIDDEN
+    then pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
+    else walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy
+
+-- | The wallet read itself, once it has been decided whose account to read.
+walletTransactionsFor ::
+  Bool -> -- whether the app may offer this person an instant payout
+  FAccount.CounterpartyType ->
+  Text ->
+  Kernel.Prelude.Maybe Text ->
+  DTConf.TransporterConfig ->
+  Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
+  Environment.Flow DriverWallet.WalletSummaryResponse
+walletTransactionsFor canWithdraw counterparty ownerId mbConcernedIndividualId transporterConfig now mbFromDate mbToDate mbAggBy = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
@@ -145,7 +185,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
   case (mbWalletAcc, mbControlAcc) of
-    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig 0}
+    (Nothing, Nothing) -> pure emptyWalletSummary {DriverWallet.payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig 0}
     _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
@@ -173,7 +213,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
             processingPayoutBalance = eligibility.processingPayoutBalance,
             holdBalance = Just holdBalance,
             netEarningsBalance,
-            payoutConfig = buildWalletPayoutConfig transporterConfig.driverWalletConfig redeemableBalance,
+            payoutConfig = buildWalletPayoutConfig canWithdraw transporterConfig.driverWalletConfig redeemableBalance,
             additions,
             deductions,
             agg
@@ -200,10 +240,18 @@ emptyWalletSummary =
       agg = []
     }
 
-buildWalletPayoutConfig :: DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
-buildWalletPayoutConfig walletConfig redeemableBalance =
+-- NOTE (reviewer, remove before merge): the only change vs main is the canWithdraw argument:
+--   payoutEnabled = enableWalletPayout && canWithdraw. canWithdraw is True unless the city lists this role in
+--   instantPayoutExcludedRoles, so cities without that setting get main's value. It does not look at the payout
+--   partner: an HDFC city hides the button only by listing its roles there.
+
+-- | @payoutEnabled@ is what the app shows the withdraw button on, and withdraw is the instant path,
+--   so it is off wherever 'postWalletPayout' would refuse: a role the city bars from instant payout
+--   (@instantPayoutExcludedRoles@).
+buildWalletPayoutConfig :: Bool -> DTConf.DriverWalletConfig -> HighPrecMoney -> DriverWallet.WalletPayoutConfig
+buildWalletPayoutConfig canWithdraw walletConfig redeemableBalance =
   DriverWallet.WalletPayoutConfig
-    { payoutEnabled = walletConfig.enableWalletPayout,
+    { payoutEnabled = walletConfig.enableWalletPayout && canWithdraw,
       payoutCutOffDays = walletConfig.payoutCutOffDays,
       minimumPayoutAmount = walletConfig.minimumWalletPayoutAmount,
       payoutFee = computePayoutFee (mfilter (\cfg -> cfg.feeBearer == Just DTConf.DRIVER_BEARER) walletConfig.payoutFee) redeemableBalance
@@ -587,6 +635,11 @@ postWalletPayout ::
 postWalletPayout (mbPersonId, merchantId, mocId) = do
   ctx <- loadPayoutContext mbPersonId merchantId mocId
   ensurePayoutsEnabled ctx
+  -- NOTE (reviewer, remove before merge): new check, instant path only. Throws 400 INSTANT_PAYOUT_NOT_ALLOWED when the
+  --   city's instantPayoutExcludedRoles lists this role (FLEET_BUSINESS counts as FLEET_OWNER). Absent setting = nobody
+  --   blocked = main. It runs after ensurePayoutsEnabled, so a city with payouts off still gets main's error first.
+  --   Shared with Juspay/Stripe -- no behaviour change unless a city sets the field.
+  ensureInstantPayoutAllowed ctx
   let params =
         WalletPayoutParams
           { payoutType = PR.INSTANT,
@@ -594,7 +647,11 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
             enforceDailyLimit = True,
             throwOnBelowMinimum = True
           }
-  runWalletPayout ctx params
+  -- NOTE (reviewer, remove before merge): main calls `runWalletPayout ctx params` here. runInstantPayout reads the
+  --   city's route and, for any city not on a bulk partner (or when the route can't be read), calls exactly that. A
+  --   bulk-rail (HDFC) city sends the payout in a batch of one under the same lock and checks. The hold-before-send
+  --   change is in SharedLogic.Finance.WalletPayout.
+  runInstantPayout ctx params
   pure APISuccess.Success
 
 --------------------------------------------------------------------------------

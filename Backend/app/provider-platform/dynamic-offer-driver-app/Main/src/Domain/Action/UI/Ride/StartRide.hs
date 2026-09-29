@@ -321,6 +321,9 @@ startRideHandler ServiceHandle {..} rideId req = do
               let payoutRequest =
                     DPR.PayoutRequest
                       { id = payoutRequestId,
+                        -- NOTE (reviewer, remove before merge): plumbing only. PayoutRequest has a new batchId field (the
+                        --   HDFC bulk batch); a special-zone payout request has no batch, so Nothing. No behaviour change.
+                        batchId = Nothing,
                         entityName = Just DPayment.SPECIAL_ZONE_PAYOUT,
                         entityId = ride.id.getId,
                         entityRefId = Just booking.id.getId,

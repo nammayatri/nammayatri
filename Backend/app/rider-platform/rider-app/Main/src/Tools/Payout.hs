@@ -88,6 +88,10 @@ runWithServiceConfigAndName func getCfg mkReq clientSdkVersion merchantId mercha
         let mConnectedAccountId = Nothing
         func vsc (mkReq (getRoutingId payoutServiceName) mConnectedAccountId serviceReq)
       Payout.StripeConfig _ -> throwError (InvalidRequest "Stripe payouts are not supported")
+      -- NOTE (reviewer, remove before merge): compile-only plumbing: case arm for the new HdfcCbxConfig
+      --   constructor; it refuses the payout, like the Stripe arm above. The rider has no HDFC config, so
+      --   rider behaviour is the same as main.
+      Payout.HdfcCbxConfig _ -> throwError (InvalidRequest "HDFC CBX payouts are not supported on the rider-app")
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getRoutingId = \case
@@ -109,6 +113,10 @@ modifyServiceName serviceName paymentMode clientSdkVersion =
       case Payout.castPayoutServiceFlow payoutService of
         Payout.JuspayFlow -> decidePayoutService serviceName clientSdkVersion
         Payout.StripeFlow -> pure . serviceType $ modifyPayoutServiceByMode payoutService paymentMode
+        -- NOTE (reviewer, remove before merge): compile-only plumbing: case arm for the new BulkFlow
+        --   constructor; it returns the service name unchanged. The rider has no bulk config, so rider
+        --   behaviour is the same as main.
+        Payout.BulkFlow -> pure . serviceType $ payoutService
 
 -- relevant only for Stripe
 modifyPayoutServiceByMode :: PT.PayoutService -> DMPM.PaymentMode -> PT.PayoutService
@@ -117,6 +125,9 @@ modifyPayoutServiceByMode Payout.Stripe DMPM.TEST = Payout.StripeTest
 modifyPayoutServiceByMode Payout.StripeTest _ = Payout.StripeTest
 modifyPayoutServiceByMode Payout.Juspay _ = Payout.Juspay
 modifyPayoutServiceByMode Payout.AAJuspay _ = Payout.AAJuspay
+-- NOTE (reviewer, remove before merge): compile-only plumbing: clause for the new HdfcCbx service; it
+--   returns it unchanged. Rider behaviour is the same as main.
+modifyPayoutServiceByMode Payout.HdfcCbx _ = Payout.HdfcCbx
 
 -- relevant only for Juspay
 decidePayoutService :: ServiceFlow m r => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName

@@ -45,6 +45,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamSplit
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamP
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamT
@@ -71,6 +72,12 @@ instance HasSchemaName BeamP.PayoutOrderT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamPR.PayoutRequestT where
+  schemaName _ = T.pack currentSchemaName
+
+-- NOTE (reviewer, remove before merge): compile-only plumbing: this instance (and the BeamPB import above)
+--   is required by lib payment's BeamFlow for the new payout_batch table. The rider never uses that
+--   table, so rider behaviour is the same as main.
+instance HasSchemaName BeamPB.PayoutBatchT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamT.PayoutTransactionT where

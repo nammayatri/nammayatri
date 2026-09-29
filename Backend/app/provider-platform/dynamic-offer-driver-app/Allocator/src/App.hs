@@ -29,6 +29,7 @@ import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
+import Kernel.External.Payout.HdfcCbx.Manager (prepareHdfcCbxHttpManagers)
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
@@ -61,6 +62,7 @@ import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDri
 import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
 import SharedLogic.Allocator.Jobs.Mandate.RetryAutopayCollection (retryAutopayCollection)
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
+import SharedLogic.Allocator.Jobs.Payout.BulkPayoutStatusCheck (runBulkPayoutStatusCheck)
 import SharedLogic.Allocator.Jobs.Payout.ConnectAccountCharge (sendConnectAccountCharge)
 import SharedLogic.Allocator.Jobs.Payout.DriverReferralPayout (sendDriverReferralPayoutJobData)
 import SharedLogic.Allocator.Jobs.Payout.PayoutStatusCheck (payoutStatusCheckJob)
@@ -90,6 +92,7 @@ import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Tools.ActorInfo as ActorInfo
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -182,6 +185,10 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env expireSubscriptionPurchase
           & putJobHandlerInListWrapper flowRt env sendScheduledBatchPayout
           & putJobHandlerInListWrapper flowRt env payoutStatusCheckJob
+          -- NOTE (reviewer, remove before merge): new handler for the bulk status-check job (one job per HDFC city,
+          --   created when a batch is opened). Bulk-only: it handles only its own job type; the Juspay/Stripe
+          --   per-order payoutStatusCheckJob above is unchanged.
+          & putJobHandlerInListWrapper flowRt env runBulkPayoutStatusCheck
           & putJobHandlerInListWrapper flowRt env runReconciliationJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSchedulerJob
           & putJobHandlerInListWrapper flowRt env runReconciliationSweepJob
@@ -236,12 +243,29 @@ runDriverOfferAllocator configModifier = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
+        -- NOTE (reviewer, remove before merge): same HDFC CBX mutual-TLS manager registration as the driver app's App.hs
+        --   (see the NOTE there), because the sweep's HDFC branch and the per-city bulk status check call HDFC from the
+        --   allocator. Decrypt / PEM failures and a failed config read are logged and startup continues; only HDFC
+        --   payouts fail until a restart. Juspay/Stripe: no behaviour change (HDFC-only keys; empty map when no HDFC
+        --   config).
+        -- The configs are read in a try: a bad HDFC row or a failed read must not stop the allocator (and every
+        -- other job) from starting -- HDFC payouts fail later instead, as for a bad certificate.
+        hdfcCbxConfigsResult <- try CQMSC.findAllHdfcCbxPayoutConfigs
+        hdfcCbxConfigs <- case hdfcCbxConfigsResult of
+          Left (err :: SomeException) -> do
+            logError $ "HDFC CBX payout configs could not be loaded at startup; HDFC payouts will fail until a restart: " <> show err
+            pure []
+          Right configs -> pure configs
+        hdfcCbxManagers <- prepareHdfcCbxHttpManagers 60000 hdfcCbxConfigs
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt handlerEnv allSubscriberIds),
-                Just (Just 20000, prepareIdfyHttpManager 20000)
+                Just (Just 20000, prepareIdfyHttpManager 20000),
+                -- The payout jobs run here, and HDFC CBX needs its client certificate presented
+                -- on every call; the managers are built just above.
+                Just (Nothing, hdfcCbxManagers)
               ]
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))

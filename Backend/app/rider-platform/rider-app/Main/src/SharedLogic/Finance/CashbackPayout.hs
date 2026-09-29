@@ -101,9 +101,14 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
   emailId <- mapM decrypt person.email
   let originalEntryIds = map (.id) cashbackEntries
       payoutCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
+      -- NOTE (reviewer, remove before merge): compile-only plumbing: batchId = Nothing fills the new
+      --   PayoutSubmission field, which only the HDFC bulk flow sets. Rider cashback always uses
+      --   JuspayFlow, so rider behaviour is the same as main.
       submission =
         PayoutRequest.PayoutSubmission
-          { beneficiaryId = person.id.getId,
+          { -- rider cashback is never part of a bulk batch; the field exists for the HDFC CBX rail
+            batchId = Nothing,
+            beneficiaryId = person.id.getId,
             entityName = DLP.RIDE_OFFER_CASHBACK,
             entityId = person.id.getId,
             entityRefId = Nothing,
@@ -158,3 +163,19 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
     PayoutRequest.PayoutFailed _ err -> do
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+    -- NOTE (reviewer, remove before merge): compile-only plumbing: new case arm for the new lib result
+    --   PayoutAmbiguous. Lib returns it only for BulkFlow and this file always passes JuspayFlow, so it is
+    --   never reached; rider behaviour is the same as main.
+    -- Unreachable on this rail: only the bulk (HDFC CBX) flow distinguishes an ambiguous
+    -- transport failure from a confirmed rejection. Handled explicitly (no cashback hold posted, no
+    -- failure notification) so a future rail that does return it cannot silently fall through to
+    -- "failed".
+    PayoutRequest.PayoutAmbiguous pr err ->
+      logError $
+        "Cashback payout outcome unknown for person="
+          <> person.id.getId
+          <> " payoutRequestId="
+          <> pr.id.getId
+          <> ": "
+          <> err
+          <> " -- hold left in place, needs manual reconciliation"

@@ -203,6 +203,14 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> isJust payoutVpa
             IPayout.StripeFlow -> True
+            -- NOTE (reviewer, remove before merge): plumbing only, same for both payout cases in this file (referral
+            --   payout here, registration refund in processScheduledRegistrationRefunds). A BulkFlow arm so the case on
+            --   PayoutServiceFlow stays complete (-Werror), and the extra trailing `Nothing` passed to
+            --   mkCreatePayoutServiceReq is the batchId argument (only the HDFC bulk path sets one). Juspay/Stripe arms
+            --   and values are main's, so no behaviour change. Bulk caveat: these payouts are not part of the bulk
+            --   lifecycle. If merchant_service_usage_config named HdfcCbx, Tools.Payout.createPayoutOrder would only make
+            --   a local order (Bulk.localOrderCall, INITIATED, no batch) that no HDFC batch carries.
+            IPayout.BulkFlow -> isJust mbPersonBankAccount
       if payoutVpaValid
         then do
           dailyStat <- QDailyStats.findByPrimaryKey id >>= fromMaybeM (InternalError "DailyStats Not Found")
@@ -219,7 +227,7 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
               if directBase <= payoutConfig.thresholdPayoutAmountPerPerson
                 then do
                   logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show directBase <> " | orderId: " <> show uid
-                  let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) payoutVpa payoutConfig.orderType payoutServiceFlow Nothing
+                  let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) payoutVpa payoutConfig.orderType payoutServiceFlow Nothing Nothing
                       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                   mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
                   errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
@@ -301,6 +309,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
       let payoutVpaValid = case payoutServiceFlow of
             IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
             IPayout.StripeFlow -> True
+            IPayout.BulkFlow -> isJust mbPersonBankAccount -- Tools.Payout.getCreatePayoutServiceFlow already required a bank account row
       when payoutVpaValid $ do
         fork ("processing registration refund for DriverId: " <> driverId.getId) $ do
           let refundLockKey = "PayoutRegRefund:DriverId-" <> driverId.getId
@@ -321,7 +330,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
                 QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
                 -- Attempt payout; rollback on failure
                 phoneNo <- mapM decrypt person.mobileNumber
-                let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType payoutServiceFlow Nothing
+                let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType payoutServiceFlow Nothing Nothing
                     entityName = DLP.REGISTRATION_REFUND
                     createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                 logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid

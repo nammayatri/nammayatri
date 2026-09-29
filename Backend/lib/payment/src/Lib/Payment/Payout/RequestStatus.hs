@@ -20,6 +20,12 @@ import qualified Lib.Payment.Payout.History as PayoutHistory
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 
+-- NOTE (reviewer, remove before merge): same function as main, but shared-kernel's Juspay
+--   PayoutOrderStatus has three more cases for the bulk rail: AWAITING_APPROVAL | PROCESSING | DEBITED.
+--   They fall into the `_ -> PROCESSING` case, and updatePayoutRequestStatusFromOrder (Domain/Action.hs)
+--   does nothing for PROCESSING, so the request is left as it is. Juspay difference from main: a Juspay
+--   answer with one of these statuses failed to decode on main; here it is read as "still pending".
+--   Stripe does not use this enum.
 castPayoutOrderStatusToPayoutRequestStatus :: JuspayPayout.PayoutOrderStatus -> PayoutRequestStatus
 castPayoutOrderStatusToPayoutRequestStatus = \case
   JuspayPayout.SUCCESS -> CREDITED
@@ -78,6 +84,13 @@ toPaymentState FAILED = ST.FAILED
 toPaymentState CANCELLED = ST.CANCELLED
 toPaymentState CASH_PAID = ST.CASH_PAID
 toPaymentState CASH_PENDING = ST.CASH_PENDING
+-- NOTE (reviewer, remove before merge): EXCLUDED is a new payout_request status (not on main) for the
+--   HDFC bulk flow: a person picked for a batch who has no usable bank details gets an EXCLUDED request
+--   (with the reason) instead of a payout. These three lines (state, message, event) map it to the
+--   finance-kernel StateMachine state EXCLUDED and event EXCLUDE. Bulk-only: only
+--   Bulk.Batch.recordExclusion writes EXCLUDED. During a rolling deploy, an old server reading an
+--   "excluded" history row fails that one history read.
+toPaymentState EXCLUDED = ST.EXCLUDED
 
 getStatusMessage :: PayoutRequestStatus -> Text
 getStatusMessage INITIATED = "Payout scheduled"
@@ -89,6 +102,7 @@ getStatusMessage RETRYING = "Retrying payment..."
 getStatusMessage FAILED = "Payment failed/cancelled"
 getStatusMessage CASH_PAID = "Payment marked as cash paid"
 getStatusMessage CASH_PENDING = "Payment marked as cash pending"
+getStatusMessage EXCLUDED = "Payout excluded"
 
 toPaymentEvent :: PayoutRequestStatus -> ST.PaymentEvent
 toPaymentEvent INITIATED = ST.INITIATE
@@ -100,3 +114,4 @@ toPaymentEvent RETRYING = ST.RETRY
 toPaymentEvent FAILED = ST.FAIL
 toPaymentEvent CASH_PAID = ST.CREDIT
 toPaymentEvent CASH_PENDING = ST.INITIATE
+toPaymentEvent EXCLUDED = ST.EXCLUDE

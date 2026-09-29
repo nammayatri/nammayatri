@@ -33,6 +33,15 @@ updateFleetOwnerBlockedStatus blocked blockReasonFlag fleetOwnerPersonId = do
     [Se.Set Beam.blocked blocked, Se.Set Beam.blockReasonFlag blockReasonFlag, Se.Set Beam.updatedAt now]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (getId fleetOwnerPersonId)]
 
+-- NOTE (reviewer, remove before merge): new query, used only by the adhoc payout (AdhocPayout.personBlockReasons) to
+--   read the enabled / blocked / blocked-for-scheduled-payout flags of many fleet owners in one query. No existing
+--   query changed, so no Juspay/Stripe effect.
+
+-- | The fleet owner rows of these people, in one query on the primary key.
+findAllByFleetOwnerPersonIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+findAllByFleetOwnerPersonIds [] = pure []
+findAllByFleetOwnerPersonIds personIds = findAllWithKV [Se.Is Beam.fleetOwnerPersonId $ Se.In personIds]
+
 findByVerifiedAndEnabled ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->

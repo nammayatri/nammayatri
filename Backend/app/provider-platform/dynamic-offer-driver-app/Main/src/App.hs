@@ -35,6 +35,7 @@ import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Insurance.Interface (prepareIffcoTokioHttpManager)
+import Kernel.External.Payout.HdfcCbx.Manager (prepareHdfcCbxHttpManagers)
 import Kernel.External.SharedLogic.HyperVerge.Functions (prepareHyperVergeHttpManager)
 import Kernel.External.Tokenize (prepareJourneyMonitoringHttpManager)
 import Kernel.External.Verification.Ekatra.Types (prepareEkatraHttpManager)
@@ -71,6 +72,7 @@ import Network.Wai.Handler.Warp
 import qualified SharedLogic.DriverSupplyMetrics as DSM
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import "utils" Utils.Common.Events as UE
@@ -153,11 +155,29 @@ runDynamicOfferDriverApp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
+        -- NOTE (reviewer, remove before merge): registers the HDFC CBX mutual-TLS managers at startup (every HDFC call
+        --   presents the city's client certificate). prepareHdfcCbxHttpManagers (shared kernel) builds one manager per
+        --   HDFC config, keyed "hdfc-cbx:<groupId>:<clientCode>:<cert hash>"; a client key that can't be decrypted or a
+        --   PEM that won't parse is logged and that config skipped. A failed config read is also caught and logged,
+        --   unlike loadAllProviders above, which stops startup. New HDFC configs / rotated certs need a restart.
+        --   Juspay/Stripe -- no behaviour change: the keys are HDFC-only; no HDFC config means an empty map.
+        -- HDFC CBX calls run on a mutually-authenticated connection, so every configured city's
+        -- certificate becomes a named manager here; the call sites look them up by the same name.
+        -- The configs are read in a try: a bad HDFC row or a failed read must not stop the app (and every
+        -- other city's payouts) from starting -- HDFC payouts fail later instead, as for a bad certificate.
+        hdfcCbxConfigsResult <- try CQMSC.findAllHdfcCbxPayoutConfigs
+        hdfcCbxConfigs <- case hdfcCbxConfigsResult of
+          Left (err :: SomeException) -> do
+            logError $ "HDFC CBX payout configs could not be loaded at startup; HDFC payouts will fail until a restart: " <> show err
+            pure []
+          Right configs -> pure configs
+        hdfcCbxManagers <- prepareHdfcCbxHttpManagers 60000 hdfcCbxConfigs
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
+                Just (Nothing, hdfcCbxManagers),
                 (Nothing,) <$> mkS3MbManager flowRt appEnv appCfg.s3Config,
                 Just (Just 20000, prepareIdfyHttpManager 20000),
                 Just (Just 10000, prepareInternalScriptsHttpManager 10000),

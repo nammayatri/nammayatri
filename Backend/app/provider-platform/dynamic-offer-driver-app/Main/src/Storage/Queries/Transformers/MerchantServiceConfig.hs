@@ -36,6 +36,10 @@ import Kernel.Utils.Common
 import qualified Lib.Dashcam.Domain.Interface as DashcamInter
 import qualified Lib.Dashcam.Domain.Types as Dashcam
 
+-- NOTE (reviewer, remove before merge): plumbing only. getConfigJSON (encode), getPayoutServiceConfigJson (config ->
+--   service name) and mkPayoutServiceConfig (decode) each get an HdfcCbx arm, because the shared kernel's payout
+--   types include HdfcCbx and these cases must stay complete (-Werror). The Juspay and Stripe arms are main's, so
+--   their configs encode and decode exactly as on main.
 getConfigJSON :: Domain.ServiceConfig -> Data.Aeson.Value
 getConfigJSON = \case
   Domain.MapsServiceConfig mapsCfg -> case mapsCfg of
@@ -89,9 +93,11 @@ getConfigJSON = \case
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
     Payout.StripeConfig cfg -> toJSON cfg
+    Payout.HdfcCbxConfig cfg -> toJSON cfg
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
     Payout.StripeConfig cfg -> toJSON cfg
+    Payout.HdfcCbxConfig cfg -> toJSON cfg
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -99,6 +105,7 @@ getConfigJSON = \case
   Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
     Payout.StripeConfig cfg -> toJSON cfg
+    Payout.HdfcCbxConfig cfg -> toJSON cfg
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -263,6 +270,7 @@ getPayoutServiceConfigJson = \case
     Just Stripe.Live -> Payout.Stripe
     Just Stripe.Test -> Payout.StripeTest
     Nothing -> Payout.Stripe
+  Payout.HdfcCbxConfig _ -> Payout.HdfcCbx
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON for serviceName: " <> show serviceName <> " Error:" <> err)) return $ case serviceName of
@@ -369,3 +377,4 @@ mkPayoutServiceConfig configJSON = \case
   Payout.AAJuspay -> Payout.JuspayConfig <$> eitherValue configJSON
   Payout.Stripe -> Payout.StripeConfig <$> eitherValue configJSON
   Payout.StripeTest -> Payout.StripeConfig <$> eitherValue configJSON
+  Payout.HdfcCbx -> Payout.HdfcCbxConfig <$> eitherValue configJSON

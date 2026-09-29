@@ -28,7 +28,7 @@ data StateTransition = StateTransition
 
 data PaymentEntityType = PaymentTransaction | PayoutRequest | Refunds deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data PaymentEvent = INITIATE | AUTHORIZE | CAPTURE | SETTLE | FAIL | REFUND | CANCEL | CREDIT | RETRY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PaymentEvent = INITIATE | AUTHORIZE | CAPTURE | SETTLE | FAIL | REFUND | CANCEL | CREDIT | RETRY | EXCLUDE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data PaymentState
   = PENDING
@@ -45,6 +45,7 @@ data PaymentState
   | RETRYING
   | CASH_PAID
   | CASH_PENDING
+  | EXCLUDED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentEntityType)

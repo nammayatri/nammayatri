@@ -26,6 +26,7 @@ import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
 import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.PayoutBatch as BeamPB
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutRequest as BeamPR
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
@@ -47,6 +48,12 @@ type BeamFlow m r =
     HasSchemaName BeamRF.RefundsT,
     HasSchemaName BeamPOO.PayoutOrderT,
     HasSchemaName BeamPR.PayoutRequestT,
+    -- NOTE (reviewer, remove before merge): for the new payout_batch table (with the BeamPB import above),
+    --   so the lib's PayoutBatch queries run under this same BeamFlow. Compile-time only: every app that
+    --   uses this constraint has a matching `instance HasSchemaName BeamPB.PayoutBatchT` (driver app and
+    --   rider app Storage/Beam/Payment.hs, payment mock Handler.hs). Juspay/Stripe: same as main; no
+    --   Juspay/Stripe code reads or writes payout_batch, and the rider app never creates a batch.
+    HasSchemaName BeamPB.PayoutBatchT,
     HasSchemaName BeamPOT.PayoutTransactionT,
     HasSchemaName BeamPOS.PaymentOrderSplitT,
     HasSchemaName BeamOffer.PaymentOrderOfferT,

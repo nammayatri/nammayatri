@@ -28,6 +28,15 @@ findByServiceAndCity serviceName merchantOperatingCityId = do
 findAllMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [MerchantServiceConfig]
 findAllMerchantOpCityId (Id merchantOperatingCityId) = findAllWithKV [Se.Is BeamMSC.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId]
 
+-- NOTE (reviewer, remove before merge): new read-only query, bulk-only. Its one caller is
+--   Storage.CachedQueries.Merchant.MerchantServiceConfig.findAllHdfcCbxPayoutConfigs (startup), always with an HdfcCbx
+--   service name. No existing query changed, so no Juspay/Stripe effect.
+
+-- | Every city's config for one service. Used at startup to build the mutually-authenticated
+--   HDFC CBX managers, which need the certificate material of every city that has one.
+findAllByServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceName -> m [MerchantServiceConfig]
+findAllByServiceName serviceName = findAllWithKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName]
+
 findOne :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceName -> m (Maybe MerchantServiceConfig)
 findOne serviceName = findAllWithOptionsKV [Se.Is BeamMSC.serviceName $ Se.Eq serviceName] (Se.Desc BeamMSC.createdAt) (Just 1) Nothing <&> listToMaybe
 

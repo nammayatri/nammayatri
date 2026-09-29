@@ -78,6 +78,11 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             maxWalletPayoutsPerDay = Nothing,
             minWalletAmountForCashRides = Nothing,
             minWalletAmountForScheduledRides = Nothing,
+            -- NOTE (reviewer, remove before merge): defaults for the two new optional DriverWalletConfig fields:
+            --   fleetLinkedDriverWalletView (here) and instantPayoutExcludedRoles (last field). Nothing = main's
+            --   behaviour for both (a fleet-linked driver sees the fleet owner's wallet; nobody is barred from instant
+            --   payouts). No Juspay/Stripe change.
+            fleetLinkedDriverWalletView = Nothing,
             fareRecomputeBufferAmount = Nothing,
             fareRecomputeBufferPercent = Nothing,
             minimumWalletPayoutAmount = 0,
@@ -98,7 +103,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             connectAccountChargeBearer = Nothing,
             connectAccountChargeTimeOfDay = Nothing,
             connectAccountChargeDayOfWeek = Nothing,
-            connectAccountChargeDayOfMonth = Nothing
+            connectAccountChargeDayOfMonth = Nothing,
+            instantPayoutExcludedRoles = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 

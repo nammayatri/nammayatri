@@ -56,6 +56,23 @@ findAllWithOptions limit offset mbDriverId mbMobileNumberHash mbFrom mbTo isFail
     (Just limit)
     (Just offset)
 
+-- NOTE (reviewer, remove before merge): new query (main's queries in this file are unchanged). Used only
+--   by the admin batch drill-down (Domain/Action/Dashboard/PayoutBatch.listPayoutBatchOrders).
+--   Juspay/Stripe: no caller, and it cannot return their orders -- payout_order.batch_id (not on main) is
+--   set only for bulk orders (the bulk claim and the instant payout in a bulk city); every other order has
+--   batch_id NULL. Reads by batchId, a KV secondary key on payout_order; DB index idx_payout_order_batch_id
+--   (migration 0893).
+
+-- | Dashboard batch drill-down. Limit and offset are optional; the drill-down passes neither and
+--   reads the whole batch.
+findAllByBatchIdWithOptions :: BeamFlow m r => Text -> Maybe Int -> Maybe Int -> m [PayoutOrder]
+findAllByBatchIdWithOptions batchId limit offset =
+  findAllWithOptionsKV
+    [Se.Is Beam.batchId $ Se.Eq (Just batchId)]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
 findAllByCustomerIdWithLimitOffset :: BeamFlow m r => Maybe Int -> Maybe Int -> Text -> m [PayoutOrder]
 findAllByCustomerIdWithLimitOffset limit offset customerId = do
   findAllWithOptionsKV

@@ -15,6 +15,7 @@ imports:
   Value: Data.Aeson
   Seconds: Kernel.Types.Common
   EntityName: Lib.Payment.Domain.Types.Common
+  PayoutBatchRail: Lib.Payment.Domain.Types.PayoutBatch
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
   CloudType: Kernel.Types.Version
@@ -1053,6 +1054,12 @@ TransporterConfig:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
       enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
+    # Which account a fleet-linked driver's wallet summary is read from.
+    #   FLEET_ACCOUNT  the fleet owner's account, filtered to rides this driver did (main's behaviour)
+    #   OWN_ACCOUNT    the driver's own account only: own balance, entries and payouts, no fleet earnings
+    #   HIDDEN         nothing: an empty wallet
+    FleetLinkedDriverWalletView:
+      enum: "FLEET_ACCOUNT, OWN_ACCOUNT, HIDDEN"
     # The components of the ten-slot fare partition, plus the payment charge, that
     # a surface may club together rather than itemise. Listing a component means
     # "show it as one row"; omitting it means "show its parts separately".
@@ -1084,12 +1091,25 @@ TransporterConfig:
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
       minWalletAmountForScheduledRides: Maybe HighPrecMoney
+      # What a driver linked to a fleet owner sees in the wallet summary. Absent = FLEET_ACCOUNT,
+      # which is main's behaviour.
+      fleetLinkedDriverWalletView: Maybe FleetLinkedDriverWalletView
+      # Present in main's checked-in generated TransporterConfig.hs and read by its hand-written
+      # Transformers/TransporterConfig.hs, but never declared in main's spec -- so regenerating from
+      # the spec dropped them and main's transformer stopped compiling. Declared here so the
+      # generated type matches what main's code already expects.
+      fareRecomputeBufferAmount: Maybe HighPrecMoney
+      fareRecomputeBufferPercent: Maybe Double
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
       fetchWalletTransactionsFromClickhouse: Maybe Bool
       enableWalletGatedTierCheck: Maybe Bool
+      # Roles that may not take an instant (on-demand) wallet payout in this city. Scheduled, bulk and
+      # adhoc payouts are unaffected. FLEET_OWNER also covers FLEET_BUSINESS. Absent: nobody is barred.
+      instantPayoutExcludedRoles: Maybe [Role]
+      # Stripe payment charge (BPP ledger): P = paymentChargeRate% * online cash-in total; bearer decides funding leg.
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double
@@ -2492,7 +2512,7 @@ ScheduledPayoutConfig:
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
   types:
     ScheduledPayoutFrequency:
-      enum: "DAILY, WEEKLY, MONTHLY"
+      enum: "DAILY, WEEKLY, MONTHLY, HOURLY, EVERY_N_DAYS"
   fields:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -2509,6 +2529,18 @@ ScheduledPayoutConfig:
     remark: Maybe Text
     orderType: Text
     timeDiffFromUtc: Seconds
+    itemsPerBatchLimit: Maybe Int
+    defaultPayoutRail: Maybe PayoutBatchRail
+    intervalHours: Maybe Int
+    intervalDays: Maybe Int
+    rescheduleBufferMinutes: Maybe Int
+    bufferCheckEnabled: Maybe Bool
+    # How often the city's bulk payout status-check job runs when it finds nothing due, in minutes.
+    # Read from the DRIVER_WALLET_TRANSACTION row (the only category paid in bulk). Absent: 5.
+    bulkStatusCheckIntervalMinutes: Maybe Int
+    # Most batches one run of that job checks (1..500). Absent: 50. Whatever a run leaves is still due
+    # and is taken by the next run, 5 seconds later.
+    bulkStatusCheckBatchLimit: Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
   constraints:

@@ -136,7 +136,10 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
                 currency = booking.totalPrice.currency
                 entityName = DLP.METRO_BOOKING_CASHBACK
                 payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
-                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType payoutServiceFlow Nothing
+                -- NOTE (reviewer, remove before merge): compile-only plumbing: the extra last Nothing is the
+                --   new batch-id argument of lib mkCreatePayoutServiceReq (used only by HDFC bulk). Rider
+                --   behaviour is the same as main.
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType payoutServiceFlow Nothing Nothing
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
             mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
