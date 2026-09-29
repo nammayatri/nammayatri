@@ -24,6 +24,7 @@ where
 
 import Data.List (nub)
 import Domain.Action.UI.Person
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.PersonStats
@@ -35,6 +36,8 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as YTypes
 import qualified Storage.Queries.Person as Queries
 import qualified Storage.Queries.PersonStats as QPS
+import qualified Storage.Queries.RegistrationToken as QRT
+import Tools.Auth (authTokenCacheKey, merchantIdFallback)
 
 findCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> m (Maybe PersonCityInformation)
 findCityInfoById personId = do
@@ -42,10 +45,23 @@ findCityInfoById personId = do
     Just a -> pure a
     Nothing -> flip whenJust cachePersonCityInfo /=<< Queries.findCityInfoById personId
 
-updateCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> City -> Id DMOC.MerchantOperatingCity -> m ()
-updateCityInfoById personId city merchantOperatingCityId = do
+updateCityInfoById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> Id DM.Merchant -> City -> Id DMOC.MerchantOperatingCity -> m ()
+updateCityInfoById personId merchantId city merchantOperatingCityId = do
   Queries.updateCityInfoById personId city merchantOperatingCityId
   clearCityInfoCache personId
+  refreshRegistrationTokensCity personId merchantId merchantOperatingCityId
+
+-- | The cross-cloud proxy resolves the owning cloud from the token's city, so keep
+--   the person's tokens for the current merchant (and their auth cache in both
+--   clouds) on the new city. Token merchants are resolved via 'merchantIdFallback',
+--   as in auth, so tokens issued under a legacy merchant id still match.
+refreshRegistrationTokensCity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+refreshRegistrationTokensCity personId merchantId merchantOperatingCityId = do
+  regTokens <- filter (\regToken -> merchantIdFallback (Id regToken.merchantId) == merchantId) <$> QRT.findAllByPersonId personId
+  unless (null regTokens) $ do
+    QRT.updateMerchantOperatingCityIdByIds ((.id) <$> regTokens) merchantOperatingCityId
+    forM_ regTokens $ \regToken ->
+      Hedis.runInMultiCloudRedisWrite $ Hedis.del (authTokenCacheKey regToken.token)
 
 updateCustomerTags :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe [YTypes.TagNameValueExpiry] -> Id Person -> m ()
 updateCustomerTags tags personId = do
