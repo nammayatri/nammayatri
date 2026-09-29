@@ -1286,8 +1286,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
-        unlinkedDriver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-        SOnboardingComms.setOnboardingAs transporterConfig unlinkedDriver DI.INDIVIDUAL
+        SOnboardingComms.clearOnboardingAsIfNoFleet transporterConfig personId
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus
