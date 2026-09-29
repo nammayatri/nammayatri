@@ -77,6 +77,7 @@ module SharedLogic.SharedCab.Allocation
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (whenJustM)
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
