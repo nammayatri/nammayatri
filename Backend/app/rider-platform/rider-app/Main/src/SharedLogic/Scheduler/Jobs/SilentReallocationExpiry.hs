@@ -28,9 +28,9 @@ silentReallocationExpiry ::
 silentReallocationExpiry Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       personId = jobData.personId
-  mbCtx <- SilentRealloc.takeSilentReallocationForExpiry personId
+  mbCtx <- SilentRealloc.takeSilentReallocationForExpiry personId jobData.bookingId
   case mbCtx of
-    Just ctx | ctx.bookingId == jobData.bookingId -> do
+    Just ctx -> do
       booking <- QB.findById ctx.bookingId >>= fromMaybeM (BookingDoesNotExist ctx.bookingId.getId)
       mbNewerBooking <- QB.findByTransactionIdAndStatusWithKVAndDB booking.transactionId DB.activeBookingStatus
       case mbNewerBooking of

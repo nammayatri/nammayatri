@@ -72,6 +72,7 @@ data SearchRequestT f = SearchRequestT
     isMeterRideSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSilentReallocationEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isWhatsappRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     maxDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),

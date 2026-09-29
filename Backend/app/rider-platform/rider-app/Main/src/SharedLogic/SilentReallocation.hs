@@ -75,12 +75,16 @@ clearSilentReallocation personId = Redis.withCrossAppRedis $ Redis.del (silentRe
 
 -- | For the expiry job only: read the window context even though 'expiresAt' has
 -- (by design) just passed, and close it. 'getSilentReallocation' hides an elapsed
--- window from the API, which is exactly what the job must not rely on.
-takeSilentReallocationForExpiry :: SilentReallocFlow m r => Id DP.Person -> m (Maybe SilentReallocationCtx)
-takeSilentReallocationForExpiry personId = do
+-- window from the API, which is exactly what the job must not rely on. Only a window
+-- opened for this job's booking is closed; a stale job must not end a newer window.
+takeSilentReallocationForExpiry :: SilentReallocFlow m r => Id DP.Person -> Id DRB.Booking -> m (Maybe SilentReallocationCtx)
+takeSilentReallocationForExpiry personId bookingId = do
   mbCtx <- Redis.withCrossAppRedis $ Redis.safeGet (silentReallocationKey personId)
-  whenJust mbCtx $ \_ -> clearSilentReallocation personId
-  pure mbCtx
+  case mbCtx of
+    Just ctx | ctx.bookingId == bookingId -> do
+      clearSilentReallocation personId
+      pure (Just ctx)
+    _ -> pure Nothing
 
 -- | For an active-bookings query: if the rider is inside a silent window and no newer
 -- active booking exists, return the reallocated booking so the app keeps its tracking

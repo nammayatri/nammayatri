@@ -72,6 +72,7 @@ triggerSubscriptionSearch subscription = do
             enforceTollRoute = Nothing,
             startTime = Nothing,
             isReallocationEnabled = Nothing,
+            isSilentReallocationEnabled = Nothing,
             fareParametersInRateCard = Nothing,
             quotesUnifiedFlow = Nothing,
             sessionToken = Nothing,

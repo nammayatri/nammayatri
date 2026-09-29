@@ -70,6 +70,7 @@ data SearchRequest = SearchRequest
     isMeterRideSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMultimodalSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPetRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isSilentReallocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isWhatsappRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,

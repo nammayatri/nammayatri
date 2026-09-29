@@ -279,6 +279,7 @@ mkBackendHandle merchantId mocId _ctx =
           enforceTollRoute = Nothing,
           startTime = Nothing,
           isReallocationEnabled = Nothing,
+          isSilentReallocationEnabled = Nothing,
           fareParametersInRateCard = Nothing,
           quotesUnifiedFlow = Just True,
           sessionToken = Nothing,
@@ -310,6 +311,7 @@ mkBackendHandle merchantId mocId _ctx =
           isSpecialLocation = Nothing,
           quotesUnifiedFlow = Nothing,
           isReallocationEnabled = Nothing,
+          isSilentReallocationEnabled = Nothing,
           numberOfLuggages = Nothing
         }
 
