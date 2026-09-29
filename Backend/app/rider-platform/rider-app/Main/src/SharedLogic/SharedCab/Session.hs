@@ -26,8 +26,6 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
-import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
-import SharedLogic.SharedCab.Allocation.Types (parseLtsTimestamp)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Events as Events
@@ -133,14 +131,10 @@ closeLiveTrip plate reason now =
 
 -- | LTS moves before anything is persisted; if it fails, the select/change fails and the session stays as it was.
 switchTo :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Session -> m Session
-switchTo reason newRoute s = switchAs reason s.driverId newRoute s
-
--- | `switchTo` under `driver` (F14 takeover): the old driver's LTS ride ends, the new driver's begins.
-switchAs :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m) => DVT.VehicleTripEndReason -> Text -> Text -> Session -> m Session
-switchAs reason driver newRoute s = do
+switchTo reason newRoute s = do
   now <- getCurrentTime
   tripId <- generateGUID
-  let s' = if driver == s.driverId then switchRoute newRoute tripId s else takeOver driver newRoute tripId s
+  let s' = switchRoute newRoute tripId s
   withAttach (Just s) s' (replaceLiveTrip reason now (Just s) s') <* Events.forSession (Events.RouteChanged s.routeCode) s'
 
 -- | The live-trip index (1575) allows one ACTIVE/PAUSED row per plate, so the old run closes before the new one is
@@ -193,41 +187,10 @@ selectRoute ::
   Maybe SelectRouteMode ->
   OpenSessionReq ->
   m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
-selectRoute mode req = do
-  evidence <- takeoverEvidence req.driverId plate
-  withPlateLock plate $ selectLocked mode req evidence
-  where
-    plate = canonicalisePlate req.vehicleNumber
-
--- | F14: what LTS says of another driver's live session on the plate, read BEFORE the plate lock (no network under it):
--- the route it was read on, and the plate's ping there (Nothing = LTS unreadable). Unread when there's nothing to take over.
-takeoverEvidence :: LtsFlow m r c => Text -> Text -> m (Maybe (Text, Maybe (Maybe Ping)))
-takeoverEvidence driver plate =
-  readSession plate >>= \case
-    Just s | s.driverId /= driver && s.status == ACTIVE -> do
-      now <- getCurrentTime
-      ping <-
-        withTryCatch "sharedCab:takeoverPing" (LTS.vehicleTrackingOnRoute (LTS.ByRoute s.routeCode)) >>= \case
-          Left err -> Nothing <$ logWarning ("sharedCab: takeover ping read failed for " <> plate <> ": " <> show err)
-          Right vehicles -> pure . Just $ listToMaybe [readPing now (v.vehicleInfo.timestamp >>= parseLtsTimestamp) | v <- vehicles, canonicalisePlate v.vehicleNumber == plate]
-      pure (Just (s.routeCode, ping))
-    _ -> pure Nothing
-
-selectLocked :: (ServiceFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) => Maybe SelectRouteMode -> OpenSessionReq -> Maybe (Text, Maybe (Maybe Ping)) -> m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
-selectLocked mode req evidence = do
+selectRoute mode req = withPlateLock plate $ do
   prior <- readSession plate
-  now0 <- getCurrentTime
-  let takeoverOk s = canTakeOver takeoverStaleAfter endSilentAfter now0 s (maybe Nothing (\(route, ping) -> if route == s.routeCode then ping else Nothing) evidence)
-  liftSession (planSelect req.driverId req.routeCode takeoverOk prior) >>= \case
+  liftSession (planSelect req.driverId req.routeCode prior) >>= \case
     KeepRoute s -> pure (Right s)
-    TakeOver s -> do
-      onBoard <- ridersOnBoard plate
-      case mode of
-        _ | null onBoard || s.routeCode == req.routeCode -> Right <$> switchAs DVT.ROUTE_CHANGED req.driverId req.routeCode s
-        Just Force -> do
-          s' <- switchAs DVT.ROUTE_CHANGED req.driverId req.routeCode s
-          Right s' <$ mapM_ (Notify.notifyRouteChange req.routeCode) onBoard
-        _ -> pure (Left onBoard)
     ChangeRoute s -> do
       onBoard <- ridersOnBoard plate
       case mode of

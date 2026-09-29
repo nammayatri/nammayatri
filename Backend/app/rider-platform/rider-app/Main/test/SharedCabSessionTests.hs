@@ -5,7 +5,7 @@ module SharedCabSessionTests (tests) where
 
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Text (Text)
-import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
+import Data.Time (UTCTime (..), fromGregorian)
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import qualified "rider-app" Domain.Types.VehicleTrip as DVT
 import "mobility-core" Kernel.Types.Id (Id (..))
@@ -42,31 +42,11 @@ active =
       vehicleTripId = Id "trip1"
     }
 
-at :: Int -> UTCTime
-at n = addUTCTime (fromIntegral n) t0
-
 tests :: TestTree
 tests =
   testGroup
     "SharedCab session state"
-    [ testCase "F14: another driver's session is taken over once it is judged abandoned" $
-        planSelect "d2" "R1" (const True) (Just active) @?= Right (TakeOver active),
-      testCase "F14: a takeover is refused while the judge says the cab is live" $
-        planSelect "d2" "R1" (\s -> canTakeOver takeoverStaleAfter endSilentAfter (at 600) s (Just (Just (SeenAt (at 590))))) (Just active) @?= Left SessionHeldByAnotherDriver,
-      testCase "F14: a paused session can be taken over" $
-        canTakeOver takeoverStaleAfter endSilentAfter (at 10) active {status = PAUSED} Nothing @?= True,
-      testCase "F14: a ping older than the stale window can be taken over" $
-        canTakeOver takeoverStaleAfter endSilentAfter (at 600) active (Just (Just (SeenAt (at 300)))) @?= True,
-      testCase "F14: a fresh ping keeps the session" $
-        canTakeOver takeoverStaleAfter endSilentAfter (at 600) active (Just (Just (SeenAt (at 500)))) @?= False,
-      testCase "F14: LTS unread is no evidence" $
-        canTakeOver takeoverStaleAfter endSilentAfter (at 6000) active Nothing @?= False,
-      testCase "F14: no ping on the route counts from the session start" $ do
-        canTakeOver takeoverStaleAfter endSilentAfter (at 600) active (Just Nothing) @?= True
-        canTakeOver takeoverStaleAfter endSilentAfter (at 60) active (Just Nothing) @?= False,
-      testCase "F14: a takeover keeps the plate's run but hands it to the new driver" $
-        takeOver "d2" "R1" (Id "trip2") active @?= active {driverId = "d2", vehicleTripId = Id "trip2", version = 4},
-      testCase "R24: a cab-full fill counts no offline boardings, a driver count does" $ do
+    [ testCase "R24: a cab-full fill counts no offline boardings, a driver count does" $ do
         let full = fillCab 1 active
         walkupsToCount CabFullFill active full @?= 0
         walkupsToCount DriverCounted active full @?= 3,
@@ -84,15 +64,15 @@ tests =
         shouldDropOnDeadSession (Just ENDED) False [TS.ACTIVE] @?= False
         shouldDropOnDeadSession (Just ENDED) False [TS.USED] @?= False,
       testCase "second driver on the same plate is rejected" $
-        planSelect "d2" "R1" (const False) (Just active) @?= Left SessionHeldByAnotherDriver,
+        planSelect "d2" "R1" (Just active) @?= Left SessionHeldByAnotherDriver,
       testCase "second driver can't drive another's session either" $
         ownedSession "d2" (Just active) @?= Left SessionHeldByAnotherDriver,
       testCase "an ENDED session frees the plate for another driver" $
-        planSelect "d2" "R1" (const False) (Just (endSession active)) @?= Right OpenSession,
+        planSelect "d2" "R1" (Just (endSession active)) @?= Right OpenSession,
       testCase "same driver, same route is a no-op" $
-        planSelect "d1" "R1" (const False) (Just active) @?= Right (KeepRoute active),
+        planSelect "d1" "R1" (Just active) @?= Right (KeepRoute active),
       testCase "same driver, other route is a route change" $
-        planSelect "d1" "R2" (const False) (Just active) @?= Right (ChangeRoute active),
+        planSelect "d1" "R2" (Just active) @?= Right (ChangeRoute active),
       testCase "route change points the session at the new trip" $
         switchRoute "R2" (Id "trip2") active
           @?= active {routeCode = "R2", vehicleTripId = Id "trip2", version = 4},

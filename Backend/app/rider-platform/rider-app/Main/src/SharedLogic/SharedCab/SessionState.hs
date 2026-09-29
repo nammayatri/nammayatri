@@ -9,10 +9,6 @@ module SharedLogic.SharedCab.SessionState
     SelectPlan (..),
     RouteSetMoves (..),
     planSelect,
-    canTakeOver,
-    takeoverStaleAfter,
-    endSilentAfter,
-    takeOver,
     WalkupSource (..),
     walkupsToCount,
     shouldDropOnDeadSession,
@@ -117,7 +113,7 @@ data OpenSessionReq = OpenSessionReq
 data EndRouteAction = StartReturn | EndRoute | EndForNow
   deriving (Show, Eq)
 
-data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session | TakeOver Session
+data SelectPlan = OpenSession | ChangeRoute Session | KeepRoute Session
   deriving (Show, Eq)
 
 -- | Route sets list only ACTIVE sessions, so `addTo` is re-asserted on every write (heals a lost member).
@@ -130,36 +126,14 @@ data RouteSetMoves = RouteSetMoves
 isLive :: Session -> Bool
 isLive s = s.status /= ENDED
 
--- | `takeoverOk` says whether another driver's live session is abandoned (`canTakeOver`).
-planSelect :: Text -> Text -> (Session -> Bool) -> Maybe Session -> Either SharedCabSessionError SelectPlan
-planSelect driver route takeoverOk = \case
+planSelect :: Text -> Text -> Maybe Session -> Either SharedCabSessionError SelectPlan
+planSelect driver route = \case
   Just s
     | not (isLive s) -> Right OpenSession
-    | s.driverId /= driver -> if takeoverOk s then Right (TakeOver s) else Left SessionHeldByAnotherDriver
+    | s.driverId /= driver -> Left SessionHeldByAnotherDriver
     | s.routeCode == route -> Right (KeepRoute s)
     | otherwise -> Right (ChangeRoute s)
   Nothing -> Right OpenSession
-
--- | F14: a second driver on the plate may take a live session over once its driver is gone: PAUSED, or its plate's LTS ping
--- silent for `staleAfter` (no ping on the route = silent since the session began). Nothing (LTS unread) or an unreadable ping is
--- no evidence, so a live cab is never taken; `endAfter` is the expiry job's, past which an unreadable ping stops shielding.
-canTakeOver :: NominalDiffTime -> NominalDiffTime -> UTCTime -> Session -> Maybe (Maybe Ping) -> Bool
-canTakeOver staleAfter endAfter now s evidence
-  | s.status == PAUSED = True
-  | otherwise = case evidence of
-    Nothing -> False
-    Just ping -> maybe False (\lastSeen -> diffUTCTime now lastSeen >= staleAfter) (lastSeenFor endAfter now s.startedAt ping)
-
-takeoverStaleAfter :: NominalDiffTime
-takeoverStaleAfter = 3 * 60
-
--- rider_config.noLocationEndMin default: the expiry job ends a session this long silent.
-endSilentAfter :: NominalDiffTime
-endSilentAfter = 60 * 60
-
--- | The new driver inherits the plate's run: riders and walk-ups stay, the trip and LTS attach are the new driver's.
-takeOver :: Text -> Text -> Id DVT.VehicleTrip -> Session -> Session
-takeOver driver route tripId s = (switchRoute route tripId s) {driverId = driver}
 
 ownedSession :: Text -> Maybe Session -> Either SharedCabSessionError Session
 ownedSession driver = \case

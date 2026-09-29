@@ -31,7 +31,7 @@ pauseAfter :: NominalDiffTime
 pauseAfter = 15 * 60
 
 endAfter :: NominalDiffTime
-endAfter = endSilentAfter
+endAfter = 60 * 60
 
 sharedCabSessionExpiry :: (LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m, Redis.HedisLTSFlowEnv r, ServiceFlow m r, Allocation.InternalEndpointFlow m r) => Job 'SharedCabSessionExpiry -> m ExecutionResult
 sharedCabSessionExpiry Job {jobInfo} = do
