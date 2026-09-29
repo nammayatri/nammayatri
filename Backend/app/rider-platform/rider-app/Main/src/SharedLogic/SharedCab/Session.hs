@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
+import SharedLogic.SharedCab.DegradedSweepSchedule (ensureDegradedSweep)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.ExpirySchedule (ensureExpiryJob)
 import SharedLogic.SharedCab.LtsAttach
@@ -183,7 +184,7 @@ finish reason s = do
 -- | Open a session, or change route if this driver already has one (idempotent for the same route).
 -- A change with riders on board (`04` §4) needs a mode: Left lists them when there is none.
 selectRoute ::
-  (ServiceFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) =>
+  (ServiceFlow m r, Redis.HedisFlow m r, LtsFlow m r c, Events.EventFlow m r, MonadMask m, JobCreator r m) =>
   Maybe SelectRouteMode ->
   OpenSessionReq ->
   m (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
@@ -207,6 +208,12 @@ selectRoute mode req = withPlateLock plate $ do
       let s = newSession req tripId now prior
       opened <- withAttach Nothing s $ replaceLiveTrip DVT.SESSION_TIMEOUT now prior s
       ensureExpiryJob s.merchantId s.merchantOperatingCityId
+      -- R51: a rider `finish` can't drop is only ever swept if the city has a chain, and a city with sessions has them. Seeded
+      -- here (idempotent, and it heals a lapsed chain) rather than in `finish`, which runs from the expiry job and the API
+      -- with no scheduler constraint; a failure must not fail the open.
+      withTryCatch "sharedCabSeedSweep" (ensureDegradedSweep s.merchantId s.merchantOperatingCityId) >>= \case
+        Left e -> logError $ "sharedCab: couldn't seed the degraded sweep for " <> plate <> ": " <> show e
+        Right () -> pure ()
       Events.forSession Events.SessionStarted opened
       pure (Right opened)
   where
