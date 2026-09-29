@@ -148,7 +148,11 @@ tests =
         map View.walkMinutesAway [0, 60, 833, 5000] @?= [0, 1, 10, 60],
       testCase "R41: the group relays the row's ARRIVING status, walking ETA and deadline" $
         let deadline = Just (addUTCTime 90 t0)
-            arriving = (row "b1" "Asha" 1 "A" "C" False) {View.riderStatus = View.ARRIVING, View.minutesAway = Just 3, View.expiresAt = deadline}
+            arriving =
+              View.RiderRow
+                { bookingId = "b1", firstName = "Asha", seats = 1, boardStopCode = "A", dropStopCode = "C", boarded = False, fare = 10,
+                  riderStatus = View.ARRIVING, minutesAway = Just 3, expiresAt = deadline
+                }
          in View.groupRidersByStop routeStops [arriving]
               @?= [View.RidersAtStop "Alpha" [View.BoardingRider "b1" "Asha" 1 "Charlie" 10 View.ARRIVING (Just 3) deadline] []],
       testCase "H3: finish reports exactly the riders whose drop failed" $
