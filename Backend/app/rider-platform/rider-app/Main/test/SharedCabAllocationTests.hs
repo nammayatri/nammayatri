@@ -8,10 +8,12 @@ import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
 import Data.Text (Text)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import "rider-app" Domain.Action.UI.SharedCab (skipReason)
+import qualified "rider-app" Domain.Types.FRFSTicketBookingStatus as BS
+import qualified "rider-app" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -104,6 +106,15 @@ tests =
       testCase "R19: a skipped cab is never offered to that booking again" $
         map (.rcSession.vehicleNumber) (withoutSkipped ["ML05B2222"] (map candidate ["ML05A1111", "ML05B2222", "ML05C3333"]))
           @?= ["ML05A1111", "ML05C3333"],
+      testCase "a close needs a live booking still holding the plate with nobody boarded" $
+        [ closable "P1" BS.CONFIRMED (Just "P1") [TS.ACTIVE, TS.ACTIVE],
+          closable "P1" BS.CONFIRMED (Just "P1") [TS.ACTIVE, TS.INPROGRESS],
+          closable "P1" BS.CONFIRMED (Just "P1") [TS.INPROGRESS],
+          closable "P1" BS.CANCELLED (Just "P1") [TS.ACTIVE],
+          closable "P1" BS.CONFIRMED (Just "P2") [TS.ACTIVE],
+          closable "P1" BS.CONFIRMED Nothing [TS.ACTIVE]
+        ]
+          @?= [True, False, False, False, False, False],
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing
     ]

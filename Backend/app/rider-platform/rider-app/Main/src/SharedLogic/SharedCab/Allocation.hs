@@ -42,6 +42,7 @@ module SharedLogic.SharedCab.Allocation
     skipSharedCabAllocation,
     releaseUnboarded,
     allocatedPlate,
+    closable,
     withCityTickLease,
     allocationPass,
     readRoutePositions,
@@ -188,10 +189,19 @@ findingOf (b, statuses) = do
 
 -- | 05 §2 ALLOCATED: plate set and nobody boarded (every ticket still ACTIVE); the plate it holds.
 allocatedPlate :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe Text
-allocatedPlate (b, statuses) = do
-  plate <- b.vehicleNumber
+allocatedPlate (b, statuses) = plateIfUnboarded b.vehicleNumber statuses
+
+plateIfUnboarded :: Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Maybe Text
+plateIfUnboarded mbPlate statuses = do
+  plate <- mbPlate
   guard (not (null statuses) && all (== DFRFSTicket.ACTIVE) statuses)
   pure plate
+
+-- | The under-lock gate of every close: the booking is still live, still holds the plate the closer
+-- believes it does, and nobody has boarded since the closer's pre-lock read. A boarded rider keeps the plate.
+closable :: Text -> FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool
+closable expectedPlate status mbPlate statuses =
+  status == CONFIRMED && plateIfUnboarded mbPlate statuses == Just expectedPlate
 
 --------------------------------------------------------------------------------
 -- LTS positions: one HGETALL on route:{routeCode} (05 §3 pseudo-code; 04 §3 join key)
@@ -437,21 +447,25 @@ closeLocked ::
   m (Maybe (Id DMOC.MerchantOperatingCity, Bool))
 closeLocked cfg bookingId expectedPlate outcome =
   QFRFSTicketBooking.findById bookingId >>= \case
-    Just b
-      | b.vehicleNumber == Just expectedPlate -> do
-        QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
-        shared $ Redis.del (allocKey bookingId.getId)
-        -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
-        attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
-        let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
-        shared $ Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
-        -- R16/R10: push "board any cab" once, exactly on the close that crosses maxAttempts (not on
-        -- every close after -- the engine keeps retrying a FALLBACK booking, this just stops the spam).
-        let fallbackJustTriggered = attemptsBefore < cfg.maxAttempts && attemptsNow >= cfg.maxAttempts
-        when fallbackJustTriggered $
-          logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
-        pure (Just (b.merchantOperatingCityId, fallbackJustTriggered))
-    _ -> pure Nothing
+    Nothing -> pure Nothing
+    Just b -> do
+      -- boarding flips tickets under this same booking lock, so this read is the truth the closers' pre-lock ones weren't
+      statuses <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId b.id
+      if closable expectedPlate b.status b.vehicleNumber statuses then Just <$> close b else pure Nothing
+  where
+    close b = do
+      QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
+      shared $ Redis.del (allocKey bookingId.getId)
+      -- //TODO(report Q1): a Redis flush resets attempts by design (05 §11 flush row).
+      attemptsBefore <- readAttempts (attemptsKey bookingId.getId)
+      let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
+      shared $ Redis.setExp (attemptsKey bookingId.getId) attemptsNow cfg.findingTimeoutSec
+      -- R16/R10: push "board any cab" once, exactly on the close that crosses maxAttempts (not on
+      -- every close after -- the engine keeps retrying a FALLBACK booking, this just stops the spam).
+      let fallbackJustTriggered = attemptsBefore < cfg.maxAttempts && attemptsNow >= cfg.maxAttempts
+      when fallbackJustTriggered $
+        logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); R10 fallback surface"
+      pure (b.merchantOperatingCityId, fallbackJustTriggered)
 
 eventBlame :: Blame -> Events.Blame
 eventBlame = \case
