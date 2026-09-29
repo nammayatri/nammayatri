@@ -99,7 +99,7 @@ tests =
       testCase "a route without a direction suffix has no return" $
         returnRouteOf "SC-MAWLAI" @?= Left NoReturnRoute,
       testCase "ridersByStop: waiting riders board at their stop, boarded riders alight at theirs, in route order" $
-        View.ridersByStop
+        View.groupRidersByStop
           routeStops
           [ row "b1" "Asha" 2 "A" "C" False,
             row "b2" "Ravi" 1 "A" "B" True,
@@ -109,8 +109,8 @@ tests =
                 View.RidersAtStop "Bravo" [boarding "b3" "Mei" 1 "Charlie"] [View.AlightingRider "b2" "Ravi" 1]
               ],
       testCase "ridersByStop: a booking holding no seat, an unknown stop and an empty cab produce nothing" $ do
-        View.ridersByStop routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 1 "Z" "Y" False] @?= []
-        View.ridersByStop routeStops [] @?= [],
+        View.groupRidersByStop routeStops [row "b1" "Asha" 0 "A" "C" False, row "b2" "Ravi" 1 "Z" "Y" False] @?= []
+        View.groupRidersByStop routeStops [] @?= [],
       testCase "expiry and ops ends drop the riders as the tick" $
         map endDropBy [DVT.SESSION_TIMEOUT, DVT.OPS_FORCED] @?= [Events.DroppedByTick, Events.DroppedByTick],
       testCase "a driver's end drops the riders as the driver" $

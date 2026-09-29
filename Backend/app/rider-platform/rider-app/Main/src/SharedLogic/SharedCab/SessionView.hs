@@ -125,8 +125,8 @@ data RiderRow = RiderRow
 
 -- | Per stop of the route, in route order, the riders still to board there and the boarded riders getting off
 -- there; stops with neither are left out, as are rows holding no seat and stops the route does not have.
-ridersByStop :: [(Text, Text)] -> [RiderRow] -> [RidersAtStop]
-ridersByStop stops rows =
+groupRidersByStop :: [(Text, Text)] -> [RiderRow] -> [RidersAtStop]
+groupRidersByStop stops rows =
   [ RidersAtStop {stopName, boarding, alighting}
     | (code, stopName) <- stops,
       let boarding = [BoardingRider {bookingId = r.bookingId, firstName = r.firstName, seats = r.seats, dropStop = nameOf r.dropStopCode, fare = r.fare, riderStatus = MINUTES_AWAY, minutesAway = Nothing, expiresAt = Nothing} | r <- held, not r.boarded, r.boardStopCode == code],

@@ -283,7 +283,7 @@ mkSessionResp s = do
         walkupCount = s.walkupCount,
         available = max 0 (s.capacity - s.walkupCount - bookedSeats),
         version = s.version,
-        ridersByStop = View.ridersByStop [(st.stopCode, st.stopName) | st <- stops] riders,
+        ridersByStop = View.groupRidersByStop [(st.stopCode, st.stopName) | st <- stops] riders,
         demandAhead =
           [ View.DemandAtStop {stopName = stop.stopName, waiting = d.waiting, searching = d.searching, windowMin = Demand.searchWindowMin}
             | stop <- stops,
