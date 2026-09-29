@@ -1,11 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
 
 -- | R18: the "which counter to bump" decision (SharedLogic.SharedCab.BlameCount.subjectFor) is the
 -- only branch in the bump path -- everything else is plumbing (one atomic upsert). Falsified by
 -- swapping the outcome BlameRider/BlameDriver arm and watching the wrong counter light up.
 module SharedCabBlameCountTests (tests) where
 
-import qualified Domain.Types.Merchant as DM
+import qualified "rider-app" Domain.Types.Merchant as DM
 import qualified Domain.Types.SharedCabBlameCount as DBlame
 import Kernel.Prelude
 import Kernel.Types.Id
