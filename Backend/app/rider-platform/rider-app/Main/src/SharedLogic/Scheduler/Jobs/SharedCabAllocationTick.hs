@@ -22,7 +22,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
-import SharedLogic.SharedCab.Allocation (allocationPass, sharedCabAllocationEnabled, withCityTickLease)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass, sharedCabAllocationEnabled, withCityTickLease)
 import SharedLogic.SharedCab.AllocationSchedule (claimTickRun, scheduleNextTick)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import SharedLogic.SharedCab.StopProgress (runStopProgress)
@@ -39,6 +39,7 @@ sharedCabAllocationTick ::
     EsqDBFlow m r,
     MonadMask m,
     HasKafkaProducer r,
+    InternalEndpointFlow m r,
     Metrics.CoreMetrics m,
     HasField "blackListedJobs" r [Text],
     LtsFlow m r c
