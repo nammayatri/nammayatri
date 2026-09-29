@@ -219,7 +219,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   let runBody = do
         when (isNameCompareRequired transporterConfig verifyBy) $
           validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
-        mbExistingLicense <- Query.findByDLNumber driverLicenseNumber
+        mbExistingLicense <- Query.findByDLNumber driverLicenseNumber person.merchantId
         -- let mdriverLicense =
         --       mbExistingLicense >>= \dl ->
         --         if dl.verificationStatus == Documents.INVALID
