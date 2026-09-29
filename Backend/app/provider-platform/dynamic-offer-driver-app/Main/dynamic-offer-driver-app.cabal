@@ -754,6 +754,7 @@ library
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SharedCab.Flag
+      SharedLogic.SharedCab.ReconcilerSeed
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SurgeConfig

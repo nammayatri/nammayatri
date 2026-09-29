@@ -26,6 +26,10 @@ module Domain.Action.UI.SharedCab where
 -- (set-/clearSharedCabSessionActive) — the single exported wrapper around
 -- updateSharedCabSessionActive inside the cross-app master Redis cell; this
 -- module no longer calls the query fn directly.
+-- (R26) selectSharedCabRoute additionally re-runs the idempotent reconciler
+-- chain seeder via SharedLogic.SharedCab.ReconcilerSeed (fire-and-forget):
+-- the select-route hook is the boot-INDEPENDENT dead-chain recovery path —
+-- see that module's header for the recovery contract.
 
 import API.Types.UI.SharedCab
 import Data.Time (utctDay)
@@ -42,10 +46,12 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as SharedCabBAP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
+import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
 import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -103,11 +109,17 @@ setSharedCabSessionActiveBeforeSelect driverId = do
     _ -> SharedCabFlag.setSharedCabSessionActive driverId
 
 selectSharedCabRoute :: DriverAuthInfo -> SelectRouteReq -> Flow SelectRouteResp
-selectSharedCabRoute (personId, _merchantId, merchantOpCityId) req = do
+selectSharedCabRoute (personId, merchantId, merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
   setSharedCabSessionActiveBeforeSelect personId
+  -- R26 dead-chain recovery (select-route seeder hook): a shared-cab select is
+  -- the city's hottest driver action, so each call re-runs the idempotent
+  -- chain seeder — cheap no-op while the marker is alive (one Redis probe),
+  -- a real reseed once a dead chain's marker has expired. Fire-and-forget:
+  -- a seed failure is logged, NEVER propagated into the driver's select.
+  SharedCabSeed.trySeedSharedCabReconcilerChain (Just merchantId) merchantOpCityId (SharedCabReconcilerJobData merchantId merchantOpCityId)
   SharedCabBAP.selectSharedCabRoute bap.apiKey bap.url $
     SharedCabBAP.BAPSelectRouteReq
       { SharedCabBAP.mode = req.mode,

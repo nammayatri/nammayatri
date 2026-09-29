@@ -42,41 +42,27 @@
 --   (Common.SharedCabReconcilerTrigger) — see
 --   Domain.Action.Dashboard.Management.Merchant.postMerchantSchedulerTrigger.
 --
---   DUPLICATE-CHAIN GUARD (R26): the trigger seed above goes through
---   'seedSharedCabReconcilerChain', so a second seed (dashboard re-trigger)
---   or a redeploy can not start a second self-re-enqueuing chain for the
---   same city:
---
---     1. DB-EXISTENCE: a scheduler_job row of jobType SharedCabReconciler
---        for this city with status Pending means a chain is alive and the
---        seed is skipped. ONLY Pending counts — Completed/Failed rows are
---        dead chain roots and must never block a reseed. NOTE (claude's
---        STEP-0 check, verified in R26): driver-app runs the RedisBased
---        scheduler (dhall schedulerType) and SharedCabReconciler is NOT in
---        jobInfoMap, so under the deployed config job records live only in
---        Redis (zset + stream), the Redis-side lookup fns are stubs that
---        return [], and the table check is VACUOUS — the no-TTL SETNX below
---        is the de-facto primary guard; the DB check becomes the durable
---        truth the day the job is marked long-running or the scheduler
---        flips to DbBased.
---     2. SETNX sharedcab:reconciler:seeded:<city> (no TTL, raw cross-app
---        key in the master cell): wins the first-seed race — Main and the
---        Allocator scheduler use different key prefixes, so the key goes
---        through withCrossAppRedis to strip them. Loser skips; winner
---        creates the first job. If createJob fails after winning, the
---        marker is released again so a later trigger can retry, and the
---        seed call fails loudly instead of returning a false Success.
+--   DUPLICATE-CHAIN GUARD + DEAD-CHAIN RECOVERY (R26): every seed goes
+--   through 'SharedLogic.SharedCab.ReconcilerSeed.seedSharedCabReconcilerChain'
+--   (DB-existence, then one ATOMIC SETNX-WITH-TTL on the cross-app marker
+--   key), so a re-trigger, redeploy or hot-path retry can not start a second
+--   self-re-enqueuing chain for the same city. DEAD-CHAIN RECOVERY: the
+--   marker carries TTL = 3 x the fire interval and EVERY FIRE of this job
+--   refreshes it (below, before the enabled check, so even a disabled fire
+--   refreshes while the chain exists); a dead chain stops refreshing, the
+--   marker self-expires, and the next recovery hook (boot seeder or
+--   select-route seeder) recreates exactly one chain. Detection latency =
+--   marker TTL + the next hook. The full contract lives in the module
+--   header of SharedLogic.SharedCab.ReconcilerSeed.
 --
 --   The chain's own re-enqueue (below, after every fire) is deliberately
 --   NOT guarded: a fire is by definition inside the live chain. When the
 --   chain INTENTIONALLY ends (reconciler disabled for the city) the
 --   marker is released so ops can re-enable and reseed later; a full
---   Redis flush loses chain + marker together, so the next trigger then
+--   Redis flush loses chain + marker together, so the next hook then
 --   reseeds exactly one clean chain.
 module SharedLogic.Allocator.Jobs.SharedCab.Reconciler
   ( runSharedCabReconcilerJob,
-    seedSharedCabReconcilerChain,
-    sharedCabReconcilerSeededKey,
   )
 where
 
@@ -84,15 +70,12 @@ import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Domain.Types.DriverInformation as DDI
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import EulerHS.Types (EulerClient, client)
-import Kernel.Beam.Functions (findAllWithKVScheduler)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error (GenericError (InternalError))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.APIError (APICallError (..))
@@ -100,23 +83,17 @@ import qualified Kernel.Utils.Servant.Client as EC
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
-import qualified Lib.Scheduler.JobStorageType.DB.Table as SJT
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import Servant hiding (throwError)
-import Sequelize as Se
 import SharedLogic.Allocator (AllocatorJobType (SharedCabReconciler), SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
+import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Metrics (CoreMetrics)
-
--- Fixed sweep interval; per-city on/off lives on TransporterConfig itself, so
--- cadence stays a code constant for the pilot (make it config if ops asks).
-sharedCabReconcilerInterval :: NominalDiffTime
-sharedCabReconcilerInterval = 900 -- 15 minutes
 
 sharedCabReconcilerBatchSize :: Int
 sharedCabReconcilerBatchSize = 100
@@ -221,6 +198,18 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
   let jobData :: SharedCabReconcilerJobData = jobInfo.jobData
       merchantId = jobData.merchantId
       merchantOpCityId = jobData.merchantOperatingCityId
+  -- R26 dead-chain recovery: HEARTBEAT REFRESH — every fire re-arms the seed
+  -- marker's TTL (SET ... EX, no NX: overwrites a still-live value on the same
+  -- raw cross-app master-cell key). Placed BEFORE the enabled check so it
+  -- runs while the chain exists at all; a dead chain stops refreshing, the
+  -- marker expires within 3 fire intervals, and the next recovery hook
+  -- (boot or select-route seeder) recreates exactly one chain. When the
+  -- chain ends intentionally below, the marker is released as before.
+  -- Best-effort: a refresh failure must not kill the chain it marks.
+  eRefresh <- withTryCatch "sharedCabReconciler:refreshSeedMarker" $ SharedCabSeed.refreshSharedCabReconcilerSeedMarker merchantOpCityId
+  case eRefresh of
+    Right () -> pure ()
+    Left err -> logError $ "SharedCabReconciler: seed marker refresh failed for city " <> merchantOpCityId.getId <> ": " <> show err
   mbTc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let reconcilerOn = maybe False (fromMaybe False . (.sharedCabReconcilerEnabled)) mbTc
   if not reconcilerOn
@@ -231,11 +220,11 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
       -- city. Best-effort: a DEL failure must not throw (that would kill the
       -- chain silently AND leave the marker), so we log the exact key for
       -- manual cleanup instead.
-      eRelease <- withTryCatch "sharedCabReconciler:releaseSeedMarker" $ releaseSharedCabReconcilerSeedMarker merchantOpCityId
+      eRelease <- withTryCatch "sharedCabReconciler:releaseSeedMarker" $ SharedCabSeed.releaseSharedCabReconcilerSeedMarker merchantOpCityId
       case eRelease of
         Right () -> pure ()
         Left err ->
-          logError $ "SharedCabReconciler: failed to release seed marker for city " <> merchantOpCityId.getId <> ": " <> show err <> "; ops must DEL " <> sharedCabReconcilerSeededKey merchantOpCityId <> " (cross-app key) before reseeding"
+          logError $ "SharedCabReconciler: failed to release seed marker for city " <> merchantOpCityId.getId <> ": " <> show err <> "; ops must DEL " <> SharedCabSeed.sharedCabReconcilerSeededKey merchantOpCityId <> " (cross-app key) before reseeding"
       pure Complete
     else do
       bap <- asks (.appBackendBapInternal)
@@ -248,7 +237,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
           logInfo $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " checked=" <> show (checked :: Int) <> " cleared=" <> show (cleared :: Int) <> " left=" <> show (leftFlag :: Int)
         Left err ->
           logError $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " sweep aborted: " <> show err <> "; re-enqueueing, un-reconciled flags stay as they were"
-      JC.createJobIn @_ @'SharedCabReconciler (Just merchantId) (Just merchantOpCityId) sharedCabReconcilerInterval jobData
+      JC.createJobIn @_ @'SharedCabReconciler (Just merchantId) (Just merchantOpCityId) SharedCabSeed.sharedCabReconcilerInterval jobData
       pure Complete
   where
     -- One full keyset pass over the city's flagged drivers (batch_size-ordered
@@ -296,90 +285,3 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
     -- .updateSharedCabSessionActive (cross-app master cell write).
     clearFlag :: Id DP.Person -> m ()
     clearFlag driverId = SharedCabFlag.clearSharedCabSessionActive driverId
-
-
--- DUPLICATE-CHAIN GUARD (R26) ---------------------------------------------------
--- Seed path for the FIRST job of a city's chain; the only legal caller is the
--- dashboard scheduler trigger (postMerchantSchedulerTrigger). Guard semantics
--- are documented in the module header above.
-
--- | Raw cross-app Redis key: "a reconciler chain for this city was seeded".
---   No TTL: it mirrors the intended chain state, released only when the chain
---   intentionally ends (reconciler disabled) or an in-flight seed fails. Main
---   (dashboard trigger) SETNXes it, the Allocator scheduler DELs it — both
---   under withCrossAppRedis because the two services run with different
---   hedis key prefixes ("dynamic-offer-driver-app:" vs
---   "driver-offer-scheduler:"); cross-app removes the modifier, and the
---   master-cell wrapper keeps both cells (primary/secondary) consistent.
-sharedCabReconcilerSeededKey :: Id DMOC.MerchantOperatingCity -> Text
-sharedCabReconcilerSeededKey merchantOpCityId = "sharedcab:reconciler:seeded:" <> merchantOpCityId.getId
-
--- | Release the seed marker for the city (see 'sharedCabReconcilerSeededKey').
-releaseSharedCabReconcilerSeedMarker :: Redis.HedisFlow m r => Id DMOC.MerchantOperatingCity -> m ()
-releaseSharedCabReconcilerSeedMarker merchantOpCityId =
-  Redis.runInMasterCloudRedisCellWithCrossAppRedis $
-    Redis.del (sharedCabReconcilerSeededKey merchantOpCityId)
-
--- | Existing chain roots: scheduler_job rows of this job type for this city
---   whose status is Pending — a fired job marks itself Completed and the
---   handler creates the next Pending row, so a live chain always holds
---   exactly one Pending row; Completed/Failed rows are dead roots and must
---   NOT count (module header, R26 STEP-0 note).
-findLiveSharedCabReconcilerJobs ::
-  ( EsqDBFlow m r,
-    MonadFlow m
-  ) =>
-  Id DMOC.MerchantOperatingCity ->
-  m [AnyJob AllocatorJobType]
-findLiveSharedCabReconcilerJobs merchantOpCityId =
-  findAllWithKVScheduler
-    [ Se.And
-        [ Se.Is SJT.status $ Se.Eq Pending,
-          Se.Is SJT.jobType $ Se.Eq (show SharedCabReconciler),
-          Se.Is SJT.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId)
-        ]
-    ]
-
--- | Seed the reconciler chain for a city, idempotently. Order matters:
---   DB-EXISTENCE first (cheap, durable), then the SETNX (atomic race guard),
---   then the job creation. A concurrent pair of seeds interleaves so that
---   at most one SETNX ever wins; the loser sees either the winner's Pending
---   row (DbBased deployments) or the marker (always) and creates nothing.
-seedSharedCabReconcilerChain ::
-  ( EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    MonadFlow m,
-    CoreMetrics m,
-    JobCreator r m,
-    HasSchemaName SchedulerJobT
-  ) =>
-  Maybe (Id DM.Merchant) ->
-  Id DMOC.MerchantOperatingCity ->
-  NominalDiffTime ->
-  SharedCabReconcilerJobData ->
-  m ()
-seedSharedCabReconcilerChain mbMerchantId merchantOpCityId diffTimeS jobData = do
-  liveJobs <- findLiveSharedCabReconcilerJobs merchantOpCityId
-  if not (null liveJobs)
-    then
-      logInfo $ "SharedCabReconciler: a live chain root (scheduler_job status=Pending) already exists for city " <> merchantOpCityId.getId <> "; skipping duplicate seed"
-    else do
-      firstSeed <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNx (sharedCabReconcilerSeededKey merchantOpCityId) True
-      if not firstSeed
-        then
-          logInfo $ "SharedCabReconciler: seed marker already set for city " <> merchantOpCityId.getId <> "; skipping duplicate seed"
-        else do
-          eCreate <- withTryCatch "sharedCabReconciler:seed:createJob" $ JC.createJobIn @_ @'SharedCabReconciler mbMerchantId (Just merchantOpCityId) diffTimeS jobData
-          case eCreate of
-            Right () ->
-              logInfo $ "SharedCabReconciler: seeded chain for city " <> merchantOpCityId.getId
-            Left err -> do
-              logError $ "SharedCabReconciler: seed failed for city " <> merchantOpCityId.getId <> ": " <> show err
-              -- release the marker so the next trigger can reseed; the seed
-              -- itself fails loudly (never a silent half-seeded state)
-              eRelease <- withTryCatch "sharedCabReconciler:seed:releaseMarker" $ releaseSharedCabReconcilerSeedMarker merchantOpCityId
-              case eRelease of
-                Right () -> pure ()
-                Left delErr -> logError $ "SharedCabReconciler: failed to release seed marker for city " <> merchantOpCityId.getId <> ": " <> show delErr <> "; ops must DEL " <> sharedCabReconcilerSeededKey merchantOpCityId <> " (cross-app key) before reseeding"
-              throwError $ InternalError ("SharedCabReconciler seed failed for city " <> merchantOpCityId.getId)

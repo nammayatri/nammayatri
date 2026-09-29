@@ -200,13 +200,13 @@ import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SharedCabReconcilerJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
-import SharedLogic.Allocator.Jobs.SharedCab.Reconciler (seedSharedCabReconcilerChain)
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import SharedLogic.SharedCab.ReconcilerSeed (SharedCabSeedOutcome (..), seedSharedCabReconcilerChain, sharedCabReconcilerSeededKey)
 import qualified SharedLogic.SpecialLocationUpsert as SLU
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.TollDashboard
@@ -584,11 +584,25 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
             Just jobData -> do
               merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
               merchantOpCityId <- CQMOC.getMerchantOpCityId (Just jobData.merchantOperatingCityId) merchant Nothing
-              -- R26: the seed is idempotent (DB-existence + SETNX guard inside)
-              -- — a second trigger or a redeploy re-running this can not start
-              -- a second self-re-enqueuing reconciler chain for the city.
-              seedSharedCabReconcilerChain (Just merchant.id) merchantOpCityId diffTimeS jobData
-              pure Success
+              -- R26: the seed is idempotent (DB-existence + SETNX-with-TTL guard
+              -- inside) — a second trigger or a redeploy re-running this can not
+              -- start a second self-re-enqueuing reconciler chain for the city.
+              -- R26 MED-3: a SKIPPED seed is NOT a success — surface it (the
+              -- seeder itself only throws on real Redis/createJob failures).
+              seedResult <- seedSharedCabReconcilerChain (Just merchant.id) merchantOpCityId diffTimeS jobData
+              case seedResult of
+                SharedCabChainSeeded -> pure Success
+                skipped ->
+                  throwError $
+                    InvalidRequest
+                      ( "SharedCabReconciler chain already seeded for city "
+                          <> merchantOpCityId.getId
+                          <> " (outcome="
+                          <> show skipped
+                          <> "); a dead chain self-recovers within the marker TTL + next seed hook — DEL "
+                          <> sharedCabReconcilerSeededKey merchantOpCityId
+                          <> " (cross-app key) only to force an immediate reseed"
+                      )
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
 
