@@ -24,6 +24,7 @@ module SharedLogic.SharedCab.Boarding
     boardingCodeMatches,
     UnknownCodeStep (..),
     unknownCodeStep,
+    forceHonoured,
     tryBoardSharedCab,
     seatCheck,
     canBoard,
@@ -72,7 +73,7 @@ data SharedCabBoardOutcome
     -- boarded in degraded mode: ticket INPROGRESS, degrade marker set, no session / driver card / seat effect.
     SharedCabDegraded
   | -- | Soft proximity miss: caller turns this into `boardingConfirmationRequired = True`
-    -- (a forceCheckIn retry is only honoured for the *allocated* cab — 05 §4 item 3).
+    -- (a forceCheckIn retry is honoured for the *allocated* cab or a booking with no cab — 05 §4 item 3).
     SharedCabProximityHold (Maybe Double) Text
   deriving (Show, Generic)
 
@@ -101,6 +102,12 @@ unknownCodeStep :: Maybe Bool -> UnknownCodeStep
 unknownCodeStep forceCheckIn
   | forceCheckIn == Just True = BoardUnlisted
   | otherwise = AskToConfirmUnlisted
+
+-- | forceCheckIn skips the proximity check for the allocated cab, and for a booking with no cab yet (FINDING/FALLBACK:
+-- "board any cab"). Never for a re-bind: that can't be forced from home.
+forceHonoured :: Maybe Bool -> Maybe Text -> Text -> Bool
+forceHonoured forceCheckIn bookingPlate targetPlate =
+  forceCheckIn == Just True && maybe True (== targetPlate) bookingPlate
 
 -- ---------------- code resolution (8.1) ----------------
 
@@ -329,8 +336,8 @@ tryBoardSharedCab journey journeyLeg booking mbPersonId req = do
     boardMatched tunables target = do
       let isAllocatedCab = booking.vehicleNumber == Just target.vehicleNumber
           isRebind = isJust booking.vehicleNumber && not isAllocatedCab
-          -- 8.2: forceCheckIn reopens re-bind-from-home without this; honour it only for the allocated cab.
-          forced = req.forceCheckIn == Just True && isAllocatedCab
+          -- 8.2: forceCheckIn reopens re-bind-from-home without this; honour it only for the allocated cab or no cab yet.
+          forced = forceHonoured req.forceCheckIn booking.vehicleNumber target.vehicleNumber
       mbCase <-
         if forced
           then pure $ Right (Nothing, False)

@@ -2,7 +2,7 @@
 
 module SharedCabBoardingTests (tests) where
 
-import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), canBoard, seatCheck, unknownCodeStep)
+import "rider-app" SharedLogic.SharedCab.Boarding (UnknownCodeStep (..), canBoard, forceHonoured, seatCheck, unknownCodeStep)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -27,5 +27,16 @@ tests =
             unknownCodeStep (Just False) @?= AskToConfirmUnlisted,
           testCase "explicit confirm: boards unlisted" $
             unknownCodeStep (Just True) @?= BoardUnlisted
+        ],
+      testGroup
+        "forced check-in"
+        [ testCase "the allocated cab" $
+            forceHonoured (Just True) (Just "ML05A1234") "ML05A1234" @?= True,
+          testCase "FINDING/FALLBACK booking, no cab yet" $
+            forceHonoured (Just True) Nothing "ML05A1234" @?= True,
+          testCase "re-bind to another cab: never forced from home" $
+            forceHonoured (Just True) (Just "ML05A9999") "ML05A1234" @?= False,
+          testCase "no force asked" $
+            forceHonoured Nothing Nothing "ML05A1234" @?= False
         ]
     ]
