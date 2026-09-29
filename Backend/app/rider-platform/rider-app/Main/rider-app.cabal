@@ -639,6 +639,7 @@ library
       SharedLogic.SharedCab.AllocationSchedule
       SharedLogic.SharedCab.Boarding
       SharedLogic.SharedCab.Booking
+      SharedLogic.SharedCab.Cancel
       SharedLogic.SharedCab.Config
       SharedLogic.SharedCab.Degraded
       SharedLogic.SharedCab.DegradedSweepSchedule
@@ -653,6 +654,8 @@ library
       SharedLogic.SharedCab.Notify
       SharedLogic.SharedCab.Plate
       SharedLogic.SharedCab.RateLimit
+      SharedLogic.SharedCab.RefundDecision
+      SharedLogic.SharedCab.RefundPolicy
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
       SharedLogic.SharedCab.SessionView
@@ -2179,6 +2182,7 @@ test-suite rider-app-test
       SharedCabMissesTests
       SharedCabNotifyTests
       SharedCabPlateTests
+      SharedCabRefundPolicyTests
       SharedCabSessionTests
       SharedCabStopProgressTests
       Paths_rider_app

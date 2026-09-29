@@ -39,7 +39,7 @@ data SelectRouteResp = SelectRouteResp {affectedRiders :: Kernel.Prelude.Maybe [
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SharedCabDriverReq = SharedCabDriverReq {driverId :: Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text}
+data SharedCabDriverReq = SharedCabDriverReq {driverId :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text, vehicleNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

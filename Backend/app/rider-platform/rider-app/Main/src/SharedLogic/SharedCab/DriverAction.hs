@@ -5,29 +5,37 @@ module SharedLogic.SharedCab.DriverAction
   ( DriverAction (..),
     SharedCabDriverActionError (..),
     decideDriverAction,
+    requireReason,
     runDriverAction,
   )
 where
 
+import qualified Data.Text as T
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.SharedCab.Allocation as Allocation
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (DriverCancelled, RouteChanged))
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged))
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, shared, withBookingLock)
+import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.RefundPolicy (CancelBy (ByDriver))
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), ownedSession)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import Tools.Error (SharedCabSessionError (SessionNotFound))
 
 data SharedCabDriverActionError
@@ -35,6 +43,7 @@ data SharedCabDriverActionError
   | BookingNotLive
   | BookingAlreadyBoarded
   | BookingNotBoarded
+  | CancelReasonRequired
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SharedCabDriverActionError
@@ -45,6 +54,7 @@ instance IsBaseError SharedCabDriverActionError where
     BookingNotLive -> Just "This booking has no seat left to act on."
     BookingAlreadyBoarded -> Just "The rider is already on board; mark them dropped instead."
     BookingNotBoarded -> Just "The rider hasn't boarded yet."
+    CancelReasonRequired -> Just "Say why you are cancelling this rider."
 
 instance IsHTTPError SharedCabDriverActionError where
   toErrorCode = \case
@@ -52,11 +62,13 @@ instance IsHTTPError SharedCabDriverActionError where
     BookingNotLive -> "SHARED_CAB_BOOKING_NOT_LIVE"
     BookingAlreadyBoarded -> "SHARED_CAB_BOOKING_ALREADY_BOARDED"
     BookingNotBoarded -> "SHARED_CAB_BOOKING_NOT_BOARDED"
+    CancelReasonRequired -> "SHARED_CAB_CANCEL_REASON_REQUIRED"
   toHttpCode = \case
     BookingNotOnThisCab -> E404
     BookingNotLive -> E409
     BookingAlreadyBoarded -> E409
     BookingNotBoarded -> E409
+    CancelReasonRequired -> E400
 
 instance IsAPIError SharedCabDriverActionError
 
@@ -89,11 +101,18 @@ decideDriverAction action plate bookingPlate tickets
     boarded = DFRFSTicket.INPROGRESS `elem` tickets
     waiting = DFRFSTicket.ACTIVE `elem` tickets
 
+-- | R54: a driver's cancel says why.
+requireReason :: Maybe Text -> Either SharedCabDriverActionError Text
+requireReason mbReason = maybe (Left CancelReasonRequired) Right (mfilter (not . T.null) (T.strip <$> mbReason))
+
 -- | Plate lock, then booking lock (05 §2 lock order); the driver must own the cab's live session.
 -- Returns the session to render. A drop may apply an `afterLastDrop` route change, so re-read the session after.
-runDriverAction :: DriverAction -> Text -> Text -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow Session
-runDriverAction action driver rawPlate bookingId = do
-  mbDropped <- Session.withPlateLock plate $ do
+runDriverAction :: DriverAction -> Text -> Text -> Maybe Text -> Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow Session
+runDriverAction action driver rawPlate mbReason bookingId = do
+  mbCancelReason <- case action of
+    DriverCancel -> Just <$> either throwError pure (requireReason mbReason)
+    _ -> pure Nothing
+  (mbDropped, mbCancel) <- Session.withPlateLock plate $ do
     s <- Session.readSession plate >>= either throwError pure . ownedSession driver
     booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM BookingNotOnThisCab
     unless (isSharedCabBooking booking && booking.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
@@ -103,23 +122,30 @@ runDriverAction action driver rawPlate bookingId = do
       DriverDropped -> do
         decide booking
         markDropped Events.DroppedByDriver booking
-        pure (Just booking)
-      -- TODO(7.4 blame): count the DRIVER_CANCELLED miss on the session (consecutiveMisses, absent pause).
+        pure (Just booking, Nothing)
+      -- the cancel's refund goes out to the payment service: it runs after the plate lock is dropped
       DriverCancel -> do
         decide booking
-        cfg <- Allocation.cityConfig booking.merchantOperatingCityId
-        void $ Allocation.releaseSharedCabAllocation cfg booking.id plate DriverCancelled
-        pure Nothing
+        pure (Nothing, Just booking)
       DriverBoarded -> withBookingLock booking.id $ do
         decide booking
         board s booking
-        pure Nothing
+        pure (Nothing, Nothing)
+  forM_ ((,) <$> mbCancelReason <*> mbCancel) $ uncurry cancelByDriver
   whenJust mbDropped $ \_ -> do
     switched <- Session.applyQueuedRoute plate
     when switched $ Allocation.releaseUnboarded plate RouteChanged
   Session.getSession plate >>= fromMaybeM SessionNotFound
   where
     plate = canonicalisePlate rawPlate
+    -- the booking lock inside re-decides (a boarding since the plate lock flips a ticket, and the cancel is refused)
+    cancelByDriver reason booking = do
+      leg <- QJourneyLeg.findByLegSearchId (Just booking.searchId.getId) >>= fromMaybeM (InvalidRequest "No journey leg for this booking")
+      withSharedCabCancel ByDriver ConfirmCancel (Just reason) stillOnThisCab booking $
+        JM.cancelLeg leg (SCR.CancellationReasonCode "") False Nothing
+    stillOnThisCab fresh = do
+      unless (fresh.status == DFRFSTicketBookingStatus.CONFIRMED) $ throwError BookingNotLive
+      unless ((canonicalisePlate <$> fresh.vehicleNumber) == Just plate) $ throwError BookingNotOnThisCab
     decide booking = do
       tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
       either throwError pure $ decideDriverAction action plate booking.vehicleNumber (map (.status) tickets)

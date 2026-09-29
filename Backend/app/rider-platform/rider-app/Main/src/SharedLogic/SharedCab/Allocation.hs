@@ -42,6 +42,7 @@ module SharedLogic.SharedCab.Allocation
     releaseSharedCabAllocation,
     skipSharedCabAllocation,
     releaseUnboarded,
+    clearAllocationKeys,
     allocatedPlate,
     closable,
     claimable,
@@ -539,6 +540,12 @@ releaseUnboarded plate outcome = do
     afterClose cfg b.id plate outcome closed
     pure closed
   mapM_ triggerSharedCabAllocation (nub (map (.closedCity) (catMaybes cities)))
+
+-- | R54: a cancelled booking leaves no allocation state behind (its plate is already off the cab's live seats once the
+-- status is CANCELLED). Run inside the booking lock, after the cancel went through.
+clearAllocationKeys :: (MonadFlow m, Redis.HedisFlow m r) => Id DFTB.FRFSTicketBooking -> m ()
+clearAllocationKeys bookingId =
+  shared . forM_ [allocKey, attemptsKey, skippedKey, findingSinceKey, fallbackPushedKey] $ \key -> Redis.del (key bookingId.getId)
 
 -- | Run inside the booking lock: KV read, CAS plate -> null (back to FINDING), clear the alloc key,
 -- bump attempts. The city it closed in (and whether this close is the one that just crossed

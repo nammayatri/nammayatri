@@ -14,17 +14,18 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified SharedLogic.CallSharedCabBooking as CallBooking
 
-data BookingAction = Cancel | BoardedWithoutCode | Dropped
+-- | Cancel carries the driver's reason (R54).
+data BookingAction = Cancel Text | BoardedWithoutCode | Dropped
   deriving (Show, Eq)
 
-driverReq :: DriverAuthInfo -> Flow CallBooking.BAPDriverReq
-driverReq (personId, _merchantId, _merchantOpCityId) = do
+driverReq :: Maybe Text -> DriverAuthInfo -> Flow CallBooking.BAPDriverReq
+driverReq reason (personId, _merchantId, _merchantOpCityId) = do
   vehicle <- validateSharedCabDriver personId
-  pure CallBooking.BAPDriverReq {driverId = personId.getId, vehicleNumber = vehicle.registrationNo}
+  pure CallBooking.BAPDriverReq {driverId = personId.getId, vehicleNumber = vehicle.registrationNo, reason}
 
 bookingAction :: BookingAction -> DriverAuthInfo -> Text -> Flow SharedCabSession
 bookingAction action auth bookingId = do
-  req <- driverReq auth
+  req <- driverReq (actionReason action) auth
   bap <- bapInternal
   CallBooking.postBookingAction bap.apiKey bap.url (actionPath action) bookingId req
 
@@ -32,12 +33,17 @@ bookingAction action auth bookingId = do
 -- plate as SEAT_LOST (no blame).
 cabFull :: DriverAuthInfo -> Flow SharedCabSession
 cabFull auth = do
-  req <- driverReq auth
+  req <- driverReq Nothing auth
   bap <- bapInternal
   CallBooking.postCabFull bap.apiKey bap.url req
 
+actionReason :: BookingAction -> Maybe Text
+actionReason = \case
+  Cancel reason -> Just reason
+  _ -> Nothing
+
 actionPath :: BookingAction -> Text
 actionPath = \case
-  Cancel -> "cancel"
+  Cancel _ -> "cancel"
   BoardedWithoutCode -> "boardedWithoutCode"
   Dropped -> "dropped"

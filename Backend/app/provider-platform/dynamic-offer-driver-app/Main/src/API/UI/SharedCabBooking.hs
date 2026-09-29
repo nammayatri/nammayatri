@@ -7,7 +7,7 @@ module API.UI.SharedCabBooking
   )
 where
 
-import API.Types.UI.SharedCab (SharedCabSession)
+import API.Types.UI.SharedCab (CancelBookingReq (..), SharedCabSession)
 import qualified Domain.Action.UI.SharedCab as DSharedCab
 import qualified Domain.Action.UI.SharedCabBooking as DSharedCabBooking
 import Environment
@@ -25,17 +25,30 @@ type BookingAction name =
     :> Post '[JSON] SharedCabSession
 
 type API =
-  BookingAction "cancel"
+  "sharedCab"
+    :> "booking"
+    :> Capture "bookingId" Text
+    :> "cancel"
+    :> TokenAuth
+    :> ReqBody '[JSON] CancelBookingReq
+    :> Post '[JSON] SharedCabSession
     :<|> BookingAction "boardedWithoutCode"
     :<|> BookingAction "dropped"
-    :<|> "sharedCab" :> "cabFull" :> TokenAuth :> Post '[JSON] SharedCabSession
+    :<|> "sharedCab"
+    :> "cabFull"
+    :> TokenAuth
+    :> Post '[JSON] SharedCabSession
 
 handler :: FlowServer API
 handler =
-  act DSharedCabBooking.Cancel
+  cancelBooking
     :<|> act DSharedCabBooking.BoardedWithoutCode
     :<|> act DSharedCabBooking.Dropped
     :<|> cabFull
+
+cancelBooking :: Text -> DSharedCab.DriverAuthInfo -> CancelBookingReq -> FlowHandler SharedCabSession
+cancelBooking bookingId auth@(personId, _, _) req =
+  withFlowHandlerAPI $ withPersonIdLogTag personId $ DSharedCabBooking.bookingAction (DSharedCabBooking.Cancel req.reason) auth bookingId
 
 act :: DSharedCabBooking.BookingAction -> Text -> DSharedCab.DriverAuthInfo -> FlowHandler SharedCabSession
 act action bookingId auth@(personId, _, _) =

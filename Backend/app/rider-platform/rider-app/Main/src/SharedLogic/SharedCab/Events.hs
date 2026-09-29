@@ -52,7 +52,8 @@ data EventKind
   | -- | end reason
     Ended Text
   | BookingCreated
-  | BookingCancelled
+  | -- | who cancelled (rider | driver), refund (full | none), the driver's reason
+    BookingCancelled Text Text (Maybe Text)
   | -- | eta minutes, rank
     AllocationCreated (Maybe Int) Int
   | -- | outcome, blame
@@ -90,7 +91,7 @@ eventName = \case
   Resumed -> "resumed"
   Ended _ -> "ended"
   BookingCreated -> "booking_created"
-  BookingCancelled -> "booking_cancelled"
+  BookingCancelled {} -> "booking_cancelled"
   AllocationCreated _ _ -> "allocation_created"
   AllocationClosed _ _ -> "allocation_closed"
   Boarded _ -> "boarded"
@@ -130,6 +131,7 @@ kindFields = \case
   Boarded source -> ["source" .= boardSourceText source]
   Rebound from sibling -> ["fromVehicle" .= from, "siblingRoute" .= sibling]
   Dropped by -> ["by" .= dropByText by]
+  BookingCancelled by refund reason -> ["by" .= by, "refund" .= refund, "reason" .= reason]
   CabFull walkups -> ["walkupCount" .= walkups]
   InvariantViolation rule detail -> ["rule" .= rule, "detail" .= detail]
   _ -> []

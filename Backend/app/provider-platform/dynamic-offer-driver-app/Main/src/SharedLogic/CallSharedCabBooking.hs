@@ -1,7 +1,7 @@
 -- | driver-app -> rider-app client for the driver's actions on one booking (routes-browse's
 -- POST /internal/sharedCab/booking/{bookingId}/{action}) and R19's cab-full (alloc-opus, log.md:1080:
 -- POST /internal/sharedCab/cabFull, same mount/token as /sharedCab/resume). Header token, body
--- {driverId, vehicleNumber}, response SharedCabSession. Errors pass through as SharedCabBAPError: the
+-- {driverId, vehicleNumber, reason?}, response SharedCabSession. Errors pass through as SharedCabBAPError: the
 -- rider app's errorCode and HTTP status reach the driver app unchanged (4.5 R11).
 module SharedLogic.CallSharedCabBooking
   ( BAPDriverReq (..),
@@ -22,7 +22,9 @@ import Tools.Error (SharedCabBAPError)
 
 data BAPDriverReq = BAPDriverReq
   { driverId :: Text,
-    vehicleNumber :: Text
+    vehicleNumber :: Text,
+    -- | the driver's reason for a cancel (R54); Nothing on every other action
+    reason :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)

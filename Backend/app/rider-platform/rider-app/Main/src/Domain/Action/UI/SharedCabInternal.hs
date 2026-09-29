@@ -201,7 +201,7 @@ postSharedCabCabFull mbToken req = do
 driverAction :: DriverAction -> Id DFTB.FRFSTicketBooking -> Maybe Text -> API.SharedCabDriverReq -> Environment.Flow View.SharedCabSession
 driverAction action bookingId mbToken req = do
   checkToken mbToken
-  s <- runDriverAction action req.driverId req.vehicleNumber bookingId >>= checked
+  s <- runDriverAction action req.driverId req.vehicleNumber req.reason bookingId >>= checked
   Invariants.checkBooking bookingId
   mkSessionResp s
 

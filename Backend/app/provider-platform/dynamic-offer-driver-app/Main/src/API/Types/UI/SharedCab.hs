@@ -94,6 +94,15 @@ data SeatsReq = SeatsReq
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+-- POST /sharedCab/booking/{bookingId}/cancel -----------------------------------
+
+-- R54: the driver's cancel refunds the rider in full and says why.
+data CancelBookingReq = CancelBookingReq
+  { reason :: Text
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 -- Session payload ---------------------------------------------------------------
 
 data SharedCabSessionStatus = ACTIVE | ENDED | PAUSED

@@ -30,6 +30,7 @@ import qualified SharedCabLegStateTests
 import qualified SharedCabMissesTests
 import qualified SharedCabNotifyTests
 import qualified SharedCabPlateTests
+import qualified SharedCabRefundPolicyTests
 import qualified SharedCabSessionTests
 import qualified SharedCabStopProgressTests
 import System.Environment (lookupEnv)
@@ -52,4 +53,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabMissesTests.tests, SharedCabDegradedSweepTests.tests]
+  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabMissesTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests]

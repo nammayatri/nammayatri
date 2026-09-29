@@ -50,6 +50,7 @@ types:
   SharedCabDriverReq:
     driverId: Text
     vehicleNumber: Text
+    reason: Maybe Text
 
   SharedCabTrip:
     id: Id VehicleTrip

@@ -44,6 +44,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
+import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking, readRefundDecision, refundAmounts)
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -565,7 +566,9 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
         Spec.CONFIRM_CANCEL -> Spec.CANCELLED
   let baseFare = fromMaybe booking.totalPrice.amount booking.overriddenAmount
       departureTime = fromMaybe booking.validTill booking.startTime
-  (charges, refund) <- calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
+  -- shared cab: the refund policy (SharedLogic.SharedCab.Cancel) decided under the booking lock; not a tier.
+  mbSharedCabRefund <- if isSharedCabBooking booking then readRefundDecision booking.id else pure Nothing
+  (charges, refund) <- maybe (calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime) (pure . refundAmounts baseFare) mbSharedCabRefund
   return $
     DOnCancel.DOnCancel
       { providerId = bapConfig.uniqueKeyId,

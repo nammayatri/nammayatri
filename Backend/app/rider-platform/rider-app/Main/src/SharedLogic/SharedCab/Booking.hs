@@ -2,7 +2,6 @@ module SharedLogic.SharedCab.Booking
   ( isSharedCabBooking,
     withBookingLock,
     tryWithBookingLock,
-    ensureCancellable,
     markDropped,
     ridersOnBoard,
     liveSeatsOnVehicle,
@@ -23,18 +22,14 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatu
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
 import SharedLogic.SharedCab.Allocation.Types (RiderFix)
 import qualified SharedLogic.SharedCab.Events as Events
-import SharedLogic.SharedCab.LegState (isDroppable, seatsHeld)
+import SharedLogic.SharedCab.LegState (seatsHeld)
+import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-
-isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
-isSharedCabBooking booking = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson == Just Spec.SHARED_CAB
 
 -- | The cross-app master cell, unprefixed: allocation (`sharedcab:alloc:`) and degraded-boarding (`sharedcab:degraded:`)
 -- keys live here so every app and the scheduler see them. Session keys and the plate lock stay app-prefixed.
@@ -62,18 +57,12 @@ tryWithBookingLock bookingId action = do
       Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.unlockRedis (bookingLockKey bookingId)
       pure (Just result)
 
--- | R7: no cancel once a seat has boarded. Call inside `withBookingLock` so boarding can't slip in before the cancel.
-ensureCancellable :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSTicketBooking.FRFSTicketBooking -> m ()
-ensureCancellable booking = do
-  tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
-  when (any ((== DFRFSTicket.INPROGRESS) . (.status)) tickets) $
-    throwError $ InvalidRequest "This shared cab ride has started and can't be cancelled"
-
--- | "I got down" (R8): tickets still held go USED, which ends the leg and takes the seat out of the cab's live set.
+-- | "I got down" (R8): boarded tickets go USED, which ends the leg and takes the seat out of the cab's live set. A ticket
+-- that never boarded is not consumed here: the rider's drop of one is a cancel (R54).
 -- TODO(7.4): clear sharedcab:alloc:{bookingId} once allocation keys exist.
 markDropped :: (Events.EventFlow m r, MonadMask m) => Events.DropBy -> DFRFSTicketBooking.FRFSTicketBooking -> m ()
 markDropped by booking = withBookingLock booking.id $ do
-  droppable <- filter (isDroppable . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
+  droppable <- filter ((== DFRFSTicket.INPROGRESS) . (.status)) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   forM_ droppable $ \ticket ->
     QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.USED ticket.scannedByVehicleNumber booking.id ticket.ticketNumber
   unless (null droppable) $ Events.forBooking (Events.Dropped by) booking
