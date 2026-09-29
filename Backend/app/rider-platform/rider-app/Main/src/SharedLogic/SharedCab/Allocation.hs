@@ -630,7 +630,8 @@ triggerSharedCabAllocation ::
     Redis.HedisLTSFlowEnv r,
     Metrics.CoreMetrics m,
     Events.EventFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id DMOC.MerchantOperatingCity ->
   m ()
