@@ -280,10 +280,11 @@ postCustomerUpdateSafetyCenterBlocking _ _ personId req = do
     blockingDate now count = if (count + 1) == 3 || count + 1 >= 6 then Just now else Nothing
 
 postCustomerPersonNumbers :: ShortId DM.Merchant -> Context.City -> Common.PersonIdsReq -> Flow [Common.PersonRes]
-postCustomerPersonNumbers _ _ req = do
+postCustomerPersonNumbers merchantShortId _ req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   csvData <- readCsvAndGetPersonIds req.file
   let chunks = chunksOf 100 csvData
-  decryptedNumbers <- forM chunks processChunk
+  decryptedNumbers <- forM chunks (processChunk merchant.id)
   return $ concat decryptedNumbers
   where
     readCsvAndGetPersonIds :: FilePath -> Flow [Text]
@@ -293,19 +294,19 @@ postCustomerPersonNumbers _ _ req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> pure $ map Common.personId $ V.toList v
 
-    processChunk :: [Text] -> Flow [Common.PersonRes]
-    processChunk chunk = do
-      persons <- QP.findAllByPersonIds chunk
-      decryptedPersons <- forM persons $ \p -> do
+    processChunk :: Id DM.Merchant -> [Text] -> Flow [Common.PersonRes]
+    processChunk merchantId chunk = do
+      persons <- QP.findAllByPersonIdsAndMerchantId merchantId chunk
+      forM persons $ \p -> do
         decPerson <- decrypt p
-        return $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber Nothing decPerson.merchantOperatingCityId.getId
-      return decryptedPersons
+        pure $ Common.PersonRes decPerson.id.getId decPerson.mobileNumber Nothing decPerson.merchantOperatingCityId.getId
 
 postCustomerPersonId :: ShortId DM.Merchant -> Context.City -> Common.PersonMobileNoReq -> Flow [Common.PersonRes]
-postCustomerPersonId _ _ req = do
+postCustomerPersonId merchantShortId _ req = do
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   csvData <- readCsvAndGetPersonIds req.file
   let chunks = chunksOf 100 csvData
-  decryptedNumbers <- forM chunks processChunk
+  decryptedNumbers <- forM chunks (processChunk merchant.id)
   return $ concat decryptedNumbers
   where
     readCsvAndGetPersonIds :: FilePath -> Flow [Text]
@@ -315,13 +316,12 @@ postCustomerPersonId _ _ req = do
         Left err -> throwError (InvalidRequest $ show err)
         Right (_, v) -> pure $ mapMaybe (Common.mobileNumber :: Common.PersonMobileNumberIdsCsvRow -> Maybe Text) $ V.toList v
 
-    processChunk :: [Text] -> Flow [Common.PersonRes]
-    processChunk chunk = do
-      mobile <- QP.findPersonIdsByPhoneNumber chunk
-      decryptedPersons <- forM mobile $ \p -> do
+    processChunk :: Id DM.Merchant -> [Text] -> Flow [Common.PersonRes]
+    processChunk merchantId chunk = do
+      mobile <- QP.findPersonIdsByPhoneNumberAndMerchantId merchantId chunk
+      forM mobile $ \p -> do
         decMobile <- decrypt p
-        return $ Common.PersonRes decMobile.id.getId decMobile.mobileNumber Nothing decMobile.merchantOperatingCityId.getId
-      return decryptedPersons
+        pure $ Common.PersonRes decMobile.id.getId decMobile.mobileNumber Nothing decMobile.merchantOperatingCityId.getId
 
 ---------------------------------------------------------------------
 postCustomerUpdatePaymentMode :: ShortId DM.Merchant -> Context.City -> Id Common.Customer -> Common.UpdatePaymentModeReq -> Flow APISuccess
