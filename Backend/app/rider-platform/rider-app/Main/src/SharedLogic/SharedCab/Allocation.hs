@@ -52,6 +52,7 @@ module SharedLogic.SharedCab.Allocation
     eligibleCandidates,
     rankCandidates,
     withoutSkipped,
+    isSkipped,
     isFreshPosition,
     RankedCandidate (..),
     FindingBooking (..),
@@ -310,13 +311,16 @@ planRouteAllocation now cfg tracking sessions booking =
 
 -- | R19: a cab the rider skipped is never offered to that booking again.
 withoutSkipped :: [Text] -> [RankedCandidate] -> [RankedCandidate]
-withoutSkipped skipped = filter ((`notElem` skipped) . (.rcSession.vehicleNumber))
+withoutSkipped skipped = filter (not . (`isSkipped` skipped) . (.rcSession.vehicleNumber))
+
+isSkipped :: Text -> [Text] -> Bool
+isSkipped = elem
 
 --------------------------------------------------------------------------------
 -- Phase 2 -- target cab lock, then booking lock (05 §2/§3 order)
 --------------------------------------------------------------------------------
 
-data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost
+data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
 
 -- | 05 §3 Phase 2, one candidate. Under `sharedcab:lock:{plate}` then
@@ -338,29 +342,34 @@ attemptClaim cfg booking cand = do
       Just s
         | s.status == ACTIVE && s.routeCode == booking.routeCode -> do
           withBookingLock booking.bookingId $ do
+            -- the tick read the skipped set before it waited on these locks; a skip that landed meanwhile is only visible now
+            skipped <- shared $ Redis.sMembers (skippedKey booking.bookingId.getId)
             liveSeats <- liveSeatsOnVehicle plate
             let available = s.capacity - s.walkupCount - liveSeats
-            if available < booking.seats
-              then pure (Left ClaimSeatsGone)
-              else do
-                QFRFSTicketBooking.findById booking.bookingId >>= \case
-                  Just b
-                    | b.status == CONFIRMED && isNothing b.vehicleNumber -> do
-                      QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
-                      now <- getCurrentTime
-                      attempts <- readAttempts (attemptsKey booking.bookingId.getId)
-                      -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
-                      -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
-                      -- The key's TTL is only a garbage-collection backstop.
-                      let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
-                      shared $
-                        Redis.setExp
-                          (allocKey booking.bookingId.getId)
-                          AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
-                          cfg.findingTimeoutSec
-                      pure (Right now)
-                    | otherwise -> pure (Left ClaimCasLost)
-                  Nothing -> pure (Left ClaimCasLost)
+            if plate `isSkipped` skipped
+              then pure (Left ClaimSkipped)
+              else
+                if available < booking.seats
+                  then pure (Left ClaimSeatsGone)
+                  else do
+                    QFRFSTicketBooking.findById booking.bookingId >>= \case
+                      Just b
+                        | b.status == CONFIRMED && isNothing b.vehicleNumber -> do
+                          QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
+                          now <- getCurrentTime
+                          attempts <- readAttempts (attemptsKey booking.bookingId.getId)
+                          -- 05 §2 timer mode: a stationary cab gets the stand timer (it must start moving),
+                          -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
+                          -- The key's TTL is only a garbage-collection backstop.
+                          let standDeadline = addUTCTime (intToNominalDiffTime cfg.standTimerSec) now
+                          shared $
+                            Redis.setExp
+                              (allocKey booking.bookingId.getId)
+                              AllocationState {vehicleNumber = plate, allocatedAt = now, expiresAt = if cand.rcMoving then Nothing else Just standDeadline, attempts, timerKind = StandTimer}
+                              cfg.findingTimeoutSec
+                          pure (Right now)
+                        | otherwise -> pure (Left ClaimCasLost)
+                      Nothing -> pure (Left ClaimCasLost)
       _ -> pure (Left ClaimSessionGone)
 
 readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Int

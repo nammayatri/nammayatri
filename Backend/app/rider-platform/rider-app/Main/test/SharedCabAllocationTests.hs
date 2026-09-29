@@ -13,7 +13,7 @@ import qualified "rider-app" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (RankedCandidate (..), closable, isSkipped, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
@@ -115,6 +115,8 @@ tests =
           closable "P1" BS.CONFIRMED Nothing [TS.ACTIVE]
         ]
           @?= [True, False, False, False, False, False],
+      testCase "R19: the claim's under-lock check sees only the plate the rider skipped" $
+        map (`isSkipped` ["ML05B2222"]) ["ML05A1111", "ML05B2222"] @?= [False, True],
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing
     ]
