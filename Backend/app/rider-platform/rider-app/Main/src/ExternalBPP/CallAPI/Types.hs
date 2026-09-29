@@ -41,6 +41,7 @@ type FRFSConfirmFlow m r c =
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasField "ltsHedisEnv" r HedisEnv,
+    HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
     -- Needed for withTimeAPI, used to time the auto-seat hold retry loop
     -- (SharedLogic.FRFSConfirm.selectAndHoldWithRetries).
