@@ -15,6 +15,7 @@
 module Beckn.ACL.OnConfirm (buildOnConfirmReqV2) where
 
 import Beckn.ACL.Common as ACL
+import qualified Beckn.OnDemand.Utils.Common as RiderUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -106,6 +107,9 @@ buildOnConfirmReqV2 req isValueAddNP = do
           driverMobileNumber <- fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & maybe (Left "Missing fulfillment.agent.contact.phone in on_confirm") Right
           vehicleNumber <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & maybe (Left "Missing fulfillment.vehicle.registration in on_confirm") Right
           let vehicleColor = fulf >>= (.fulfillmentVehicle) >>= (.vehicleColor)
+              vehicleCategory = fulf >>= (.fulfillmentVehicle) >>= (.vehicleCategory)
+              vehicleVariantText = fulf >>= (.fulfillmentVehicle) >>= (.vehicleVariant)
+              assignedVehicleVariant = RiderUtils.parseVehicleVariant (T.toUpper <$> vehicleCategory) (T.toUpper <$> vehicleVariantText)
           vehicleModel <- fulf >>= (.fulfillmentVehicle) >>= (.vehicleModel) & maybe (Left "Missing fulfillment.vehicle.model in on_confirm") Right
           Right $ DOnConfirm.RideAssigned DOnConfirm.RideAssignedInfo {fareBreakups = Just fareBreakups, isSafetyPlus = isSafetyPlus', ..}
         else Right $ DOnConfirm.BookingConfirmed DOnConfirm.BookingConfirmedInfo {specialZoneOtp = mbRideOtp, ..}

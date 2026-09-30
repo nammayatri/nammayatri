@@ -30,6 +30,7 @@ import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.VehicleVariant as DVeh
 import EulerHS.Prelude hiding (id, whenJust)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -116,6 +117,7 @@ data RideAssignedInfo = RideAssignedInfo
     vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
+    assignedVehicleVariant :: Maybe DVeh.VehicleVariant,
     fareBreakups :: Maybe [DCommon.DFareBreakup],
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
