@@ -48,6 +48,8 @@ METRO_DIR="$SCRIPT_DIR/collections/MetroTicketBookingFlow"
 SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
 LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
+# EasyBookingRideFlow had no command, so CI couldn't run it; added `easy`.
+EASY_BOOKING_DIR="$SCRIPT_DIR/collections/EasyBookingRideFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
@@ -608,6 +610,7 @@ run_scheduler() {
 }
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
+run_easy_booking() { run_frfs "$EASY_BOOKING_DIR" "EASY BOOKING RIDE" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_driver_image() { run_frfs "$DRIVER_IMAGE_DIR" "DRIVER IMAGE" "${1:-}" "${2:-}"; }
 # Delegates to the collection's own run.sh — it sets transporter_config.pan_hard_check,
@@ -774,6 +777,7 @@ show_help() {
     echo "  offline-offers      Run offline ride cashback offer suites"
     echo "  scheduler           Run scheduler job integration tests"
     echo "  loyalty             Run loyalty wallet topup/burn suites"
+    echo "  easy                Run easy booking ride suites"
     echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
     echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
     echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
@@ -890,6 +894,9 @@ case "${1:-}" in
         ;;
     loyalty|wallet)
         run_loyalty "${2:-}" "${3:-}"
+        ;;
+    easy|easy-booking)
+        run_easy_booking "${2:-}" "${3:-}"
         ;;
     stcl|stcl-membership)
         run_stcl "${2:-}" "${3:-}"
