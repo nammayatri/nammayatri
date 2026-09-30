@@ -9,7 +9,7 @@ and that the Firebase-specific identity contract works end to end.
 ## What the suite asserts
 
 One collection, one random rider, one full auto ride (skeleton copied from
-`RideBookingFlow/01-AutoRideFlow.json`), under seeded providers
+`AutoRideFlow/01-AutoRideFlow.json`), under seeded providers
 `{Moengage,Clevertap,FirebaseAnalytics}`:
 
 | Step | Event(s) fired server-side | Assertion |
@@ -96,7 +96,7 @@ caveat `PhoneShareConsentFlow/Rules.md` documents for `transporter_config` and `
 - Rider/driver numbers, vehicle registration and both Firebase ids are random per run
   (collection prerequest, `_test_*` collection variables) — safe to run concurrently and
   repeatedly.
-- The ride skeleton is generated from `RideBookingFlow/01-AutoRideFlow.json` by inserting the
+- The ride skeleton is generated from `AutoRideFlow/01-AutoRideFlow.json` by inserting the
   profile steps after `Rider OTP` and after `End Ride` and dropping the invoice check. If
   AutoRideFlow changes materially (auth, allocator timing), regenerate this collection the
   same way.
