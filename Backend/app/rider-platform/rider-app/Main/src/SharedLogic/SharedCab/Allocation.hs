@@ -110,6 +110,7 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, recordCancelReason, shared, withBookingLock)
@@ -122,6 +123,7 @@ import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP), fallbackReach
 import qualified SharedLogic.SharedCab.Misses as Misses
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gatePayOnBoard, refundAmounts)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -677,7 +679,9 @@ cancelForNoShows b = do
   void $ QFRFSTicketBooking.updateStatusById CANCELLED b.id
   void $ QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED b.id
   void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) b.id
-  QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just 0) (Just (fromMaybe b.totalPrice.amount b.overriddenAmount)) (Just True) b.id
+  payOnBoard <- FRFSUtils.isPayOnBoard b
+  let (charges, refundAmount) = refundAmounts (fromMaybe b.totalPrice.amount b.overriddenAmount) (gatePayOnBoard payOnBoard NoRefund)
+  QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just charges) (Just True) b.id
   -- the journey-level part of a cancel (legs Finished, journey CANCELLED), as a rider cancel does
   void . withTryCatch "sharedCab:cancelForNoShows:cancelJourney" $
     QJourneyLeg.findByLegSearchId (Just b.searchId.getId) >>= mapM_ (FRFSCancelJourney.cancelJourneyById . (.journeyId))

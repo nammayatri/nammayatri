@@ -1,6 +1,8 @@
 module SharedLogic.SharedCab.LegState
   ( SharedCabState (..),
     SharedCabLegStatus (..),
+    CabPosition (..),
+    cabTracking,
     CancelReason (..),
     FallbackGate (..),
     fallbackDue,
@@ -24,6 +26,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 
 data SharedCabState = FINDING | ALLOCATED | ARRIVING | FALLBACK | BOARDED | DEGRADED | DROPPED | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -47,6 +50,18 @@ data FallbackGate = FallbackGate
   }
   deriving (Show, Eq)
 
+data CabPosition = CabPosition {lat :: Double, lon :: Double}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | The cab's fix and its ETAs to the booking's board and drop stops out of its LTS tracking info. A stop the cab
+-- has already reached (or that LTS does not list) has no ETA.
+cabTracking :: UTCTime -> Text -> Text -> LT.VehicleInfo -> (CabPosition, Maybe Int, Maybe Int)
+cabTracking now boardStopCode dropStopCode vi = (CabPosition {lat = vi.latitude, lon = vi.longitude}, etaTo boardStopCode, etaTo dropStopCode)
+  where
+    etaTo code = do
+      u <- find (\u' -> u'.stop.stopCode == code && u'.status == LT.Upcoming) =<< vi.upcomingStops
+      pure (max 0 (floor (diffUTCTime u.eta now)))
+
 data SharedCabLegStatus = SharedCabLegStatus
   { state :: SharedCabState,
     -- | The FRFS ticket booking id, for booking-level calls such as R19 skip.
@@ -57,6 +72,8 @@ data SharedCabLegStatus = SharedCabLegStatus
     driverPhotoUrl :: Maybe Text,
     etaToBoardStopSec :: Maybe Int,
     etaToDropStopSec :: Maybe Int,
+    -- | The cab's last LTS fix, when the booking has a live cab whose fix is fresh; Nothing on any miss.
+    position :: Maybe CabPosition,
     cabsComing :: Int,
     -- | R17: seconds left to board before the allocated cab's stand/moving timer releases it
     -- (allocKey's expiresAt); set only while ARRIVING, so the app can count down.

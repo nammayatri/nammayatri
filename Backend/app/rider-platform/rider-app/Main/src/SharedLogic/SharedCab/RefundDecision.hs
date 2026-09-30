@@ -3,6 +3,8 @@
 module SharedLogic.SharedCab.RefundDecision
   ( Refund (..),
     isSharedCabBooking,
+    gatePayOnBoard,
+    owesRefund,
     refundAmounts,
     refundWithheld,
     cancelRefund,
@@ -21,7 +23,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (MonadFlow)
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
 
-data Refund = FullRefund | NoRefund
+data Refund = FullRefund | NoRefund | NothingPaid
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 isSharedCabBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
@@ -33,6 +35,16 @@ refundAmounts :: HighPrecMoney -> Refund -> (HighPrecMoney, HighPrecMoney)
 refundAmounts baseFare = \case
   FullRefund -> (0, baseFare)
   NoRefund -> (baseFare, 0)
+  NothingPaid -> (0, 0)
+
+-- | A pay-on-board booking was never charged in-app, so the cancel policy decides only whether the cancel is allowed
+-- (the near-stop, boarded and no-show rules), never money. The one gate every refund decision passes through.
+gatePayOnBoard :: Bool -> Refund -> Refund
+gatePayOnBoard payOnBoard refund = if payOnBoard then NothingPaid else refund
+
+-- | Only FullRefund starts a refund: NoRefund keeps the fare and NothingPaid has none to give back.
+owesRefund :: Refund -> Bool
+owesRefund = (== FullRefund)
 
 -- | A cancel that charged the fare and refunds nothing: the payment must stay charged, so it is never marked
 -- refund-pending (that mark is what makes the payment service refund the order in full).

@@ -25,7 +25,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (JobCreator)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSCancelJourney (cancelJourneyById)
-import SharedLogic.FRFSUtils (getJourneyIdFromBooking, markFRFSBookingStatus, noPaymentDue)
+import SharedLogic.FRFSUtils (getJourneyIdFromBooking, isPayOnBoard, markFRFSBookingStatus, noPaymentDue)
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.SharedCab.Allocation (cityConfig, claimable, clearAllocationKeys, readFindingSince, releaseCancelledBooking)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
@@ -35,9 +35,9 @@ import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (NO_CAB_FOUND), SharedCabState (FINDING))
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.RefundDecision (Refund (..), refundAmounts)
-import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gatePayOnBoard, owesRefund, refundAmounts)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
+import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -122,21 +122,23 @@ cancelOne findingTimeoutSec stale = do
           since <- readFindingSince b.id b.createdAt
           if claimable b.status b.vehicleNumber statuses markerAlive && findingTimeoutAction now findingTimeoutSec since b.createdAt == CancelNoCab
             then do
-              let refund = findingTimeoutRefund b.sharedCabNoShows statuses
+              payOnBoard <- isPayOnBoard b
+              let refund = gatePayOnBoard payOnBoard (findingTimeoutRefund b.sharedCabNoShows statuses)
               Just (b, refund) <$ flipToCancelled refund b
             else pure Nothing
   whenJust cancelled $ \(b, decision) -> do
     -- each step is its own try: the booking is CANCELLED by now, so one failure must not skip the rest or the rider's push
-    refunded <- if decision == FullRefund then startRefund b else pure True
+    refunded <- if owesRefund decision then startRefund b else pure True
     withTryCatch "sharedCab:findingTimeout:releaseCancelledBooking" (releaseCancelledBooking b)
       >>= either (\e -> logError $ "shared-cab finding-timeout release effects failed for booking " <> b.id.getId <> ": " <> show e) pure
     void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
     void . withTryCatch "sharedCab:findingTimeout:recordCancelReason" $ recordCancelReason b.id NO_CAB_FOUND
     Events.forBooking (Events.BookingCancelled "system" (if decision == FullRefund then "full" else "none") (Just "finding_timeout")) b
     Invariants.checkBooking b.id
-    if decision == FullRefund
-      then when refunded $ Notify.notifyFindingTimeout b -- never "refunded in full" to a rider whose refund did not start
-      else Notify.notifyBookingCancelled b.sharedCabNoShows b
+    case decision of
+      FullRefund -> when refunded $ Notify.notifyFindingTimeout b -- never "refunded in full" to a rider whose refund did not start
+      NothingPaid -> Notify.notifyFindingTimeout b
+      NoRefund -> Notify.notifyBookingCancelled b.sharedCabNoShows b
 
 flipToCancelled ::
   (Events.EventFlow m r, Redis.HedisFlow m r, HasBAPMetrics m r) =>

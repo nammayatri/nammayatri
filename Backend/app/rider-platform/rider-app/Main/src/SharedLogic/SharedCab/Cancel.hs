@@ -14,6 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils (isPayOnBoard)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..))
 import SharedLogic.SharedCab.Booking (readRiderFix, recordCancelReason, shared, withBookingLock)
@@ -21,7 +22,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
-import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, isSharedCabBooking, setRefundDecision)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gatePayOnBoard, isSharedCabBooking, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -69,7 +70,7 @@ decide by booking = do
       near = riderNearStop tunables.boardProximityM tunables.ltsMaxAgeSec now booking.fromStationPoint riderFix
   case decideCancel by state booking.sharedCabNoShows tickets near of
     Rejected err -> throwError err
-    Allowed refund -> pure refund
+    Allowed refund -> (\payOnBoard -> gatePayOnBoard payOnBoard refund) <$> isPayOnBoard booking
 
 byText :: CancelBy -> Text
 byText = \case
@@ -85,3 +86,4 @@ refundText :: Refund -> Text
 refundText = \case
   FullRefund -> "full"
   NoRefund -> "none"
+  NothingPaid -> "none"
