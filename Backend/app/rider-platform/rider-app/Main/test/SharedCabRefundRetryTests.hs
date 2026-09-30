@@ -48,8 +48,10 @@ tests =
       testCase "five consecutive failures cost five real attempts, then exactly one ops-alert" $
         steps maxRefundRetryAttempts 0 (alwaysFails 60) @?= [Tried 1, Tried 2, Tried 3, Tried 4, Tried 5, Alerted],
       testCase "a success on any attempt ends the series with no alert" $
-        map (steps maxRefundRetryAttempts 0) [[True], [False, False, True], [False, False, False, False, False, True]]
-          @?= [[Tried 1, Cleared], [Tried 1, Tried 2, Tried 3, Cleared], [Tried 1, Tried 2, Tried 3, Tried 4, Tried 5, Cleared]],
+        map (steps maxRefundRetryAttempts 0) [[True], [False, False, True]]
+          @?= [[Tried 1, Cleared], [Tried 1, Tried 2, Tried 3, Cleared]],
+      testCase "after cap failures the give-up fires BEFORE the refund is attempted again (a queued success never runs)" $
+        steps maxRefundRetryAttempts 0 (replicate maxRefundRetryAttempts False ++ [True]) @?= map Tried [1 .. maxRefundRetryAttempts] ++ [Alerted],
       testCase "a success on the cap attempt is still a success (the cap binds only the NEXT decision)" $
         steps maxRefundRetryAttempts 0 (replicate (maxRefundRetryAttempts - 1) False <> [True]) @?= map Tried [1 .. maxRefundRetryAttempts] <> [Cleared],
       testCase "the alert fires at most once per marker lifetime (GiveUp removes the booking from the visited set)" $
