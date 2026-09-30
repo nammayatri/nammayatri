@@ -2633,7 +2633,7 @@
     {
       "name": "Unassign Driver (Cleanup)",
       "request": {
-        "method": "DELETE",
+        "method": "POST",
         "header": [
           {
             "key": "Content-Type",
@@ -2701,7 +2701,7 @@
     {
       "name": "Unassign Driver from Journey 2 (Cleanup)",
       "request": {
-        "method": "DELETE",
+        "method": "POST",
         "header": [
           {
             "key": "Content-Type",

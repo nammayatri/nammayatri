@@ -316,7 +316,7 @@ data WaiveIncentiveJourneyMilestoneReq = WaiveIncentiveJourneyMilestoneReq
 instance Kernel.Types.HideSecrets.HideSecrets WaiveIncentiveJourneyMilestoneReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("incentiveJourney" :> (GetIncentiveJourneyList :<|> PostIncentiveJourneyCreate :<|> GetIncentiveJourneyMilestoneList :<|> PostIncentiveJourneyMilestoneCreate :<|> GetIncentiveJourneyStatsHistory :<|> PostIncentiveJourneyStatsWaiveOff :<|> GetIncentiveJourneyPersonAssignments :<|> PostIncentiveJourneyCohortCreate :<|> PostIncentiveJourneyCohortJourneyCreate :<|> PutIncentiveJourneyCohortJourneyUpdate :<|> GetIncentiveJourneyCohortJourneyList :<|> PostIncentiveJourneyAssign :<|> DeleteIncentiveJourneyUnassign))
+type API = ("incentiveJourney" :> (GetIncentiveJourneyList :<|> PostIncentiveJourneyCreate :<|> GetIncentiveJourneyMilestoneList :<|> PostIncentiveJourneyMilestoneCreate :<|> GetIncentiveJourneyStatsHistory :<|> PostIncentiveJourneyStatsWaiveOff :<|> GetIncentiveJourneyPersonAssignments :<|> PostIncentiveJourneyCohortCreate :<|> PostIncentiveJourneyCohortJourneyCreate :<|> PutIncentiveJourneyCohortJourneyUpdate :<|> GetIncentiveJourneyCohortJourneyList :<|> PostIncentiveJourneyAssign :<|> PostIncentiveJourneyUnassign))
 
 type GetIncentiveJourneyList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -389,7 +389,7 @@ type GetIncentiveJourneyCohortJourneyList =
 
 type PostIncentiveJourneyAssign = ("assign" :> ReqBody '[JSON] AssignUserToIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type DeleteIncentiveJourneyUnassign = ("unassign" :> ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostIncentiveJourneyUnassign = ("unassign" :> ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data IncentiveJourneyAPIs = IncentiveJourneyAPIs
   { getIncentiveJourneyList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney) -> Kernel.Prelude.Maybe IncentiveJourneyType -> EulerHS.Types.EulerClient IncentiveJourneyListRes,
@@ -404,13 +404,13 @@ data IncentiveJourneyAPIs = IncentiveJourneyAPIs
     putIncentiveJourneyCohortJourneyUpdate :: UpdateCohortJourneyMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getIncentiveJourneyCohortJourneyList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe IncentiveJourneyType -> EulerHS.Types.EulerClient CohortJourneyMappingListRes,
     postIncentiveJourneyAssign :: AssignUserToIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    deleteIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkIncentiveJourneyAPIs :: (Client EulerHS.Types.EulerClient API -> IncentiveJourneyAPIs)
 mkIncentiveJourneyAPIs incentiveJourneyClient = (IncentiveJourneyAPIs {..})
   where
-    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> getIncentiveJourneyPersonAssignments :<|> postIncentiveJourneyCohortCreate :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> deleteIncentiveJourneyUnassign = incentiveJourneyClient
+    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> getIncentiveJourneyPersonAssignments :<|> postIncentiveJourneyCohortCreate :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyUnassign = incentiveJourneyClient
 
 data IncentiveJourneyUserActionType
   = GET_INCENTIVE_JOURNEY_LIST
@@ -425,7 +425,7 @@ data IncentiveJourneyUserActionType
   | PUT_INCENTIVE_JOURNEY_COHORT_JOURNEY_UPDATE
   | GET_INCENTIVE_JOURNEY_COHORT_JOURNEY_LIST
   | POST_INCENTIVE_JOURNEY_ASSIGN
-  | DELETE_INCENTIVE_JOURNEY_UNASSIGN
+  | POST_INCENTIVE_JOURNEY_UNASSIGN
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

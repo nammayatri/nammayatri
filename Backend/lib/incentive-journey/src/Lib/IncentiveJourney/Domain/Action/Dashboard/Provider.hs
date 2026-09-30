@@ -12,7 +12,7 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Provider
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
-    deleteIncentiveJourneyUnassign,
+    postIncentiveJourneyUnassign,
     postIncentiveJourneyAssignBulkFromS3,
     getIncentiveJourneyAssignBulkFromS3List,
     postIncentiveJourneyAutoApplyCohortCreate,
@@ -23,6 +23,7 @@ where
 
 import qualified API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney as Common
 import qualified Dashboard.Common
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Data.Time (Day)
 import qualified Domain.Types.VehicleCategory as DTV
@@ -573,14 +574,14 @@ postIncentiveJourneyAssign handle merchantShortId opCity req = do
     "Driver does not belong to this merchant/city"
   pure Success
 
-deleteIncentiveJourneyUnassign ::
+postIncentiveJourneyUnassign ::
   BeamFlow m r =>
   ServiceHandle m ->
   ID.ShortId DIJC.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Common.UnassignUserFromIncentiveJourneyReq ->
   m APISuccess
-deleteIncentiveJourneyUnassign handle merchantShortId opCity req = do
+postIncentiveJourneyUnassign handle merchantShortId opCity req = do
   Core.unassignUser
     handle
     merchantShortId
@@ -994,8 +995,9 @@ getIncentiveJourneyAutoApplyCohortList ::
   Maybe Int ->
   Maybe Int ->
   Maybe DTV.VehicleCategory ->
+  Maybe Bool ->
   m Common.AutoApplyCohortMappingListRes
-getIncentiveJourneyAutoApplyCohortList handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory = do
+getIncentiveJourneyAutoApplyCohortList handle merchantShortId opCity mbLimit mbOffset mbVehicleCategory mbEnabled = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   rows <-
     QAuto.findByMerchantAndCity
@@ -1004,22 +1006,41 @@ getIncentiveJourneyAutoApplyCohortList handle merchantShortId opCity mbLimit mbO
       (ID.cast merchant.id)
       (ID.cast merchantOpCityId)
       mbVehicleCategory
+      mbEnabled
+  cjms <- QCJMExtra.findByIds (map (.cohortJourneyMappingId) rows)
+  cohorts <- QCDExtra.findByIds (map (.cohortId) cjms)
+  journeys <- QJourney.findByIds (map (.journeyId) cjms)
+  let cjmById = HM.fromList $ map (\cjm -> (cjm.id, cjm)) cjms
+      cohortById = HM.fromList $ map (\cohort -> (cohort.id, cohort)) cohorts
+      journeyById = HM.fromList $ map (\journey -> (journey.id, journey)) journeys
   pure
     Common.AutoApplyCohortMappingListRes
       { mappings =
-          map
-            ( \row ->
-                Common.AutoApplyCohortMappingListItem
-                  { autoApplyCohortMappingId = ID.cast row.id,
-                    cohortJourneyMappingId = ID.cast row.cohortJourneyMappingId,
-                    merchantId = row.merchantId.getId,
-                    merchantOperatingCityId = row.merchantOperatingCityId.getId,
-                    vehicleCategory = row.vehicleCategory,
-                    allowIfNoMapping = row.allowIfNoMapping,
-                    enabled = row.enabled,
-                    createdAt = row.createdAt,
-                    updatedAt = row.updatedAt
-                  }
+          mapMaybe
+            ( \row -> do
+                cjm <- HM.lookup row.cohortJourneyMappingId cjmById
+                cohort <- HM.lookup cjm.cohortId cohortById
+                journey <- HM.lookup cjm.journeyId journeyById
+                pure $
+                  Common.AutoApplyCohortMappingListItem
+                    { autoApplyCohortMappingId = ID.cast row.id,
+                      cohortJourneyMappingId = ID.cast row.cohortJourneyMappingId,
+                      cohortId = ID.cast cohort.id,
+                      cohortName = cohort.name,
+                      cohortCategory = cohort.category,
+                      cohortRule = cohort.cohortRule,
+                      journeyId = ID.cast journey.id,
+                      journeyName = journey.name,
+                      journeyType = toApiJourneyType journey.journeyType,
+                      cohortMappingEnabled = cjm.enabled,
+                      merchantId = row.merchantId.getId,
+                      merchantOperatingCityId = row.merchantOperatingCityId.getId,
+                      vehicleCategory = row.vehicleCategory,
+                      allowIfNoMapping = row.allowIfNoMapping,
+                      enabled = row.enabled,
+                      createdAt = row.createdAt,
+                      updatedAt = row.updatedAt
+                    }
             )
             rows
       }

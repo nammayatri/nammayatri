@@ -193,12 +193,13 @@ apis:
         - limit: Int
         - offset: Int
         - vehicleCategory: VehicleCategory
+        - enabled: Bool
       response:
         type: AutoApplyCohortMappingListRes
       migrate:
         capability: system-config.coins.read
 
-  - DELETE:
+  - POST:
       endpoint: /unassign
       auth: ApiAuthV2
       request:
@@ -517,6 +518,15 @@ types:
   AutoApplyCohortMappingListItem:
     - autoApplyCohortMappingId: Id AutoApplyCohortMapping
     - cohortJourneyMappingId: Id CohortJourneyMapping
+    - cohortId: Id CohortDetails
+    - cohortName: Text
+    - cohortCategory: Text
+    - cohortRule: Maybe Value
+    - journeyId: Id IncentiveJourney
+    - journeyName: Text
+    - journeyType: IncentiveJourneyType
+    # cohort_journey_mapping.enabled. `enabled` below is this auto-apply row.
+    - cohortMappingEnabled: Bool
     - merchantId: Text
     - merchantOperatingCityId: Text
     - vehicleCategory: Maybe VehicleCategory
