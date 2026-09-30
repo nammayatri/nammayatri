@@ -388,7 +388,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
   // Load and parse collection when suite changes
   useEffect(() => {
-    if (!selectedDir || !selectedSuite || !currentEnv) {
+    // Parked suites (DbDependent / thrash-collections) are shown by name only: never load their steps.
+    if (!selectedDir || !selectedSuite || !currentEnv || currentSuite?.parked) {
       setSteps([]);
       setNodes([]);
       return;
@@ -421,7 +422,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       setStepStates({});
       setExpandedSteps(new Set());
     });
-  }, [selectedDir, selectedSuite, selectedEnv, currentEnv]);
+  }, [selectedDir, selectedSuite, selectedEnv, currentEnv, currentSuite?.parked]);
 
   // Re-run collection-level prerequest script (generates random phone numbers, reg nos, etc.)
   const reinitStores = useCallback(() => {
@@ -618,6 +619,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     for (const group of groups) {
       for (const env of group.environments) {
         for (const suite of group.suites) {
+          if (suite.parked) continue; // parked suites are not runnable
           jobs.push({ group, env, suite });
         }
       }
@@ -1149,6 +1151,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         />
       ) : (
       <div className="cr-steps">
+        {currentSuite?.parked && (
+          <div className="cr-node">This suite is parked (needs fixing), so steps are hidden.</div>
+        )}
         {visibleNodes.map(node => (
           <div key={node.id} className="cr-node">
             <div className="cr-node-header">

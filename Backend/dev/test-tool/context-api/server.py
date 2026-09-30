@@ -2159,49 +2159,66 @@ def _read_env_file(f, env_type):
         return None
 
 
+# Suites that need fixing are parked outside collections/ (direct-DB ones in DbDependent/,
+# failing ones in DbDependent/thrash-collections/). They are listed by name only (parked=True);
+# get_collection_file() still reads collections/ only, so their steps are never served.
+DB_DEPENDENT_DIR = COLLECTIONS_DIR.parent / "DbDependent"
+THRASH_COLLECTIONS_DIR = DB_DEPENDENT_DIR / "thrash-collections"
+
+
 def scan_collections():
-    """Walk integration-tests/collections/ and return metadata for each collection group."""
-    result = []
-    if not COLLECTIONS_DIR.is_dir():
-        return result
-    for subdir in sorted(COLLECTIONS_DIR.iterdir()):
-        if not subdir.is_dir():
+    """Walk collections/ (runnable) plus the parked dirs and return metadata per collection group."""
+    groups = {}
+    roots = [(COLLECTIONS_DIR, False), (DB_DEPENDENT_DIR, True), (THRASH_COLLECTIONS_DIR, True)]
+    for root, parked in roots:
+        if not root.is_dir():
             continue
-        group = {
-            "directory": subdir.name,
-            "envTypes": list(ENV_TYPES),
-            "environments": [],
-            "suites": [],
-        }
-        for env_type in ENV_TYPES:
-            env_dir = subdir / env_type
-            if not env_dir.is_dir():
+        for subdir in sorted(root.iterdir()):
+            if not subdir.is_dir() or subdir == THRASH_COLLECTIONS_DIR:
                 continue
-            for f in sorted(env_dir.iterdir()):
-                if not (f.suffix == ".json" and f.name.endswith(".postman_environment.json")):
+            group = groups.setdefault(subdir.name, {
+                "directory": subdir.name,
+                "envTypes": list(ENV_TYPES),
+                "environments": [],
+                "suites": [],
+            })
+            seen_envs = {(e["envType"], e["filename"]) for e in group["environments"]}
+            # Parked envs (e.g. Chennai) only fill fully-parked collections; never offered
+            # next to runnable suites, so a working suite can't be run against a parked city.
+            use_envs = not parked or not group["environments"]
+            for env_type in (ENV_TYPES if use_envs else ()):
+                env_dir = subdir / env_type
+                if not env_dir.is_dir():
                     continue
-                env = _read_env_file(f, env_type)
-                if env is not None:
-                    group["environments"].append(env)
-        for f in sorted(subdir.iterdir()):
-            if not f.is_file() or f.suffix != ".json":
-                continue
-            if f.name.endswith(".postman_environment.json"):
-                continue
-            try:
-                col_data = json.loads(f.read_text())
-                info = col_data.get("info", {})
-                group["suites"].append({
-                    "filename": f.name,
-                    "name": info.get("name", f.stem),
-                    "description": info.get("description", ""),
-                    "itemCount": len(col_data.get("item", [])),
-                })
-            except Exception:
-                pass
-        if group["environments"] or group["suites"]:
-            result.append(group)
-    return result
+                for f in sorted(env_dir.iterdir()):
+                    if not (f.suffix == ".json" and f.name.endswith(".postman_environment.json")):
+                        continue
+                    if (env_type, f.name) in seen_envs:
+                        continue
+                    env = _read_env_file(f, env_type)
+                    if env is not None:
+                        group["environments"].append(env)
+            seen_suites = {s["filename"] for s in group["suites"]}
+            for f in sorted(subdir.iterdir()):
+                if not f.is_file() or f.suffix != ".json":
+                    continue
+                if f.name.endswith(".postman_environment.json") or f.name in seen_suites:
+                    continue
+                try:
+                    col_data = json.loads(f.read_text())
+                    info = col_data.get("info", {})
+                    group["suites"].append({
+                        "filename": f.name,
+                        "name": info.get("name", f.stem),
+                        "description": info.get("description", ""),
+                        "itemCount": 0 if parked else len(col_data.get("item", [])),
+                        "parked": parked,
+                    })
+                except Exception:
+                    pass
+    for g in groups.values():
+        g["suites"].sort(key=lambda s: (s["parked"], s["filename"]))  # runnable first
+    return [g for _, g in sorted(groups.items()) if g["environments"] or g["suites"]]
 
 
 def get_collection_file(directory, filename):
