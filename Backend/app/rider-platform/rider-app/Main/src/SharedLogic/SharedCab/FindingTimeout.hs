@@ -112,7 +112,8 @@ cancelOne findingTimeoutSec stale = do
   whenJust cancelled $ \(b, decision) -> do
     -- each step is its own try: the booking is CANCELLED by now, so one failure must not skip the rest or the rider's push
     refunded <- if decision == FullRefund then startRefund b else pure True
-    releaseCancelledBooking b
+    withTryCatch "sharedCab:findingTimeout:releaseCancelledBooking" (releaseCancelledBooking b)
+      >>= either (\e -> logError $ "shared-cab finding-timeout release effects failed for booking " <> b.id.getId <> ": " <> show e) pure
     void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
     void . withTryCatch "sharedCab:findingTimeout:recordCancelReason" $ recordCancelReason b.id NO_CAB_FOUND
     Events.forBooking (Events.BookingCancelled "system" (if decision == FullRefund then "full" else "none") (Just "finding_timeout")) b

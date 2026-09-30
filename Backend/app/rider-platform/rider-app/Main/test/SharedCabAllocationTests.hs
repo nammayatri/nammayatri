@@ -214,7 +214,7 @@ tests =
         map (\(stint, age) -> findingTimeoutAction (addUTCTime age t0) 1200 (addUTCTime (age - stint) t0) t0) [(0, 1300), (1200, 1300), (1201, 1300), (60, 3000), (10, 3600), (10, 3601), (10, 7200)]
           @?= [KeepFinding, KeepFinding, CancelNoCab, KeepFinding, KeepFinding, CancelNoCab, CancelNoCab],
       testCase "R63: a booking already cancelled is not cancelled (or refunded) again" $
-        map cancellableStatus [BS.CONFIRMED, BS.CANCELLED, BS.COUNTER_CANCELLED, BS.CANCEL_INITIATED] @?= [True, False, False, False],
+        map cancellableStatus [BS.CONFIRMED, BS.CANCELLED, BS.COUNTER_CANCELLED, BS.CANCEL_INITIATED, BS.FAILED, BS.RESCHEDULED] @?= [True, False, False, False, False, False],
       testCase "R68: a booking with a parent (rescheduled) never counted its tickets at confirm, so none are reversed" $
         (ticketsCountedAtConfirm (Nothing :: Maybe ()), ticketsCountedAtConfirm (Just ())) @?= (True, False),
       testCase "R61: the next tick is scheduled even when the tick body throws" $ do

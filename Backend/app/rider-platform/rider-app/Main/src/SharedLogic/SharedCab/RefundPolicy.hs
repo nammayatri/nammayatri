@@ -84,9 +84,9 @@ riderNearStop radiusM maxAgeSec now mbStop = \case
       distanceBetweenInMeters riderFix.position stop <= fromIntegral radiusM
   _ -> True
 
--- | A booking another cancel already ended (or started ending) is not cancelled again: the refund would run twice.
+-- | A booking that is already cancelled, mid-cancel, failed or rescheduled away is not cancelled again: the refund would run twice.
 cancellableStatus :: DFRFSBooking.FRFSTicketBookingStatus -> Bool
-cancellableStatus = (`notElem` [DFRFSBooking.CANCELLED, DFRFSBooking.COUNTER_CANCELLED, DFRFSBooking.CANCEL_INITIATED])
+cancellableStatus = (`notElem` [DFRFSBooking.CANCELLED, DFRFSBooking.COUNTER_CANCELLED, DFRFSBooking.CANCEL_INITIATED, DFRFSBooking.FAILED, DFRFSBooking.RESCHEDULED])
 
 data DropRoute = MarkDropped | CancelInstead | NothingToDrop
   deriving (Show, Eq)
