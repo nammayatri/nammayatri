@@ -10,7 +10,10 @@ import Data.List (isInfixOf)
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified "beckn-spec" Domain.Types.Trip as DTrip
+import qualified "mobility-core" Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
+import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import "rider-app" SharedLogic.SharedCab.LegState
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
@@ -25,6 +28,13 @@ tests =
         [ testCase "SHARED_CAB agency" $ isSharedCabAgency "shillong_shared_cab:SHARED_CAB" @?= True,
           testCase "bus agency" $ isSharedCabAgency "chennai_bus:MTC" @?= False,
           testCase "bare SHARED_CAB id" $ isSharedCabAgency "SHARED_CAB" @?= True
+        ],
+      testGroup
+        "journey leg travel mode"
+        [ testCase "shared-cab agency bus leg reports SharedCab" $
+            JMU.convertMultiModalModeToTripMode MultiModalTypes.Bus (Just "shillong_shared_cab:SHARED_CAB") 0 0 @?= DTrip.SharedCab,
+          testCase "other bus agency stays Bus" $
+            JMU.convertMultiModalModeToTripMode MultiModalTypes.Bus (Just "chennai_bus:MTC") 0 0 @?= DTrip.Bus
         ],
       testGroup
         "B5: shared-cab leg bypasses the bus-schedule filter with the SHARED_CAB tier"
