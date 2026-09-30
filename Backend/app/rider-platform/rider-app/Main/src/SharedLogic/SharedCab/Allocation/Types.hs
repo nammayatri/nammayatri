@@ -15,6 +15,8 @@ module SharedLogic.SharedCab.Allocation.Types
     RiderFix (..),
     passedStopBlame,
     timerExpiry,
+    FindingTimeout (..),
+    findingTimeoutAction,
     isMovingSpeed,
     parseLtsTimestamp,
     Blame (..),
@@ -57,7 +59,9 @@ data AllocationState = AllocationState
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data TimerKind = StandTimer | MovingTimer
+-- | AwayTimer is the bounded wait of a stationary cab still away from the board stop: it is nobody's miss, unlike the
+-- stand timer of a cab that sat at the stop and never left.
+data TimerKind = StandTimer | MovingTimer | AwayTimer
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 -- | Why a live allocation ended before boarding (05 §3 release reasons).
@@ -67,6 +71,8 @@ data AllocationOutcome
     StandTimeout
   | -- | moving timer expired after the cab reached the board stop (05 §2, §3)
     MovingTimeout
+  | -- | the bounded wait for a stationary cab away from the stop ran out: nobody's fault, and the cab stays eligible
+    AwayTimeout
   | -- | driver cancelled the allocation (05 §3)
     DriverCancelled
   | -- | tick saw the cab pass the board stop with the booking unboarded (05 §6 item 2); blame per passedStopBlame (R15)
@@ -94,6 +100,7 @@ outcomeText :: AllocationOutcome -> Text
 outcomeText = \case
   StandTimeout -> "STAND_TIMEOUT"
   MovingTimeout -> "MOVING_TIMEOUT"
+  AwayTimeout -> "AWAY_TIMEOUT"
   DriverCancelled -> "DRIVER_CANCELLED"
   PassedStop _ -> "PASSED_STOP"
   SeatLost -> "SEAT_LOST"
@@ -121,6 +128,7 @@ blameFor = \case
   StandTimeout -> BlameDriver
   DriverCancelled -> BlameDriver
   MovingTimeout -> BlameRider
+  AwayTimeout -> BlameNone
   PassedStop blame -> blame
   SeatLost -> BlameNone
   RouteChanged -> BlameNone
@@ -137,6 +145,7 @@ countsTowardAttempts :: AllocationOutcome -> Bool
 countsTowardAttempts = \case
   StandTimeout -> True
   MovingTimeout -> True
+  AwayTimeout -> True
   DriverCancelled -> True
   PassedStop _ -> True
   SeatLost -> True
@@ -217,6 +226,7 @@ timerExpiry now (Just st) = case st.expiresAt of
   Just deadline | now > deadline -> Just $ case st.timerKind of
     StandTimer -> StandTimeout
     MovingTimer -> MovingTimeout
+    AwayTimer -> AwayTimeout
   _ -> Nothing
 
 -- | Moving per the cab's latest LTS speed (m/s); no speed reads as stationary, which arms the
@@ -246,3 +256,15 @@ passedStopBlame radiusM maxAgeSec now stop = \case
     | diffUTCTime now riderFix.takenAt <= fromIntegral maxAgeSec ->
       if distanceBetweenInMeters riderFix.position stop <= fromIntegral radiusM then BlameDriver else BlameRider
   _ -> BlameNone
+
+-- | R63 (05 §8.11): what the tick does with a booking it reads as FINDING (CONFIRMED, no cab, every ticket ACTIVE).
+data FindingTimeout = KeepFinding | CancelNoCab
+  deriving (Show, Eq)
+
+-- | A FINDING booking is cancelled once it is older than findingTimeoutSec, measured from its creation: a release restarts
+-- the FINDING stint, and a stint clock would let a cab that keeps timing out hold the rider forever. It is a system cancel
+-- with a full refund (R54: no cab took the rider), so the rider's own no-shows do not change it.
+findingTimeoutAction :: UTCTime -> Int -> UTCTime -> FindingTimeout
+findingTimeoutAction now findingTimeoutSec createdAt
+  | diffUTCTime now createdAt > fromIntegral findingTimeoutSec = CancelNoCab
+  | otherwise = KeepFinding

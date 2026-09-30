@@ -68,6 +68,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PersonPTStats as SPUS
+import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, onSharedCabConfirmed)
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -226,7 +227,8 @@ onConfirm ::
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
     HasMasterCloudForwarder r,
-    MonadMask m
+    MonadMask m,
+    SharedCabConfirmFlow m r
   ) =>
   Merchant ->
   Booking.FRFSTicketBooking ->
@@ -234,6 +236,38 @@ onConfirm ::
   DOrder ->
   m ()
 onConfirm merchant booking' quoteCategories dOrder = do
+  onConfirmBody merchant booking' quoteCategories dOrder
+  onSharedCabConfirmed booking'
+
+onConfirmBody ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    Metrics.HasBAPMetrics m r,
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "cloudType" r (Maybe CloudType),
+    Finance.HasActorInfo m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r,
+    MonadMask m
+  ) =>
+  Merchant ->
+  Booking.FRFSTicketBooking ->
+  [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  DOrder ->
+  m ()
+onConfirmBody merchant booking' quoteCategories dOrder = do
   Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name dOrder.transactionId booking'.merchantOperatingCityId.getId
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets

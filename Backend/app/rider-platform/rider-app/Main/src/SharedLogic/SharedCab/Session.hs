@@ -176,8 +176,11 @@ finish reason s = do
   results <- forM onBoard $ \b -> (b,) <$> withTryCatch "sharedCab:dropOnFinish" (Booking.markDropped (endDropBy reason) b)
   forM_ (stranded results) $ \b -> logError $ "sharedCab: rider still on board after the session ended, booking=" <> b.id.getId <> " plate=" <> s.vehicleNumber
   now <- getCurrentTime
-  closeLiveTrip s.vehicleNumber reason now
+  -- R67: the session goes ENDED first, since the tick claims onto ACTIVE sessions only. A crash between the steps then leaves a
+  -- stale live trip row (the next open closes it, closeLiveTrip) or a cab still on its LTS route (the tick ignores it),
+  -- never a phantom ACTIVE cab that keeps taking bookings.
   ended <- saveSession (Just s) (endSession s)
+  closeLiveTrip s.vehicleNumber reason now
   detach s
   ended <$ Events.forSession (Events.Ended (show reason)) s
 

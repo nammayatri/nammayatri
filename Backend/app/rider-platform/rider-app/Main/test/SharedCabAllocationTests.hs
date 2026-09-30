@@ -15,8 +15,10 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (FindingBooking (..), RankedCandidate (..), claimTimerSec, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
+import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
+import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -186,6 +188,29 @@ tests =
               @?= [False, False, True, True, False, False],
       testCase "R38: a silent-cab release is nobody's fault and not an attempt" $
         (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
+      testCase "R64: only a cab that sat at the stop (or is moving) gets the stand-timer kind; a cab away from the stop gets its own" $
+        map (\veh -> [claimTimerKind c | c <- eligibleCandidates t0 defaultAllocationConfig [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
+          @?= [[StandTimer], [AwayTimer], [StandTimer]],
+      testCase "R64: the away timer lapses as AwayTimeout, which blames nobody, skips no cab and is not a driver miss" $
+        ( timerExpiry (addUTCTime 181 t0) (Just standing {timerKind = AwayTimer}),
+          blameFor AwayTimeout,
+          skipsPlateOnClose AwayTimeout,
+          isMissedCabOutcome AwayTimeout,
+          countsTowardDriverMisses AwayTimeout,
+          outcomeText AwayTimeout
+        )
+          @?= (Just AwayTimeout, BlameNone, False, False, False, "AWAY_TIMEOUT"),
+      testCase "R64: stand and away timers are cleared once the cab moves, the moving timer is not" $
+        map clearsWhenMoving [StandTimer, AwayTimer, MovingTimer] @?= [True, True, False],
+      testCase "R67: a claim on a stationary cab at the stop pushes ARRIVING, any other claim pushes ASSIGNED" $
+        map (\veh -> [claimPush c | c <- eligibleCandidates t0 defaultAllocationConfig [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
+          @?= [[PushArriving], [PushAssigned], [PushAssigned]],
+      testCase "R63: a FINDING booking is cancelled only once it is older than findingTimeoutSec, counted from its creation" $
+        map (\age -> findingTimeoutAction (addUTCTime age t0) 1200 t0) [0, 1199, 1200, 1201, 7200]
+          @?= [KeepFinding, KeepFinding, KeepFinding, CancelNoCab, CancelNoCab],
+      testCase "R63/R54: a finding-timeout cancel refunds in full, unless a no-show is already booked against the booking" $
+        map (\noShows -> findingTimeoutRefund noShows [TS.ACTIVE]) [0, 1, 2]
+          @?= [FullRefund, NoRefund, NoRefund],
       testCase "garbage is not a timestamp" $
         parseLtsTimestamp "yesterday" @?= Nothing,
       testCase "a clock-skewed fix from the future is not fresh" $ do

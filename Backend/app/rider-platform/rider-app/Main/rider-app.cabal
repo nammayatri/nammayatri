@@ -641,12 +641,14 @@ library
       SharedLogic.SharedCab.Booking
       SharedLogic.SharedCab.Cancel
       SharedLogic.SharedCab.Config
+      SharedLogic.SharedCab.ConfirmHook
       SharedLogic.SharedCab.Degraded
       SharedLogic.SharedCab.DegradedSweepSchedule
       SharedLogic.SharedCab.Demand
       SharedLogic.SharedCab.DriverAction
       SharedLogic.SharedCab.Events
       SharedLogic.SharedCab.ExpirySchedule
+      SharedLogic.SharedCab.FindingTimeout
       SharedLogic.SharedCab.Invariants
       SharedLogic.SharedCab.LegState
       SharedLogic.SharedCab.LtsAttach

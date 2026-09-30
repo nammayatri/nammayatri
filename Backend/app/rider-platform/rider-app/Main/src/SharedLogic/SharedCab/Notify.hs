@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.Notify
     reassignReasonFor,
     notifyBoardAny,
     notifyBookingCancelled,
+    notifyFindingTimeout,
     notifyRouteChange,
     notifyDropConfirm,
   )
@@ -36,6 +37,7 @@ data SharedCabNotificationType
   | SHARED_CAB_ROUTE_CHANGE
   | SHARED_CAB_DROP_CONFIRM
   | SHARED_CAB_BOOKING_CANCELLED
+  | SHARED_CAB_FINDING_TIMEOUT
   deriving (Show, Eq, Enum, Bounded, Generic, ToJSON, FromJSON)
 
 -- | TIMEOUT: the rider's own timer ran out. SEAT_LOST: a walk-up took the seat. CAB_PULLED: the cab went away (driver cancel,
@@ -123,6 +125,7 @@ reassignReasonFor :: AllocationOutcome -> Maybe ReassignReason
 reassignReasonFor = \case
   StandTimeout -> Just TIMEOUT
   MovingTimeout -> Just TIMEOUT
+  AwayTimeout -> Just CAB_PULLED
   SeatLost -> Just SEAT_LOST
   DriverCancelled -> Just CAB_PULLED
   PassedStop _ -> Just CAB_PULLED
@@ -139,6 +142,10 @@ notifyBoardAny = send SHARED_CAB_BOARD_ANY Nothing Nothing Nothing []
 -- | R54: the rider's last allowed no-show cancelled the booking (no refund). `missedCabs` fills {#missedCabs#}.
 notifyBookingCancelled :: (ServiceFlow m r, MonadFlow m) => Int -> DFTB.FRFSTicketBooking -> m ()
 notifyBookingCancelled missedCabs = send SHARED_CAB_BOOKING_CANCELLED Nothing Nothing Nothing [("missedCabs", show missedCabs)]
+
+-- | R63: no cab was found in time; the booking is cancelled and the fare refunded in full.
+notifyFindingTimeout :: (ServiceFlow m r, MonadFlow m) => DFTB.FRFSTicketBooking -> m ()
+notifyFindingTimeout = send SHARED_CAB_FINDING_TIMEOUT Nothing Nothing Nothing []
 
 -- | R13: the rider's cab is switching to `routeCode` before reaching their drop stop.
 notifyRouteChange :: (ServiceFlow m r, MonadFlow m) => Text -> DFTB.FRFSTicketBooking -> m ()

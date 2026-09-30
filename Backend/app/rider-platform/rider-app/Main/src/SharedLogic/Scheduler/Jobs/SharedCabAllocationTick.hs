@@ -14,6 +14,7 @@ module SharedLogic.Scheduler.Jobs.SharedCabAllocationTick
   )
 where
 
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -24,6 +25,7 @@ import Lib.Scheduler
 import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass, sharedCabAllocationEnabled, withCityTickLease)
 import SharedLogic.SharedCab.AllocationSchedule (claimTickRun, scheduleNextTick)
+import SharedLogic.SharedCab.FindingTimeout (CancelFlow, cancelTimedOutFindings)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import SharedLogic.SharedCab.StopProgress (runStopProgress)
 import Storage.Beam.SchedulerJob ()
@@ -43,7 +45,8 @@ sharedCabAllocationTick ::
     Metrics.CoreMetrics m,
     HasField "blackListedJobs" r [Text],
     EncFlow m r,
-    LtsFlow m r c
+    LtsFlow m r c,
+    CancelFlow m r c
   ) =>
   Job 'SharedCabAllocationTick ->
   m ExecutionResult
@@ -52,8 +55,16 @@ sharedCabAllocationTick Job {jobInfo} = do
   -- a duplicate chain finds this tick claimed and ends; the gate going off ends the chain too
   claimed <- claimTickRun merchantOperatingCityId
   when (claimed && sharedCabAllocationEnabled) $ do
-    -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress (7.5) shares it
-    withCityTickLease merchantOperatingCityId $
-      allocationPass merchantOperatingCityId >>= uncurry (runStopProgress merchantOperatingCityId)
-    scheduleNextTick merchantId merchantOperatingCityId
+    liveRef <- liftIO $ newIORef []
+    -- R61: the next tick is scheduled even when this one throws, or one DB hiccup ends the city's chain for good
+    ( do
+        -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress (7.5) shares it
+        withCityTickLease merchantOperatingCityId $
+          allocationPass merchantOperatingCityId >>= \(live, positions) -> do
+            liftIO (writeIORef liveRef live)
+            runStopProgress merchantOperatingCityId live positions
+        -- R63: after the lease, so the refund's network calls never hold up the city's tick
+        liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
+      )
+      `finally` scheduleNextTick merchantId merchantOperatingCityId
   pure Complete

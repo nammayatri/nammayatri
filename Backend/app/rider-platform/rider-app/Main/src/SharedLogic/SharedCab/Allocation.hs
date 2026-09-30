@@ -59,6 +59,10 @@ module SharedLogic.SharedCab.Allocation
     skipsPlateOnClose,
     standTimerOnClaim,
     claimTimerSec,
+    claimTimerKind,
+    ClaimPush (..),
+    claimPush,
+    clearsWhenMoving,
     silentCab,
     silentReleaseMult,
     skippedWhileFinding,
@@ -355,6 +359,26 @@ claimTimerSec cfg c
   | c.rcAtStop = Just cfg.standTimerSec
   | otherwise = Just cfg.allocationWindowSec
 
+-- | R64: which timer a claim's deadline belongs to. Only a cab that sat at the stop gets the stand timer, whose expiry
+-- blames the driver; the bounded wait of a cab still away from the stop is its own kind, nobody's miss and no skip.
+claimTimerKind :: RankedCandidate -> TimerKind
+claimTimerKind c
+  | c.rcMoving || c.rcAtStop = StandTimer
+  | otherwise = AwayTimer
+
+-- | A stand or away timer is cleared once its cab is seen moving; the moving timer is stop-progress's.
+clearsWhenMoving :: TimerKind -> Bool
+clearsWhenMoving = (/= MovingTimer)
+
+-- | R67: what a fresh claim tells the rider. A cab already at the stop, stationary, is ARRIVING with its countdown; any
+-- other claim is ASSIGNED ("on its way"), and stop-progress sends ARRIVING once the cab gets to the stop. One push per
+-- claim, and only the claim's CAS winner gets here, so it is deduped.
+data ClaimPush = PushArriving | PushAssigned
+  deriving (Show, Eq)
+
+claimPush :: RankedCandidate -> ClaimPush
+claimPush c = if standTimerOnClaim c then PushArriving else PushAssigned
+
 -- | R31: a cab the rider failed to board in time is skipped for this booking too, or the same stationary cab is
 -- re-claimed at once and its stand timer blames the driver for the rider's miss.
 skipsPlateOnClose :: AllocationOutcome -> Bool
@@ -470,7 +494,7 @@ attemptClaim cfg booking cand = do
                             shared $
                               Redis.setExp
                                 (allocKey booking.bookingId.getId)
-                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = StandTimer}
+                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = claimTimerKind cand}
                                 cfg.findingTimeoutSec
                             pure (Right now)
                           else pure (Left ClaimCasLost)
@@ -738,7 +762,7 @@ expireTimers cfg now movingOn silentOn live =
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
         Nothing -> do
           whenJust mbState $ \st ->
-            when (st.timerKind == StandTimer && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $
+            when (clearsWhenMoving st.timerKind && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $
               shared $ Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} cfg.findingTimeoutSec
           pure Nothing
     whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
@@ -903,8 +927,9 @@ claimFirst cfg booking = go (0 :: Int)
           -- R17: a cab claimed while stationary already has its stand timer running (attemptClaim
           -- armed it at claim, standDeadline = now + standTimerSec) -- push now rather than waiting
           -- on stop-progress, which only arms the moving timer for a cab that was moving at claim.
-          when (standTimerOnClaim c) $
-            whenJustM (QFRFSTicketBooking.findById booking.bookingId) (Notify.notifyArriving c.rcSession.vehicleNumber cfg.standTimerSec)
+          whenJustM (QFRFSTicketBooking.findById booking.bookingId) $ case claimPush c of
+            PushArriving -> Notify.notifyArriving c.rcSession.vehicleNumber cfg.standTimerSec
+            PushAssigned -> Notify.notifyAssigned c.rcSession.vehicleNumber
           pure (Just c)
         Left miss -> do
           logDebug $ "shared-cab claim missed booking=" <> booking.bookingId.getId <> " cab=" <> c.rcSession.vehicleNumber <> " reason=" <> show miss

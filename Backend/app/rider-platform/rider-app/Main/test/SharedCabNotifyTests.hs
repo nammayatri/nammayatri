@@ -22,7 +22,8 @@ tests =
                 "SHARED_CAB_BOARD_ANY",
                 "SHARED_CAB_ROUTE_CHANGE",
                 "SHARED_CAB_DROP_CONFIRM",
-                "SHARED_CAB_BOOKING_CANCELLED"
+                "SHARED_CAB_BOOKING_CANCELLED",
+                "SHARED_CAB_FINDING_TIMEOUT"
               ],
       testCase "the app sees the same string as the key" $
         map toJSON [minBound .. maxBound :: SharedCabNotificationType]
@@ -34,6 +35,6 @@ tests =
         templateParams (Nothing, "MLK") (Just "Laitumkhrah", "LTK") Nothing
           @?= [("boardStop", "MLK"), ("dropStop", "Laitumkhrah")],
       testCase "F7: every release but the rider's own skip owes the rider a push" $
-        map reassignReasonFor [StandTimeout, MovingTimeout, SeatLost, DriverCancelled, PassedStop BlameRider, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipFull, RiderSkipped SkipOther]
-          @?= map Just [TIMEOUT, TIMEOUT, SEAT_LOST, CAB_PULLED, CAB_PULLED, CAB_PULLED, CAB_PULLED, CAB_PULLED] <> [Nothing, Nothing]
+        map reassignReasonFor [StandTimeout, MovingTimeout, AwayTimeout, SeatLost, DriverCancelled, PassedStop BlameRider, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipFull, RiderSkipped SkipOther]
+          @?= map Just [TIMEOUT, TIMEOUT, CAB_PULLED, SEAT_LOST, CAB_PULLED, CAB_PULLED, CAB_PULLED, CAB_PULLED, CAB_PULLED] <> [Nothing, Nothing]
     ]
