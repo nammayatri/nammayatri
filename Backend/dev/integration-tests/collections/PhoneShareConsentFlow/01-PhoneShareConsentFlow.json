@@ -1079,6 +1079,48 @@
    }
   },
   {
+   "name": "Enable SOS Contact Settings",
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseUrl_app}}/profile/updateEmergencySettings",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "profile",
+      "updateEmergencySettings"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"autoCallDefaultContact\": true, \"notifySosWithEmergencyContacts\": true}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "console.log('SOS contact settings set to True');"
+      ]
+     }
+    }
+   ]
+  },
+  {
    "name": "Enable Phone Share Consent",
    "request": {
     "method": "PUT",
@@ -1155,6 +1197,10 @@
        "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
        "pm.test('consent reads back true', function () {",
        "    pm.expect(d.consentToShareMobileNumber, 'consent').to.eql(true);",
+       "});",
+       "pm.test('consent-only update leaves SOS contact settings untouched', function () {",
+       "    pm.expect(d.autoCallDefaultContact, 'autoCallDefaultContact').to.eql(true);",
+       "    pm.expect(d.notifySosWithEmergencyContacts, 'notifySosWithEmergencyContacts').to.eql(true);",
        "});",
        "console.log('consentToShareMobileNumber =', JSON.stringify(d.consentToShareMobileNumber));"
       ]
@@ -1785,6 +1831,10 @@
        "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
        "pm.test('consent reads back explicit false (not null)', function () {",
        "    pm.expect(d.consentToShareMobileNumber, 'consent').to.eql(false);",
+       "});",
+       "pm.test('consent-only update leaves SOS contact settings untouched', function () {",
+       "    pm.expect(d.autoCallDefaultContact, 'autoCallDefaultContact').to.eql(true);",
+       "    pm.expect(d.notifySosWithEmergencyContacts, 'notifySosWithEmergencyContacts').to.eql(true);",
        "});",
        "console.log('consentToShareMobileNumber =', JSON.stringify(d.consentToShareMobileNumber));"
       ]
