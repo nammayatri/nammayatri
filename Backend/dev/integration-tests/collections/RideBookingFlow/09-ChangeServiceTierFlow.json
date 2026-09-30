@@ -230,13 +230,13 @@
           "raw": "{}"
         },
         "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe",
+          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe",
           "host": [
             "{{baseURL_namma_P}}"
           ],
           "path": [
             "plan",
-            "{{plan_id}}",
+            "{{car_plan_id}}",
             "subscribe"
           ]
         }

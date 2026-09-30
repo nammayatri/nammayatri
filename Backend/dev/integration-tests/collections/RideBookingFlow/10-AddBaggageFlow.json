@@ -71,7 +71,7 @@
 				"method": "POST",
 				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
 				"body": {"mode": "raw", "raw": "{}"},
-				"url": {"raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe", "host": ["{{baseURL_namma_P}}"], "path": ["plan", "{{plan_id}}", "subscribe"]}
+				"url": {"raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe", "host": ["{{baseURL_namma_P}}"], "path": ["plan", "{{car_plan_id}}", "subscribe"]}
 			}
 		},
 		{

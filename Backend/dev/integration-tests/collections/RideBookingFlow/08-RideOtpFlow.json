@@ -237,13 +237,13 @@
           "raw": "{}"
         },
         "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe",
+          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe",
           "host": [
             "{{baseURL_namma_P}}"
           ],
           "path": [
             "plan",
-            "{{plan_id}}",
+            "{{car_plan_id}}",
             "subscribe"
           ]
         }
@@ -510,31 +510,31 @@
               "var d = pm.response.json();",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
               "",
-              "// RideOTP flow returns quotes (not estimates)",
-              "// Pick the quote matching the driver's vehicle variant",
+              "// RideOTP flow returns quotes (not estimates).",
+              "// Pick the tier this city's SEDAN driver can serve (env: ride_otp_service_tier, e.g. COMFY in Bangalore).",
+              "// No silent fallback: booking another tier (e.g. SUV) makes otpRide/start fail with \"Wrong Vehicle Variant\".",
               "var quotes = d.quotes || [];",
-              "var wantVariant = pm.environment.get('vehicle_variant') || 'SEDAN';",
+              "var wantTier = pm.environment.get('ride_otp_service_tier');",
+              "var available = quotes.map(function (q) { var i = q.onDemandCab || q.onRentalCab || q.onMeterRide; return i ? i.vehicleVariant + '=' + i.estimatedTotalFare : '?'; });",
               "var szQuote = null;",
               "for (var i = 0; i < quotes.length; i++) {",
               "    var inner = quotes[i].onDemandCab || quotes[i].onRentalCab || quotes[i].onMeterRide;",
-              "    if (!inner) continue;",
-              "    // Match by vehicleVariant or by serviceTierName containing the variant",
-              "    if (inner.vehicleVariant === wantVariant) {",
+              "    if (inner && inner.vehicleVariant === wantTier) {",
               "        szQuote = inner;",
               "        break;",
               "    }",
               "}",
-              "// Fallback: use first quote if no variant match",
-              "if (!szQuote && quotes.length > 0) {",
-              "    szQuote = quotes[0].onDemandCab || quotes[0].onRentalCab || quotes[0].onMeterRide;",
-              "}",
+              "pm.environment.set('sz_quoteId', '');  // clear any stale id (runner has no environment.unset)",
               "if (szQuote) {",
               "    pm.environment.set('sz_quoteId', szQuote.id);",
-              "    console.log('Selected Quote:', szQuote.id, 'variant:', szQuote.vehicleVariant, 'fare:', szQuote.estimatedTotalFare, '(wanted:', wantVariant + ')');",
-              "    console.log('Available quotes:', quotes.map(function(q) { var i = q.onDemandCab || q.onRentalCab; return i ? i.vehicleVariant + '=' + i.estimatedTotalFare : '?'; }).join(', '));",
+              "    console.log('Selected Quote:', szQuote.id, 'tier:', szQuote.vehicleVariant, 'fare:', szQuote.estimatedTotalFare);",
               "}",
-              "pm.test('Has quotes for special zone', function () {",
-              "    pm.expect(pm.environment.get('sz_quoteId')).to.be.a('string').that.is.not.empty;",
+              "console.log('Available quotes:', available.join(', '), '| wanted:', wantTier);",
+              "pm.test('ride_otp_service_tier is set in env', function () {",
+              "    pm.expect(wantTier, 'set ride_otp_service_tier in the env file').to.be.a('string').that.is.not.empty;",
+              "});",
+              "pm.test('Quote offered for ' + wantTier, function () {",
+              "    pm.expect(szQuote, 'no ' + wantTier + ' quote offered; available: ' + available.join(', ')).to.not.be.null;",
               "});"
             ],
             "type": "text/javascript"
