@@ -386,14 +386,14 @@ run_single() {
 }
 
 # ── Parked collections ──
-# Failing / direct-DB suites live outside collections/ (DbDependent/ and DbDependent/thrash-collections/).
+# Failing / direct-DB suites live outside collections/ (DbDependent/ and thrash-collections/).
 # A command whose collection is parked skips cleanly instead of failing.
 skip_if_parked() {
     local dir="$1"
     [ -d "$dir" ] && return 1
     local name
     name="$(basename "$dir")"
-    for parked in "$SCRIPT_DIR/DbDependent/thrash-collections/$name" "$SCRIPT_DIR/DbDependent/$name"; do
+    for parked in "$SCRIPT_DIR/thrash-collections/$name" "$SCRIPT_DIR/DbDependent/$name"; do
         if [ -d "$parked" ]; then
             echo "SKIP: $name is parked in ${parked#"$SCRIPT_DIR"/} (not in collections/)"
             return 0

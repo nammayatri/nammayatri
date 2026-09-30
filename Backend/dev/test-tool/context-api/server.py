@@ -2160,10 +2160,10 @@ def _read_env_file(f, env_type):
 
 
 # Suites that need fixing are parked outside collections/ (direct-DB ones in DbDependent/,
-# failing ones in DbDependent/thrash-collections/). They are listed by name only (parked=True);
+# failing ones in thrash-collections/). They are listed by name only (parked=True);
 # get_collection_file() still reads collections/ only, so their steps are never served.
 DB_DEPENDENT_DIR = COLLECTIONS_DIR.parent / "DbDependent"
-THRASH_COLLECTIONS_DIR = DB_DEPENDENT_DIR / "thrash-collections"
+THRASH_COLLECTIONS_DIR = COLLECTIONS_DIR.parent / "thrash-collections"
 
 
 def scan_collections():
@@ -2174,7 +2174,7 @@ def scan_collections():
         if not root.is_dir():
             continue
         for subdir in sorted(root.iterdir()):
-            if not subdir.is_dir() or subdir == THRASH_COLLECTIONS_DIR:
+            if not subdir.is_dir():
                 continue
             group = groups.setdefault(subdir.name, {
                 "directory": subdir.name,
