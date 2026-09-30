@@ -80,8 +80,8 @@ DB_USER_SUPER="atlas_superuser"
 RIDE_ENVS=("NY_Bangalore" "YS_Kolkata" "NY_Chennai" "BT_Delhi")
 
 # Cities that support Cab (TAXI/SEDAN) fare products
-# Bangalore only has Auto, no cab dynamic-offer fare policies
-CAB_CITIES=("YS_Kolkata" "NY_Chennai" "BT_Delhi")
+# Bangalore cab flows (TaxiRideFlow 04-06) verified working, so it is no longer skipped
+CAB_CITIES=("NY_Bangalore" "YS_Kolkata" "NY_Chennai" "BT_Delhi")
 
 # ── Utilities ──
 
