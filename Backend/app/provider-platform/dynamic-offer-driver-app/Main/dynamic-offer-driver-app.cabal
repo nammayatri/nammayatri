@@ -678,8 +678,10 @@ library
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
+      SharedLogic.Finance.B2CQRCode
       SharedLogic.Finance.EInvoice
       SharedLogic.Finance.GstBreakdown
+      SharedLogic.Finance.InvoiceDocument
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.LedgerAdjustment
       SharedLogic.Finance.LedgerAdjustmentCast

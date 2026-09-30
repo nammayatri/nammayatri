@@ -61,10 +61,20 @@ type API =
       :> Get
            '[JSON]
            API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
+      :<|> TokenAuth
+      :> "finance"
+      :> "invoice"
+      :> "pdfUrl"
+      :> MandatoryQueryParam
+           "invoiceId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
   )
 
 handler :: Environment.FlowServer API
-handler = getSubscriptionInvoices :<|> getFinanceInvoicePdf
+handler = getSubscriptionInvoices :<|> getFinanceInvoicePdf :<|> getFinanceInvoicePdfUrl
 
 getSubscriptionInvoices ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -94,3 +104,13 @@ getFinanceInvoicePdf ::
     Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfResp
   )
 getFinanceInvoicePdf a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a7) $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdf (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a7) a6 a5 a4 a3 a2 a1
+
+getFinanceInvoicePdfUrl ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.FinanceInvoice.FinanceInvoicePdfUrlResp
+  )
+getFinanceInvoicePdfUrl a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FinanceInvoice.getFinanceInvoicePdfUrl (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

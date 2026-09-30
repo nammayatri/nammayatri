@@ -133,7 +133,8 @@ mkUpdateMessage req (UPaymentCompletedBuildReqDetails details) = do
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
-          { orderBilling = Nothing,
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
             orderCancellation = Nothing,
             orderCancellationTerms = Nothing,
             orderId = Just $ req.bppBookingId.getId,
@@ -187,7 +188,8 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
-          { orderBilling = Nothing,
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
             orderCancellation = Nothing,
             orderCancellationTerms = Nothing,
             orderId = Just $ req.bppBookingId.getId,
@@ -230,7 +232,8 @@ mkUpdateMessage req (UAddStopBuildReqDetails details) = do
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
-          { orderBilling = Nothing,
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
             orderCancellation = Nothing,
             orderCancellationTerms = Nothing,
             orderId = Just $ req.bppBookingId.getId,
@@ -273,7 +276,8 @@ mkUpdateMessage req (UEditStopBuildReqDetails details) = do
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
-          { orderBilling = Nothing,
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
             orderCancellation = Nothing,
             orderCancellationTerms = Nothing,
             orderId = Just $ req.bppBookingId.getId,
@@ -322,7 +326,8 @@ mkUpdateMessage req (UChangeServiceTierBuildReqDetails details) = do
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
-          { orderBilling = Nothing,
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
             orderCancellation = Nothing,
             orderCancellationTerms = Nothing,
             orderId = Just $ req.bppBookingId.getId,
@@ -385,7 +390,8 @@ mkUpdateMessage req (UAddBaggageBuildReqDetails details) = do
   Spec.UpdateReqMessage
     { updateReqMessageOrder =
         Spec.Order
-          { orderBilling = Nothing,
+          { orderDocuments = Nothing,
+            orderBilling = Nothing,
             orderCancellation = Nothing,
             orderCancellationTerms = Nothing,
             orderId = Just $ req.bppBookingId.getId,

@@ -53,6 +53,7 @@ in
                 htop
                 wget
                 zbar
+                qrencode # QR-code PNG generation for invoice documents (Utils.QRCode.Encoder)
                 wkhtmltopdf-bin
                 openssh # For SFTP CLI support
                 sshpass # For password-based SFTP authentication

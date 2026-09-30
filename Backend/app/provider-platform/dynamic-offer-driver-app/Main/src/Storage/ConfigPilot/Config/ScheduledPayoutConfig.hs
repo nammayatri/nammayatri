@@ -15,7 +15,6 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.ScheduledPayoutConfig as SQ
-import qualified Storage.Queries.ScheduledPayoutConfigExtra as SQE
 
 data ScheduledPayoutConfigDimensions = ScheduledPayoutConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -43,4 +42,3 @@ instance ConfigDimensions ScheduledPayoutConfigDimensions where
         LCP.DimMatcher (.payoutCategory) (Just . (.payoutCategory)) (==)
       ]
       Nothing
-  configFallback a = Just (SQE.findByDimensions (Id a.merchantOperatingCityId) a.isEnabled a.payoutCategory)
