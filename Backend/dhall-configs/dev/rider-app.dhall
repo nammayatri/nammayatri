@@ -332,13 +332,19 @@ let RiderJobType =
       | ReconcileRewardInflight
       | BookingDepositExpiry
       | SilentReallocationExpiry
+      | SharedCabAllocationTick
+      | SharedCabSessionExpiry
+      | SharedCabDegradedSweep
       >
 
 let jobRetryOnExceptionMapx =
       [] : List { mapKey : RiderJobType, mapValue : Bool }
 
 let jobInfoMapx =
-      [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      [ { mapKey = RiderJobType.SharedCabAllocationTick, mapValue = False }
+      , { mapKey = RiderJobType.SharedCabSessionExpiry, mapValue = False }
+      , { mapKey = RiderJobType.SharedCabDegradedSweep, mapValue = False }
+      , { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
       , { mapKey = RiderJobType.ScheduledRidePopupToRider, mapValue = False }
       , { mapKey = RiderJobType.ScheduledRideNotificationsToRider
         , mapValue = True

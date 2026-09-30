@@ -347,13 +347,15 @@ let AllocatorJobType =
       | ReconciliationScheduler
       | ReconciliationSweep
       | ConnectAccountChargeDeduction
+      | SharedCabReconciler
       >
 
 let jobRetryOnExceptionMapx =
       [] : List { mapKey : AllocatorJobType, mapValue : Bool }
 
 let jobInfoMapx =
-      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
+      [ { mapKey = AllocatorJobType.SharedCabReconciler, mapValue = False }
+      , { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.SendScheduledSearchRequestToDriver
         , mapValue = True
         }
