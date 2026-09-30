@@ -88,7 +88,7 @@ import qualified Tools.Metrics.BAPMetrics as Metrics
 -- | `07` §3 shared-cab block; skips bus live tracking, which knows nothing of shared cabs.
 -- Positions and ETAs wait on the LTS read (7.2), driver details on the session (B6).
 getSharedCabLegState ::
-  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadFlow m, SharedCabEvents.EventFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r) =>
   UTCTime ->
   [APITypes.RiderLocationReq] ->
   DJourneyLeg.JourneyLeg ->
@@ -116,6 +116,17 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   findingSince <- SharedCabAllocation.readFindingSince booking.id booking.createdAt
   attempts <- SharedCabBooking.shared $ fromMaybe 0 <$> Redis.safeGet (SharedCabAllocation.attemptsKey booking.id.getId)
   mbAllocState <- SharedCabBooking.shared $ Redis.safeGet @AllocationState (SharedCabAllocation.allocKey booking.id.getId)
+  -- the cab's fix and ETAs: one read of the route's LTS hash (what the allocator reads); any miss is Nothing
+  mbCabTracking <- case mbSession of
+    Just session
+      | session.status /= SharedCabSessionState.ENDED ->
+        withTryCatch "sharedCab:legState:readCabTracking" (SharedCabAllocation.readRoutePositions session.routeCode)
+          <&> either (const Nothing) (find (\veh -> veh.vehicleNumber == session.vehicleNumber))
+    _ -> pure Nothing
+  let cabTrack = do
+        veh <- mbCabTracking
+        guard (SharedCabAllocation.isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo)
+        pure (SharedCabLeg.cabTracking now booking.fromStationCode booking.toStationCode veh.vehicleInfo)
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
       arrivalDeadline = mbAllocState >>= (.expiresAt)
@@ -129,19 +140,21 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             fallbackAfterSec = cfg.fallbackAfterSec
           }
       mkSharedCab reason st =
-        SharedCabLeg.SharedCabLegStatus
-          { state = st,
-            bookingId = booking.id.getId,
-            vehicleNumber = booking.vehicleNumber,
-            vehicleModel = Nothing,
-            driverName = Nothing,
-            driverPhotoUrl = Nothing,
-            etaToBoardStopSec = Nothing,
-            etaToDropStopSec = Nothing,
-            cabsComing,
-            boardDeadlineSec,
-            cancelReason = reason
-          }
+        let live = if st `elem` [SharedCabLeg.DROPPED, SharedCabLeg.CANCELLED] then Nothing else cabTrack
+         in SharedCabLeg.SharedCabLegStatus
+              { state = st,
+                bookingId = booking.id.getId,
+                vehicleNumber = booking.vehicleNumber,
+                vehicleModel = Nothing,
+                driverName = Nothing,
+                driverPhotoUrl = Nothing,
+                etaToBoardStopSec = live >>= (\(_, board, _) -> board),
+                etaToDropStopSec = live >>= (\(_, _, dropEta) -> dropEta),
+                position = (\(pos, _, _) -> pos) <$> live,
+                cabsComing,
+                boardDeadlineSec,
+                cancelReason = reason
+              }
   -- R15: where the rider is while a cab is on its way decides the blame if it passes the stop
   when (mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]) $
     whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
@@ -346,6 +359,30 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
           -- return $ JT.Single finalStateData
           return $ JT.Single detailedStateData
+        DTrip.SharedCab -> do
+          -- no bus tracking for a cab; the booking-less state is one leg state keeping the plate and tier the walk-up path set
+          mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
+          let (trackingStatus, trackingStatusLastUpdatedAt) =
+                case listToMaybe trackingStatuses of
+                  Just (_, ts, tsupAt) -> (ts, tsupAt)
+                  Nothing -> (JMStateTypes.InPlan, now)
+          return $
+            JT.Single
+              JT.JourneyLegStateData
+                { status = oldStatus,
+                  bookingStatus,
+                  trackingStatus,
+                  trackingStatusLastUpdatedAt,
+                  userPosition,
+                  JT.vehiclePositions = [],
+                  legOrder = journeyLeg.sequenceNumber,
+                  subLegOrder = 1,
+                  mode,
+                  fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                  serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
+                  merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+                  sharedCab = Nothing
+                }
         _ -> do
           -- Other modes (Metro, Subway, etc.)
           let journeyLegStates =

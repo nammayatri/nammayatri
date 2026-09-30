@@ -7,13 +7,16 @@ import qualified "beckn-spec" BecknV2.FRFS.Enums as Spec
 import Data.Aeson (decode, encode)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.List (isInfixOf)
+import Data.Text (Text)
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified "beckn-spec" Domain.Types.Trip as DTrip
+import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import qualified "mobility-core" Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
+import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.LegState
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
@@ -30,11 +33,22 @@ tests =
           testCase "bare SHARED_CAB id" $ isSharedCabAgency "SHARED_CAB" @?= True
         ],
       testGroup
+        "cab position and ETAs from LTS tracking"
+        [ testCase "position is the fix; ETAs are seconds to the listed Upcoming stops" $
+            cabTracking now "B" "D" (vehicle [upcoming "B" LT.Upcoming 120, upcoming "D" LT.Upcoming 600]) @?= (CabPosition 25.5 91.8, Just 120, Just 600),
+          testCase "a reached stop and an unlisted stop have no ETA" $
+            cabTracking now "B" "Z" (vehicle [upcoming "B" LT.Reached 0]) @?= (CabPosition 25.5 91.8, Nothing, Nothing),
+          testCase "no upcoming stops at all is all-Nothing ETAs" $
+            cabTracking now "B" "D" ((vehicle []) {LT.upcomingStops = Nothing}) @?= (CabPosition 25.5 91.8, Nothing, Nothing)
+        ],
+      testGroup
         "journey leg travel mode"
         [ testCase "shared-cab agency bus leg reports SharedCab" $
             JMU.convertMultiModalModeToTripMode MultiModalTypes.Bus (Just "shillong_shared_cab:SHARED_CAB") 0 0 @?= DTrip.SharedCab,
           testCase "other bus agency stays Bus" $
-            JMU.convertMultiModalModeToTripMode MultiModalTypes.Bus (Just "chennai_bus:MTC") 0 0 @?= DTrip.Bus
+            JMU.convertMultiModalModeToTripMode MultiModalTypes.Bus (Just "chennai_bus:MTC") 0 0 @?= DTrip.Bus,
+          testCase "the search-result leg builder (legTripMode, used by init, mkJourney and mkJourneyLeg) reads the leg's agency" $
+            [JMU.legTripMode 0 0 (leg "shillong_shared_cab:SHARED_CAB"), JMU.legTripMode 0 0 (leg "chennai_bus:MTC")] @?= [DTrip.SharedCab, DTrip.Bus]
         ],
       testGroup
         "B5: shared-cab leg bypasses the bus-schedule filter with the SHARED_CAB tier"
@@ -103,6 +117,42 @@ tests =
     gate attempts offsetSec =
       FallbackGate {attempts, maxAttempts = 2, findingSince = addUTCTime offsetSec now, fallbackAfterSec = 600}
 
+    vehicle :: [LT.UpcomingStop] -> LT.VehicleInfo
+    vehicle stops =
+      LT.VehicleInfo {LT.startTime = Nothing, LT.scheduleRelationship = Nothing, LT.tripId = Nothing, LT.latitude = 25.5, LT.longitude = 91.8, LT.speed = Nothing, LT.timestamp = Nothing, LT.upcomingStops = Just stops}
+
+    upcoming :: Text -> LT.UpcomingStopStatus -> NominalDiffTime -> LT.UpcomingStop
+    upcoming code status etaSec =
+      LT.UpcomingStop
+        { LT.stop = LT.Stop {LT.name = code, LT.coordinate = LatLong 0 0, LT.stopCode = code, LT.stopIdx = 0, LT.distanceToUpcomingIntermediateStop = 0, LT.durationToUpcomingIntermediateStop = 0},
+          LT.eta = addUTCTime etaSec now,
+          LT.status = status,
+          LT.delta = Nothing
+        }
+
+    leg :: Text -> MultiModalTypes.MultiModalLeg
+    leg agencyGtfsId =
+      MultiModalTypes.MultiModalLeg
+        { distance = undefined,
+          duration = undefined,
+          polyline = undefined,
+          mode = MultiModalTypes.Bus,
+          startLocation = undefined,
+          endLocation = undefined,
+          fromStopDetails = Nothing,
+          toStopDetails = Nothing,
+          routeDetails = [],
+          serviceTypes = [],
+          agency = Just (MultiModalTypes.MultiModalAgency {gtfsId = Just agencyGtfsId, name = "agency"}),
+          fromArrivalTime = Nothing,
+          fromDepartureTime = Nothing,
+          toArrivalTime = Nothing,
+          toDepartureTime = Nothing,
+          entrance = Nothing,
+          exit = Nothing,
+          providerRouteId = Nothing
+        }
+
     statusNoReason :: SharedCabLegStatus
     statusNoReason =
       SharedCabLegStatus
@@ -114,6 +164,7 @@ tests =
           driverPhotoUrl = Nothing,
           etaToBoardStopSec = Nothing,
           etaToDropStopSec = Nothing,
+          position = Nothing,
           cabsComing = 0,
           boardDeadlineSec = Nothing,
           cancelReason = Nothing
