@@ -359,6 +359,28 @@ jobs:
             ln -sfn "$CACHE_ROOT/hie/$pkg" "$pkg/.hie"
           done
 
+      # TEMPORARY: runner-exporter.py on the CI runner holds :8080, so move mock-server to 18080 for CI only.
+      # Rewrites the CI checkout copy, not the repo. Remove once the exporter moves off 8080.
+      - name: Move mock-server off 8080 (temporary)
+        run: |
+          MOCK_PORT=18080
+          echo "MOCK_SERVER_PORT=$MOCK_PORT" >> $GITHUB_ENV
+          sed -i "s/mock-server = 8080;/mock-server = $MOCK_PORT;/" Backend/nix/services/ports.nix
+          sed -i "s/8080 # mock-server (python)/$MOCK_PORT # mock-server (python)/" Backend/nix/scripts.nix
+          grep -rl 'localhost:8080' Backend/dev/feature-migrations Backend/dev/integration-tests/collections \
+            | xargs -r sed -i "s/localhost:8080/localhost:$MOCK_PORT/g"
+          grep -rl 'MOCK_SERVER_PORT:8080' Backend/dev/integration-tests/collections \
+            | xargs -r sed -i "s/MOCK_SERVER_PORT:8080/MOCK_SERVER_PORT:$MOCK_PORT/g"
+          grep -n "mock-server" Backend/nix/services/ports.nix
+
+      # Runner env has LC_ALL=C.UTF-8, which nix's glibc can't load, so Haskell falls back to ASCII and
+      # driver-app crashes reading migrations with non-ASCII chars (e.g. "—" in 0864). Point nix at glibcLocales.
+      - name: Set UTF-8 locale for nix processes
+        run: |
+          echo "LANG=C.UTF-8" >> $GITHUB_ENV
+          echo "LC_ALL=C.UTF-8" >> $GITHUB_ENV
+          echo "LOCALE_ARCHIVE=$(nix build --no-link --print-out-paths nixpkgs#glibcLocales)/lib/locale/locale-archive" >> $GITHUB_ENV
+
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
         run: |
