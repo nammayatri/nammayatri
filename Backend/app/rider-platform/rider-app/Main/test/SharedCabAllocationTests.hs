@@ -204,6 +204,11 @@ tests =
           outcomeText AwayTimeout
         )
           @?= (Just AwayTimeout, BlameNone, False, False, False, "AWAY_TIMEOUT"),
+      testCase "R75 (user decision 2026-09-30): a stand timeout is the rider's no-show, not a driver miss; a driver cancel still is" $
+        ( map blameFor [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout],
+          map countsTowardDriverMisses [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
+        )
+          @?= ([BlameRider, BlameRider, BlameDriver, BlameNone], [False, False, True, False]),
       testCase "R64: stand and away timers are cleared once the cab moves, the moving timer is not" $
         map clearsWhenMoving [StandTimer, AwayTimer, MovingTimer] @?= [True, True, False],
       testCase "R67: a claim on a stationary cab at the stop pushes ARRIVING, any other claim pushes ASSIGNED" $

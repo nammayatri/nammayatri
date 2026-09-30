@@ -117,7 +117,8 @@ data Blame = BlameDriver | BlameRider | BlameNone
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 -- | 05 §8.4 blame rules:
---   * cab time running out at the stand and driver cancels are the driver's miss;
+--   * driver cancels are the driver's miss; cab time running out at the stand (the cab waited, the rider never boarded)
+--     is the RIDER's no-show -- user decision 2026-09-30 (R75), which reverses the plan's "stand TIMEOUT is the driver's";
 --   * the cab reaching/passing the stop with the rider not there is the rider's no-show; passing a rider
 --     who was waiting at the stop is the driver's miss (R15, passedStopBlame);
 --   * capacity-guard eviction and session lifecycle closes are nobody's fault.
@@ -126,7 +127,7 @@ data Blame = BlameDriver | BlameRider | BlameNone
 -- MovingTimeout is mapped to BlameRider. If product wants MovingTimeout neutral, change only here.
 blameFor :: AllocationOutcome -> Blame
 blameFor = \case
-  StandTimeout -> BlameDriver
+  StandTimeout -> BlameRider
   DriverCancelled -> BlameDriver
   MovingTimeout -> BlameRider
   AwayTimeout -> BlameNone
@@ -157,11 +158,11 @@ countsTowardAttempts = \case
   RiderSkipped SkipFull -> False
   RiderSkipped SkipOther -> True
 
--- | 05 §8.4 literal: "@consecutiveMisses@ counts only DRIVER_CANCELLED and stand TIMEOUT."
+-- | 05 §8.4, amended by user decision 2026-09-30 (R75): "@consecutiveMisses@ counts only DRIVER_CANCELLED"; a stand
+-- timeout is the rider's no-show now.
 countsTowardDriverMisses :: AllocationOutcome -> Bool
 countsTowardDriverMisses = \case
   DriverCancelled -> True
-  StandTimeout -> True
   _ -> False
 
 -- | Engine tunables. Every field maps to a rider_config row of 05 §7 with the same default.

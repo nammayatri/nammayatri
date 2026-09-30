@@ -362,7 +362,7 @@ claimTimerSec cfg c
   | otherwise = Just cfg.allocationWindowSec
 
 -- | R64: which timer a claim's deadline belongs to. Only a cab that sat at the stop gets the stand timer, whose expiry
--- blames the driver; the bounded wait of a cab still away from the stop is its own kind, nobody's miss and no skip.
+-- blames the rider (a no-show, user decision 2026-09-30); the bounded wait of a cab still away from the stop is its own kind, nobody's miss and no skip.
 claimTimerKind :: RankedCandidate -> TimerKind
 claimTimerKind c
   | c.rcMoving || c.rcAtStop = StandTimer
@@ -382,7 +382,7 @@ claimPush :: RankedCandidate -> ClaimPush
 claimPush c = if standTimerOnClaim c then PushArriving else PushAssigned
 
 -- | R31: a cab the rider failed to board in time is skipped for this booking too, or the same stationary cab is
--- re-claimed at once and its stand timer blames the driver for the rider's miss.
+-- re-claimed at once and its stand timer would charge the rider a second no-show for the same cab.
 skipsPlateOnClose :: AllocationOutcome -> Bool
 skipsPlateOnClose = isMissedCabOutcome
 
