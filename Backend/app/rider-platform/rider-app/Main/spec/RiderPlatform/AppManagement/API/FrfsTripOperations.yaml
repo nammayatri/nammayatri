@@ -1,0 +1,38 @@
+imports:
+  FleetOperatorCurrentOperationReq: API.Types.UI.FRFSTicketService
+  FleetOperatorCurrentOperationResp: API.Types.UI.FRFSTicketService
+  FleetOperatorTripActionReq: API.Types.UI.FRFSTicketService
+  FleetOperatorTripActionResp: API.Types.UI.FRFSTicketService
+
+importPackageOverrides:
+  API.Types.UI.FRFSTicketService: "rider-app"
+
+module: FrfsTripOperations
+apiPrefix: FrfsFleetOperator
+
+apis:
+  - POST:
+      endpoint: /currentOperation
+      auditRequestBody: false
+      name: PostFrfsFleetOperatorCurrentOperation
+      auth: ApiAuthV2
+      request:
+        type: FleetOperatorCurrentOperationReq
+      response:
+        type: FleetOperatorCurrentOperationResp
+      migrate:
+        capability: transit-operations.trip.execute
+
+  - POST:
+      endpoint: /tripAction
+      auditRequestBody: false
+      name: PostFrfsFleetOperatorTripAction
+      auth: ApiAuthV2
+      request:
+        type: FleetOperatorTripActionReq
+      response:
+        type: FleetOperatorTripActionResp
+      migrate:
+        capability: transit-operations.trip.execute
+
+types: {}
