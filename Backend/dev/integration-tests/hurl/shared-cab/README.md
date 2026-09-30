@@ -1,6 +1,6 @@
 # Shared-cab scenario scripts (validators layer 5)
 
-These scripts ran green against a local rider-app + driver-app stack (2026-09-30, batch8/9): `driver`, `flush`, `rider`, and `boarding` parts 1 and 2 (allocate, code, drop; re-bind). Boarding part 3 (walk-up `publicTransport/vehicleData/BUS/{plate}`) returned 404 in that local stack and is unverified.
+These scripts ran green against a local rider-app + driver-app stack (2026-09-30, batch8/9): `driver`, `flush`, `rider`, and `boarding` (allocate, code, drop; re-bind; walk-up). Boarding part 3 (walk-up `publicTransport/vehicleData/%22BUS%22/{plate}`) needs the JSON-quoted enum segment (`/BUS/` is a router-level 404). It also waits 8 s before typing the code: a code sent while the tick allocates the same booking is refused with a generic 400 (`Boarding.hs` `bindingUnmoved`).
 
 Board rows 3.6 (driver flow), 6.8 (rider flow) and 8.7 (boarding flow). **`boarding-flow.hurl` is untested until 8.1 merges** (boarding is on `backend/feat/shared-cab-prime-81`) and allocation (7.1–7.4) is on. The driver side hits rider-app's internal `/internal/sharedCab/*` APIs directly: these are what driver-app proxies, plus the `driverId` / `vehicleNumber` that driver-app resolves from its token (`spec/API/SharedCabInternal.yaml`). The rider side uses the multimodal UI APIs with a rider token.
 
