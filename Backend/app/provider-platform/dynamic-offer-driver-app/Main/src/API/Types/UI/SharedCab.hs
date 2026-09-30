@@ -113,9 +113,20 @@ data SharedCabPauseReason = ABSENT | DRIVER_OFFLINE | NO_LOCATION | OFF_ROUTE
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SharedCabRiderStatus = AT_STOP | MINUTES_AWAY | ARRIVING | BOARDED
+-- | Mirrors rider-app SessionView.RiderStatus. A status a newer rider-app adds decodes as UNKNOWN_STATUS instead of
+-- failing the driver's whole session view.
+data SharedCabRiderStatus = AT_STOP | MINUTES_AWAY | ARRIVING | BOARDED | UNKNOWN_STATUS
   deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, ToSchema)
+
+instance FromJSON SharedCabRiderStatus where
+  parseJSON = withText "SharedCabRiderStatus" $ \t ->
+    pure $ case t of
+      "AT_STOP" -> AT_STOP
+      "MINUTES_AWAY" -> MINUTES_AWAY
+      "ARRIVING" -> ARRIVING
+      "BOARDED" -> BOARDED
+      _ -> UNKNOWN_STATUS
 
 data BoardingRider = BoardingRider
   { bookingId :: Text,
