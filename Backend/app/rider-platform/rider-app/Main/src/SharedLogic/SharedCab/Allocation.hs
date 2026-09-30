@@ -90,6 +90,7 @@ import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PersonPTStats as DPUS
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -102,23 +103,28 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.LegState (fallbackReached, fallbackTimeElapsed)
+import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP), fallbackReached, fallbackTimeElapsed)
 import qualified SharedLogic.SharedCab.Misses as Misses
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.PersonStats as QPS
 
 --------------------------------------------------------------------------------
 -- Redis key contract
@@ -126,6 +132,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
 -- | Everything the tick, claims and releases need (the release re-triggers the tick, hence LTS).
 -- ServiceFlow: afterClose/claimFirst push the rider on a timer close or a stationary claim (R16/R17).
+-- EncFlow: R68's person-stats reversal in cancelForNoShows decrypts the phone for staticPersonId.
 -- | Calling the driver-app internal API (the allocation push) needs the endpoint map.
 type InternalEndpointFlow m r = HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
 
@@ -140,6 +147,7 @@ type AllocFlow m r =
     Metrics.CoreMetrics m,
     ServiceFlow m r,
     Events.EventFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   )
 
@@ -559,7 +567,7 @@ clearAllocationKeys bookingId =
 -- bump attempts. The city it closed in (and whether this close is the one that just crossed
 -- maxAttempts, R16), or Nothing when another closer won.
 closeLocked ::
-  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   AllocationConfig ->
   Id DFTB.FRFSTicketBooking ->
   Text ->
@@ -607,7 +615,38 @@ closeLocked cfg bookingId expectedPlate outcome =
 -- | R54: the rider's last allowed no-show. Cancelled by the system, fare kept: the payment is left charged (nothing marks
 -- it refund-pending). Runs in the tick's own env, so it writes only what the leg state and the ticket need; the
 -- payment, recon and journey side effects of a rider cancel are skipped on purpose. Inside the booking lock.
-cancelForNoShows :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFTB.FRFSTicketBooking -> m ()
+-- Note the refund-pending mark is exactly what would make the payment service refund: R54 means the charging (the
+-- NoRefund tier paid out by decideCancel) survives the system cancel.
+--
+-- R68 -- the cancel side effects of a settled no-refund rider cancel (SharedLogic.FRFSCancel.handleCancelledStatus),
+-- revisited under the tick's constraints (tick env: CacheFlow/EsqDBFlow/Hedis/EncFlow; anything else is documented,
+-- not done):
+--
+--   * Pass-trip release -- IMPLEMENTED. refundPassOverrideTrip hands back the trips the booking's confirm debited;
+--     it is exactly-once per searchId (TripReleased / TripRefundPending markers), so a retried tick can never
+--     double-credit the pass. releaseBookedTrip drops the booked-window overlap entries; its srem is a no-op on a
+--     replay. The trip comes back even though the money is kept: handleCancelledStatus's refundOwed gate looks at
+--     the pre-write status, not at the refund amount, so a settled no-refund rider cancel does the same.
+--   * Person-stats reversal -- IMPLEMENTED. reversePurchase undoes OnConfirm's recordPurchase on the same
+--     dimensions (EncFlow only buys the staticPersonId phone decrypt); ticketsBookedInEvent ticks back down and the
+--     PersonStats cache is cleared, mirroring handleCancelledStatus. Not crash-idempotent, and doesn't need to be:
+--     the close only happens once per booking (a re-read sees CANCELLED and `closable` bails), and a crash between
+--     the row flip and this point leaves stats un-reversed rather than reversed twice -- the same failure
+--     preference handleCancelledStatus documents for its own non-idempotent counters.
+--   * Cancel SMS -- BLOCKED. SharedLogic.FRFSCancel.sendTicketCancelSMS is typed to the rider-app API's concrete
+--     Flow (its AppEnv record carries the SMS/template/urlShortner plumbing; the message builder needs partner-org
+--     config through it). The tick runs in the scheduler's env record and this engine layer is
+--     constraint-polymorphic, so the SMS can not be sent from here without re-typing the engine to the API Flow and
+--     dragging the whole messaging stack into SharedLogic. Cover: the R54 booking-cancelled push
+--     (Notify.notifyBookingCancelled) fires in afterClose.
+--   * Google Wallet status flip -- BLOCKED, same shape: handleGoogleWalletStatusUpdate needs the API Flow for the
+--     JWT service-account bindings (GWLink/GWSA). The wallet refreshes the ticket's CANCELLED state off the booking
+--     row on its next fetch.
+--
+-- Contrariwise invariant: the booking row flips to CANCELLED first and only then any of this runs; between the row
+-- flip and clearAllocationKeys/event a failure can only lose an observability step, never leave a live booking on
+-- a cancelled cab (and every individual effect above is wrapped in withTryCatch for the same reason).
+cancelForNoShows :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, EncFlow m r) => DFTB.FRFSTicketBooking -> m ()
 cancelForNoShows b = do
   void $ QFRFSTicketBooking.updateStatusById CANCELLED b.id
   void $ QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED b.id
@@ -615,6 +654,29 @@ cancelForNoShows b = do
   QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just 0) (Just (fromMaybe b.totalPrice.amount b.overriddenAmount)) (Just True) b.id
   -- the journey-level part of a cancel (legs Finished, journey CANCELLED), as a rider cancel does
   QJourneyLeg.findByLegSearchId (Just b.searchId.getId) >>= mapM_ (FRFSCancelJourney.cancelJourneyById . (.journeyId))
+  -- R55: the leg state shows 'cancelled after missed cabs'. clearAllocationKeys (next, in the caller) leaves this key.
+  recordCancelReason b.id NO_SHOW_CAP
+  quantity <- FRFSPassOverride.ticketQuantityForBooking b
+  mbPerson <- QPerson.findById b.riderId
+  -- (1) give the pass's spent trip back; the marker inside makes a tick retry safe
+  whenJust b.overrideAppliedEntityId $ \entityId -> do
+    void . withTryCatch "sharedCab:cancelForNoShows:refundPassOverrideTrip" $
+      FRFSPassOverride.refundPassOverrideTrip b.searchId (Id entityId) quantity
+    void . withTryCatch "sharedCab:cancelForNoShows:releaseBookedTrip" $
+      whenJust mbPerson $ \person ->
+        FRFSPassOverride.releaseBookedTrip person (Id entityId) b.id.getId (fromMaybe b.createdAt b.startTime)
+  -- (2) undo the persona counters OnConfirm's recordPurchase wrote, in handleCancelledStatus's order:
+  -- PersonStats cache cleared, then the reverse, then the legacy tickets-booked counter.
+  void $ CQP.clearPSCache b.riderId
+  case mbPerson of
+    Nothing -> logError $ "shared-cab cancelForNoShows: person " <> b.riderId.getId <> " not found, stats reversal skipped"
+    Just person -> do
+      reverseStatsResult <-
+        withTryCatch "sharedCab:cancelForNoShows:reversePersonPTStats" $ do
+          purchaseEvent <- SPUS.mkPurchaseEvent person (Just b.vehicleType) b.serviceTierType DPUS.TICKET Nothing (Just quantity) b.merchantId b.merchantOperatingCityId
+          SPUS.reversePurchase purchaseEvent
+      either (\e -> logError $ "Failed to reverse PersonPTStats for booking " <> b.id.getId <> ": " <> show e) pure reverseStatsResult
+  void $ QPS.incrementTicketsBookedInEvent b.riderId (- quantity)
 
 -- | R16: the close that takes the attempt count over maxAttempts (not one past it).
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
@@ -729,6 +791,7 @@ triggerSharedCabAllocation ::
     Metrics.CoreMetrics m,
     Events.EventFlow m r,
     ServiceFlow m r,
+    EncFlow m r,
     InternalEndpointFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->

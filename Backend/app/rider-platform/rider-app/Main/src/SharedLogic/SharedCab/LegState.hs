@@ -15,7 +15,7 @@ module SharedLogic.SharedCab.LegState
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
-import Data.Aeson (defaultOptions, genericParseJSON, genericToJSON)
+import Data.Aeson (defaultOptions, omitNothingFields)
 import Data.Time (diffUTCTime)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking

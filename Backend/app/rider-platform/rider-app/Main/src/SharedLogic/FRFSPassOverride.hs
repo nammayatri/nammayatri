@@ -9,6 +9,7 @@ module SharedLogic.FRFSPassOverride
     passOptionsForQuote,
     resolvePassOverride,
     refundPassOverrideTrip,
+    ticketQuantityForBooking,
     hasPendingTripRefund,
     hasUnreleasedDebit,
     releasePassOverrideTripOnFailure,

@@ -42,6 +42,7 @@ sharedCabAllocationTick ::
     InternalEndpointFlow m r,
     Metrics.CoreMetrics m,
     HasField "blackListedJobs" r [Text],
+    EncFlow m r,
     LtsFlow m r c
   ) =>
   Job 'SharedCabAllocationTick ->

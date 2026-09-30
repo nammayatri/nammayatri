@@ -42,8 +42,10 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     (cancelAction >> when (stage == ConfirmCancel) (Allocation.clearAllocationKeys booking.id)) `finally` clearRefundDecision booking.id
     pure refund
   when (stage == ConfirmCancel) $ do
-    -- R55: the leg-state surface shows why; the R54 no-show cap writes its own reason from the tick
-    recordCancelReason booking.id (reasonFor by)
+    -- R55: the leg-state surface shows why; the R54 no-show cap writes its own reason from the tick. Swallowed:
+    -- the booking is cancelled by now, so a Redis hiccup here must not error a finished cancel.
+    withTryCatch "sharedCab:cancel:recordCancelReason" (recordCancelReason booking.id (reasonFor by))
+      >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
     Events.forBooking (Events.BookingCancelled (byText by) (refundText refund) mbReason) booking
   Invariants.checkBooking booking.id
