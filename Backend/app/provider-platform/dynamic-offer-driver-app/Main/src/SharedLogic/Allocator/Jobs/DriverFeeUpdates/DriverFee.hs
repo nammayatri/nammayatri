@@ -287,7 +287,10 @@ splitCancellationPenaltyIntoDriverFees paymentMode parentDriverFee subscriptionC
     else do
       -- idempotent: complete existing children, then create only the shortfall so a retry can't duplicate; parent zeroed last
       existingChildren <- QDF.findCancellationPenaltyChildrenByParentId parentDriverFee.driverId parentDriverFee.id
-      forM_ existingChildren $ ensureCancellationChildDependents paymentMode subscriptionConfig transporterConfig.cancellationFeeVendor now
+      -- repair from the child's stored fee type; today's plan mode must not put an autopay invoice on a manual child
+      forM_ existingChildren $ \child -> do
+        let childPaymentMode = if child.feeType == RECURRING_EXECUTION_INVOICE then AUTOPAY else MANUAL
+        ensureCancellationChildDependents childPaymentMode subscriptionConfig transporterConfig.cancellationFeeVendor now child
       let alreadySplit = sum $ map (fromMaybe 0 . (.cancellationPenaltyAmount)) existingChildren
           remainingToSplit = totalCancellationAmount - alreadySplit
       newChildIds <-
@@ -1071,8 +1074,13 @@ mkPaymentLinkRateLimitKey driverId = "SendPaymentLink:RateLimit:DriverId:" <> dr
 getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
 getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)
 
+-- Old pods store a Bool here. Keep this key boolean so a pod from either version can read it.
 cancellationVendorFeeGuardKey :: Id DriverFee -> Text
 cancellationVendorFeeGuardKey driverFeeId = "VendorFee:CancellationApplied:" <> driverFeeId.getId
+
+-- Pre-penalty vendor amount. Separate from the boolean key so a rolling deploy never decodes Bool as money.
+cancellationVendorFeeBaseKey :: Id DriverFee -> Text
+cancellationVendorFeeBaseKey driverFeeId = "VendorFee:CancellationBase:" <> driverFeeId.getId
 
 makeVendorFeeForCancellationPenalty ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
@@ -1083,28 +1091,35 @@ makeVendorFeeForCancellationPenalty ::
 makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig = when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust transporterConfig.cancellationFeeVendor && fromMaybe 0 driverFee.cancellationPenaltyAmount > 0) $ do
   let vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" transporterConfig.cancellationFeeVendor
       cancellationAmount = fromMaybe 0 driverFee.cancellationPenaltyAmount
-      guardKey = cancellationVendorFeeGuardKey driverFee.id
-  -- idempotent: the guard captures the pre-fold base once, then every run SETs base + cancellation (never additive), so a retry can't double-add
-  mbBase <- Hedis.get guardKey
-  mbExisting <- runInMasterDbAndRedis $ QVF.findByVendorAndDriverFeeId vendorId driverFee.id
-  base <- case (mbBase :: Maybe HighPrecMoney) of
-    Just b -> pure b
-    Nothing -> do
-      let b = SPayment.roundToTwoDecimalPlaces (maybe 0 (.amount) mbExisting)
-      Hedis.setExp guardKey b (3600 * 24)
-      pure b
-  let targetAmount = SPayment.roundToTwoDecimalPlaces (base + cancellationAmount)
-  case mbExisting of
-    Just _ -> QVF.updateAmount driverFee.id vendorId targetAmount
-    Nothing ->
-      QVF.create
-        DVF.VendorFee
-          { driverFeeId = driverFee.id,
-            vendorId = vendorId,
-            amount = targetAmount,
-            createdAt = driverFee.createdAt,
-            updatedAt = driverFee.updatedAt
-          }
+      appliedKey = cancellationVendorFeeGuardKey driverFee.id
+      baseKey = cancellationVendorFeeBaseKey driverFee.id
+      guardTtl = 3600 * 24
+  alreadyApplied <- Hedis.get appliedKey
+  -- Old pods set this Bool after an additive write. Skip so a new pod does not add the penalty again.
+  unless (alreadyApplied == Just True) $ do
+    mbBase <- Hedis.get baseKey
+    -- Read the current vendor fee only when the base is not stored yet. A retry uses the stored base.
+    (base, mbExisting) <- case (mbBase :: Maybe HighPrecMoney) of
+      Just b -> (b,) <$> runInMasterDbAndRedis (QVF.findByVendorAndDriverFeeId vendorId driverFee.id)
+      Nothing -> do
+        mbExisting <- runInMasterDbAndRedis $ QVF.findByVendorAndDriverFeeId vendorId driverFee.id
+        let b = SPayment.roundToTwoDecimalPlaces (maybe 0 (.amount) mbExisting)
+        Hedis.setExp baseKey b guardTtl
+        pure (b, mbExisting)
+    let targetAmount = SPayment.roundToTwoDecimalPlaces (base + cancellationAmount)
+    case mbExisting of
+      Just _ -> QVF.updateAmount driverFee.id vendorId targetAmount
+      Nothing ->
+        QVF.create
+          DVF.VendorFee
+            { driverFeeId = driverFee.id,
+              vendorId = vendorId,
+              amount = targetAmount,
+              createdAt = driverFee.createdAt,
+              updatedAt = driverFee.updatedAt
+            }
+    -- Set after the write. A crash before this still retries from the stored base, so the amount is not added twice.
+    Hedis.setExp appliedKey True guardTtl
 
 updateCancellationPenaltyAccumulationFees :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) => ServiceNames -> TransporterConfig -> Id Merchant -> Id MerchantOperatingCity -> m ()
 updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchantId merchantOperatingCityId = do
@@ -1131,8 +1146,9 @@ recomputeVendorFeesForPlan driverFeeId plan cityId = do
   unless (null planSplits) $ do
     now <- getCurrentTime
     QVF.deleteAllByDriverFeeId driverFeeId
-    -- rows are recreated here, so clear the guard to let makeVendorFeeForCancellationPenalty re-apply the cancellation
+    -- rows are recreated here, so clear both guards to let makeVendorFeeForCancellationPenalty re-apply the cancellation
     Hedis.del (cancellationVendorFeeGuardKey driverFeeId)
+    Hedis.del (cancellationVendorFeeBaseKey driverFeeId)
     forM_ planSplits $ \vsd -> do
       let amount = maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount
       QVF.create
