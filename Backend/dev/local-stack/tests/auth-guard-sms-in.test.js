@@ -81,6 +81,15 @@ const forward = (from, body, token = TOKEN) =>
   const cd = await call('GET', '/ui/auth/sms-in/countries');
   check('the driver side answers the same', cd.status === 200 && JSON.stringify(cd.json) === '{"countries":["+222"]}', cd);
 
+  // The phone screen's question (2026-09-30): which ways in, per country --
+  // from the same settings the starts obey. Here: SMS for Mauritania only,
+  // the SIM for Mauritania, and no WhatsApp configured in this test.
+  const ch = await call('GET', '/v2/auth/channels');
+  check('channels: SMS and SIM per country, WhatsApp as configured',
+    ch.status === 200 && JSON.stringify(ch.json) === '{"sms":["+222"],"smsIn":["+222"],"whatsapp":false}', ch);
+  const chd = await call('GET', '/ui/auth/channels');
+  check('the driver side answers the same', chd.status === 200 && JSON.stringify(chd.json) === JSON.stringify(ch.json), chd);
+
   const before = n;
   const dz = await call('POST', '/v2/auth/sms-in', { mobileCountryCode: '+213', mobileNumber: '0555123456', merchantId: 'm' });
   check('no SIM for Algeria -> 503 SMS_IN_UNAVAILABLE, backend never asked',

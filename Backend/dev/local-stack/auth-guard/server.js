@@ -780,6 +780,8 @@ const rx = {
   smsInStart: (p) => new RegExp(`^${p}auth/sms-in/?$`),
   smsInStatus: (p) => new RegExp(`^${p}auth/([^/?]+)/sms-in/?$`),
   smsInCountries: (p) => new RegExp(`^${p}auth/sms-in/countries/?$`),
+  // Which ways in each country has, for the phone screen (2026-09-30).
+  channels: (p) => new RegExp(`^${p}auth/channels/?$`),
 };
 
 /**
@@ -1060,6 +1062,21 @@ async function handle(req, res) {
      purpose: it lists dialling codes, the numbers come with a start. */
   if (rx.smsInCountries(route.prefix).test(pathname) && req.method === 'GET') {
     return send(res, 200, { countries: smsInbox.countries() });
+  }
+
+  /* Every way in, per country, so the phone screen offers exactly the ones
+     that work there (the owner, 2026-09-30: Algeria shows WhatsApp and « SMS
+     to us », Mauritania SMS and WhatsApp). Read from the same settings the
+     starts obey -- `SMS_COUNTRIES` for a code we text, the SIM list for a
+     text to us -- so changing a country stays a setting, not an app build.
+     Public: dialling codes and a yes/no, nothing else. The older
+     `sms-in/countries` stays for the APKs that still ask it. */
+  if (rx.channels(route.prefix).test(pathname) && req.method === 'GET') {
+    return send(res, 200, {
+      sms: [...SMS_COUNTRIES].filter((c) => OPEN_COUNTRIES.has(c)),
+      smsIn: smsInbox.countries().filter((c) => OPEN_COUNTRIES.has(c)),
+      whatsapp: whatsapp.ready(),
+    });
   }
 
   /* ── starting a sign-in ──────────────────────────────────────────────────

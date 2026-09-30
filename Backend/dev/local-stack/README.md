@@ -3729,6 +3729,13 @@ The WhatsApp flow, route for route:
 - `GET {/v2,/ui}/auth/{id}/sms-in` → `{confirmed}`; the app polls it.
 - `GET {/v2,/ui}/auth/sms-in/countries` → `{countries: ["+222"]}` — asked by
   the phone screen before it shows « Confirmer en nous envoyant un SMS ».
+  Superseded on 2026-09-30 by `GET {/v2,/ui}/auth/channels` →
+  `{sms: ["+222"], smsIn: ["+213"], whatsapp: true}`: the phone screen now
+  shows **only the ways in a country has** (Algeria: WhatsApp and « SMS to
+  us »; Mauritania: « Continuer avec SMS » and WhatsApp), read from
+  `SMS_COUNTRIES`, the SIM list and WhatsApp's readiness — so a country
+  changing is still a setting here, not an app build. The old route stays for
+  APKs built before that date.
 - verify accepts the code only once the office phone has forwarded it FROM
   the number signing in. Only texts that carry a code are filed, so a « merci »
   sent after it does not bury it.
