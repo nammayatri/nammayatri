@@ -133,6 +133,7 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         rideFrequencyScore = Nothing,
         preferenceMatchScore = Nothing,
         hasApplicablePreferences = Nothing,
+        autoAssignMaxPickupDistance = Nothing,
         coinsRewardedOnGoldTierRide = Nothing,
         conditionalCharges = [],
         isPartOfIntelligentPool = False,

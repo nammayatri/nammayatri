@@ -27,6 +27,7 @@ data SearchRequestForDriver = SearchRequestForDriver
   { acceptanceRatio :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     actualDistanceToPickup :: Kernel.Types.Common.Meters,
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    autoAssignMaxPickupDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     baseFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

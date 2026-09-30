@@ -25,6 +25,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
   { acceptanceRatio :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     actualDistanceToPickup :: (B.C f Kernel.Types.Common.Meters),
     airConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    autoAssignMaxPickupDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
     backendAppVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     backendConfigVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     baseFare :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money)),

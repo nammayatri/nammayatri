@@ -83,6 +83,7 @@ SearchRequestForDriver:
     rideFrequencyScore: Maybe Double
     preferenceMatchScore: Maybe Double
     hasApplicablePreferences: Maybe Bool
+    autoAssignMaxPickupDistance: Maybe Meters
     customerCancellationDues: HighPrecMoney
     clientSdkVersion: Maybe Version
     reactBundleVersion: Maybe Text

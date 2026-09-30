@@ -59,6 +59,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
     [ Se.Set Beam.acceptanceRatio acceptanceRatio,
       Se.Set Beam.actualDistanceToPickup actualDistanceToPickup,
       Se.Set Beam.airConditioned airConditioned,
+      Se.Set Beam.autoAssignMaxPickupDistance autoAssignMaxPickupDistance,
       Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
       Se.Set Beam.baseFare (Kernel.Prelude.roundToIntegral <$> baseFare),
