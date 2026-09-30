@@ -52,6 +52,7 @@ import qualified API.Action.UI.PayoutDriverStatus as PayoutDriverStatus
 import qualified API.Action.UI.Penalty as Penalty
 import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
+import qualified API.Action.UI.PolicyDocument as PolicyDocument
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
@@ -202,6 +203,7 @@ type API =
            :<|> DriverAreaPreference.API
            :<|> AvailableForRides.API
            :<|> DriverTag.API
+           :<|> PolicyDocument.API
        )
 
 handler :: FlowServer API
@@ -288,3 +290,4 @@ handler =
     :<|> DriverAreaPreference.handler
     :<|> AvailableForRides.handler
     :<|> DriverTag.handler
+    :<|> PolicyDocument.handler

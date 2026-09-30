@@ -39,6 +39,7 @@ import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatemen
 import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
+import qualified API.Action.UI.PolicyDocument as PolicyDocument
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Rewards as Rewards
 import qualified API.Action.UI.RidePayment as RidePayment
@@ -205,6 +206,7 @@ type API =
            :<|> ZendeskSdkToken.API
            :<|> FleetEngineToken.API
            :<|> VehicleServiceTier.API
+           :<|> PolicyDocument.API
        )
 
 -- Healthcheck for every datastore connection the app holds, so a pod with any
@@ -344,3 +346,4 @@ handler =
     :<|> ZendeskSdkToken.handler
     :<|> FleetEngineToken.handler
     :<|> VehicleServiceTier.handler
+    :<|> PolicyDocument.handler
