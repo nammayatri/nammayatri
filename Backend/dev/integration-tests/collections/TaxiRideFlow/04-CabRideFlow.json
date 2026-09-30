@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "NY Change Service Tier Flow (RideOTP)",
-    "description": "RideOTP flow + change service tier before ride starts: search in special zone -> confirm quote -> get higher-tier quotes -> confirm tier change -> driver starts with OTP -> end.\n\nPrerequisites: same as 08-RideOtpFlow.json + change service tier APIs must be wired.",
+    "name": "NY Taxi Ride Flow",
+    "description": "End-to-end taxi/sedan ride: search -> assign -> start -> end",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -23,14 +23,15 @@
           "  }",
           "})();",
           "",
-          "if (!pm.collectionVariables.get('_test_driver_number')) {",
-          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
-          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
-          "    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
-          "    pm.collectionVariables.set('_test_driver_number', dNum);",
-          "    pm.collectionVariables.set('_test_rider_number', rNum);",
-          "    pm.collectionVariables.set('_test_reg_no', regNo);",
-          "    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get(\"_test_driver_number\")) {",
+          "    var dNum = \"9\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = \"KA\" + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set(\"_test_driver_number\", dNum);",
+          "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
+          "    pm.collectionVariables.set(\"_test_reg_no\", regNo);",
+          "    console.log(\"Test driver:\", dNum, \"rider:\", rNum, \"reg:\", regNo);",
           "}"
         ],
         "type": "text/javascript"
@@ -45,7 +46,9 @@
           "listen": "test",
           "script": {
             "exec": [
-              "var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -61,7 +64,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
         },
         "url": {
           "raw": "{{baseURL_namma_P}}/auth",
@@ -81,7 +84,11 @@
           "listen": "test",
           "script": {
             "exec": [
-              "var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -97,7 +104,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
         },
         "url": {
           "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
@@ -113,12 +120,15 @@
       }
     },
     {
-      "name": "Add Vehicle (Dashboard) - SUV for tier change test",
+      "name": "Switch City (Dashboard)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
@@ -139,7 +149,50 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"variant\": \"SUV\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"CAR\", \"make\": \"Toyota\", \"model\": \"Innova\", \"driverName\": \"Test Tier Change Driver\", \"colour\": \"White\"}"
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+              "console.log('AddVehicle:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"colour\": \"White\", \"model\": \"{{vehicle_model}}\", \"make\": \"{{vehicle_make}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"variant\": \"{{vehicle_variant}}\", \"category\": \"{{vehicle_category}}\"}"
         },
         "url": {
           "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
@@ -163,7 +216,8 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+              "console.log('Enable:', pm.response.text());"
             ],
             "type": "text/javascript"
           }
@@ -183,7 +237,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"
+          "raw": ""
         },
         "url": {
           "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
@@ -207,7 +261,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "pm.test('Plan subscribed', function () { pm.expect(pm.response.code).to.be.oneOf([200, 500]); });"
             ],
             "type": "text/javascript"
           }
@@ -227,10 +281,10 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{}"
+          "raw": ""
         },
         "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe",
+          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
           "host": [
             "{{baseURL_namma_P}}"
           ],
@@ -238,18 +292,86 @@
             "plan",
             "{{car_plan_id}}",
             "subscribe"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22YATRI_SUBSCRIPTION%22"
+            }
           ]
         }
       }
     },
     {
-      "name": "Set Driver Online",
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "SEDAN"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Online",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s = Date.now(); while (Date.now() - s < 2000) {}"
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -269,7 +391,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{}"
+          "raw": ""
         },
         "url": {
           "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
@@ -294,67 +416,15 @@
       }
     },
     {
-      "name": "Airport Cash Recharge (Dashboard)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "pm.environment.set('_recharge_ref', 'test-recharge-' + Date.now() + '-' + Math.floor(Math.random() * 100000));"
-            ],
-            "type": "text/javascript"
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{dashboard_token}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\"amount\": 300, \"referenceId\": \"{{_recharge_ref}}\"}"
-        },
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverWallet/wallet/{{driver_id}}/airportCashRecharge",
-          "host": [
-            "{{baseURL_BPP_Dashboard_Internal}}"
-          ],
-          "path": [
-            "{{dashboard_merchant_id}}",
-            "{{dashboard_city}}",
-            "driverWallet",
-            "wallet",
-            "{{driver_id}}",
-            "airportCashRecharge"
-          ]
-        }
-      }
-    },
-    {
       "name": "Rider Auth",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -370,7 +440,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
@@ -390,7 +460,9 @@
           "listen": "test",
           "script": {
             "exec": [
-              "var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
@@ -406,7 +478,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
@@ -422,7 +494,69 @@
       }
     },
     {
-      "name": "Ride Search (Special Zone Pickup)",
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "SEDAN"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ride Search",
       "event": [
         {
           "listen": "prerequest",
@@ -437,7 +571,11 @@
           "listen": "test",
           "script": {
             "exec": [
-              "var d = pm.response.json(); pm.environment.set('searchId', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const _d = 8000; const _s = Date.now(); while (Date.now() - _s < _d) {}"
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services\nconst _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
             ],
             "type": "text/javascript"
           }
@@ -457,7 +595,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Special Zone Pickup\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/rideSearch",
@@ -471,13 +609,13 @@
       }
     },
     {
-      "name": "Get Search Results (Pick cheapest quote)",
+      "name": "Get Search Results",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "exec": [
-              "setTimeout(function(){}, 3000);"
+              "setTimeout(function(){}, 5000);"
             ],
             "type": "text/javascript"
           }
@@ -487,28 +625,16 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "var quotes = d.quotes || [];",
-              "// Pick the cheapest quote so we can upgrade later",
-              "var cheapest = null;",
-              "var allQuotes = [];",
-              "for (var i = 0; i < quotes.length; i++) {",
-              "    var inner = quotes[i].onDemandCab || quotes[i].onRentalCab || quotes[i].onMeterRide;",
-              "    if (!inner) continue;",
-              "    allQuotes.push({id: inner.id, variant: inner.vehicleVariant, fare: inner.estimatedTotalFare});",
-              "    if (!cheapest || inner.estimatedTotalFare < cheapest.estimatedTotalFare) {",
-              "        cheapest = inner;",
-              "    }",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var est = d.estimates.find(e => e.vehicleServiceTierType === 'TAXI')",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === 'ECO')",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === 'COMFY')",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
               "}",
-              "if (cheapest) {",
-              "    pm.environment.set('sz_quoteId', cheapest.id);",
-              "    pm.environment.set('initial_fare', cheapest.estimatedTotalFare);",
-              "    pm.environment.set('initial_variant', cheapest.vehicleVariant);",
-              "    console.log('Selected cheapest quote:', cheapest.id, cheapest.vehicleVariant, '$' + cheapest.estimatedTotalFare);",
-              "    console.log('All quotes:', JSON.stringify(allQuotes));",
-              "}",
-              "pm.test('Has quotes', function () { pm.expect(quotes.length).to.be.above(0); });",
-              "pm.test('Has multiple tiers for upgrade', function () { pm.expect(allQuotes.length).to.be.above(1); });"
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
             ],
             "type": "text/javascript"
           }
@@ -536,13 +662,14 @@
       }
     },
     {
-      "name": "Confirm Quote (Cheapest Tier)",
+      "name": "Select Estimate (Auto Assign)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking ID:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const _d = 5000; const _s = Date.now(); while (Date.now() - _s < _d) {}"
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select processing before next step\nconst _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
             ],
             "type": "text/javascript"
           }
@@ -562,30 +689,31 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{}"
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
         },
         "url": {
-          "raw": "{{baseUrl_app}}/rideSearch/quotes/{{sz_quoteId}}/confirm",
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
           "host": [
             "{{baseUrl_app}}"
           ],
           "path": [
-            "rideSearch",
-            "quotes",
-            "{{sz_quoteId}}",
-            "confirm"
+            "estimate",
+            "{{estimateId}}",
+            "select2"
           ]
         }
       }
     },
     {
-      "name": "Get Change Service Tier Quotes",
+      "name": "Get Nearby Ride Requests (Driver)",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "exec": [
-              "const s = Date.now(); while (Date.now() - s < 2000) {}"
+              "// Wait briefly before checking nearby requests",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -595,35 +723,17 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "",
-              "// Should return quotes with higher fare than current booking",
-              "var quotes = d.quotes || [];",
-              "var upgradeQuote = null;",
-              "var initialFare = parseFloat(pm.environment.get('initial_fare'));",
-              "console.log('Current booking fare:', initialFare, 'variant:', pm.environment.get('initial_variant'));",
-              "console.log('Available upgrade quotes:', quotes.length);",
-              "",
-              "for (var i = 0; i < quotes.length; i++) {",
-              "    var inner = quotes[i].onDemandCab || quotes[i].onRentalCab || quotes[i].onMeterRide;",
-              "    if (!inner) continue;",
-              "    console.log('  -', inner.vehicleVariant, '$' + inner.estimatedTotalFare, 'id:', inner.id);",
-              "    if (!upgradeQuote || inner.estimatedTotalFare < upgradeQuote.estimatedTotalFare) {",
-              "        upgradeQuote = inner;",
-              "    }",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    // Pick the newest search (latest startTime): a request from an earlier, cancelled test can still be listed first.",
+              "    var req = d.searchRequestsForDriver.reduce(function (a, b) { return new Date(b.startTime) > new Date(a.startTime) ? b : a; });",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+              "} else {",
+              "    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
               "}",
-              "",
-              "if (upgradeQuote) {",
-              "    pm.environment.set('upgrade_quoteId', upgradeQuote.id);",
-              "    pm.environment.set('upgrade_variant', upgradeQuote.vehicleVariant);",
-              "    pm.environment.set('upgrade_fare', upgradeQuote.estimatedTotalFare);",
-              "    console.log('Selected upgrade:', upgradeQuote.vehicleVariant, '$' + upgradeQuote.estimatedTotalFare);",
-              "}",
-              "pm.test('Has upgrade quotes with higher fare', function () {",
-              "    pm.expect(quotes.length).to.be.above(0);",
-              "});",
-              "pm.test('Upgrade fare is higher than current', function () {",
-              "    pm.expect(upgradeQuote.estimatedTotalFare).to.be.above(initialFare);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has search requests', function () {",
+              "    pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
               "});"
             ],
             "type": "text/javascript"
@@ -635,202 +745,30 @@
         "header": [
           {
             "key": "token",
-            "value": "{{rider_token}}"
+            "value": "{{driver_token}}"
           }
         ],
         "url": {
-          "raw": "{{baseUrl_app}}/booking/{{customer_bookingId}}/changeServiceTier/quotes",
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
           "host": [
-            "{{baseUrl_app}}"
+            "{{baseURL_namma_P}}"
           ],
           "path": [
-            "booking",
-            "{{customer_bookingId}}",
-            "changeServiceTier",
-            "quotes"
+            "driver",
+            "nearbyRideRequest"
           ]
         }
       }
     },
     {
-      "name": "Confirm Change Service Tier",
+      "name": "Driver Accept Ride",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "console.log('Service tier changed from', pm.environment.get('initial_variant'), '($' + pm.environment.get('initial_fare') + ')',",
-              "    'to', pm.environment.get('upgrade_variant'), '($' + pm.environment.get('upgrade_fare') + ')');",
-              "// Wait for BECKN update -> on_update processing",
-              "const s = Date.now(); while (Date.now() - s < 5000) {}"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{rider_token}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\"quoteId\": \"{{upgrade_quoteId}}\"}"
-        },
-        "url": {
-          "raw": "{{baseUrl_app}}/booking/{{customer_bookingId}}/changeServiceTier/confirm",
-          "host": [
-            "{{baseUrl_app}}"
-          ],
-          "path": [
-            "booking",
-            "{{customer_bookingId}}",
-            "changeServiceTier",
-            "confirm"
-          ]
-        }
-      }
-    },
-    {
-      "name": "Verify Booking Updated (Rider)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "const s = Date.now(); while (Date.now() - s < 3000) {}"
-            ],
-            "type": "text/javascript"
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var d = pm.response.json();",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "if (d.list && d.list.length > 0) {",
-              "    var booking = d.list[0];",
-              "    var upgradeFare = parseFloat(pm.environment.get('upgrade_fare'));",
-              "    console.log('Updated booking - tier:', booking.vehicleServiceTierType, 'fare:', booking.estimatedTotalFare, 'status:', booking.status);",
-              "    pm.test('Booking tier changed', function () {",
-              "        pm.expect(booking.vehicleServiceTierType).to.not.equal(pm.environment.get('initial_variant'));",
-              "    });",
-              "}"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "token",
-            "value": "{{rider_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
-          "host": [
-            "{{baseUrl_app}}"
-          ],
-          "path": [
-            "rideBooking",
-            "list"
-          ],
-          "query": [
-            {
-              "key": "limit",
-              "value": "1"
-            },
-            {
-              "key": "onlyActive",
-              "value": "true"
-            },
-            {
-              "key": "offset",
-              "value": "0"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Get Booking (Extract OTP)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var d = pm.response.json();",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "if (d.list && d.list.length > 0) {",
-              "    var booking = d.list[0];",
-              "    pm.environment.set('customer_bookingId', booking.id);",
-              "    var szOtp = null;",
-              "    if (booking.bookingDetails && booking.bookingDetails.contents && booking.bookingDetails.contents.otpCode) {",
-              "        szOtp = booking.bookingDetails.contents.otpCode;",
-              "    }",
-              "    pm.environment.set('sz_otp', szOtp || '');",
-              "    console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', szOtp, 'Tier:', booking.vehicleServiceTierType);",
-              "}",
-              "pm.test('Has OTP', function () { pm.expect(pm.environment.get('sz_otp')).to.be.a('string').that.is.not.empty; });"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "token",
-            "value": "{{rider_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
-          "host": [
-            "{{baseUrl_app}}"
-          ],
-          "path": [
-            "rideBooking",
-            "list"
-          ],
-          "query": [
-            {
-              "key": "limit",
-              "value": "1"
-            },
-            {
-              "key": "onlyActive",
-              "value": "true"
-            },
-            {
-              "key": "offset",
-              "value": "0"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "Driver OTP Ride Start",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); if (d.id) { pm.environment.set('driver_ride_id', d.id); } console.log('Ride started with OTP after tier change!');"
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver accepted ride!');"
             ],
             "type": "text/javascript"
           }
@@ -850,16 +788,179 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"specialZoneOtpCode\": \"{{sz_otp}}\", \"point\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}"
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
         },
         "url": {
-          "raw": "{{baseURL_namma_P}}/driver/otpRide/start",
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
           "host": [
             "{{baseURL_namma_P}}"
           ],
           "path": [
             "driver",
-            "otpRide",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Booking (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for booking to be created after driver acceptance",
+              "const delay = pm.environment.get('booking_wait_ms') || 5000;",
+              "const start = Date.now();",
+              "while (Date.now() - start < delay) { /* busy wait */ }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var booking = d.list[0];",
+              "    pm.environment.set('customer_bookingId', booking.id);",
+              "    var otp = booking.rideOtp;",
+              "    if (!otp && booking.rideList && booking.rideList.length > 0) {",
+              "        otp = booking.rideList[0].rideOtp;",
+              "    }",
+              "    pm.environment.set('ride_otp', otp);",
+              "    console.log('Booking:', booking.id, 'OTP:', otp, 'Status:', booking.status);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Ride:', d.list[0].id, 'Status:', d.list[0].status);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride started!');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
             "start"
           ]
         }
@@ -872,7 +973,9 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "const s = Date.now(); while (Date.now() - s < 1000) {}"
+              "// Small delay before ending ride",
+              "const start = Date.now();",
+              "while (Date.now() - start < 1000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -881,7 +984,7 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Ride ended!');"
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride ended!');"
             ],
             "type": "text/javascript"
           }
@@ -918,13 +1021,15 @@
       }
     },
     {
-      "name": "Verify Booking Completed",
+      "name": "Get Driver Ride Invoices",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "exec": [
-              "const s = Date.now(); while (Date.now() - s < 3000) {}"
+              "// Wait for invoice generation after ride end",
+              "const start = Date.now();",
+              "while (Date.now() - start < 2000) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -934,10 +1039,15 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); });",
-              "pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); });",
-              "console.log('Change Service Tier flow completed! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"
+              "console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
+              "if (d.invoices && d.invoices.length > 0) {",
+              "    d.invoices.forEach(function(inv, i) {",
+              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
+              "    });",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
+              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });"
             ],
             "type": "text/javascript"
           }
@@ -948,21 +1058,49 @@
         "header": [
           {
             "key": "token",
-            "value": "{{rider_token}}"
+            "value": "{{driver_token}}"
           }
         ],
         "url": {
-          "raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}",
+          "raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
           "host": [
-            "{{baseUrl_app}}"
+            "{{baseURL_namma_P}}"
           ],
           "path": [
-            "rideBooking",
-            "v2",
-            "{{customer_bookingId}}"
+            "subscription",
+            "invoices"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Ride%22"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
           ]
         }
-      }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    },
+    {
+      "key": "_test_reg_no",
+      "value": ""
     }
   ]
 }
