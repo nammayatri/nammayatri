@@ -154,6 +154,7 @@ data TransporterConfig = TransporterConfig
     driverFeeMandateNotificationBatchSize :: Kernel.Prelude.Int,
     driverFeeOverlaySendingTimeLimitInDays :: Kernel.Prelude.Int,
     driverFeeRetryThresholdConfig :: Kernel.Prelude.Int,
+    driverImagePresignedUrlExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     driverLocationAccuracyBuffer :: Kernel.Types.Common.Meters,
     driverLocationStalenessThresholdSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     driverOnboardingLinkExpiryHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

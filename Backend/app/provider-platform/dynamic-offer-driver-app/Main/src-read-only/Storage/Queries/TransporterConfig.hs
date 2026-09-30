@@ -234,6 +234,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.driverFeeMandateNotificationBatchSize driverFeeMandateNotificationBatchSize,
       Se.Set Beam.driverFeeOverlaySendingTimeLimitInDays driverFeeOverlaySendingTimeLimitInDays,
       Se.Set Beam.driverFeeRetryThresholdConfig driverFeeRetryThresholdConfig,
+      Se.Set Beam.driverImagePresignedUrlExpiry driverImagePresignedUrlExpiry,
       Se.Set Beam.driverLocationAccuracyBuffer driverLocationAccuracyBuffer,
       Se.Set Beam.driverLocationStalenessThresholdSeconds driverLocationStalenessThresholdSeconds,
       Se.Set Beam.driverOnboardingLinkExpiryHours driverOnboardingLinkExpiryHours,
