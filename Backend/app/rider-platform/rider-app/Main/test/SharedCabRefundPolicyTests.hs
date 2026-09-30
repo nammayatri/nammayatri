@@ -3,6 +3,8 @@
 
 module SharedCabRefundPolicyTests (tests) where
 
+import qualified "rider-app" API.Types.UI.SharedCabInternal as API
+import Data.Aeson (decode)
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import "beckn-spec" Domain.Types.FRFSTicketStatus (FRFSTicketStatus (ACTIVE, INPROGRESS, USED))
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
@@ -134,6 +136,15 @@ tests =
         [ testCase "missing" $ requireReason Nothing @?= Left CancelReasonRequired,
           testCase "empty" $ requireReason (Just "") @?= Left CancelReasonRequired,
           testCase "blank" $ requireReason (Just "  ") @?= Left CancelReasonRequired,
-          testCase "trimmed" $ requireReason (Just " rider not at stop ") @?= Right "rider not at stop"
+          testCase "trimmed" $ requireReason (Just " rider not at stop ") @?= Right "rider not at stop",
+          -- the body the driver-app proxy sends (driver-app-test pins its shape)
+          testCase "rider-app reads the proxy's reason" $
+            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"cab breakdown\"}" >>= \r -> Just (API.reason r)) @?= Just (Just "cab breakdown"),
+          testCase "a null reason (other actions) reads as Nothing" $
+            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":null}" >>= \r -> Just (API.reason r)) @?= Just Nothing,
+          testCase "a blank reason from the proxy is refused" $
+            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\",\"reason\":\"  \"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired),
+          testCase "a body with no reason field is refused when cancelling" $
+            (decode "{\"driverId\":\"d1\",\"vehicleNumber\":\"ML05A9999\"}" >>= \r -> Just (requireReason (API.reason r))) @?= Just (Left CancelReasonRequired)
         ]
     ]

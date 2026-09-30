@@ -3,6 +3,7 @@
 -- session and (for booking actions) that the booking is on that plate.
 module Domain.Action.UI.SharedCabBooking
   ( BookingAction (..),
+    actionReason,
     bookingAction,
     cabFull,
   )
