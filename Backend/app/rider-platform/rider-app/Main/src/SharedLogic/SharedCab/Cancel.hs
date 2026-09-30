@@ -16,10 +16,11 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..))
-import SharedLogic.SharedCab.Booking (readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (readRiderFix, recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
+import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
 import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, isSharedCabBooking, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -41,6 +42,8 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     (cancelAction >> when (stage == ConfirmCancel) (Allocation.clearAllocationKeys booking.id)) `finally` clearRefundDecision booking.id
     pure refund
   when (stage == ConfirmCancel) $ do
+    -- R55: the leg-state surface shows why; the R54 no-show cap writes its own reason from the tick
+    recordCancelReason booking.id (reasonFor by)
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason
     Events.forBooking (Events.BookingCancelled (byText by) (refundText refund) mbReason) booking
   Invariants.checkBooking booking.id
@@ -68,6 +71,11 @@ byText :: CancelBy -> Text
 byText = \case
   ByRider -> "rider"
   ByDriver -> "driver"
+
+reasonFor :: CancelBy -> CancelReason
+reasonFor = \case
+  ByRider -> RIDER
+  ByDriver -> DRIVER
 
 refundText :: Refund -> Text
 refundText = \case

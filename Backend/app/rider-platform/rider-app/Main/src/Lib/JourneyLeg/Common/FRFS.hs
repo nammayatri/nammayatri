@@ -128,7 +128,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             findingSince,
             fallbackAfterSec = cfg.fallbackAfterSec
           }
-      mkSharedCab st =
+      mkSharedCab reason st =
         SharedCabLeg.SharedCabLegStatus
           { state = st,
             bookingId = booking.id.getId,
@@ -139,11 +139,17 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             etaToBoardStopSec = Nothing,
             etaToDropStopSec = Nothing,
             cabsComing,
-            boardDeadlineSec
+            boardDeadlineSec,
+            cancelReason = reason
           }
   -- R15: where the rider is while a cab is on its way decides the blame if it passes the stop
   when (mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]) $
     whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
+  -- R55: why a cancelled leg was cancelled (written by the cancel paths; absent once its TTL lapses)
+  mbCancelReason <-
+    if mbState == Just SharedCabLeg.CANCELLED
+      then SharedCabBooking.readCancelReason booking.id
+      else pure Nothing
   pure $
     JT.Single
       JT.JourneyLegStateData
@@ -159,7 +165,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkSharedCab <$> mbState
+          sharedCab = mkSharedCab mbCancelReason <$> mbState
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode

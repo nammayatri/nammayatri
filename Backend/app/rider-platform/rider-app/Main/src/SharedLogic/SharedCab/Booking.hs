@@ -8,6 +8,9 @@ module SharedLogic.SharedCab.Booking
     boardedSeatsOnVehicle,
     recordRiderFix,
     readRiderFix,
+    recordCancelReason,
+    readCancelReason,
+    cancelReasonKey,
     findingOnRoute,
     shared,
     nonTerminalStatuses,
@@ -26,7 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Allocation.Types (RiderFix)
 import qualified SharedLogic.SharedCab.Events as Events
-import SharedLogic.SharedCab.LegState (seatsHeld)
+import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -109,6 +112,19 @@ recordRiderFix bookingId riderFix = shared $ Redis.setExp (riderFixKey bookingId
 
 readRiderFix :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe RiderFix)
 readRiderFix = shared . Redis.safeGet . riderFixKey
+
+cancelReasonKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+cancelReasonKey bookingId = "sharedcab:cancelreason:" <> bookingId.getId
+
+-- | R55: who cancelled the booking, for the leg-state surface (`SharedLogic.SharedCab.LegState.cancelReason`).
+-- Cross-app unprefixed cell: the tick (no-show cap) writes it from the scheduler, the API's journey poll reads
+-- it. The TTL only collects garbage: the reason matters only while the app's poll may still show the cancelled
+-- leg, and clearAllocationKeys deliberately leaves this key alone.
+recordCancelReason :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> CancelReason -> m ()
+recordCancelReason bookingId reason = shared $ Redis.setExp (cancelReasonKey bookingId) reason (24 * 3600)
+
+readCancelReason :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe CancelReason)
+readCancelReason = shared . Redis.safeGet . cancelReasonKey
 
 -- | `05` §3: FINDING = CONFIRMED with no cab yet.
 findingOnRoute :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [DFRFSTicketBooking.FRFSTicketBooking]

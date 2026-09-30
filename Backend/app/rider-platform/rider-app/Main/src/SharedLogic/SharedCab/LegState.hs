@@ -1,6 +1,7 @@
 module SharedLogic.SharedCab.LegState
   ( SharedCabState (..),
     SharedCabLegStatus (..),
+    CancelReason (..),
     FallbackGate (..),
     fallbackDue,
     fallbackReached,
@@ -14,6 +15,7 @@ module SharedLogic.SharedCab.LegState
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
+import Data.Aeson (defaultOptions, genericParseJSON, genericToJSON)
 import Data.Time (diffUTCTime)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -22,6 +24,14 @@ import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
 
 data SharedCabState = FINDING | ALLOCATED | ARRIVING | FALLBACK | BOARDED | DEGRADED | DROPPED | CANCELLED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | R55: why the leg was cancelled, so the app can render "cancelled after missed cabs". Casing follows the
+-- other app-facing shared-cab enums (SharedCabState, SessionState.SessionStatus, Notify.ReassignReason).
+-- The writers know three of these today (the R54 no-show cap, the driver, the rider); NO_CAB_FOUND and
+-- SYSTEM are defined for cancels that live outside the shared-cab code (BPP on_cancel, search expiry)
+-- so the wire enum does not have to churn when those paths start recording a reason.
+data CancelReason = NO_SHOW_CAP | DRIVER | RIDER | SYSTEM | NO_CAB_FOUND
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | FINDING fallback trigger inputs (R16, `05` §3/§7 fallbackAfterSec): a booking still FINDING falls
@@ -48,9 +58,21 @@ data SharedCabLegStatus = SharedCabLegStatus
     cabsComing :: Int,
     -- | R17: seconds left to board before the allocated cab's stand/moving timer releases it
     -- (allocKey's expiresAt); set only while ARRIVING, so the app can count down.
-    boardDeadlineSec :: Maybe Int
+    boardDeadlineSec :: Maybe Int,
+    -- | R55: why the leg was cancelled, when the shared-cab code knows (rider/driver cancel guard, R54
+    -- no-show cap). Additive: knocked-on default Nothing while the leg is live or the canceller (say the
+    -- BPP's on_cancel) is outside our code.
+    cancelReason :: Maybe CancelReason
   }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Generic, ToSchema)
+
+-- R55: Nothing fields ship as absent keys (cancelReason in particular stays invisible to older app builds),
+-- and a payload without a Nothing field still parses back (additive round-trip).
+instance ToJSON SharedCabLegStatus where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromJSON SharedCabLegStatus where
+  parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}
 
 -- | Shared cabs ship in GTFS under the SHARED_CAB agency (agency gtfsId `<feed>:SHARED_CAB`).
 isSharedCabAgency :: Text -> Bool

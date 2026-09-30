@@ -4,6 +4,9 @@
 module SharedCabLegStateTests (tests) where
 
 import qualified "beckn-spec" BecknV2.FRFS.Enums as Spec
+import Data.Aeson (decode, encode)
+import qualified Data.ByteString.Lazy.Char8 as BLC
+import Data.List (isInfixOf)
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -64,6 +67,15 @@ tests =
           testCase "boarded ticket" $ isDroppable DFRFSTicket.INPROGRESS @?= True,
           testCase "cancelled ticket stays cancelled" $ isDroppable DFRFSTicket.CANCELLED @?= False,
           testCase "used ticket untouched" $ isDroppable DFRFSTicket.USED @?= False
+        ],
+      testGroup
+        "R55: cancelReason on the leg status"
+        [ testCase "reason encodes SCREAMING like SharedCabState" $ BLC.unpack (encode NO_SHOW_CAP) @?= "\"NO_SHOW_CAP\"",
+          testCase "status with a reason round-trips" $ decode (encode statusWithReason) @?= Just statusWithReason,
+          testCase "a Nothing reason leaves no key (additive for older app builds)" $
+            isInfixOf "cancelReason" (BLC.unpack (encode statusNoReason)) @?= False,
+          testCase "a pre-R55 payload (no cancelReason key) still decodes" $
+            decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"vehicleNumber\":\"ML05A1234\",\"cabsComing\":0}" @?= Just statusNoReason
         ]
     ]
   where
@@ -75,3 +87,22 @@ tests =
     gate :: Int -> NominalDiffTime -> FallbackGate
     gate attempts offsetSec =
       FallbackGate {attempts, maxAttempts = 2, findingSince = addUTCTime offsetSec now, fallbackAfterSec = 600}
+
+    statusNoReason :: SharedCabLegStatus
+    statusNoReason =
+      SharedCabLegStatus
+        { state = CANCELLED,
+          bookingId = "b1",
+          vehicleNumber = Just "ML05A1234",
+          vehicleModel = Nothing,
+          driverName = Nothing,
+          driverPhotoUrl = Nothing,
+          etaToBoardStopSec = Nothing,
+          etaToDropStopSec = Nothing,
+          cabsComing = 0,
+          boardDeadlineSec = Nothing,
+          cancelReason = Nothing
+        }
+
+    statusWithReason :: SharedCabLegStatus
+    statusWithReason = statusNoReason {cancelReason = Just NO_SHOW_CAP}
