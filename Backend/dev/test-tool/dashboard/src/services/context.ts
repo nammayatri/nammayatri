@@ -119,7 +119,7 @@ export interface CollectionSuite {
   name: string;
   description: string;
   itemCount: number;
-  /** Parked in DbDependent/ or DbDependent/thrash-collections/: listed by name only, steps not served. */
+  /** Parked in DbDependent/ or thrash-collections/: listed by name only, steps not served. */
   parked?: boolean;
 }
 
