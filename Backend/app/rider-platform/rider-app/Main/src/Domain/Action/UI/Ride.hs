@@ -52,7 +52,6 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
-import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (HasField)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
@@ -64,6 +63,8 @@ import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
+import SharedLogic.LocationFallback (withLenientLocationReads)
+import SharedLogic.LocationFallbackEnrich (enrichBooking)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.Serviceability as Serviceability
@@ -108,23 +109,16 @@ getDriverPhoto :: Text -> Flow Text
 getDriverPhoto filePath = S3.get $ Text.unpack filePath
 
 getRideStatus ::
-  ( CacheFlow m r,
-    EncFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    ServiceFlow m r
-  ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
-  m GetRideStatusResp
-getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
+  Flow GetRideStatusResp
+getRideStatus rideId personId = withLenientLocationReads . withLogTag ("personId-" <> personId.getId) $ do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   mbPos <-
     if ride.status == COMPLETED || ride.status == CANCELLED
       then return Nothing
       else Just <$> CallBPP.callGetDriverLocation ride.trackingUrl
-  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  booking <- B.runInReplica (QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)) >>= enrichBooking
   rider <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   customerDisability <- B.runInReplica $ PDisability.findByPersonId personId
   let tag = customerDisability <&> (.tag)

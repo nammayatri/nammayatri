@@ -43,6 +43,7 @@ import qualified Kernel.Utils.Servant.Client as EC
 import Lib.Queries.SpecialLocation (SpecialLocationFull)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
+import SharedLogic.LocationFallbackTypes (BppBookingLocationsRes)
 import Tools.Metrics (CoreMetrics)
 
 -- import Kernel.Types.Common
@@ -1493,3 +1494,31 @@ getVehicleServiceTiers merchant city = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getVehicleServiceTiersClient merchantId city (Just apiKey)) "GetVehicleServiceTiers" getVehicleServiceTiersApi
+
+type GetBookingLocationsAPI =
+  "internal"
+    :> "booking"
+    :> Capture "bookingId" Text
+    :> "locations"
+    :> Header "token" Text
+    :> Get '[JSON] (Maybe BppBookingLocationsRes)
+
+getBookingLocationsClient :: Text -> Maybe Text -> EulerClient (Maybe BppBookingLocationsRes)
+getBookingLocationsClient = client getBookingLocationsApi
+
+getBookingLocationsApi :: Proxy GetBookingLocationsAPI
+getBookingLocationsApi = Proxy
+
+getBookingLocations ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m (Maybe BppBookingLocationsRes)
+getBookingLocations apiKey internalUrl bppBookingId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getBookingLocationsClient bppBookingId (Just apiKey)) "BookingLocations" getBookingLocationsApi

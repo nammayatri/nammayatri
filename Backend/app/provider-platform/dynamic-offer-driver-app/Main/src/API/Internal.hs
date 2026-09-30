@@ -12,6 +12,7 @@ import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
 import qualified API.Internal.CancellationDues as CancellationDues
 import qualified API.Internal.CustomerCancellationDues as CustomerCancellationDues
+import qualified API.Internal.BookingLocations as BookingLocations
 import qualified API.Internal.DriverCoordinates as DriverCoordinates
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReachedDestination as DriverReachedDestination
@@ -71,6 +72,7 @@ type API =
            :<|> BlackListedDrivers.API
            :<|> KnowYourDriver.API
            :<|> DriverCoordinates.API
+           :<|> BookingLocations.API
            :<|> PickupInstruction.API
            :<|> PopulateTipAmount.API
            :<|> RefundLedger.API
@@ -123,6 +125,7 @@ handler env =
     :<|> BlackListedDrivers.handler
     :<|> KnowYourDriver.handler
     :<|> DriverCoordinates.handler
+    :<|> BookingLocations.handler
     :<|> PickupInstruction.handler
     :<|> PopulateTipAmount.handler
     :<|> RefundLedger.handler

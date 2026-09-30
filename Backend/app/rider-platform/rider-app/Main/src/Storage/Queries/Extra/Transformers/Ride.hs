@@ -7,6 +7,7 @@ import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM)
+import SharedLogic.LocationFallback (LocationRole (..), resolveLocation)
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
@@ -38,7 +39,7 @@ getFromLocation id bookingId merchantId merchantOperatingCityId = do
         case mbRideStartMapping of
           Just m -> return m
           Nothing -> getFromLocationFromBooking id bookingId merchantId merchantOperatingCityId
-  QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+  resolveLocation Pickup id merchantId merchantOperatingCityId fromLocationMapping.locationId FromLocationNotFound
 
 getFromLocationFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m DLM.LocationMapping
 getFromLocationFromBooking id bookingId merchantId merchantOperatingCityId = do
@@ -55,8 +56,7 @@ getStops id hasStops = do
       stopsLocationMapping <- QLM.getLatestStopsByEntityId id
       mapM
         ( \stopLocationMapping ->
-            QL.findById stopLocationMapping.locationId
-              >>= fromMaybeM (StopsLocationNotFound stopLocationMapping.locationId.getId)
+            resolveLocation Stop id Nothing Nothing stopLocationMapping.locationId StopsLocationNotFound
         )
         stopsLocationMapping
     else return []

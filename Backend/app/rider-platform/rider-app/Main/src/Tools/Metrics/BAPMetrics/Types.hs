@@ -43,6 +43,7 @@ data BAPMetricsContainer = BAPMetricsContainer
     confirmDuration :: DurationMetric,
     busScannerCounter :: BusScannetCounterMetric,
     fleetRouteMapMissingCounter :: FleetRouteMapMissingCounterMetric,
+    locationFallbackServedCounter :: LocationFallbackServedCounterMetric,
     vehicleNoEtaCounter :: VehicleNoEtaCounterMetric,
     emptyVehiclesCounter :: EmptyVehiclesCounterMetric,
     vehicleHistoricCounter :: VehicleHistoricCounterMetric,
@@ -62,6 +63,8 @@ type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
 type BusScannetCounterMetric = P.Vector P.Label4 P.Counter
 
 type FleetRouteMapMissingCounterMetric = P.Vector P.Label4 P.Counter
+
+type LocationFallbackServedCounterMetric = P.Vector P.Label3 P.Counter
 
 type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
@@ -102,6 +105,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
   busScannerCounter <- registerBusScannetCounterMetric
   fleetRouteMapMissingCounter <- registerFleetRouteMapMissingCounterMetric
+  locationFallbackServedCounter <- registerLocationFallbackServedCounterMetric
   vehicleNoEtaCounter <- registerVehicleNoEtaCounterMetric
   busScanSearchRequestCounter <- registerBusScanSearchRequestCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
@@ -135,6 +139,9 @@ registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "versi
 
 registerFleetRouteMapMissingCounterMetric :: IO FleetRouteMapMissingCounterMetric
 registerFleetRouteMapMissingCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "fleet_route_map_missing_counter" ""
+
+registerLocationFallbackServedCounterMetric :: IO LocationFallbackServedCounterMetric
+registerLocationFallbackServedCounterMetric = P.register $ P.vector ("version", "source", "role") $ P.counter $ P.Info "location_fallback_served_counter" ""
 
 registerVehicleNoEtaCounterMetric :: IO VehicleNoEtaCounterMetric
 registerVehicleNoEtaCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "source") $ P.counter $ P.Info "vehicle_no_eta_count" ""
