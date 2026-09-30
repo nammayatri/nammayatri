@@ -5,6 +5,8 @@ module SharedCabAllocationTests (tests) where
 
 import qualified "rider-app" API.Types.UI.SharedCab as API
 import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
+import Control.Exception (IOException, throwIO, try)
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
@@ -15,10 +17,12 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, ticketsCountedAtConfirm, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
+import "rider-app" SharedLogic.SharedCab.AllocationSchedule (thenReschedule)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
+import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -205,9 +209,20 @@ tests =
       testCase "R67: a claim on a stationary cab at the stop pushes ARRIVING, any other claim pushes ASSIGNED" $
         map (\veh -> [claimPush c | c <- eligibleCandidates t0 defaultAllocationConfig [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
           @?= [[PushArriving], [PushAssigned], [PushAssigned]],
-      testCase "R63: a FINDING booking is cancelled only once it is older than findingTimeoutSec, counted from its creation" $
-        map (\age -> findingTimeoutAction (addUTCTime age t0) 1200 t0) [0, 1199, 1200, 1201, 7200]
-          @?= [KeepFinding, KeepFinding, KeepFinding, CancelNoCab, CancelNoCab],
+      testCase "R63: a FINDING booking is cancelled once its current stint is older than findingTimeoutSec, so a late release still gets its reallocation" $
+        -- (age of the stint, age of the booking)
+        map (\(stint, age) -> findingTimeoutAction (addUTCTime age t0) 1200 (addUTCTime (age - stint) t0) t0) [(0, 1300), (1200, 1300), (1201, 1300), (60, 3000), (10, 3600), (10, 3601), (10, 7200)]
+          @?= [KeepFinding, KeepFinding, CancelNoCab, KeepFinding, KeepFinding, CancelNoCab, CancelNoCab],
+      testCase "R63: a booking already cancelled is not cancelled (or refunded) again" $
+        map cancellableStatus [BS.CONFIRMED, BS.CANCELLED, BS.COUNTER_CANCELLED, BS.CANCEL_INITIATED] @?= [True, False, False, False],
+      testCase "R68: a booking with a parent (rescheduled) never counted its tickets at confirm, so none are reversed" $
+        (ticketsCountedAtConfirm (Nothing :: Maybe ()), ticketsCountedAtConfirm (Just ())) @?= (True, False),
+      testCase "R61: the next tick is scheduled even when the tick body throws" $ do
+        ran <- newIORef False
+        r <- try (thenReschedule (throwIO (userError "db down")) (writeIORef ran True)) :: IO (Either IOException ())
+        (,) (either (const True) (const False) r) <$> readIORef ran >>= (@?= (True, True))
+        ran' <- newIORef False
+        thenReschedule (pure ()) (writeIORef ran' True) >> readIORef ran' >>= (@?= True),
       testCase "R63/R54: a finding-timeout cancel refunds in full, unless a no-show is already booked against the booking" $
         map (\noShows -> findingTimeoutRefund noShows [TS.ACTIVE]) [0, 1, 2]
           @?= [FullRefund, NoRefund, NoRefund],

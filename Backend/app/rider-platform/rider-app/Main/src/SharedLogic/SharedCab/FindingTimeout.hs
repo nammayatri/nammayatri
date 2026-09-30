@@ -24,7 +24,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSCancelJourney (cancelJourneyById)
 import SharedLogic.FRFSUtils (getJourneyIdFromBooking, markFRFSBookingStatus, noPaymentDue)
 import qualified SharedLogic.Payment as SPayment
-import SharedLogic.SharedCab.Allocation (cityConfig, claimable, clearAllocationKeys)
+import SharedLogic.SharedCab.Allocation (cityConfig, claimable, clearAllocationKeys, readFindingSince, releaseCancelledBooking)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
 import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
 import qualified SharedLogic.SharedCab.Degraded as Degraded
@@ -80,7 +80,10 @@ cancelTimedOutFindings ::
 cancelTimedOutFindings cityId live = do
   cfg <- cityConfig cityId
   now <- getCurrentTime
-  forM_ [b | (b, statuses) <- live, isNothing b.vehicleNumber, DFRFSTicket.ACTIVE `elem` statuses, findingTimeoutAction now cfg.findingTimeoutSec b.createdAt == CancelNoCab] $ \b ->
+  candidates <- fmap catMaybes . forM [b | (b, statuses) <- live, isNothing b.vehicleNumber, DFRFSTicket.ACTIVE `elem` statuses] $ \b -> do
+    since <- readFindingSince b.id b.createdAt
+    pure $ if findingTimeoutAction now cfg.findingTimeoutSec since b.createdAt == CancelNoCab then Just b else Nothing
+  forM_ candidates $ \b ->
     withTryCatch "sharedCabFindingTimeout" (cancelOne cfg.findingTimeoutSec b)
       >>= either (\e -> logError $ "shared-cab finding-timeout cancel failed for booking " <> b.id.getId <> ": " <> show e) pure
 
@@ -100,18 +103,23 @@ cancelOne findingTimeoutSec stale = do
           statuses <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId b.id
           markerAlive <- Degraded.isMarkerAlive b.id
           -- the booking may have been claimed, boarded or cancelled since the tick read it
-          if claimable b.status b.vehicleNumber statuses markerAlive && findingTimeoutAction now findingTimeoutSec b.createdAt == CancelNoCab
+          since <- readFindingSince b.id b.createdAt
+          if claimable b.status b.vehicleNumber statuses markerAlive && findingTimeoutAction now findingTimeoutSec since b.createdAt == CancelNoCab
             then do
               let refund = findingTimeoutRefund b.sharedCabNoShows statuses
               Just (b, refund) <$ flipToCancelled refund b
             else pure Nothing
   whenJust cancelled $ \(b, decision) -> do
-    when (decision == FullRefund) $ startRefund b
-    getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
-    recordCancelReason b.id NO_CAB_FOUND
+    -- each step is its own try: the booking is CANCELLED by now, so one failure must not skip the rest or the rider's push
+    refunded <- if decision == FullRefund then startRefund b else pure True
+    releaseCancelledBooking b
+    void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
+    void . withTryCatch "sharedCab:findingTimeout:recordCancelReason" $ recordCancelReason b.id NO_CAB_FOUND
     Events.forBooking (Events.BookingCancelled "system" (if decision == FullRefund then "full" else "none") (Just "finding_timeout")) b
     Invariants.checkBooking b.id
-    if decision == FullRefund then Notify.notifyFindingTimeout b else Notify.notifyBookingCancelled b.sharedCabNoShows b
+    if decision == FullRefund
+      then when refunded $ Notify.notifyFindingTimeout b -- never "refunded in full" to a rider whose refund did not start
+      else Notify.notifyBookingCancelled b.sharedCabNoShows b
 
 flipToCancelled ::
   (Events.EventFlow m r, Redis.HedisFlow m r, HasBAPMetrics m r) =>
@@ -131,12 +139,12 @@ flipToCancelled decision b = do
 startRefund ::
   CancelFlow m r c =>
   DFTB.FRFSTicketBooking ->
-  m ()
+  m Bool
 startRefund b = do
   mbPayment <- QFRFSTicketBookingPayment.findTicketBookingPayment b
   isFree <- noPaymentDue b
   case mbPayment of
     Just payment ->
       withTryCatch "sharedCabFindingTimeoutRefund" (SPayment.markRefundPendingAndSyncOrderStatus b.merchantId b.riderId payment.paymentOrderId)
-        >>= either (\e -> logError $ "shared-cab finding-timeout refund NOT started for booking " <> b.id.getId <> ": " <> show e) (const (pure ()))
-    Nothing -> unless isFree . logError $ "shared-cab finding-timeout: booking " <> b.id.getId <> " has no payment to refund"
+        >>= either (\e -> False <$ logError ("shared-cab finding-timeout refund NOT started for booking " <> b.id.getId <> ": " <> show e)) (const (pure True))
+    Nothing -> isFree <$ unless isFree (logError $ "shared-cab finding-timeout: booking " <> b.id.getId <> " has no payment to refund")

@@ -6,6 +6,7 @@ module SharedLogic.SharedCab.AllocationSchedule
   ( ensureAllocationTick,
     claimTickRun,
     scheduleNextTick,
+    thenReschedule,
   )
 where
 
@@ -46,6 +47,10 @@ ensureAllocationTick merchantId mocId =
   when sharedCabAllocationEnabled $ do
     tickSec <- tickSecOf mocId
     whenM (setNx (guardKey mocId) (guardTtlSec tickSec)) $ createNext tickSec merchantId mocId
+
+-- | R61: the tick body, then the reschedule, which runs even when the body throws (one DB hiccup must not end the chain).
+thenReschedule :: MonadMask m => m () -> m () -> m ()
+thenReschedule body reschedule = body `finally` reschedule
 
 -- | False when another chain already ran this tick: the caller stops without rescheduling.
 claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool

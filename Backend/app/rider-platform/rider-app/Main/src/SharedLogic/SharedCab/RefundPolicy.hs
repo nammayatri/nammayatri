@@ -7,6 +7,7 @@ module SharedLogic.SharedCab.RefundPolicy
     SharedCabCancelError (..),
     DropRoute (..),
     decideCancel,
+    cancellableStatus,
     cancelState,
     riderNearStop,
     routeRiderDrop,
@@ -82,6 +83,10 @@ riderNearStop radiusM maxAgeSec now mbStop = \case
       diffUTCTime now riderFix.takenAt <= fromIntegral maxAgeSec ->
       distanceBetweenInMeters riderFix.position stop <= fromIntegral radiusM
   _ -> True
+
+-- | A booking another cancel already ended (or started ending) is not cancelled again: the refund would run twice.
+cancellableStatus :: DFRFSBooking.FRFSTicketBookingStatus -> Bool
+cancellableStatus = (`notElem` [DFRFSBooking.CANCELLED, DFRFSBooking.COUNTER_CANCELLED, DFRFSBooking.CANCEL_INITIATED])
 
 data DropRoute = MarkDropped | CancelInstead | NothingToDrop
   deriving (Show, Eq)

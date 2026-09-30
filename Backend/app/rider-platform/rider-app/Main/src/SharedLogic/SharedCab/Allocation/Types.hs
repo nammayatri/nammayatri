@@ -17,6 +17,7 @@ module SharedLogic.SharedCab.Allocation.Types
     timerExpiry,
     FindingTimeout (..),
     findingTimeoutAction,
+    totalAgeMult,
     isMovingSpeed,
     parseLtsTimestamp,
     Blame (..),
@@ -261,10 +262,17 @@ passedStopBlame radiusM maxAgeSec now stop = \case
 data FindingTimeout = KeepFinding | CancelNoCab
   deriving (Show, Eq)
 
--- | A FINDING booking is cancelled once it is older than findingTimeoutSec, measured from its creation: a release restarts
--- the FINDING stint, and a stint clock would let a cab that keeps timing out hold the rider forever. It is a system cancel
--- with a full refund (R54: no cab took the rider), so the rider's own no-shows do not change it.
-findingTimeoutAction :: UTCTime -> Int -> UTCTime -> FindingTimeout
-findingTimeoutAction now findingTimeoutSec createdAt
-  | diffUTCTime now createdAt > fromIntegral findingTimeoutSec = CancelNoCab
+-- | A FINDING booking is cancelled once its current FINDING stint has run findingTimeoutSec (the findingSince clock, reset by
+-- every release, the same one fallbackAfterSec uses), so a booking a cab released late (a no-show, a driver cancel) still
+-- gets the reallocation R54 promises. A stint clock alone would let a parked cab that keeps timing out hold the rider forever
+-- (attempts and the fallback push do not cancel), so the total age since creation is capped at `totalAgeMult` stints.
+-- A system cancel with a full refund (R54: no cab took the rider) unless a no-show is booked (findingTimeoutRefund).
+findingTimeoutAction :: UTCTime -> Int -> UTCTime -> UTCTime -> FindingTimeout
+findingTimeoutAction now findingTimeoutSec findingSince createdAt
+  | diffUTCTime now findingSince > fromIntegral findingTimeoutSec = CancelNoCab
+  | diffUTCTime now createdAt > fromIntegral (totalAgeMult * findingTimeoutSec) = CancelNoCab
   | otherwise = KeepFinding
+
+-- | How many findingTimeoutSec stints a booking may live in FINDING in total, releases included.
+totalAgeMult :: Int
+totalAgeMult = 3

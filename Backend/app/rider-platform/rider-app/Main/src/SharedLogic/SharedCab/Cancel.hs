@@ -36,6 +36,8 @@ withSharedCabCancel :: CancelBy -> CancelStage -> Maybe Text -> (DFTB.FRFSTicket
 withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
   refund <- withBookingLock booking.id $ do
     fresh <- QFRFSTicketBooking.findById booking.id >>= fromMaybeM (InvalidRequest "Booking not found")
+    -- a canceller that lost the lock to another cancel (a rider's tap racing the finding timeout) must not refund again
+    unless (cancellableStatus fresh.status) $ throwError (InvalidRequest "Booking is already cancelled")
     checkFresh fresh
     refund <- decide by fresh
     setRefundDecision booking.id refund

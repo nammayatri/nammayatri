@@ -24,7 +24,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass, sharedCabAllocationEnabled, withCityTickLease)
-import SharedLogic.SharedCab.AllocationSchedule (claimTickRun, scheduleNextTick)
+import SharedLogic.SharedCab.AllocationSchedule (claimTickRun, scheduleNextTick, thenReschedule)
 import SharedLogic.SharedCab.FindingTimeout (CancelFlow, cancelTimedOutFindings)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import SharedLogic.SharedCab.StopProgress (runStopProgress)
@@ -57,14 +57,15 @@ sharedCabAllocationTick Job {jobInfo} = do
   when (claimed && sharedCabAllocationEnabled) $ do
     liveRef <- liftIO $ newIORef []
     -- R61: the next tick is scheduled even when this one throws, or one DB hiccup ends the city's chain for good
-    ( do
-        -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress (7.5) shares it
-        withCityTickLease merchantOperatingCityId $
-          allocationPass merchantOperatingCityId >>= \(live, positions) -> do
-            liftIO (writeIORef liveRef live)
-            runStopProgress merchantOperatingCityId live positions
-        -- R63: after the lease, so the refund's network calls never hold up the city's tick
-        liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
+    thenReschedule
+      ( do
+          -- the lease runSharedCabAllocationTick takes for on-demand triggers too; stop progress (7.5) shares it
+          withCityTickLease merchantOperatingCityId $
+            allocationPass merchantOperatingCityId >>= \(live, positions) -> do
+              liftIO (writeIORef liveRef live)
+              runStopProgress merchantOperatingCityId live positions
+          -- R63: after the lease, so the refund's network calls never hold up the city's tick
+          liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
       )
-      `finally` scheduleNextTick merchantId merchantOperatingCityId
+      (scheduleNextTick merchantId merchantOperatingCityId)
   pure Complete

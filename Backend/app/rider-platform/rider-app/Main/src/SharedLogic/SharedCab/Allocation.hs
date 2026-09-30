@@ -60,6 +60,8 @@ module SharedLogic.SharedCab.Allocation
     standTimerOnClaim,
     claimTimerSec,
     claimTimerKind,
+    releaseCancelledBooking,
+    ticketsCountedAtConfirm,
     ClaimPush (..),
     claimPush,
     clearsWhenMoving,
@@ -677,30 +679,47 @@ cancelForNoShows b = do
   void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) b.id
   QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just 0) (Just (fromMaybe b.totalPrice.amount b.overriddenAmount)) (Just True) b.id
   -- the journey-level part of a cancel (legs Finished, journey CANCELLED), as a rider cancel does
-  QJourneyLeg.findByLegSearchId (Just b.searchId.getId) >>= mapM_ (FRFSCancelJourney.cancelJourneyById . (.journeyId))
+  void . withTryCatch "sharedCab:cancelForNoShows:cancelJourney" $
+    QJourneyLeg.findByLegSearchId (Just b.searchId.getId) >>= mapM_ (FRFSCancelJourney.cancelJourneyById . (.journeyId))
   -- R55: the leg state shows 'cancelled after missed cabs'. clearAllocationKeys (next, in the caller) leaves this key.
-  recordCancelReason b.id NO_SHOW_CAP
+  withTryCatch "sharedCab:cancelForNoShows:recordCancelReason" (recordCancelReason b.id NO_SHOW_CAP)
+    >>= either (\e -> logError $ "shared-cab cancel-reason not recorded for booking " <> b.id.getId <> ": " <> show e) pure
+  releaseCancelledBooking b
+
+-- | The R68 side effects of a system cancel, shared by every cancel the tick does itself (no-show cap, finding timeout),
+-- each effect wrapped so one failure never skips the rest: the pass's spent trip handed back (exactly-once by its marker)
+-- and the persona counters OnConfirm wrote reversed. Not crash-idempotent for the counters, and doesn't need to be: the
+-- booking flips to CANCELLED once, and a crash before this point leaves stats un-reversed rather than reversed twice.
+-- Run after the row flip; needs no lock of its own.
+releaseCancelledBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DFTB.FRFSTicketBooking -> m ()
+releaseCancelledBooking b = do
   quantity <- FRFSPassOverride.ticketQuantityForBooking b
   mbPerson <- QPerson.findById b.riderId
   -- (1) give the pass's spent trip back; the marker inside makes a tick retry safe
   whenJust b.overrideAppliedEntityId $ \entityId -> do
-    void . withTryCatch "sharedCab:cancelForNoShows:refundPassOverrideTrip" $
+    void . withTryCatch "sharedCab:releaseCancelledBooking:refundPassOverrideTrip" $
       FRFSPassOverride.refundPassOverrideTrip b.searchId (Id entityId) quantity
-    void . withTryCatch "sharedCab:cancelForNoShows:releaseBookedTrip" $
+    void . withTryCatch "sharedCab:releaseCancelledBooking:releaseBookedTrip" $
       whenJust mbPerson $ \person ->
         FRFSPassOverride.releaseBookedTrip person (Id entityId) b.id.getId (fromMaybe b.createdAt b.startTime)
   -- (2) undo the persona counters OnConfirm's recordPurchase wrote, in handleCancelledStatus's order:
   -- PersonStats cache cleared, then the reverse, then the legacy tickets-booked counter.
-  void $ CQP.clearPSCache b.riderId
+  void . withTryCatch "sharedCab:releaseCancelledBooking:clearPSCache" $ CQP.clearPSCache b.riderId
   case mbPerson of
-    Nothing -> logError $ "shared-cab cancelForNoShows: person " <> b.riderId.getId <> " not found, stats reversal skipped"
+    Nothing -> logError $ "shared-cab releaseCancelledBooking: person " <> b.riderId.getId <> " not found, stats reversal skipped"
     Just person -> do
       reverseStatsResult <-
-        withTryCatch "sharedCab:cancelForNoShows:reversePersonPTStats" $ do
+        withTryCatch "sharedCab:releaseCancelledBooking:reversePersonPTStats" $ do
           purchaseEvent <- SPUS.mkPurchaseEvent person (Just b.vehicleType) b.serviceTierType DPUS.TICKET Nothing (Just quantity) b.merchantId b.merchantOperatingCityId
           SPUS.reversePurchase purchaseEvent
       either (\e -> logError $ "Failed to reverse PersonPTStats for booking " <> b.id.getId <> ": " <> show e) pure reverseStatsResult
-  void $ QPS.incrementTicketsBookedInEvent b.riderId (- quantity)
+  -- OnConfirm counts a child (rescheduled) booking's tickets only through its parent
+  when (ticketsCountedAtConfirm b.parentBookingId) . void . withTryCatch "sharedCab:releaseCancelledBooking:ticketsBooked" $
+    QPS.incrementTicketsBookedInEvent b.riderId (- quantity)
+
+-- | OnConfirm increments ticketsBookedInEvent `unless (isJust parentBookingId)`; the reversal mirrors it.
+ticketsCountedAtConfirm :: Maybe parent -> Bool
+ticketsCountedAtConfirm = isNothing
 
 -- | R16: the close that takes the attempt count over maxAttempts (not one past it).
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
