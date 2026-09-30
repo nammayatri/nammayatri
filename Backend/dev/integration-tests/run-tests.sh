@@ -385,6 +385,23 @@ run_single() {
     echo "PASSED: $suite_name ($env_name)"
 }
 
+# ── Parked collections ──
+# Failing / direct-DB suites live outside collections/ (DbDependent/ and DbDependent/thrash-collections/).
+# A command whose collection is parked skips cleanly instead of failing.
+skip_if_parked() {
+    local dir="$1"
+    [ -d "$dir" ] && return 1
+    local name
+    name="$(basename "$dir")"
+    for parked in "$SCRIPT_DIR/DbDependent/thrash-collections/$name" "$SCRIPT_DIR/DbDependent/$name"; do
+        if [ -d "$parked" ]; then
+            echo "SKIP: $name is parked in ${parked#"$SCRIPT_DIR"/} (not in collections/)"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # ── Ride Booking ──
 
 run_rides() {
@@ -393,6 +410,7 @@ run_rides() {
     # Optional 3rd arg: collection dir (AutoRideFlow / TaxiRideFlow reuse this runner).
     local ride_dir="${3:-$RIDE_DIR}"
 
+    skip_if_parked "$ride_dir" && return 0
     if [ ! -d "$ride_dir" ]; then
         echo "No ride collections found at $ride_dir"
         exit 1
@@ -475,6 +493,7 @@ run_frfs() {
     local filter_env="${3:-}"
     local filter_suite="${4:-}"
 
+    skip_if_parked "$flow_dir" && return 0
     if [ ! -d "$flow_dir" ]; then
         echo "No collections found at $flow_dir"
         exit 1
