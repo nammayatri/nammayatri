@@ -79,7 +79,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Types.SpecialLocation as SL
 import Lib.Yudhishthira.Types
 import qualified SharedLogic.AddOn as SAddOn
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (autoAssignPreferenceScore, getPoolBatchNum, incrementDriverRequestCount)
+import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum, incrementDriverRequestCount)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
@@ -207,7 +207,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache driverPool
   languageDictionary <- foldM (addLanguageToDictionary transporterConfig searchReq) M.empty dispatchPool
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False) dispatchPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False driverPoolConfig.autoAssignMaxPickupDistance) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
   (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
   let metricsDistanceBucketEdges = SML.distanceBucketEdges transporterConfig
@@ -397,9 +397,10 @@ buildSearchRequestForDriver ::
   Maybe (Id RiderDetails) ->
   M.Map DVST.ServiceTierType (Maybe Int) ->
   Bool ->
+  Maybe Meters ->
   SDP.DriverPoolWithActualDistResult ->
   m SearchRequestForDriver
-buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache isAutoAccepted dpwRes = do
+buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache isAutoAccepted autoAssignMaxPickupDistance dpwRes = do
   let currency = searchTry.currency
   guid <- generateGUID
   now <- getCurrentTime
@@ -504,6 +505,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             driverTagScore = dpwRes.score,
             preferenceMatchScore = Just dpwRes.preferenceMatchScore,
             hasApplicablePreferences = Just dpwRes.hasApplicablePreferences,
+            autoAssignMaxPickupDistance = autoAssignMaxPickupDistance,
             conditionalCharges = additionalChargesEligiblFor,
             isSafetyPlus = Just isEligibleForSafetyPlusCharge,
             coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
@@ -680,7 +682,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             if onRide || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
               then pure False
               else do
-                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True dp
+                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True driverPoolCfg.autoAssignMaxPickupDistance dp
                 -- Nested try: a failure after the SRFD row exists must retract it, otherwise the
                 -- driver can still poll and manually accept an offer this loop already abandoned.
                 assignResult :: Either SomeException [SearchRequestForDriver] <- C.try $ do
@@ -729,8 +731,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
       isAutoAssignEnabledForTier dp.driverPoolResult.serviceTier
         && UI.hasPriorityTag (show dp.driverPoolResult.serviceTier) dp
         && dp.driverPoolResult.serviceTier `elem` dp.driverPoolResult.selectedAutoAcceptTiers
-        -- Trip-distance preference deliberately excluded from the auto-assign score.
-        && autoAssignPreferenceScore searchReq dp == 1.0
+        && dp.preferenceMatchScore == 1.0
         -- Farther-than-threshold drivers still get the normal broadcast, just no silent assign.
         && maybe True (dp.actualDistanceToPickup <=) driverPoolCfg.autoAssignMaxPickupDistance
     priorityCandidates = DL.filter isPriorityCandidate batch
