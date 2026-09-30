@@ -182,7 +182,7 @@ types:
   FPV2SchedulingCharge:
     - enum: "ProgressiveSchedulingCharge Double, ConstantSchedulingCharge HighPrecMoney"
   FPV2PlatformFeeMethod:
-    - enum: "Subscription, FixedAmount, None, SlabBased, NoCharge"
+    - enum: "Subscription, FixedAmount, None, SlabBased, NoCharge, WalletCharged"
   FPV2NightShiftBounds:
     - nightShiftStart: TimeOfDay
     - nightShiftEnd: TimeOfDay

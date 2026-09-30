@@ -171,11 +171,11 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
     prepareDriverPoolBatch' previousBatchesDrivers batchNum merchantOpCityId txnId isValueAddNP = withLogTag ("BatchNum - " <> show batchNum <> " and txnId:- " <> show txnId) $ do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
       mbFareSettlementTypeForPool <- SFarePolicy.getFareSettlementTypeForSpecialZone (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+      isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       airportEntryFee <-
-        if fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
+        if not isAirportRequest || fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide
           then pure Nothing
           else AirportEntryFee.requiredDriverWalletAmountForBooking (fromMaybe False transporterConfig.airportEntryFeeEnabled) searchReq.pickupGateId (listToMaybe tripQuoteDetails <&> (.vehicleServiceTier)) mbFareSettlementTypeForPool (Just searchReq.currency)
-      isAirportRequest <- AirportEntryFee.isAirportPickupArea searchReq.area
       blockListedDriversForSearch <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
       blockListedDriversForRider <- maybe (pure []) (Redis.withCrossAppRedis . Redis.getList . mkBlockListedDriversForRiderKey) searchReq.riderId
       riderCorrelations <- maybe (pure []) QFavDrivers.findAllCorrelationsForRider searchReq.riderId
