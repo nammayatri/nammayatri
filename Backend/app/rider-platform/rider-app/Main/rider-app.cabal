@@ -198,6 +198,7 @@ library
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
       Domain.Action.Dashboard.AppManagement.FRFSTicketService
+      Domain.Action.Dashboard.AppManagement.FrfsTripOperations
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
@@ -919,6 +920,7 @@ library
       API.Action.Dashboard.AppManagement.EDCMachine
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.FRFSTicketService
+      API.Action.Dashboard.AppManagement.FrfsTripOperations
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
       API.Action.Dashboard.AppManagement.Passetto
@@ -975,6 +977,7 @@ library
       API.Action.DashboardAuth.AppManagement.EDCMachine
       API.Action.DashboardAuth.AppManagement.EventManagement
       API.Action.DashboardAuth.AppManagement.FRFSTicketService
+      API.Action.DashboardAuth.AppManagement.FrfsTripOperations
       API.Action.DashboardAuth.AppManagement.MerchantOnboarding
       API.Action.DashboardAuth.AppManagement.Pass
       API.Action.DashboardAuth.AppManagement.Passetto
@@ -1094,6 +1097,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.EDCMachine
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
+      API.Types.Dashboard.AppManagement.Endpoints.FrfsTripOperations
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
       API.Types.Dashboard.AppManagement.Endpoints.Passetto
@@ -1107,6 +1111,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.VehicleSeatLayoutMapping
       API.Types.Dashboard.AppManagement.EventManagement
       API.Types.Dashboard.AppManagement.FRFSTicketService
+      API.Types.Dashboard.AppManagement.FrfsTripOperations
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
       API.Types.Dashboard.AppManagement.Passetto
