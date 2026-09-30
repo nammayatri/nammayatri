@@ -16,6 +16,7 @@ import Kernel.Utils.Common hiding (Error)
 import Servant hiding (throwError)
 import qualified SharedLogic.DriverOnboarding as SLogicOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.Finance.TdsRate as STds
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -57,6 +58,10 @@ hyperVergeResultWebhookHandler payload = do
     DVC.PanCard -> do
       QDPC.updateVerificationStatus vstatus imageEntity.personId
       logInfo $ "PAN Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus
+      -- PAN validity feeds the TDS cohort, so the stored rate is stale the moment
+      -- this status changes. No-op unless the merchant has cohort TDS enabled.
+      person <- QPerson.findById imageEntity.personId >>= fromMaybeM (PersonNotFound imageEntity.personId.getId)
+      STds.materializeTdsRateFor person
     DVC.AadhaarCard -> do
       QAadhaarCard.updateVerificationStatus vstatus imageEntity.personId
       logInfo $ "Aadhaar Card Validation Status Updated for Driver: " <> show imageEntity.personId <> " to: " <> show vstatus

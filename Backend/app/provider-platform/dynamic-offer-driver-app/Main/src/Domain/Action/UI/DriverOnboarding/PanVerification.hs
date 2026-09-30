@@ -68,7 +68,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import qualified SharedLogic.Finance.Wallet as Wallet
+import SharedLogic.Finance.TdsRate (materializeTdsRateFor)
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -542,23 +542,6 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
             ivEntity <- mkIdfyVerificationEntityPanAadhaarLink person driverPanCard.documentImageId1 verifyRes.requestId now encPan
             IVQuery.create ivEntity
           _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
-
-materializeTdsRateFor :: Person.Person -> Flow ()
-materializeTdsRateFor person = do
-  transporterConfig <-
-    getOneConfig
-      (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
-      Nothing
-      >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  -- No-op unless PAN-Aadhaar-link TDS is enabled for the merchant; otherwise
-  -- leave tds_rate alone so other merchants' rate resolution is unchanged.
-  when (Wallet.panAadhaarLinkTdsEnabled transporterConfig.taxConfig) $ do
-    mbPanCard <- DPQuery.findByDriverId person.id
-    let mbRate = Wallet.computeEffectiveTdsRate mbPanCard Nothing transporterConfig.taxConfig
-    whenJust mbRate $ \rate ->
-      if DCommon.checkFleetOwnerRole person.role
-        then QFOI.updateTdsRate (Just rate) (cast person.id)
-        else DIQuery.updateTdsRate (Just rate) (cast person.id)
 
 onVerifyPanAadhaarLink :: VerificationReqRecord -> VT.PanAadhaarLinkResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPanAadhaarLink verificationReq output serviceName = do

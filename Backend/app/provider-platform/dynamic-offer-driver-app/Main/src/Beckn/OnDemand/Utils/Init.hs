@@ -10,7 +10,7 @@ import qualified Domain.Types.VehicleVariant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error (GenericError (..))
-import Kernel.Utils.Common (decodeFromText, fromMaybeM)
+import Kernel.Utils.Common (decodeFromText, fromMaybeM, logWarning)
 
 castVehicleVariant :: Maybe Text -> Maybe Text -> Maybe VehVar.VehicleVariant
 castVehicleVariant mbVehCategory mbVehVariant = case (mbVehCategory, mbVehVariant) of
@@ -71,7 +71,13 @@ castPaymentInstrument params mPaymentTags = do
       -- Fallback to VPA detection for backward compatibility
       if isJust $ params.paymentParamsVirtualPaymentAddress
         then return DMPM.UPI
-        else return DMPM.Cash
+        else do
+          logWarning $
+            "castPaymentInstrument: no PAYMENT_INSTRUMENT tag and no VPA; defaulting to Cash. "
+              <> "This stamps the booking as a cash ride and changes how earnings are ledgered. "
+              <> "Raw tag value: "
+              <> show (Utils.getTagV2Compat Tag.BPP_TERMS Tag.PAYMENT_INSTRUMENT mPaymentTags)
+          return DMPM.Cash
 
 -- Helper to extract payment instrument from tags
 getPaymentInstrumentFromTags :: Maybe [Spec.TagGroup] -> Maybe DMPM.PaymentInstrument

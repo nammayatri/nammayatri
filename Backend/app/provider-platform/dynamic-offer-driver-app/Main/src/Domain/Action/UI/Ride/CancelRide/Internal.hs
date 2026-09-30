@@ -80,6 +80,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.SubscriptionConsumption as SubscriptionConsumption
+import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -324,14 +325,18 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
       mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       mbDriverInfo <- QDI.findById (cast ride.driverId)
-      -- Read the materialized tds_rate for the tax subject (fleet owner if it's
-      -- a fleet ride, else the driver). Set by the PAN / linkage webhooks when
-      -- PAN-Aadhaar-link TDS is enabled (see PanVerification.materializeTdsRateFor).
+      -- Resolve the materialized tds_rate for the tax subject (fleet owner if
+      -- it's a fleet ride, else the driver), materialising it from the cohort if
+      -- the column is empty -- same contract as ride end, so a cancellation and a
+      -- completed ride can never price off different rates for the same person.
       (mbFleetInfo, mbStoredTdsRate) <- case ride.fleetOwnerId of
         Just fleetOwnerId -> do
           mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
-          pure (mbFleetInfo', mbFleetInfo' >>= (.tdsRate))
-        Nothing -> pure (Nothing, mbDriverInfo >>= (.tdsRate))
+          rate <- STds.ensureTdsRateFor transporterConfig fleetOwnerId True (mbFleetInfo' >>= (.tdsRate))
+          pure (mbFleetInfo', rate)
+        Nothing -> do
+          rate <- STds.ensureTdsRateFor transporterConfig ride.driverId False (mbDriverInfo >>= (.tdsRate))
+          pure (Nothing, rate)
       let rideGst = transporterConfig.taxConfig.rideGst
           cancelIsVat = fromMaybe False booking.fareParams.isVatTaxType
           -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.

@@ -1040,7 +1040,8 @@ sendDriverOffer transporter searchReq srfd searchTry driverQuote = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle transporter.id "MOBILITY" (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show transporter.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show (Utils.mapServiceTierToCategory driverQuote.vehicleServiceTier))
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback driverQuote.id.getId
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow driverQuote.vehicleServiceTier searchTry.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show driverQuote.vehicleServiceTier)
-  onSelectMsg' <- buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy
+  mPaymentInstrument <- Utils.resolveAdvertisedPaymentInstrument searchTry.merchantOperatingCityId (show bppConfig.collectedBy)
+  onSelectMsg' <- buildOnSelectReq transporter vehicleServiceTierItem searchReq driverQuote isValueAddNP <&> ACL.mkOnSelectMessageV2 isValueAddNP bppConfig transporter farePolicy mPaymentInstrument
   -- Fixes item.descriptor.code, item.tags and quote.breakup titles to match ONDC v2.1.0, since the dynamic-offer/bidding flow's on_select has no ONDC compliance override applied, unlike the Quote-based flow; also echoes back the selected add-ons.
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchTry.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist searchTry.merchantOperatingCityId.getId)
   let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport

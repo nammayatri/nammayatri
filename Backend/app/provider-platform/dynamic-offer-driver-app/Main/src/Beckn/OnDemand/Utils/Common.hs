@@ -75,6 +75,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
@@ -1270,11 +1271,38 @@ mkCancellationTermForState state reasonRequired =
       cancellationTermReasonRequired = Just reasonRequired
     }
 
+resolveAdvertisedPaymentInstrument ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id MOC.MerchantOperatingCity ->
+  -- | collectedBy, rendered the way it goes on the wire ("BAP" / "BPP")
+  Text ->
+  m (Maybe Text)
+resolveAdvertisedPaymentInstrument merchantOpCityId collectedBy = do
+  methods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
+  pure $ show . (.paymentInstrument) <$> listToMaybe (List.sortOn sortKey (filter eligible methods))
+  where
+    eligible mpm = show mpm.collectedBy == collectedBy && instrumentFitsCollector mpm
+    instrumentFitsCollector mpm
+      | collectedBy == "BAP" = DMPM.isOnlinePaymentInstrument mpm.paymentInstrument
+      | otherwise = True
+    sortKey :: DMPM.MerchantPaymentMethod -> (Int, Text)
+    sortKey mpm = (mpm.priority, show mpm.paymentInstrument)
+
+pickAdvertisedPaymentInstrument :: Text -> [DMPM.PaymentMethodInfo] -> Maybe Text
+pickAdvertisedPaymentInstrument collectedBy methods =
+  listToMaybe . List.sort $
+    [ show pmi.paymentInstrument
+      | pmi <- methods,
+        show pmi.collectedBy == collectedBy,
+        collectedBy /= "BAP" || DMPM.isOnlinePaymentInstrument pmi.paymentInstrument
+    ]
+
 tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
 tfPayments booking transporter bppConfig = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: Maybe DT.BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
+      mPaymentInstrument = show <$> booking.paymentInstrument
+  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 tfProvider becknConfig =

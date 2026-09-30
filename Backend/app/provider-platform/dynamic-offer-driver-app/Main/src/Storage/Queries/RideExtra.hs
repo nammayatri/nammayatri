@@ -623,9 +623,28 @@ roundToMidnightUTC (UTCTime day _) = UTCTime day 0
 roundToMidnightUTCToDate :: UTCTime -> UTCTime
 roundToMidnightUTCToDate (UTCTime day _) = UTCTime (addDays 1 day) 0
 
+-- | Cash/Online filter.
+--
+-- ledgerWriteMode is authoritative where it is set: paymentInstrument is frozen
+-- at init from whatever the BAP declared and is never corrected, whereas
+-- ledgerWriteMode is what the money actually did (resolved at ride end,
+-- including the forceOnlineLedger override). A BAP that declares Cash at init
+-- and then collects the fare itself leaves an online ride filed under Cash.
+--
+-- ledgerWriteMode is only written at ride end, so it is NULL for in-flight and
+-- cancelled bookings; those fall back to the instrument.
 mkPaymentModeCond :: BeamB.BookingT (B.QExpr Postgres s) -> Common.PaymentMode -> B.QExpr Postgres s (B.SqlBool)
-mkPaymentModeCond booking Common.CASH = BeamB.paymentInstrument booking B.==?. B.val_ (Just DMPM.Cash)
-mkPaymentModeCond booking Common.ONLINE = BeamB.paymentInstrument booking B./=?. B.val_ (Just DMPM.Cash) B.&&?. B.sqlBool_ (B.isJust_ $ BeamB.paymentInstrument booking)
+mkPaymentModeCond booking Common.CASH =
+  (BeamB.ledgerWriteMode booking B.==?. B.val_ (Just False))
+    B.||?. ( B.sqlBool_ (B.isNothing_ $ BeamB.ledgerWriteMode booking)
+               B.&&?. (BeamB.paymentInstrument booking B.==?. B.val_ (Just DMPM.Cash))
+           )
+mkPaymentModeCond booking Common.ONLINE =
+  (BeamB.ledgerWriteMode booking B.==?. B.val_ (Just True))
+    B.||?. ( B.sqlBool_ (B.isNothing_ $ BeamB.ledgerWriteMode booking)
+               B.&&?. (BeamB.paymentInstrument booking B./=?. B.val_ (Just DMPM.Cash))
+               B.&&?. B.sqlBool_ (B.isJust_ $ BeamB.paymentInstrument booking)
+           )
 
 findAllRideItems ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
