@@ -13,7 +13,11 @@ module Domain.Action.UI.SharedCab where
 -- reject unless variant == SHARED_CAB (400, 04-driver-side-plan.md §4), then
 -- forward to rider-app's /internal/sharedCab/* via SharedLogic.CallSharedCabBAP.
 -- driverId comes from TokenAuth; vehicleNumber from the driver's Vehicle row;
--- integratedBppConfigId from the SHARED_CAB IntegratedBPPConfig of the driver's
+-- R62 wire rename: what the driver used to read as
+-- "-- integratedBppConfigId from the SHARED_CAB IntegratedBPPConfig of the driver's
+-- merchant operating city" is sent as agencyId = that config's agencyKey (IBC ids are
+-- per-DB UUIDs, never mirrored; agency_key, the GTFS agency gtfsId, is the cross-DB
+-- business key and rider-app resolves its own row by it);
 -- merchant operating city; serviceTierType is SHARED_CAB; capacity defaults to
 -- 4 when the Vehicle row has no explicit capacity.
 -- Flag ownership (4.5 R11): selectSharedCabRoute sets DriverInformation
@@ -92,7 +96,7 @@ getSharedCabRoutes (personId, _merchantId, merchantOpCityId) lat lon = do
   _ <- validateSharedCabDriver personId
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
-  SharedCabBAP.getSharedCabRoutes bap.apiKey bap.url integratedBPPConfig.id.getId lat lon
+  SharedCabBAP.getSharedCabRoutes bap.apiKey bap.url integratedBPPConfig.agencyKey lat lon
 
 -- 4.5 R11: set the taxi-pool exclusion flag BEFORE the BAP route/select call is
 -- issued (fail-CLOSED: if the call then fails, the driver stays excluded until the
@@ -127,7 +131,7 @@ selectSharedCabRoute (personId, merchantId, merchantOpCityId) req = do
         SharedCabBAP.walkupCount = req.walkupCount,
         SharedCabBAP.driverId = personId.getId,
         SharedCabBAP.vehicleNumber = vehicle.registrationNo,
-        SharedCabBAP.integratedBppConfigId = integratedBPPConfig.id.getId,
+        SharedCabBAP.agencyId = integratedBPPConfig.agencyKey,
         SharedCabBAP.serviceTierType = sharedCabServiceTierType,
         SharedCabBAP.capacity = fromMaybe sharedCabDefaultCapacity vehicle.capacity
       }

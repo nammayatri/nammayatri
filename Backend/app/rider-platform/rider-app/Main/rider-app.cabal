@@ -2185,6 +2185,7 @@ test-suite rider-app-test
       SharedCabRefundPolicyTests
       SharedCabSessionTests
       SharedCabStopProgressTests
+      SharedCabTicketBirthTests
       Paths_rider_app
   hs-source-dirs:
       test

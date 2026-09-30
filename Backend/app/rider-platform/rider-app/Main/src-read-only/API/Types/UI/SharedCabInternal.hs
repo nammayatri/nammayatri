@@ -4,7 +4,6 @@ module API.Types.UI.SharedCabInternal where
 
 import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.VehicleTrip
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -23,9 +22,9 @@ data SeatsReq = SeatsReq {driverId :: Kernel.Prelude.Text, vehicleNumber :: Kern
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SelectRouteReq = SelectRouteReq
-  { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { agencyId :: Kernel.Prelude.Text,
+    capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverId :: Kernel.Prelude.Text,
-    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     mode :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionState.SelectRouteMode,
     routeCode :: Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,

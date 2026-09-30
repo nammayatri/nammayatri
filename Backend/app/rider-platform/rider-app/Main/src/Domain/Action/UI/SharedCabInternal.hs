@@ -61,8 +61,16 @@ checkToken mbToken = do
   unless (Just internalAPIKey == mbToken) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
+-- | Session-stored id copy: resolved at select time by THIS app, so a plain id lookup is right.
 getIntegratedBppConfig :: Id DIBC.IntegratedBPPConfig -> Environment.Flow DIBC.IntegratedBPPConfig
 getIntegratedBppConfig ibcId = CQIBC.findById ibcId >>= fromMaybeM IntegratedBPPConfigNotFound
+
+-- | R62: the driver's identifier for its city config. IBC ids are per-DB UUIDs and are never
+-- mirrored, so the driver app sends the one identity both DBs' rows share for the same provider:
+-- integrated_bpp_config.agency_key, the GTFS agency gtfsId of the shared-cab feed
+-- ("<feed>:SHARED_CAB", e.g. "shillong_shared_cab:SHARED_CAB").
+getIntegratedBppConfigByAgency :: Text -> Environment.Flow DIBC.IntegratedBPPConfig
+getIntegratedBppConfigByAgency agencyId = CQIBC.findByAgencyId agencyId >>= fromMaybeM IntegratedBPPConfigNotFound
 
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
@@ -78,9 +86,9 @@ routeDirection = maybe "" (.stopName) . listToMaybe . reverse
 
 -- | Every route of the feed, nearest stop first; demand ranking and stand pinning join later.
 getSharedCabRoutes :: Text -> Double -> Double -> Maybe Text -> Environment.Flow API.SharedCabRoutesResp
-getSharedCabRoutes ibcId driverLat driverLon mbToken = do
+getSharedCabRoutes agencyId driverLat driverLon mbToken = do
   checkToken mbToken
-  routes <- getIntegratedBppConfig (Id ibcId) >>= feedRoutes
+  routes <- getIntegratedBppConfigByAgency agencyId >>= feedRoutes
   let distanceFrom = distanceBetweenInMeters (LatLong driverLat driverLon)
       distanceKm route stops =
         realToFrac . (/ 1000) . foldl' min (distanceFrom route.startPoint) $ map distanceFrom (route.endPoint : map (.stopPoint) stops)
@@ -100,7 +108,7 @@ getSharedCabRoutes ibcId driverLat driverLon mbToken = do
 postSharedCabRouteSelect :: Maybe Text -> API.SelectRouteReq -> Environment.Flow API.SelectRouteResp
 postSharedCabRouteSelect mbToken req = do
   checkToken mbToken
-  integratedBppConfig <- getIntegratedBppConfig req.integratedBppConfigId
+  integratedBppConfig <- getIntegratedBppConfigByAgency req.agencyId
   priorRoute <- fmap (.routeCode) . mfilter ((/= ENDED) . (.status)) <$> Session.getSession req.vehicleNumber
   selected <-
     checkedCab req.vehicleNumber $

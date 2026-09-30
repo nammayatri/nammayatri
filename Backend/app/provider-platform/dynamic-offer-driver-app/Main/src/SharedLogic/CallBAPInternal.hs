@@ -577,7 +577,10 @@ data BAPSelectRouteReq = BAPSelectRouteReq
     walkupCount :: Int,
     driverId :: Text,
     vehicleNumber :: Text,
-    integratedBppConfigId :: Text,
+    -- R62: the SHARED_CAB config's agency_key (GTFS agency gtfsId like "<feed>:SHARED_CAB"),
+    -- the one identity both apps' integrated_bpp_config rows share; rider-app looks its own
+    -- config row up by it (Storage.CachedQueries.IntegratedBPPConfig.findByAgencyId).
+    agencyId :: Text,
     serviceTierType :: Text,
     capacity :: Int
   }
@@ -612,13 +615,15 @@ data BAPResumeReq = BAPResumeReq
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)
 
--- GET /internal/sharedCab/routes?integratedBppConfigId=&lat=&lon= --------------
+-- GET /internal/sharedCab/routes?agencyId=&lat=&lon= --------------------------
+-- (wire name matches rider-app's generated MandatoryQueryParam; R62 renamed the
+-- driver-DB config row id to the shared agency_key.)
 
 type SharedCabRoutesAPI =
   "internal"
     :> "sharedCab"
     :> "routes"
-    :> QueryParam' '[Required, Strict] "integratedBppConfigId" Text
+    :> QueryParam' '[Required, Strict] "agencyId" Text
     :> QueryParam' '[Required, Strict] "lat" Double
     :> QueryParam' '[Required, Strict] "lon" Double
     :> Header "token" Text
@@ -642,10 +647,10 @@ getSharedCabRoutes ::
   Double ->
   Double ->
   m SharedCabRoutesResp
-getSharedCabRoutes apiKey internalUrl integratedBppConfigId lat lon = do
-  logInfo $ "CallSharedCabBAP: Getting routes for integratedBppConfigId: " <> integratedBppConfigId
+getSharedCabRoutes apiKey internalUrl agencyId lat lon = do
+  logInfo $ "CallSharedCabBAP: Getting routes for agencyId: " <> agencyId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callRoutesClient integratedBppConfigId lat lon (Just apiKey)) "GetSharedCabRoutes" callRoutesAPI
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callRoutesClient agencyId lat lon (Just apiKey)) "GetSharedCabRoutes" callRoutesAPI
 
 -- POST /internal/sharedCab/route/select -----------------------------------------
 

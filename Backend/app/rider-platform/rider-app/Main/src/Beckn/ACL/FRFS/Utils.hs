@@ -34,6 +34,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 
 -- | Build a BaseUrl with the request host (nwAddress) and the path from the given URL.
 -- Used so BAP context/callbacks hit the current instance (multicloud).
@@ -351,14 +352,25 @@ getTicketStatus booking checkInprogress dTicket = do
 
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> Spec.VehicleCategory -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ False _ = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
-castTicketStatus "UNCLAIMED" _ True Spec.BUS = return Ticket.USED -- In case of bus, ticket is scanned only once to validate the booking
-castTicketStatus "UNCLAIMED" _ True _ = return Ticket.INPROGRESS -- True means unsolicited on_status received
+-- True means unsolicited on_status received, or an on_confirm spot booking:
+castTicketStatus "UNCLAIMED" booking True vehicleCategory = return $ checkedInBirthStatus (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson) vehicleCategory
 castTicketStatus "CLAIMED" _ _ Spec.METRO = return Ticket.USED
 castTicketStatus "CANCELLED" booking _ _
   | booking.customerCancelled = return Ticket.CANCELLED
   | otherwise = return Ticket.COUNTER_CANCELLED
 castTicketStatus "EXPIRED" _ _ _ = return Ticket.EXPIRED
 castTicketStatus _ _ _ _ = throwError $ InternalError "Invalid ticket status"
+
+checkedInBirthStatus :: Maybe Spec.ServiceTierType -> Spec.VehicleCategory -> Ticket.FRFSTicketStatus
+checkedInBirthStatus (Just Spec.SHARED_CAB) Spec.BUS =
+  -- R66: a shared-cab ticket is never born USED or boarded: walking up is not a conductor scan.
+  -- The rider boards afterwards by typing the sticker code (SharedLogic.SharedCab.Boarding),
+  -- which drives ACTIVE -> INPROGRESS itself. Tier check mirrors SharedLogic.SharedCab.Booking.isSharedCabBooking.
+  Ticket.ACTIVE
+checkedInBirthStatus _ Spec.BUS =
+  -- In case of bus, ticket is scanned only once to validate the booking
+  Ticket.USED
+checkedInBirthStatus _ _ = Ticket.INPROGRESS
 
 data BppData = BppData
   { bppId :: Text,

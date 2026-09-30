@@ -32,6 +32,8 @@ import Tools.Auth
 -- and driverId/vehicleNumber stripped (both come from TokenAuth + the driver's
 -- Vehicle row server-side):
 --   GET  /internal/sharedCab/routes?integratedBppConfigId&lat&lon   -> GET  routes?lat&lon
+--     (R62 wire rename: ?integratedBppConfigId is now ?agencyId — the row's agencyKey, so rider-app
+--     resolves ITS OWN config row; row ids are per-DB UUIDs.)
 --   POST /internal/sharedCab/route/select                           -> POST route/select
 --   GET  /internal/sharedCab/session?driverId&vehicleNumber         -> GET  session
 --   POST /internal/sharedCab/seats                                  -> POST seats

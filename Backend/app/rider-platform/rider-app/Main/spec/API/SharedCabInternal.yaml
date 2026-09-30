@@ -4,7 +4,6 @@ imports:
   VehicleTrip: Domain.Types.VehicleTrip
   VehicleTripStatus: Domain.Types.VehicleTrip
   VehicleTripEndReason: Domain.Types.VehicleTrip
-  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   ServiceTierType: BecknV2.FRFS.Enums
   SelectRouteMode: SharedLogic.SharedCab.SessionState
   SharedCabRoute: SharedLogic.SharedCab.SessionView
@@ -31,10 +30,13 @@ types:
     session: Maybe SharedCabSession
     affectedRiders: Maybe [AffectedRider]
 
+  # agencyId is the shared-cab provider's business key across the two DBs: the GTFS agency
+  # gtfsId of the feed (integrated_bpp_config.agency_key, e.g. "<feed>:SHARED_CAB"). The caller's
+  # own row id never leaves its database (R62).
   SelectRouteReq:
     driverId: Text
     vehicleNumber: Text
-    integratedBppConfigId: Id IntegratedBPPConfig
+    agencyId: Text
     serviceTierType: ServiceTierType
     capacity: Maybe Int
     routeCode: Text
@@ -71,7 +73,7 @@ apis:
       headers:
         token: Text
       mandatoryQuery:
-        integratedBppConfigId: Text
+        agencyId: Text
         lat: Double
         lon: Double
       response:
