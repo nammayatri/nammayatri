@@ -264,3 +264,13 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN has_appl
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN auto_assign_max_pickup_distance integer ;
+
+
+------- SQL updates -------
+
