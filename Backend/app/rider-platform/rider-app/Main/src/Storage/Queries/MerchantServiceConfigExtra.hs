@@ -62,8 +62,14 @@ findByMerchantOpCityIdAndService (Id merchantId) (Id merchantOperatingCity) serv
       logError $ show (MerchantServiceConfigNotFound (merchantId <> "mocId" <> merchantOperatingCity) "ServiceName" (show serviceName))
       merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
       merchantOperatingCity' <- CQMOC.findByMerchantShortIdAndCity merchant.shortId merchant.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchant.defaultCity)
-      resp' <- findByMerchantOpCityIdAndService' (Id merchantId) (merchantOperatingCity'.id) serviceName >>= fromMaybeM (MerchantServiceConfigNotFound (merchantId <> "mocId" <> merchantOperatingCity'.id.getId) "ServiceName" (show serviceName))
-      return $ Just resp'
+      -- absent in the default city too: the function is Maybe-typed, so answer
+      -- Nothing instead of throwing — an OPTIONAL service (FleetEngine etc.)
+      -- missing everywhere must degrade, not 500 every read that peeks at it.
+      -- Callers that REQUIRE the config already wrap with their own fromMaybeM.
+      resp' <- findByMerchantOpCityIdAndService' (Id merchantId) (merchantOperatingCity'.id) serviceName
+      when (isNothing resp') $
+        logError $ show (MerchantServiceConfigNotFound (merchantId <> "mocId" <> merchantOperatingCity'.id.getId) "ServiceName" (show serviceName)) <> " (default-city fallback also missing; returning Nothing)"
+      return resp'
 
 findByMerchantOpCityIdAndService' ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
