@@ -959,7 +959,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         bookingAllowed = True,
         searchId = booking.searchId.getId,
         pricingId = Just booking.quoteId.getId, -- Just booking.id.getId,
-        travelMode = castCategoryToMode booking.vehicleType,
+        travelMode = journeyLeg.mode,
         startTime = startTime,
         order = journeyLeg.sequenceNumber,
         estimatedDuration = journeyLeg.duration,
@@ -1403,7 +1403,7 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
         bookingAllowed = True,
         pricingId = Nothing,
         searchId = frfsSearch.id.getId,
-        travelMode = castCategoryToMode frfsSearch.vehicleType,
+        travelMode = if (mbSelectedServiceTier <&> (.serviceTierType)) == Just Spec.SHARED_CAB then DTrip.SharedCab else castCategoryToMode frfsSearch.vehicleType,
         startTime = now,
         order = 0,
         status = InPlan,
@@ -1550,7 +1550,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         bookingAllowed,
         searchId = id.getId,
         pricingId = journeyLeg.legPricingId,
-        travelMode = castCategoryToMode vehicleType,
+        travelMode = journeyLeg.mode,
         startTime = fromMaybe now startTime,
         order = journeyLeg.sequenceNumber,
         estimatedDuration = duration,
@@ -1711,8 +1711,8 @@ mkSearchReqLocation address latLng = do
 mkJourney :: MonadFlow m => Bool -> Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Location -> Maybe Location -> m DJ.Journey
 mkJourney isSingleMode riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
   let journeyLegsCount = length legs
-      modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) maximumWalkDistance) legs
-  let isPublicTransportIncluded = any (`elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) modes
+      modes = map (\x -> convertMultiModalModeToTripMode x.mode (x.agency >>= (.gtfsId)) (straightLineDistance x) maximumWalkDistance) legs
+  let isPublicTransportIncluded = any DTrip.isFrfsTransitMode modes
   now <- getCurrentTime
   return $
     DJ.Journey
@@ -1796,7 +1796,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail merchantId merchantOpCityId journeyLegId fare) leg.routeDetails
-  let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance maximumWalkDistance
+  let travelMode = convertMultiModalModeToTripMode leg.mode (leg.agency >>= (.gtfsId)) straightLineDistance maximumWalkDistance
   gates <- maybe (getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId) (pure . Just) mbGates
   let (fromStopDetails, toStopDetails) =
         case travelMode of

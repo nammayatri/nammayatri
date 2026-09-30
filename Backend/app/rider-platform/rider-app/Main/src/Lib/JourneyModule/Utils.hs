@@ -68,6 +68,7 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -100,8 +101,10 @@ mapWithIndex f = go 0
       ys <- go (idx + 1) xs'
       return (y : ys)
 
-convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.MultimodalTravelMode
-convertMultiModalModeToTripMode input straightLineDistance maximumWalkDistance = case input of
+-- The shared-cab agency is published in GTFS as a BUS route; the travel mode says what the leg really is.
+convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Maybe Text -> Meters -> Meters -> DTrip.MultimodalTravelMode
+convertMultiModalModeToTripMode MultiModal.Bus (Just agencyGtfsId) _ _ | isSharedCabAgency agencyGtfsId = DTrip.SharedCab
+convertMultiModalModeToTripMode input _ straightLineDistance maximumWalkDistance = case input of
   MultiModal.MetroRail -> DTrip.Metro
   MultiModal.Subway -> DTrip.Subway
   MultiModal.Walk -> if straightLineDistance < maximumWalkDistance then DTrip.Walk else DTrip.Taxi
@@ -1374,6 +1377,7 @@ convertSortingType sortType = case sortType of
 -- Helper functions for recent location
 convertModeToEntityType :: DTrip.MultimodalTravelMode -> DTRL.EntityType
 convertModeToEntityType DTrip.Bus = DTRL.BUS
+convertModeToEntityType DTrip.SharedCab = DTRL.BUS
 convertModeToEntityType DTrip.Metro = DTRL.METRO
 convertModeToEntityType DTrip.Subway = DTRL.SUBWAY
 convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to conditional check
@@ -1382,7 +1386,7 @@ convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to cond
 createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Journey -> m ()
 createRecentLocationForMultimodal journey = do
   journeyLegs <- QJourneyLeg.getJourneyLegs journey.id
-  let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) journeyLegs
+  let onlyPublicTransportLegs = filter (\leg -> DTrip.isFrfsTransitMode leg.mode) journeyLegs
   fare <-
     foldrM
       ( \leg acc -> do
@@ -2229,7 +2233,7 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
         QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag journeyLeg.id
         -- R22: shared-cab bookings move seats under sharedcab:lock:booking:{id} with expected-value CAS writes;
         -- this waybill refresh holds no lock, so guard it the same way. Scheduled-BUS bookings are untouched.
-        if SharedCabBooking.isSharedCabBooking booking
+        if journeyLeg.mode == DTrip.SharedCab
           then SharedCabBooking.withBookingLock booking.id $ do
             mbFresh <- QFRFSTicketBooking.findById booking.id
             -- a FINDING booking (no plate) holds no bus; the waybill must not seat it on one

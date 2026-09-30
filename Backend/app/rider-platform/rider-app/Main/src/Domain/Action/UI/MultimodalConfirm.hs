@@ -310,7 +310,7 @@ postMultimodalConfirm (mbPersonId, _merchantId) journeyId forcedBookLegOrder mbI
   where
     isAllFRFSLegSkipped legs journeyConfirmReqElements =
       all
-        ( \leg -> maybe True (.skipBooking) (find (\r -> r.journeyLegOrder == leg.sequenceNumber && leg.mode `elem` [DTrip.Bus, DTrip.Subway, DTrip.Metro]) journeyConfirmReqElements)
+        ( \leg -> maybe True (.skipBooking) (find (\r -> r.journeyLegOrder == leg.sequenceNumber && DTrip.isFrfsTransitMode leg.mode) journeyConfirmReqElements)
         )
         legs
 
@@ -714,6 +714,7 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
           DTrip.Metro -> frfsFeedback journeyLeg legFeedback
           DTrip.Subway -> frfsFeedback journeyLeg legFeedback
           DTrip.Bus -> frfsFeedback journeyLeg legFeedback
+          DTrip.SharedCab -> frfsFeedback journeyLeg legFeedback
           _ -> pure ()
     )
     journeyFeedbackForm.rateTravelMode
@@ -3032,6 +3033,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       vehicleType <-
         case journeyLeg.mode of
           DTrip.Bus -> return Enums.BUS
+          DTrip.SharedCab -> return Enums.BUS
           DTrip.Metro -> return Enums.METRO
           DTrip.Subway -> return Enums.SUBWAY
           _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
@@ -3108,6 +3110,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           let frfsVehicleCategory =
                 case journeyLeg.mode of
                   DTrip.Bus -> Spec.BUS
+                  DTrip.SharedCab -> Spec.BUS
                   DTrip.Metro -> Spec.METRO
                   DTrip.Subway -> Spec.SUBWAY
                   _ -> Spec.BUS

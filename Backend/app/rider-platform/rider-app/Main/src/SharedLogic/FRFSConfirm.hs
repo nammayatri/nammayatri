@@ -63,6 +63,7 @@ import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
+import qualified SharedLogic.SharedCab.RefundDecision as SharedCabRefundDecision
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -970,7 +971,7 @@ buildJourneyAndLeg booking fareParameters = do
               -- OnConfirm, so OnConfirm's mark finds no leg yet and skips a fully covered booking.
               isPaymentSuccess = if FRFSPassOverride.fullyCoveredByPass booking then Just True else Nothing,
               totalLegs = 1,
-              modes = [mapVehicleCategoryToTripMode booking.vehicleType],
+              modes = [bookingTripMode],
               searchRequestId = booking.searchId.getId, -- Note :: This is not SearchRequest Table's ID. Do not use it to Query SearchReqeust Anywhere in Application.
               merchantId = booking.merchantId,
               status = DJ.CONFIRMED,
@@ -1098,7 +1099,7 @@ buildJourneyAndLeg booking fareParameters = do
     let journeyLeg =
           DJL.JourneyLeg
             { id = journeyLegGuid,
-              mode = mapVehicleCategoryToTripMode booking.vehicleType,
+              mode = bookingTripMode,
               groupCode = Nothing,
               startLocation = LatLngV2 fromLocation.lat fromLocation.lon,
               endLocation = LatLngV2 toLocation.lat toLocation.lon,
@@ -1204,6 +1205,10 @@ buildJourneyAndLeg booking fareParameters = do
     QJourneyLeg.create journeyLeg
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId
+
+    bookingTripMode
+      | SharedCabRefundDecision.isSharedCabBooking booking = DTrip.SharedCab
+      | otherwise = mapVehicleCategoryToTripMode booking.vehicleType
 
     mapVehicleCategoryToTripMode = \case
       Spec.BUS -> DTrip.Bus

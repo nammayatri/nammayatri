@@ -183,7 +183,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
       (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
       case mode of
-        _ | SharedCabBooking.isSharedCabBooking booking -> getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses
+        DTrip.SharedCab -> getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus bookingStatus trackingStatuses
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)

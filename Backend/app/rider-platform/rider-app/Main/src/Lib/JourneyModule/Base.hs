@@ -177,10 +177,10 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
   legsAndFares <-
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
-          let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
+          let travelMode = convertMultiModalModeToTripMode leg.mode (leg.agency >>= (.gtfsId)) (straightLineDistance leg) journeyReq.maximumWalkDistance
           legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes journeyReq.isSingleMode journeyReq.userPreferredServiceTier) "multimodal getFare"
           let onboardedSingleModeVehicle =
-                if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]
+                if DTrip.isFrfsTransitMode travelMode
                   then
                     journeyReq.routeLiveInfo <&> \liveInfo ->
                       JL.FinalBoardedBusData
@@ -195,7 +195,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
                           busTagNumber = liveInfo.busTagNumber
                         }
                   else Nothing
-          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData (if travelMode == DTrip.Bus then journeyReq.userPreferredServiceTier else Nothing)
+          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle ((.serviceType) <$> journeyReq.routeLiveInfo) journeyReq.busLocationData (if travelMode `elem` [DTrip.Bus, DTrip.SharedCab] then journeyReq.userPreferredServiceTier else Nothing)
           return (legFare, journeyLeg)
       )
       legsWithContext
@@ -215,10 +215,11 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
     hasUserPreferredTransitTypes legs userPrefs = do
-      let relevantLegs = filter (\leg -> leg.mode == DTrip.Bus || leg.mode == DTrip.Subway) legs
+      let relevantLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.SharedCab, DTrip.Subway]) legs
           checkLeg leg =
             case leg.mode of
               DTrip.Bus -> checkTransitType userPrefs.busTransitTypes leg.liveVehicleAvailableServiceTypes
+              DTrip.SharedCab -> checkTransitType userPrefs.busTransitTypes leg.liveVehicleAvailableServiceTypes
               DTrip.Subway -> checkTransitType userPrefs.subwayTransitTypes leg.liveVehicleAvailableServiceTypes
               _ -> True
       return (all checkLeg relevantLegs)
@@ -232,7 +233,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
                 Nothing -> False
                 Just types -> any (`elem` preferred) types
     hasUserPreferredTransitModes legs userPrefs = do
-      return (all (\leg -> leg.mode `elem` userPrefs.allowedTransitModes) legs)
+      return (all (\leg -> (if leg.mode == DTrip.SharedCab then DTrip.Bus else leg.mode) `elem` userPrefs.allowedTransitModes) legs) -- a shared cab is allowed wherever Bus is
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
@@ -241,6 +242,7 @@ multiModalTravelModeToBecknVehicleCategory :: DTrip.MultimodalTravelMode -> Mayb
 multiModalTravelModeToBecknVehicleCategory = \case
   DTrip.Metro -> Just BecknSpec.METRO
   DTrip.Bus -> Just BecknSpec.BUS
+  DTrip.SharedCab -> Just BecknSpec.BUS
   DTrip.Subway -> Just BecknSpec.SUBWAY
   _ -> Nothing
 
@@ -283,7 +285,7 @@ getAllLegsInfoFromLegs personId journeyId allLegs = do
 
 loadJourneyPassCandidates :: JL.GetStateFlow m r c => Id DPerson.Person -> Id DJourney.Journey -> [DJourneyLeg.JourneyLeg] -> m (Maybe [FRFSPassOverride.PassCandidate])
 loadJourneyPassCandidates personId journeyId legs
-  | not (any (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs) = pure (Just [])
+  | not (any (\leg -> DTrip.isFrfsTransitMode leg.mode) legs) = pure (Just [])
   | otherwise = do
     journey <- getJourney journeyId
     let alreadyPurchased =
@@ -344,6 +346,7 @@ getLegInfo personId checkSearch journeyLegs mbPassCandidates journeyLeg = do
         DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
         DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
         DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
+        DTrip.SharedCab -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg, journeyLegs = journeyLegs, passCandidates = mbPassCandidates}
     Nothing -> return Nothing
 
 hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool
@@ -448,6 +451,9 @@ getAllLegsStatus journey mbFleetNo = do
               DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, journeyLeg = leg}
               DTrip.Subway -> JL.getState $ SubwayLegRequestGetState $ SubwayLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, journeyLeg = leg}
               DTrip.Bus -> do
+                logDebug $ "BusLegRequestGetStateData: " <> show legSearchId <> ", " <> show leg
+                JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, movementDetected, routeCodeForDetailedTracking = getRouteCodeToTrack leg, journeyLeg = leg, mbFleetNo}
+              DTrip.SharedCab -> do
                 logDebug $ "BusLegRequestGetStateData: " <> show legSearchId <> ", " <> show leg
                 JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, movementDetected, routeCodeForDetailedTracking = getRouteCodeToTrack leg, journeyLeg = leg, mbFleetNo}
           return
@@ -609,7 +615,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
           crisSdkResponse = mElement >>= (.crisSdkResponse)
       categorySelectionReq <- do
         let categorySelectionReq' = fromMaybe [] $ mElement >>= (.categorySelectionReq)
-        if null categorySelectionReq' && leg.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]
+        if null categorySelectionReq' && DTrip.isFrfsTransitMode leg.travelMode
           then
             maybe
               (pure categorySelectionReq')
@@ -719,7 +725,7 @@ startJourneyLeg legInfo isSingleMode = do
         return (legExtraInfo.categories, crisSdkResponse)
       JL.Bus legExtraInfo -> return (legExtraInfo.categories, Nothing)
       _ -> return ([], Nothing)
-  when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
+  when (DTrip.isFrfsTransitMode legInfo.travelMode) $ do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
   let categorySelectionReq =
         map
@@ -760,9 +766,10 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
           void $ measureLatency (addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) ("addSubwayLeg leg: " <> show journeyLeg.sequenceNumber)
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
-        DTrip.Bus -> do
-          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
+        DTrip.Bus -> addBus journeyLeg
+        DTrip.SharedCab -> addBus journeyLeg
   where
+    addBus journeyLeg = void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
     upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
 
@@ -781,6 +788,7 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
       let modeText = case mode of
             DTrip.Metro -> Just "Metro Station"
             DTrip.Bus -> Just "Bus Stop"
+            DTrip.SharedCab -> Just "Bus Stop"
             _ -> Nothing
        in LA.LocationAddress
             { street = Nothing,
@@ -1011,10 +1019,10 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
 getUnifiedQR journey legs = do
-  let bookingsFor mode = mapMaybe getTickets (filter (\leg -> leg.travelMode == mode) legs)
-  let metroBookings = bookingsFor DTrip.Metro
-  let busBookings = bookingsFor DTrip.Bus
-  let subwayBookings = bookingsFor DTrip.Subway
+  let bookingsFor modes = mapMaybe getTickets (filter (\leg -> leg.travelMode `elem` modes) legs)
+  let metroBookings = bookingsFor [DTrip.Metro]
+  let busBookings = bookingsFor [DTrip.Bus, DTrip.SharedCab]
+  let subwayBookings = bookingsFor [DTrip.Subway]
   if null metroBookings && null busBookings && null subwayBookings
     then Nothing
     else
@@ -1151,19 +1159,22 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
               { searchId = Id searchId,
                 cancellationType
               }
-      DTrip.Bus ->
-        JL.cancel $
-          BusLegRequestCancel
-            BusLegRequestCancelData
-              { searchId = Id searchId,
-                cancellationType
-              }
+      DTrip.Bus -> cancelBus searchId
+      DTrip.SharedCab -> cancelBus searchId
   when shouldUpdateJourneyStatus $ do
     journey <- getJourney journeyLeg.journeyId
     updatedLegStatus <- getAllLegsStatus journey Nothing
     when (length updatedLegStatus == 1) $ do
       checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   return ()
+  where
+    cancelBus searchId =
+      JL.cancel $
+        BusLegRequestCancel
+          BusLegRequestCancelData
+            { searchId = Id searchId,
+              cancellationType
+            }
 
 multimodalLegSearchIdAccessLockKey :: Text -> Text
 multimodalLegSearchIdAccessLockKey legSearchId = "Multimodal:Leg:SearchIdAccess:" <> legSearchId

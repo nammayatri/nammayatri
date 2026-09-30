@@ -894,7 +894,7 @@ journeyFullyPassCovered booking = do
     Just leg -> do
       legs <- QJL.getJourneyLegs leg.journeyId
       bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-      let frfsLegs = filter (\l -> l.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs
+      let frfsLegs = filter (\l -> DTrip.isFrfsTransitMode l.mode) legs
           live b =
             b.status
               `notElem` [ DFRFSTicketBooking.FAILED,
