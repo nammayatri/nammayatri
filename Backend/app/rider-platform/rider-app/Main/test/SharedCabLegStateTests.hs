@@ -13,7 +13,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
 import "rider-app" SharedLogic.SharedCab.LegState
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Prelude
 
 tests :: TestTree
@@ -73,7 +73,12 @@ tests =
         [ testCase "reason encodes SCREAMING like SharedCabState" $ BLC.unpack (encode NO_SHOW_CAP) @?= "\"NO_SHOW_CAP\"",
           testCase "status with a reason round-trips" $ decode (encode statusWithReason) @?= Just statusWithReason,
           testCase "a Nothing reason leaves no key (additive for older app builds)" $
-            isInfixOf "cancelReason" (BLC.unpack (encode statusNoReason)) @?= False,
+            isInfixOf "\"cancelReason\"" (BLC.unpack (encode statusNoReason)) @?= False,
+          testCase "everything else still ships as null like before R55 (M4: only cancelReason is omitted)" $ do
+            let encoded = BLC.unpack (encode statusNoReason)
+            assertBool "vehicleModel must ship null" (isInfixOf "\"vehicleModel\":null" encoded)
+            assertBool "boardDeadlineSec must ship null" (isInfixOf "\"boardDeadlineSec\":null" encoded)
+            assertBool "cancelReason with a value ships" (isInfixOf "\"cancelReason\":\"NO_SHOW_CAP\"" (BLC.unpack (encode statusWithReason))),
           testCase "a pre-R55 payload (no cancelReason key) still decodes" $
             decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"vehicleNumber\":\"ML05A1234\",\"cabsComing\":0}" @?= Just statusNoReason
         ]

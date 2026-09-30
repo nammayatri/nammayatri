@@ -90,6 +90,15 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
       FRFSUtils.checkCancellationQuota booking
     case integratedBPPConfig.providerConfig of
       ONDC _ -> do
+        -- R80: a shared-cab booking must never take this branch. The fork leaves the row CONFIRMED until the
+        -- ASYNC on_cancel, so the no-double-refund guard (`SharedLogic.SharedCab.Cancel.withSharedCabCancel`'s
+        -- under-lock `cancellableStatus` check) cannot hold against a racing finding-timeout tick, and this
+        -- branch never reads the policy's refund decision (RefundDecision), letting the BPP re-refund on top
+        -- of the tick's. Shared-cab providers are direct-integrated (agency key `<feed>:SHARED_CAB`), so today
+        -- this is a config error: refuse loudly instead of cancelling through the wrong contract.
+        when (isSharedCabBooking booking) $ do
+          logError $ "shared-cab booking " <> booking.id.getId <> " reached the ONDC cancel dispatcher (integratedBPPConfig=" <> integratedBPPConfig.id.getId <> "): booking would sit CONFIRMED until on_cancel and the refund policy decision would be ignored; refusing"
+          throwError CancellationNotSupported
         fork "FRFS ONDC Cancel Req" $ do
           providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
           ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")

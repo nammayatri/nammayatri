@@ -8,7 +8,7 @@ import "beckn-spec" Domain.Types.FRFSTicketStatus (FRFSTicketStatus (..))
 import qualified "rider-app" Domain.Types.MerchantOperatingCity as DMOC
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Degraded (shouldExpireDegraded)
-import "rider-app" SharedLogic.SharedCab.DegradedSweepSchedule (scanWindowStart, sweepJobGuardKey, sweepLeaseKey, sweepRunKey)
+import "rider-app" SharedLogic.SharedCab.DegradedSweepSchedule (refundRetryRunKey, scanWindowStart, sweepJobGuardKey, sweepLeaseKey, sweepRunKey)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Prelude
@@ -57,10 +57,10 @@ tests =
         -- on the fresh read, the rule owner's predicate refuses -- no second USED flip, no second
         -- Dropped event. Same fn the poll path calls; the sweep adds no decision of its own.
         shouldExpireDegraded Nothing [USED] False @?= False,
-      testCase "two cities, three keys each: one lease per city, no cross-talk" $ do
+      testCase "two cities, four keys each: one lease per city, no cross-talk" $ do
         let a = Id "city-a" :: Id DMOC.MerchantOperatingCity
             b = Id "city-b" :: Id DMOC.MerchantOperatingCity
-            keysA = [sweepJobGuardKey a, sweepRunKey a, sweepLeaseKey a]
-            keysB = [sweepJobGuardKey b, sweepRunKey b, sweepLeaseKey b]
+            keysA = [sweepJobGuardKey a, sweepRunKey a, sweepLeaseKey a, refundRetryRunKey a]
+            keysB = [sweepJobGuardKey b, sweepRunKey b, sweepLeaseKey b, refundRetryRunKey b]
         assertBool "per-city keys must differ across cities" (all (`notElem` keysB) keysA)
     ]

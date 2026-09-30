@@ -15,7 +15,9 @@ module SharedLogic.SharedCab.LegState
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
-import Data.Aeson (defaultOptions, omitNothingFields)
+import Data.Aeson (Value (..), defaultOptions, omitNothingFields)
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Time (diffUTCTime)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -68,8 +70,12 @@ data SharedCabLegStatus = SharedCabLegStatus
 
 -- R55: Nothing fields ship as absent keys (cancelReason in particular stays invisible to older app builds),
 -- and a payload without a Nothing field still parses back (additive round-trip).
+-- M4 amendment: the blanket `omitNothingFields` removal was scoped to cancelReason alone -- every other
+-- Nothing field ships null, exactly like before R55, so strict client decoders keep the keys they were served.
 instance ToJSON SharedCabLegStatus where
-  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+  toJSON status = case genericToJSON defaultOptions status of
+    Object obj | isNothing status.cancelReason -> Object (KeyMap.delete (Key.fromText "cancelReason") obj)
+    v -> v
 
 instance FromJSON SharedCabLegStatus where
   parseJSON = genericParseJSON defaultOptions {omitNothingFields = True}

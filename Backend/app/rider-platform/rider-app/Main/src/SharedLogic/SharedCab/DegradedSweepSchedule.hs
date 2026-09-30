@@ -21,6 +21,9 @@ module SharedLogic.SharedCab.DegradedSweepSchedule
     claimSweepRun,
     withSweepLease,
     scheduleNextSweep,
+    -- R77: the refund-retry pass's own per-tick claim (another claim type on the same chain, not a job)
+    refundRetryRunKey,
+    claimRefundRetryRun,
   )
 where
 
@@ -75,6 +78,15 @@ ensureDegradedSweep merchantId mocId =
 -- | False when another chain already ran within this tick: the caller stops without rescheduling.
 claimSweepRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
 claimSweepRun mocId = setNx (sweepRunKey mocId) (sweepTickSec - 5)
+
+-- | R77: the refund-retry pass of the same sweep run claims its own cadence: a run whose degraded/plated
+-- passes recovered before the body reached the refund pass (or whose claim was contested) skips the refund
+-- pass this tick rather than double-running it, and the next tick picks it up.
+refundRetryRunKey :: Id DMOC.MerchantOperatingCity -> Text
+refundRetryRunKey mocId = "sharedcab:refundretryRun:" <> mocId.getId
+
+claimRefundRetryRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
+claimRefundRetryRun mocId = setNx (refundRetryRunKey mocId) (sweepTickSec - 5)
 
 -- | One sweep body at a time per city: a shard-duplicated run that finds the lease held skips silently.
 -- The TTL (10x the tick) comfortably outlives a sweep; it only bounds a crashed holder. The lease carries an

@@ -658,6 +658,7 @@ library
       SharedLogic.SharedCab.RateLimit
       SharedLogic.SharedCab.RefundDecision
       SharedLogic.SharedCab.RefundPolicy
+      SharedLogic.SharedCab.RefundRetry
       SharedLogic.SharedCab.Session
       SharedLogic.SharedCab.SessionState
       SharedLogic.SharedCab.SessionView
@@ -2185,6 +2186,7 @@ test-suite rider-app-test
       SharedCabNotifyTests
       SharedCabPlateTests
       SharedCabRefundPolicyTests
+      SharedCabRefundRetryTests
       SharedCabSessionTests
       SharedCabStopProgressTests
       SharedCabTicketBirthTests

@@ -5,6 +5,8 @@ module SharedLogic.SharedCab.FindingTimeout
   ( CancelFlow,
     cancelTimedOutFindings,
     findingTimeoutRefund,
+    startRefund,
+    maxFindingTimeoutBatch,
   )
 where
 
@@ -20,6 +22,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
+import Lib.Scheduler (JobCreator)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSCancelJourney (cancelJourneyById)
 import SharedLogic.FRFSUtils (getJourneyIdFromBooking, markFRFSBookingStatus, noPaymentDue)
@@ -33,6 +36,7 @@ import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (NO_CAB_FOUND), SharedCabState (FINDING))
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RefundDecision (Refund (..), refundAmounts)
+import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -50,6 +54,8 @@ type CancelFlow m r c =
     ServiceFlow m r,
     EsqDBReplicaFlow m r,
     MonadMask m,
+    -- R77: marking a failed refund re-seeds the city's degraded-sweep chain (RefundRetry.markRefundRetry)
+    JobCreator r m,
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     CallFRFSBPP.BecknAPICallFlow m r,
@@ -70,6 +76,13 @@ findingTimeoutRefund noShows tickets = case decideCancel ByRider FINDING noShows
   Allowed refund -> refund
   Rejected _ -> NoRefund
 
+-- | L3 (batch8 review): refunds are sequential network calls inside the tick; a city-wide booking outage would
+-- otherwise hold the tick for candidates x payment latency. A capped batch a tick: the tail stays FINDING and
+-- is re-derived from the tick's next `live` scan (the findingTimeout clock is in seconds-minutes, so one tick of
+-- delay is noise).
+maxFindingTimeoutBatch :: Int
+maxFindingTimeoutBatch = 25
+
 -- | `live` is the tick's read of the city's live bookings; every candidate is decided again from a fresh read under its
 -- booking lock, and a failure on one booking is logged and never stops the others or the tick.
 cancelTimedOutFindings ::
@@ -83,7 +96,10 @@ cancelTimedOutFindings cityId live = do
   candidates <- fmap catMaybes . forM [b | (b, statuses) <- live, isNothing b.vehicleNumber, DFRFSTicket.ACTIVE `elem` statuses] $ \b -> do
     since <- readFindingSince b.id b.createdAt
     pure $ if findingTimeoutAction now cfg.findingTimeoutSec since b.createdAt == CancelNoCab then Just b else Nothing
-  forM_ candidates $ \b ->
+  let batch = take maxFindingTimeoutBatch candidates
+  when (length candidates > length batch) $
+    logWarning $ "shared-cab finding-timeout: " <> show (length candidates - length batch) <> " of " <> show (length candidates) <> " candidates deferred to the next tick (batch cap " <> show maxFindingTimeoutBatch <> ")"
+  forM_ batch $ \b ->
     withTryCatch "sharedCabFindingTimeout" (cancelOne cfg.findingTimeoutSec b)
       >>= either (\e -> logError $ "shared-cab finding-timeout cancel failed for booking " <> b.id.getId <> ": " <> show e) pure
 
@@ -136,7 +152,9 @@ flipToCancelled decision b = do
   clearAllocationKeys b.id
 
 -- | Starts the refund of the payment; a free (pass-covered) booking has none. A failure is logged and left for ops, since the
--- booking is already CANCELLED and no later tick sees it.
+-- booking is already CANCELLED and no later tick sees it. R77 excepts one thing: the failure ALSO marks it
+-- for the retry sweep. RefundRetry pins it to its city's pending set, the degraded-sweep chain's refund pass
+-- retries until `maxRefundRetryAttempts`, then alerts ops.
 startRefund ::
   CancelFlow m r c =>
   DFTB.FRFSTicketBooking ->
@@ -146,6 +164,15 @@ startRefund b = do
   isFree <- noPaymentDue b
   case mbPayment of
     Just payment ->
-      withTryCatch "sharedCabFindingTimeoutRefund" (SPayment.markRefundPendingAndSyncOrderStatus b.merchantId b.riderId payment.paymentOrderId)
-        >>= either (\e -> False <$ logError ("shared-cab finding-timeout refund NOT started for booking " <> b.id.getId <> ": " <> show e)) (const (pure True))
-    Nothing -> isFree <$ unless isFree (logError $ "shared-cab finding-timeout: booking " <> b.id.getId <> " has no payment to refund")
+      withTryCatch "sharedCab:findingTimeout:startRefund" (SPayment.markRefundPendingAndSyncOrderStatus b.merchantId b.riderId payment.paymentOrderId)
+        >>= either (\e -> False <$ (logError ("shared-cab refund NOT started for booking " <> b.id.getId <> ": " <> show e) >> mark)) (const (pure True))
+    Nothing ->
+      isFree
+        <$ unless
+          isFree
+          (logError ("shared-cab booking " <> b.id.getId <> " has no payment to refund") >> mark)
+  where
+    -- The refund pass sees this booking from the next sweep tick on; the sweep's own retries count their
+    -- attempts through RefundRetry.bumpRefundRetry (markRefundRetry preserves an existing count). Wrapped:
+    -- a Redis hiccup here must not drop the rider's push and event below.
+    mark = void $ withTryCatch "sharedCabFindingTimeoutRefundMark" (RefundRetry.markRefundRetry b.merchantId b.merchantOperatingCityId b.id)
