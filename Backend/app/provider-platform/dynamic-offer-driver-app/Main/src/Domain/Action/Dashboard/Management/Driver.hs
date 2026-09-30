@@ -1616,10 +1616,10 @@ postDriverTdsRateUpdate merchantShortId opCity req = do
   case (ownerType :: Common.TdsOwnerType) of
     Common.DRIVER -> do
       _ <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      STds.setTdsRateValidatedFor personId False tdsRate
+      STds.setTdsRateValidatedFor merchantOpCityId personId False tdsRate
     Common.FLEET_OWNER -> do
       _ <- QFOI.findByPrimaryKey personId >>= fromMaybeM (FleetOwnerNotFound personId.getId)
-      STds.setTdsRateValidatedFor personId True tdsRate
+      STds.setTdsRateValidatedFor merchantOpCityId personId True tdsRate
   pure Success
 
 ---------------------------------------------------------------------
