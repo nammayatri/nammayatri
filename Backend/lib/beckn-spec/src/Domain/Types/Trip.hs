@@ -38,7 +38,13 @@ data MultimodalTravelMode = Metro | Bus | Walk | Taxi | Subway | SharedCab
 
 -- Modes booked through the FRFS rails (search, quote, confirm, payment, tickets).
 isFrfsTransitMode :: MultimodalTravelMode -> Bool
-isFrfsTransitMode m = m `elem` [Metro, Bus, Subway, SharedCab]
+isFrfsTransitMode = \case
+  Metro -> True
+  Bus -> True
+  Subway -> True
+  SharedCab -> True
+  Walk -> False
+  Taxi -> False
 
 data TripCategory
   = OneWay OneWayMode
