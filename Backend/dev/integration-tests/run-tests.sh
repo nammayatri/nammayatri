@@ -5,7 +5,7 @@
 #   ./run-tests.sh                                    # Run all ride booking suites for all cities
 #   ./run-tests.sh rides                              # Run all ride booking suites for all cities
 #   ./run-tests.sh rides NY_Bangalore                 # Run ride suites for Bangalore only
-#   ./run-tests.sh rides NY_Bangalore 01-NYAutoRideFlow  # Run specific suite
+#   ./run-tests.sh auto NY_Bangalore 01-AutoRideFlow     # Run specific suite
 #   ./run-tests.sh bus                               # Run all bus ticket booking suites for all cities
 #   ./run-tests.sh bus FRFS_Chennai                   # Run bus suites for Chennai only
 #   ./run-tests.sh metro                              # Run all metro ticket booking suites
@@ -37,6 +37,9 @@ set -- "${args[@]+"${args[@]}"}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RIDE_DIR="$SCRIPT_DIR/collections/RideBookingFlow"
+# Auto (01-03) and Taxi/Cab (04-06) suites were split out of RideBookingFlow into their own collections.
+AUTO_RIDE_DIR="$SCRIPT_DIR/collections/AutoRideFlow"
+TAXI_RIDE_DIR="$SCRIPT_DIR/collections/TaxiRideFlow"
 ONLINE_DIR="$SCRIPT_DIR/collections/OnlineRideBookingFlow"
 ONLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OnlineRideBookingOffers"
 OFFLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OfflineRideBookingOffers"
@@ -235,16 +238,20 @@ setup() {
 # ── List ──
 
 list_suites() {
-    echo "=== Ride Booking Flow ==="
-    for env_name in "${RIDE_ENVS[@]}"; do
-        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
-        if [ -f "$env_file" ]; then
-            echo "  $env_name:"
-            for f in "$RIDE_DIR"/*.json; do
-                [[ "$f" == *"postman_environment"* ]] && continue
-                echo "    $(basename "$f" .json)"
-            done
-        fi
+    for ride_label_dir in "Auto Ride Flow:$AUTO_RIDE_DIR" "Taxi Ride Flow:$TAXI_RIDE_DIR" "Ride Booking Flow:$RIDE_DIR"; do
+        local ride_label="${ride_label_dir%%:*}"
+        local ride_dir="${ride_label_dir#*:}"
+        echo "=== $ride_label ==="
+        for env_name in "${RIDE_ENVS[@]}"; do
+            local env_file="$ride_dir/Local/Local_${env_name}.postman_environment.json"
+            if [ -f "$env_file" ]; then
+                echo "  $env_name:"
+                for f in "$ride_dir"/*.json; do
+                    [[ "$f" == *"postman_environment"* ]] && continue
+                    echo "    $(basename "$f" .json)"
+                done
+            fi
+        done
     done
     for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Incentive Journey:$INCENTIVE_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR" "Event Tracking:$EVENT_TRACKING_DIR"; do
         local label="${label_dir%%:*}"
@@ -383,9 +390,11 @@ run_single() {
 run_rides() {
     local filter_env="${1:-}"
     local filter_suite="${2:-}"
+    # Optional 3rd arg: collection dir (AutoRideFlow / TaxiRideFlow reuse this runner).
+    local ride_dir="${3:-$RIDE_DIR}"
 
-    if [ ! -d "$RIDE_DIR" ]; then
-        echo "No ride collections found at $RIDE_DIR"
+    if [ ! -d "$ride_dir" ]; then
+        echo "No ride collections found at $ride_dir"
         exit 1
     fi
 
@@ -401,7 +410,7 @@ run_rides() {
             continue
         fi
 
-        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
+        local env_file="$ride_dir/Local/Local_${env_name}.postman_environment.json"
         if [ ! -f "$env_file" ]; then
             echo "WARNING: Environment not found: $env_file, skipping $env_name"
             continue
@@ -412,7 +421,7 @@ run_rides() {
         echo "  $env_name"
         echo "════════════════════════════════════════════════════════════"
 
-        for f in "$RIDE_DIR"/*.json; do
+        for f in "$ride_dir"/*.json; do
             [[ "$f" == *"postman_environment"* ]] && continue
             local suite_name
             suite_name=$(basename "$f" .json)
@@ -736,6 +745,8 @@ show_help() {
     echo "Commands:"
     echo "  (none)              Run all ride booking suites for all cities"
     echo "  rides               Run all ride booking suites for all cities"
+    echo "  auto                Run Auto ride suites (AutoRideFlow)"
+    echo "  taxi                Run Taxi/Cab ride suites (TaxiRideFlow)"
     echo "  bus                 Run all bus ticket booking suites"
     echo "  metro               Run all metro ticket booking suites"
     echo "  subway              Run all subway ticket booking suites"
@@ -782,7 +793,7 @@ show_help() {
     echo "  ./run-tests.sh                                    # All ride suites, all cities"
     echo "  ./run-tests.sh rides                              # All ride suites, all cities"
     echo "  ./run-tests.sh rides NY_Bangalore                 # All ride suites for Bangalore"
-    echo "  ./run-tests.sh rides NY_Bangalore 01-AutoRideFlow # Specific suite + city"
+    echo "  ./run-tests.sh auto NY_Bangalore 01-AutoRideFlow  # Specific suite + city"
     echo "  ./run-tests.sh bus                                # All bus suites, all cities"
     echo "  ./run-tests.sh bus FRFS_Chennai                   # Bus suites for Chennai"
     echo "  ./run-tests.sh metro FRFS_Bangalore               # Metro suites for Bangalore"
@@ -830,6 +841,12 @@ case "${1:-}" in
         ;;
     rides)
         run_rides "${2:-}" "${3:-}"
+        ;;
+    auto|auto-rides)
+        run_rides "${2:-}" "${3:-}" "$AUTO_RIDE_DIR"
+        ;;
+    taxi|taxi-rides)
+        run_rides "${2:-}" "${3:-}" "$TAXI_RIDE_DIR"
         ;;
     bus)
         run_bus "${2:-}" "${3:-}"

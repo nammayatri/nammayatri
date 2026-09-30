@@ -140,6 +140,6 @@ table has the same staleness window.
 - Rider/driver numbers and vehicle registration are random per run
   (collection prerequest, `_test_*` collection variables) — safe to run
   concurrently and repeatedly.
-- The ride skeleton is copied from `RideBookingFlow/01-AutoRideFlow.json`; step
+- The ride skeleton is copied from `AutoRideFlow/01-AutoRideFlow.json`; step
   names carry a `(Ride N)` suffix to stay unique. If AutoRideFlow's flow changes
   materially (auth, allocator timing), regenerate/diff this collection against it.
