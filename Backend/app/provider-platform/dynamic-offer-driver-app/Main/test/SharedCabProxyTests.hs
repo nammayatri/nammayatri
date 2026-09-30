@@ -4,7 +4,7 @@
 -- | R54: the driver's cancel reason survives every layer of the driver-app proxy on its way to rider-app.
 module SharedCabProxyTests (tests) where
 
-import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..))
+import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..), SharedCabRiderStatus (..))
 import Data.Aeson (Value (..), decode, encode, object, (.=))
 import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabBooking (BookingAction (..), actionReason)
 import "dynamic-offer-driver-app" SharedLogic.CallSharedCabBooking (BAPDriverReq (..))
@@ -29,5 +29,8 @@ tests =
           @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= ("cab breakdown" :: String)]),
       testCase "another action sends reason null (rider-app reads it as Nothing)" $
         forwarded (BAPDriverReq {driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing})
-          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null])
+          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null]),
+      -- e2e B9: rider-app's SessionView sends all four; a missing one 500s the driver's session view
+      testCase "every rider status rider-app sends decodes" $
+        map decode ["\"AT_STOP\"", "\"MINUTES_AWAY\"", "\"ARRIVING\"", "\"BOARDED\""] @?= map Just [AT_STOP, MINUTES_AWAY, ARRIVING, BOARDED]
     ]

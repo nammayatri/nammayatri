@@ -113,7 +113,7 @@ data SharedCabPauseReason = ABSENT | DRIVER_OFFLINE | NO_LOCATION | OFF_ROUTE
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SharedCabRiderStatus = AT_STOP | MINUTES_AWAY
+data SharedCabRiderStatus = AT_STOP | MINUTES_AWAY | ARRIVING | BOARDED
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
