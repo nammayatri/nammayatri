@@ -24,7 +24,6 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     checkRequestCount,
     isBookAny,
     makeTaggedDriverPool,
-    autoAssignPreferenceScore,
     ensurePoolingLogicVersion,
     splitSilentDriversAndSortWithDistance,
     previouslyAttemptedDriversKey,
@@ -187,17 +186,8 @@ ensurePoolingLogicVersion searchReq
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
 mkDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> [PreferenceCheck]
-mkDriverPreferenceChecks searchReq driver = uncurry (:) (splitDriverPreferenceChecks searchReq driver)
-
--- | Preference score used to gate silent auto-assign: every dimension except the
--- driver's trip-distance preference, which must not block an auto-assign.
-autoAssignPreferenceScore :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> Double
-autoAssignPreferenceScore searchReq driver = computePreferenceMatchScore (snd (splitDriverPreferenceChecks searchReq driver))
-
--- | The trip-distance check paired with all the other checks.
-splitDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> (PreferenceCheck, [PreferenceCheck])
-splitDriverPreferenceChecks searchReq driver =
-  (rideDistanceCheck, [pickupRadiusCheck, petModeCheck, areaCheck])
+mkDriverPreferenceChecks searchReq driver =
+  [rideDistanceCheck, petModeCheck, areaCheck]
   where
     dpr = driver.driverPoolResult
     rideDistanceCheck =
@@ -207,10 +197,6 @@ splitDriverPreferenceChecks searchReq driver =
             Nothing -> True -- ride distance unknown yet, don't penalize
             Just rideDistance -> maybe True (rideDistance >=) dpr.minRideDistance && maybe True (rideDistance <=) dpr.maxRideDistance
         )
-    pickupRadiusCheck =
-      binaryCheck
-        (isJust dpr.maxPickupDistance)
-        (maybe True (driver.actualDistanceToPickup <=) dpr.maxPickupDistance)
     petModeCheck =
       -- Only relevant when this search is itself a pet ride; an ordinary ride never
       -- counts against (or for) a driver's pet-mode setting.
