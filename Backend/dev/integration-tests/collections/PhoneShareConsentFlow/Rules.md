@@ -42,6 +42,13 @@ Between rides it also asserts the rider API's tri-state directly via
 `GET /profile/getEmergencySettings`: `null` (never asked) → `true` → explicit
 `false` — `null` and `false` are deliberately distinct states.
 
+Before the first consent update, `Enable SOS Contact Settings` sets
+`autoCallDefaultContact` and `notifySosWithEmergencyContacts` to `true`; both
+consent read-backs assert they are still `true`. A consent-only PUT (which is
+what the consumer app's auto opt-in and preference toggle send) must not touch
+them — `updateEmergencySettings` used to default both to `shareEmergencyContacts`,
+i.e. `false`, whenever the request omitted them.
+
 Ride 2 vs ride 3 additionally exercises the BPP's repeat-rider update path
 (`unless isNewRider $ updateNightSafetyChecksAndConsent` at confirm): the
 `RiderDetails` row created during ride 1 is flipped to `true` then back to
@@ -118,6 +125,12 @@ table has the same staleness window.
   as the kill switch: `rider_config` is ConfigPilot-served, so flipping it
   between Newman steps needs a Redis flush *plus* a rider-app restart to clear
   the in-process cache — neither of which newman can do.
+  **Do not "fix" this toward preserving a stored consent.** Cities without the
+  consent flow must always dial directly, and `RiderDetails` is per merchant,
+  not per city: carrying a `false` stored from a consent-flow city into an
+  absent-tag confirm would mask calls in a direct-calling city. The overwrite
+  to `Nothing` is therefore intentional — the BAP's `SafetySettings` is the
+  source of truth and re-sends the explicit value on every consent-flow confirm.
 - **`forceDirectCalling`** (`transporter_config` break-glass override that serves
   the rider's real number as `DIRECT` on active rides regardless of the merchant
   option or rider consent, for use while exophones are down). Untestable
