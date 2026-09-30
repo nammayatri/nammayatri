@@ -741,8 +741,7 @@ updateEmergencySettings personId req = do
     updateSafetySettings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => UpdateEmergencySettingsReq -> m ()
     updateSafetySettings UpdateEmergencySettingsReq {..} = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      let shareContacts = fromMaybe False shareEmergencyContacts
-          setContactField field = bool (Just shareContacts) field (isJust field)
+      let setContactField field = field <|> shareEmergencyContacts
           emergencyInfo =
             Lib.UpdateEmergencyInfo
               { autoCallDefaultContact = setContactField autoCallDefaultContact,
