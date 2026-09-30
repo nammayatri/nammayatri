@@ -1536,6 +1536,7 @@ TransporterConfig:
     enableOndcScheduledRideSupport: Maybe Bool # City-level gate for the MSIL-style Quote-based (static/scheduled) /select capability
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
+    driverImagePresignedUrlExpiry: Maybe Seconds # Expiry of the pre-signed S3 URL of the driver image shared with non value-add BAPs. Nothing = 3600 seconds
 
   beamType:
     currency: Maybe Currency

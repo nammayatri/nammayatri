@@ -438,6 +438,9 @@ buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
+defaultDriverImagePresignedUrlExpiry :: Seconds
+defaultDriverImagePresignedUrlExpiry = 3600
+
 getQueryParam :: String -> String -> Maybe String
 getQueryParam paramName url = do
   uri <- parseURI url
@@ -561,17 +564,27 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
       prefetch.rideDetails
   let bookingDetails = ACL.BookingDetails {..}
   -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
-  -- A driver onboarded through the document-upload flow has a ProfilePhoto row in the image table but no faceImageId,
-  -- so fall back to the latest VALID selfie instead of sending the ride-assigned update without a driver image.
-  let fetchLegacyProfileImagePath =
-        fmap (.s3Path) <$> runInReplica (QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED)
-  image <- case driver.faceImageId of
-    Just mediaId -> do
-      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId))
-      case getQueryParam "filePath" (Text.unpack mediaEntry.url) of
-        Just imagePath -> pure . Just $ Text.pack imagePath
-        Nothing -> maybe fetchLegacyProfileImagePath (pure . Just) mediaEntry.s3FilePath
-    Nothing -> fetchLegacyProfileImagePath
+  -- A value-add BAP resolves the S3 path of the driver's profile photo through its own media endpoint. Every other BAP gets a
+  -- pre-signed S3 url of the latest VALID selfie from the image table, expiring after transporterConfig.driverImagePresignedUrlExpiry.
+  image <-
+    if isValueAddNP
+      then fmap join . forM driver.faceImageId $ \mediaId -> do
+        mbMediaEntry <- runInReplica $ MFQuery.findById mediaId
+        case mbMediaEntry >>= \mediaEntry -> getQueryParam "filePath" (Text.unpack mediaEntry.url) of
+          Just imagePath -> pure $ Just (Text.pack imagePath)
+          Nothing -> do
+            logError $ "Driver image does not exist for driverId: " <> driver.id.getId <> ", mediaFileId: " <> mediaId.getId
+            pure Nothing
+      else do
+        mbSelfie <- runInReplica $ QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED
+        fmap join . forM mbSelfie $ \selfie -> do
+          let urlExpiry = fromMaybe defaultDriverImagePresignedUrlExpiry (mbTransporterConfig >>= (.driverImagePresignedUrlExpiry))
+          presignedUrlResult <- withTryCatch "S3:generateDownloadUrl:driverImage" $ S3.generateDownloadUrl (Text.unpack selfie.s3Path) urlExpiry
+          case presignedUrlResult of
+            Right presignedUrl -> pure $ Just presignedUrl
+            Left err -> do
+              logError $ "Unable to generate pre-signed driver image url for driverId: " <> driver.id.getId <> ", error: " <> show err
+              pure Nothing
 
   -- let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
