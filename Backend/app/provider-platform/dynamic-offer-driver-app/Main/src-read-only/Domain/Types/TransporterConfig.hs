@@ -162,6 +162,8 @@ data TransporterConfig = TransporterConfig
     driverPaymentCycleStartTime :: Kernel.Prelude.NominalDiffTime,
     driverPaymentReminderInterval :: Kernel.Prelude.NominalDiffTime,
     driverSearchBlacklistDurationSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    driverShareLinkExpiryHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    driverShareLinkTemplate :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverSmsReceivingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
     driverTimeSpentOnPickupThresholdOnCancel :: Kernel.Types.Common.Seconds,
     driverWalletConfig :: Domain.Types.TransporterConfig.DriverWalletConfig,

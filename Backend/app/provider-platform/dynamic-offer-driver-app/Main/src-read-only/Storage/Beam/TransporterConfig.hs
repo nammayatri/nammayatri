@@ -157,6 +157,8 @@ data TransporterConfigT f = TransporterConfigT
     driverPaymentCycleStartTime :: B.C f Kernel.Types.Common.Seconds,
     driverPaymentReminderInterval :: B.C f Kernel.Types.Common.Seconds,
     driverSearchBlacklistDurationSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    driverShareLinkExpiryHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    driverShareLinkTemplate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverSmsReceivingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverTimeSpentOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Seconds,
     driverWalletConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

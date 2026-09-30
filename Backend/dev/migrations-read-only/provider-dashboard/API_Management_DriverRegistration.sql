@@ -64,3 +64,9 @@ UPDATE atlas_dashboard.transaction
 
 -- {"api":"PostDriverRegistrationGenerateTempAppCode","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_GENERATE_TEMP_APP_CODE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverRegistrationOnboardingLink","migration":"capability","param":"city-operations.onboarding.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.onboarding.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER_REGISTRATION/POST_DRIVER_REGISTRATION_ONBOARDING_LINK' ) ON CONFLICT DO NOTHING;

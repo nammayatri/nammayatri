@@ -36,6 +36,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationDocumentsCommonList,
     postDriverRegistrationDocumentRegister,
     postDriverRegistrationGenerateTempAppCode,
+    postDriverRegistrationOnboardingLink,
   )
 where
 
@@ -103,6 +104,11 @@ postDriverRegistrationGenerateTempAppCode :: ShortId DM.Merchant -> City.City ->
 postDriverRegistrationGenerateTempAppCode merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationGenerateTempAppCode) driverId apiTokenInfo.personId.getId
+
+postDriverRegistrationOnboardingLink :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Id Common.Driver -> Flow Common.OnboardingLinkRes
+postDriverRegistrationOnboardingLink merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationOnboardingLink) driverId apiTokenInfo.personId.getId
 
 getDriverRegistrationGetDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo UserActionType -> Text -> Maybe Common.DocumentType -> Maybe Common.EntityType -> Flow Common.GetDocumentResponse
 getDriverRegistrationGetDocument merchantShortId opCity apiTokenInfo entityId mbDocType mbEntityType = do

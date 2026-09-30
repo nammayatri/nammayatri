@@ -32,6 +32,8 @@ module SharedLogic.DriverOnboarding.Common
     sendEnablementSms,
     sendOnboardingLinkSms,
     defaultDriverOnboardingLinkExpiryHours,
+    defaultDriverShareLinkExpiryHours,
+    generateOnboardingCode,
   )
 where
 
@@ -66,7 +68,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified TempAppCode.Flow as TempAppCode
-import TempAppCode.Types (TempAppCodeCfg (..))
+import TempAppCode.Types (TempAppCodeCfg (..), TempAppCodeRes (..))
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 
@@ -366,6 +368,9 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
 defaultDriverOnboardingLinkExpiryHours :: Int
 defaultDriverOnboardingLinkExpiryHours = 24
 
+defaultDriverShareLinkExpiryHours :: Int
+defaultDriverShareLinkExpiryHours = 24
+
 -- | SMS the driver a login link for whatever a dashboard add left pending: fleet invitation,
 -- documents, or both. Nothing pending ⇒ no SMS.
 sendOnboardingLinkSms ::
@@ -381,9 +386,7 @@ sendOnboardingLinkSms merchantOpCity transporterConfig driver mbFleetOwner = do
   let onboardingPending = maybe True (not . (.verified)) mbDriverInfo
       consentPending = isJust mbPendingInvite
   whenJust (pickMessageKey consentPending onboardingPending) $ \messageKey -> do
-    let expiryHours = fromMaybe defaultDriverOnboardingLinkExpiryHours transporterConfig.driverOnboardingLinkExpiryHours
-        codeCfg = DReg.operatorLinkTempAppCodeCfg {ttlSeconds = expiryHours * 3600}
-    codeRes <- TempAppCode.generateTempAppCode codeCfg driver.id.getId
+    (expiryHours, codeRes) <- generateOnboardingCode transporterConfig driver.id
     mbFleetOwnerInfo <- maybe (pure Nothing) (QFOI.findByPrimaryKey . (.id)) mbFleetOwner
     mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
     smsCfg <- asks (.smsCfg)
@@ -403,3 +406,10 @@ sendOnboardingLinkSms merchantOpCity transporterConfig driver mbFleetOwner = do
     pickMessageKey False True = Just DMM.DRIVER_ONBOARDING_DEEPLINK_MESSAGE
     pickMessageKey True True = Just DMM.FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE
     pickMessageKey False False = Nothing
+
+generateOnboardingCode :: OnboardingFlow m r => DTC.TransporterConfig -> Id DP.Person -> m (Int, TempAppCodeRes)
+generateOnboardingCode transporterConfig driverId = do
+  let expiryHours = fromMaybe defaultDriverOnboardingLinkExpiryHours transporterConfig.driverOnboardingLinkExpiryHours
+      codeCfg = DReg.operatorLinkTempAppCodeCfg {ttlSeconds = expiryHours * 3600}
+  codeRes <- TempAppCode.generateTempAppCode codeCfg driverId.getId
+  pure (expiryHours, codeRes)

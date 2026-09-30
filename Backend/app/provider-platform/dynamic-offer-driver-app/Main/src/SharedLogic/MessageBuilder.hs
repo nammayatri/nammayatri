@@ -42,6 +42,8 @@ module SharedLogic.MessageBuilder
     buildFleetJoinAndDownloadAppMessage,
     BuildDriverOnboardingLinkMessageReq (..),
     buildDriverOnboardingLinkMessage,
+    shortenOnboardingLink,
+    templateText,
     BuildSendReceiptMessageReq (..),
     buildSendReceiptMessage,
     BuildOperatorDeepLinkAuthMessage (..),
@@ -316,7 +318,7 @@ buildSendReceiptMessage :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlS
 buildSendReceiptMessage merchantOperatingCityId req = do
   meterRideReferralLink <- asks (.meterRideReferralLink)
   let referralLink = T.replace "{referralCode}" req.referralCode meterRideReferralLink
-  shortReferralLink <- UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq referralLink Nothing Nothing Nothing (Just UrlShortner.METER_RIDE_REFERRAL_LINK))
+  shortReferralLink <- UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq referralLink Nothing Nothing Nothing (Just UrlShortner.METER_RIDE_REFERRAL_LINK) Nothing)
   merchantMessage <-
     QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId DMM.SEND_FARE_RECEIPT_MESSAGE Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_FARE_RECEIPT_MESSAGE))
@@ -406,8 +408,7 @@ buildDriverOnboardingLinkMessage merchantOperatingCityId messageKey req = do
     QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOperatingCityId messageKey Nothing Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show messageKey))
   linkTemplate <- merchantMessage.jsonData.var1 & fromMaybeM (InvalidRequest $ "Missing json_data.var1 link template for " <> show messageKey)
-  let longUrl = T.replace (templateText "code") req.code linkTemplate
-  url <- shortenOrFallback longUrl
+  url <- shortenOnboardingLink UrlShortner.DRIVER_ONBOARDING_LINK (req.expiryHours + 24) (T.replace (templateText "code") req.code linkTemplate)
   now <- getCurrentTime
   let expiryDate = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d" (addUTCTime (fromIntegral req.expiryHours * 3600) now)
       msg =
@@ -417,15 +418,28 @@ buildDriverOnboardingLinkMessage merchantOperatingCityId messageKey req = do
           & T.replace (templateText "fleetName") (fromMaybe "" req.fleetName)
           & T.replace (templateText "expiryDate") expiryDate
   pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
-  where
-    shortenOrFallback longUrl = do
-      let shortLinkExpiryHours = min 255 (req.expiryHours + 24) -- outlives the code; the shortener stores hours in a u8
-      result <- try @_ @SomeException $ UrlShortner.generateShortUrl (UrlShortner.GenerateShortUrlReq longUrl Nothing Nothing (Just shortLinkExpiryHours) (Just UrlShortner.DRIVER_ONBOARDING_LINK))
-      case result of
-        Right res -> pure res.shortUrl
-        Left err -> do
-          logWarning $ "Url shortener failed, sending the long onboarding link: " <> show err
-          pure longUrl
+
+-- | The shortener stores hours in a u8, hence the 255 cap.
+shortenOnboardingLink :: (EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]) => UrlShortner.UrlCategory -> Int -> Text -> m Text
+shortenOnboardingLink category expiryHours longUrl = do
+  let shortUrlReq =
+        UrlShortner.GenerateShortUrlReq
+          { baseUrl = longUrl,
+            customShortCode = Nothing,
+            shortCodeLength = Nothing,
+            expiryInHours = Just $ min 255 expiryHours,
+            urlCategory = Just category,
+            -- The SMS link's host (the brand's) also serves short links; the control-center host doesn't.
+            shortUrlHostFromBaseUrl = case category of
+              UrlShortner.DRIVER_ONBOARDING_LINK -> Just True
+              _ -> Nothing
+          }
+  result <- try @_ @SomeException $ UrlShortner.generateShortUrl shortUrlReq
+  case result of
+    Right res -> pure res.shortUrl
+    Left err -> do
+      logWarning $ "Url shortener failed, using the long onboarding link: " <> show err
+      pure longUrl
 
 newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage
   { operatorName :: Text

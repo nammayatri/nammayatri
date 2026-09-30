@@ -267,6 +267,13 @@ type API =
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "driver"
+      :> "onboarding"
+      :> "shareLink"
+      :> Post
+           '[JSON]
+           API.Types.UI.DriverOnboardingV2.ShareLinkRes
+      :<|> TokenAuth
+      :> "driver"
       :> "register"
       :> "vehicleStatus"
       :> QueryParam
@@ -301,7 +308,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> getDriverRegisterVehicleStatus :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
+handler = getOnboardingConfigs :<|> getDriverRateCard :<|> getDriverVehiclePhotos :<|> getDriverVehiclePhotosB64 :<|> postDriverUpdateAirCondition :<|> getDriverVehicleServiceTiers :<|> postDriverUpdateServiceTiers :<|> postDriverRegisterSsn :<|> postDriverVerifyBankAccount :<|> getInfoBankAccount :<|> postDriverDeleteBankAccount :<|> postDriverBackgroundVerification :<|> postDriverRegisterPancard :<|> getDriverRegisterBankAccountLink :<|> getDriverRegisterBankAccountStatus :<|> getDriverRegisterGetLiveSelfie :<|> postDriverRegisterAadhaarCard :<|> postDriverRegisterLogHvSdkCall :<|> postDriverRegisterCommonDocument :<|> getDriverFleetRcs :<|> postDriverLinkToFleet :<|> postDriverOnboardingShareLink :<|> getDriverRegisterVehicleStatus :<|> postDriverDigilockerInitiate :<|> postDriverDigilockerPullDocuments
 
 getOnboardingConfigs ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -525,6 +532,15 @@ postDriverLinkToFleet ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postDriverLinkToFleet a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.DriverOnboardingV2.postDriverLinkToFleet (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postDriverOnboardingShareLink ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Environment.FlowHandler API.Types.UI.DriverOnboardingV2.ShareLinkRes
+  )
+postDriverOnboardingShareLink a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.DriverOnboardingV2.postDriverOnboardingShareLink (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 getDriverRegisterVehicleStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

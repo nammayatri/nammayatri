@@ -13,6 +13,7 @@
 -}
 module SharedLogic.DriverOnboarding.OnboardingComms
   ( setOnboardingAs,
+    clearOnboardingAsIfNoFleet,
     notifyOnFleetOwnerChange,
     UnlinkInitiator (..),
     notifyOnDriverFleetUnlink,
@@ -101,6 +102,13 @@ setOnboardingAs transporterConfig driver onboardingAs = do
                 Analytics.decrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just association.fleetOwnerId) association.driverId
               fork "Driver fleet unlink notification" $
                 notifyOnDriverFleetUnlink driver.merchantOperatingCityId driver association.fleetOwnerId ByDriver
+
+clearOnboardingAsIfNoFleet :: OnboardingFlow m r => DTC.TransporterConfig -> Id DP.Person -> m ()
+clearOnboardingAsIfNoFleet transporterConfig driverId = do
+  associations <- QFDA.findAllByDriverIdWithStatus driverId
+  when (null associations) $
+    SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver driverId) $
+      QDIExtra.updateOnboardingAs Nothing (cast driverId)
 
 notifyOnOnboardingAsChange :: OnboardingFlow m r => DP.Person -> DI.OnboardingAs -> m ()
 notifyOnOnboardingAsChange driver onboardingAs = do

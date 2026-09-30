@@ -97,6 +97,8 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.availableForRidesMaxSearchRequests availableForRidesMaxSearchRequests,
       Se.Set Beam.knowledgeCenterSopTypes ((Just . Data.Aeson.toJSON) knowledgeCenterSopTypes),
       Se.Set Beam.driverSearchBlacklistDurationSeconds driverSearchBlacklistDurationSeconds,
+      Se.Set Beam.driverShareLinkExpiryHours driverShareLinkExpiryHours,
+      Se.Set Beam.driverShareLinkTemplate driverShareLinkTemplate,
       Se.Set Beam.metricsDistanceBucketsKm metricsDistanceBucketsKm,
       Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
       Se.Set Beam.updatedAt _now

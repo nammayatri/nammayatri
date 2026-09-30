@@ -74,6 +74,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverDashboardFleetEstimateRoute,
     postDriverFleetTripTransactionsV2,
     postDriverFleetApproveDriver,
+    postDriverFleetOnboardingLinkConsent,
     postDriverFleetDriverUpdate,
     postDriverFleetDriverChangeFleetOwner,
     postDriverFleetVehicleChangeFleetOwner,
@@ -284,6 +285,7 @@ import qualified Storage.Queries.VehicleExtra as QVehicleExtra
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
+import qualified TempAppCode.Flow as TempAppCode
 import qualified Tools.Csv as Csv
 import Tools.Encryption
 import Tools.Error
@@ -1284,8 +1286,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
-        unlinkedDriver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-        SOnboardingComms.setOnboardingAs transporterConfig unlinkedDriver DI.INDIVIDUAL
+        SOnboardingComms.clearOnboardingAsIfNoFleet transporterConfig personId
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus
@@ -3006,29 +3007,61 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
       otp <- Redis.get key >>= fromMaybeM OtpNotFound
       when (otp /= req.otp) $ throwError InvalidOtp
-      checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
-      when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+      linkExistingDriverToFleet merchant merchantOpCityId transporterConfig fleetOwnerId person
 
-      -- onboarded operator required only for new drivers
-      SOnboardingComms.setOnboardingAs transporterConfig person DI.FLEET_DRIVER
-      SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
-        SA.endDriverAssociations merchantOpCityId transporterConfig person
-        when (merchant.overwriteAssociation == Just True) $
-          DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
-        assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
-        QFDV.create assoc
-        when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
-        Analytics.handleDriverAnalyticsAndFlowStatus
-          transporterConfig
-          person.id
-          Nothing
-          ( \_ -> do
-              Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) person.id
-          )
-          ( \driverInfo -> do
-              DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
-          )
+  pure Success
 
+linkExistingDriverToFleet :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTCConfig.TransporterConfig -> Text -> DP.Person -> Flow ()
+linkExistingDriverToFleet merchant merchantOpCityId transporterConfig fleetOwnerId person = do
+  checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
+  when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
+
+  -- onboarded operator required only for new drivers
+  SOnboardingComms.setOnboardingAs transporterConfig person DI.FLEET_DRIVER
+  SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) person.id) SGuard.LinkToFleet (SGuard.TargetDriver person.id) $ do
+    SA.endDriverAssociations merchantOpCityId transporterConfig person
+    when (merchant.overwriteAssociation == Just True) $
+      DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
+    assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
+    QFDV.create assoc
+    when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
+    Analytics.handleDriverAnalyticsAndFlowStatus
+      transporterConfig
+      person.id
+      Nothing
+      ( \_ -> do
+          Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just fleetOwnerId) person.id
+      )
+      ( \driverInfo -> do
+          DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+      )
+
+-- | The code in a fleet driver's shared link is their consent, so they are linked as active with no consent SMS.
+postDriverFleetOnboardingLinkConsent ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Common.OnboardingLinkConsentReq ->
+  Flow APISuccess
+postDriverFleetOnboardingLinkConsent merchantShortId opCity fleetOwnerId mbRequestorId req = do
+  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
+  merchant <- findMerchantByShortId merchantShortId
+  DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let driverId = cast @Common.Driver @DP.Person req.driverId
+  person <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $ throwError (PersonDoesNotExist driverId.getId)
+  mbCodeOwner <- TempAppCode.redeemTempAppCode DReg.shareLinkTempAppCodeCfg req.code
+  unless (mbCodeOwner == Just driverId.getId) $ throwError (InvalidRequest "This onboarding link is invalid or code has expired")
+  driverInfo <- QDriverInfo.findById driverId >>= fromMaybeM DriverInfoNotFound
+  unless (driverInfo.onboardingAs == Just DI.FLEET_DRIVER) $ throwError (InvalidRequest "Driver is no longer onboarding as a fleet driver")
+  -- Only a driver with no fleet association can be added.
+  existingAssocs <- FDV.findAllByDriverIdWithStatus driverId
+  unless (null existingAssocs) $ throwError (InvalidRequest "Driver is already linked to a fleet")
+  linkExistingDriverToFleet merchant merchantOpCityId transporterConfig fleetOwnerId person
+  Redis.del (TempAppCode.mkCodeKey DReg.shareLinkTempAppCodeCfg req.code)
   pure Success
 
 makeFleetDriverOtpKey :: Text -> Text

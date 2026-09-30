@@ -252,6 +252,9 @@ types:
     onboardingVehicleCategory: Maybe VehicleCategory
     isRevoke: Maybe Bool
     requestReason: Maybe Text
+  ShareLinkRes:
+    link: Text
+    expiresAt: UTCTime
   DigiLockerInitiateReq:
     vehicleCategory: VehicleCategory
   DigiLockerInitiateResp:
@@ -450,6 +453,11 @@ apis:
         type: LinkToFleetReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: /driver/onboarding/shareLink
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: ShareLinkRes
   # Vehicle-only RC verify-status. Person-independent: takes registrationNo OR rcId, resolves merchant/city
   # from the RC row, checks all mandatory vehicle docs, and (under enableBotFlow) persists RC.verified.
   # Auth is for API access only — it is NOT used to derive the RC.
