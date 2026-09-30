@@ -263,17 +263,16 @@ Content-Type: application/json
 {"enableOffer": false, "journeyConfirmReqElements": [{"journeyLegOrder": {{legOrder}}, "skipBooking": false, "categorySelectionReq": [{"quoteCategoryId": "{{categoryId}}", "quantity": 1}]}]}
 HTTP 200
 
-# No rider location is posted here: a fix lets the tick allocate the booking while the code request is in flight, and
-# Boarding.commitBoarding then refuses it (bindingUnmoved: FINDING at read, allocated to the same cab under the lock) with a generic 400.
-# The code boards the FINDING booking directly, without location (counted per vehicle, 8.6).
+# The rider's fix at the stop lets the tick allocate the booking while the code request is in flight: the code must board either way (B12).
+POST {{base_url}}/v2/multimodal/{{journeyId}}/rider/location
+token: {{token}}
+Content-Type: application/json
+{"latLong": {"lat": {{from_lat}}, "lon": {{from_lon}}}, "currTime": "{{newDate}}"}
+HTTP 200
 
-# Let the tick settle first: a code typed while the tick allocates this same booking is refused with a generic 400
-# (Boarding.hs bindingUnmoved: the booking was FINDING when read, allocated to this same cab under the lock). Known race, see the notes.
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setOnboardedVehicleDetails
 token: {{token}}
 Content-Type: application/json
-[Options]
-delay: 8000ms
 {"vehicleNumber": "{{plate_code}}", "supportsBoardingConfirmation": true}
 HTTP 200
 [Asserts]
