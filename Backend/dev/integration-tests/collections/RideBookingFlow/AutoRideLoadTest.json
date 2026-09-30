@@ -309,13 +309,13 @@
           "raw": ""
         },
         "url": {
-          "raw": "{{baseURL_namma_P}}/plan/18911beb-28ba-456d-8cca-4d019461d2b0/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
+          "raw": "{{baseURL_namma_P}}/plan/{{auto_plan_id}}/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
           "host": [
             "{{baseURL_namma_P}}"
           ],
           "path": [
             "plan",
-            "18911beb-28ba-456d-8cca-4d019461d2b0",
+            "{{auto_plan_id}}",
             "subscribe"
           ],
           "query": [
