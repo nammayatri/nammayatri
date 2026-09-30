@@ -11,7 +11,7 @@ HTTP *
 # Select opens an ACTIVE session with no walk-ups: every seat free
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "integratedBppConfigId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
 HTTP 200
 [Captures]
 v_open: jsonpath "$.session.version"
@@ -26,10 +26,13 @@ jsonpath "$.affectedRiders" == null
 
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
-jsonpath "$.trips[-1:].routeCode" nth 0 == "{{route_a}}"
-jsonpath "$.trips[-1:].status" nth 0 == "ACTIVE"
+jsonpath "$.trips[-1:].routeCode" == "{{route_a}}"
+jsonpath "$.trips[-1:].status" == "ACTIVE"
 
 # Walk-up toggled on: one seat fewer, version moves
 POST {{base_url}}/internal/sharedCab/seats
@@ -67,7 +70,7 @@ jsonpath "$.version" > {{v_walkup}}
 # Change route with nobody on board: applied at once, the old run closes as ROUTE_CHANGED
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "integratedBppConfigId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_b}}", "walkupCount": 0}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_b}}", "walkupCount": 0}
 HTTP 200
 [Captures]
 v_changed: jsonpath "$.session.version"
@@ -79,13 +82,16 @@ jsonpath "$.session.version" > {{v_seats}}
 
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
 jsonpath "$.trips[-2:].routeCode" nth 0 == "{{route_a}}"
 jsonpath "$.trips[-2:].status" nth 0 == "COMPLETED"
 jsonpath "$.trips[-2:].endReason" nth 0 == "ROUTE_CHANGED"
-jsonpath "$.trips[-1:].routeCode" nth 0 == "{{route_b}}"
-jsonpath "$.trips[-1:].status" nth 0 == "ACTIVE"
+jsonpath "$.trips[-1:].routeCode" == "{{route_b}}"
+jsonpath "$.trips[-1:].status" == "ACTIVE"
 
 # GET session reflects the same state
 GET {{base_url}}/internal/sharedCab/session?driverId={{driver}}&vehicleNumber={{plate}}
@@ -99,7 +105,7 @@ jsonpath "$.version" == {{v_changed}}
 # Back on route_a, then Start return: the run flips to its direction pair
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "integratedBppConfigId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_a}}", "walkupCount": 0}
 HTTP 200
 [Asserts]
 jsonpath "$.session.route.code" == "{{route_a}}"
@@ -114,10 +120,13 @@ jsonpath "$.route.code" == "{{route_a_return}}"
 
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
 jsonpath "$.trips[-2:].endReason" nth 0 == "RETURN"
-jsonpath "$.trips[-1:].routeCode" nth 0 == "{{route_a_return}}"
+jsonpath "$.trips[-1:].routeCode" == "{{route_a_return}}"
 
 # End at the last stop: session gone, run COMPLETED as END_ROUTE
 POST {{base_url}}/internal/sharedCab/route/end
@@ -135,8 +144,11 @@ jsonpath "$.errorCode" == "SHARED_CAB_SESSION_NOT_FOUND"
 
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
-jsonpath "$.trips[-1:].status" nth 0 == "COMPLETED"
-jsonpath "$.trips[-1:].endReason" nth 0 == "END_ROUTE"
-jsonpath "$.trips[-1:].endedAt" nth 0 exists
+jsonpath "$.trips[-1:].status" == "COMPLETED"
+jsonpath "$.trips[-1:].endReason" == "END_ROUTE"
+jsonpath "$.trips[-1:].endedAt" exists

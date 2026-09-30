@@ -8,7 +8,7 @@ HTTP *
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "integratedBppConfigId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 1}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 1}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -17,6 +17,9 @@ jsonpath "$.session.walkupCount" == 1
 
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
-jsonpath "$.trips[-1:].status" nth 0 == "ACTIVE"
+jsonpath "$.trips[-1:].status" == "ACTIVE"

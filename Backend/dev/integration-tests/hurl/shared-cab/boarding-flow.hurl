@@ -2,7 +2,7 @@
 # Needs --variable token=<rider token from login.hurl>. Untested until 8.1 merges (boarding is on
 # backend/feat/shared-cab-prime-81) and allocation (7.1-7.4) is on with sharedCabAllocationEnabled.
 # Endpoints and errors are taken from the 8.1 branch: the code is the plate's last 4 on
-# setOnboardedVehicleDetails; no match -> 400 SHARED_CAB_BOARDING_FAILED.
+# setOnboardedVehicleDetails; no match -> 200 boardingConfirmationRequired (UNLISTED_CAB).
 # No LTS pings here, so the proximity anchor is the board stop: the rider posts a location at from_lat/from_lon.
 
 # Clean start: no cab on the route
@@ -20,7 +20,7 @@ HTTP *
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "integratedBppConfigId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -43,8 +43,8 @@ retry-interval: 2000ms
 {}
 HTTP 200
 [Captures]
-legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order" nth 0
-categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId" nth 0
+legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order"
+categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId"
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/confirm
 token: {{token}}
@@ -66,24 +66,25 @@ retry: 10
 retry-interval: 3000ms
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "ALLOCATED"
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" nth 0 == "{{plate}}"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLOCATED|ARRIVING)$"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
 # The allocated seat already counts against the cab
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" nth 0 == 3
+jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 3
 
-# A code that matches no cab on the route: one generic error (05 §8.1)
+# A code that matches no cab on the route: the rider is asked to confirm an unlisted cab (retry with forceCheckIn boards degraded)
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setOnboardedVehicleDetails
 token: {{token}}
 Content-Type: application/json
 {"vehicleNumber": "0000", "supportsBoardingConfirmation": true}
-HTTP 400
+HTTP 200
 [Asserts]
-jsonpath "$.errorCode" == "SHARED_CAB_BOARDING_FAILED"
+jsonpath "$.boardingConfirmationRequired" == true
+jsonpath "$.boardingConfirmationReason" == "UNLISTED_CAB"
 
 # The sticker code boards: ticket INPROGRESS, leg BOARDED on the allocated cab
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setOnboardedVehicleDetails
@@ -92,19 +93,21 @@ Content-Type: application/json
 {"vehicleNumber": "{{plate_code}}", "supportsBoardingConfirmation": true}
 HTTP 200
 [Asserts]
-jsonpath "$.boardingConfirmationRequired" not exists
+jsonpath "$.boardingConfirmationRequired" == null
 
 GET {{base_url}}/v2/multimodal/journey/{{journeyId}}/status
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "BOARDED"
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" nth 0 == "{{plate}}"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
 # On board: cancel is refused (R7) and the driver can't end without force (04 §4)
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/cancel
 token: {{token}}
-HTTP 400
+HTTP 409
+[Asserts]
+jsonpath "$.errorCode" == "SHARED_CAB_RIDE_STARTED"
 
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}
@@ -118,13 +121,13 @@ POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setSta
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "DROPPED"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" nth 0 == 4
+jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
 
 # ---- 2. wrong cab -> re-bind ----
 # Allocate to cab A while it is the only cab, then bring cab B on and board B with B's code.
@@ -147,8 +150,8 @@ retry-interval: 2000ms
 {}
 HTTP 200
 [Captures]
-legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order" nth 0
-categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId" nth 0
+legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order"
+categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId"
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/confirm
 token: {{token}}
@@ -169,12 +172,12 @@ retry: 10
 retry-interval: 3000ms
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "ALLOCATED"
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" nth 0 == "{{plate}}"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLOCATED|ARRIVING)$"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "integratedBppConfigId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -192,28 +195,28 @@ Content-Type: application/json
 {"vehicleNumber": "{{plate_b_code}}", "supportsBoardingConfirmation": true}
 HTTP 200
 [Asserts]
-jsonpath "$.boardingConfirmationRequired" not exists
+jsonpath "$.boardingConfirmationRequired" == null
 
 GET {{base_url}}/v2/multimodal/journey/{{journeyId}}/status
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "BOARDED"
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" nth 0 == "{{plate_b}}"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate_b}}"
 
 # A's seat freed itself; B holds it
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" nth 0 == 4
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_b_code}}')].freeSeats" nth 0 == 3
+jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
+jsonpath "$.cabs[?(@.plateLast4 == '{{plate_b_code}}')].freeSeats" == 3
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setStatus/Completed
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "DROPPED"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}
@@ -250,8 +253,8 @@ retry-interval: 2000ms
 {}
 HTTP 200
 [Captures]
-legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order" nth 0
-categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId" nth 0
+legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order"
+categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId"
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/confirm
 token: {{token}}
@@ -271,26 +274,26 @@ Content-Type: application/json
 {"vehicleNumber": "{{plate_code}}", "supportsBoardingConfirmation": true}
 HTTP 200
 [Asserts]
-jsonpath "$.boardingConfirmationRequired" not exists
+jsonpath "$.boardingConfirmationRequired" == null
 
 GET {{base_url}}/v2/multimodal/journey/{{journeyId}}/status
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "BOARDED"
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" nth 0 == "{{plate}}"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "BOARDED"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
 
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" nth 0 == 3
+jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 3
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setStatus/Completed
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" nth 0 == "DROPPED"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" == "DROPPED"
 
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}

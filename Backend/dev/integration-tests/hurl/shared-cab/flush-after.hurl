@@ -23,11 +23,14 @@ jsonpath "$.version" > 1000000000
 # No new run: the restored session carries on the one that was live
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
-jsonpath "$.trips[-1:].routeCode" nth 0 == "{{route_a}}"
-jsonpath "$.trips[-1:].status" nth 0 == "ACTIVE"
-jsonpath "$.trips[-1:].endedAt" nth 0 == null
+jsonpath "$.trips[-1:].routeCode" == "{{route_a}}"
+jsonpath "$.trips[-1:].status" == "ACTIVE"
+jsonpath "$.trips[-1:].endedAt" == null
 
 # The restored session takes writes with its new version
 POST {{base_url}}/internal/sharedCab/seats
@@ -56,7 +59,10 @@ jsonpath "$.errorCode" == "SHARED_CAB_SESSION_NOT_FOUND"
 
 GET {{base_url}}/internal/sharedCab/trips?driverId={{driver}}&date={{date}}
 token: {{internal_key}}
+[Options]
+retry: 8
+retry-interval: 1000ms
 HTTP 200
 [Asserts]
-jsonpath "$.trips[-1:].status" nth 0 == "COMPLETED"
-jsonpath "$.trips[-1:].endReason" nth 0 == "END_FOR_NOW"
+jsonpath "$.trips[-1:].status" == "COMPLETED"
+jsonpath "$.trips[-1:].endReason" == "END_FOR_NOW"

@@ -1,6 +1,6 @@
 # Shared-cab scenario scripts (validators layer 5)
 
-**Untested until a backend is up.** These files parse (`hurlfmt --check`) and fail only on the HTTP connection. None has run against a rider-app yet.
+These scripts ran green against a local rider-app + driver-app stack (2026-09-30, batch8/9): `driver`, `flush`, `rider`, and `boarding` parts 1 and 2 (allocate, code, drop; re-bind). Boarding part 3 (walk-up `publicTransport/vehicleData/BUS/{plate}`) returned 404 in that local stack and is unverified.
 
 Board rows 3.6 (driver flow), 6.8 (rider flow) and 8.7 (boarding flow). **`boarding-flow.hurl` is untested until 8.1 merges** (boarding is on `backend/feat/shared-cab-prime-81`) and allocation (7.1–7.4) is on. The driver side hits rider-app's internal `/internal/sharedCab/*` APIs directly: these are what driver-app proxies, plus the `driverId` / `vehicleNumber` that driver-app resolves from its token (`spec/API/SharedCabInternal.yaml`). The rider side uses the multimodal UI APIs with a rider token.
 
@@ -42,3 +42,15 @@ Fill the `REPLACE_ME` values in `local.env` (or copy it and point `ENV` at the c
 - **Restored walk-ups**: `walkupCount` is seeded from the trip's `offlineBoardings`, which counts every walk-up of the run. After toggles it can exceed the real count, so `available` comes out low. That is conservative, and the flush test avoids it by never toggling off before the flush.
 - **Itinerary choice.** The rider flow takes `journeys[0]`: pick `from_*` / `to_*` so the shared cab is the only transit option (true for a Shillong feed with only SC routes). The `initiate` assert catches a wrong pick.
 - **Invariants.** The checker (layer 4) logs `invariant_violation` to rider-app's log and does not surface it over HTTP; grep the log after a run.
+
+## Local run recipe (validated 2026-09-30)
+
+1. Stack: `, run-mobility-stack-dev` (Postgres 5434, Redis cluster 30001-6 and 6379, Kafka, LTS 8081, rider 8013, driver 8016/8116, schedulers). Local DB content comes from the config-sync snapshot import; then `Backend/dev/local-testing-data/dynamic-offer-driver-app.sql`.
+2. Nandi OTP with the Shillong shared-cab feed (`feat/shillong-shared-cab`, GTFS unzipped flat: the Dockerfile unzips into one dir) on a free port (8080 is the mock server), and GIMS (gtfs-inmemory-server-rust) polling it. Rider `MultiModal_OTPTransit` -> OTP `/otp/gtfs/v1/`, `MultiModalStaticData_OTPTransit` -> GIMS. GIMS has a hardcoded Chalo poller (external.chalo.com): run it under a localhost-only sandbox. Feed notes: `stops.txt` needs a `stop_code` column; GIMS in OTP-polling mode reports route_type 1501 as `TAXI` (rider-app cannot decode it), local runs used route_type 3.
+3. Seeds, in order: `seed/01-config.sql` (IBC rows on both DBs, `agency_key = shillong_shared_cab:SHARED_CAB`; rider needs a MULTIMODAL and an APPLICATION row), `seed/02-geometry.sql`, `seed/03-drivers.sql`, `seed/04-fares.sql` (service tier + fare product + `route_stop_fare` from `shillong_fares.csv`), `seed/05-local-config.sql`. The ids in them are the imported master snapshot's Chennai NAMMA_YATRI city (rider moc `c7e3c3eb-...`, driver moc `f8e9db0a-...`); adapt for another city. The Shillong bbox is added as an extra geometry of that city.
+4. Flip the two gates (see `run.sh` header), rebuild, restart, clear the Redis config caches (see `run.sh` header).
+5. LTS: `Backend/geo_config/meghalaya.json` (Shillong bbox MultiPolygon) and one `Backend/route_geo_json_config/<routeCode>.geojson` per SC route (LineString + stop Points with `Stop Code` / `Stop Name`, `Route Code`, `Travel Mode: DRIVE`), then restart LTS. Keep both cabs pinging LTS for the whole run (`vt: SEDAN` works; `SHARED_CAB` is rejected by LTS).
+6. Variables: copy `local.env`; set `driver` / `driver_b` to the real driver person ids from `seed/03-drivers.sql` (LTS positions are keyed by plate, the session by driver) and `merchantId` / `merchantOperatingCityId` / `from_*` / `to_*`. The rider token: `login.hurl` (sandbox OTP 7891) once, then `TOKEN=...`.
+7. Run: `ENV=./mylocal.env TOKEN=... REDIS_CLI="redis-cli -c -p 30001" ./run.sh`.
+
+Behaviour the scripts encode (batch8/9): a leg is ARRIVING (not ALLOCATED) while the cab waits at the stop; an unknown code returns `boardingConfirmationRequired` (UNLISTED_CAB), `forceCheckIn` degrades; cancel while boarded is 409 `SHARED_CAB_RIDE_STARTED`; "I got down" on an unboarded booking is a cancel (R54).
