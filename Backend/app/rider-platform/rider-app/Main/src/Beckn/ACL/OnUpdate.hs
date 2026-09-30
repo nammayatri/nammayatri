@@ -120,6 +120,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "STOP_ARRIVED" -> parseStopArrivedEvent transactionId order
         "TOLL_CROSSED" -> return $ DOnUpdate.OUTollCrossedEventReq $ DOnUpdate.TollCrossedEventReq transactionId
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
+        "RETURN_TRIP_STARTED" -> parseReturnTripStartedEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
         "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent transactionId order
@@ -242,9 +243,22 @@ parseDriverReachedDestinationEvent order = do
   destinationReachedTime :: UTCTime <-
     Utils.getTag Tag.DRIVER_REACHED_DESTINATION (Just tagGroups)
       >>= readMaybe . T.unpack & fromMaybeM (InvalidRequest "DRIVER_REACHED_DESTINATION tag is not present in DestinationReached Event.")
+  let mbReturnOtp = Utils.getTag Tag.RETURN_TRIP_OTP (Just tagGroups)
   return $
     DOnUpdate.OUDestinationReachedReq $
       DOnUpdate.DestinationReachedReq
+        { bppRideId = Id bppRideId,
+          ..
+        }
+
+parseReturnTripStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseReturnTripStartedEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in ReturnTripStarted Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in ReturnTripStarted Event.")
+  let returnStartedAt :: Maybe UTCTime = Utils.getTag Tag.RETURN_TRIP_STARTED_TIME (Just tagGroups) >>= readMaybe . T.unpack
+  return $
+    DOnUpdate.OUReturnTripStartedReq $
+      DOnUpdate.ReturnTripStartedReq
         { bppRideId = Id bppRideId,
           ..
         }

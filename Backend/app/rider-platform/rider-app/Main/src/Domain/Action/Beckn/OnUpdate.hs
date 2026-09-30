@@ -37,6 +37,7 @@ module Domain.Action.Beckn.OnUpdate
     PhoneCallRequestEventReq (..),
     PhoneCallCompletedEventReq (..),
     DestinationReachedReq (..),
+    ReturnTripStartedReq (..),
     EstimatedEndTimeRangeReq (..),
     ParcelImageFileUploadReq (..),
     ChangeServiceTierReq (..),
@@ -136,6 +137,7 @@ data OnUpdateReq
   | OUPhoneCallCompletedEventReq PhoneCallCompletedEventReq
   | OUEditDestError EditDestErrorReq
   | OUDestinationReachedReq DestinationReachedReq
+  | OUReturnTripStartedReq ReturnTripStartedReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
   | OUParcelImageFileUploadReq ParcelImageFileUploadReq
   | OUChangeServiceTierReq ChangeServiceTierReq
@@ -162,6 +164,7 @@ data ValidatedOnUpdateReq
   | OUValidatedPhoneCallCompletedEventReq ValidatedPhoneCallCompletedEventReq
   | OUValidatedEditDestError ValidatedEditDestErrorReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
+  | OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
   | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
   | OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq
@@ -379,13 +382,26 @@ newtype ValidatedPhoneCallCompletedEventReq = ValidatedPhoneCallCompletedEventRe
 
 data DestinationReachedReq = DestinationReachedReq
   { bppRideId :: Id DRide.BPPRide,
-    destinationReachedTime :: UTCTime
+    destinationReachedTime :: UTCTime,
+    mbReturnOtp :: Maybe Text
   }
 
 data ValidatedDestinationReachedReq = ValidatedDestinationReachedReq
   { booking :: DRB.Booking,
     ride :: DRide.Ride,
-    destinationReachedTime :: UTCTime
+    destinationReachedTime :: UTCTime,
+    mbReturnOtp :: Maybe Text
+  }
+
+data ReturnTripStartedReq = ReturnTripStartedReq
+  { bppRideId :: Id DRide.BPPRide,
+    returnStartedAt :: Maybe UTCTime
+  }
+
+data ValidatedReturnTripStartedReq = ValidatedReturnTripStartedReq
+  { booking :: DRB.Booking,
+    ride :: DRide.Ride,
+    returnStartedAt :: Maybe UTCTime
   }
 
 data EstimatedEndTimeRangeReq = EstimatedEndTimeRangeReq
@@ -650,11 +666,18 @@ onUpdate = \case
       else Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
   OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
+    whenJust mbReturnOtp $ \otp -> QRide.updateReturnOtp (Just otp) ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id
     let allBookingPartyIds = map (.partyId) allBookingParty
     allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
     mapM_ QPFS.clearCache (nub $ booking.riderId : allBookingPartyIds)
     Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_HAS_REACHED_DESTINATION"
+  OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq {..} -> do
+    QRide.updateReturnStartedAt returnStartedAt ride.id
+    allBookingParty <- QBPL.findAllActiveByBookingId booking.id
+    let allBookingPartyIds = map (.partyId) allBookingParty
+    allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
+    Notify.notifyToAllBookingParties allParty booking.tripCategory "DRIVER_STARTED_RETURN_TRIP"
   OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq {..} -> do
     QRide.updateEstimatedEndTimeRange (Just estimatedEndTimeRange) ride.id
   OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..} ->
@@ -796,6 +819,11 @@ validateRequest = \case
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     return $ OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..}
+  OUReturnTripStartedReq ReturnTripStartedReq {..} -> do
+    ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+    unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"
+    booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
+    return $ OUValidatedReturnTripStartedReq ValidatedReturnTripStartedReq {..}
   OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
     unless (ride.status == DRide.INPROGRESS) $ throwError $ RideInvalidStatus "This ride is not in progress"

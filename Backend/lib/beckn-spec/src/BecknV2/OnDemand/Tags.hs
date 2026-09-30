@@ -100,6 +100,7 @@ data BecknTagGroup
   | DEVICE_ID_INFO
   | DELIVERY
   | DRIVER_REACHED_DESTINATION_INFO
+  | RETURN_TRIP_STARTED_INFO
   | ESTIMATED_END_TIME_RANGE
   | RIDE_DETAILS_INFO
   | SAFETY_PLUS_INFO
@@ -148,6 +149,7 @@ instance CompleteTagGroup BecknTagGroup where
     FARE_PARAMETERS_IN_RATECARD_INFO -> (Just "Fare Parametes in RateCard information", Nothing)
     DELIVERY -> (Just "Delivery Information", Nothing)
     DRIVER_REACHED_DESTINATION_INFO -> (Just "Driver Reached Destination Information", Nothing)
+    RETURN_TRIP_STARTED_INFO -> (Just "Return Trip Started Information", Nothing)
     FEATURE_LIST -> (Just "Feature List", Nothing)
     DISABILITY_VIS -> (Just "Visual Disability Information", Nothing)
     DISABILITY_HEA -> (Just "Hearing Disability Information", Nothing)
@@ -559,6 +561,8 @@ data BecknTag
   | RECEIVER_LOCATION_INSTRUCTIONS
   | INITIATED_AS
   | DRIVER_REACHED_DESTINATION
+  | RETURN_TRIP_OTP
+  | RETURN_TRIP_STARTED_TIME
   | ESTIMATED_END_TIME_RANGE_START
   | ESTIMATED_END_TIME_RANGE_END
   | PARCEL_IMAGE_UPLOADED
@@ -667,6 +671,8 @@ instance CompleteTag BecknTag where
     RECEIVER_LOCATION_INSTRUCTIONS -> (Just "Delivery Receiver Location Instructions", Nothing)
     INITIATED_AS -> (Just "Delivery Initiated As", Nothing)
     DRIVER_REACHED_DESTINATION -> (Just "Destination Reached Time", Nothing)
+    RETURN_TRIP_OTP -> (Just "Return Trip OTP", Nothing)
+    RETURN_TRIP_STARTED_TIME -> (Just "Return Trip Started Time", Nothing)
     DISTANCE_TO_NEAREST_DRIVER_METER -> (Just "Distance To Nearest Driver In Meters", Nothing)
     ETA_TO_NEAREST_DRIVER_MIN -> (Just "Agent Duration to Pickup in Seconds", Nothing)
     SPECIAL_LOCATION_TAG -> (Just "Special Zone Tag", Nothing)
@@ -744,6 +750,8 @@ instance CompleteTag BecknTag where
     RECEIVER_NAME -> DELIVERY
     RECEIVER_LOCATION_INSTRUCTIONS -> DELIVERY
     DRIVER_REACHED_DESTINATION -> DRIVER_REACHED_DESTINATION_INFO
+    RETURN_TRIP_OTP -> DRIVER_REACHED_DESTINATION_INFO
+    RETURN_TRIP_STARTED_TIME -> RETURN_TRIP_STARTED_INFO
     DISTANCE_TO_NEAREST_DRIVER_METER -> GENERAL_INFO
     ETA_TO_NEAREST_DRIVER_MIN -> GENERAL_INFO
     SPECIAL_LOCATION_TAG -> INFO

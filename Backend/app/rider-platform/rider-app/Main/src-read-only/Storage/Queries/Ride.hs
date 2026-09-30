@@ -99,6 +99,14 @@ updateRefundRequestStatus refundRequestStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.refundRequestStatus refundRequestStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateReturnOtp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateReturnOtp returnOtp id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.returnOtp returnOtp, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateReturnStartedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateReturnStartedAt returnStartedAt id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.returnStartedAt returnStartedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateSosId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos) -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateSosId sosId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.sosId (Kernel.Types.Id.getId <$> sosId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

@@ -24,6 +24,7 @@ module Domain.Action.UI.Ride
     resolveCallingNumber,
     arrivedAtPickup,
     arrivedAtDestination,
+    startReturnTrip,
     otpRideCreate,
     arrivedAtStop,
     stopAction,
@@ -53,6 +54,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.TransporterConfig as DTC
+import Domain.Types.Trip (isInterCityTrip)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -545,17 +547,43 @@ arrivedAtDestination rideId pt = do
   let curPt = LatLong destLoc.lat destLoc.lon
       distance = distanceBetweenInMeters pt curPt
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  let dropLocThreshold = metersToHighPrecMeters transporterConfig.dropLocThreshold
+  let dropLocThreshold =
+        if isInterCityTrip booking.tripCategory
+          then metersToHighPrecMeters (fromMaybe transporterConfig.dropLocThreshold transporterConfig.interCityDropLocThreshold)
+          else metersToHighPrecMeters transporterConfig.dropLocThreshold
   unless (distance < dropLocThreshold) $ throwError $ InvalidRequest ("Driver is not at destination location for ride " <> ride.id.getId)
   unless (isJust ride.destinationReachedAt) $ do
     now <- getCurrentTime
-    -- Notify BEFORE committing destinationReachedAt (same reasoning as arrivedAtPickup):
-    -- write-first makes a failed on_update unretryable and silently lost.
-    BP.sendDestinationArrivalUpdateToBAP booking ride (Just now)
+    mbReturnOtp <-
+      if booking.roundTrip == Just True && isInterCityTrip booking.tripCategory
+        then case ride.returnOtp of
+          Just existingOtp -> pure (Just existingOtp)
+          Nothing -> do
+            otp <- generateOTPCode
+            QRide.updateReturnOtp (Just otp) ride.id
+            pure (Just otp)
+        else pure Nothing
+    let updatedRide = ride {DRide.returnOtp = mbReturnOtp}
+    BP.sendDestinationArrivalUpdateToBAP booking updatedRide (Just now)
     QRide.updateDestinationArrival ride.id now
   pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS
+
+startReturnTrip :: Id DRide.Ride -> Text -> Flow APISuccess
+startReturnTrip rideId enteredOtp = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (booking.roundTrip == Just True && isInterCityTrip booking.tripCategory) $
+    throwError (InvalidRequest "Return trip is not applicable for this booking")
+  unless (isJust ride.destinationReachedAt) $
+    throwError (InvalidRequest "Destination has not been reached yet")
+  unless (isJust ride.returnStartedAt) $ do
+    unless (Just enteredOtp == ride.returnOtp) $ throwError IncorrectOTP
+    now <- getCurrentTime
+    BP.sendReturnTripStartedUpdateToBAP booking ride (Just now)
+    QRide.updateReturnStartedAt (Just now) ride.id
+  pure Success
 
 -- | The rider's real number reaches the driver only when the merchant has enabled
 -- direct calling AND the rider consented to sharing it. Consent can restrict but

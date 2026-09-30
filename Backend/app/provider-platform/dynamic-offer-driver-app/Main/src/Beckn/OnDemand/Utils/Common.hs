@@ -1506,6 +1506,12 @@ mkFulfillmentStateCode code =
 mkDestinationReachedTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
 mkDestinationReachedTimeTagGroupV2 = Tags.mkSingleTagGroup Tags.DRIVER_REACHED_DESTINATION
 
+mkReturnTripOtpTagGroup :: Maybe Text -> Maybe [Spec.TagGroup]
+mkReturnTripOtpTagGroup = Tags.mkSingleTagGroup Tags.RETURN_TRIP_OTP
+
+mkReturnTripStartedTimeTagGroup :: Maybe UTCTime -> Maybe [Spec.TagGroup]
+mkReturnTripStartedTimeTagGroup = Tags.mkSingleTagGroup Tags.RETURN_TRIP_STARTED_TIME
+
 validateSearchContext :: (HasFlowEnv m r '["_version" ::: Text], MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Spec.Context -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m ()
 validateSearchContext context merchantId merchantOperatingCityId = do
   ContextUtils.validateContext Context.SEARCH context

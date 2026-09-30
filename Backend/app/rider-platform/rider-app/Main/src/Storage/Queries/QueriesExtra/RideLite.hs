@@ -49,6 +49,7 @@ data RideLite = RideLite
     status :: Domain.Types.RideStatus.RideStatus,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    returnStartedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
     isSafetyPlus :: Kernel.Prelude.Bool,

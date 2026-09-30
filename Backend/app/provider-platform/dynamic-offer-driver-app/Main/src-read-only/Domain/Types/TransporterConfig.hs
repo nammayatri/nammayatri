@@ -228,6 +228,7 @@ data TransporterConfig = TransporterConfig
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
     individualPANCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    interCityDropLocThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     invoiceConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InvoiceConfig,
     isAAEnabledForRecurring :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,

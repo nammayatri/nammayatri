@@ -63,6 +63,8 @@ Ride:
     fleetOwnerId: Maybe (Id Person)
     otp: Text
     endOtp: Maybe Text
+    returnOtp: Maybe Text
+    returnStartedAt: Maybe UTCTime
     trackingUrl: BaseUrl
     fare: Maybe HighPrecMoney
     currency: Currency
@@ -322,6 +324,14 @@ Ride:
     shortId: SecondaryKey
 
   queries:
+    updateReturnOtp:
+      kvFunction: updateOneWithKV
+      params: [returnOtp]
+      where: id
+    updateReturnStartedAt:
+      kvFunction: updateOneWithKV
+      params: [returnStartedAt]
+      where: id
     updateCancellationFeeIfCancelledField:
       kvFunction: updateOneWithKV
       params: [cancellationFeeIfCancelled]

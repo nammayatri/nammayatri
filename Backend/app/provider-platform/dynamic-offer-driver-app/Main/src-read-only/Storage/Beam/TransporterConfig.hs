@@ -225,6 +225,7 @@ data TransporterConfigT f = TransporterConfigT
     graceTimeForScheduledRidePickup :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     includeDriverCurrentlyOnRide :: B.C f Kernel.Prelude.Bool,
     individualPANCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    interCityDropLocThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     invoiceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     isAAEnabledForRecurring :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isAvoidToll :: B.C f Kernel.Prelude.Bool,

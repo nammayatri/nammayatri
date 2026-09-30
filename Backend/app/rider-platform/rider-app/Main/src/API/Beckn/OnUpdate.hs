@@ -68,6 +68,8 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ 
               else fork "on update processing" $ onUpdateProcessAction
           DOnUpdate.OUValidatedEstimateRepetitionReq _ -> onUpdateProcessAction
           DOnUpdate.OUValidatedQuoteRepetitionReq _ -> onUpdateProcessAction
+          DOnUpdate.OUValidatedDestinationReachedReq _ -> onUpdateProcessAction
+          DOnUpdate.OUValidatedReturnTripStartedReq _ -> onUpdateProcessAction
           _ -> fork "on update processing" $ onUpdateProcessAction
         fork "on update received pushing ondc logs" do
           booking <- case validatedOnUpdateReq of
@@ -90,6 +92,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ 
             DOnUpdate.OUValidatedEditDestConfirmUpdateReq req -> return req.booking
             DOnUpdate.OUValidatedTollCrossedEventReq req -> return req.booking
             DOnUpdate.OUValidatedDestinationReachedReq req -> return req.booking
+            DOnUpdate.OUValidatedReturnTripStartedReq req -> return req.booking
             DOnUpdate.OUValidatedEstimatedEndTimeRangeReq req -> return req.booking
             DOnUpdate.OUValidatedParcelImageFileUploadReq req -> return req.booking
             DOnUpdate.OUValidatedChangeServiceTierReq req -> return req.booking

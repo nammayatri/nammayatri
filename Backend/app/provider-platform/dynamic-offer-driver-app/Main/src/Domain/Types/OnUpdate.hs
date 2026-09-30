@@ -48,6 +48,7 @@ data OnUpdateBuildReq
   | EditDestinationUpdate DEditDestinationUpdateReq
   | TollCrossedBuildReq DTollCrossedBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
+  | ReturnTripStartedBuildReq DReturnTripStartedReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
   | ParcelImageUploadedBuildReq DParcelImageUploadedReq
   | ChangeServiceTierBuildReq DChangeServiceTierReq
@@ -128,6 +129,11 @@ data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE
 data DDriverReachedDestinationReq = DDriverReachedDestinationReq
   { bookingDetails :: BookingDetails,
     destinationArrivalTime :: Maybe UTCTime
+  }
+
+data DReturnTripStartedReq = DReturnTripStartedReq
+  { bookingDetails :: BookingDetails,
+    returnStartedAt :: Maybe UTCTime
   }
 
 newtype DRideEstimatedEndTimeRangeReq = DRideEstimatedEndTimeRangeReq

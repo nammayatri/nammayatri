@@ -21,6 +21,7 @@ module SharedLogic.CallBAP
     sendDriverArrivalUpdateToBAP,
     sendStopArrivalUpdateToBAP,
     sendDestinationArrivalUpdateToBAP,
+    sendReturnTripStartedUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendRideEstimatedEndTimeRangeUpdateToBAP,
     sendQuoteRepetitionUpdateToBAP,
@@ -1593,6 +1594,40 @@ sendDestinationArrivalUpdateToBAP booking ride destinationArrivalTime = do
   retryConfig <- asks (.shortDurationRetryCfg)
   driverReachedDestMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing driverReachedDestBuildReq
   void $ callOnUpdateV2 driverReachedDestMsgV2 retryConfig merchant.id
+
+sendReturnTripStartedUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  Maybe UTCTime ->
+  m ()
+sendReturnTripStartedUpdateToBAP booking ride returnStartedAt = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+  let riderPhone = Nothing
+      paymentMethodInfo = Nothing
+      paymentUrl = Nothing
+      bookingDetails = ACL.BookingDetails {..}
+      returnTripStartedBuildReq = ACL.ReturnTripStartedBuildReq ACL.DReturnTripStartedReq {..}
+  retryConfig <- asks (.shortDurationRetryCfg)
+  returnTripStartedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing returnTripStartedBuildReq
+  void $ callOnUpdateV2 returnTripStartedMsgV2 retryConfig merchant.id
 
 notfyDeliveryImageUploadedToBAP ::
   ( CacheFlow m r,
