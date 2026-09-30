@@ -107,10 +107,14 @@ findByMerchantAndCity ::
   Id Common.Merchant ->
   Id Common.MerchantOperatingCity ->
   Maybe VehicleCategory ->
+  Maybe Bool ->
   m [DAuto.AutoApplyCohortMapping]
-findByMerchantAndCity mbLimit mbOffset merchantId merchantOperatingCityId mbVehicleCategory = do
+findByMerchantAndCity mbLimit mbOffset merchantId merchantOperatingCityId mbVehicleCategory mbEnabled = do
   let categoryClause = case mbVehicleCategory of
         Just category -> [Se.Is Beam.vehicleCategory $ Se.Eq (Just (T.pack (show category)))]
+        Nothing -> []
+      enabledClause = case mbEnabled of
+        Just enabled -> [Se.Is Beam.enabled $ Se.Eq enabled]
         Nothing -> []
       whereClause =
         [ Se.And
@@ -118,6 +122,7 @@ findByMerchantAndCity mbLimit mbOffset merchantId merchantOperatingCityId mbVehi
                 Se.Is Beam.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId)
               ]
                 <> categoryClause
+                <> enabledClause
             )
         ]
   findAllWithOptionsKV whereClause (Se.Desc Beam.createdAt) mbLimit mbOffset

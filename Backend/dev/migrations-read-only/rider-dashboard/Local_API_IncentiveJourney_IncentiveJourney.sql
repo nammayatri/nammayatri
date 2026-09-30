@@ -40,9 +40,6 @@ INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES 
 -- {"api":"PostIncentiveJourneyAssign","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'system-config.coins.write' ) ON CONFLICT DO NOTHING;
 
--- {"api":"DeleteIncentiveJourneyUnassign","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
-INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'system-config.coins.write' ) ON CONFLICT DO NOTHING;
-
 -- {"api":"DeleteIncentiveJourneyCohortJourney","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'system-config.coins.write' ) ON CONFLICT DO NOTHING;
 
@@ -62,4 +59,10 @@ INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES 
 INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'system-config.coins.write' ) ON CONFLICT DO NOTHING;
 
 -- {"api":"DeleteJourneyMilestoneMapping","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'system-config.coins.write' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostIncentiveJourneyUnassign","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'system-config.coins.write' ) ON CONFLICT DO NOTHING;

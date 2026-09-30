@@ -151,7 +151,7 @@ apis:
       migrate:
         capability: system-config.coins.write
 
-  - DELETE:
+  - POST:
       endpoint: /unassign
       auth: ApiAuthV2
       request:
