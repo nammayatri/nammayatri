@@ -149,12 +149,9 @@ data SearchResp = SearchResp
     -- to polling /rideSearch/:id/results (legacy behaviour).
     -- Backward-compatible: legacy clients ignore the unknown field.
     results :: Maybe DQuote.GetQuotesRes,
-    -- | Whether 'alternateSuggestions' on /rideSearch/:id/results has anything to return, so the
-    -- frontend polls it only when there is something coming. False for the overwhelming
-    -- majority of searches, which produce no walk-and-save shapes at all.
-    --
-    -- Counts every shape that endpoint serves: when the city prices one inline this is the
-    -- shapes beside it, and when it loads them asynchronously it includes the default too.
+    -- | Whether walk-and-save shapes were detected for this search. They are measured, built
+    -- and priced in the background, so poll 'alternateSuggestions' on /rideSearch/:id/results
+    -- until 'allLoaded'; it may settle with none if the walks fail the cap on the map.
     hasAlternates :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -363,48 +360,16 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
             mbFromSpecialLocId = Id <$> dSearchRes.searchRequest.fromSpecialLocationId
         pure $ SSD.shouldDispatchSync mbSyncCfg req mbFromSpecialLocId
       else pure False
-  -- Look for a point on the resolved route that would cut a detour out of the ride. On a
-  -- hit this persists a shadow search request; it is priced by the BPP in parallel below,
-  -- and never replaces what the customer asked for.
-  mbSuggestedBuild <- case mbRiderConfig of
-    Just riderConfig ->
-      withTryCatch "betterRoutePointSearch" (withTimeAPI "rideSearch" "betterRoutePointBuild" $ JMU.measureLatency (BRPS.buildSuggestedSearchRes riderConfig dSearchRes) "betterRoutePoint.total") >>= \case
-        Right res -> pure res
-        Left e -> do
-          logError $ "better_route_point: shadow search build failed, continuing without it: " <> T.pack (show e)
-          pure Nothing
+  mbDetected <- case mbRiderConfig of
+    Just riderConfig -> fmap (riderConfig,) <$> JMU.measureLatency (pure $! BRPS.detectBetterRoute riderConfig dSearchRes) "betterRoutePoint.detect"
     Nothing -> pure Nothing
-  -- Only the shape the city wants priced inline is awaited, and only when it wants one.
-  suggestedAwaitable <- case mbSuggestedBuild of
-    Just build
-      | Just inlineRes <- build.inlineSearchRes ->
-        Just <$> dispatchSuggestedSearch dSearchRes inlineRes (DQuote.mkSuggestedOption <$> build.alternates)
-    _ -> pure Nothing
-  -- Everything else is never waited on: those fares are for a decision the customer has not
-  -- made yet, so they must not sit in front of the estimates they are shown beside. Each
-  -- one's on_search persists its own estimates, which the results poll collects whenever
-  -- the app asks.
-  whenJust mbSuggestedBuild $ \build ->
-    unless (null build.backgroundSearchRes) $
-      fork "betterRoutePointAlternates" $ do
-        -- Caught, not propagated: the marker below has to be written whatever happens in
-        -- here. An exception that escaped would leave the customer's app polling for fares
-        -- that are no longer coming, until the search itself expired.
-        void . withTryCatch "betterRoutePointAlternates" $
-          forM_ build.backgroundSearchRes $ \backgroundRes ->
-            priceSuggestedSearch dSearchRes backgroundRes [] >>= \case
-              Just _ -> pure ()
-              -- Not an error worth failing anything over -- the app renders the shapes it
-              -- has fares for -- but it is worth knowing how often one goes unpriced.
-              Nothing ->
-                logWarning $
-                  "better_route_point: no fare for background shape " <> backgroundRes.searchRequest.id.getId
-                    <> " of parent "
-                    <> dSearchRes.searchRequest.id.getId
-        -- Unconditional: every shape has been through the provider, or has stopped being
-        -- tried. Either way nothing further is coming, which is what the result endpoint
-        -- reports as allLoaded -- it means settled, not successful.
-        BRPC.markAlternatesDispatched dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry
+  whenJust mbDetected $ \(riderConfig, detected) -> do
+    void . withTryCatch "betterRoutePointMarkSuggestion" $ QSearchRequest.updateHasBetterPointSuggestion dSearchRes.searchRequest.id
+    fork "betterRoutePointSuggestions" $ do
+      withTryCatch "betterRoutePointSuggestions" (priceSuggestions riderConfig detected) >>= \case
+        Right () -> pure ()
+        Left e -> logError $ "better_route_point: suggestions failed, continuing without them: " <> T.pack (show e)
+      BRPC.markAlternatesDispatched dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry
   let dispatch reqV =
         GatewayLookup.dispatchToGateway
           dSearchRes.merchant.id
@@ -413,10 +378,8 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
           reqV
           (\url r -> void $ CallBPP.searchV2 url r merchantId)
           (\url mappedAction jsonBody -> void $ CallBPP.callBecknAPIUnsigned mappedAction url jsonBody)
-  -- Everything the background dispatch will answer for, which is exactly what
-  -- 'alternateSuggestions' on the results poll serves.
-  let hasAlternates = maybe False (not . null . (.alternates)) mbSuggestedBuild
-      parentBecknRes = maybe dSearchRes (const $ withDpInputsPublishTag dSearchRes) mbSuggestedBuild
+  let hasAlternates = isJust mbDetected
+      parentBecknRes = maybe dSearchRes (const $ withDpInputsPublishTag dSearchRes) mbDetected
   if shouldSync
     then do
       becknTaxiReqV2 <- withTimeAPI "rideSearch" "buildBecknSearchReqV2" $ TaxiACL.buildSearchReqV2 parentBecknRes
@@ -424,15 +387,8 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
       fork "search cabs" $ dispatch becknTaxiReqV2
       -- Publishes this search's dynamic-pricing inputs when a suggestion exists, so the
       -- shadow prices on the same congestion instead of its own drop's.
-      let mbDpPublishKey = mbSuggestedBuild $> dSearchRes.searchRequest.id.getId
-      mbQuotesRes <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey
-      -- Both searches were dispatched together; only now do we join on the suggestion, so
-      -- its latency overlaps the real search's instead of adding to it.
-      inlineResults <- case (mbQuotesRes, suggestedAwaitable) of
-        (Just quotesRes, Just awaitable) -> do
-          mbSuggested <- withTimeAPI "rideSearch" "awaitBetterRoutePointSearch" $ awaitSuggestedSearch dSearchRes awaitable
-          pure . Just $ quotesRes {DQuote.suggestedEstimates = mbSuggested}
-        _ -> pure mbQuotesRes
+      let mbDpPublishKey = mbDetected $> dSearchRes.searchRequest.id.getId
+      inlineResults <- withTimeAPI "rideSearch" "awaitSyncSearch" $ awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey
       pure DispatchRes {inlineResults, hasAlternates}
     else do
       fork "search cabs" . withShortRetry $ do
@@ -443,16 +399,17 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
       -- Async path: nothing to join on. The shadow's estimates are persisted by its inline
       -- on_search, and /rideSearch/results picks them up via parentSearchRequestId.
       pure DispatchRes {inlineResults = Nothing, hasAlternates}
-
--- | Fires the shadow search at the BPP's internal sync endpoint, in parallel with the real
--- search. Not routed through the gateway: this is a second price lookup for one customer
--- intent, and it must not look like a second market-wide search.
--- | The alternates ride along as geometry so the app can draw every marker as soon as the
--- search answers, and match the fares that follow by search id.
-dispatchSuggestedSearch :: DSearch.SearchRes -> DSearch.SearchRes -> [DQuote.SuggestedOption] -> Flow (ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)))
-dispatchSuggestedSearch parentRes inlineRes alternates =
-  awaitableFork "betterRoutePointSearchDispatch" $
-    priceSuggestedSearch parentRes inlineRes alternates
+  where
+    priceSuggestions riderConfig detected = do
+      shadows <- JMU.measureLatency (BRPS.buildSuggestedSearchRes riderConfig dSearchRes detected) "betterRoutePoint.total"
+      forM_ shadows $ \shadowRes ->
+        priceSuggestedSearch dSearchRes shadowRes [] >>= \case
+          Just _ -> pure ()
+          Nothing ->
+            logWarning $
+              "better_route_point: no fare for shape " <> shadowRes.searchRequest.id.getId
+                <> " of parent "
+                <> dSearchRes.searchRequest.id.getId
 
 -- | Sends one shadow search to the BPP and reads its answer back as the customer-facing
 -- suggestion. 'Nothing' whenever the BPP does not answer with estimates: a suggestion is
@@ -595,20 +552,6 @@ suggestedFare' (personId, merchantId) req = withPersonIdLogTag personId $
       shadowRes <- BRPS.buildShadowSearchRes parentRes betterRoute ((.address) =<< req.suggestedPickup) ((.address) =<< req.suggestedDrop)
       priceSuggestedSearch parentRes shadowRes offeredAlternatives
         >>= fromMaybeM (InvalidRequest "No fare could be fetched for the suggested pickup or drop")
-
--- | Joins on the shadow search. It shares the real search's timeout budget, so a slow
--- suggestion degrades to no suggestion rather than delaying the estimates the customer
--- is waiting for.
-awaitSuggestedSearch :: DSearch.SearchRes -> ET.Awaitable (Either Text (Maybe DQuote.SuggestedEstimates)) -> Flow (Maybe DQuote.SuggestedEstimates)
-awaitSuggestedSearch dSearchRes awaitable =
-  L.await (Just syncSearchTimeoutMicros) awaitable >>= \case
-    Right r -> pure r
-    Left AwaitingTimeout -> do
-      logWarning $ "better_route_point: shadow search exceeded timeout for txn " <> dSearchRes.searchRequest.id.getId
-      pure Nothing
-    Left (ForkedFlowError e) -> do
-      logError $ "better_route_point: shadow search fork failed for txn " <> dSearchRes.searchRequest.id.getId <> ": " <> e
-      pure Nothing
 
 awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Maybe Text -> Flow (Maybe DQuote.GetQuotesRes)
 awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 mbDpPublishKey = do

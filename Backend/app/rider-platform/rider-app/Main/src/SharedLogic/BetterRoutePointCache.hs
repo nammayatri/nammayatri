@@ -115,9 +115,8 @@ cacheSuggestedSearchCtx ::
   [AlternateShadow] ->
   m ()
 cacheSuggestedSearchCtx parentSearchId SLS.SearchRes {..} inlineSearchId alternates = do
-  -- The search's own clock reading, not a fresh one: this is written while the search is
-  -- still being answered, and the two are the same instant to any precision that matters.
-  let ttl = round $ diffUTCTime searchRequestExpiry now
+  currentTime <- getCurrentTime
+  let ttl = round $ diffUTCTime searchRequestExpiry currentTime
   when (ttl > 0) $
     Redis.setExp (suggestedSearchCtxKey parentSearchId) SuggestedSearchCtx {taggings = dropRouteTags <$> taggings, ..} ttl
   where

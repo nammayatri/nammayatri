@@ -26,7 +26,7 @@
 -- select/init/confirm resolve the shadow through @estimate.requestId@ with no
 -- special handling anywhere downstream.
 module SharedLogic.BetterRoutePointSearch
-  ( SuggestedSearchBuild (..),
+  ( detectBetterRoute,
     buildSuggestedSearchRes,
     buildShadowSearchRes,
     offeredAlternateFor,
@@ -61,72 +61,28 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Maps as Maps
 
--- | What /rideSearch/ found: the shape it would pick, and the other shapes on offer.
---
--- Every one of them gets a shadow search request here, including the alternates. What
--- separates them is only how their fare is awaited: the default is joined before the
--- search response goes out, the alternates are dispatched fire-and-forget and collected
--- later through 'alternateSuggestions' on the results poll.
-data SuggestedSearchBuild = SuggestedSearchBuild
-  { -- | The shape to price before answering the search, when the city wants one priced
-    -- inline. 'Nothing' when suggestions are loaded asynchronously -- then every shape, the
-    -- default included, is in 'backgroundSearchRes'.
-    inlineSearchRes :: Maybe SLS.SearchRes,
-    -- | Dispatched fire-and-forget, in the same order as 'alternates'.
-    backgroundSearchRes :: [SLS.SearchRes],
-    alternates :: [BRPC.AlternateShadow]
-  }
-
--- | Looks for a better pickup/drop on the route the parent search already resolved.
--- On a hit, persists the shadow search request for the best shape and returns a
--- 'SLS.SearchRes' for it that the caller can dispatch to the BPP exactly like the real
--- one, alongside the alternatives it deliberately left unpriced.
---
--- Returns 'Nothing' whenever the feature is off, the search is not a shape we can
--- reason about, or no point clears the configured thresholds — all of which are the
--- normal case, so callers should treat 'Nothing' as unremarkable.
 buildSuggestedSearchRes ::
   ServiceFlow m r =>
   DRC.RiderConfig ->
   SLS.SearchRes ->
-  m (Maybe SuggestedSearchBuild)
-buildSuggestedSearchRes riderConfig parentRes = do
-  -- `$!` matters here: without it the timing would be meaningless, because a lazy Maybe
-  -- is not evaluated until used. Forcing to WHNF is enough — deciding Just vs Nothing is
-  -- exactly what runs both segment scans.
-  mbDetected <- JMU.measureLatency (pure $! detectBetterRoute riderConfig parentRes) "betterRoutePoint.detect"
-  -- A provider failure here escapes to the caller, which drops the suggestion rather than
-  -- offer a walk it could not measure. Nothing has been persisted yet at this point.
-  mbPlan <- case mbDetected of
-    Nothing -> pure Nothing
-    Just detected -> JMU.measureLatency (measurePlanWalks riderConfig parentRes.searchRequest detected) "betterRoutePoint.measureWalks"
+  BRP.BetterRoutePlan ->
+  m [SLS.SearchRes]
+buildSuggestedSearchRes riderConfig parentRes detected = do
+  mbPlan <- JMU.measureLatency (measurePlanWalks riderConfig parentRes.searchRequest detected) "betterRoutePoint.measureWalks"
   case mbPlan of
-    Nothing -> pure Nothing
-    Just plan -> JMU.measureLatency (Just <$> buildFromPlan plan) "betterRoutePoint.buildShadow"
+    Nothing -> pure []
+    Just plan -> JMU.measureLatency (buildFromPlan plan) "betterRoutePoint.buildShadow"
   where
-    -- Every shape gets its shadow now, not when the customer asks: creating one is two
-    -- local writes, and doing it here is what lets a fare be dispatched in the background
-    -- and collected by search id later. No address is resolved for any of them -- naming a
-    -- point the customer may never choose would put a reverse-geocode on the search path,
-    -- and select resolves the name of the one they do choose.
     buildFromPlan plan = do
-      let loadAsync = fromMaybe False riderConfig.betterPointLoadSuggestionsAsync
-          -- Loading asynchronously is only a question of which shape is waited on: the
-          -- default joins the others in one list, marked so the reader can still say which
-          -- one it was.
-          background = if loadAsync then plan.best : plan.alternatives else plan.alternatives
-      inlineSearchRes <- if loadAsync then pure Nothing else Just <$> buildShadowSearchRes parentRes plan.best Nothing Nothing
-      backgroundSearchRes <- traverse (\route -> buildShadowSearchRes parentRes route Nothing Nothing) background
+      let routes = plan.best : plan.alternatives
+      shadowRes <- traverse (\route -> buildShadowSearchRes parentRes route Nothing Nothing) routes
       let alternates =
             zipWith
-              (\res route -> BRPC.AlternateShadow {searchId = res.searchRequest.id, route, isDefault = loadAsync && route == plan.best})
-              backgroundSearchRes
-              background
-      BRPC.cacheSuggestedSearchCtx parentRes.searchRequest.id parentRes ((\res -> res.searchRequest.id) <$> inlineSearchRes) alternates
-      -- Tells the readers there is something here to fetch. Every other search leaves this
-      -- unset, which is what lets them skip the lookup entirely.
-      QSearchRequest.updateHasBetterPointSuggestion parentRes.searchRequest.id
-      pure SuggestedSearchBuild {inlineSearchRes, backgroundSearchRes, alternates}
+              (\res route -> BRPC.AlternateShadow {searchId = res.searchRequest.id, route, isDefault = route == plan.best})
+              shadowRes
+              routes
+      BRPC.cacheSuggestedSearchCtx parentRes.searchRequest.id parentRes Nothing alternates
+      pure shadowRes
 
 -- | Persists a shadow search request for one better-route shape and returns the
 -- 'SLS.SearchRes' that prices it. The address overrides are for endpoints the customer
