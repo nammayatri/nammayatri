@@ -16,6 +16,7 @@ module SharedLogic.SilentReallocation
     clearSilentReallocation,
     includeSilentReallocationBooking,
     maskSilentReallocationBooking,
+    maskSilentReallocationBookingStatus,
   )
 where
 
@@ -124,3 +125,15 @@ maskSilentReallocationBooking mbCtx entity =
         { DRideAPI.driverNumber = Nothing,
           DRideAPI.status = DRide.NEW
         }
+
+maskSilentReallocationBookingStatus :: Maybe SilentReallocationCtx -> DRBAPI.BookingStatusAPIEntity -> DRBAPI.BookingStatusAPIEntity
+maskSilentReallocationBookingStatus mbCtx entity =
+  case mbCtx of
+    Just ctx
+      | ctx.bookingId == entity.id ->
+        entity
+          { DRBAPI.bookingStatus = DRB.TRIP_ASSIGNED,
+            DRBAPI.rideStatus = Just DRide.NEW,
+            DRBAPI.isSilentReallocation = Just True
+          }
+    _ -> entity
