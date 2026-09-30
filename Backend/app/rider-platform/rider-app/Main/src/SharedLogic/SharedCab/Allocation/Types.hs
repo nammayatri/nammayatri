@@ -18,6 +18,9 @@ module SharedLogic.SharedCab.Allocation.Types
     FindingTimeout (..),
     findingTimeoutAction,
     totalAgeMult,
+    allocKeyTtl,
+    allocKeyTtlMarginSec,
+    allocKeyTtlShort,
     isMovingSpeed,
     parseLtsTimestamp,
     Blame (..),
@@ -277,3 +280,24 @@ findingTimeoutAction now findingTimeoutSec findingSince createdAt
 -- | How many findingTimeoutSec stints a booking may live in FINDING in total, releases included.
 totalAgeMult :: Int
 totalAgeMult = 3
+
+-- | R83 (config footgun, e2e-reproduced at findingTimeoutSec=25): the TTL every armer/extender of
+-- `sharedcab:alloc:{bookingId}` must use. A claim arms the stand (or away) timer; the tick clears it once
+-- the cab moves and stop-progress then arms the moving timer at the board stop, so the two timers stack
+-- back to back under the same key. If findingTimeoutSec is below their sum, the key dies before the
+-- deadline it stored, expireTimers reads nothing and closes as TimerLost: released with BlameNone and no
+-- attempt counted, so the no-show path is unreachable. The TTL is only a garbage-collection backstop --
+-- nothing reads a decision from it -- so widening it is always safe.
+allocKeyTtl :: AllocationConfig -> Int
+allocKeyTtl cfg = max cfg.findingTimeoutSec (cfg.standTimerSec + cfg.movingTimerSec + allocKeyTtlMarginSec)
+
+-- | One tick of slack past the stacked stand+moving timers: expireTimers must still find the key on the
+-- first tick after the last deadline passed. tickSec defaults to 3 s; 10 s covers a couple of missed
+-- ticks without making a well-configured key artificially longer.
+allocKeyTtlMarginSec :: Int
+allocKeyTtlMarginSec = 10
+
+-- | R83: True when findingTimeoutSec lost to the timer sum -- `allocKeyTtl` is then silently carrying the
+-- config and every armer warns (once per site) so ops can raise findingTimeoutSec instead.
+allocKeyTtlShort :: AllocationConfig -> Bool
+allocKeyTtlShort cfg = cfg.findingTimeoutSec < cfg.standTimerSec + cfg.movingTimerSec + allocKeyTtlMarginSec

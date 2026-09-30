@@ -19,8 +19,8 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocKey, cityConfig, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled)
-import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), Blame (BlameNone), TimerKind (..), passedStopBlame)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocKey, cityConfig, isFreshPosition, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded, shared, sharedCabAllocationEnabled, warnAllocKeyTtlOnce)
+import SharedLogic.SharedCab.Allocation.Types (AllocationConfig (..), AllocationOutcome (..), AllocationState (..), Blame (BlameNone), TimerKind (..), allocKeyTtl, passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
@@ -125,7 +125,10 @@ stepCab cfg spc now live positions route s = do
         let boardStop = (.coordinate) <$> (find ((== b.fromStationCode) . (.stopCode)) . (.stops) =<< mbCab)
             blame = maybe BlameNone (\stop -> passedStopBlame cfg.atStopRadiusM cfg.ltsMaxAgeSec now stop riderFix) boardStop
         void $ releaseSharedCabAllocation cfg b.id plate (PassedStop blame)
-      else movingTimerStep cfg.findingTimeoutSec spc now freshCab plate b
+      else do
+        -- R83: the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
+        warnAllocKeyTtlOnce cfg "moving-arm"
+        movingTimerStep (allocKeyTtl cfg) spc now freshCab plate b
   forM_ onBoard $ dropStep spc now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep spc now route ((.position) <$> freshCab) plate
   whenJust mbCab $ \cab -> when (reachedRouteEnd spc.atStopRadiusM cab) $ markReachedEnd now s

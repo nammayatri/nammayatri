@@ -239,5 +239,19 @@ tests =
           isFreshPosition t0 60 (cabFix "P1" nearStop (Just 5) 10).vehicleInfo,
           silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) fromTheFutureAgo]
           )
-          @?= (False, True, False)
+          @?= (False, True, False),
+      testCase "R83: a findingTimeoutSec that already covers the stacked timers stays the key's TTL, no warning owed" $
+        -- defaults: 1200 vs 180 + 90 + 10
+        (allocKeyTtl defaultAllocationConfig, allocKeyTtlShort defaultAllocationConfig) @?= (1200, False),
+      testCase "R83: a findingTimeoutSec below stand + moving + margin is raised to their sum and flagged (e2e's 25)" $
+        let cfg = defaultAllocationConfig {findingTimeoutSec = 25, standTimerSec = 12, movingTimerSec = 8}
+         in (allocKeyTtl cfg, allocKeyTtlShort cfg) @?= (12 + 8 + allocKeyTtlMarginSec, True),
+      testCase "R83: the exact boundary findingTimeoutSec == stand + moving + margin is not a breach; one below is" $
+        let bound = defaultAllocationConfig.standTimerSec + defaultAllocationConfig.movingTimerSec + allocKeyTtlMarginSec
+            atBound = defaultAllocationConfig {findingTimeoutSec = bound}
+            belowBound = defaultAllocationConfig {findingTimeoutSec = bound - 1}
+         in ( (allocKeyTtl atBound, allocKeyTtlShort atBound),
+              (allocKeyTtl belowBound, allocKeyTtlShort belowBound)
+            )
+          @?= ((bound, False), (bound, True))
     ]

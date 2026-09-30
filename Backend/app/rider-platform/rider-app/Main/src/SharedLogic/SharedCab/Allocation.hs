@@ -82,6 +82,7 @@ module SharedLogic.SharedCab.Allocation
     readFindingSince,
     crossedMaxAttempts,
     isMissedCabOutcome,
+    warnAllocKeyTtlOnce,
   )
 where
 
@@ -506,12 +507,14 @@ attemptClaim cfg booking cand = do
                             -- 05 §2 timer mode: a stationary cab gets a timer (see claimTimerSec),
                             -- a moving one none; stop-progress (7.5) arms the moving timer at the board stop.
                             -- The key's TTL is only a garbage-collection backstop.
+                            -- R83: that backstop must outlive the stacked timers, not just findingTimeoutSec.
+                            warnAllocKeyTtlOnce cfg "claim"
                             let deadline = (\sec -> addUTCTime (intToNominalDiffTime sec) now) <$> claimTimerSec cfg cand
                             shared $
                               Redis.setExp
                                 (allocKey booking.bookingId.getId)
                                 AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = claimTimerKind cand}
-                                cfg.findingTimeoutSec
+                                (allocKeyTtl cfg)
                             pure (Right now)
                           else pure (Left ClaimCasLost)
                       Nothing -> pure (Left ClaimCasLost)
@@ -519,6 +522,26 @@ attemptClaim cfg booking cand = do
 
 readFindingSince :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> UTCTime -> m UTCTime
 readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.safeGet (findingSinceKey bookingId.getId)
+
+-- | R83: warn ops once (per site, per hour) that the alloc key TTL had to be raised past findingTimeoutSec
+-- to cover the stacked stand+moving timers. The raised key still works -- this is so ops fix the root
+-- cause: a findingTimeoutSec this short makes every other TTL it feeds (attempts, skipped, fallback push,
+-- the FINDING cancel clock itself) unexpectedly short too.
+warnAllocKeyTtlOnce :: (MonadFlow m, Redis.HedisFlow m r, Log m) => AllocationConfig -> Text -> m ()
+warnAllocKeyTtlOnce cfg site =
+  when (allocKeyTtlShort cfg) . whenM (shared $ Redis.tryLockRedis ("sharedcab:cfgwarn:allockeyttl:" <> site) 3600) $
+    logWarning $
+      "shared-cab config: alloc key TTL raised past findingTimeoutSec to cover the stacked timers (site "
+        <> site
+        <> "): findingTimeoutSec="
+        <> show cfg.findingTimeoutSec
+        <> ", standTimerSec="
+        <> show cfg.standTimerSec
+        <> ", movingTimerSec="
+        <> show cfg.movingTimerSec
+        <> ", allocKeyTtlMarginSec="
+        <> show allocKeyTtlMarginSec
+        <> " -- a key this short dies before its timers, the close reads TimerLost (no blame, no attempt) and the no-show path is unreachable; raise findingTimeoutSec"
 
 -- | True for the caller that wins the once-per-stint right to push "board any cab".
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => AllocationConfig -> Id DFTB.FRFSTicketBooking -> m Bool
@@ -798,8 +821,9 @@ expireTimers cfg now movingOn silentOn live =
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
         Nothing -> do
           whenJust mbState $ \st ->
-            when (clearsWhenMoving st.timerKind && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $
-              shared $ Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} cfg.findingTimeoutSec
+            when (clearsWhenMoving st.timerKind && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $ do
+              warnAllocKeyTtlOnce cfg "timer-clear"
+              shared $ Redis.setExp (allocKey b.id.getId) st {expiresAt = Nothing} (allocKeyTtl cfg)
           pure Nothing
     whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
 
