@@ -423,6 +423,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                 -- L.setOptionLocal QRSTT.CalledForFare True
                 ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- case serviecType of
                   Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
+                  Nothing | Just sharedCabTiers <- SharedCabLeg.sharedCabFareTiers agencyGtfsId -> pure ((Just sharedCabTiers, fares), Nothing) -- shared-cab availability is decided by the search gate; GIMS bus-schedule has no frequency GTFS
                   Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRoute.segments integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRoute.segments)
                 -- L.setOptionLocal QRSTT.CalledForFare False
 

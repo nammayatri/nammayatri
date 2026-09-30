@@ -6,12 +6,14 @@ module SharedLogic.SharedCab.LegState
     fallbackReached,
     fallbackTimeElapsed,
     isSharedCabAgency,
+    sharedCabFareTiers,
     deriveSharedCabState,
     isDroppable,
     seatsHeld,
   )
 where
 
+import BecknV2.FRFS.Enums (ServiceTierType (SHARED_CAB))
 import Data.Time (diffUTCTime)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -53,6 +55,12 @@ data SharedCabLegStatus = SharedCabLegStatus
 -- | Shared cabs ship in GTFS under the SHARED_CAB agency (agency gtfsId `<feed>:SHARED_CAB`).
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
+
+-- | Shared cabs are frequency-based GTFS (no fixed trips), so the GIMS bus-schedule availability filter
+-- always returns nothing for them; availability is already decided by the search gate. A shared-cab leg
+-- bypasses that filter and resolves its fares under the SHARED_CAB tier; every other agency returns Nothing.
+sharedCabFareTiers :: Maybe Text -> Maybe [ServiceTierType]
+sharedCabFareTiers mbAgencyGtfsId = [SHARED_CAB] <$ guard (maybe False isSharedCabAgency mbAgencyGtfsId)
 
 -- | The FINDING stint's clock: has it run fallbackAfterSec (the allocation tick pushes "board any cab" on this same test).
 fallbackTimeElapsed :: UTCTime -> UTCTime -> Int -> Bool

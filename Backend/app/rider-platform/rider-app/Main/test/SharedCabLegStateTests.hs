@@ -3,6 +3,7 @@
 
 module SharedCabLegStateTests (tests) where
 
+import qualified "beckn-spec" BecknV2.FRFS.Enums as Spec
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -21,6 +22,12 @@ tests =
         [ testCase "SHARED_CAB agency" $ isSharedCabAgency "shillong_shared_cab:SHARED_CAB" @?= True,
           testCase "bus agency" $ isSharedCabAgency "chennai_bus:MTC" @?= False,
           testCase "bare SHARED_CAB id" $ isSharedCabAgency "SHARED_CAB" @?= True
+        ],
+      testGroup
+        "B5: shared-cab leg bypasses the bus-schedule filter with the SHARED_CAB tier"
+        [ testCase "SHARED_CAB agency -> SHARED_CAB tier" $ sharedCabFareTiers (Just "shillong_shared_cab:SHARED_CAB") @?= Just [Spec.SHARED_CAB],
+          testCase "bus agency -> no bypass" $ sharedCabFareTiers (Just "chennai_bus:MTC") @?= Nothing,
+          testCase "no agency -> no bypass" $ sharedCabFareTiers Nothing @?= Nothing
         ],
       testGroup
         "07 section 3: state from the 05 section 2 encoding"
