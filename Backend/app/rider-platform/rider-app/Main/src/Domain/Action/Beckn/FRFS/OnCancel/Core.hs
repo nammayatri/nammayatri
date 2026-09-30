@@ -54,7 +54,7 @@ onCancelCore merchant booking' dOnCancel = do
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
       return Nothing
     Spec.CANCELLED -> do
-      sideEffectData <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId (isCounterCancellation dOnCancel)
+      sideEffectData <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.vendorRefunds dOnCancel.messageId (isCounterCancellation dOnCancel)
       return (Just sideEffectData)
     Spec.CANCEL_INITIATED -> do
       void $ FRFSUtils.markFRFSBookingStatus FTBooking.CANCEL_INITIATED "cancel_initiated" booking

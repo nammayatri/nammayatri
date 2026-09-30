@@ -28,6 +28,7 @@ Refunds:
     completedAt: Maybe UTCTime
     arnGeneratedAt: Maybe UTCTime
     actualRefundedAmount: Maybe HighPrecMoney
+    split: Maybe Value
 
   constraints:
     orderId: SecondaryKey
