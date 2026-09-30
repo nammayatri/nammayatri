@@ -302,6 +302,7 @@ processAssignment req = do
                 vehicleNumber = req.vehicleDetails.number,
                 vehicleColor = req.vehicleDetails.color,
                 vehicleModel = fromMaybe "" req.vehicleDetails.model,
+                assignedVehicleVariant = Just req.vehicleDetails.variant,
                 otp = req.otp,
                 isInitiatedByCronJob = False,
                 isTierUpgrade = req.isTierUpgrade,

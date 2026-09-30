@@ -186,6 +186,9 @@ data BookingDetails = BookingDetails
     vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
+    -- | Actual variant of the assigned vehicle, as sent by the provider in fulfillment.vehicle.
+    -- Nothing when the provider did not send it or it could not be parsed.
+    assignedVehicleVariant :: Maybe DV.VehicleVariant,
     otp :: Text,
     isInitiatedByCronJob :: Bool,
     isTierUpgrade :: Bool,
@@ -405,7 +408,9 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         traveledDistance = Nothing,
         driverArrivalTime = Nothing,
         driverArrivalStatus = Nothing,
-        vehicleVariant = DV.castServiceTierToVariant booking.vehicleServiceTierType, -- fix later
+        -- Prefer the real variant of the assigned vehicle; fall back to the booked tier's default
+        -- variant only when the provider did not send one (e.g. non value-add NPs).
+        vehicleVariant = fromMaybe (DV.castServiceTierToVariant booking.vehicleServiceTierType) bookingDetails.assignedVehicleVariant,
         vehicleServiceTierType = Just booking.vehicleServiceTierType,
         createdAt = now,
         updatedAt = now,

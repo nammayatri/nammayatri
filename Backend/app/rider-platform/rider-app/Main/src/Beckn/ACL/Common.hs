@@ -127,6 +127,11 @@ parseBookingDetails order msgId = do
   let vehicleColor = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor)
       vehicleModel = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel)
       vehicleNumber = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration)
+      vehicleCategory = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleCategory)
+      vehicleVariantText = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleVariant)
+      assignedVehicleVariant = Utils.parseVehicleVariant (T.toUpper <$> vehicleCategory) (T.toUpper <$> vehicleVariantText)
+  when (isJust vehicleVariantText && isNothing assignedVehicleVariant) $
+    logWarning $ "RideAssigned: unable to parse vehicle category:-" <> show vehicleCategory <> ", vehicle variant:-" <> show vehicleVariantText
   let fulfillmentTagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
       isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< Utils.getTag Tag.IS_TIER_UPGRADE fulfillmentTagGroups)
       assignedServiceTierName = Utils.getTag Tag.ASSIGNED_SERVICE_TIER_NAME fulfillmentTagGroups
