@@ -67,18 +67,26 @@ retryStep maxAttempts attemptsDone
   | attemptsDone >= maxAttempts = GiveUp
   | otherwise = AttemptRefund (attemptsDone + 1)
 
--- | batch9 H2: what the refund pass knows about the marked booking's refund BEFORE it decides anything --
--- the marker can outlive the refund it was armed for (the push side raced it, ops refunded by hand, a
--- sibling pass started it). The sweep fills this from the booking-payment row's status and the payment
--- order's refund records (SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep.refundPaymentState).
+-- | batch9 H2/H3: what the refund pass knows about the marked booking's refund BEFORE it decides anything
+-- -- the marker can outlive the refund it was armed for (the push side raced it, ops refunded by hand, a
+-- sibling pass started it). The sweep fills this from the payment order's refund records FIRST, then the
+-- booking-payment row's status (SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep.refundPaymentState).
 data PaymentState
-  = -- | the payment row says REFUND_PENDING or REFUND_INITIATED: a refund start is in flight
-    PaymentRefundStarted
-  | -- | the payment row says REFUNDED: done already
-    PaymentRefunded
-  | -- | the row's status has not caught up, but the payment order already carries a refund record
-    -- (the evidence refundWithAmount consults before creating one)
+  = -- | the payment order already carries a refund record (the same evidence refundWithAmount /
+    -- createRefundService consult before creating one): Done whatever the status column says
     PaymentRefundRecord
+  | -- | no refund record on this read, but the payment row says REFUND_INITIATED: that status is stamped
+    -- ONLY from an existing refunds row ("refund_api_call_success" in SharedLogic.Payment's
+    -- bookingsRefundStatusHandler), so the record exists in transit -- Done
+    PaymentRefundInitiatedNoRecord
+  | -- | no refund record on this read, but the payment row says REFUNDED: settled -- done already
+    PaymentRefundedNoRecord
+  | -- | no refund record, payment row says REFUND_PENDING: the H3 stale mark.
+    -- markRefundPendingAndSyncOrderStatus stamps REFUND_PENDING BEFORE syncOrderStatus has created the
+    -- refund row, so a gateway-side failure leaves exactly this shape: money silently un-refunded were it
+    -- read as "started". With NO record it is an owed refund; another startRefund is idempotent here
+    -- (createRefundService's one-refund-per-order guard covers a record landing in the race window)
+    PaymentRefundPendingNoRecord
   | -- | no payment row at all: terminal -- this is the free-booking shape, or data loss; either way nothing
     -- can be retried into existence (same conclusion as the cancel-start path: "no payment to refund")
     PaymentMissing
@@ -96,15 +104,18 @@ data RetryAction
     Terminal
   deriving (Show, Eq)
 
--- | The idempotency decide (batch9 H2): evidence of a refund -- started, refunded, or a refund record on
--- the order -- is DONE (the marker's work is someone else's now); a missing payment row is TERMINAL -- the
--- refund pass must NOT loop markers forever on bookings that can never be refunded; only the genuinely owed
+-- | The idempotency decide (batch9 H2, record-over-status per H3): ANY refund record on the order is DONE,
+-- whatever the status column says; REFUND_INITIATED/REFUNDED without a record on this read are still DONE
+-- (both statuses are only ever stamped from a refunds row in transit); REFUND_PENDING with NO record is the
+-- H3 pre-gateway stale mark -- START again, the refund is owed; a missing payment row is TERMINAL -- the
+-- refund pass must NOT loop markers forever on bookings that can never be refunded; and the plain owed
 -- state retries the start. Every state maps somewhere: the matrix has no fall-through.
 decideRetryStep :: PaymentState -> RetryAction
 decideRetryStep = \case
-  PaymentRefundStarted -> Done
-  PaymentRefunded -> Done
   PaymentRefundRecord -> Done
+  PaymentRefundInitiatedNoRecord -> Done
+  PaymentRefundedNoRecord -> Done
+  PaymentRefundPendingNoRecord -> Start
   PaymentMissing -> Terminal
   PaymentOwed -> Start
 

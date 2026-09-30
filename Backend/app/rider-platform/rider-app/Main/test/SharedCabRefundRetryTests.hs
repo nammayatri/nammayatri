@@ -69,26 +69,30 @@ tests =
         ++ h2StateMatrix
     )
 
--- | batch9 H2: the refund pass decides idempotently from the payment evidence BEFORE any startRefund.
--- The matrix is falsified state by state, and the mutation guards pin the two halves of the lesson: only the
--- genuinely owed state ever retries a start, and a missing payment row is terminal instead of looping the
--- marker forever.
+-- | batch9 H2/H3: the refund pass decides idempotently from the payment evidence BEFORE any startRefund,
+-- refund-record evidence FIRST, row status second. The matrix is falsified state by state, and the mutation
+-- guards pin the lesson's halves: any started/settled evidence unmarks, ONLY owed evidence retries a start,
+-- a missing payment row is terminal, and the H3 stale mark (REFUND_PENDING, no record) is owed -- not done.
 h2StateMatrix :: [TestTree]
 h2StateMatrix =
   [ testGroup
-      "decideRetryStep: idempotency before startRefund (H2)"
-      [ testCase "refund already in flight (REFUND_PENDING or REFUND_INITIATED on the row) => Done: no new startRefund, no re-mark" $
-          decideRetryStep PaymentRefundStarted @?= Done,
-        testCase "row says REFUNDED => Done" $
-          decideRetryStep PaymentRefunded @?= Done,
-        testCase "an existing refund record on the order => Done, even if the row status has not caught up" $
+      "decideRetryStep: idempotency before startRefund (H2, record-over-status per H3)"
+      [ testCase "an existing refund record on the order => Done, whatever the status column says" $
           decideRetryStep PaymentRefundRecord @?= Done,
+        testCase "REFUND_INITIATED with no record on this read => Done (that status is stamped only from a refunds row in transit)" $
+          decideRetryStep PaymentRefundInitiatedNoRecord @?= Done,
+        testCase "REFUNDED with no record on this read => Done (settled already)" $
+          decideRetryStep PaymentRefundedNoRecord @?= Done,
+        testCase "H3: REFUND_PENDING with NO refund record => Start (the pre-gateway stale mark; silent Done would leave the money un-refunded)" $
+          decideRetryStep PaymentRefundPendingNoRecord @?= Start,
         testCase "missing payment row => Terminal (aligned with the cancel-start path: no payment to refund; the marker must not loop)" $
           decideRetryStep PaymentMissing @?= Terminal,
-        testCase "a payment row with no refund evidence is the only state that retries the start" $
+        testCase "a payment row with no refund evidence retries the start" $
           decideRetryStep PaymentOwed @?= Start,
-        testCase "mutation guards: owed is not Done/Terminal, missing is not Start" $ do
+        testCase "mutation guards: owed states are not Done/Terminal, settled/stale evidence is not confused, missing is not Start" $ do
           (decideRetryStep PaymentOwed == Done || decideRetryStep PaymentOwed == Terminal) @?= False
+          (decideRetryStep PaymentRefundPendingNoRecord == Done || decideRetryStep PaymentRefundPendingNoRecord == Terminal) @?= False
+          decideRetryStep PaymentRefundRecord @?= Done
           decideRetryStep PaymentMissing @?= Terminal
       ]
   ]

@@ -191,7 +191,10 @@ sweepCity mocId =
 -- (refundPaymentState + RefundRetry.decideRetryStep): a refund already started/settled anywhere else --
 -- the row status, or an existing refund record on the order -- unmarks with no new startRefund and no
 -- re-mark of the payment status; a MISSING payment row is terminal (same text as the cancel-start path's
--- "has no payment to refund") and never retried; only real "owed" evidence retries the start.)
+-- "has no payment to refund") and never retried; only real "owed" evidence retries the start.
+-- batch9 H3: the decide reads refund RECORDS before the row's status, because the cancel path stamps
+-- REFUND_PENDING before the gateway refund exists -- a stale REFUND_PENDING with no record is owed, not
+-- started.)
 refundPass ::
   (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, MonadMask m, FindingTimeout.CancelFlow m r c) =>
   Id DMOC.MerchantOperatingCity ->
@@ -235,8 +238,10 @@ refundPass mocId
                     0 <$ RefundRetry.clearRefundRetry mocId bookingId
                   -- aligned with the cancel-start path's missing-payment text: there is nothing to retry
                   -- (a free booking owes no refund), so the marker is terminal, not queued again.
+                  -- LOW-1: terminal means a charged booking's refund can never self-heal here -- that is
+                  -- an ops event, so it logs as an OPS-ALERT error, not a warning.
                   RefundRetry.Terminal -> do
-                    logWarning $ "shared-cab refund retry: booking " <> bookingId.getId <> " has no payment to refund (decideRetryStep Terminal); unmarking, no more retries"
+                    logError $ "OPS-ALERT: shared-cab refund retry: booking " <> bookingId.getId <> " has no payment to refund (decideRetryStep Terminal); unmarking, no more retries -- hand to ops"
                     0 <$ RefundRetry.clearRefundRetry mocId bookingId
                   RefundRetry.Start -> do
                     started <- FindingTimeout.startRefund b
@@ -249,11 +254,16 @@ refundPass mocId
                         pure 0
                       else 1 <$ RefundRetry.bumpRefundRetry bookingId n
 
--- | batch9 H2: the booking's refund evidence, in the order the cancel-start path would read it: the
--- booking-payment row's status first (a started refund always leaves REFUND_PENDING/REFUND_INITIATED/REFUNDED
--- on it), then the payment order's refund records (the same refund-row evidence refundWithAmount consults
--- before creating one). A missing order row leaves Owed: startRefund's own throw (PaymentOrderNotFound)
--- keeps today's fail-to-cap behavior, which is where the OPS-ALERT fires.
+-- | batch9 H3: the booking's refund evidence, in ground-truth order: the payment order's refund records
+-- FIRST (HQRefunds.findLatestByOrderId -- the same evidence refundWithAmount and createRefundService
+-- consult before creating one), THEN the booking-payment row's status. The order is the fix:
+-- markRefundPendingAndSyncOrderStatus stamps REFUND_PENDING BEFORE syncOrderStatus creates the refund row,
+-- so a gateway-side failure leaves REFUND_PENDING with NO refund record -- status-first read that as
+-- "started" and unmarked with the money un-refunded. Now only REFUND_INITIATED/REFUNDED are trusted
+-- without a record: both are stamped only from a refunds row in transit (SharedLogic.Payment's
+-- bookingsRefundStatusHandler). A missing order row leaves the status-only mapping (no records to read):
+-- Owed/PendingNoRecord still reach startRefund, whose own throw (PaymentOrderNotFound) keeps the
+-- fail-to-cap behavior, which is where the OPS-ALERT fires.
 refundPaymentState ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   DFTB.FRFSTicketBooking ->
@@ -261,13 +271,15 @@ refundPaymentState ::
 refundPaymentState b =
   QFRFSTicketBookingPayment.findTicketBookingPayment b >>= \case
     Nothing -> pure RefundRetry.PaymentMissing
-    Just payment
-      | payment.status == DTBP.REFUND_PENDING || payment.status == DTBP.REFUND_INITIATED -> pure RefundRetry.PaymentRefundStarted
-      | payment.status == DTBP.REFUNDED -> pure RefundRetry.PaymentRefunded
-      | otherwise ->
+    Just payment -> do
+      mbRefundRecord <-
         QPaymentOrder.findById payment.paymentOrderId >>= \case
-          Nothing -> pure RefundRetry.PaymentOwed
-          Just paymentOrder ->
-            HQRefunds.findLatestByOrderId paymentOrder.shortId >>= \case
-              Just _ -> pure RefundRetry.PaymentRefundRecord
-              Nothing -> pure RefundRetry.PaymentOwed
+          Nothing -> pure Nothing
+          Just paymentOrder -> HQRefunds.findLatestByOrderId paymentOrder.shortId
+      case mbRefundRecord of
+        Just _ -> pure RefundRetry.PaymentRefundRecord
+        Nothing
+          | payment.status == DTBP.REFUND_INITIATED -> pure RefundRetry.PaymentRefundInitiatedNoRecord
+          | payment.status == DTBP.REFUNDED -> pure RefundRetry.PaymentRefundedNoRecord
+          | payment.status == DTBP.REFUND_PENDING -> pure RefundRetry.PaymentRefundPendingNoRecord
+          | otherwise -> pure RefundRetry.PaymentOwed
