@@ -2173,6 +2173,7 @@ test-suite rider-app-test
       FRFS.DirectQR
       SharedCabAllocationTests
       SharedCabBoardingTests
+      SharedCabCancelRefusalTests
       SharedCabConfigTests
       SharedCabDegradedSweepTests
       SharedCabDegradedTests

@@ -35,6 +35,22 @@ import qualified UrlShortner.Common as UrlShortner
 data CancellationInitiator = UserInitiated | Technical
   deriving (Eq, Show)
 
+-- | R80 (batch9: the refusal pulled out as a total pure decide, unit-tested one level in from the forked
+-- dispatcher in `cancel` below): what the ONDC branch's guard decides for a booking. The booking side is its
+-- service tier out of routeStationsJson (SharedLogic.SharedCab.RefundDecision.isSharedCabBooking's test,
+-- one call in).
+data CancelDispatchRefusal
+  = -- | shared-cab through the ONDC dispatcher: the branch refuses with CancellationNotSupported
+    RefuseSharedCabOndc
+  | -- | anything else dispatches: the direct/EBIX path applies the refund-policy decision
+    DispatchProceeds
+  deriving (Eq, Show)
+
+decideCancelDispatchRefusal :: ProviderConfig -> Maybe Spec.ServiceTierType -> CancelDispatchRefusal
+decideCancelDispatchRefusal providerConfig mbServiceTierType = case providerConfig of
+  ONDC _ | mbServiceTierType == Just Spec.SHARED_CAB -> RefuseSharedCabOndc
+  _ -> DispatchProceeds
+
 -- Caller should handle sideEffectData and call cancelJourney based on the cancellationType
 cancel ::
   ( CacheFlow m r,
@@ -96,7 +112,7 @@ cancel merchant merchantOperatingCity bapConfig cancellationType initiator enfor
         -- branch never reads the policy's refund decision (RefundDecision), letting the BPP re-refund on top
         -- of the tick's. Shared-cab providers are direct-integrated (agency key `<feed>:SHARED_CAB`), so today
         -- this is a config error: refuse loudly instead of cancelling through the wrong contract.
-        when (isSharedCabBooking booking) $ do
+        when (decideCancelDispatchRefusal integratedBPPConfig.providerConfig (FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson) == RefuseSharedCabOndc) $ do
           logError $ "shared-cab booking " <> booking.id.getId <> " reached the ONDC cancel dispatcher (integratedBPPConfig=" <> integratedBPPConfig.id.getId <> "): booking would sit CONFIRMED until on_cancel and the refund policy decision would be ignored; refusing"
           throwError CancellationNotSupported
         fork "FRFS ONDC Cancel Req" $ do

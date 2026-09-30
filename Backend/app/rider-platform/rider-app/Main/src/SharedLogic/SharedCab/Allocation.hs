@@ -115,6 +115,7 @@ import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
+import SharedLogic.SharedCab.DegradedSweepSchedule (sharedCabAllocationEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP), fallbackReached, fallbackTimeElapsed)
@@ -207,10 +208,9 @@ data FindingBooking = FindingBooking
 -- Gate + the city scan (FINDING and ALLOCATED views)
 --------------------------------------------------------------------------------
 
--- | HARD GATE. The queries are real now (FINDING below, seats via Booking.liveSeatsOnVehicle), but the
--- engine has never run end to end: flip only after the 7.x scenario run, as a human decision.
-sharedCabAllocationEnabled :: Bool
-sharedCabAllocationEnabled = False
+-- | batch9 H1: `sharedCabAllocationEnabled`'s definition now lives in SharedLogic.SharedCab.DegradedSweepSchedule
+-- (the shared sweep+refund chain needs the flag to gate the refund pass's claim, and this module's import
+-- closure reaches that module through Session); the name stays exported from here, unchanged for all callers.
 
 -- | The city's live shared-cab bookings (partial index idx_frfs_ticket_booking_shared_cab_city), each
 -- with its ticket statuses: the tick's FINDING and ALLOCATED views both come from this one read.

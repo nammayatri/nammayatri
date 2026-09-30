@@ -18,6 +18,10 @@ module SharedLogic.SharedCab.RefundRetry
     maxRefundRetryAttempts,
     RetryStep (..),
     retryStep,
+    -- batch9 H2: the sweep's idempotency decide, pure and unit-tested across the state matrix
+    PaymentState (..),
+    RetryAction (..),
+    decideRetryStep,
     markRefundRetry,
     pendingRefundRetries,
     readRefundRetryAttempts,
@@ -62,6 +66,47 @@ retryStep :: Int -> Int -> RetryStep
 retryStep maxAttempts attemptsDone
   | attemptsDone >= maxAttempts = GiveUp
   | otherwise = AttemptRefund (attemptsDone + 1)
+
+-- | batch9 H2: what the refund pass knows about the marked booking's refund BEFORE it decides anything --
+-- the marker can outlive the refund it was armed for (the push side raced it, ops refunded by hand, a
+-- sibling pass started it). The sweep fills this from the booking-payment row's status and the payment
+-- order's refund records (SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep.refundPaymentState).
+data PaymentState
+  = -- | the payment row says REFUND_PENDING or REFUND_INITIATED: a refund start is in flight
+    PaymentRefundStarted
+  | -- | the payment row says REFUNDED: done already
+    PaymentRefunded
+  | -- | the row's status has not caught up, but the payment order already carries a refund record
+    -- (the evidence refundWithAmount consults before creating one)
+    PaymentRefundRecord
+  | -- | no payment row at all: terminal -- this is the free-booking shape, or data loss; either way nothing
+    -- can be retried into existence (same conclusion as the cancel-start path: "no payment to refund")
+    PaymentMissing
+  | -- | a payment row, no refund evidence: the refund is genuinely owed -- retry the start
+    PaymentOwed
+  deriving (Show, Eq)
+
+-- | What one sweep visit of one marked booking does, BEFORE any effect runs (pure, so the matrix is testable):
+data RetryAction
+  = -- | call FindingTimeout.startRefund (the only action that touches the payment service)
+    Start
+  | -- | unmark only: no new startRefund, no re-mark of the payment status
+    Done
+  | -- | unmark + warn, and the marker never loops again
+    Terminal
+  deriving (Show, Eq)
+
+-- | The idempotency decide (batch9 H2): evidence of a refund -- started, refunded, or a refund record on
+-- the order -- is DONE (the marker's work is someone else's now); a missing payment row is TERMINAL -- the
+-- refund pass must NOT loop markers forever on bookings that can never be refunded; only the genuinely owed
+-- state retries the start. Every state maps somewhere: the matrix has no fall-through.
+decideRetryStep :: PaymentState -> RetryAction
+decideRetryStep = \case
+  PaymentRefundStarted -> Done
+  PaymentRefunded -> Done
+  PaymentRefundRecord -> Done
+  PaymentMissing -> Terminal
+  PaymentOwed -> Start
 
 -- | The refund did not start: pin the booking to its city's pending set and (re-)seed the city's
 -- degraded-sweep chain so the marker is even picked up at all. Idempotent: an already-marked booking

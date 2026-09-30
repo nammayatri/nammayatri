@@ -9,8 +9,17 @@
 -- every candidate that could need the chain is by definition in the window, and the next degrade or session
 -- open (R51 Session.selectRoute) re-seeds it.
 -- Keys are unprefixed (cross-app master cell, Booking.shared): the API seeds, the scheduler runs.
+--
+-- Amends (batch9 H1): the chain no longer belongs to the degraded sweep alone -- it also carries the R77
+-- refund-retry pass, and the two passes have different reasons to exist. Each pass's claim is its gate:
+-- claimSweepRun refuses while sharedCabDegradedSweepEnabled is off, claimRefundRetryRun refuses while
+-- sharedCabAllocationEnabled is off (refund markers only arise from finding-timeout cancels, and those only
+-- fire with allocation on), and ensureDegradedSweep seeds the chain when EITHER is on so a pass is never
+-- armed without a chain behind it. sharedCabAllocationEnabled's definition moved here (Allocation re-exports
+-- it) so this module gates on it without an Allocation -> Session -> this module import cycle.
 module SharedLogic.SharedCab.DegradedSweepSchedule
   ( sharedCabDegradedSweepEnabled,
+    sharedCabAllocationEnabled,
     sweepTickSec,
     scanWindowStart,
     -- redis key contract
@@ -44,6 +53,15 @@ import Storage.Beam.SchedulerJob ()
 sharedCabDegradedSweepEnabled :: Bool
 sharedCabDegradedSweepEnabled = False
 
+-- | HARD GATE. The queries are real now (FINDING below, seats via Booking.liveSeatsOnVehicle), but the
+-- engine has never run end to end: flip only after the 7.x scenario run, as a human decision.
+--
+-- (batch9 H1: definition home -- SharedLogic.SharedCab.Allocation re-exports this name, all call sites keep
+-- importing it from there. Here because the refund pass's claim below gates on it and Allocation's import
+-- closure reaches this module through Session.)
+sharedCabAllocationEnabled :: Bool
+sharedCabAllocationEnabled = False
+
 -- | Sweep cadence, far below the degraded horizon (Config.degradedTimeoutSec is minutes-to-hours):
 -- a ride whose rider never polls ends at most one tick after its marker dies. The scan is bounded
 -- (updatedAt-front 3x the horizon, keyset-paged), so a tight tick costs about nothing.
@@ -70,14 +88,25 @@ setNx :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> m Bool
 setNx key ttl = shared $ Redis.setNxExpire key ttl ()
 
 -- | Idempotent; no chain while the sweep is gated off.
+--
+-- (batch9 H1 wording: "gated off" now means NEITHER pass is enabled -- the chain seeds when the degraded
+-- sweep OR the refund pass (allocation) is on. All three armers -- Boarding.degradedBoarding, R51's
+-- Session.selectRoute, R77's RefundRetry.markRefundRetry -- call this same ensure, so an armed refund
+-- marker always has a chain behind it once allocation go-live flips on.)
 ensureDegradedSweep :: (JobCreator r m, Redis.HedisFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureDegradedSweep merchantId mocId =
-  when sharedCabDegradedSweepEnabled $
+  when (sharedCabDegradedSweepEnabled || sharedCabAllocationEnabled) $
     whenM (setNx (sweepJobGuardKey mocId) (2 * sweepTickSec)) $ createNext merchantId mocId
 
 -- | False when another chain already ran within this tick: the caller stops without rescheduling.
+--
+-- batch9 H1: the claim carries the pass's own gate (folding in what
+-- SharedLogic.Scheduler.Jobs.SharedCabDegradedSweep used to test beside the claim): gated off, this pass
+-- neither claims nor runs -- and it must not hold the chain up for the refund pass.
 claimSweepRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
-claimSweepRun mocId = setNx (sweepRunKey mocId) (sweepTickSec - 5)
+claimSweepRun mocId
+  | not sharedCabDegradedSweepEnabled = pure False
+  | otherwise = setNx (sweepRunKey mocId) (sweepTickSec - 5)
 
 -- | R77: the refund-retry pass of the same sweep run claims its own cadence: a run whose degraded/plated
 -- passes recovered before the body reached the refund pass (or whose claim was contested) skips the refund
@@ -85,8 +114,13 @@ claimSweepRun mocId = setNx (sweepRunKey mocId) (sweepTickSec - 5)
 refundRetryRunKey :: Id DMOC.MerchantOperatingCity -> Text
 refundRetryRunKey mocId = "sharedcab:refundretryRun:" <> mocId.getId
 
+-- | R77: the refund-retry pass's claim, with its own gate (batch9 H1): refund markers only arise from
+-- finding-timeout cancels, and those only fire while allocation runs -- so the refund pass lives with
+-- sharedCabAllocationEnabled, not with the degraded sweep's gate. Gated off, it neither claims nor runs.
 claimRefundRetryRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
-claimRefundRetryRun mocId = setNx (refundRetryRunKey mocId) (sweepTickSec - 5)
+claimRefundRetryRun mocId
+  | not sharedCabAllocationEnabled = pure False
+  | otherwise = setNx (refundRetryRunKey mocId) (sweepTickSec - 5)
 
 -- | One sweep body at a time per city: a shard-duplicated run that finds the lease held skips silently.
 -- The TTL (10x the tick) comfortably outlives a sweep; it only bounds a crashed holder. The lease carries an
@@ -100,9 +134,10 @@ withSweepLease mocId action = do
   acquired <- shared $ Redis.setNxExpire key (10 * sweepTickSec) owner
   if not acquired
     then pure Nothing
-    else (Just <$> action) `finally` shared do
-      current <- Redis.safeGet key
-      when (current == Just owner) $ Redis.unlockRedis (sweepLeaseKey mocId)
+    else
+      (Just <$> action) `finally` shared do
+        current <- Redis.safeGet key
+        when (current == Just owner) $ Redis.unlockRedis (sweepLeaseKey mocId)
 
 scheduleNextSweep :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 scheduleNextSweep merchantId mocId = do

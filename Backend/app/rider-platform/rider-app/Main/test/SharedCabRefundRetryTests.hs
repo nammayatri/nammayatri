@@ -7,10 +7,10 @@
 -- from the city set, ops alerted once).
 module SharedCabRefundRetryTests (tests) where
 
-import "rider-app" SharedLogic.SharedCab.RefundRetry (RetryStep (..), maxRefundRetryAttempts, refundRetryCityKey, refundRetryKey, refundRetryTtlSec, retryStep)
 import qualified "rider-app" Domain.Types.FRFSTicketBooking as DFTB
 import qualified "rider-app" Domain.Types.MerchantOperatingCity as DMOC
 import "mobility-core" Kernel.Types.Id (Id (..))
+import "rider-app" SharedLogic.SharedCab.RefundRetry (PaymentState (..), RetryAction (..), RetryStep (..), decideRetryStep, maxRefundRetryAttempts, refundRetryCityKey, refundRetryKey, refundRetryTtlSec, retryStep)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Prelude
@@ -43,26 +43,52 @@ tests :: TestTree
 tests =
   testGroup
     "shared-cab refund retry (R77)"
-    [ testCase "retryStep caps: attempts below the max retry, at and above it the sweep gives up" $
-        map (retryStep maxRefundRetryAttempts) [0, 1, 4, 5, 100] @?= [AttemptRefund 1, AttemptRefund 2, AttemptRefund 5, GiveUp, GiveUp],
-      testCase "five consecutive failures cost five real attempts, then exactly one ops-alert" $
-        steps maxRefundRetryAttempts 0 (alwaysFails 60) @?= [Tried 1, Tried 2, Tried 3, Tried 4, Tried 5, Alerted],
-      testCase "a success on any attempt ends the series with no alert" $
-        map (steps maxRefundRetryAttempts 0) [[True], [False, False, True]]
-          @?= [[Tried 1, Cleared], [Tried 1, Tried 2, Tried 3, Cleared]],
-      testCase "after cap failures the give-up fires BEFORE the refund is attempted again (a queued success never runs)" $
-        steps maxRefundRetryAttempts 0 (replicate maxRefundRetryAttempts False ++ [True]) @?= map Tried [1 .. maxRefundRetryAttempts] ++ [Alerted],
-      testCase "a success on the cap attempt is still a success (the cap binds only the NEXT decision)" $
-        steps maxRefundRetryAttempts 0 (replicate (maxRefundRetryAttempts - 1) False <> [True]) @?= map Tried [1 .. maxRefundRetryAttempts] <> [Cleared],
-      testCase "the alert fires at most once per marker lifetime (GiveUp removes the booking from the visited set)" $
-        length (filter (== Alerted) (steps maxRefundRetryAttempts 0 (alwaysFails 60))) @?= 1,
-      testCase "markers are per booking + per city and carry a days-scale TTL" $ do
-        let b1 = Id "booking-1" :: Id DFTB.FRFSTicketBooking
-            b2 = Id "booking-2" :: Id DFTB.FRFSTicketBooking
-            c1 = Id "city-1" :: Id DMOC.MerchantOperatingCity
-            c2 = Id "city-2" :: Id DMOC.MerchantOperatingCity
-        assertBool "booking key must name the booking" (refundRetryKey b1 == "sharedcab:refundretry:booking-1")
-        assertBool "per-booking keys differ" (refundRetryKey b1 /= refundRetryKey b2)
-        assertBool "per-city keys differ" (refundRetryCityKey c1 /= refundRetryCityKey c2)
-        assertBool "TTL is a couple of days" (refundRetryTtlSec >= 2 * 24 * 3600)
-    ]
+    ( [ testCase "retryStep caps: attempts below the max retry, at and above it the sweep gives up" $
+          map (retryStep maxRefundRetryAttempts) [0, 1, 4, 5, 100] @?= [AttemptRefund 1, AttemptRefund 2, AttemptRefund 5, GiveUp, GiveUp],
+        testCase "five consecutive failures cost five real attempts, then exactly one ops-alert" $
+          steps maxRefundRetryAttempts 0 (alwaysFails 60) @?= [Tried 1, Tried 2, Tried 3, Tried 4, Tried 5, Alerted],
+        testCase "a success on any attempt ends the series with no alert" $
+          map (steps maxRefundRetryAttempts 0) [[True], [False, False, True]]
+            @?= [[Tried 1, Cleared], [Tried 1, Tried 2, Tried 3, Cleared]],
+        testCase "after cap failures the give-up fires BEFORE the refund is attempted again (a queued success never runs)" $
+          steps maxRefundRetryAttempts 0 (replicate maxRefundRetryAttempts False ++ [True]) @?= map Tried [1 .. maxRefundRetryAttempts] ++ [Alerted],
+        testCase "a success on the cap attempt is still a success (the cap binds only the NEXT decision)" $
+          steps maxRefundRetryAttempts 0 (replicate (maxRefundRetryAttempts - 1) False <> [True]) @?= map Tried [1 .. maxRefundRetryAttempts] <> [Cleared],
+        testCase "the alert fires at most once per marker lifetime (GiveUp removes the booking from the visited set)" $
+          length (filter (== Alerted) (steps maxRefundRetryAttempts 0 (alwaysFails 60))) @?= 1,
+        testCase "markers are per booking + per city and carry a days-scale TTL" $ do
+          let b1 = Id "booking-1" :: Id DFTB.FRFSTicketBooking
+              b2 = Id "booking-2" :: Id DFTB.FRFSTicketBooking
+              c1 = Id "city-1" :: Id DMOC.MerchantOperatingCity
+              c2 = Id "city-2" :: Id DMOC.MerchantOperatingCity
+          assertBool "booking key must name the booking" (refundRetryKey b1 == "sharedcab:refundretry:booking-1")
+          assertBool "per-booking keys differ" (refundRetryKey b1 /= refundRetryKey b2)
+          assertBool "per-city keys differ" (refundRetryCityKey c1 /= refundRetryCityKey c2)
+          assertBool "TTL is a couple of days" (refundRetryTtlSec >= 2 * 24 * 3600)
+      ]
+        ++ h2StateMatrix
+    )
+
+-- | batch9 H2: the refund pass decides idempotently from the payment evidence BEFORE any startRefund.
+-- The matrix is falsified state by state, and the mutation guards pin the two halves of the lesson: only the
+-- genuinely owed state ever retries a start, and a missing payment row is terminal instead of looping the
+-- marker forever.
+h2StateMatrix :: [TestTree]
+h2StateMatrix =
+  [ testGroup
+      "decideRetryStep: idempotency before startRefund (H2)"
+      [ testCase "refund already in flight (REFUND_PENDING or REFUND_INITIATED on the row) => Done: no new startRefund, no re-mark" $
+          decideRetryStep PaymentRefundStarted @?= Done,
+        testCase "row says REFUNDED => Done" $
+          decideRetryStep PaymentRefunded @?= Done,
+        testCase "an existing refund record on the order => Done, even if the row status has not caught up" $
+          decideRetryStep PaymentRefundRecord @?= Done,
+        testCase "missing payment row => Terminal (aligned with the cancel-start path: no payment to refund; the marker must not loop)" $
+          decideRetryStep PaymentMissing @?= Terminal,
+        testCase "a payment row with no refund evidence is the only state that retries the start" $
+          decideRetryStep PaymentOwed @?= Start,
+        testCase "mutation guards: owed is not Done/Terminal, missing is not Start" $ do
+          (decideRetryStep PaymentOwed == Done || decideRetryStep PaymentOwed == Terminal) @?= False
+          decideRetryStep PaymentMissing @?= Terminal
+      ]
+  ]
