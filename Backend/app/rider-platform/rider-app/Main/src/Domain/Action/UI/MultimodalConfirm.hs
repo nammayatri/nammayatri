@@ -1302,7 +1302,10 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                   mkResponse stations routes routeStops bppConfig mbServiceType
               )
               >>= \case
-                Left err -> throwError (PublicTransportDataUnavailable $ "Public transport data unavailable: " <> show err)
+                Left err -> do
+                  fork "incrementRouteNotFoundCounter" $
+                    Metrics.incrementRouteNotFoundCounter merchant.shortId.getShortId merchantOperatingCityId.getId routeCode
+                  throwError (PublicTransportDataUnavailable $ "Public transport data unavailable: " <> show err)
                 Right response -> return response
           Nothing -> do
             stations <- OTPRest.getStationsByGtfsId Nothing bppConfig
