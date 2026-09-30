@@ -263,7 +263,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     -- the tip it currently has set, e.g. after a restart. Mirrors RideAPIEntity.tipAmount.
     tipAmount :: Maybe PriceAPIEntity,
     bookingDepositAmount :: Maybe HighPrecMoney,
-    pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo
+    pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo,
+    isSilentReallocation :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -711,7 +712,7 @@ buildBookingStatusAPIEntity booking = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea)
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

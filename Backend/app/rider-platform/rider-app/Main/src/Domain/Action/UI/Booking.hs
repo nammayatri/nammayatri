@@ -129,7 +129,8 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
   fork "booking status update" $ checkBookingsForStatus [booking]
   logInfo $ "booking: test " <> show booking
   handleConfirmTtlExpiry booking
-  SRB.buildBookingStatusAPIEntity booking
+  mbSilentCtx <- SilentRealloc.getSilentReallocation booking.riderId
+  SilentRealloc.maskSilentReallocationBookingStatus mbSilentCtx <$> SRB.buildBookingStatusAPIEntity booking
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
