@@ -264,7 +264,7 @@ instance IsBaseError DriverError where
   toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
   toMessage AccountBlocked = Just "Account has been blocked."
   toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
-  toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient airport entry fee balance. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
+  toMessage (InsufficientAirportBalance required available) = Just $ "Insufficient wallet balance for this ride. Required: " <> show required <> ", Available: " <> show available <> ". Please recharge before starting this ride."
   toMessage DriverNotEnabledForAirport = Just "Driver is not enabled for airport rides"
   toMessage DriverAirportAlreadyBlocked = Just "Driver is already blocked for airport rides."
   toMessage AvailableForRidesNotEnabled = Just "Available for rides is not enabled for this city."

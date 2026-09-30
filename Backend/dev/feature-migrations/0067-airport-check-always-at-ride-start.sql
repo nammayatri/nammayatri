@@ -1,0 +1,3 @@
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET airport_entry_fee_check_at_start_ride = true
+WHERE airport_entry_fee_check_at_start_ride IS DISTINCT FROM true;

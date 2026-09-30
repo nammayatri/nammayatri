@@ -145,6 +145,8 @@ module SharedLogic.Finance.Wallet
     walletReferenceAirportEntryFeeGST,
     walletReferenceAirportEntryFee,
     walletReferenceGateDriverFee,
+    walletReferencePlatformFee,
+    walletReferencePlatformFeeGST,
     walletReferenceVATInput,
     walletReferenceCancellationVATInput,
     walletReferenceTips,
@@ -388,6 +390,14 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 walletReferenceGateDriverFee :: Text
 walletReferenceGateDriverFee = "GateDriverFee"
 
+-- | Reference type for the base portion of a wallet-settled platform fee at EndRide
+walletReferencePlatformFee :: Text
+walletReferencePlatformFee = "PlatformFee"
+
+-- | Reference type for the GST (cgst + sgst) on a wallet-settled platform fee at EndRide
+walletReferencePlatformFeeGST :: Text
+walletReferencePlatformFeeGST = "PlatformFeeGST"
+
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
 
@@ -468,6 +478,8 @@ walletCreditRefs =
     walletReferenceCustomerCancellationCharges,
     walletReferenceDriverCancellationCharges,
     walletReferenceCustomerCancellationGST,
+    walletReferencePlatformFee,
+    walletReferencePlatformFeeGST,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
     walletReferenceCommissionVATOnline,
@@ -670,12 +682,16 @@ resolveIsOnlineFromBooking booking = do
 
 -- | Build a minimal FinanceCtx without invoice fields (for callers that
 --   only need transfers, not invoices).
-financeCtxFromRide :: (EncFlow m r, MonadFlow m) => SRB.Booking -> DRide.Ride -> Maybe DPanCard.DriverPanCard -> Bool -> m FinanceCtx
-financeCtxFromRide booking ride mbPanCard isOnline = do
+financeCtxFromRide ::
+  (EncFlow m r, MonadFlow m) =>
+  DTC.TransporterConfig ->
+  SRB.Booking ->
+  DRide.Ride ->
+  Maybe DPanCard.DriverPanCard ->
+  Bool ->
+  m FinanceCtx
+financeCtxFromRide transporterConfig booking ride mbPanCard isOnline = do
   let merchantId = fromMaybe booking.providerId ride.merchantId
-      (cType, cId) = case ride.fleetOwnerId of
-        Just fleetOwnerId -> (FLEET_OWNER, fleetOwnerId.getId)
-        Nothing -> (DRIVER, ride.driverId.getId)
   panDecrypted <- traverse (decrypt . (.panCardNumber)) mbPanCard
   let panTypeText = mbPanCard >>= (fmap show . (.docType))
       rateReason = computeTdsRateReason mbPanCard False
@@ -685,10 +701,10 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         merchantOpCityId = booking.merchantOperatingCityId.getId,
         currency = booking.currency,
         isOnline = isOnline,
-        counterpartyType = cType,
-        counterpartyId = cId,
+        counterpartyType = DRIVER,
+        counterpartyId = ride.driverId.getId,
         concernedIndividualId = Just ride.driverId.getId,
-        referenceId = booking.id.getId,
+        referenceId = ride.id.getId,
         entityReferenceId = Nothing,
         entityReferenceType = Nothing,
         merchantName = Nothing,
@@ -704,10 +720,10 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         panOfParty = panDecrypted,
         panType = panTypeText,
         tdsRateReason = rateReason,
-        emitLedgerEntries = True,
+        emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
-        enableWalletGatedTierCheck = False, -- no transporterConfig in scope here; this function has no real callers today
+        enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
         buyerCounterpartyId = Nothing
       }
 

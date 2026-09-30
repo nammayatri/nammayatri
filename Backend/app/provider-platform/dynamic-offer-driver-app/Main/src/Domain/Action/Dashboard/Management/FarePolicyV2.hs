@@ -1363,6 +1363,7 @@ toApiPlatformFeeMethod = \case
   FarePolicyD.None -> Common.None
   FarePolicyD.SlabBased -> Common.SlabBased
   FarePolicyD.NoCharge -> Common.NoCharge
+  FarePolicyD.WalletCharged -> Common.WalletCharged
 
 fromApiPlatformFeeMethod :: Common.FPV2PlatformFeeMethod -> FarePolicyD.PlatformFeeMethods
 fromApiPlatformFeeMethod = \case
@@ -1371,6 +1372,7 @@ fromApiPlatformFeeMethod = \case
   Common.None -> FarePolicyD.None
   Common.SlabBased -> FarePolicyD.SlabBased
   Common.NoCharge -> FarePolicyD.NoCharge
+  Common.WalletCharged -> FarePolicyD.WalletCharged
 
 toApiPlatformFeeInfo :: FarePolicyD.PlatformFeeInfo -> Common.FPV2PlatformFeeInfo
 toApiPlatformFeeInfo p =
