@@ -4,6 +4,7 @@
 module Storage.Beam.Person where
 
 import qualified BecknV2.OnDemand.Enums
+import qualified Dashboard.Common
 import qualified Data.Time
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
@@ -24,6 +25,7 @@ import Tools.Beam.UtilsTH
 
 data PersonT f = PersonT
   { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
+    acceptedPolicies :: B.C f (Kernel.Prelude.Maybe Dashboard.Common.AcceptedPolicies),
     androidId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     authBlocked :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

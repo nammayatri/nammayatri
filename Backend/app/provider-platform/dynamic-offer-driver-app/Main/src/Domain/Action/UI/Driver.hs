@@ -140,6 +140,7 @@ import qualified Domain.Action.UI.Merchant as DM
 import qualified Domain.Action.UI.Payout as Payout
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Plan as DAPlan
+import qualified Domain.Action.UI.PolicyDocument as PolicyDoc
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types as DTC
@@ -1051,6 +1052,10 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
+          when (PolicyDoc.isGoOnlineBlockerActive transporterConfig) $ do
+            blockingDocs <- PolicyDoc.findBlockingUnacceptedPolicies person
+            unless (null blockingDocs) $
+              throwError $ UnacceptedMandatoryPolicies (map (.policyType) blockingDocs)
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
           mbVehicle <- QVehicle.findById personId
           mbFleetAssociation <- QFDA.findByDriverId driverId True

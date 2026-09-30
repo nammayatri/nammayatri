@@ -8,6 +8,7 @@ where
 import qualified API.Action.UI.AssetManifest as AssetManifest
 import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
+import qualified API.Action.UI.BlackListDriver as BlackListDriver
 import qualified API.Action.UI.BookingDeposit as BookingDeposit
 import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
@@ -168,6 +169,7 @@ type API =
            :<|> SocialLogin.API
            :<|> EstimateBP.API
            :<|> FavouriteDriver.API
+           :<|> BlackListDriver.API
            :<|> PartnerOrgFRFS.API
            :<|> TriggerFCM.API
            :<|> MultimodalConfirm.API
@@ -306,6 +308,7 @@ handler =
     :<|> SocialLogin.handler
     :<|> EstimateBP.handler
     :<|> FavouriteDriver.handler
+    :<|> BlackListDriver.handler
     :<|> PartnerOrgFRFS.handler
     :<|> TriggerFCM.handler
     :<|> MultimodalConfirm.handler

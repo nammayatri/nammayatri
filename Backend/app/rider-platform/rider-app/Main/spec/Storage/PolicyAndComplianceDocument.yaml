@@ -1,0 +1,52 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PolicyType: Dashboard.Common
+
+PolicyAndComplianceDocument:
+  tableName: policy_and_compliance_document
+  derives: Generic,Show,Eq,FromJSON,ToJSON
+
+  fields:
+    id: Id PolicyAndComplianceDocument
+    policyType: PolicyType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    version: Text
+    url: Text
+    isMandatory: Bool
+    enabled: Bool
+    metadata: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    isMandatory: "false"
+    enabled: "true"
+
+  sqlType:
+    id: character(36)
+    merchantId: character(36)
+    merchantOperatingCityId: character(36)
+
+  constraints:
+    id: PrimaryKey
+    policyType: "!SecondaryKey"
+
+  queries:
+    findAllByMerchant:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId]
+
+    updateFields:
+      kvFunction: updateOneWithKV
+      params: [url, isMandatory, enabled, metadata, updatedAt]
+      where: id
+
+  extraIndexes:
+    - columns: [merchantId, policyType, enabled, createdAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

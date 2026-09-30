@@ -96,6 +96,7 @@ import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FareParameters as Fare
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
@@ -141,6 +142,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import Servant (JSON, Post, ReqBody, (:>))
+import qualified SharedLogic.Allocator as Alloc
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
@@ -161,6 +163,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.IdfyVerification as QIV
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
@@ -557,10 +560,17 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
       prefetch.rideDetails
   let bookingDetails = ACL.BookingDetails {..}
   -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
-  image <- forM driver.faceImageId $ \mediaId -> do
-    mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId))
-    imagePath <- fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId)) (getQueryParam "filePath" (Text.unpack mediaEntry.url))
-    pure $ Text.pack imagePath
+  -- A driver onboarded through the document-upload flow has a ProfilePhoto row in the image table but no faceImageId,
+  -- so fall back to the latest VALID selfie instead of sending the ride-assigned update without a driver image.
+  let fetchLegacyProfileImagePath =
+        fmap (.s3Path) <$> runInReplica (QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED)
+  image <- case driver.faceImageId of
+    Just mediaId -> do
+      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId))
+      case getQueryParam "filePath" (Text.unpack mediaEntry.url) of
+        Just imagePath -> pure . Just $ Text.pack imagePath
+        Nothing -> maybe fetchLegacyProfileImagePath (pure . Just) mediaEntry.s3FilePath
+    Nothing -> fetchLegacyProfileImagePath
 
   -- let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
@@ -812,7 +822,8 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -929,7 +940,8 @@ sendRideCompletedUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -981,7 +993,8 @@ sendBookingCancelledUpdateToBAP ::
     CoreMetrics m,
     CacheFlow m r,
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   DM.Merchant ->
@@ -1093,7 +1106,8 @@ sendDriverArrivalUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
   SRide.Ride ->

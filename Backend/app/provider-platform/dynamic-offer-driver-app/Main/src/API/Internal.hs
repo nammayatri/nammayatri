@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Internal.Auth as Auth
+import qualified API.Internal.BlackListedDrivers as BlackListedDrivers
 import qualified API.Internal.BulkLocPickupUpdate as BulkLocPickupUpdate
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.Cac as Cac
@@ -67,6 +68,7 @@ type API =
            :<|> CallCustomerFCM.API
            :<|> Cac.API
            :<|> FavouriteDrivers.API
+           :<|> BlackListedDrivers.API
            :<|> KnowYourDriver.API
            :<|> DriverCoordinates.API
            :<|> PickupInstruction.API
@@ -118,6 +120,7 @@ handler env =
     :<|> CallCustomerFCM.handler
     :<|> Cac.handler
     :<|> FavouriteDrivers.handler
+    :<|> BlackListedDrivers.handler
     :<|> KnowYourDriver.handler
     :<|> DriverCoordinates.handler
     :<|> PickupInstruction.handler

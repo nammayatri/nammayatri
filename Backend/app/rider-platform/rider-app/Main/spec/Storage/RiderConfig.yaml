@@ -340,6 +340,8 @@ RiderConfig:
     # (e.g. state sync, live tracking) rather than being purely informational, where
     # suppressing the send would break the app, not just annoy the rider.
     alwaysAllowedNotificationCategories: "[NotificationCategory]"
+    enableLegalComplianceDocuments: Maybe Bool
+    enableGoOnlinePolicyBlocker: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

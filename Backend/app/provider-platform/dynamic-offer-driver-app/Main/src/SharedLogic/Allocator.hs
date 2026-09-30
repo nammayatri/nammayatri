@@ -20,6 +20,7 @@ module SharedLogic.Allocator where
 import Control.Applicative ((<|>))
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson (withObject, (.:))
+import qualified Data.Map as M
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.Booking as DB
@@ -42,6 +43,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -112,7 +114,20 @@ data AllocatorJobType
   | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
   | BulkUserCohortMappingUpload
+  | FleetEngineRetry
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
+
+-- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
+-- Use this in signatures of functions that (transitively) call createJobIn — saves
+-- listing 5 HasField constraints at each call site. Named 'SchedulerJobFlow' to avoid
+-- clash with 'Kernel.External.Types.SchedulerFlow'.
+type SchedulerJobFlow r =
+  ( HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text]
+  )
 
 genSingletons [''AllocatorJobType]
 showSingInstance ''AllocatorJobType
@@ -177,6 +192,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
   restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
+  restoreAnyJobInfo SFleetEngineRetry jobData = AnyJobInfo <$> restoreJobInfo SFleetEngineRetry jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -538,6 +554,34 @@ data SendWebhookToExternalJobData = SendWebhookToExternalJobData
 instance JobInfoProcessor 'SendWebhookToExternal
 
 type instance JobContent 'SendWebhookToExternal = SendWebhookToExternalJobData
+
+data FleetEngineRetryOperation
+  = FEOpCompleteTrip
+  | FEOpCancelTrip
+  | FEOpCreateTrip
+  | FEOpDriverArrived
+  | FEOpRideStarted
+  | FEOpDropoffChanged
+  | FEOpPickupChanged
+  | FEOpStopsChanged
+  | FEOpStopArrived
+  | FEOpStopDeparted
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data FleetEngineRetryJobData = FleetEngineRetryJobData
+  { merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    operation :: FleetEngineRetryOperation,
+    rideId :: Id SRide.Ride,
+    mbLatLong :: Maybe LatLong,
+    mbStops :: Maybe [LatLong],
+    mbStopIndex :: Maybe Int,
+    attemptCount :: Maybe Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FleetEngineRetry
+
+type instance JobContent 'FleetEngineRetry = FleetEngineRetryJobData
 
 data CheckDashCamInstallationStatusJobData = CheckDashCamInstallationStatusJobData
   { merchantId :: Id DM.Merchant,

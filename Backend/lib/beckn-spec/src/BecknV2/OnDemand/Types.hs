@@ -198,7 +198,9 @@ data Agent = Agent
   { -- |
     agentContact :: Maybe Contact,
     -- |
-    agentPerson :: Maybe Person
+    agentPerson :: Maybe Person,
+    -- | Rating value given to the agent.
+    agentRating :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -217,7 +219,8 @@ optionsAgent =
   where
     table =
       [ ("agentContact", "contact"),
-        ("agentPerson", "person")
+        ("agentPerson", "person"),
+        ("agentRating", "rating")
       ]
 
 -- | Describes an authorization mechanism used to start or end the fulfillment of an order. For example, in the mobility sector, the driver may require a one-time password to initiate the ride. In the healthcare sector, a patient may need to provide a password to open a video conference link during a teleconsultation.

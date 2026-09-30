@@ -330,12 +330,14 @@ applyOnStatusOrderOverrides =
 -- so it shipped Layer 1's internal vocabulary straight to the BAP and got NACKed on
 -- fulfillment.type, fulfillment.state.descriptor.code (SCHEDULED_RIDE_ASSIGNED, for a scheduled
 -- ride cancelled before pickup), vehicle.energy_type and quote.breakup[*].title.
--- Order tags are deliberately NOT dropped here, unlike the on_confirm patch: on_cancel carries
--- CANCELLATION_COLLECTION_MODE and CUSTOMER_CANCELLATION_NOTIFICATION_KEY, which the BAP needs
--- and which ONDC did not object to.
+-- Order tags are dropped only for non value-add NPs: on_cancel carries CANCELLATION_COLLECTION_MODE
+-- and CUSTOMER_CANCELLATION_NOTIFICATION_KEY (CANCELLATION_CONSEQUENCE group), which our own BAP
+-- needs, but ONDC NACKs any order.tags group other than BAP_TERMS/BPP_TERMS once a cancellation
+-- with dues actually populates them.
 applyOnCancelOrderOverrides :: Bool -> DRB.Booking -> Spec.Order -> Spec.Order
 applyOnCancelOrderOverrides isValueAddNP booking =
-  patchOrderVehicleEnergyType
+  dropOrderTagsForNonValueAddNP
+    . patchOrderVehicleEnergyType
     . patchOrderFulfillmentTypes
     . overrideOrderFulfillmentState
     . overrideOrderCategoryIds booking.isScheduled
@@ -343,6 +345,10 @@ applyOnCancelOrderOverrides isValueAddNP booking =
     . overrideOrderBreakupTitles
     . ensureQuoteBreakup isValueAddNP booking
     . ensureFulfillmentVehicle booking
+  where
+    dropOrderTagsForNonValueAddNP
+      | isValueAddNP = \order -> order
+      | otherwise = dropNonConformingOrderTags
 
 -- | A cancel before driver assignment has no ride, so Layer 1's tfVehicle yields Nothing and the
 -- fulfillment ships with no vehicle at all. ONDC's vehicle.category check carries no "skip if absent"

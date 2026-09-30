@@ -31,9 +31,12 @@ module Dashboard.Common
 where
 
 import Data.Aeson
+import Data.Aeson.Types (Parser, toJSONKeyText)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Csv as Csv
+import qualified Data.HashMap.Strict as HM
+import Data.Hashable (Hashable)
 import Data.OpenApi
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
@@ -41,6 +44,7 @@ import Domain.Types.ServiceTierType (ServiceTierType (..))
 import Domain.Types.Trip (OneWayMode (..), RentalMode, RideShareMode, TripCategory (..), TripMode (..))
 import Domain.Types.VehicleCategory
 import Domain.Types.VehicleVariant
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.Common (Centesimal, HighPrecMoney, Meters)
@@ -83,6 +87,49 @@ data FareProduct
 data FarePolicyChangeRequest
 
 data SurgeConfig
+
+data PolicyAndComplianceDocument
+
+data PolicyType
+  = TERMS_OF_SERVICE
+  | PRIVACY_POLICY
+  | COOKIE_POLICY
+  | DRIVER_AGREEMENT
+  | CONSENT_FORM
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Hashable)
+
+instance ToJSONKey PolicyType where
+  toJSONKey = toJSONKeyText (T.pack . show)
+
+instance FromJSONKey PolicyType where
+  fromJSONKey =
+    FromJSONKeyTextParser $ \t ->
+      case readMaybe (T.unpack t) of
+        Just v -> pure v
+        Nothing -> fail $ "unknown PolicyType: " <> T.unpack t
+
+$(mkBeamInstancesForEnum ''PolicyType)
+
+newtype AcceptedPolicies = AcceptedPolicies (HM.HashMap PolicyType Text)
+  deriving stock (Generic, Show, Eq)
+  deriving newtype (Ord)
+
+instance ToJSON AcceptedPolicies where
+  toJSON (AcceptedPolicies m) = toJSON m
+
+instance FromJSON AcceptedPolicies where
+  parseJSON v = do
+    raw <- parseJSON v :: Parser (HM.HashMap Text Text)
+    pure $
+      AcceptedPolicies $
+        HM.fromList
+          [ (pt, docId)
+            | (k, docId) <- HM.toList raw,
+              Just pt <- [readMaybe (T.unpack k) :: Maybe PolicyType]
+          ]
+
+$(mkBeamInstancesForJSON ''AcceptedPolicies)
 
 data FareAdjustment
 

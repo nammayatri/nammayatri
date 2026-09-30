@@ -116,6 +116,7 @@ handler merchantId req ride = do
                         createdAt = now,
                         updatedAt = now,
                         favourite = True,
+                        blackListed = Nothing,
                         mobileNumber = encPhoneNumber
                       }
               RDC.create riderDriverCorr

@@ -12,7 +12,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RiderDriverCorrelationT f = RiderDriverCorrelationT
-  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+  { blackListed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     favourite :: B.C f Kernel.Prelude.Bool,
     merchantId :: B.C f Kernel.Prelude.Text,

@@ -51,6 +51,7 @@ import Data.List (nubBy)
 import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
+import qualified Domain.Action.UI.PolicyDocument as PolicyDoc
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
 import qualified Domain.Types.ClientPersonInfo as DCP
@@ -179,7 +180,8 @@ data ProfileRes = ProfileRes
     customerTags :: DA.Value,
     profilePicture :: Maybe Text,
     paymentMode :: Maybe DMPM.PaymentMode,
-    blockedUntil :: Maybe UTCTime
+    blockedUntil :: Maybe UTCTime,
+    pendingLegalPolicies :: Maybe [PolicyDoc.PendingLegalPolicy]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -407,10 +409,11 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
     when person.blocked $
       QPerson.unblockIfExpired personId
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
+  pendingLegalPolicies <- PolicyDoc.computePendingLegalPolicies person riderConfig
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage pendingLegalPolicies
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam pendingLegalPolicies = do
       logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case

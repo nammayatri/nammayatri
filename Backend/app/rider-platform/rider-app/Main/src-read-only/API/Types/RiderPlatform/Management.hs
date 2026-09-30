@@ -15,6 +15,7 @@ import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified API.Types.RiderPlatform.Management.Notification
 import qualified API.Types.RiderPlatform.Management.Offer
 import qualified API.Types.RiderPlatform.Management.Payout
+import qualified API.Types.RiderPlatform.Management.PolicyDocument
 import qualified API.Types.RiderPlatform.Management.Rewards
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified API.Types.RiderPlatform.Management.SearchTry
@@ -41,6 +42,7 @@ data ManagementUserActionType
   | NOTIFICATION API.Types.RiderPlatform.Management.Notification.NotificationUserActionType
   | OFFER API.Types.RiderPlatform.Management.Offer.OfferUserActionType
   | PAYOUT API.Types.RiderPlatform.Management.Payout.PayoutUserActionType
+  | POLICY_DOCUMENT API.Types.RiderPlatform.Management.PolicyDocument.PolicyDocumentUserActionType
   | REWARDS API.Types.RiderPlatform.Management.Rewards.RewardsUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
   | SEARCH_TRY API.Types.RiderPlatform.Management.SearchTry.SearchTryUserActionType
@@ -64,6 +66,7 @@ instance Text.Show.Show ManagementUserActionType where
     NOTIFICATION e -> "NOTIFICATION/" <> show e
     OFFER e -> "OFFER/" <> show e
     PAYOUT e -> "PAYOUT/" <> show e
+    POLICY_DOCUMENT e -> "POLICY_DOCUMENT/" <> show e
     REWARDS e -> "REWARDS/" <> show e
     RIDE e -> "RIDE/" <> show e
     SEARCH_TRY e -> "SEARCH_TRY/" <> show e
@@ -168,6 +171,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PAYOUT/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( POLICY_DOCUMENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "POLICY_DOCUMENT/" r,
                    ( v1,
                      r2
                      ) <-

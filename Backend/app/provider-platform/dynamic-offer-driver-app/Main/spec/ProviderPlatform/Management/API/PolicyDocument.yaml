@@ -1,0 +1,75 @@
+imports:
+  PolicyAndComplianceDocument: Dashboard.Common
+  PolicyType: Dashboard.Common
+
+module: PolicyDocument
+
+apis:
+  - POST:
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: PolicyCreateReq
+      response:
+        type: PolicyCreateResp
+      migrate:
+        capability: system-config.legal_compliance.write
+
+  - POST:
+      endpoint: /{policyDocId}/update
+      auth: ApiAuthV2
+      params:
+        policyDocId: Id PolicyAndComplianceDocument
+      request:
+        type: PolicyUpdateReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.legal_compliance.write
+
+  - GET:
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: PolicyListMgmtResp
+      migrate:
+        capability: system-config.legal_compliance.read
+
+types:
+  PolicyCreateReq:
+    - policyType: PolicyType
+    - version: Text
+    - url: Text
+    - isMandatory: Bool
+    - enabled: Maybe Bool
+    - metadata: Maybe Text
+    - derive: "'HideSecrets"
+
+  PolicyCreateResp:
+    - id: Text
+    - policyType: PolicyType
+    - version: Text
+
+  PolicyUpdateReq:
+    - url: Maybe Text
+    - isMandatory: Maybe Bool
+    - enabled: Maybe Bool
+    - metadata: Maybe Text
+    - derive: "'HideSecrets"
+
+  PolicyDocumentMgmtResp:
+    - id: Text
+    - policyType: PolicyType
+    - version: Text
+    - url: Text
+    - isMandatory: Bool
+    - enabled: Bool
+    - metadata: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  PolicyListMgmtResp:
+    - documents: "[PolicyDocumentMgmtResp]"

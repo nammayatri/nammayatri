@@ -1533,6 +1533,8 @@ TransporterConfig:
     allowInvalidRcDeletionOnReplacement: Maybe Bool # When True, allows deleting an invalid RC and its driver/fleet associations when a replacement RC is submitted
     metricsDistanceBucketsKm: "Maybe [Int]" # BPP funnel distance buckets: upper edges in KILOMETRES, ascending, max 4, e.g. {5,12,30}. Nothing = defaults (5/12/30 km, matching ClickHouse trip_distance_bin). See SharedLogic.MetricsLabels.distanceBucketEdges for how a config is validated and when it is rejected.
     enableOndcScheduledRideSupport: Maybe Bool # City-level gate for the MSIL-style Quote-based (static/scheduled) /select capability
+    enableLegalComplianceDocuments: Maybe Bool
+    enableGoOnlinePolicyBlocker: Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1958,6 +1960,8 @@ TransporterConfig:
     enableOndcScheduledRideSupport: boolean
 
   default:
+    enableLegalComplianceDocuments: "false"
+    enableGoOnlinePolicyBlocker: "false"
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
     mediaFileSizeUpperLimit: "10000000"
