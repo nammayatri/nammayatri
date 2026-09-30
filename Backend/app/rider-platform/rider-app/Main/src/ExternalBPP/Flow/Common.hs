@@ -44,6 +44,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import SharedLogic.SharedCab.RefundDecision (Refund, refundAmounts)
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -295,7 +296,8 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
       fromLocationId <- generateGUID
       toLocationId <- generateGUID
       routeDetails <- mapM (mkRouteDetail searchReq.merchantId searchReq.merchantOperatingCityId journeyLegGuid Nothing) legsRouteDetails
-      let mode = mapVehicleCategoryToTripMode searchReq.vehicleType
+      let isSharedCabRoute = any (\leg -> maybe False isSharedCabAgency (leg.agency >>= (.gtfsId))) transitRoute.legs
+          mode = if isSharedCabRoute then DTrip.SharedCab else mapVehicleCategoryToTripMode searchReq.vehicleType
           lastSubLeg = fromMaybe firstSubLeg (listToMaybe (reverse legsRouteDetails))
           fromLat = maybe 0.0 (.lat) searchReq.fromStationPoint
           fromLon = maybe 0.0 (.lon) searchReq.fromStationPoint

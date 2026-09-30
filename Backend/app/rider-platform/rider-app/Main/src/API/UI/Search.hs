@@ -1063,6 +1063,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> GeneralVehicleType
     allowedTransitModeToGeneralVehicleType mode = case mode of
       DTrip.Bus -> MultiModalTypes.Bus
+      DTrip.SharedCab -> MultiModalTypes.Bus -- the shared-cab agency is an OTP bus route
       DTrip.Metro -> MultiModalTypes.MetroRail
       DTrip.Subway -> MultiModalTypes.Subway
       DTrip.Walk -> MultiModalTypes.Walk

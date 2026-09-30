@@ -111,6 +111,10 @@ convertMultiModalModeToTripMode input _ straightLineDistance maximumWalkDistance
   MultiModal.Bus -> DTrip.Bus
   MultiModal.Unspecified -> DTrip.Taxi
 
+-- | The travel mode of a search-result leg; the one place a leg's agency reaches the mode, so a cab never goes back to Bus.
+legTripMode :: Meters -> Meters -> MultiModalTypes.MultiModalLeg -> DTrip.MultimodalTravelMode
+legTripMode straightLineDistance maximumWalkDistance leg = convertMultiModalModeToTripMode leg.mode (leg.agency >>= (.gtfsId)) straightLineDistance maximumWalkDistance
+
 mkJourneyUpdateInProgressKey :: Id Journey -> Text
 mkJourneyUpdateInProgressKey journeyId = "Journey:UpdateInProgress:JourneyId-" <> journeyId.getId
 

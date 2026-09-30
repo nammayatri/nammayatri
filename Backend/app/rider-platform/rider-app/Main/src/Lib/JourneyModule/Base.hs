@@ -177,7 +177,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
   legsAndFares <-
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
-          let travelMode = convertMultiModalModeToTripMode leg.mode (leg.agency >>= (.gtfsId)) (straightLineDistance leg) journeyReq.maximumWalkDistance
+          let travelMode = legTripMode (straightLineDistance leg) journeyReq.maximumWalkDistance leg
           legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode (Just journeyReq.parentSearchId.getId) blacklistedServiceTiers blacklistedFareQuoteTypes journeyReq.isSingleMode journeyReq.userPreferredServiceTier) "multimodal getFare"
           let onboardedSingleModeVehicle =
                 if DTrip.isFrfsTransitMode travelMode
@@ -233,7 +233,7 @@ init journeyReq userPreferences blacklistedServiceTiers blacklistedFareQuoteType
                 Nothing -> False
                 Just types -> any (`elem` preferred) types
     hasUserPreferredTransitModes legs userPrefs = do
-      return (all (\leg -> (if leg.mode == DTrip.SharedCab then DTrip.Bus else leg.mode) `elem` userPrefs.allowedTransitModes) legs) -- a shared cab is allowed wherever Bus is
+      return (all (\leg -> leg.mode `elem` userPrefs.allowedTransitModes || (leg.mode == DTrip.SharedCab && DTrip.Bus `elem` userPrefs.allowedTransitModes)) legs) -- a shared cab is allowed wherever Bus is
 
 getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m DJourney.Journey
 getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
@@ -543,6 +543,7 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
     allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> Maybe GeneralVehicleType
     allowedTransitModeToGeneralVehicleType mode = case mode of
       DTrip.Bus -> Just MultiModalTypes.Bus
+      DTrip.SharedCab -> Just MultiModalTypes.Bus -- the shared-cab agency is an OTP bus route
       DTrip.Metro -> Just MultiModalTypes.MetroRail
       DTrip.Subway -> Just MultiModalTypes.Subway
       DTrip.Walk -> Just MultiModalTypes.Walk

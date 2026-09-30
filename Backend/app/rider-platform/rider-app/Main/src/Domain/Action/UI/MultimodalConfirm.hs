@@ -577,6 +577,7 @@ postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
           )
           legs
   let busLeg = find (\leg -> leg.mode == DTrip.Bus && leg.status == JL.Ongoing) concatLegs
+  let vehicleLeg = find (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.SharedCab] && leg.status == JL.Ongoing) concatLegs
   -- Check if there's an ongoing bus leg but no live vehicle position or no ETA data
   case busLeg of
     Just leg -> do
@@ -587,7 +588,7 @@ postMultimodalRiderLocation (_, merchantId) journeyId mbFleetNo req = do
         forM_ leg.serviceTierType $ \tierType ->
           BAPMetrics.incrementEmptyVehiclesCounter (merchantId.getId) leg.merchantOperatingCityId.getId (show tierType)
     Nothing -> pure ()
-  addPoint journeyId req ((.fleetNo) =<< busLeg)
+  addPoint journeyId req ((.fleetNo) =<< vehicleLeg)
   return journeyStatus
 
 postMultimodalJourneyCancel ::
