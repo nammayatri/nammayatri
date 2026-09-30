@@ -2249,7 +2249,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
     if booking.isScheduled
       then -- per-driver lock: two overlapping scheduled accepts hold different per-booking locks, so serialize
       -- here; 60s TTL covers the worst-case critical section (feasibility legs + initializeRide)
-      Redis.withWaitAndLockRedis (CS.driverScheduledHoldLockKey driver.id) 60 5000 $ do
+      CS.withDriverScheduledHoldLock driver.id $ do
         -- authoritative re-check; a conflict here means we lost a race after the pre-flight passed,
         -- so restore the side effects the prefix above already performed before rejecting
         recheck <- withTryCatch "acceptScheduledOverlapLocked" $ ensureNoScheduledOverlap transporterConfig booking

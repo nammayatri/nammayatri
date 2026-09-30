@@ -37,11 +37,14 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride
+import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
+import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import Text.Printf (printf)
 import qualified Tools.Metrics as Metrics
@@ -137,6 +140,12 @@ cancelBooking' notifyBAP booking mbDriver transporter = do
         FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
       when (ride.status == SRide.INPROGRESS) $ DSC.recordOnRideChange booking.merchantOperatingCityId False
       updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
+      -- Mirrors cancelRideTransaction: without this the gate keeps pointing at the cancelled booking and benches the driver from every later scheduled pool.
+      when booking.isScheduled $ do
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        CS.withDriverScheduledHoldLock (cast ride.driverId) $ do
+          mbNextHold <- SBOC.nextScheduledHoldAfterRelease transporterConfig (cast ride.driverId) booking.id
+          QDI.updateLatestScheduledBookingAndPickup (fst <$> mbNextHold) (snd <$> mbNextHold) (cast ride.driverId)
       void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
 
     -- Terminal system/error cancel (ByApplication source): drop demand and release the
