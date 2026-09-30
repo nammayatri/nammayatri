@@ -2114,10 +2114,11 @@
             }
           },
           {
-            "_comment": "BG (gateway) subscriber → local beckn-gateway",
+            "_comment": "BG (gateway) subscriber → local beckn-gateway. Only Juspay's gateway: master also has workbench.ondc.tech (ONDC test BG); renaming both made duplicate JUSPAY.BG.1 rows",
             "where": {
               "type": "BG",
-              "domain": "MOBILITY"
+              "domain": "MOBILITY",
+              "subscriber_id": "api.sandbox.moving.tech/dev/gateway/v1"
             },
             "set": {
               "subscriber_id": "JUSPAY.BG.1",

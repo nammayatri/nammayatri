@@ -207,7 +207,8 @@
 				{"listen": "test", "script": {"exec": [
 					"var d = pm.response.json();",
 					"if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
-					"    var req = d.searchRequestsForDriver[0];",
+					"    // Pick the newest search (latest startTime): a request from an earlier, cancelled test can still be listed first.",
+					"    var req = d.searchRequestsForDriver.reduce(function (a, b) { return new Date(b.startTime) > new Date(a.startTime) ? b : a; });",
 					"    pm.environment.set('searchTryId', req.searchTryId);",
 					"    console.log('Got EasyBooking search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant, 'tripCategory:', JSON.stringify(req.tripCategory));",
 					"    pm.test('Status 200', function () { pm.response.to.have.status(200); });",
