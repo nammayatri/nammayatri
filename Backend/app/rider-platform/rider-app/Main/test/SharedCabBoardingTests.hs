@@ -44,12 +44,14 @@ tests =
       testGroup
         "H2: binding under the booking lock"
         [ testCase "a cab claimed since the pre-lock read aborts the boarding" $
-            [ bindingUnmoved Nothing Nothing,
-              bindingUnmoved Nothing (Just "ML05B2222"),
-              bindingUnmoved (Just "ML05A1234") (Just "ML05A1234"),
-              bindingUnmoved (Just "ML05A1234") (Just "ML05B2222"),
-              bindingUnmoved (Just "ML05A1234") Nothing
+            [ bindingUnmoved "ML05A1234" Nothing Nothing,
+              bindingUnmoved "ML05A1234" Nothing (Just "ML05B2222"),
+              bindingUnmoved "ML05A1234" (Just "ML05A1234") (Just "ML05A1234"),
+              bindingUnmoved "ML05A1234" (Just "ML05A1234") (Just "ML05B2222"),
+              bindingUnmoved "ML05A1234" (Just "ML05A1234") Nothing
             ]
-              @?= [True, False, True, False, False]
+              @?= [True, False, True, False, False],
+          testCase "e2e B12: the tick claiming the booking for the SAME cab being boarded does not abort" $
+            bindingUnmoved "ML05A1234" Nothing (Just "ML05A1234") @?= True
         ]
     ]
