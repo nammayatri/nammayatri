@@ -3719,7 +3719,7 @@ code under its sender, local or international (`41234567`, `0555123456`,
 field names, because the forwarder is not ours. An empty list is a
 heartbeat; `/healthz` → `smsInbox.lastAt` is the phone's pulse.
 
-**Phase 2, the sign-in — built 2026-09-29, dormant until a SIM is set.**
+**Phase 2, the sign-in — built 2026-09-29; live for Algeria, proved end to end on 2026-09-30** (the owner, from the APK: button, Messages, send, signed in; the boss's forwarder posting incoming texts and a heartbeat every 5 min).
 The WhatsApp flow, route for route:
 
 - `POST {/v2,/ui}/auth/sms-in` — a start with every check a start has; the
