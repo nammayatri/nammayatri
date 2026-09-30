@@ -10,6 +10,7 @@ import qualified Data.Map.Strict as M
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
@@ -26,6 +27,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
+import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
@@ -35,6 +37,7 @@ import qualified Storage.Queries.VehicleTrip as QVT
 
 -- LtsFlow: applyQueuedRoute re-attaches the cab to LTS when a queued route applies.
 -- ServiceFlow: R17's "your cab is here" push, fired once the moving timer arms.
+-- EncFlow: a release that ends in cancelForNoShows reverses person stats (R68).
 type StopProgressFlow m r c =
   ( LtsFlow m r c,
     Redis.HedisFlow m r,
@@ -46,6 +49,7 @@ type StopProgressFlow m r c =
     Metrics.CoreMetrics m,
     Events.EventFlow m r,
     ServiceFlow m r,
+    EncFlow m r,
     InternalEndpointFlow m r
   )
 
@@ -107,7 +111,8 @@ stepCab ::
   m ()
 stepCab cfg spc now live positions route s = do
   let plate = s.vehicleNumber
-      mbInfo = (.vehicleInfo) <$> find ((== plate) . (.vehicleNumber)) positions
+      -- R56: LTS plates aren't canonical; compare both sides, same as silentCab/movingOn (LOWS wave)
+      mbInfo = (.vehicleInfo) <$> find ((== canonicalisePlate plate) . canonicalisePlate . (.vehicleNumber)) positions
       mbCab = cabFix <$> mbInfo
       freshCab = mfilter (const $ any (isFreshPosition now cfg.ltsMaxAgeSec) mbInfo) mbCab
       bookings = [entry | entry@(b, _) <- live, b.vehicleNumber == Just plate]
