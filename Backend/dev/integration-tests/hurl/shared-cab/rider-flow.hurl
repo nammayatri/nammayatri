@@ -47,10 +47,10 @@ retry-interval: 2000ms
 {}
 HTTP 200
 [Captures]
-legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order"
-categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId"
+legOrder: jsonpath "$.legs[?(@.travelMode == 'SharedCab')].order"
+categoryId: jsonpath "$.legs[?(@.travelMode == 'SharedCab')].legExtraInfo.contents.categories[0].categoryId"
 [Asserts]
-jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.routeCode" == "{{route_a}}"
+jsonpath "$.legs[?(@.travelMode == 'SharedCab')].legExtraInfo.contents.routeCode" == "{{route_a}}"
 
 # Pay on board: confirm opens no payment order
 POST {{base_url}}/v2/multimodal/{{journeyId}}/confirm
@@ -111,8 +111,8 @@ retry-interval: 2000ms
 {}
 HTTP 200
 [Captures]
-legOrder: jsonpath "$.legs[?(@.travelMode == 'Bus')].order"
-categoryId: jsonpath "$.legs[?(@.travelMode == 'Bus')].legExtraInfo.contents.categories[0].categoryId"
+legOrder: jsonpath "$.legs[?(@.travelMode == 'SharedCab')].order"
+categoryId: jsonpath "$.legs[?(@.travelMode == 'SharedCab')].legExtraInfo.contents.categories[0].categoryId"
 
 POST {{base_url}}/v2/multimodal/{{journeyId}}/confirm
 token: {{token}}
