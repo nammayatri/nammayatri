@@ -73,16 +73,35 @@ instance IsAPIError RatingError
 
 data RideFeedbackError
   = RideFeedbackAccessDenied Text
+  | RideFeedbackConfigNotFound Text
+  | RideFeedbackConfigAlreadyExists Text
+  | RideFeedbackInvalidConfig [Text]
+  | RideFeedbackResponseNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RideFeedbackError
 
 instance IsBaseError RideFeedbackError where
-  toMessage (RideFeedbackAccessDenied rideId) = Just $ "Ride " <> rideId <> " does not belong to this person."
+  toMessage = \case
+    RideFeedbackAccessDenied rideId -> Just $ "Ride " <> rideId <> " does not belong to this person."
+    RideFeedbackConfigNotFound configId -> Just $ "Ride feedback question " <> configId <> " not found in this city."
+    RideFeedbackConfigAlreadyExists questionKey -> Just $ "A ride feedback question with key " <> questionKey <> " already exists in this city."
+    RideFeedbackInvalidConfig errors -> Just $ "Invalid ride feedback question: " <> T.intercalate "; " errors
+    RideFeedbackResponseNotFound responseId -> Just $ "Ride feedback response " <> responseId <> " not found in this city."
 
 instance IsHTTPError RideFeedbackError where
-  toErrorCode (RideFeedbackAccessDenied _) = "RIDE_FEEDBACK_ACCESS_DENIED"
-  toHttpCode (RideFeedbackAccessDenied _) = E403
+  toErrorCode = \case
+    RideFeedbackAccessDenied _ -> "RIDE_FEEDBACK_ACCESS_DENIED"
+    RideFeedbackConfigNotFound _ -> "RIDE_FEEDBACK_CONFIG_NOT_FOUND"
+    RideFeedbackConfigAlreadyExists _ -> "RIDE_FEEDBACK_CONFIG_ALREADY_EXISTS"
+    RideFeedbackInvalidConfig _ -> "RIDE_FEEDBACK_INVALID_CONFIG"
+    RideFeedbackResponseNotFound _ -> "RIDE_FEEDBACK_RESPONSE_NOT_FOUND"
+  toHttpCode = \case
+    RideFeedbackAccessDenied _ -> E403
+    RideFeedbackConfigNotFound _ -> E404
+    RideFeedbackConfigAlreadyExists _ -> E400
+    RideFeedbackInvalidConfig _ -> E400
+    RideFeedbackResponseNotFound _ -> E404
 
 instance IsAPIError RideFeedbackError
 

@@ -43,9 +43,11 @@ RideFeedbackResponse:
   types:
     RideFeedbackResponseStatus:
       enum: "SHOWN,ANSWERED,SKIPPED,DISMISSED,EXPIRED"
+      derive: "Bounded, Enum"
 
     RideFeedbackActionStatus:
       enum: "PENDING,SUCCESS,FAILED"
+      derive: "Bounded, Enum"
 
     RideFeedbackAnswer:
       selectedOptionKeys: Maybe [Text]

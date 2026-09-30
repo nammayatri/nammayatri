@@ -1,6 +1,7 @@
 module SharedLogic.RideFeedback.Rule
   ( evaluateRule,
     unsupportedOperators,
+    supportedOperatorNames,
     stableBucket,
   )
 where
@@ -10,6 +11,7 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import Data.Char (ord)
 import qualified Data.HashSet as HS
+import Data.List (sort)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import JsonLogic (jsonLogicEither)
@@ -54,6 +56,10 @@ supportedOperators =
       "currentTime",
       "dateDiff"
     ]
+
+-- | The supported operators, sorted (shown to dashboard users writing rules).
+supportedOperatorNames :: [Text]
+supportedOperatorNames = sort (HS.toList supportedOperators)
 
 -- | A missing rule always matches. A rule matches only when it evaluates to exactly @true@.
 evaluateRule :: A.ToJSON ctx => Maybe A.Value -> ctx -> Either Text Bool

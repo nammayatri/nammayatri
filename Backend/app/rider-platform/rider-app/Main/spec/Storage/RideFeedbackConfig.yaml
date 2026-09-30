@@ -43,12 +43,15 @@ RideFeedbackConfig:
   types:
     RideFeedbackQuestionType:
       enum: "SINGLE_SELECT,MULTI_SELECT,YES_NO,STAR_RATING,EMOJI_SCALE,THUMBS,SCALE,TEXT_INPUT,NUMBER_INPUT,IMAGE_UPLOAD,AUDIO"
+      derive: "Bounded, Enum"
 
     RideFeedbackDeliveryMode:
       enum: "IN_APP,PUSH"
+      derive: "Bounded, Enum"
 
     RideFeedbackActionType:
       enum: "REPORT_ISSUE_TO_BPP,CREATE_TICKET,L0_SENSITIVE_WORD_CHECK,SLACK_ALERT,NOTIFY_RIDER,SAFETY_ESCALATION,TAG_RIDE"
+      derive: "Bounded, Enum"
 
     QuestionOption:
       key: Text

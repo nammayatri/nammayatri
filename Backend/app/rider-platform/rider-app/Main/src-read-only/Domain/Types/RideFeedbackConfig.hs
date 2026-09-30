@@ -94,9 +94,9 @@ data RideFeedbackActionType
   | NOTIFY_RIDER
   | SAFETY_ESCALATION
   | TAG_RIDE
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
-data RideFeedbackDeliveryMode = IN_APP | PUSH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data RideFeedbackDeliveryMode = IN_APP | PUSH deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 data RideFeedbackQuestionType
   = SINGLE_SELECT
@@ -110,7 +110,7 @@ data RideFeedbackQuestionType
   | NUMBER_INPUT
   | IMAGE_UPLOAD
   | AUDIO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackActionType))
 

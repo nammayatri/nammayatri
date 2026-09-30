@@ -1,6 +1,7 @@
 module SharedLogic.RideFeedback.Actions
   ( ActionEnv (..),
     triggerActions,
+    retryFailedActions,
   )
 where
 
@@ -68,6 +69,26 @@ triggerActions env ctx = do
       Left err -> do
         logError $ "RideFeedback: skipping action rule " <> rule.ruleId <> " of " <> env.config.questionKey <> ": " <> err
         pure []
+
+-- | Re-runs, in the background, only the actions whose last result is not SUCCESS (so a retry never
+-- repeats a ticket or report that already went through). Returns how many actions were scheduled.
+-- Actions whose rule was since removed from the question cannot be retried and keep their old result.
+retryFailedActions :: ActionEnv -> Flow Int
+retryFailedActions env = do
+  let previous = fromMaybe [] env.response.actionResults
+      isRetryable r = r.status /= DRFR.SUCCESS
+      toRetry =
+        [ (rule.ruleId, action)
+          | rule <- fromMaybe [] env.config.actionRules,
+            action <- rule.actions,
+            any (\r -> isRetryable r && r.ruleId == rule.ruleId && r.actionType == action.actionType) previous
+        ]
+  unless (null toRetry) $
+    fork "RideFeedback:retryActions" $ do
+      retried <- mapM (runAction env) toRetry
+      let merged = [fromMaybe r (find (\n -> n.ruleId == r.ruleId && n.actionType == r.actionType) retried) | r <- previous]
+      QRFR.updateActionResults (Just merged) env.response.id
+  pure (length toRetry)
 
 mkResult :: UTCTime -> DRFR.RideFeedbackActionStatus -> Int -> Maybe Text -> Maybe Text -> (Text, DRFC.FeedbackAction) -> DRFR.RideFeedbackActionResult
 mkResult now status attempts externalRef errorMessage (ruleId, action) =

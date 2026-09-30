@@ -1,0 +1,306 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  APISuccess: Kernel.Types.APISuccess
+  Value: Data.Aeson
+  Summary: Dashboard.Common
+  City: Kernel.Types.Beckn.Context
+  Language: Kernel.External.Types
+  Translation: IssueManagement.Common
+  IssueReportType: IssueManagement.Common
+  Ride: Dashboard.Common
+  RideStatus: Domain.Types.RideStatus
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackQuestionType: Domain.Types.RideFeedbackConfig
+  RideFeedbackActionType: Domain.Types.RideFeedbackConfig
+  RideFeedbackDeliveryMode: Domain.Types.RideFeedbackConfig
+  QuestionOption: Domain.Types.RideFeedbackConfig
+  InputConfig: Domain.Types.RideFeedbackConfig
+  DisplayTrigger: Domain.Types.RideFeedbackConfig
+  FeedbackActionRule: Domain.Types.RideFeedbackConfig
+  RideFeedbackResponse: Domain.Types.RideFeedbackResponse
+  RideFeedbackResponseStatus: Domain.Types.RideFeedbackResponse
+  RideFeedbackAnswer: Domain.Types.RideFeedbackResponse
+  RideFeedbackActionResult: Domain.Types.RideFeedbackResponse
+
+importPackageOverrides:
+  Domain.Types.RideStatus: "beckn-spec"
+
+# Ops management of during-ride feedback questions (ride_feedback_config) for one merchant + city.
+# Which rides get a question is decided by the RIDE-FEEDBACK dynamic logic, managed through the NammaTag APIs.
+module: RideFeedback
+
+types:
+  RideFeedbackConfigItem:
+    id: Id RideFeedbackConfig
+    questionKey: Text
+    version: Int
+    questionType: RideFeedbackQuestionType
+    title: "[Translation]"
+    description: Maybe [Translation]
+    options: Maybe [QuestionOption]
+    inputConfig: Maybe InputConfig
+    acknowledgement: Maybe [Translation]
+    uiConfig: Maybe Value
+    isSkippable: Maybe Bool
+    isFollowUpOnly: Maybe Bool
+    allowedRideStatuses: Maybe [RideStatus]
+    displayTrigger: Maybe DisplayTrigger
+    actionRules: Maybe [FeedbackActionRule]
+    priority: Maybe Int
+    maxShowsPerRide: Maybe Int
+    cooldownDays: Maybe Int
+    startsAt: Maybe UTCTime
+    endsAt: Maybe UTCTime
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  RideFeedbackConfigListRes:
+    totalItems: Int
+    summary: Summary
+    configs: "[RideFeedbackConfigItem]"
+
+  CreateRideFeedbackConfigReq:
+    questionKey: Text
+    questionType: RideFeedbackQuestionType
+    title: "[Translation]"
+    description: Maybe [Translation]
+    options: Maybe [QuestionOption]
+    inputConfig: Maybe InputConfig
+    acknowledgement: Maybe [Translation]
+    uiConfig: Maybe Value
+    isSkippable: Maybe Bool
+    isFollowUpOnly: Maybe Bool
+    allowedRideStatuses: Maybe [RideStatus]
+    displayTrigger: Maybe DisplayTrigger
+    actionRules: Maybe [FeedbackActionRule]
+    priority: Maybe Int
+    maxShowsPerRide: Maybe Int
+    cooldownDays: Maybe Int
+    startsAt: Maybe UTCTime
+    endsAt: Maybe UTCTime
+    enabled: Maybe Bool
+    derive: "'HideSecrets"
+
+  # Replaces the question's content: an omitted/null optional field is cleared.
+  # questionType and title keep their stored value when omitted.
+  UpdateRideFeedbackConfigReq:
+    questionType: Maybe RideFeedbackQuestionType
+    title: Maybe [Translation]
+    description: Maybe [Translation]
+    options: Maybe [QuestionOption]
+    inputConfig: Maybe InputConfig
+    acknowledgement: Maybe [Translation]
+    uiConfig: Maybe Value
+    isSkippable: Maybe Bool
+    isFollowUpOnly: Maybe Bool
+    allowedRideStatuses: Maybe [RideStatus]
+    displayTrigger: Maybe DisplayTrigger
+    actionRules: Maybe [FeedbackActionRule]
+    priority: Maybe Int
+    maxShowsPerRide: Maybe Int
+    cooldownDays: Maybe Int
+    startsAt: Maybe UTCTime
+    endsAt: Maybe UTCTime
+    derive: "'HideSecrets"
+
+  RideFeedbackConfigUpsertRes:
+    id: Id RideFeedbackConfig
+    version: Int
+
+  ToggleRideFeedbackConfigReq:
+    enabled: Bool
+    derive: "'HideSecrets"
+
+  CloneRideFeedbackConfigReq:
+    targetCities: "[City]"
+    enabled: Maybe Bool
+    derive: "'HideSecrets"
+
+  CloneRideFeedbackConfigRes:
+    created: "[ClonedConfig]"
+    skipped: "[SkippedClone]"
+
+  ClonedConfig:
+    city: City
+    configId: Id RideFeedbackConfig
+
+  SkippedClone:
+    city: City
+    reason: Text
+
+  ValidateRideFeedbackConfigRes:
+    isValid: Bool
+    errors: "[Text]"
+
+  RideFeedbackPreviewRes:
+    rideId: Id Ride
+    rideStatus: RideStatus
+    logicVersion: Maybe Int
+    selectedQuestionKeys: "[Text]"
+    context: Value
+    evaluations: "[QuestionEvaluation]"
+
+  QuestionEvaluation:
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    eligible: Bool
+    isFollowUp: Bool
+    reason: Maybe Text
+    showAt: Maybe UTCTime
+
+  RideFeedbackResponseItem:
+    id: Id RideFeedbackResponse
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    configVersion: Int
+    logicVersion: Maybe Int
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    parentResponseId: Maybe (Id RideFeedbackResponse)
+    rideStatusAtResponse: Maybe RideStatus
+    secondsIntoRide: Maybe Int
+    actionResults: Maybe [RideFeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  RideFeedbackMetaRes:
+    questionTypes: "[RideFeedbackQuestionType]"
+    actionTypes: "[RideFeedbackActionType]"
+    deliveryModes: "[RideFeedbackDeliveryMode]"
+    allowedRideStatuses: "[RideStatus]"
+    issueReportTypes: "[IssueReportType]"
+    languages: "[Language]"
+    uiLayouts: "[Text]"
+    supportedOperators: "[Text]"
+    contextSample: Value
+
+apis:
+  # GET /rideFeedback/config/list
+  - GET:
+      endpoint: /config/list
+      auth: ApiAuthV2
+      query:
+        - questionKey: Text
+        - enabled: Bool
+        - limit: Int
+        - offset: Int
+      response:
+        type: RideFeedbackConfigListRes
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # GET /rideFeedback/config/{configId}
+  - GET:
+      endpoint: /config/{configId}
+      auth: ApiAuthV2
+      params:
+        configId: Id RideFeedbackConfig
+      response:
+        type: RideFeedbackConfigItem
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # POST /rideFeedback/config/create
+  - POST:
+      endpoint: /config/create
+      auth: ApiAuthV2
+      request:
+        type: CreateRideFeedbackConfigReq
+      response:
+        type: RideFeedbackConfigUpsertRes
+      migrate:
+        capability: system-config.ride_feedback.write
+
+  # POST /rideFeedback/config/{configId}/update
+  - POST:
+      endpoint: /config/{configId}/update
+      auth: ApiAuthV2
+      params:
+        configId: Id RideFeedbackConfig
+      request:
+        type: UpdateRideFeedbackConfigReq
+      response:
+        type: RideFeedbackConfigUpsertRes
+      migrate:
+        capability: system-config.ride_feedback.write
+
+  # POST /rideFeedback/config/{configId}/toggle
+  - POST:
+      endpoint: /config/{configId}/toggle
+      auth: ApiAuthV2
+      params:
+        configId: Id RideFeedbackConfig
+      request:
+        type: ToggleRideFeedbackConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.ride_feedback.write
+
+  # POST /rideFeedback/config/{configId}/clone
+  - POST:
+      endpoint: /config/{configId}/clone
+      auth: ApiAuthV2
+      params:
+        configId: Id RideFeedbackConfig
+      request:
+        type: CloneRideFeedbackConfigReq
+      response:
+        type: CloneRideFeedbackConfigRes
+      migrate:
+        capability: system-config.ride_feedback.write
+
+  # POST /rideFeedback/config/validate
+  - POST:
+      endpoint: /config/validate
+      auth: ApiAuthV2
+      request:
+        type: CreateRideFeedbackConfigReq
+      response:
+        type: ValidateRideFeedbackConfigRes
+      migrate:
+        capability: system-config.ride_feedback.write
+
+  # GET /rideFeedback/ride/{rideId}/preview
+  - GET:
+      endpoint: /ride/{rideId}/preview
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideFeedbackPreviewRes
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # GET /rideFeedback/ride/{rideId}/responses
+  - GET:
+      endpoint: /ride/{rideId}/responses
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: "[RideFeedbackResponseItem]"
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # POST /rideFeedback/response/{responseId}/retryActions
+  - POST:
+      endpoint: /response/{responseId}/retryActions
+      auth: ApiAuthV2
+      params:
+        responseId: Id RideFeedbackResponse
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.ride_feedback.write
+
+  # GET /rideFeedback/meta
+  - GET:
+      endpoint: /meta
+      auth: ApiAuthV2
+      response:
+        type: RideFeedbackMetaRes
+      migrate:
+        capability: system-config.ride_feedback.read

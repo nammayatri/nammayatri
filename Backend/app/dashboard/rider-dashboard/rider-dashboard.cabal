@@ -65,6 +65,7 @@ library
       Domain.Action.RiderPlatform.Management.PolicyDocument
       Domain.Action.RiderPlatform.Management.Rewards
       Domain.Action.RiderPlatform.Management.Ride
+      Domain.Action.RiderPlatform.Management.RideFeedback
       Domain.Action.RiderPlatform.Management.SearchTry
       Domain.Action.RiderPlatform.Management.Sos
       Domain.Action.RiderPlatform.Management.SosMedia
@@ -122,6 +123,7 @@ library
       API.Action.RiderPlatform.Management.PolicyDocument
       API.Action.RiderPlatform.Management.Rewards
       API.Action.RiderPlatform.Management.Ride
+      API.Action.RiderPlatform.Management.RideFeedback
       API.Action.RiderPlatform.Management.SearchTry
       API.Action.RiderPlatform.Management.Sos
       API.Action.RiderPlatform.Management.SosMedia

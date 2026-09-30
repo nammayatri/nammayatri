@@ -243,6 +243,7 @@ library
       Domain.Action.Dashboard.RideBooking.Registration
       Domain.Action.Dashboard.RideBooking.Search
       Domain.Action.Dashboard.RideBooking.Select
+      Domain.Action.Dashboard.RideFeedback
       Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.SearchTry
@@ -607,6 +608,7 @@ library
       SharedLogic.RideFeedback.Events
       SharedLogic.RideFeedback.Rule
       SharedLogic.RideFeedback.Selection
+      SharedLogic.RideFeedback.Validation
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -960,6 +962,7 @@ library
       API.Action.Dashboard.Management.PolicyDocument
       API.Action.Dashboard.Management.Rewards
       API.Action.Dashboard.Management.Ride
+      API.Action.Dashboard.Management.RideFeedback
       API.Action.Dashboard.Management.SearchTry
       API.Action.Dashboard.Management.Sos
       API.Action.Dashboard.Management.SosMedia
@@ -1016,6 +1019,7 @@ library
       API.Action.DashboardAuth.Management.PolicyDocument
       API.Action.DashboardAuth.Management.Rewards
       API.Action.DashboardAuth.Management.Ride
+      API.Action.DashboardAuth.Management.RideFeedback
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.Sos
       API.Action.DashboardAuth.Management.SosMedia
@@ -1176,6 +1180,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.PolicyDocument
       API.Types.RiderPlatform.Management.Endpoints.Rewards
       API.Types.RiderPlatform.Management.Endpoints.Ride
+      API.Types.RiderPlatform.Management.Endpoints.RideFeedback
       API.Types.RiderPlatform.Management.Endpoints.SearchTry
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
@@ -1192,6 +1197,7 @@ library
       API.Types.RiderPlatform.Management.PolicyDocument
       API.Types.RiderPlatform.Management.Rewards
       API.Types.RiderPlatform.Management.Ride
+      API.Types.RiderPlatform.Management.RideFeedback
       API.Types.RiderPlatform.Management.SearchTry
       API.Types.RiderPlatform.Management.Sos
       API.Types.RiderPlatform.Management.SosMedia
