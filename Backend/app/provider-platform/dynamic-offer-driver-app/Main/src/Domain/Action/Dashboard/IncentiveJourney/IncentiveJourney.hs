@@ -12,7 +12,7 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
-    deleteIncentiveJourneyUnassign,
+    postIncentiveJourneyUnassign,
     postIncentiveJourneyAssignBulkFromS3,
     getIncentiveJourneyAssignBulkFromS3List,
     postIncentiveJourneyAutoApplyCohortCreate,
@@ -275,13 +275,13 @@ postIncentiveJourneyAssign ::
 postIncentiveJourneyAssign merchantShortId opCity =
   LibProvider.postIncentiveJourneyAssign mkHandle (ShortId merchantShortId.getShortId) opCity
 
-deleteIncentiveJourneyUnassign ::
+postIncentiveJourneyUnassign ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Common.UnassignUserFromIncentiveJourneyReq ->
   Environment.Flow APISuccess
-deleteIncentiveJourneyUnassign merchantShortId opCity =
-  LibProvider.deleteIncentiveJourneyUnassign mkHandle (ShortId merchantShortId.getShortId) opCity
+postIncentiveJourneyUnassign merchantShortId =
+  LibProvider.postIncentiveJourneyUnassign mkHandle (ShortId merchantShortId.getShortId)
 
 postIncentiveJourneyAssignBulkFromS3 ::
   ShortId DM.Merchant ->
@@ -323,6 +323,10 @@ getIncentiveJourneyAutoApplyCohortList ::
   Maybe Int ->
   Maybe Int ->
   Maybe DTV.VehicleCategory ->
+  Maybe Bool ->
   Environment.Flow Common.AutoApplyCohortMappingListRes
 getIncentiveJourneyAutoApplyCohortList merchantShortId opCity =
-  LibProvider.getIncentiveJourneyAutoApplyCohortList mkHandle (ShortId merchantShortId.getShortId) opCity
+  LibProvider.getIncentiveJourneyAutoApplyCohortList
+    mkHandle
+    (ShortId merchantShortId.getShortId)
+    opCity

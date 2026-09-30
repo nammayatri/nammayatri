@@ -40,9 +40,6 @@ INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name,
 -- {"api":"PostIncentiveJourneyAssign","migration":"capability","param":"system-config.coins.write","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_ASSIGN' ) ON CONFLICT DO NOTHING;
 
--- {"api":"DeleteIncentiveJourneyUnassign","migration":"capability","param":"system-config.coins.write","schema":"atlas_bap_dashboard"}
-INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/DELETE_INCENTIVE_JOURNEY_UNASSIGN' ) ON CONFLICT DO NOTHING;
-
 -- {"api":"DeleteIncentiveJourneyCohortJourney","migration":"capability","param":"system-config.coins.write","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/DELETE_INCENTIVE_JOURNEY_COHORT_JOURNEY' ) ON CONFLICT DO NOTHING;
 
@@ -63,3 +60,9 @@ INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name,
 
 -- {"api":"DeleteJourneyMilestoneMapping","migration":"capability","param":"system-config.coins.write","schema":"atlas_bap_dashboard"}
 INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/DELETE_JOURNEY_MILESTONE_MAPPING' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostIncentiveJourneyUnassign","migration":"capability","param":"system-config.coins.write","schema":"atlas_bap_dashboard"}
+INSERT INTO atlas_bap_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.coins.write', 'DASHBOARD', 'RIDER_INCENTIVE_JOURNEY/INCENTIVE_JOURNEY/POST_INCENTIVE_JOURNEY_UNASSIGN' ) ON CONFLICT DO NOTHING;

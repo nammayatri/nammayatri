@@ -12,7 +12,7 @@ module Domain.Action.ProviderPlatform.IncentiveJourney.IncentiveJourney
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
-    deleteIncentiveJourneyUnassign,
+    postIncentiveJourneyUnassign,
     postIncentiveJourneyAssignBulkFromS3,
     getIncentiveJourneyAssignBulkFromS3List,
     postIncentiveJourneyAutoApplyCohortCreate,
@@ -111,11 +111,11 @@ postIncentiveJourneyAssign merchantShortId opCity apiTokenInfo req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.postIncentiveJourneyAssign) req)
 
-deleteIncentiveJourneyUnassign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.UnassignUserFromIncentiveJourneyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-deleteIncentiveJourneyUnassign merchantShortId opCity apiTokenInfo req = do
+postIncentiveJourneyUnassign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.UnassignUserFromIncentiveJourneyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIncentiveJourneyUnassign merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.deleteIncentiveJourneyUnassign) req)
+  SharedLogic.Transaction.withTransactionStoring transaction (do API.Client.ProviderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.postIncentiveJourneyUnassign) req)
 
 postIncentiveJourneyAssignBulkFromS3 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.BulkAssignUserCohortFromS3Req -> Environment.Flow API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.BulkAssignUserCohortFromS3Res)
 postIncentiveJourneyAssignBulkFromS3 merchantShortId opCity apiTokenInfo req = do
@@ -140,7 +140,7 @@ putIncentiveJourneyAutoApplyCohortUpdate merchantShortId opCity apiTokenInfo req
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.putIncentiveJourneyAutoApplyCohortUpdate) req)
 
-getIncentiveJourneyAutoApplyCohortList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Environment.Flow API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.AutoApplyCohortMappingListRes)
-getIncentiveJourneyAutoApplyCohortList merchantShortId opCity apiTokenInfo limit offset vehicleCategory = do
+getIncentiveJourneyAutoApplyCohortList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney.AutoApplyCohortMappingListRes)
+getIncentiveJourneyAutoApplyCohortList merchantShortId opCity apiTokenInfo limit offset vehicleCategory enabled = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.getIncentiveJourneyAutoApplyCohortList) limit offset vehicleCategory
+  API.Client.ProviderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.getIncentiveJourneyAutoApplyCohortList) limit offset vehicleCategory enabled

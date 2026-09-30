@@ -11,7 +11,7 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
-    deleteIncentiveJourneyUnassign,
+    postIncentiveJourneyUnassign,
   )
 where
 
@@ -223,10 +223,10 @@ postIncentiveJourneyAssign ::
 postIncentiveJourneyAssign merchantShortId opCity =
   LibRider.postIncentiveJourneyAssign mkHandle (ShortId merchantShortId.getShortId) opCity
 
-deleteIncentiveJourneyUnassign ::
+postIncentiveJourneyUnassign ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Common.UnassignUserFromIncentiveJourneyReq ->
   Environment.Flow APISuccess
-deleteIncentiveJourneyUnassign merchantShortId opCity =
-  LibRider.deleteIncentiveJourneyUnassign mkHandle (ShortId merchantShortId.getShortId) opCity
+postIncentiveJourneyUnassign merchantShortId =
+  LibRider.postIncentiveJourneyUnassign mkHandle (ShortId merchantShortId.getShortId)

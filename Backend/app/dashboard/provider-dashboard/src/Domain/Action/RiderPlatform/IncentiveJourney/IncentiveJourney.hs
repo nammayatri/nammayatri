@@ -13,7 +13,7 @@ module Domain.Action.RiderPlatform.IncentiveJourney.IncentiveJourney
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
-    deleteIncentiveJourneyUnassign,
+    postIncentiveJourneyUnassign,
   )
 where
 
@@ -102,8 +102,8 @@ postIncentiveJourneyAssign merchantShortId opCity apiTokenInfo req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.postIncentiveJourneyAssign) req)
 
-deleteIncentiveJourneyUnassign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.UnassignUserFromIncentiveJourneyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
-deleteIncentiveJourneyUnassign merchantShortId opCity apiTokenInfo req = do
+postIncentiveJourneyUnassign :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> API.Types.RiderPlatform.IncentiveJourney.IncentiveJourney.UnassignUserFromIncentiveJourneyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postIncentiveJourneyUnassign merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.deleteIncentiveJourneyUnassign) req)
+  SharedLogic.Transaction.withTransactionStoring transaction (do API.Client.RiderPlatform.IncentiveJourney.callIncentiveJourneyAPI checkedMerchantId opCity (.incentiveJourneyDSL.postIncentiveJourneyUnassign) req)
