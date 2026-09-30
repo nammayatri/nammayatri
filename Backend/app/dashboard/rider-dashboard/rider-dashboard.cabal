@@ -36,6 +36,7 @@ library
       Domain.Action.RiderPlatform.AppManagement.EDCMachine
       Domain.Action.RiderPlatform.AppManagement.EventManagement
       Domain.Action.RiderPlatform.AppManagement.FRFSTicketService
+      Domain.Action.RiderPlatform.AppManagement.FrfsTripOperations
       Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
       Domain.Action.RiderPlatform.AppManagement.Pass
       Domain.Action.RiderPlatform.AppManagement.Passetto
@@ -89,6 +90,7 @@ library
       API.Action.RiderPlatform.AppManagement.EDCMachine
       API.Action.RiderPlatform.AppManagement.EventManagement
       API.Action.RiderPlatform.AppManagement.FRFSTicketService
+      API.Action.RiderPlatform.AppManagement.FrfsTripOperations
       API.Action.RiderPlatform.AppManagement.MerchantOnboarding
       API.Action.RiderPlatform.AppManagement.Pass
       API.Action.RiderPlatform.AppManagement.Passetto
