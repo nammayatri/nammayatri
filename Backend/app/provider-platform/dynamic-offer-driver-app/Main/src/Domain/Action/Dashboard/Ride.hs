@@ -49,6 +49,7 @@ import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as DCReason
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -578,36 +579,49 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
               Nothing -> (Lib.Finance.Domain.Types.Account.DRIVER, ride.driverId.getId)
         mbOwnerAccount <- FinanceWallet.getWalletAccountByOwner ownerCounterpartyType ownerId
         let mbOwnerAccId = mbOwnerAccount <&> (.id)
-        -- Sign amount: positive if toAccountId == owner, negative if fromAccountId == owner
+        -- Sign amount: positive if toAccountId == owner, negative if fromAccountId
+        -- == owner, and Nothing when the entry does not touch the owner at all.
+        --
+        -- That last case is not hypothetical and must not fall through to a
+        -- positive credit. Online ride earnings are posted as a two-leg
+        -- pass-through (EndRide.Internal.postEarning): BuyerAsset -> BuyerExternal,
+        -- then BuyerExternal -> OwnerLiability, BOTH carrying the same
+        -- referenceType and amount. Counting the first leg doubled every online
+        -- ride's net payable. GST is worse still -- online GST runs
+        -- BuyerAsset -> BuyerExternal -> GovtIndirect, so neither leg touches the
+        -- driver and both were being credited to them.
         let signedAmount ownerAccId e
-              | e.toAccountId == ownerAccId = e.amount
-              | e.fromAccountId == ownerAccId = negate e.amount
-              | otherwise = e.amount
+              | e.toAccountId == ownerAccId = Just e.amount
+              | e.fromAccountId == ownerAccId = Just (negate e.amount)
+              | otherwise = Nothing
+        -- Driver payout view: only legs the owner is actually party to.
+        let ownerEntries = case mbOwnerAccId of
+              Just ownerAccId -> mapMaybe (\e -> (e,) <$> signedAmount ownerAccId e) walletCreditEntries
+              Nothing -> []
         let walletTxns =
               map
-                ( \e ->
+                ( \(e, amt) ->
                     Common.WalletTransactionItem
                       { ledgerEntryId = e.id.getId,
                         referenceType = e.referenceType,
-                        amount = maybe e.amount (\accId -> signedAmount accId e) mbOwnerAccId,
+                        amount = amt,
                         createdAt = e.createdAt
                       }
                 )
-                walletCreditEntries
+                ownerEntries
         -- Subscription offset: sum of RideSubscriptionDebit entries
         let subEntries = filter (\e -> e.referenceType == FinancePrepaid.prepaidRideDebitReferenceType) allLedgerEntries
         let subOffset = if null subEntries then Nothing else Just (sum (map (.amount) subEntries))
         -- Cancellation charges: sum of cancellation-related entries
         let cancelEntries = filter (\e -> e.referenceType `elem` [FinanceWallet.walletReferenceDriverCancellationCharges, FinanceWallet.walletReferenceCustomerCancellationCharges]) allLedgerEntries
         let cancelCharges = if null cancelEntries then Nothing else Just (sum (map (.amount) cancelEntries))
-        -- Net payable to driver: signed sum of wallet credit entry amounts
-        let netPayable = case mbOwnerAccId of
-              Just ownerAccId ->
-                if null walletCreditEntries
-                  then Nothing
-                  else Just (sum (map (signedAmount ownerAccId) walletCreditEntries))
-              Nothing ->
-                if null walletCreditEntries then Nothing else Just (sum (map (.amount) walletCreditEntries))
+        -- Net payable to driver: signed sum over the owner's own legs only.
+        -- Nothing when the owner's wallet account cannot be resolved -- summing
+        -- raw amounts there would reproduce the same double-count silently.
+        let netPayable =
+              if isNothing mbOwnerAccId || null ownerEntries
+                then Nothing
+                else Just (sum (map snd ownerEntries))
         -- Payment info from wallet credit entries settlement status only
         let settledEntry = listToMaybe $ filter (\e -> isJust e.settlementStatus) walletCreditEntries
         let payStatus = settledEntry >>= (fmap show . (.settlementStatus))
@@ -623,6 +637,12 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         let sgstAmt = mbRideFareTxn <&> (.sgstAmount)
         let igstAmt = mbRideFareTxn <&> (.igstAmount)
         let invoiceNums = mapMaybe (.invoiceNumber) indirectTaxTxns
+        let instrumentIsCash = maybe False (`elem` [DMPM.Cash, DMPM.BoothOnline]) booking.paymentInstrument
+            mbInstrumentText = (T.pack . show) <$> booking.paymentInstrument
+            resolvedPaymentMode = case booking.ledgerWriteMode of
+              Just True | instrumentIsCash -> Just "Online"
+              Just False | isJust booking.paymentInstrument && not instrumentIsCash -> Just "Cash"
+              _ -> mbInstrumentText
         -- Direct tax (TDS)
         directTaxTxns <- QDirectTax.findByReferenceId bookingIdStr
         let mbTdsTxn = listToMaybe directTaxTxns
@@ -643,7 +663,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
             tdsR,
             tdsAmt,
             netPayable,
-            (T.pack . show) <$> booking.paymentInstrument,
+            resolvedPaymentMode,
             payStatus,
             payRef,
             walletTxns,

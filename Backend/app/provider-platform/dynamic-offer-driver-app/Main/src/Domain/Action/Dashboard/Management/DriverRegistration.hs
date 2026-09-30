@@ -142,6 +142,7 @@ import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
+import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Reminder.Helper (createReminder)
@@ -2128,6 +2129,7 @@ approveAndUpdatePan req mId mOpCityId = do
       QPan.create pan
   updateFleetOwnerInfoOnDocApproval person $ \personId ->
     QFOIE.updatePanImage (Just panNoEnc) (Just imageId.getId) personId
+  STds.materializeTdsRateFor person
 
 approveAndUpdateAadhaar :: Common.AadhaarApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateAadhaar req mId mOpCityId = do
@@ -2305,7 +2307,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       QUdyamExtra.upsert updatedUdyam
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
-        QFOI.updateTdsRate (Just rate) driverId
+        STds.setTdsRateValidatedFor driverId True (Just rate)
     Nothing -> whenCreateDocumentRequired merchantOpCityId (pure ()) $ do
       uamNumber <- req.udyamNumber & fromMaybeM (InvalidRequest "udyamNumber is required for creating UDYAM document")
       encryptedUam <- encrypt uamNumber
@@ -2331,7 +2333,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       QUdyam.create newUdyam
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
-        QFOI.updateTdsRate (Just rate) driverId
+        STds.setTdsRateValidatedFor driverId True (Just rate)
 
 approveAndUpdateLdcDocument :: Common.LDCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateLdcDocument req _mId _mOpCityId = do
@@ -2339,7 +2341,7 @@ approveAndUpdateLdcDocument req _mId _mOpCityId = do
   image <- findApproveImage DVC.LDCCertificate imageId
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LDCCertificate
   whenJust req.tdsRate $ \rate ->
-    QFOI.updateTdsRate (Just rate) image.personId
+    STds.setTdsRateValidatedFor image.personId True (Just rate)
 
 approveAndUpdateTanDocument :: Common.TANApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateTanDocument req _mId _mOpCityId = do
@@ -2347,7 +2349,7 @@ approveAndUpdateTanDocument req _mId _mOpCityId = do
   image <- findApproveImage DVC.TANCertificate imageId
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.TANCertificate
   whenJust req.tdsRate $ \rate ->
-    QFOI.updateTdsRate (Just rate) image.personId
+    STds.setTdsRateValidatedFor image.personId True (Just rate)
 
 castReqTypeToDomain :: Common.PanType -> DPan.PanType
 castReqTypeToDomain = \case
@@ -2615,6 +2617,9 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         DVC.PanCard -> do
           rejectImage imageId
           QPan.updateVerificationStatusAndRejectReason INVALID (Just reason) imageId
+          -- An invalidated PAN moves the person into the invalidPanTdsRate cohort.
+          person <- QPerson.findById image.personId >>= fromMaybeM (PersonNotFound image.personId.getId)
+          STds.materializeTdsRateFor person
         DVC.AadhaarCard -> do
           rejectImage imageId
           QAadhaarCard.updateVerificationStatusAndRejectReason INVALID (Just reason) image.personId
@@ -2637,7 +2642,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           -- LDC reject also resets the fleet owner's TDS: explicit rate from the request, else the configured default (mirrors approve)
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
           let mbTdsRate = imageRejectReq.tdsRate <|> ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate)
-          QFOI.updateTdsRate mbTdsRate image.personId
+          STds.setTdsRateValidatedFor image.personId True mbTdsRate
         docType
           | docType `elem` imageOnlyRejectTypes -> rejectImage imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")

@@ -119,6 +119,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
+import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
@@ -587,24 +588,18 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       QRB.updateLedgerWriteMode booking.id (Just resolvedIsOnline)
       pure resolvedIsOnline
 
-    let panLinkTdsEnabled = panAadhaarLinkTdsEnabled transporterConfig.taxConfig
-        configTdsRate = (.rate) <$> transporterConfig.taxConfig.defaultTdsRate
+    -- The stored rate is authoritative; 'ensureTdsRateFor' materialises it from
+    -- the cohort when the column is empty, so the rate charged here and the rate
+    -- recorded against the person can never disagree. Legacy merchants (cohort
+    -- off) still get the one-time defaultTdsRate backfill.
     (mbFleetInfo, mbTdsRate) <- case ride.fleetOwnerId of
       Just fleetOwnerId -> do
         mbFleetInfo' <- QFOI.findByPrimaryKey (cast fleetOwnerId)
-        let currentRate = mbFleetInfo' >>= (.tdsRate)
-        unless panLinkTdsEnabled $
-          whenJust mbFleetInfo' $ \_ ->
-            when (isNothing currentRate) $
-              whenJust configTdsRate $ \rate ->
-                QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
-        pure $ (mbFleetInfo',) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
+        rate <- STds.ensureTdsRateFor transporterConfig fleetOwnerId True (mbFleetInfo' >>= (.tdsRate))
+        pure (mbFleetInfo', rate)
       Nothing -> do
-        let currentRate = driverInfo.tdsRate
-        when (not panLinkTdsEnabled && isNothing currentRate) $
-          whenJust configTdsRate $ \rate ->
-            QDI.updateTdsRate (Just rate) ride.driverId
-        pure $ (Nothing,) if panLinkTdsEnabled then currentRate else (currentRate <|> configTdsRate)
+        rate <- STds.ensureTdsRateFor transporterConfig ride.driverId False driverInfo.tdsRate
+        pure (Nothing, rate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
     -- TDS base = Total Ride Fare - GST. Tolls and parking stay IN the base (they

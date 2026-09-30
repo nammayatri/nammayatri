@@ -696,6 +696,7 @@ library
       SharedLogic.Finance.Reconciliation.SubscriptionMeta
       SharedLogic.Finance.SubscriptionConsumption
       SharedLogic.Finance.SubscriptionPurchase
+      SharedLogic.Finance.TdsRate
       SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
       SharedLogic.Finance.WalletAccount

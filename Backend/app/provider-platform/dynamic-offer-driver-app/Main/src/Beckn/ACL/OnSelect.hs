@@ -64,11 +64,13 @@ mkOnSelectMessageV2 ::
   DBC.BecknConfig ->
   DM.Merchant ->
   Maybe FarePolicyD.FullFarePolicy ->
+  -- | payment instrument to advertise (see Utils.resolveAdvertisedPaymentInstrument)
+  Maybe Text ->
   DOnSelectReq ->
   Spec.OnSelectReqMessage
-mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectReq {..} = do
+mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy mPaymentInstrument req@DOnSelectReq {..} = do
   let fulfillments = [mkFulfillmentV2 req driverQuote isValueAddNP]
-  let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote Nothing
+  let paymentV2 = mkPaymentV2 bppConfig merchant driverQuote Nothing mPaymentInstrument
   Spec.OnSelectReqMessage $
     Just
       emptyOrder
@@ -89,11 +91,11 @@ mkFulfillmentV2 dReq quote isValueAddNP = do
       Spec.fulfillmentAgent = Just $ mkAgentV2 quote isValueAddNP
     }
 
-mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Maybe Text -> Spec.Payment
-mkPaymentV2 bppConfig merchant driverQuote mbPaymentId = do
+mkPaymentV2 :: DBC.BecknConfig -> DM.Merchant -> DQuote.DriverQuote -> Maybe Text -> Maybe Text -> Spec.Payment
+mkPaymentV2 bppConfig merchant driverQuote mbPaymentId mPaymentInstrument = do
   let mPrice = Just $ Common.mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
+  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 mkVehicleV2 :: DQuote.DriverQuote -> Spec.Vehicle
 mkVehicleV2 quote =

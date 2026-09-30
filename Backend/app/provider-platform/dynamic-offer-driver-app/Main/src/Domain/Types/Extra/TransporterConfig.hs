@@ -31,10 +31,14 @@ instance FromJSON TdsConfig where
     where
       parseNested =
         withObject "TdsConfig" $ \o ->
-          TdsConfig <$> o .: "rate" <*> o .:? "thresholdAmount"
+          (TdsConfig <$> o .: "rate" <*> o .:? "thresholdAmount") >>= validateCfg
       parseLegacyRate =
         withScientific "TdsConfig" $ \n ->
-          pure TdsConfig {rate = realToFrac n, thresholdAmount = Nothing}
+          validateCfg TdsConfig {rate = realToFrac n, thresholdAmount = Nothing}
+      validateCfg cfg@(TdsConfig r _)
+        | r < 0 || r > 1 =
+          fail $ "TdsConfig.rate must be a decimal fraction in [0,1] (0.001 = 0.1%), got: " <> show r
+        | otherwise = pure cfg
 
 data AppletKey = SosAppletID | RentalAppletID | FleetAppletID deriving (Show, Read, Eq, Ord, Generic)
 

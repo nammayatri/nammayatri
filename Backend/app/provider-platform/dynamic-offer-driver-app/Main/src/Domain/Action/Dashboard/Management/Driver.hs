@@ -161,6 +161,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
@@ -1615,10 +1616,10 @@ postDriverTdsRateUpdate merchantShortId opCity req = do
   case (ownerType :: Common.TdsOwnerType) of
     Common.DRIVER -> do
       _ <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-      QDriverInfo.updateTdsRate tdsRate personId
+      STds.setTdsRateValidatedFor personId False tdsRate
     Common.FLEET_OWNER -> do
       _ <- QFOI.findByPrimaryKey personId >>= fromMaybeM (FleetOwnerNotFound personId.getId)
-      QFOI.updateTdsRate tdsRate personId
+      STds.setTdsRateValidatedFor personId True tdsRate
   pure Success
 
 ---------------------------------------------------------------------
