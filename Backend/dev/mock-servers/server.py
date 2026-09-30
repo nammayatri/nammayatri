@@ -222,14 +222,6 @@ class MockHandler(BaseHTTPRequestHandler):
                 subprocess.run(["redis-cli", "-p", str(p), "-c", "FLUSHALL"], capture_output=True)
             return self._json({"flushed": True})
 
-        # ── Generic SQL endpoints (for scheduler tests and DB fixtures) ──
-        if path == "/mock/sql/select" and self.command == "POST":
-            return self._mock_sql_select(body)
-        if path == "/mock/sql/update" and self.command == "POST":
-            return self._mock_sql_update(body)
-        if path == "/mock/sql/insert" and self.command == "POST":
-            return self._mock_sql_insert(body)
-
         # ── Generic Redis SET / DEL (for tests that need to seed or invalidate Redis cache state) ──
         if path == "/mock/redis/set" and self.command == "POST":
             return self._mock_redis_set(body)
@@ -395,15 +387,9 @@ class MockHandler(BaseHTTPRequestHandler):
 
         return self._json({"error": "method not allowed"}, status=405)
 
-    # ── Generic SQL query endpoints (for scheduler tests / DB fixtures) ──
+    # ── Dev-DB connection (used by /mock/refunds/clear) ──
+    # The /mock/sql/* endpoints were removed: integration tests must go through backend APIs.
     #
-    # Two endpoints expose SELECT and UPDATE against any dev-DB table. Table,
-    # schema, and column identifiers go through psycopg2.sql.Identifier so
-    # they're safely quoted; values are bound as parameters. Whitelisted
-    # operators only. These are dev-only — the mock server is not exposed
-    # outside the dev stack.
-
-    _SQL_WHERE_OPS = {"=", "!=", "<", "<=", ">", ">=", "LIKE", "IN", "IS NULL", "IS NOT NULL"}
     # `atlas_superuser` has SELECT across all schemas (atlas_app + atlas_driver_offer_bpp + …).
     # `atlas_app_user` is scoped to atlas_app only and 500s on cross-schema queries.
     # Local dev Postgres uses trust auth so password is ignored — kept optional for
@@ -415,215 +401,9 @@ class MockHandler(BaseHTTPRequestHandler):
         **({"password": os.environ["MOCK_SQL_PASSWORD"]} if os.environ.get("MOCK_SQL_PASSWORD") else {}),
     }
 
-    def _build_where(self, clauses):
-        """Build a (SQL, params) pair from a where_clause list.
-        Each clause is {"column_name": ..., "val": ..., "op": "="}.
-        `val` is ignored for IS NULL / IS NOT NULL; for IN, `val` must be a list."""
-        from psycopg2 import sql as psql
-        if not clauses:
-            return psql.SQL(""), []
-        parts = []
-        params = []
-        for c in clauses:
-            col = c.get("column_name")
-            op = (c.get("op") or "=").upper()
-            if not col:
-                raise ValueError("where_clause entry missing column_name")
-            if op not in self._SQL_WHERE_OPS:
-                raise ValueError(f"unsupported op {op!r}; allowed: {sorted(self._SQL_WHERE_OPS)}")
-            if op in ("IS NULL", "IS NOT NULL"):
-                parts.append(psql.SQL("{} {}").format(psql.Identifier(col), psql.SQL(op)))
-            elif op == "IN":
-                val = c.get("val")
-                if not isinstance(val, list) or not val:
-                    raise ValueError(f"op=IN on column {col} requires non-empty list val")
-                placeholders = psql.SQL(", ").join(psql.Placeholder() * len(val))
-                parts.append(psql.SQL("{} IN ({})").format(psql.Identifier(col), placeholders))
-                params.extend(val)
-            else:
-                parts.append(psql.SQL("{} " + op + " {}").format(psql.Identifier(col), psql.Placeholder()))
-                params.append(c.get("val"))
-        return psql.SQL(" WHERE ") + psql.SQL(" AND ").join(parts), params
-
     def _pg_connect(self, db_name):
         import psycopg2
         return psycopg2.connect(dbname=db_name, **self._SQL_DB_DEFAULT)
-
-    def _parse_sql_target(self, body):
-        """Parse common SQL body fields. Returns (data, db_name, schema, table).
-        Raises ValueError on invalid JSON or missing required fields."""
-        try:
-            data = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            raise ValueError("invalid JSON")
-        db_name = data.get("db_name")
-        schema = data.get("db_schema")
-        table = data.get("table_name")
-        if not db_name or not schema or not table:
-            raise ValueError("db_name, db_schema, table_name are required")
-        return data, db_name, schema, table
-
-    def _mock_sql_select(self, body):
-        """POST /mock/sql/select — run a SELECT against a dev DB table.
-        Body: {
-          "db_name": "atlas_dev",
-          "db_schema": "atlas_app",
-          "table_name": "purchased_pass",
-          "select": ["id", "status"],         # optional, defaults to ["*"]
-          "where_clause": [{"column_name": "id", "val": "uuid", "op": "="}],
-          "limit": 100                        # optional
-        }
-        Returns: {"rows": [{...}, ...], "count": N}"""
-        from psycopg2 import sql as psql
-        try:
-            data, db_name, schema, table = self._parse_sql_target(body)
-            where_sql, where_params = self._build_where(data.get("where_clause") or [])
-        except ValueError as ve:
-            return self._json({"error": str(ve)}, status=400)
-
-        cols = data.get("select") or ["*"]
-        limit = data.get("limit")
-
-        select_sql = (
-            psql.SQL("*") if cols == ["*"]
-            else psql.SQL(", ").join(psql.Identifier(c) for c in cols)
-        )
-        query = psql.SQL("SELECT {cols} FROM {sch}.{tbl}{where}").format(
-            cols=select_sql,
-            sch=psql.Identifier(schema),
-            tbl=psql.Identifier(table),
-            where=where_sql,
-        )
-        if isinstance(limit, int) and limit > 0:
-            query = query + psql.SQL(" LIMIT {}").format(psql.Literal(limit))
-
-        try:
-            conn = self._pg_connect(db_name)
-            try:
-                cur = conn.cursor()
-                cur.execute(query, where_params)
-                col_names = [d[0] for d in cur.description] if cur.description else []
-                rows = [dict(zip(col_names, r)) for r in cur.fetchall()]
-                cur.close()
-            finally:
-                conn.close()
-            return self._json({"rows": rows, "count": len(rows)}, default=str)
-        except Exception:
-            log.exception("sql-select error")
-            return self._json({"error": "internal server error"}, status=500)
-
-    def _mock_sql_update(self, body):
-        """POST /mock/sql/update — run an UPDATE against a dev DB table.
-        Body: {
-          "db_name": "atlas_dev",
-          "db_schema": "atlas_app",
-          "table_name": "purchased_pass",
-          "set": {"status": "PreBooked"},     # column → value map
-          "touch_updated_at": true,           # optional, appends updated_at = NOW()
-          "where_clause": [{"column_name": "id", "val": "uuid", "op": "="}]
-        }
-        Returns: {"ok": true, "rowcount": N}"""
-        from psycopg2 import sql as psql
-        try:
-            data, db_name, schema, table = self._parse_sql_target(body)
-        except ValueError as ve:
-            return self._json({"error": str(ve)}, status=400)
-
-        set_map = data.get("set") or {}
-        where = data.get("where_clause") or []
-        if not isinstance(set_map, dict) or not set_map:
-            return self._json({"error": "set must be a non-empty object"}, status=400)
-        if not where:
-            return self._json({"error": "where_clause required (refusing unscoped UPDATE)"}, status=400)
-
-        try:
-            where_sql, where_params = self._build_where(where)
-        except ValueError as ve:
-            return self._json({"error": str(ve)}, status=400)
-
-        set_parts = [
-            psql.SQL("{} = {}").format(psql.Identifier(c), psql.Placeholder())
-            for c in set_map.keys()
-        ]
-        set_params = list(set_map.values())
-        if data.get("touch_updated_at"):
-            set_parts.append(psql.SQL("updated_at = NOW()"))
-
-        query = psql.SQL("UPDATE {sch}.{tbl} SET {sets}{where}").format(
-            sch=psql.Identifier(schema),
-            tbl=psql.Identifier(table),
-            sets=psql.SQL(", ").join(set_parts),
-            where=where_sql,
-        )
-
-        try:
-            conn = self._pg_connect(db_name)
-            try:
-                conn.autocommit = True
-                cur = conn.cursor()
-                cur.execute(query, set_params + where_params)
-                rowcount = cur.rowcount
-                cur.close()
-            finally:
-                conn.close()
-            return self._json({"ok": True, "rowcount": rowcount})
-        except Exception:
-            log.exception("sql-update error")
-            return self._json({"error": "internal server error"}, status=500)
-
-    def _mock_sql_insert(self, body):
-        """POST /mock/sql/insert — run an INSERT into a dev DB table.
-        Body: {
-          "db_name": "atlas_dev",
-          "db_schema": "atlas_app",
-          "table_name": "purchased_pass",
-          "values": {"id": "...", "status": "Active", ...},   # column → value
-          "touch_timestamps": true,                            # optional, sets created_at/updated_at = NOW()
-          "on_conflict_do_nothing": true                       # optional, appends ON CONFLICT DO NOTHING
-        }
-        Returns: {"ok": true, "rowcount": N}"""
-        from psycopg2 import sql as psql
-        try:
-            data, db_name, schema, table = self._parse_sql_target(body)
-        except ValueError as ve:
-            return self._json({"error": str(ve)}, status=400)
-
-        values = data.get("values") or {}
-        if not isinstance(values, dict) or not values:
-            return self._json({"error": "values must be a non-empty object"}, status=400)
-
-        cols = list(values.keys())
-        params = list(values.values())
-        col_idents = psql.SQL(", ").join(psql.Identifier(c) for c in cols)
-        placeholders = psql.SQL(", ").join(psql.Placeholder() * len(cols))
-
-        if data.get("touch_timestamps"):
-            col_idents = col_idents + psql.SQL(", created_at, updated_at")
-            placeholders = placeholders + psql.SQL(", NOW(), NOW()")
-
-        on_conflict = psql.SQL(" ON CONFLICT DO NOTHING") if data.get("on_conflict_do_nothing") else psql.SQL("")
-        query = psql.SQL("INSERT INTO {sch}.{tbl} ({cols}) VALUES ({vals}){oc}").format(
-            sch=psql.Identifier(schema),
-            tbl=psql.Identifier(table),
-            cols=col_idents,
-            vals=placeholders,
-            oc=on_conflict,
-        )
-
-        try:
-            conn = self._pg_connect(db_name)
-            try:
-                conn.autocommit = True
-                cur = conn.cursor()
-                cur.execute(query, params)
-                rowcount = cur.rowcount
-                cur.close()
-            finally:
-                conn.close()
-            return self._json({"ok": True, "rowcount": rowcount})
-        except Exception:
-            log.exception("sql-insert error")
-            return self._json({"error": "internal server error"}, status=500)
 
     # ── Generic scheduler job trigger (for scheduler tests) ──
 
@@ -1275,7 +1055,7 @@ def main():
 
     server = _QuietThreadingHTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear, POST /mock/refunds/clear")
+    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear, POST /mock/refunds/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()
