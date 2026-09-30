@@ -2277,6 +2277,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   udyamImage <- findApproveImage DVC.UDYAMCertificate imageId
   let driverId = udyamImage.personId
+  STds.assertValidTdsRateFor merchantOpCityId driverId req.tdsRate
   mbUdyamByImage <- QUdyam.findByImageId imageId
   -- Fallback for re-upload-after-reject: the UDYAM row's documentImageId still points at the
   -- prior (rejected) image. Look up by udyam number hash to recover the existing row.
@@ -2307,7 +2308,7 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       QUdyamExtra.upsert updatedUdyam
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
-        STds.setTdsRateValidatedFor driverId True (Just rate)
+        STds.setTdsRateValidatedFor merchantOpCityId driverId True (Just rate)
     Nothing -> whenCreateDocumentRequired merchantOpCityId (pure ()) $ do
       uamNumber <- req.udyamNumber & fromMaybeM (InvalidRequest "udyamNumber is required for creating UDYAM document")
       encryptedUam <- encrypt uamNumber
@@ -2333,23 +2334,25 @@ approveAndUpdateUdyamDocument req merchantId merchantOpCityId = do
       QUdyam.create newUdyam
       QImage.updateVerificationStatusByIdAndType VALID imageId DVC.UDYAMCertificate
       whenJust req.tdsRate $ \rate ->
-        STds.setTdsRateValidatedFor driverId True (Just rate)
+        STds.setTdsRateValidatedFor merchantOpCityId driverId True (Just rate)
 
 approveAndUpdateLdcDocument :: Common.LDCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateLdcDocument req _mId _mOpCityId = do
+approveAndUpdateLdcDocument req _mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   image <- findApproveImage DVC.LDCCertificate imageId
+  STds.assertValidTdsRateFor mOpCityId image.personId req.tdsRate
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.LDCCertificate
   whenJust req.tdsRate $ \rate ->
-    STds.setTdsRateValidatedFor image.personId True (Just rate)
+    STds.setTdsRateValidatedFor mOpCityId image.personId True (Just rate)
 
 approveAndUpdateTanDocument :: Common.TANApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
-approveAndUpdateTanDocument req _mId _mOpCityId = do
+approveAndUpdateTanDocument req _mId mOpCityId = do
   let imageId = Id req.documentImageId.getId
   image <- findApproveImage DVC.TANCertificate imageId
+  STds.assertValidTdsRateFor mOpCityId image.personId req.tdsRate
   QImage.updateVerificationStatusByIdAndType VALID imageId DVC.TANCertificate
   whenJust req.tdsRate $ \rate ->
-    STds.setTdsRateValidatedFor image.personId True (Just rate)
+    STds.setTdsRateValidatedFor mOpCityId image.personId True (Just rate)
 
 castReqTypeToDomain :: Common.PanType -> DPan.PanType
 castReqTypeToDomain = \case
@@ -2638,11 +2641,14 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           whenJust mbUdyam $ \udyam ->
             QUdyam.updateVerificationStatusAndRejectReason INVALID (Just reason) udyam.id
         DVC.LDCCertificate -> do
-          rejectImage imageId
           -- LDC reject also resets the fleet owner's TDS: explicit rate from the request, else the configured default (mirrors approve)
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
           let mbTdsRate = imageRejectReq.tdsRate <|> ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate)
-          STds.setTdsRateValidatedFor image.personId True mbTdsRate
+          -- Validated before rejectImage for the same reason as the approve paths:
+          -- a throw afterwards would leave the image rejected and the rate unchanged.
+          whenJust mbTdsRate $ STds.assertValidTdsRate transporterConfig.taxConfig image.personId
+          rejectImage imageId
+          STds.setTdsRateValidatedWith transporterConfig.taxConfig image.personId True mbTdsRate
         docType
           | docType `elem` imageOnlyRejectTypes -> rejectImage imageId
         _ -> throwError (InternalError "Unknown Config in reject update document")

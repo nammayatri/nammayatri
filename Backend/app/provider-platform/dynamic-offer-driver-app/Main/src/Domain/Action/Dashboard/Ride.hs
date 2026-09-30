@@ -638,7 +638,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         let igstAmt = mbRideFareTxn <&> (.igstAmount)
         let invoiceNums = mapMaybe (.invoiceNumber) indirectTaxTxns
         let instrumentIsCash = maybe False (`elem` [DMPM.Cash, DMPM.BoothOnline]) booking.paymentInstrument
-            mbInstrumentText = (T.pack . show) <$> booking.paymentInstrument
+            mbInstrumentText = T.pack . show <$> booking.paymentInstrument
             resolvedPaymentMode = case booking.ledgerWriteMode of
               Just True | instrumentIsCash -> Just "Online"
               Just False | isJust booking.paymentInstrument && not instrumentIsCash -> Just "Cash"
