@@ -26,11 +26,11 @@ import SharedLogic.FRFSUtils (getJourneyIdFromBooking, markFRFSBookingStatus, no
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.SharedCab.Allocation (cityConfig, claimable, clearAllocationKeys)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
-import SharedLogic.SharedCab.Booking (withBookingLock)
+import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.LegState (SharedCabState (FINDING))
+import SharedLogic.SharedCab.LegState (CancelReason (NO_CAB_FOUND), SharedCabState (FINDING))
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RefundDecision (Refund (..), refundAmounts)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
@@ -108,6 +108,7 @@ cancelOne findingTimeoutSec stale = do
   whenJust cancelled $ \(b, decision) -> do
     when (decision == FullRefund) $ startRefund b
     getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
+    recordCancelReason b.id NO_CAB_FOUND
     Events.forBooking (Events.BookingCancelled "system" (if decision == FullRefund then "full" else "none") (Just "finding_timeout")) b
     Invariants.checkBooking b.id
     if decision == FullRefund then Notify.notifyFindingTimeout b else Notify.notifyBookingCancelled b.sharedCabNoShows b
