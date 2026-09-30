@@ -1,0 +1,121 @@
+imports:
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  RideStatus: Domain.Types.RideStatus
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackActionType: Domain.Types.RideFeedbackConfig
+  ServiceTierType: Domain.Types.ServiceTierType
+  Value: Data.Aeson
+
+RideFeedbackResponse:
+  tableName: ride_feedback_response
+
+  # One row per (ride, question). Created as SHOWN on first impression, then moved to a final status.
+  fields:
+    id: Id RideFeedbackResponse
+    rideId: Id Ride
+    bookingId: Id Booking
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    configVersion: Int
+    logicVersion: Maybe Int # RIDE-FEEDBACK dynamic logic version that selected the question
+    parentResponseId: Maybe (Id RideFeedbackResponse)
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    selectedOptionKeys: Maybe [Text]
+    shownCount: Int
+    rideStatusAtResponse: Maybe RideStatus
+    secondsIntoRide: Maybe Int
+    lat: Maybe Double
+    lon: Maybe Double
+    vehicleServiceTierType: Maybe ServiceTierType
+    vehicleVariant: Maybe Text # stored as text: VehicleVariant has clashing orphan beam instances via IssueManagement.Common
+    actionResults: Maybe [RideFeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    RideFeedbackResponseStatus:
+      enum: "SHOWN,ANSWERED,SKIPPED,DISMISSED,EXPIRED"
+
+    RideFeedbackActionStatus:
+      enum: "PENDING,SUCCESS,FAILED"
+
+    RideFeedbackAnswer:
+      selectedOptionKeys: Maybe [Text]
+      text: Maybe Text
+      number: Maybe Double
+      rating: Maybe Int
+      mediaFileIds: Maybe [Text]
+
+    RideFeedbackActionResult:
+      ruleId: Text
+      actionType: RideFeedbackActionType
+      status: RideFeedbackActionStatus
+      attempts: Int
+      externalRef: Maybe Text
+      errorMessage: Maybe Text
+      updatedAt: UTCTime
+
+  beamType:
+    answer: Maybe Value
+    rideStatusAtResponse: Maybe Text
+    actionResults: Maybe Value
+
+  sqlType:
+    questionKey: text
+    status: text
+    answer: json
+    selectedOptionKeys: "text[]"
+    rideStatusAtResponse: text
+    vehicleServiceTierType: text
+    vehicleVariant: text
+    actionResults: json
+
+  default:
+    shownCount: "0"
+
+  toTType:
+    answer: Data.Aeson.toJSON <$> answer|E
+    rideStatusAtResponse: Kernel.Prelude.show <$> rideStatusAtResponse|E
+    actionResults: Data.Aeson.toJSON <$> actionResults|E
+
+  fromTType:
+    answer: Kernel.Utils.JSON.valueToMaybe =<< answer|E
+    rideStatusAtResponse: Kernel.Prelude.readMaybe . Data.Text.unpack =<< rideStatusAtResponse|E
+    actionResults: Kernel.Utils.JSON.valueToMaybe =<< actionResults|E
+
+  constraints:
+    id: PrimaryKey
+    rideId: "!SecondaryKey" # forcing to be a secondary key, queried from the Extra file
+    personId: "!SecondaryKey" # forcing to be a secondary key, queried from the Extra file
+
+  # (ride_id) and (person_id, created_at) lookup indexes are in ddl-migrations: the generator sorts index columns.
+  extraIndexes:
+    - columns: [rideId, configId]
+      unique: true
+
+  queries:
+    findAllByRideId:
+      kvFunction: findAllWithKV
+      where: rideId
+
+    findByRideIdAndConfigId:
+      kvFunction: findOneWithKV
+      where:
+        and: [rideId, configId]
+
+    updateActionResults:
+      kvFunction: updateWithKV
+      params: [actionResults]
+      where: id
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE

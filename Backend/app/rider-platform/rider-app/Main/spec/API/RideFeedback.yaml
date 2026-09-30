@@ -1,0 +1,120 @@
+imports:
+  Ride: Domain.Types.Ride
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackQuestionType: Domain.Types.RideFeedbackConfig
+  RideFeedbackResponseStatus: Domain.Types.RideFeedbackResponse
+  RideFeedbackAnswer: Domain.Types.RideFeedbackResponse
+  Language: Kernel.External.Types
+  LatLong: Kernel.External.Maps.Types
+  Value: Data.Aeson
+
+module: RideFeedback
+
+types:
+  RideFeedbackQuestionsRes:
+    rideId: Id Ride
+    serverTime: UTCTime
+    nextPollAfterSeconds: Maybe Int
+    questions: "[FeedbackQuestionItem]"
+    followUpQuestions: "[FeedbackQuestionItem]"
+
+  FeedbackQuestionItem:
+    questionId: Id RideFeedbackConfig
+    questionKey: Text
+    questionType: RideFeedbackQuestionType
+    title: Text
+    description: Maybe Text
+    options: Maybe [FeedbackOptionItem]
+    inputConfig: Maybe FeedbackInputConfigRes
+    acknowledgement: Maybe Text
+    isSkippable: Bool
+    showAt: UTCTime
+    autoDismissAfterSeconds: Maybe Int
+    priority: Int
+    uiConfig: Maybe Value
+
+  FeedbackOptionItem:
+    key: Text
+    label: Text
+    iconUrl: Maybe Text
+    nextQuestionKey: Maybe Text
+    requiresText: Bool
+    isExclusive: Bool
+
+  FeedbackInputConfigRes:
+    placeholder: Maybe Text
+    minLength: Maybe Int
+    maxLength: Maybe Int
+    minValue: Maybe Double
+    maxValue: Maybe Double
+    step: Maybe Double
+    minSelections: Maybe Int
+    maxSelections: Maybe Int
+    maxFiles: Maybe Int
+    maxDurationSec: Maybe Int
+    minLabel: Maybe Text
+    maxLabel: Maybe Text
+
+  SubmitRideFeedbackReq:
+    responses: "[FeedbackResponseItem]"
+
+  FeedbackResponseItem:
+    questionId: Id RideFeedbackConfig
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    parentQuestionId: Maybe (Id RideFeedbackConfig)
+    clientTimestamp: Maybe UTCTime
+    location: Maybe LatLong
+
+  SubmitRideFeedbackRes:
+    results: "[FeedbackSubmitResult]"
+
+  FeedbackSubmitResult:
+    questionId: Id RideFeedbackConfig
+    accepted: Bool
+    errorCode: Maybe Text
+    acknowledgement: Maybe Text
+
+  RideFeedbackSubmittedRes:
+    responses: "[SubmittedFeedbackItem]"
+
+  SubmittedFeedbackItem:
+    questionId: Id RideFeedbackConfig
+    questionKey: Text
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    updatedAt: UTCTime
+
+apis:
+  # GET /ride/{rideId}/feedback/questions
+  - GET:
+      endpoint: /ride/{rideId}/feedback/questions
+      auth: TokenAuth
+      headers:
+        x-language: Language
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.RideFeedback.RideFeedbackQuestionsRes
+
+  # POST /ride/{rideId}/feedback
+  - POST:
+      endpoint: /ride/{rideId}/feedback
+      auth: TokenAuth
+      headers:
+        x-language: Language
+      params:
+        rideId: Id Ride
+      request:
+        type: API.Types.UI.RideFeedback.SubmitRideFeedbackReq
+      response:
+        type: API.Types.UI.RideFeedback.SubmitRideFeedbackRes
+
+  # GET /ride/{rideId}/feedback
+  - GET:
+      endpoint: /ride/{rideId}/feedback
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.RideFeedback.RideFeedbackSubmittedRes

@@ -366,6 +366,7 @@ library
       Domain.Action.UI.RentalsIntercityCache
       Domain.Action.UI.Rewards
       Domain.Action.UI.Ride
+      Domain.Action.UI.RideFeedback
       Domain.Action.UI.RidePayment
       Domain.Action.UI.RiderLocation
       Domain.Action.UI.RiderPreferences
@@ -600,6 +601,12 @@ library
       SharedLogic.Referral
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
+      SharedLogic.RideFeedback.Actions
+      SharedLogic.RideFeedback.Context
+      SharedLogic.RideFeedback.Eligibility
+      SharedLogic.RideFeedback.Events
+      SharedLogic.RideFeedback.Rule
+      SharedLogic.RideFeedback.Selection
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -702,6 +709,7 @@ library
       Storage.CachedQueries.PickupRoute
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.PolicyAndComplianceDocument
+      Storage.CachedQueries.RideFeedbackConfigExtra
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.RiderPreferences
       Storage.CachedQueries.RoutePolylines
@@ -823,6 +831,7 @@ library
       Storage.Queries.RewardCouponUploadBatchExtra
       Storage.Queries.RewardUnlockExtra
       Storage.Queries.RideExtra
+      Storage.Queries.RideFeedbackResponseExtra
       Storage.Queries.RiderPreferencesExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
@@ -1070,6 +1079,7 @@ library
       API.Action.UI.PolicyDocument
       API.Action.UI.PriceBreakup
       API.Action.UI.Rewards
+      API.Action.UI.RideFeedback
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
       API.Action.UI.RiderPreferences
@@ -1226,6 +1236,7 @@ library
       API.Types.UI.PolicyDocument
       API.Types.UI.PriceBreakup
       API.Types.UI.Rewards
+      API.Types.UI.RideFeedback
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
       API.Types.UI.RiderPreferences
@@ -1381,6 +1392,8 @@ library
       Domain.Types.RewardCouponUploadBatch
       Domain.Types.RewardUnlock
       Domain.Types.Ride
+      Domain.Types.RideFeedbackConfig
+      Domain.Types.RideFeedbackResponse
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
       Domain.Types.RiderPreferences
@@ -1556,6 +1569,8 @@ library
       Storage.Beam.RewardCouponUploadBatch
       Storage.Beam.RewardUnlock
       Storage.Beam.Ride
+      Storage.Beam.RideFeedbackConfig
+      Storage.Beam.RideFeedbackResponse
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
       Storage.Beam.RiderPreferences
@@ -1600,6 +1615,7 @@ library
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.FRFSVehicleServiceTier
       Storage.CachedQueries.InsuranceConfig
+      Storage.CachedQueries.RideFeedbackConfig
       Storage.CachedQueries.SavedReqLocation
       Storage.CachedQueries.VehicleSeatLayoutMapping
       Storage.Queries.AadhaarOtpReq
@@ -1760,6 +1776,7 @@ library
       Storage.Queries.OrphanInstances.RewardCouponUploadBatch
       Storage.Queries.OrphanInstances.RewardUnlock
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RideFeedbackResponse
       Storage.Queries.OrphanInstances.RiderPreferences
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
@@ -1817,6 +1834,8 @@ library
       Storage.Queries.RewardCouponUploadBatch
       Storage.Queries.RewardUnlock
       Storage.Queries.Ride
+      Storage.Queries.RideFeedbackConfig
+      Storage.Queries.RideFeedbackResponse
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
       Storage.Queries.RiderPreferences

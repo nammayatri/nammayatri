@@ -125,6 +125,8 @@ import SharedLogic.Offer
 import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PickupETA as PickupETA
+import qualified SharedLogic.RideFeedback.Context as SRFC
+import qualified SharedLogic.RideFeedback.Selection as SRFS
 import qualified SharedLogic.Scheduler.Jobs.Chakras as Chakras
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
@@ -428,6 +430,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYTU.PASS_PURCHASE_ELIGIBILITY -> do
       logicData :: SLE.PassEligibilityData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SLE.PassEligibilityResult) req logicData
+    LYTU.RIDE_FEEDBACK -> do
+      logicData :: SRFC.RideFeedbackContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SRFS.RideFeedbackSelection) req logicData
     LYTU.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
@@ -707,6 +712,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON (def :: SLE.PassEligibilityData),
             LYTU.schema = toInlinedSchemaValue (Proxy @SLE.PassEligibilityData)
+          }
+    LYTU.RIDE_FEEDBACK ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: SRFC.RideFeedbackContext),
+            LYTU.schema = toInlinedSchemaValue (Proxy @SRFC.RideFeedbackContext)
           }
     LYTU.INVOICE_TEMPLATE _scope ->
       return $

@@ -151,6 +151,15 @@ updateDriverArrival rideId arrivalTime = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateRideTags :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe [Text] -> m ()
+updateRideTags rideId rideTags = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.rideTags rideTags,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateSafetyCheckStatus :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Maybe Bool -> m ()
 updateSafetyCheckStatus rideId status = do
   updateOneWithKV

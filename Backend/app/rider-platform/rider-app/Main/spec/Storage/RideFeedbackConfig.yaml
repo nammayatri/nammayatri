@@ -1,0 +1,170 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  RideStatus: Domain.Types.RideStatus
+  Translation: IssueManagement.Common
+  Value: Data.Aeson
+
+RideFeedbackConfig:
+  tableName: ride_feedback_config
+
+  # One row = one during-ride feedback question for one city: its content, timing, limits and actions.
+  # Which questions a ride gets is decided by the RIDE-FEEDBACK logic in app_dynamic_logic_element
+  # (version chosen per city by app_dynamic_logic_rollout), not by this table.
+  fields:
+    id: Id RideFeedbackConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    questionKey: Text
+    version: Int
+    questionType: RideFeedbackQuestionType
+    title: "[Translation]"
+    description: Maybe [Translation]
+    options: Maybe [QuestionOption]
+    inputConfig: Maybe InputConfig
+    acknowledgement: Maybe [Translation]
+    uiConfig: Maybe Value
+    isSkippable: Maybe Bool
+    isFollowUpOnly: Maybe Bool
+    allowedRideStatuses: Maybe [RideStatus]
+    displayTrigger: Maybe DisplayTrigger
+    actionRules: Maybe [FeedbackActionRule]
+    priority: Maybe Int
+    maxShowsPerRide: Maybe Int
+    cooldownDays: Maybe Int
+    startsAt: Maybe UTCTime
+    endsAt: Maybe UTCTime
+    enabled: Bool
+    createdBy: Maybe Text
+    updatedBy: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    RideFeedbackQuestionType:
+      enum: "SINGLE_SELECT,MULTI_SELECT,YES_NO,STAR_RATING,EMOJI_SCALE,THUMBS,SCALE,TEXT_INPUT,NUMBER_INPUT,IMAGE_UPLOAD,AUDIO"
+
+    RideFeedbackDeliveryMode:
+      enum: "IN_APP,PUSH"
+
+    RideFeedbackActionType:
+      enum: "REPORT_ISSUE_TO_BPP,CREATE_TICKET,L0_SENSITIVE_WORD_CHECK,SLACK_ALERT,NOTIFY_RIDER,SAFETY_ESCALATION,TAG_RIDE"
+
+    QuestionOption:
+      key: Text
+      label: "[Translation]"
+      iconUrl: Maybe Text
+      nextQuestionKey: Maybe Text
+      requiresText: Maybe Bool
+      isExclusive: Maybe Bool
+
+    InputConfig:
+      placeholder: Maybe [Translation]
+      minLength: Maybe Int
+      maxLength: Maybe Int
+      minValue: Maybe Double
+      maxValue: Maybe Double
+      step: Maybe Double
+      minSelections: Maybe Int
+      maxSelections: Maybe Int
+      maxFiles: Maybe Int
+      maxDurationSec: Maybe Int
+      minLabel: Maybe [Translation]
+      maxLabel: Maybe [Translation]
+
+    DisplayTrigger:
+      deliveryMode: Maybe RideFeedbackDeliveryMode
+      triggerEvent: Maybe Text
+      showAfterSecondsFromRideStart: Maybe Int
+      showAfterSecondsFromAssign: Maybe Int
+      minDistanceCoveredPct: Maybe Int
+      maxDistanceCoveredPct: Maybe Int
+      autoDismissAfterSeconds: Maybe Int
+
+    FeedbackAction:
+      actionType: RideFeedbackActionType
+      params: Maybe Value
+
+    FeedbackActionRule:
+      ruleId: Text
+      condition: Maybe Value
+      actions: "[FeedbackAction]"
+
+  beamType:
+    title: Value
+    description: Maybe Value
+    options: Maybe Value
+    inputConfig: Maybe Value
+    acknowledgement: Maybe Value
+    allowedRideStatuses: Maybe [Text]
+    displayTrigger: Maybe Value
+    actionRules: Maybe Value
+
+  sqlType:
+    questionKey: text
+    questionType: text
+    title: json
+    description: json
+    options: json
+    inputConfig: json
+    acknowledgement: json
+    uiConfig: json
+    allowedRideStatuses: "text[]"
+    displayTrigger: json
+    actionRules: json
+    createdBy: text
+    updatedBy: text
+
+  default:
+    version: "1"
+    enabled: "false"
+
+  toTType:
+    title: Data.Aeson.toJSON title|E
+    description: Data.Aeson.toJSON <$> description|E
+    options: Data.Aeson.toJSON <$> options|E
+    inputConfig: Data.Aeson.toJSON <$> inputConfig|E
+    acknowledgement: Data.Aeson.toJSON <$> acknowledgement|E
+    allowedRideStatuses: map Kernel.Prelude.show <$> allowedRideStatuses|E
+    displayTrigger: Data.Aeson.toJSON <$> displayTrigger|E
+    actionRules: Data.Aeson.toJSON <$> actionRules|E
+
+  fromTType:
+    title: Kernel.Prelude.fromMaybe [] (Kernel.Utils.JSON.valueToMaybe title)|E
+    description: Kernel.Utils.JSON.valueToMaybe =<< description|E
+    options: Kernel.Utils.JSON.valueToMaybe =<< options|E
+    inputConfig: Kernel.Utils.JSON.valueToMaybe =<< inputConfig|E
+    acknowledgement: Kernel.Utils.JSON.valueToMaybe =<< acknowledgement|E
+    allowedRideStatuses: Kernel.Prelude.mapMaybe (Kernel.Prelude.readMaybe . Data.Text.unpack) <$> allowedRideStatuses|E
+    displayTrigger: Kernel.Utils.JSON.valueToMaybe =<< displayTrigger|E
+    actionRules: Kernel.Utils.JSON.valueToMaybe =<< actionRules|E
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, questionKey]
+      unique: true
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findAllByMerchantOperatingCityIdAndEnabled:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+    findByMerchantOperatingCityIdAndQuestionKey:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, questionKey]
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_CACHED_QUERY_FILE

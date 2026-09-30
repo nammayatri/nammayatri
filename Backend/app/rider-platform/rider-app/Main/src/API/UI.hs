@@ -41,6 +41,7 @@ import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Rewards as Rewards
+import qualified API.Action.UI.RideFeedback as RideFeedback
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.RiderPreferences as RiderPreferences
@@ -187,6 +188,7 @@ type API =
            :<|> Metrics.API
            :<|> PickupInstructions.API
            :<|> RiderPreferences.API
+           :<|> RideFeedback.API
            :<|> BookingDeposit.API
            :<|> NYRegular.API
            :<|> Offers.API
@@ -326,6 +328,7 @@ handler =
     :<|> Metrics.handler
     :<|> PickupInstructions.handler
     :<|> RiderPreferences.handler
+    :<|> RideFeedback.handler
     :<|> BookingDeposit.handler
     :<|> NYRegular.handler
     :<|> Offers.handler
