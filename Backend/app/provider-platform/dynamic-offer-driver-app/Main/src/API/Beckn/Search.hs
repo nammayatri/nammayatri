@@ -23,6 +23,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Text as A
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -36,7 +37,9 @@ import Kernel.Beam.Types (TxnIdKey (..))
 import Kernel.External.BapHostRedirect (shouldRedirectBapHost)
 import qualified Kernel.Prelude as Kernel
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Logging (withDynamicLogLevel)
 import Kernel.Types.Beckn.Ack
+import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -94,60 +97,66 @@ search ::
   SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
-  bapUri <- Utils.getContextBapUri reqV2.searchReqContext
-  redirectMap <- asks (.bapHostRedirectMap)
-  case shouldRedirectBapHost redirectMap bapUri of
-    Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2
-    _ -> do
-      -- Process locally
-      transactionId <- Utils.getTransactionId reqV2.searchReqContext
-      L.setOptionLocal TxnIdKey transactionId
-      Utils.withTransactionIdLogTag transactionId $ do
-        logTagInfo "SearchV2 API Flow Local Processing" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
-        let context = reqV2.searchReqContext
-            txnId = Just transactionId
-        city <- Utils.getContextCity context
-        merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
-        unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
-        moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-        void $ Utils.validateSearchContext context transporterId moc.id
-        dSearchReq' <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
-        msgId <- Utils.getMessageId context
-        country <- Utils.getContextCountry context
+search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
+  withDynamicLogLevel logLevelKey $ do
+    bapUri <- Utils.getContextBapUri reqV2.searchReqContext
+    redirectMap <- asks (.bapHostRedirectMap)
+    case shouldRedirectBapHost redirectMap bapUri of
+      Just (Just url) -> forwardSearchToBpp url transporterId authResult gatewayAuthResult reqV2
+      _ -> do
+        -- Process locally
+        transactionId <- Utils.getTransactionId reqV2.searchReqContext
+        L.setOptionLocal TxnIdKey transactionId
+        Utils.withTransactionIdLogTag transactionId $ do
+          logTagInfo "SearchV2 API Flow Local Processing" $ "Reached:-" <> TL.toStrict (A.encodeToLazyText reqV2)
+          let context = reqV2.searchReqContext
+              txnId = Just transactionId
+          city <- Utils.getContextCity context
+          merchant <- CQM.findById transporterId >>= fromMaybeM (MerchantDoesNotExist transporterId.getId)
+          unless merchant.enabled $ throwError (AgencyDisabled transporterId.getId)
+          moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
+          void $ Utils.validateSearchContext context transporterId moc.id
+          dSearchReq' <- ACL.buildSearchReqV2 authResult.subscriber reqV2 bapUri
+          msgId <- Utils.getMessageId context
+          country <- Utils.getContextCountry context
 
-        -- Pilot merchants get isSchedule derived from the category code and the BAP's STATIC_TERMS verified/stored, in one pass.
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
-        let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-        dSearchReq <-
-          if isOndcScheduledRideSupportEnabled
-            then OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq'
-            else pure dSearchReq'
-        DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
+          -- Pilot merchants get isSchedule derived from the category code and the BAP's STATIC_TERMS verified/stored, in one pass.
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
+          let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+          dSearchReq <-
+            if isOndcScheduledRideSupportEnabled
+              then OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq'
+              else pure dSearchReq'
+          DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
 
-        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
-        when isFirst $
-          Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
-            fork "search request processing" $
-              Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-                (dSearchRes, onSearchReq') <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
-                -- Same pilot check, patches the already-built on_search reply's catalog.tags with BPP_TERMS.
-                onSearchReq <-
-                  if isOndcScheduledRideSupportEnabled
-                    then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id moc.id dSearchReq.bapId dSearchRes onSearchReq'
-                    else pure onSearchReq'
-                internalEndPointHashMap <- asks (.internalEndPointHashMap)
-                let context' = onSearchReq.onSearchReqContext
-                logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-                void $
-                  GatewayDispatch.dispatchAction dSearchRes.provider.id
-                    Domain.MOBILITY
-                    "on_search"
-                    (onSearchReq.onSearchReqContext.contextBapId)
-                    onSearchReq
-                    (Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ pure onSearchReq)
-                    (\url mappedAction jsonBody -> withShortRetry $ CallBAP.callBecknAPIUnsigned mappedAction url jsonBody)
-        pure Ack
+          isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
+          when isFirst $
+            Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
+              fork "search request processing" $
+                Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+                  (dSearchRes, onSearchReq') <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                  -- Same pilot check, patches the already-built on_search reply's catalog.tags with BPP_TERMS.
+                  onSearchReq <-
+                    if isOndcScheduledRideSupportEnabled
+                      then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id moc.id dSearchReq.bapId dSearchRes onSearchReq'
+                      else pure onSearchReq'
+                  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+                  let context' = onSearchReq.onSearchReqContext
+                  logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+                  void $
+                    GatewayDispatch.dispatchAction dSearchRes.provider.id
+                      Domain.MOBILITY
+                      "on_search"
+                      (onSearchReq.onSearchReqContext.contextBapId)
+                      onSearchReq
+                      (Callback.withCallback dSearchRes.provider "on_search" OnSearch.onSearchAPIV2 bapUri internalEndPointHashMap (errHandler context') $ pure onSearchReq)
+                      (\url mappedAction jsonBody -> withShortRetry $ CallBAP.callBecknAPIUnsigned mappedAction url jsonBody)
+          pure Ack
+  where
+    -- "beckn-search:<bapId>:<merchantId>:<city>"
+    logLevelKey = "beckn-search:" <> fromMaybe "" reqV2.searchReqContext.contextBapId <> ":" <> transporterId.getId <> ":" <> maybe "" show mbCity
+    mbCity :: Maybe Context.City
+    mbCity = reqV2.searchReqContext.contextLocation >>= (.locationCity) >>= (.cityCode) >>= Aeson.decode . Aeson.encode
 
 searchLockKey :: Text -> Text -> Text
 searchLockKey id mId = "Driver:Search:MessageId-" <> id <> ":" <> mId
