@@ -2345,3 +2345,42 @@ instance IsHTTPError LedgerAdjustmentError where
     LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
 
 instance IsAPIError LedgerAdjustmentError
+
+data ManualTollChargeError
+  = ManualTollChargeNotAllowed
+  | ManualTollChargeAboveLimit HighPrecMoney
+  | TollChargeApprovalRequired
+  | TollChargeApprovalRejected
+  | TollChargeApprovalNotPending
+  | TollChargeApprovalRequestFailed
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ManualTollChargeError
+
+instance IsBaseError ManualTollChargeError where
+  toMessage = \case
+    ManualTollChargeNotAllowed -> Just "A manual toll charge is not allowed for this ride."
+    ManualTollChargeAboveLimit limit -> Just $ "The toll charge cannot be more than " <> show limit <> "."
+    TollChargeApprovalRequired -> Just "The customer must approve this toll charge before the ride can end."
+    TollChargeApprovalRejected -> Just "The customer rejected this toll charge; the driver must declare a new amount."
+    TollChargeApprovalNotPending -> Just "There is no toll charge waiting for the customer's decision."
+    TollChargeApprovalRequestFailed -> Just "The toll charge approval request could not be sent to the customer."
+
+instance IsHTTPError ManualTollChargeError where
+  toErrorCode = \case
+    ManualTollChargeNotAllowed -> "MANUAL_TOLL_CHARGE_NOT_ALLOWED"
+    ManualTollChargeAboveLimit _ -> "MANUAL_TOLL_CHARGE_ABOVE_LIMIT"
+    TollChargeApprovalRequired -> "TOLL_CHARGE_APPROVAL_REQUIRED"
+    TollChargeApprovalRejected -> "TOLL_CHARGE_APPROVAL_REJECTED"
+    TollChargeApprovalNotPending -> "TOLL_CHARGE_APPROVAL_NOT_PENDING"
+    TollChargeApprovalRequestFailed -> "TOLL_CHARGE_APPROVAL_REQUEST_FAILED"
+
+  toHttpCode = \case
+    ManualTollChargeNotAllowed -> E400
+    ManualTollChargeAboveLimit _ -> E400
+    TollChargeApprovalRequired -> E400
+    TollChargeApprovalRejected -> E400
+    TollChargeApprovalNotPending -> E400
+    TollChargeApprovalRequestFailed -> E500
+
+instance IsAPIError ManualTollChargeError

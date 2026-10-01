@@ -487,16 +487,23 @@ isReallocatableCategory (InterCity OneWayOnDemandStaticOffer _) = True
 isReallocatableCategory _ = False
 
 isTollApplicableForTrip :: ServiceTierType -> TripCategory -> Bool
-isTollApplicableForTrip AUTO_RICKSHAW _ = False
-isTollApplicableForTrip AUTO_PLUS _ = False
-isTollApplicableForTrip BIKE _ = False
-isTollApplicableForTrip BIKE_PLUS _ = False
-isTollApplicableForTrip DELIVERY_BIKE _ = False
+isTollApplicableForTrip vehicleServiceTier _ | isTollExemptVehicleTier vehicleServiceTier = False
 isTollApplicableForTrip _ (OneWay _) = True
 isTollApplicableForTrip _ (CrossCity _ _) = True
 isTollApplicableForTrip _ (Delivery _) = True
 isTollApplicableForTrip _ (EasyBooking _) = True
 isTollApplicableForTrip _ _ = False
+
+-- | Tiers that never carry tolls, regardless of trip category. Unlike isTollApplicableForTrip,
+-- this ignores the category, so it stays True for InterCity/Rental too, where the tier still
+-- matters even though the category itself has no toll estimate.
+isTollExemptVehicleTier :: ServiceTierType -> Bool
+isTollExemptVehicleTier AUTO_RICKSHAW = True
+isTollExemptVehicleTier AUTO_PLUS = True
+isTollExemptVehicleTier BIKE = True
+isTollExemptVehicleTier BIKE_PLUS = True
+isTollExemptVehicleTier DELIVERY_BIKE = True
+isTollExemptVehicleTier _ = False
 
 isDeliveryTrip :: TripCategory -> Bool
 isDeliveryTrip (Delivery _) = True

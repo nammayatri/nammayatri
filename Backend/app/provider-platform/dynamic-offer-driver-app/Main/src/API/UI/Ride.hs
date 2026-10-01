@@ -24,6 +24,8 @@ module API.UI.Ride
     cancelRide,
     startRide',
     endRide,
+    endRideRequirements,
+    endRideChargeApproval,
   )
 where
 
@@ -34,6 +36,7 @@ import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
+import qualified Domain.Action.UI.Ride.EndRideRequirements as RideEndRequirements
 import qualified Domain.Action.UI.Ride.StartRide as RideStart
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Location as DL
@@ -107,6 +110,19 @@ type API =
                     :> Post '[JSON] RideEnd.EndRideResp
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
+                    :> "end-ride"
+                    :> "requirements"
+                    :> QueryParam "lat" Double
+                    :> QueryParam "lon" Double
+                    :> Get '[JSON] RideEndRequirements.EndRideRequirementsRes
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "end-ride"
+                    :> "charge-approval"
+                    :> ReqBody '[JSON] RideEndRequirements.RequestTollChargeApprovalReq
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
                     :> "cancel"
                     :> ReqBody '[JSON] CancelRideReq
                     :> Post '[JSON] RideCancel.CancelRideResp
@@ -166,7 +182,8 @@ data EndRideReq = EndRideReq
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometer :: Maybe Ride.OdometerReading,
-    driverGpsTurnedOff :: Maybe Bool
+    driverGpsTurnedOff :: Maybe Bool,
+    manualTollCharge :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -185,6 +202,8 @@ handler =
              :<|> arrivedAtPickup
              :<|> startRide
              :<|> endRide
+             :<|> endRideRequirements
+             :<|> endRideChargeApproval
              :<|> cancelRide
              :<|> arrivedAtStop
              :<|> uploadOdometerReading
@@ -251,6 +270,16 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
                 Nothing -> throwError DriverLocationOutOfRestictionBounds
         Nothing -> return ()
     mkOtpRideLockKey bookingId = "OtpRideCreate:BookingId:" <> bookingId.getId
+
+endRideRequirements :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Maybe Double -> Maybe Double -> FlowHandler RideEndRequirements.EndRideRequirementsRes
+endRideRequirements (requestorId, merchantId, merchantOpCityId) rideId mbLat mbLon =
+  withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $
+    RideEndRequirements.getEndRideRequirements (requestorId, merchantId, merchantOpCityId) rideId (LatLong <$> mbLat <*> mbLon)
+
+endRideChargeApproval :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> RideEndRequirements.RequestTollChargeApprovalReq -> FlowHandler APISuccess
+endRideChargeApproval (requestorId, merchantId, merchantOpCityId) rideId req =
+  withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $
+    RideEndRequirements.requestManualTollChargeApproval (requestorId, merchantId, merchantOpCityId) rideId req
 
 endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> EndRideReq -> FlowHandler RideEnd.EndRideResp
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId $ do

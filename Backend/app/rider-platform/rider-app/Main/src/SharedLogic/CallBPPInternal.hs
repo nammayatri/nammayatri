@@ -119,6 +119,45 @@ callCustomerFCMClient = client callCustomerFCMApi
 callCustomerFCMApi :: Proxy CallCustomerFCMAPI
 callCustomerFCMApi = Proxy
 
+-- Toll Charge Approval Decision API (BAP -> BPP): relays the rider's approve/reject decision
+-- on a driver-declared toll charge back to the ride's own BPP.
+
+type SubmitTollChargeApprovalDecisionAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "tollChargeApproval"
+    :> Header "token" Text
+    :> ReqBody '[JSON] TollChargeApprovalDecisionReq
+    :> Post '[JSON] APISuccess
+
+data TollChargeApprovalDecisionReq = TollChargeApprovalDecisionReq
+  { approved :: Bool,
+    amount :: HighPrecMoney
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+submitTollChargeApprovalDecisionClient :: Text -> Maybe Text -> TollChargeApprovalDecisionReq -> EulerClient APISuccess
+submitTollChargeApprovalDecisionClient = client submitTollChargeApprovalDecisionApi
+
+submitTollChargeApprovalDecisionApi :: Proxy SubmitTollChargeApprovalDecisionAPI
+submitTollChargeApprovalDecisionApi = Proxy
+
+submitTollChargeApprovalDecision ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Bool ->
+  HighPrecMoney ->
+  m APISuccess
+submitTollChargeApprovalDecision apiKey internalUrl bppRideId approved amount = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (submitTollChargeApprovalDecisionClient bppRideId (Just apiKey) (TollChargeApprovalDecisionReq {approved, amount})) "SubmitTollChargeApprovalDecision" submitTollChargeApprovalDecisionApi
+
 callCustomerFCM ::
   ( MonadFlow m,
     CoreMetrics m,

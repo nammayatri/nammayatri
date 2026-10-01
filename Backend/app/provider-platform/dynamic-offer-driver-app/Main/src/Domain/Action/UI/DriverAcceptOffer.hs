@@ -195,6 +195,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           nightShiftCharge = Nothing,
           customerCancellationDues = searchReq.customerCancellationDues,
           tollCharges = searchReq.tollCharges,
+          isManualTollCharge = False,
           estimatedRideDuration = searchReq.estimatedDuration,
           estimatedRideStaticDuration = searchReq.estimatedStaticDuration,
           nightShiftOverlapChecking = DTC.isFixedNightCharge searchTry.tripCategory,

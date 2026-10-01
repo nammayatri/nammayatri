@@ -129,6 +129,7 @@ data RiderConfigT f = RiderConfigT
     kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     makeMultiModalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    manualChargeApprovalMinCustomerVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     maxAllowedPublicTransportLegs :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxAlternateRouteVehicles :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxLiveVehiclesPerRoute :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

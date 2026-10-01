@@ -26,6 +26,7 @@ module Domain.Action.UI.Ride.EndRide
     driverEndRide,
     dashboardEndRide,
     cronJobEndRide,
+    isPickupDropOutsideOfThreshold,
   )
 where
 
@@ -102,9 +103,11 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
+import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.RuleBasedTierUpgrade
+import qualified SharedLogic.TollChargeDecision as TollChargeDecision
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -151,7 +154,8 @@ data DriverEndRideReq = DriverEndRideReq
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometer :: Maybe DRide.OdometerReading,
-    driverGpsTurnedOff :: Maybe Bool
+    driverGpsTurnedOff :: Maybe Bool,
+    manualTollCharge :: Maybe HighPrecMoney
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -504,67 +508,37 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
                   logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
 
-                let (tollCharges, tollNames, tollIds, tollConfidence) = do
-                      let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
-                          -- Only apply validated pending toll if pickup/drop is within threshold (route was as expected)
-                          canApplyValidatedPendingToll = not pickupDropOutsideOfThreshold
-                      if distanceCalculationFailure
-                        then
-                          if isJust updRide.estimatedTollCharges
-                            then
-                              if updRide.estimatedTollCharges == Just 0
-                                then (Nothing, Nothing, Nothing, Nothing)
-                                else
-                                  if isJust updRide.tollCharges
-                                    then case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                      (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                        -- Some detected + some pending (same as distance calc success case)
-                                        let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
-                                            combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                            combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                                         in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                      _ ->
-                                        -- No pending tolls or route deviated
-                                        (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Neutral)
-                                    else
-                                      if updRide.driverDeviatedToTollRoute == Just True
-                                        then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Neutral)
-                                        else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                          (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                            -- Combine detected + pending tolls
-                                            let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
-                                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                          _ ->
-                                            -- Nothing detected and nothing pending: GPS was dark around the gates, so
-                                            -- neither the billing walk nor the deviation walk has any signal
-                                            if thresholdConfig.enableEstimatedTollFallback && canApplyValidatedPendingToll
-                                              then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Unsure)
-                                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
-                            else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                              (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                (Just pendingCharges, Just pendingNames, Just pendingIds, Just Unsure)
-                              _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
-                        else case (updRide.tollCharges, canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                          (Just charges, _, Nothing) ->
-                            (Just charges, updRide.tollNames, updRide.tollIds, Just Sure)
-                          (Just charges, True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                            -- Some detected + some pending
-                            let combinedCharges = charges + pendingCharges
-                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                          (Nothing, True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                            (Just pendingCharges, Just pendingNames, Just pendingIds, Just Neutral)
-                          _ ->
-                            if maybe False (> 0) updRide.estimatedTollCharges
-                              then (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Sure)
-                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
+                let autoTollChargeDecision =
+                      TollChargeDecision.resolveTollChargeAndConfidence
+                        TollChargeDecision.TollChargeDecisionInput
+                          { distanceCalculationFailed = distanceCalculationFailed,
+                            numberOfSelfTuned = updRide.numberOfSelfTuned,
+                            detectedTollCharges = updRide.tollCharges,
+                            detectedTollNames = updRide.tollNames,
+                            detectedTollIds = updRide.tollIds,
+                            estimatedTollCharges = updRide.estimatedTollCharges,
+                            estimatedTollNames = updRide.estimatedTollNames,
+                            estimatedTollIds = updRide.estimatedTollIds,
+                            driverDeviatedToTollRoute = updRide.driverDeviatedToTollRoute,
+                            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+                            validatedPendingToll = mbValidatedPendingToll,
+                            enableEstimatedTollFallback = thresholdConfig.enableEstimatedTollFallback
+                          }
+                mbManualTollChargeResolution <- case req of
+                  DriverReq driverReq -> forM driverReq.manualTollCharge $ ManualTollCharge.resolveManualTollChargeForEndRide thresholdConfig rideOld booking.tripCategory booking.vehicleServiceTier booking.id.getId autoTollChargeDecision
+                  _ -> pure Nothing
+                let (tollCharges, tollNames, tollIds, tollConfidence) = case mbManualTollChargeResolution of
+                      -- A driver-declared 0 means no toll was paid, so the estimated toll's name/id
+                      -- shouldn't linger on a ride the driver says had none.
+                      Just manualTollChargeResolution
+                        | manualTollChargeResolution.amount == 0 -> (Just 0, Nothing, Nothing, Just Sure)
+                        | otherwise -> (Just manualTollChargeResolution.amount, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Sure)
+                      Nothing -> (autoTollChargeDecision.tollCharges, autoTollChargeDecision.tollNames, autoTollChargeDecision.tollIds, autoTollChargeDecision.tollConfidence)
+                    manualTollChargeTags = (\manualTollChargeResolution -> [ManualTollCharge.manualTollChargeTag manualTollChargeResolution.confirmedBy]) <$> mbManualTollChargeResolution
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
+                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed, rideTags = updRide.rideTags <> manualTollChargeTags}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -774,7 +748,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         Left someException ->
           case fromException someException of
             Just NoFareProduct -> return defaultVal
-            _ -> throwError $ InternalError (Text.pack $ displayException someException)
+            _ -> case fromException someException of
+              Just (manualTollChargeError :: ManualTollChargeError) -> throwError manualTollChargeError
+              Nothing -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
 
 tripCategoriesForNoRecalc :: [DTC.TripCategory]
@@ -902,6 +878,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
+              isManualTollCharge = ManualTollCharge.isManualTollChargeRide ride,
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,

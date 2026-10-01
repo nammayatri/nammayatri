@@ -80,6 +80,7 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import SharedLogic.Finance.Wallet (splitGrossByVatPct)
+import SharedLogic.ManualTollCharge (isManualTollChargeEnabled)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
@@ -190,6 +191,7 @@ data DriverRideRes = DriverRideRes
     parkingCharge :: Maybe HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     tollConfidence :: Maybe Confidence,
+    endRideRequirementsCheckRequired :: Bool,
     customerCancellationDuesWithCurrency :: PriceAPIEntity,
     estimatedTollChargesWithCurrency :: Maybe PriceAPIEntity,
     parkingChargeWithCurrency :: Maybe PriceAPIEntity,
@@ -613,6 +615,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
       Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams chargeNet chargeVat customerBearsCharge driverBearsCharge clubCharge
     Nothing -> pure Nothing
 
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
+
   return $
     DriverRideRes
       { id = ride.id,
@@ -674,6 +678,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         parkingCharge = displayParkingCharge,
         tollCharges = ride.tollCharges,
         tollConfidence = ride.tollConfidence,
+        endRideRequirementsCheckRequired = maybe False (\config -> isManualTollChargeEnabled config booking.tripCategory && not (DTC.isTollExemptVehicleTier booking.vehicleServiceTier)) mbTransporterConfig,
         customerCancellationDuesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency $ fromMaybe 0 estimatedFareParams.customerCancellationDues,
         estimatedTollChargesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.tollCharges,
         parkingChargeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> displayParkingCharge,

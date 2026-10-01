@@ -1211,3 +1211,10 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_share_li
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_share_link_expiry_hours integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_legal_compliance_documents boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_go_online_policy_blocker boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_charge_trip_categories text[] ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_charge_max_amount_without_estimate double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_charge_approval_timeout_seconds integer ;

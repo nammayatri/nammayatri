@@ -149,7 +149,8 @@ executeSpecialZonePayout payoutRequest = do
                 uiDistanceCalculationWithAccuracy = Nothing,
                 uiDistanceCalculationWithoutAccuracy = Nothing,
                 odometer = Nothing,
-                driverGpsTurnedOff = Nothing
+                driverGpsTurnedOff = Nothing,
+                manualTollCharge = Nothing
               }
       shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id) False
       void $ RideEnd.driverEndRide shandle ride.id driverReq
@@ -271,7 +272,8 @@ executeOldSpecialZonePayout scheduledPayout = do
                   uiDistanceCalculationWithAccuracy = Nothing,
                   uiDistanceCalculationWithoutAccuracy = Nothing,
                   odometer = Nothing,
-                  driverGpsTurnedOff = Nothing
+                  driverGpsTurnedOff = Nothing,
+                  manualTollCharge = Nothing
                 }
         shandle <- RideEnd.buildEndRideHandle mId mocId (Just ride.id) False
         void $ RideEnd.driverEndRide shandle ride.id driverReq

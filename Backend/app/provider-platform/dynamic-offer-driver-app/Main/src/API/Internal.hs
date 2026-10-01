@@ -44,6 +44,7 @@ import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
+import qualified API.Internal.TollChargeApproval as TollChargeApproval
 import qualified API.Internal.TollList as TollList
 import qualified API.Internal.TollUpsert as TollUpsert
 import qualified API.Internal.VehicleServiceTierList as VehicleServiceTierList
@@ -90,6 +91,7 @@ type API =
            :<|> SpecialLocationUpsert.API
            :<|> TollList.API
            :<|> TollUpsert.API
+           :<|> TollChargeApproval.API
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
@@ -142,6 +144,7 @@ handler env =
     :<|> SpecialLocationUpsert.handler
     :<|> TollList.handler
     :<|> TollUpsert.handler
+    :<|> TollChargeApproval.handler
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler

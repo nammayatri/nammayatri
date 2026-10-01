@@ -1506,6 +1506,9 @@ TransporterConfig:
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverLocationStalenessThresholdSeconds: Maybe Seconds
+    manualTollChargeTripCategories: Maybe [Text]
+    manualTollChargeMaxAmountWithoutEstimate: Maybe HighPrecMoney
+    manualTollChargeApprovalTimeoutSeconds: Maybe Int
     driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
@@ -1951,6 +1954,8 @@ TransporterConfig:
     knowledgeCenterSopTypes: json
     vehicleCategoryExcludedFromVerification: "text[]"
     minBaseFare: double precision
+    manualTollChargeTripCategories: "text[]"
+    manualTollChargeMaxAmountWithoutEstimate: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"

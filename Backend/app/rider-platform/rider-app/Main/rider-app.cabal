@@ -73,6 +73,7 @@ library
       API.Internal.SendSMS
       API.Internal.Sos
       API.Internal.StopEvents
+      API.Internal.TollChargeApproval
       API.Internal.UpdateCancellationFeeStatus
       API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
@@ -272,6 +273,7 @@ library
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
+      Domain.Action.Internal.TollChargeApproval
       Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
@@ -382,6 +384,7 @@ library
       Domain.Action.UI.TicketDashboard
       Domain.Action.UI.TicketKapture
       Domain.Action.UI.TicketService
+      Domain.Action.UI.TollChargeApproval
       Domain.Action.UI.TrackRoute
       Domain.Action.UI.TransitOperator
       Domain.Action.UI.TransitOperator.Validation

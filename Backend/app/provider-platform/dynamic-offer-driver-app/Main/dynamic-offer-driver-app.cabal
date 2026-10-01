@@ -96,6 +96,7 @@ library
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.SyncSearch
+      API.Internal.TollChargeApproval
       API.Internal.TollList
       API.Internal.TollUpsert
       API.Internal.VehicleServiceTierList
@@ -440,6 +441,7 @@ library
       Domain.Action.UI.Ride.Common
       Domain.Action.UI.Ride.EndRide
       Domain.Action.UI.Ride.EndRide.Internal
+      Domain.Action.UI.Ride.EndRideRequirements
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideDetails
@@ -716,6 +718,7 @@ library
       SharedLogic.KaalChakra.Chakras
       SharedLogic.KnowledgeCenter
       SharedLogic.LocationMapping
+      SharedLogic.ManualTollCharge
       SharedLogic.MediaFileDocument
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
@@ -751,6 +754,7 @@ library
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
+      SharedLogic.TollChargeDecision
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type

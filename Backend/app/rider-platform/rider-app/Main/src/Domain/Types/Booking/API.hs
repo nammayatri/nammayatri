@@ -23,6 +23,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
+import Domain.Action.UI.TollChargeApproval (TollChargeApprovalRequestRes, getPendingTollChargeApproval)
 import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types
 import Domain.Types.Booking
@@ -263,7 +264,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     -- the tip it currently has set, e.g. after a restart. Mirrors RideAPIEntity.tipAmount.
     tipAmount :: Maybe PriceAPIEntity,
     bookingDepositAmount :: Maybe HighPrecMoney,
-    pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo
+    pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo,
+    tollChargeApproval :: Maybe TollChargeApprovalRequestRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -711,7 +713,12 @@ buildBookingStatusAPIEntity booking = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea)
+  -- This response is already polled continuously for the ride's whole duration, so a pending toll
+  -- approval rides along here instead of needing its own poll. Only an in-progress ride can have one.
+  tollChargeApproval <- case mbActiveRide of
+    Just ride | ride.status == DRide.INPROGRESS -> getPendingTollChargeApproval ride.id
+    _ -> pure Nothing
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) tollChargeApproval
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
@@ -770,6 +777,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                   estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
                 }
         Nothing -> return Nothing
+  tollChargeApproval <- if status == DRide.INPROGRESS then getPendingTollChargeApproval id else pure Nothing
   return $
     RideAPIEntity
       { shortRideId = shortId,
