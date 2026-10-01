@@ -1238,6 +1238,8 @@ FRFSGtfsStageFare:
     merchantOperatingCityId: Id MerchantOperatingCity
     cessCharge: Maybe HighPrecMoney
     discountIds: "[Id FRFSTicketCategoryMetadataConfig]"
+    # A null routeType is the catch-all fare, used when the route carries no type for this tier.
+    routeType: Maybe Text
   constraints:
     id: PrimaryKey
   default:
@@ -1246,14 +1248,37 @@ FRFSGtfsStageFare:
     findAllByVehicleServiceTierId:
       kvFunction: findAllWithKV
       where: vehicleServiceTierId
-    findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId:
-      kvFunction: findOneWithKV
-      where:
-        and: [vehicleType, stage, merchantOperatingCityId, vehicleServiceTierId]
     findAllByVehicleTypeAndStageAndMerchantOperatingCityId:
       kvFunction: findAllWithKV
       where:
         and: [vehicleType, stage, merchantOperatingCityId]
+    findAllByVehicleTypeAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [vehicleType, merchantOperatingCityId]
+
+FRFSRouteTypeMapping:
+  tableName: frfs_route_type_mapping
+  fields:
+    integratedBppConfigId: Id IntegratedBPPConfig
+    routeCode: Text
+    vehicleServiceTierId: Id FRFSVehicleServiceTier
+    routeType: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    integratedBppConfigId: "PrimaryKey | CompositeSecondaryKey routeTypeLookup"
+    routeCode: "PrimaryKey | CompositeSecondaryKey routeTypeLookup"
+    vehicleServiceTierId: PrimaryKey
+  queries:
+    findAllByRouteCodeAndIntegratedBppConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [routeCode, integratedBppConfigId]
+    deleteByRouteCodeAndVehicleServiceTierIdAndIntegratedBppConfigId:
+      kvFunction: deleteWithKV
+      where:
+        and: [integratedBppConfigId, routeCode, vehicleServiceTierId]
 
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare

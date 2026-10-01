@@ -25,7 +25,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("fRFSTicket" :> (GetFRFSTicketFrfsRoutes :<|> GetFRFSTicketFrfsRouteFareList :<|> PutFRFSTicketFrfsRouteFareUpsert :<|> GetFRFSTicketFrfsRouteStations :<|> GetFRFSTicketFrfsGtfs :<|> PostFRFSTicketFrfsStatusUpdate))
+type API = ("fRFSTicket" :> (GetFRFSTicketFrfsRoutes :<|> GetFRFSTicketFrfsRouteFareList :<|> PutFRFSTicketFrfsRouteFareUpsert :<|> PutFRFSTicketFrfsRouteTypeUpsert :<|> GetFRFSTicketFrfsStageFareList :<|> PutFRFSTicketFrfsStageFareUpsert :<|> GetFRFSTicketFrfsRouteStations :<|> GetFRFSTicketFrfsGtfs :<|> PostFRFSTicketFrfsStatusUpdate))
 
 type GetFRFSTicketFrfsRoutes =
   ( DashboardUserAuth
@@ -46,6 +46,27 @@ type PutFRFSTicketFrfsRouteFareUpsert =
       'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_ROUTE_FARE_UPSERT"
       :> API.Types.RiderPlatform.Management.FRFSTicket.PutFRFSTicketFrfsRouteFareUpsert
+  )
+
+type PutFRFSTicketFrfsRouteTypeUpsert =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_ROUTE_TYPE_UPSERT"
+      :> API.Types.RiderPlatform.Management.FRFSTicket.PutFRFSTicketFrfsRouteTypeUpsert
+  )
+
+type GetFRFSTicketFrfsStageFareList =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_MANAGEMENT/FRFS_TICKET/GET_FRFS_TICKET_FRFS_STAGE_FARE_LIST"
+      :> API.Types.RiderPlatform.Management.FRFSTicket.GetFRFSTicketFrfsStageFareList
+  )
+
+type PutFRFSTicketFrfsStageFareUpsert =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_STAGE_FARE_UPSERT"
+      :> API.Types.RiderPlatform.Management.FRFSTicket.PutFRFSTicketFrfsStageFareUpsert
   )
 
 type GetFRFSTicketFrfsRouteStations =
@@ -70,7 +91,7 @@ type PostFRFSTicketFrfsStatusUpdate =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getFRFSTicketFrfsRoutes merchantId city :<|> getFRFSTicketFrfsRouteFareList merchantId city :<|> putFRFSTicketFrfsRouteFareUpsert merchantId city :<|> getFRFSTicketFrfsRouteStations merchantId city :<|> getFRFSTicketFrfsGtfs merchantId city :<|> postFRFSTicketFrfsStatusUpdate merchantId city
+handler merchantId city = getFRFSTicketFrfsRoutes merchantId city :<|> getFRFSTicketFrfsRouteFareList merchantId city :<|> putFRFSTicketFrfsRouteFareUpsert merchantId city :<|> putFRFSTicketFrfsRouteTypeUpsert merchantId city :<|> getFRFSTicketFrfsStageFareList merchantId city :<|> putFRFSTicketFrfsStageFareUpsert merchantId city :<|> getFRFSTicketFrfsRouteStations merchantId city :<|> getFRFSTicketFrfsGtfs merchantId city :<|> postFRFSTicketFrfsStatusUpdate merchantId city
 
 getFRFSTicketFrfsRoutes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSDashboardRouteAPI])
 getFRFSTicketFrfsRoutes a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.FRFSTicket.getFRFSTicketFrfsRoutes a7 a6 a4 a3 a2 a1
@@ -84,6 +105,25 @@ putFRFSTicketFrfsRouteFareUpsert a7 a6 a5 a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_ROUTE_FARE_UPSERT" a5 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.FRFSTicket.putFRFSTicketFrfsRouteFareUpsert a7 a6 a4 a3 a2 a1
+    )
+
+putFRFSTicketFrfsRouteTypeUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteTypeReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteTypeResp)
+putFRFSTicketFrfsRouteTypeUpsert a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_ROUTE_TYPE_UPSERT" a4 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.FRFSTicket.putFRFSTicketFrfsRouteTypeUpsert a6 a5 a3 a2 a1
+    )
+
+getFRFSTicketFrfsStageFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStageFareAPI])
+getFRFSTicketFrfsStageFareList a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.FRFSTicket.getFRFSTicketFrfsStageFareList a4 a3 a1
+
+putFRFSTicketFrfsStageFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertStageFareReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.FRFSTicket.UpsertStageFareResp)
+putFRFSTicketFrfsStageFareUpsert a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/FRFS_TICKET/PUT_FRFS_TICKET_FRFS_STAGE_FARE_UPSERT" a4 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.FRFSTicket.putFRFSTicketFrfsStageFareUpsert a6 a5 a3 a2 a1
     )
 
 getFRFSTicketFrfsRouteStations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.FlowHandler [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStationAPI])

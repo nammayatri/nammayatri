@@ -34,6 +34,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
+import qualified Domain.Types.FRFSGtfsStageFare as DFRFSGtfsStageFare
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
@@ -41,6 +42,7 @@ import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import Domain.Types.FRFSRouteFareProduct
+import qualified Domain.Types.FRFSRouteTypeMapping as DFRFSRouteTypeMapping
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -101,13 +103,13 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
+import qualified Storage.CachedQueries.FRFSRouteTypeMapping as CQFRFSRouteTypeMapping
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus (utcToIST)
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
-import qualified Storage.Queries.FRFSGtfsStageFare as QQFRFSGtfsStageFare
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -483,6 +485,47 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         fareQuoteType = Nothing
       }
 
+-- | Route type codes are free text entered by ops, so the mapping row and the fare row are compared
+-- case- and whitespace-insensitively rather than trusting both to have been typed identically.
+normalizeRouteType :: Text -> Text
+normalizeRouteType = T.toUpper . T.strip
+
+-- | Picks one stage fare per service tier: the row carrying this route's type for that tier, else the
+-- untyped catch-all row. Falling back rather than failing matters because fares are mandatory for
+-- every non-ONDC provider, so a single missing typed row would drop the leg out of search results.
+selectStageFaresForRoute ::
+  [DFRFSRouteTypeMapping.FRFSRouteTypeMapping] ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare] ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare]
+selectStageFaresForRoute routeTypeMappings stageFares =
+  mapMaybe pickForTier (M.toList stageFaresByTier)
+  where
+    stageFaresByTier = M.fromListWith (<>) [(stageFare.vehicleServiceTierId, [stageFare]) | stageFare <- stageFares]
+    routeTypeByTier = M.fromList [(mapping.vehicleServiceTierId, normalizeRouteType mapping.routeType) | mapping <- routeTypeMappings]
+    pickForTier (vehicleServiceTierId, tierStageFares) =
+      let mbRouteType = M.lookup vehicleServiceTierId routeTypeByTier
+          matchesRouteType stageFare = (normalizeRouteType <$> stageFare.routeType) == mbRouteType
+       in find matchesRouteType tierStageFares <|> find (isNothing . (.routeType)) tierStageFares
+
+logStageFareRouteTypeFallbacks ::
+  MonadFlow m =>
+  Text ->
+  [DFRFSRouteTypeMapping.FRFSRouteTypeMapping] ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare] ->
+  m ()
+logStageFareRouteTypeFallbacks routeCode routeTypeMappings selectedStageFares =
+  forM_ routeTypeMappings $ \mapping ->
+    whenJust (find (\stageFare -> stageFare.vehicleServiceTierId == mapping.vehicleServiceTierId) selectedStageFares) $ \stageFare ->
+      when ((normalizeRouteType <$> stageFare.routeType) /= Just (normalizeRouteType mapping.routeType)) $
+        logError $
+          "FRFS stage fare not configured for routeType "
+            <> mapping.routeType
+            <> " on route "
+            <> routeCode
+            <> " and vehicleServiceTierId "
+            <> mapping.vehicleServiceTierId.getId
+            <> ", fell back to the untyped fare"
+
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
   tripDetails <- OTPRest.getExampleTrip integratedBPPConfig routeCode
@@ -507,11 +550,15 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               let adjustedStage = case endIsStageStop of
                     Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
                     _ -> stage -- Use original stage if not found or Nothing
-              fares <- case serviceTier of
+              allStageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+              candidateStageFares <- case serviceTier of
                 Just serviceTier' -> do
                   vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
-                Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+                  return $ filter (\stageFare -> stageFare.vehicleServiceTierId == vehicleServiceTier.id) allStageFares
+                Nothing -> return allStageFares
+              routeTypeMappings <- CQFRFSRouteTypeMapping.findAllByRouteCodeAndIntegratedBppConfigId routeCode integratedBPPConfig.id
+              let fares = selectStageFaresForRoute routeTypeMappings candidateStageFares
+              logStageFareRouteTypeFallbacks routeCode routeTypeMappings fares
               forM fares $ \fare -> do
                 vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
                 let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}

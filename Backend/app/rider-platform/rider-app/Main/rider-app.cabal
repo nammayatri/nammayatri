@@ -670,6 +670,7 @@ library
       Storage.CachedQueries.FRFSCancellationConfig
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
+      Storage.CachedQueries.FRFSRouteTypeMapping
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.InvoiceTemplate
@@ -1304,6 +1305,7 @@ library
       Domain.Types.FRFSRecon
       Domain.Types.FRFSRouteFareProduct
       Domain.Types.FRFSRouteStopStageFare
+      Domain.Types.FRFSRouteTypeMapping
       Domain.Types.FRFSSearch
       Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
@@ -1480,6 +1482,7 @@ library
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSRouteFareProduct
       Storage.Beam.FRFSRouteStopStageFare
+      Storage.Beam.FRFSRouteTypeMapping
       Storage.Beam.FRFSSearch
       Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
@@ -1661,6 +1664,7 @@ library
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSRouteFareProduct
       Storage.Queries.FRFSRouteStopStageFare
+      Storage.Queries.FRFSRouteTypeMapping
       Storage.Queries.FRFSSearch
       Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket

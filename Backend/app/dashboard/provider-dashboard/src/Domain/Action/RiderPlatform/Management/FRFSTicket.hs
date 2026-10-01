@@ -4,6 +4,9 @@ module Domain.Action.RiderPlatform.Management.FRFSTicket
   ( getFRFSTicketFrfsRoutes,
     getFRFSTicketFrfsRouteFareList,
     putFRFSTicketFrfsRouteFareUpsert,
+    putFRFSTicketFrfsRouteTypeUpsert,
+    getFRFSTicketFrfsStageFareList,
+    putFRFSTicketFrfsStageFareUpsert,
     getFRFSTicketFrfsRouteStations,
     postFRFSTicketFrfsStatusUpdate,
     getFRFSTicketFrfsGtfs,
@@ -63,3 +66,20 @@ postFRFSTicketFrfsStatusUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.postFRFSTicketFrfsStatusUpdate) (Just apiTokenInfo.personId.getId) req)
+
+putFRFSTicketFrfsRouteTypeUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteTypeReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertRouteTypeResp)
+putFRFSTicketFrfsRouteTypeUpsert merchantShortId opCity apiTokenInfo integratedBppConfigId vehicleType req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.fRFSTicketDSL.putFRFSTicketFrfsRouteTypeUpsert)) integratedBppConfigId vehicleType req)
+
+getFRFSTicketFrfsStageFareList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> BecknV2.FRFS.Enums.VehicleCategory -> Environment.Flow [API.Types.RiderPlatform.Management.FRFSTicket.FRFSStageFareAPI])
+getFRFSTicketFrfsStageFareList merchantShortId opCity apiTokenInfo vehicleType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.fRFSTicketDSL.getFRFSTicketFrfsStageFareList) vehicleType
+
+putFRFSTicketFrfsStageFareUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Types.Id.Id Dashboard.Common.IntegratedBPPConfig -> BecknV2.FRFS.Enums.VehicleCategory -> API.Types.RiderPlatform.Management.FRFSTicket.UpsertStageFareReq -> Environment.Flow API.Types.RiderPlatform.Management.FRFSTicket.UpsertStageFareResp)
+putFRFSTicketFrfsStageFareUpsert merchantShortId opCity apiTokenInfo integratedBppConfigId vehicleType req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.fRFSTicketDSL.putFRFSTicketFrfsStageFareUpsert)) integratedBppConfigId vehicleType req)

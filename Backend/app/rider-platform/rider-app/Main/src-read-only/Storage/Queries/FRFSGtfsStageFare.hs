@@ -26,31 +26,29 @@ createMany = traverse_ create
 
 findAllByVehicleServiceTierId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m ([Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare]))
+  (Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
 findAllByVehicleServiceTierId vehicleServiceTierId = do findAllWithKV [Se.Is Beam.vehicleServiceTierId $ Se.Eq (Kernel.Types.Id.getId vehicleServiceTierId)]
+
+findAllByVehicleTypeAndMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
+findAllByVehicleTypeAndMerchantOperatingCityId vehicleType merchantOperatingCityId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
 
 findAllByVehicleTypeAndStageAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare]))
+  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare])
 findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
         [ Se.Is Beam.vehicleType $ Se.Eq vehicleType,
           Se.Is Beam.stage $ Se.Eq stage,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
-        ]
-    ]
-
-findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
-findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType stage merchantOperatingCityId vehicleServiceTierId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.vehicleType $ Se.Eq vehicleType,
-          Se.Is Beam.stage $ Se.Eq stage,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.vehicleServiceTierId $ Se.Eq (Kernel.Types.Id.getId vehicleServiceTierId)
         ]
     ]
 
@@ -67,6 +65,7 @@ updateByPrimaryKey (Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare {..}) = do
       Se.Set Beam.discountIds (Kernel.Types.Id.getId <$> discountIds),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.routeType routeType,
       Se.Set Beam.stage stage,
       Se.Set Beam.vehicleServiceTierId (Kernel.Types.Id.getId vehicleServiceTierId),
       Se.Set Beam.vehicleType vehicleType,
@@ -86,6 +85,7 @@ instance FromTType' Beam.FRFSGtfsStageFare Domain.Types.FRFSGtfsStageFare.FRFSGt
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            routeType = routeType,
             stage = stage,
             vehicleServiceTierId = Kernel.Types.Id.Id vehicleServiceTierId,
             vehicleType = vehicleType,
@@ -103,6 +103,7 @@ instance ToTType' Beam.FRFSGtfsStageFare Domain.Types.FRFSGtfsStageFare.FRFSGtfs
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.routeType = routeType,
         Beam.stage = stage,
         Beam.vehicleServiceTierId = Kernel.Types.Id.getId vehicleServiceTierId,
         Beam.vehicleType = vehicleType,
