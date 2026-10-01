@@ -20,7 +20,7 @@ HTTP *
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "Asha K", "vehicleModel": "Dzire"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -71,6 +71,9 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 # the pinger keeps the cab's LTS fix fresh: its position rides on the leg status
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lat" isFloat
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lon" isFloat
+# the driver-app hands over the driver's name and the car model at route select
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.driverName" == "Asha K"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleModel" == "Dzire"
 
 # The allocated seat already counts against the cab
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}

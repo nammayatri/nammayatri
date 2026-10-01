@@ -32,6 +32,7 @@ flush() {
 token() { echo "${TOKEN:-$(hurl --variables-file "$env" login.hurl | jq -r .token)}"; }
 rider() { h --variable token="$(token)" rider-flow.hurl; }
 boarding() { h --variable token="$(token)" boarding-flow.hurl; }
+quantity() { h --variable token="$(token)" quantity-flow.hurl; }
 standalone() { h --variable token="$(token)" standalone-flow.hurl; }
 
 case ${1:-all} in
@@ -40,6 +41,7 @@ case ${1:-all} in
   rider) rider ;;
   boarding) boarding ;;
   standalone) standalone ;;
+  quantity) quantity ;;
   all) driver; flush; rider; boarding; standalone ;;
-  *) echo "usage: $0 [driver|flush|rider|boarding|standalone|all]"; exit 2 ;;
+  *) echo "usage: $0 [driver|flush|rider|boarding|standalone|quantity|all]"; exit 2 ;;
 esac
