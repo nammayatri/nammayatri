@@ -68,6 +68,9 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.state" matches "^(ALLOCATED|ARRIVING)$"
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{plate}}"
+# the pinger keeps the cab's LTS fix fresh: its position rides on the leg status
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lat" isFloat
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lon" isFloat
 
 # The allocated seat already counts against the cab
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
@@ -230,6 +233,14 @@ HTTP 200
 
 # NOTE: the enum path segment is JSON-quoted (mkHttpInstancesForEnum): /BUS/ is a router-level 404, /%22BUS%22/ matches.
 GET {{base_url}}/v2/publicTransport/vehicleData/%22BUS%22/{{plate}}
+token: {{token}}
+HTTP 200
+[Asserts]
+jsonpath "$.rs[0].st" == "SHARED_CAB"
+jsonpath "$.rs[0].cd" == "{{route_a}}"
+
+# The sticker code (plate's last 4) resolves among the city's live cabs too
+GET {{base_url}}/v2/publicTransport/vehicleData/%22BUS%22/{{plate_code}}
 token: {{token}}
 HTTP 200
 [Asserts]

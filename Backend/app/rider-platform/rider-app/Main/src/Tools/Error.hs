@@ -1467,6 +1467,7 @@ data SharedCabSessionError
   | InvalidWalkupCount
   | NoReturnRoute
   | RidersOnBoard Int
+  | CodeAmbiguous
   deriving (Eq, Show, IsBecknAPIError)
 
 instance IsAPIError SharedCabSessionError
@@ -1483,6 +1484,7 @@ instance IsBaseError SharedCabSessionError where
     InvalidWalkupCount -> Just "Walk-up count must be between 0 and the vehicle capacity."
     NoReturnRoute -> Just "This route has no return route."
     RidersOnBoard n -> Just $ show n <> " rider(s) still on board; drop them first or end with force."
+    CodeAmbiguous -> Just "More than one shared cab ends in that code. Pick your route to find the cab."
 
 instance IsHTTPError SharedCabSessionError where
   toErrorCode = \case
@@ -1494,6 +1496,7 @@ instance IsHTTPError SharedCabSessionError where
     InvalidWalkupCount -> "SHARED_CAB_INVALID_WALKUP_COUNT"
     NoReturnRoute -> "SHARED_CAB_NO_RETURN_ROUTE"
     RidersOnBoard _ -> "SHARED_CAB_RIDERS_ON_BOARD"
+    CodeAmbiguous -> "SHARED_CAB_CODE_AMBIGUOUS"
   toHttpCode = \case
     SessionHeldByAnotherDriver -> E409
     SessionNotFound -> E404
@@ -1503,6 +1506,7 @@ instance IsHTTPError SharedCabSessionError where
     InvalidWalkupCount -> E400
     NoReturnRoute -> E400
     RidersOnBoard _ -> E409
+    CodeAmbiguous -> E409
 
 -- | Shared-cab boarding engine (M8). 05-allocation-plan §8.1: one generic error for every boarding
 -- failure — callers must not be able to tell "no cab here" from "wrong code".

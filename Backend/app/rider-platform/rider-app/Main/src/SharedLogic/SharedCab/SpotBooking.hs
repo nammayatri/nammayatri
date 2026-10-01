@@ -2,13 +2,20 @@
 -- prefills the rider's search. The rider then books as usual and boards by typing the sticker code (8.1).
 module SharedLogic.SharedCab.SpotBooking
   ( liveSharedCab,
+    liveSharedCabByCode,
+    CodeResolution (..),
+    resolveCode,
+    isStickerCode,
     sharedCabVehicleData,
   )
 where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (sortOn)
+import qualified Data.Char as Char
+import Data.List (nub, sortOn)
+import qualified Data.Text as T
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -24,6 +31,28 @@ import Tools.Error
 -- flushed session (the driver's poll and the expiry job do).
 liveSharedCab :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe Session)
 liveSharedCab plate = mfilter ((== ACTIVE) . (.status)) <$> Session.readSession (canonicalisePlate plate)
+
+-- | The sticker code is the plate's last four digits (the same code boarding takes).
+isStickerCode :: Text -> Bool
+isStickerCode code = T.length code == 4 && T.all Char.isDigit code
+
+data CodeResolution = NoCab | OneCab Text | ManyCabs
+  deriving (Show, Eq)
+
+-- | Which of the live plates a sticker code names: none, exactly one, or more than one (the rider then picks a route).
+resolveCode :: Text -> [Text] -> CodeResolution
+resolveCode code plates = case nub (filter ((== code) . T.takeEnd 4) plates) of
+  [] -> NoCab
+  [plate] -> OneCab plate
+  _ -> ManyCabs
+
+-- | A typed sticker code resolved among the cabs live on the city's shared-cab routes (one route-set read per route,
+-- the same index the route view uses), never the whole fleet.
+liveSharedCabByCode :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow CodeResolution
+liveSharedCabByCode integratedBppConfig code = do
+  routes <- OTPRest.getRoutesByGtfsId integratedBppConfig
+  plates <- concatMap (map (.vehicleNumber)) <$> mapM (Session.activeSessionsOnRoute . (.code)) routes
+  pure (resolveCode code plates)
 
 -- | The cab's current route as vehicle data, the shape the bus path returns, with the tier set to SHARED_CAB.
 sharedCabVehicleData :: Session -> Environment.Flow ApiTypes.PublicTransportData

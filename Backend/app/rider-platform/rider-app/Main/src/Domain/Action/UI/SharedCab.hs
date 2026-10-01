@@ -1,5 +1,6 @@
 module Domain.Action.UI.SharedCab
   ( getSharedCabRoutes,
+    findSharedCabConfig,
     getSharedCabRoute,
     postSharedCabBookingSkip,
     skipReason,

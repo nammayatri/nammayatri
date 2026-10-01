@@ -74,6 +74,7 @@ import qualified Domain.Action.UI.Dispatcher as Dispatcher
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
+import qualified Domain.Action.UI.SharedCab as UISharedCab
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -867,9 +868,24 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
   -- A plate with a live shared-cab session is a spot booking's first step (05 §4), whatever vehicleType the app sent.
   SharedCabSpot.liveSharedCab vehicleNumber >>= \case
     Just session -> SharedCabSpot.sharedCabVehicleData session
-    Nothing -> case vehicleType of
-      BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
-      _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
+    Nothing -> do
+      -- a typed four-digit sticker code: the one live cab of the rider's city that ends in it, else the bus path (no cab) or a pick-a-route error (several)
+      mbCodeSession <-
+        if SharedCabSpot.isStickerCode vehicleNumber
+          then
+            UISharedCab.findSharedCabConfig mbPersonId >>= \case
+              Nothing -> pure Nothing
+              Just ibc ->
+                SharedCabSpot.liveSharedCabByCode ibc vehicleNumber >>= \case
+                  SharedCabSpot.OneCab plate -> SharedCabSpot.liveSharedCab plate
+                  SharedCabSpot.ManyCabs -> throwError CodeAmbiguous
+                  SharedCabSpot.NoCab -> pure Nothing
+          else pure Nothing
+      case mbCodeSession of
+        Just session -> SharedCabSpot.sharedCabVehicleData session
+        Nothing -> case vehicleType of
+          BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
+          _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 -- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
 
