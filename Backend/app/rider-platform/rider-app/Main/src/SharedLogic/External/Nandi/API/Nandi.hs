@@ -1,9 +1,14 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module SharedLogic.External.Nandi.API.Nandi where
 
 import Data.Aeson
+import qualified Data.Text as T
 import Data.Time (Day)
 import qualified EulerHS.Types as ET
+import GHC.TypeLits (KnownSymbol, symbolVal)
 import Kernel.Prelude
+import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import Servant
 import SharedLogic.External.Nandi.Types
 
@@ -72,7 +77,8 @@ type AlternateStopsByGtfsIdAndStopCodeAPI = "alternateStops" :> Capture "gtfs_id
 
 type RoutesServedTodayAPI = "routes-served-today" :> Get '[JSON] [RoutesServedTodayItem]
 
-type WaybillMetadataAPI = "waybill" :> Capture "gtfs_id" Text :> "metadata" :> Capture "waybill_no" Text :> Get '[JSON] WaybillMetadataResponse
+-- | `tripNumber`: transitV2 runs have crew per trip; with it, the driver is that trip's. Ignored for waybills.
+type WaybillMetadataAPI = "waybill" :> Capture "gtfs_id" Text :> "metadata" :> Capture "waybill_no" Text :> QueryParam "tripNumber" Int :> Get '[JSON] WaybillMetadataResponse
 
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
@@ -263,7 +269,7 @@ getNandiAlternateStopsByGtfsIdAndStopCode = ET.client nandiAlternateStopsByGtfsI
 getNandiRoutesServedToday :: ET.EulerClient [RoutesServedTodayItem]
 getNandiRoutesServedToday = ET.client nandiRoutesServedTodayAPI
 
-getNandiWaybillMetadata :: Text -> Text -> ET.EulerClient WaybillMetadataResponse
+getNandiWaybillMetadata :: Text -> Text -> Maybe Int -> ET.EulerClient WaybillMetadataResponse
 getNandiWaybillMetadata = ET.client nandiWaybillMetadataAPI
 
 type OperatorGetRowAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> QueryParam "column" Text :> Get '[JSON] Value
@@ -648,3 +654,76 @@ getOperatorQueryVehicle = ET.client operatorQueryVehicleAPI
 
 deleteOperatorVehicle :: Text -> Text -> ET.EulerClient RowsAffectedResp
 deleteOperatorVehicle = ET.client operatorDeleteVehicleAPI
+
+-- ─── transitV2 operator APIs (GIMS /internal/operator/{gtfs_id}/v2/...) ─────
+-- Generic pass-through: the path under v2/ is captured, the known list filters are optional
+-- query params (absent when Nothing), bodies and responses are GIMS JSON.
+
+type OperatorV2GetAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "v2" :> CaptureAll "path" Text
+    :> Header "x-operator-id" Text
+    :> Header "x-actor-person-id" Text
+    :> QueryParam "limit" Text
+    :> QueryParam "offset" Text
+    :> QueryParam "shift" Text
+    :> QueryParam "depotId" Text
+    :> QueryParam "code" Text
+    :> QueryParam "tripGroupId" Text
+    :> QueryParam "operationDate" Text
+    :> QueryParam "vehicleNumber" Text
+    :> QueryParam "driverTokenNumber" Text
+    :> QueryParam "conductorTokenNumber" Text
+    :> QueryParam "isActive" Text
+    :> QueryParam "resolved" Text
+    :> QueryParam "zone" Text
+    :> QueryParam "tripType" Text
+    :> QueryParam "repeatStatus" Text
+    :> QueryParam "search" Text
+    :> Get '[JSON] Value
+
+type OperatorV2PostAPI =
+  "internal" :> "operator" :> Capture "gtfs_id" Text :> "v2" :> CaptureAll "path" Text
+    :> Header "x-operator-id" Text
+    :> Header "x-actor-person-id" Text
+    :> ReqBody '[JSON] Value
+    :> Post '[JSON] Value
+
+operatorV2GetAPI :: Proxy OperatorV2GetAPI
+operatorV2GetAPI = Proxy
+
+operatorV2PostAPI :: Proxy OperatorV2PostAPI
+operatorV2PostAPI = Proxy
+
+getOperatorV2 ::
+  Text ->
+  [Text] ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  ET.EulerClient Value
+getOperatorV2 = ET.client operatorV2GetAPI
+
+postOperatorV2 :: Text -> [Text] -> Maybe Text -> Maybe Text -> Value -> ET.EulerClient Value
+postOperatorV2 = ET.client operatorV2PostAPI
+
+-- | Metrics label for CaptureAll routes (the kernel only ships Capture): the rest of the path
+-- collapses into one ":<name>*" segment.
+instance (KnownSymbol capture, SanitizedUrl subroute) => SanitizedUrl (CaptureAll capture a :> subroute) where
+  getSanitizedUrl _ _ = do
+    url <- getSanitizedUrl (Proxy :: Proxy subroute) Nothing
+    pure (T.pack (":" <> symbolVal (Proxy :: Proxy capture) <> "*") <> "/" <> url)

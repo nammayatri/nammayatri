@@ -4,6 +4,7 @@
 module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import qualified Data.Aeson
 import qualified Data.Map.Strict as Map
 import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
@@ -20,6 +21,7 @@ import Kernel.Types.Id (ShortId (..))
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Flow as NandiFlow
+import qualified SharedLogic.External.Nandi.TransitV2Types as V2
 import SharedLogic.External.Nandi.Types
 import SharedLogic.FRFSUtils (unixToUTC)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -191,7 +193,7 @@ transitOperatorUpdateWaybillDetailsUtil merchantShortId city vehicleCategory req
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   gimsReq <- validateVehicleChange baseUrl gtfsId req
   res <- NandiFlow.operatorWaybillDetails baseUrl gtfsId gimsReq
-  fanOutWaybillRefresh baseUrl gtfsId req.waybill_no
+  fanOutWaybillRefresh baseUrl gtfsId req.waybill_no False
   pure res
 
 -- | The bus being replaced is read off the waybill rather than taken from the request, and both buses must
@@ -202,7 +204,7 @@ validateVehicleChange baseUrl gtfsId req = case req.vehicle_no of
   Nothing -> pure req
   Just rawVehicleNo -> do
     newVehicleNo <- validateNonBlank rawVehicleNo
-    meta <- NandiFlow.getWaybillMetadata baseUrl gtfsId req.waybill_no
+    meta <- NandiFlow.getWaybillMetadata baseUrl gtfsId req.waybill_no Nothing
     let currentVehicleNo = T.strip meta.vehicle_no
     unless (T.null currentVehicleNo) $ do
       mbCurrentLayoutId <- findSeatLayoutId currentVehicleNo
@@ -252,54 +254,65 @@ getLiveTripStartTime booking = case (booking.tripId, booking.routeCode) of
 -- metadata is read directly via NandiFlow (bypassing the 30s OTPRest in-mem cache) since the operator's
 -- write just landed. The refresh (persisting to booking/leg) runs synchronously here; the per-booking
 -- customer notification is forked (best-effort). A lookup/apply failure for one booking never aborts the rest.
-fanOutWaybillRefresh :: BaseUrl -> Text -> Text -> Flow ()
-fanOutWaybillRefresh baseUrl gtfsId waybillNo = do
+-- `perTrip` (transitV2 runs, crew per trip): each booking is refreshed with its own trip's crew, one
+-- metadata read per trip; otherwise one read for the whole waybill.
+fanOutWaybillRefresh :: BaseUrl -> Text -> Text -> Bool -> Flow ()
+fanOutWaybillRefresh baseUrl gtfsId waybillNo perTrip = do
   bookings <- QFRFSTicketBooking.findAllConfirmedByWaybillNo waybillNo
   unless (null bookings) $ do
-    eMeta <- withTryCatch "fanOutWaybillRefresh:getWaybillMetadata" (NandiFlow.getWaybillMetadata baseUrl gtfsId waybillNo)
-    case eMeta of
-      Left err -> logError $ "fanOutWaybillRefresh: metadata fetch failed for waybillNo=" <> waybillNo <> ": " <> show err
-      Right meta -> do
-        legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) bookings)
-        let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
-        -- Batch-load the riders up front so the per-booking notification below needs no query in the loop.
-        persons <- QP.findAllByIds (map (.riderId) bookings)
-        let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
-        -- Notify only when the driver and/or the assigned bus actually changed. The notification (FCM push +
-        -- external WhatsApp) is slow and best-effort, so it is forked out of the critical, synchronous
-        -- refresh path above.
-        toNotify <-
-          fmap catMaybes $
-            forM bookings $ \booking -> do
-              let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
-              eRefresh <- withTryCatch ("fanOutWaybillRefresh:apply:" <> booking.id.getId) $ JMU.applyWaybillMetadataToTicket booking mbJourneyLeg meta
-              case eRefresh of
-                Left err -> do
-                  logError $ "fanOutWaybillRefresh: apply failed for booking " <> booking.id.getId <> ": " <> show err
-                  pure Nothing
-                Right refreshInfo ->
-                  pure $
-                    if refreshInfo.driverChanged || refreshInfo.busChanged
-                      then (\person -> (booking, refreshInfo, person, (.journeyId) <$> mbJourneyLeg)) <$> Map.lookup booking.riderId personMap
-                      else Nothing
-        -- Grouped by tripId: bookings on the same trip share one live schedule fetch (getLiveTripStartTime)
-        -- instead of each booking fetching it separately -- a waybill can have confirmed bookings across
-        -- more than one trip (findAllConfirmedByWaybillNo isn't trip-scoped), so this groups rather than
-        -- assuming a single shared trip.
-        let groups = Map.elems $ Map.fromListWith (<>) [(b.tripId, [item]) | item@(b, _, _, _) <- toNotify]
-        forM_ groups $ \bookingGroup ->
-          whenJust (listToMaybe bookingGroup) $ \(firstBooking, _, _, _) ->
-            fork ("fanOutWaybillRefresh:notify:" <> waybillNo <> ":" <> fromMaybe "" firstBooking.tripId) $ do
-              mbStartTime <- getLiveTripStartTime firstBooking
-              forM_ bookingGroup $ \(booking, refreshInfo, person, mbJourneyId) -> do
-                let vehicleNo = fromMaybe "" refreshInfo.finalBoardedBusNumber
-                    -- Label the trip as "<fromStop> - <toStop>" (stop names, falling back to codes) instead
-                    -- of the raw route name.
-                    routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
-                eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged mbStartTime
-                case eNotify of
-                  Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
-                  Right _ -> pure ()
+    let tripKey booking =
+          if perTrip
+            then booking.tripId >>= JMU.tripNoToMaybe . snd . JMU.getWaybillNoAndTripNoFromTripId
+            else Nothing
+    metas <- forM (ordNub (map tripKey bookings)) $ \mbTripNo -> do
+      eMeta <- withTryCatch "fanOutWaybillRefresh:getWaybillMetadata" (NandiFlow.getWaybillMetadata baseUrl gtfsId waybillNo mbTripNo)
+      case eMeta of
+        Left err -> do
+          logError $ "fanOutWaybillRefresh: metadata fetch failed for waybillNo=" <> waybillNo <> " trip=" <> show mbTripNo <> ": " <> show err
+          pure Nothing
+        Right meta -> pure (Just (mbTripNo, meta))
+    let metaByTrip = Map.fromList (catMaybes metas)
+    unless (Map.null metaByTrip) $ do
+      legs <- QJourneyLeg.findAllByLegSearchIds (map (\b -> b.searchId.getId) bookings)
+      let legMap = Map.fromList $ mapMaybe (\l -> (,l) <$> l.legSearchId) legs
+      -- Batch-load the riders up front so the per-booking notification below needs no query in the loop.
+      persons <- QP.findAllByIds (map (.riderId) bookings)
+      let personMap = Map.fromList $ map (\p -> (p.id, p)) persons
+      -- Notify only when the driver and/or the assigned bus actually changed. The notification (FCM push +
+      -- external WhatsApp) is slow and best-effort, so it is forked out of the critical, synchronous
+      -- refresh path above.
+      toNotify <-
+        fmap catMaybes $
+          forM (mapMaybe (\b -> (b,) <$> Map.lookup (tripKey b) metaByTrip) bookings) $ \(booking, meta) -> do
+            let mbJourneyLeg = Map.lookup booking.searchId.getId legMap
+            eRefresh <- withTryCatch ("fanOutWaybillRefresh:apply:" <> booking.id.getId) $ JMU.applyWaybillMetadataToTicket booking mbJourneyLeg meta
+            case eRefresh of
+              Left err -> do
+                logError $ "fanOutWaybillRefresh: apply failed for booking " <> booking.id.getId <> ": " <> show err
+                pure Nothing
+              Right refreshInfo ->
+                pure $
+                  if refreshInfo.driverChanged || refreshInfo.busChanged
+                    then (\person -> (booking, refreshInfo, person, (.journeyId) <$> mbJourneyLeg)) <$> Map.lookup booking.riderId personMap
+                    else Nothing
+      -- Grouped by tripId: bookings on the same trip share one live schedule fetch (getLiveTripStartTime)
+      -- instead of each booking fetching it separately -- a waybill can have confirmed bookings across
+      -- more than one trip (findAllConfirmedByWaybillNo isn't trip-scoped), so this groups rather than
+      -- assuming a single shared trip.
+      let groups = Map.elems $ Map.fromListWith (<>) [(b.tripId, [item]) | item@(b, _, _, _) <- toNotify]
+      forM_ groups $ \bookingGroup ->
+        whenJust (listToMaybe bookingGroup) $ \(firstBooking, _, _, _) ->
+          fork ("fanOutWaybillRefresh:notify:" <> waybillNo <> ":" <> fromMaybe "" firstBooking.tripId) $ do
+            mbStartTime <- getLiveTripStartTime firstBooking
+            forM_ bookingGroup $ \(booking, refreshInfo, person, mbJourneyId) -> do
+              let vehicleNo = fromMaybe "" refreshInfo.finalBoardedBusNumber
+                  -- Label the trip as "<fromStop> - <toStop>" (stop names, falling back to codes) instead
+                  -- of the raw route name.
+                  routeName = fromMaybe booking.fromStationCode booking.fromStationName <> " - " <> fromMaybe booking.toStationCode booking.toStationName
+              eNotify <- withTryCatch ("fanOutWaybillRefresh:notify:" <> booking.id.getId) $ Notifications.notifyFrfsTripDetailsUpdated person booking.id.getId vehicleNo routeName booking.tripId mbJourneyId refreshInfo.driverChanged refreshInfo.busChanged mbStartTime
+              case eNotify of
+                Left err -> logError $ "fanOutWaybillRefresh: notify failed for booking " <> booking.id.getId <> ": " <> show err
+                Right _ -> pure ()
 
 transitOperatorUpdateWaybillTabletUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> UpdateWaybillTabletReq -> Flow RowsAffectedResp
 transitOperatorUpdateWaybillTabletUtil merchantShortId city vehicleCategory req = do
@@ -399,3 +412,75 @@ transitOperatorQueryVehicleUtil merchantShortId city vehicleCategory vehicleNo t
     throwError $ InvalidRequest "queryVehicle: at least one of vehicleNo, tagNumber, fleetNo is required"
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
   NandiFlow.operatorQueryVehicle baseUrl gtfsId vehicleNo' tagNumber' fleetNo'
+
+-- ===== transitV2 (GIMS /internal/operator/{gtfs_id}/v2/...) =====
+-- Typed (SharedLogic.External.Nandi.TransitV2Types): the dashboard person goes to GIMS as
+-- x-actor-person-id, `operatorId` as x-operator-id; GIMS owns validation.
+
+transitOperatorV2GetUtil :: Data.Aeson.FromJSON resp => ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> [Text] -> NandiFlow.OperatorV2Query -> Flow resp
+transitOperatorV2GetUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId path q = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorV2Get baseUrl gtfsId (nonBlankText mbOperatorId) (nonBlankText mbRequestorId) path q
+
+transitOperatorV2PostUtil :: (Data.Aeson.ToJSON req, Data.Aeson.FromJSON resp) => ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> [Text] -> req -> Flow resp
+transitOperatorV2PostUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId path body = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  NandiFlow.operatorV2Post baseUrl gtfsId (nonBlankText mbOperatorId) (nonBlankText mbRequestorId) path body
+
+-- | Bodyless actions (delete / resolve): GIMS takes an empty object.
+transitOperatorV2ActionUtil :: Data.Aeson.FromJSON resp => ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> [Text] -> Flow resp
+transitOperatorV2ActionUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId path =
+  transitOperatorV2PostUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId path (Data.Aeson.object [])
+
+-- ── transitV2: bus / crew changes with the same side effects as waybill updates ──
+-- (seat-layout check on a bus swap; refresh + notify riders of the affected trips).
+
+-- | Tickets already issued on a run carry seats of its bus's layout; a swap must keep the layout.
+-- A run with no bus yet is a first assignment, not a swap.
+ensureSameSeatLayout :: Text -> Text -> Maybe Text -> Maybe Text -> Flow ()
+ensureSameSeatLayout gtfsId label mbCurrent mbNew =
+  case (nonBlankText mbCurrent, nonBlankText mbNew) of
+    (Just current, Just new) | current /= new -> do
+      let layoutOf v = fmap (.seatLayoutId) <$> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached v gtfsId
+      currentLayout <- layoutOf current
+      newLayout <- layoutOf new
+      unless (currentLayout == newLayout) $
+        throwError $
+          InvalidRequest $
+            label <> ": buses " <> current <> " and " <> new <> " don't share a seat layout ("
+              <> maybe "<none>" (.getId) currentLayout
+              <> " vs "
+              <> maybe "<none>" (.getId) newLayout
+              <> "), bus change is not allowed"
+    _ -> pure ()
+
+-- | Run-level bus change: seat-layout check, GIMS write, then refresh the run's bookings.
+transitOperatorV2UpdateRunVehicleUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Text -> V2.V2UpdateVehicleReq -> Flow V2.V2DutyGroup
+transitOperatorV2UpdateRunVehicleUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId runId req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  let op = nonBlankText mbOperatorId
+      actor = nonBlankText mbRequestorId
+  detail :: V2.V2DutyGroupDetail <- NandiFlow.operatorV2Get baseUrl gtfsId op actor ["duty-groups", runId] NandiFlow.emptyOperatorV2Query
+  ensureSameSeatLayout gtfsId "updateRunVehicle" detail.dutyGroup.vehicleNumber req.vehicleNumber
+  res <- NandiFlow.operatorV2Post baseUrl gtfsId op actor ["duty-groups", runId, "vehicle"] req
+  fanOutWaybillRefresh baseUrl gtfsId detail.dutyGroup.waybillNo True
+  pure res
+
+-- | Run-level crew change, then refresh the run's bookings (each with its own trip's crew).
+transitOperatorV2UpdateRunCrewUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Text -> V2.V2UpdateCrewReq -> Flow V2.V2DutyGroupDetail
+transitOperatorV2UpdateRunCrewUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId runId req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  res :: V2.V2DutyGroupDetail <- NandiFlow.operatorV2Post baseUrl gtfsId (nonBlankText mbOperatorId) (nonBlankText mbRequestorId) ["duty-groups", runId, "crew"] req
+  fanOutWaybillRefresh baseUrl gtfsId res.dutyGroup.waybillNo True
+  pure res
+
+-- | Trip-level crew change, then refresh the bookings of that run (per trip).
+transitOperatorV2UpdateTripCrewUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Maybe Text -> Maybe Text -> Text -> V2.V2UpdateCrewReq -> Flow V2.V2Duty
+transitOperatorV2UpdateTripCrewUtil merchantShortId city vehicleCategory mbOperatorId mbRequestorId dutyId req = do
+  (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+  let op = nonBlankText mbOperatorId
+      actor = nonBlankText mbRequestorId
+  res :: V2.V2Duty <- NandiFlow.operatorV2Post baseUrl gtfsId op actor ["duties", dutyId, "crew"] req
+  detail :: V2.V2DutyGroupDetail <- NandiFlow.operatorV2Get baseUrl gtfsId op actor ["duty-groups", res.dutyGroupId] NandiFlow.emptyOperatorV2Query
+  fanOutWaybillRefresh baseUrl gtfsId detail.dutyGroup.waybillNo True
+  pure res

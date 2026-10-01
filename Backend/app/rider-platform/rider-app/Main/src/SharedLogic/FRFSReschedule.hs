@@ -365,8 +365,8 @@ mkFreshSearchAndFreshQuote oldBooking oldQuote newTripId integratedBppConfig mbS
   oldQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId oldQuote.id
   let totalQty = sum (map (.selectedQuantity) oldQuoteCategories)
       validTill' = addUTCTime (maybe 30 intToNominalDiffTime mbSearchTtlSec) now
-  let (waybillNo, _tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId newTripId
-  eMeta <- withTryCatch "FRFSReschedule:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
+  let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId newTripId
+  eMeta <- withTryCatch "FRFSReschedule:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo (JourneyUtils.tripNoToMaybe tripNo) integratedBppConfig)
   newVehicleNo <- case eMeta of
     Left err -> do
       logError $ "FRFSReschedule:mkFreshSearchAndFreshQuote failed to fetch waybill metadata for tripId=" <> newTripId <> ": " <> show err
@@ -454,8 +454,8 @@ mkFreshSearchForNewStops oldBooking oldQuote newTripId newFromCode newToCode new
       validTill' = addUTCTime (maybe 30 intToNominalDiffTime mbSearchTtlSec) now
   newFromStation <- OTPRest.getStationByGtfsIdAndStopCode newFromCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station: " <> newFromCode)
   newToStation <- OTPRest.getStationByGtfsIdAndStopCode newToCode integratedBppConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station: " <> newToCode)
-  let (waybillNo, _tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId newTripId
-  eMeta <- withTryCatch "FRFSReschedule:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
+  let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId newTripId
+  eMeta <- withTryCatch "FRFSReschedule:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo (JourneyUtils.tripNoToMaybe tripNo) integratedBppConfig)
   newVehicleNo <- case eMeta of
     Left err -> do
       logError $ "FRFSReschedule:mkFreshSearchForNewStops failed to fetch waybill metadata for tripId=" <> newTripId <> ": " <> show err

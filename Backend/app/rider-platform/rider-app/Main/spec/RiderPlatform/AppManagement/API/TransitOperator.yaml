@@ -34,6 +34,27 @@ imports:
   VehicleUpsertRequest: SharedLogic.External.Nandi.Types
   ScheduleTripRepeatConfig: SharedLogic.External.Nandi.Types
   SetScheduleTripRepeatReq: SharedLogic.External.Nandi.Types
+  V2TripGroup: SharedLogic.External.Nandi.TransitV2Types
+  V2TripGroupPage: SharedLogic.External.Nandi.TransitV2Types
+  V2Trip: SharedLogic.External.Nandi.TransitV2Types
+  V2UpsertTripGroupReq: SharedLogic.External.Nandi.TransitV2Types
+  V2UpsertTripsReq: SharedLogic.External.Nandi.TransitV2Types
+  V2DutyRepeatPage: SharedLogic.External.Nandi.TransitV2Types
+  V2UpsertDutyRepeatReq: SharedLogic.External.Nandi.TransitV2Types
+  V2UpsertDutyRepeatResp: SharedLogic.External.Nandi.TransitV2Types
+  V2GenerateReq: SharedLogic.External.Nandi.TransitV2Types
+  V2GenerateEntry: SharedLogic.External.Nandi.TransitV2Types
+  V2DutyGroup: SharedLogic.External.Nandi.TransitV2Types
+  V2DutyGroupPage: SharedLogic.External.Nandi.TransitV2Types
+  V2DutyGroupDetail: SharedLogic.External.Nandi.TransitV2Types
+  V2Duty: SharedLogic.External.Nandi.TransitV2Types
+  V2CreateDutyGroupReq: SharedLogic.External.Nandi.TransitV2Types
+  V2UpdateVehicleReq: SharedLogic.External.Nandi.TransitV2Types
+  V2UpdateCrewReq: SharedLogic.External.Nandi.TransitV2Types
+  V2SetActiveReq: SharedLogic.External.Nandi.TransitV2Types
+  V2SuccessResp: SharedLogic.External.Nandi.TransitV2Types
+  V2DutyEventLog: SharedLogic.External.Nandi.TransitV2Types
+  V2DutyEventLogPage: SharedLogic.External.Nandi.TransitV2Types
   Value: Data.Aeson
   FilePath: EulerHS.Prelude
   APISuccess: Kernel.Types.APISuccess
@@ -41,6 +62,7 @@ imports:
 importPackageOverrides:
   BecknV2.OnDemand.Enums: "beckn-spec"
   SharedLogic.External.Nandi.Types: "rider-app"
+  SharedLogic.External.Nandi.TransitV2Types: "rider-app"
 
 module: TransitOperator
 apiPrefix: transitOperator
@@ -495,6 +517,538 @@ apis:
         type: SetScheduleTripRepeatReq
       response:
         type: ScheduleTripRepeatConfig
+
+  # ── transitV2 (GIMS /internal/operator/{gtfs_id}/v2) ─────────────────────
+  # Typed models: SharedLogic.External.Nandi.TransitV2Types (same JSON as GIMS
+  # services/operator_v2.rs). `operatorId` scopes the call (sent as x-operator-id); the dashboard
+  # person is sent as x-actor-person-id.
+
+  - GET:
+      endpoint: /v2/tripGroups
+      name: TransitOperatorV2ListTripGroups
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        search: Text
+        operatorId: Text
+        limit: Int
+        offset: Int
+        shift: Text
+        depotId: Text
+        code: Text
+        zone: Text
+        tripType: Text
+        vehicleNumber: Text
+        driverTokenNumber: Text
+        conductorTokenNumber: Text
+      response:
+        type: V2TripGroupPage
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/tripGroups/upsert
+      name: TransitOperatorV2UpsertTripGroup
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2UpsertTripGroupReq
+      response:
+        type: V2TripGroup
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/tripGroups/{tripGroupId}
+      name: TransitOperatorV2GetTripGroup
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        tripGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2TripGroup
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/tripGroups/{tripGroupId}/delete
+      name: TransitOperatorV2DeleteTripGroup
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        tripGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2SuccessResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/tripGroups/{tripGroupId}/trips
+      name: TransitOperatorV2ListTrips
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        tripGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: "[V2Trip]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/tripGroups/{tripGroupId}/trips/upsert
+      name: TransitOperatorV2UpsertTrips
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        tripGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2UpsertTripsReq
+      response:
+        type: "[V2Trip]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/trips/{tripId}/delete
+      name: TransitOperatorV2DeleteTrip
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        tripId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2SuccessResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/dutyRepeats
+      name: TransitOperatorV2ListDutyRepeats
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        search: Text
+        operatorId: Text
+        limit: Int
+        offset: Int
+        tripGroupId: Text
+        code: Text
+        vehicleNumber: Text
+        driverTokenNumber: Text
+        conductorTokenNumber: Text
+        repeatStatus: Text
+      response:
+        type: V2DutyRepeatPage
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyRepeats/upsert
+      name: TransitOperatorV2UpsertDutyRepeat
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2UpsertDutyRepeatReq
+      response:
+        type: V2UpsertDutyRepeatResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyRepeats/{dutyRepeatId}/delete
+      name: TransitOperatorV2DeleteDutyRepeat
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyRepeatId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2SuccessResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyRepeats/preview
+      name: TransitOperatorV2PreviewDutyRepeats
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2GenerateReq
+      response:
+        type: "[V2GenerateEntry]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyRepeats/generate
+      name: TransitOperatorV2GenerateDutyRepeats
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2GenerateReq
+      response:
+        type: "[V2GenerateEntry]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/dutyGroups
+      name: TransitOperatorV2ListDutyGroups
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        search: Text
+        operatorId: Text
+        limit: Int
+        offset: Int
+        operationDate: Text
+        tripGroupId: Text
+        depotId: Text
+        vehicleNumber: Text
+        driverTokenNumber: Text
+        conductorTokenNumber: Text
+        isActive: Bool
+        code: Text
+      response:
+        type: V2DutyGroupPage
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyGroups/create
+      name: TransitOperatorV2CreateDutyGroup
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2CreateDutyGroupReq
+      response:
+        type: V2DutyGroupDetail
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/dutyGroups/{dutyGroupId}
+      name: TransitOperatorV2GetDutyGroup
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2DutyGroupDetail
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/dutyGroups/{dutyGroupId}/duties
+      name: TransitOperatorV2ListDuties
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: "[V2Duty]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/dutyGroups/{dutyGroupId}/logs
+      name: TransitOperatorV2GetDutyGroupLogs
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: "[V2DutyEventLog]"
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyGroups/{dutyGroupId}/vehicle
+      name: TransitOperatorV2UpdateDutyGroupVehicle
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2UpdateVehicleReq
+      response:
+        type: V2DutyGroup
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyGroups/{dutyGroupId}/crew
+      name: TransitOperatorV2UpdateDutyGroupCrew
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2UpdateCrewReq
+      response:
+        type: V2DutyGroupDetail
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyGroups/{dutyGroupId}/active
+      name: TransitOperatorV2SetDutyGroupActive
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2SetActiveReq
+      response:
+        type: V2DutyGroup
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/dutyGroups/{dutyGroupId}/delete
+      name: TransitOperatorV2DeleteDutyGroup
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyGroupId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2SuccessResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/duties/{dutyId}/crew
+      name: TransitOperatorV2UpdateDutyCrew
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      request:
+        type: V2UpdateCrewReq
+      response:
+        type: V2Duty
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/duties/{dutyId}/delete
+      name: TransitOperatorV2DeleteDuty
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        dutyId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2SuccessResp
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - GET:
+      endpoint: /v2/generationFailures
+      name: TransitOperatorV2ListGenerationFailures
+      auth: ApiAuthV2
+      migrate:
+        capability: transit-operations.master.read
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+        limit: Int
+        offset: Int
+        resolved: Bool
+      response:
+        type: V2DutyEventLogPage
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/generationFailures/{failureId}/resolve
+      name: TransitOperatorV2ResolveGenerationFailure
+      auth: ApiAuthV2
+      auditRequestBody: false
+      migrate:
+        capability: transit-operations.master.write
+      params:
+        failureId: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        operatorId: Text
+      response:
+        type: V2DutyEventLog
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
 types:
   DeviceVehicleMappingListRes:

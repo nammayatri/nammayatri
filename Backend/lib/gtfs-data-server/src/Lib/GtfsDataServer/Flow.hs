@@ -1,11 +1,16 @@
 module Lib.GtfsDataServer.Flow where
 
+import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.ByteString.Lazy as LBS
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.GtfsDataServer.API.Nandi as NandiAPI
 import Lib.GtfsDataServer.Types
+import qualified Network.HTTP.Types.Status as HttpStatus
+import Servant.Client (ClientError (..), ResponseF (..))
 
 getRouteStopMappingByRouteCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
 getRouteStopMappingByRouteCode baseUrl gtfsId routeCode =
@@ -92,3 +97,45 @@ getStopCode baseUrl gtfsId providerStopCode =
 gimsVerifyConductor :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsVerifyReq -> m GimsVerifyResp
 gimsVerifyConductor baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorVerify gtfsId req) "gimsVerifyConductor" NandiAPI.operatorVerifyAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_VERIFY_CONDUCTOR_API") baseUrl)
+
+-- ─── transitV2 ─────────────────────────────────────────────────────────────
+
+-- | GIMS answers a refused action (wrong trip order, overlap, not found) with 4xx and
+-- @{"error": "<message>"}@. Surface that message as an InvalidRequest so the driver / ops sees
+-- why; anything else stays an ExternalAPICallError.
+gimsV2Result :: (MonadThrow m, Log m) => Text -> BaseUrl -> Either ClientError a -> m a
+gimsV2Result errCode baseUrl = \case
+  Right a -> pure a
+  Left err@(FailureResponse _ Response {responseStatusCode = status, responseBody = body})
+    | code >= 400 && code < 500,
+      Just msg <- gimsErrorMessage body ->
+      throwError $ InvalidRequest msg
+    | otherwise -> throwError $ ExternalAPICallError (Just errCode) baseUrl err
+    where
+      code = HttpStatus.statusCode status
+  Left err -> throwError $ ExternalAPICallError (Just errCode) baseUrl err
+  where
+    gimsErrorMessage :: LBS.ByteString -> Maybe Text
+    gimsErrorMessage b = case A.decode b of
+      Just (A.Object o) | Just (A.String m) <- KeyMap.lookup "error" o -> Just m
+      _ -> Nothing
+
+-- | Not retried: an action must not be applied twice. Returns the run after the action.
+gimsV2TripAction :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> GimsV2TripActionReq -> m GimsV2CurrentOperationResp
+gimsV2TripAction baseUrl gtfsId mbOperatorId mbActorId req =
+  callAPI baseUrl (NandiAPI.postGimsV2TripAction gtfsId mbOperatorId mbActorId req) "gimsV2TripAction" NandiAPI.gimsV2TripActionAPI
+    >>= gimsV2Result "UNABLE_TO_CALL_GIMS_V2_TRIP_ACTION_API" baseUrl
+
+gimsV2CurrentOperation :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> GimsV2Anchor -> m GimsV2CurrentOperationResp
+gimsV2CurrentOperation baseUrl gtfsId mbOperatorId anchor =
+  withShortRetry (callAPI baseUrl (NandiAPI.postGimsV2CurrentOperation gtfsId mbOperatorId anchor) "gimsV2CurrentOperation" NandiAPI.gimsV2CurrentOperationAPI)
+    >>= gimsV2Result "UNABLE_TO_CALL_GIMS_V2_CURRENT_OPERATION_API" baseUrl
+
+-- | Fails open (Nothing), like 'gimsActiveTrip'.
+gimsV2ActiveTrip :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> GimsV2Anchor -> m (Maybe GimsV2ActiveTripResp)
+gimsV2ActiveTrip baseUrl gtfsId mbOperatorId anchor =
+  withShortRetry (callAPI baseUrl (NandiAPI.postGimsV2ActiveTrip gtfsId mbOperatorId anchor) "gimsV2ActiveTrip" NandiAPI.gimsV2ActiveTripAPI) >>= \case
+    Right resp -> pure (Just resp)
+    Left err -> do
+      logError $ "Error getting v2 active trip: " <> show err
+      pure Nothing

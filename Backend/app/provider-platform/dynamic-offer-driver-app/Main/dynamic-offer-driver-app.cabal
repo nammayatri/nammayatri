@@ -526,6 +526,7 @@ library
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
       Domain.Types.FleetOperatorTripAction
+      Domain.Types.FleetOperatorTripActionV2
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes

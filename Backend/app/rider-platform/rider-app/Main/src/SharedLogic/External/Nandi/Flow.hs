@@ -2,14 +2,18 @@ module SharedLogic.External.Nandi.Flow where
 
 import BecknV2.FRFS.Enums
 import Data.Aeson (Value (..))
+import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (parseEither)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as T
 import Data.Time (Day)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import qualified Network.HTTP.Types.Status as HttpStatus
+import Servant.Client (ClientError (..), ResponseF (..))
 import qualified SharedLogic.External.Nandi.API.Nandi as NandiAPI
 import SharedLogic.External.Nandi.Types
 
@@ -388,9 +392,9 @@ gimsVerifyConductor :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDur
 gimsVerifyConductor baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorVerify gtfsId req) "gimsVerifyConductor" NandiAPI.operatorVerifyAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_VERIFY_CONDUCTOR_API") baseUrl)
 
-getWaybillMetadata :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m WaybillMetadataResponse
-getWaybillMetadata baseUrl gtfsId waybillNo =
-  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiWaybillMetadata gtfsId waybillNo) "getWaybillMetadata" NandiAPI.nandiWaybillMetadataAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_WAYBILL_METADATA_API") baseUrl)
+getWaybillMetadata :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> Maybe Int -> m WaybillMetadataResponse
+getWaybillMetadata baseUrl gtfsId waybillNo mbTripNumber =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiWaybillMetadata gtfsId waybillNo mbTripNumber) "getWaybillMetadata" NandiAPI.nandiWaybillMetadataAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_WAYBILL_METADATA_API") baseUrl)
 
 -- ===== Vehicle management =====
 
@@ -406,3 +410,119 @@ operatorDeleteVehicle baseUrl gtfsId vehicleId =
 operatorQueryVehicle :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> m [Fleet]
 operatorQueryVehicle baseUrl gtfsId vehicleNo tagNumber fleetNo =
   withShortRetry $ callAPI baseUrl (NandiAPI.getOperatorQueryVehicle gtfsId vehicleNo tagNumber fleetNo) "operatorQueryVehicle" NandiAPI.operatorQueryVehicleAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_QUERY_VEHICLE_API") baseUrl)
+
+-- ===== transitV2 operator APIs (pass-through) =====
+
+-- | Optional list filters for GET /internal/operator/{gtfs_id}/v2/...; Nothing = not sent.
+data OperatorV2Query = OperatorV2Query
+  { limit :: Maybe Int,
+    offset :: Maybe Int,
+    shift :: Maybe Text,
+    depotId :: Maybe Text,
+    code :: Maybe Text,
+    tripGroupId :: Maybe Text,
+    operationDate :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    driverTokenNumber :: Maybe Text,
+    conductorTokenNumber :: Maybe Text,
+    isActive :: Maybe Bool,
+    resolved :: Maybe Bool,
+    zone :: Maybe Text,
+    tripType :: Maybe Text,
+    repeatStatus :: Maybe Text,
+    -- | free-text partial search (GIMS matches it across the list's code / bus / crew columns)
+    search :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+-- | Build list queries as @emptyOperatorV2Query {limit = .., code = ..}@ (field order is not stable).
+emptyOperatorV2Query :: OperatorV2Query
+emptyOperatorV2Query =
+  OperatorV2Query
+    { limit = Nothing,
+      offset = Nothing,
+      shift = Nothing,
+      depotId = Nothing,
+      code = Nothing,
+      tripGroupId = Nothing,
+      operationDate = Nothing,
+      vehicleNumber = Nothing,
+      driverTokenNumber = Nothing,
+      conductorTokenNumber = Nothing,
+      isActive = Nothing,
+      resolved = Nothing,
+      zone = Nothing,
+      tripType = Nothing,
+      repeatStatus = Nothing,
+      search = Nothing
+    }
+
+-- | GIMS answers a refused operator call (overlap, not found, validation) with 4xx and
+-- @{"error": "<message>"}@; pass that message on as InvalidRequest so the dashboard shows it.
+operatorV2Result :: (MonadThrow m, Log m) => Text -> BaseUrl -> Either ClientError a -> m a
+operatorV2Result errCode baseUrl = \case
+  Right a -> pure a
+  Left err@(FailureResponse _ Response {responseStatusCode = status, responseBody = body})
+    | code' >= 400 && code' < 500,
+      Just msg <- gimsErrorMessage body ->
+      throwError $ InvalidRequest msg
+    | otherwise -> throwError $ ExternalAPICallError (Just errCode) baseUrl err
+    where
+      code' = HttpStatus.statusCode status
+  Left err -> throwError $ ExternalAPICallError (Just errCode) baseUrl err
+  where
+    gimsErrorMessage :: LBS.ByteString -> Maybe Text
+    gimsErrorMessage b = case A.decode b of
+      Just (A.Object o) | Just (A.String m) <- KeyMap.lookup "error" o -> Just m
+      _ -> Nothing
+
+operatorV2Get :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r, A.FromJSON resp) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> [Text] -> OperatorV2Query -> m resp
+operatorV2Get baseUrl gtfsId mbOperatorId mbActorId path q = do
+  let txt = fmap show
+      boolTxt = fmap (\b -> if b then "true" else "false")
+  withShortRetry
+    ( callAPI
+        baseUrl
+        ( NandiAPI.getOperatorV2
+            gtfsId
+            path
+            mbOperatorId
+            mbActorId
+            (txt q.limit)
+            (txt q.offset)
+            q.shift
+            q.depotId
+            q.code
+            q.tripGroupId
+            q.operationDate
+            q.vehicleNumber
+            q.driverTokenNumber
+            q.conductorTokenNumber
+            (boolTxt q.isActive)
+            (boolTxt q.resolved)
+            q.zone
+            q.tripType
+            q.repeatStatus
+            q.search
+        )
+        "operatorV2Get"
+        NandiAPI.operatorV2GetAPI
+    )
+    >>= operatorV2Result "UNABLE_TO_CALL_OPERATOR_V2_API" baseUrl
+    >>= decodeOperatorV2 path
+
+-- | Not retried: writes must not be applied twice.
+operatorV2Post :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r, A.ToJSON req, A.FromJSON resp) => BaseUrl -> Text -> Maybe Text -> Maybe Text -> [Text] -> req -> m resp
+operatorV2Post baseUrl gtfsId mbOperatorId mbActorId path body =
+  callAPI baseUrl (NandiAPI.postOperatorV2 gtfsId path mbOperatorId mbActorId (A.toJSON body)) "operatorV2Post" NandiAPI.operatorV2PostAPI
+    >>= operatorV2Result "UNABLE_TO_CALL_OPERATOR_V2_API" baseUrl
+    >>= decodeOperatorV2 path
+
+-- | GIMS v2 replies decoded into the typed models (TransitV2Types); a shape mismatch is a
+-- contract bug between GIMS and this service, reported with the path and the parse error.
+decodeOperatorV2 :: (MonadThrow m, Log m, A.FromJSON resp) => [Text] -> Value -> m resp
+decodeOperatorV2 path v = case A.fromJSON v of
+  A.Success a -> pure a
+  A.Error e -> do
+    logError $ "GIMS v2 " <> T.intercalate "/" path <> ": unexpected response: " <> T.pack e
+    throwError $ InternalError ("GIMS v2 " <> T.intercalate "/" path <> " returned an unexpected shape: " <> T.pack e)

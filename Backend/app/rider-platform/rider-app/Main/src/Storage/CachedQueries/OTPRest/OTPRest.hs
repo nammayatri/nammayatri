@@ -109,14 +109,16 @@ getBusTripScheduleForBoardingCheck waybillNo tripNumber routeId integratedBPPCon
 getWaybillMetadata ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
+  Maybe Int ->
   IntegratedBPPConfig ->
   m WaybillMetadataResponse
 -- TTL kept short (30s) so an operator changing the driver on a waybill is reflected on customer
--- tickets within ~half a minute. Keyed by waybill, so one GIMS read is shared across all tickets/polls.
+-- tickets within ~half a minute. Keyed by waybill (+ trip for transitV2 runs, whose crew is per
+-- trip), so one GIMS read is shared across all tickets/polls of that trip.
 -- (Kernel.Storage.InMem is TTL-evicted with no cross-instance invalidation, so the TTL is the bound.)
-getWaybillMetadata waybillNo integratedBPPConfig = IM.withInMemCache ["getWaybillMetadata", integratedBPPConfig.id.getId, waybillNo] 30 $ do
+getWaybillMetadata waybillNo mbTripNumber integratedBPPConfig = IM.withInMemCache ["getWaybillMetadata", integratedBPPConfig.id.getId, waybillNo, maybe "" show mbTripNumber] 30 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getWaybillMetadata baseUrl integratedBPPConfig.feedKey waybillNo
+  Flow.getWaybillMetadata baseUrl integratedBPPConfig.feedKey waybillNo mbTripNumber
 
 getRoutesByRouteIds ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
