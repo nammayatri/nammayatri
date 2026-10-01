@@ -875,7 +875,8 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
     Nothing
       | SharedCabSpot.isStickerCode vehicleNumber -> do
         -- a typed four-digit code is a bus first (the existing lookup keeps its meaning); a cab of the rider's city is tried only when it found nothing
-        busVehicleFound <- busKnowsVehicle
+        mbBusVehicle <- SharedCabSpot.probeBus busKnowsVehicle
+        let busVehicleFound = isJust mbBusVehicle
         resolution <-
           if busVehicleFound
             then pure SharedCabSpot.NoCab
@@ -884,7 +885,7 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
                 Nothing -> pure SharedCabSpot.NoCab
                 Just ibc -> SharedCabSpot.liveSharedCabByCode ibc vehicleNumber
         case SharedCabSpot.chooseWalkUp busVehicleFound resolution of
-          SharedCabSpot.UseBus -> busPath
+          SharedCabSpot.UseBus -> busPathWith (Just <$> mbBusVehicle) -- the found vehicle is passed on: one lookup
           SharedCabSpot.UseCab plate -> SharedCabSpot.liveSharedCab plate >>= maybe busPath SharedCabSpot.sharedCabVehicleData
           SharedCabSpot.PickRoute -> throwError CodeAmbiguous
       | otherwise -> busPath
@@ -894,9 +895,10 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
       personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-      isJust <$> JLU.getVehicleLiveRouteInfo configs vehicleNumber Nothing
-    busPath = case vehicleType of
-      BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
+      JLU.getVehicleLiveRouteInfo configs vehicleNumber Nothing
+    busPath = busPathWith Nothing
+    busPathWith precomputed = case vehicleType of
+      BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers precomputed
       _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 -- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
@@ -1155,7 +1157,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute mbNew
 
   -- Get from cache or compute and store
   getCachedPublicTransportData cacheKey currentVersion $
-    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False mbNewServiceTiers
+    getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False mbNewServiceTiers Nothing
 
 getPublicTransportDataImpl ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1168,9 +1170,10 @@ getPublicTransportDataImpl ::
     Kernel.Prelude.Maybe VehicleCategory ->
     Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe [ServiceTierType] ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe (DIBC.IntegratedBPPConfig, JLU.VehicleLiveRouteInfo)) ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers = do
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType isPublicVehicleData mbNewServiceTiers precomputedLive = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -1197,20 +1200,23 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
     blocked <- isVehicleBlocked integratedBPPConfigs vehicleNumber
     when blocked $ throwError (BusBlocked vehicleNumber)
   mbVehicleLiveRouteInfo <-
-    case mbVehicleNumber of
-      Just vehicleNumber -> do
-        mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
-        case mbVehicleOverrideInfo of
-          Just (sourceVehicleNumber, overrideWaybillNo) -> do
-            mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
-            case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
-              JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
-              JLU.FleetOverrideFinished -> do
-                Dispatcher.delFleetOverrideInfo vehicleNumber
-                getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-              JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-          Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
-      Nothing -> return Nothing
+    case precomputedLive of
+      Just known -> pure known
+      Nothing ->
+        case mbVehicleNumber of
+          Just vehicleNumber -> do
+            mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
+            case mbVehicleOverrideInfo of
+              Just (sourceVehicleNumber, overrideWaybillNo) -> do
+                mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
+                case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
+                  JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
+                  JLU.FleetOverrideFinished -> do
+                    Dispatcher.delFleetOverrideInfo vehicleNumber
+                    getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+                  JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+              Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
+          Nothing -> return Nothing
 
   -- Increment metrics for vehicle data fields
   fork "incrementVehicleDataMetrics" $

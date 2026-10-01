@@ -45,6 +45,7 @@ import qualified SharedLogic.SharedCab.SessionView as View
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
+import qualified Storage.Queries.IntegratedBPPConfigExtra as QIBCExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.VehicleTrip as QVT
@@ -69,7 +70,9 @@ getIntegratedBppConfig ibcId = CQIBC.findById ibcId >>= fromMaybeM IntegratedBPP
 -- integrated_bpp_config.agency_key, the GTFS agency gtfsId of the shared-cab feed
 -- ("<feed>:SHARED_CAB", e.g. "shillong_shared_cab:SHARED_CAB").
 getIntegratedBppConfigByAgency :: Text -> Environment.Flow DIBC.IntegratedBPPConfig
-getIntegratedBppConfigByAgency agencyId = CQIBC.findByAgencyId agencyId DIBC.APPLICATION >>= fromMaybeM IntegratedBPPConfigNotFound
+getIntegratedBppConfigByAgency agencyId =
+  QIBCExtra.onlyOfPlatform DIBC.APPLICATION (.platformType) <$> CQIBC.findByAgencyId agencyId DIBC.APPLICATION
+    >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyId (show DIBC.APPLICATION))
 
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig

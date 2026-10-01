@@ -8,7 +8,7 @@ import Control.Monad (mfilter)
 import Data.Text (Text)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.SharedCab.Config
-import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (pickAgencyRow)
+import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -58,6 +58,8 @@ tests =
                 afterConfigPilotFilter = mfilter ((== MULTIMODAL) . fst . fst) picked
                 cityFallback = Just (((MULTIMODAL, "b7"), "city lookup") :: ((PlatformType, Text), String))
              in (fmap snd picked, fmap snd (afterConfigPilotFilter <|> cityFallback)) @?= (Just "app", Just "city lookup"),
+          testCase "the driver proxy takes only an APPLICATION row: a key with only a MULTIMODAL row names none" $
+            [onlyOfPlatform APPLICATION (fst . fst) (pickAgencyRow APPLICATION fst [((MULTIMODAL, "a9" :: Text), "multi" :: String)]), onlyOfPlatform APPLICATION (fst . fst) (pickAgencyRow APPLICATION fst [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")])] @?= [Nothing, Just ((APPLICATION, "52"), "app")],
           testCase "no rows is Nothing" $
             fmap snd (pickAgencyRow APPLICATION fst ([] :: [((PlatformType, Text), String)])) @?= Nothing
         ]

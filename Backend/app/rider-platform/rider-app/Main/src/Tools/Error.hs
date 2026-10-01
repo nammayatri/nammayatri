@@ -705,6 +705,7 @@ instance IsAPIError BecknConfigError
 
 data IntegratedBPPConfigError
   = IntegratedBPPConfigNotFound
+  | IntegratedBPPConfigNotFoundForAgency Text Text -- agency key, platform type
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
@@ -712,13 +713,16 @@ instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
 instance IsBaseError IntegratedBPPConfigError where
   toMessage = \case
     IntegratedBPPConfigNotFound -> Just "IntegratedBPPConfig not found"
+    IntegratedBPPConfigNotFoundForAgency agencyKey platform -> Just $ "IntegratedBPPConfig not found for agency " <> agencyKey <> " on platform " <> platform
 
 instance IsHTTPError IntegratedBPPConfigError where
   toErrorCode = \case
     IntegratedBPPConfigNotFound -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+    IntegratedBPPConfigNotFoundForAgency _ _ -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
 
   toHttpCode = \case
     IntegratedBPPConfigNotFound -> E500
+    IntegratedBPPConfigNotFoundForAgency _ _ -> E500
 
 instance IsAPIError IntegratedBPPConfigError
 

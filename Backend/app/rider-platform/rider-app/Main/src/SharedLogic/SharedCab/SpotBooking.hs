@@ -8,6 +8,7 @@ module SharedLogic.SharedCab.SpotBooking
     WalkUpChoice (..),
     cabRouteRequest,
     chooseWalkUp,
+    probeBus,
     isStickerCode,
     sharedCabVehicleData,
   )
@@ -54,6 +55,12 @@ resolveCode code plates = case nub (filter ((== code) . T.takeEnd 4) plates) of
 cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
 cabRouteRequest Nothing _ = False
 cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
+
+-- | The bus fleet's lookup of a typed code, once. A failure of the lookup counts as "the bus does not know it": the lookup
+-- already swallows its own errors, so this keeps that meaning, and a brief outage plus exactly one live cab ending in the same
+-- four digits resolves to the cab (the alternative, failing the walk-up on every transient error, hurts riders more).
+probeBus :: (Monad m, TryException m) => m (Maybe a) -> m (Maybe a)
+probeBus lookupBus = either (const Nothing) identity <$> withTryCatch "walkUp:busProbe" lookupBus
 
 data WalkUpChoice = UseBus | UseCab Text | PickRoute
   deriving (Show, Eq)

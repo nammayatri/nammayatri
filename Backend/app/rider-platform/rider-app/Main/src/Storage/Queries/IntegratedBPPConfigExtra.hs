@@ -29,6 +29,11 @@ pickAgencyRow preferred key rows = case filter ((== preferred) . fst . key) rows
     _ -> Nothing
   _ -> Nothing
 
+-- | The row only if it is of the platform the caller needs (the driver proxy needs its APPLICATION row; a key that has only
+-- a MULTIMODAL row names no proxy config).
+onlyOfPlatform :: Domain.Types.IntegratedBPPConfig.PlatformType -> (a -> Domain.Types.IntegratedBPPConfig.PlatformType) -> Maybe a -> Maybe a
+onlyOfPlatform platform platformOf = mfilter ((== platform) . platformOf)
+
 findByAgencyIdDeterministic ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->

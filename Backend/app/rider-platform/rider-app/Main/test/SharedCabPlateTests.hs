@@ -4,7 +4,7 @@
 module SharedCabPlateTests (tests) where
 
 import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate)
-import "rider-app" SharedLogic.SharedCab.SpotBooking (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, chooseWalkUp, isStickerCode, resolveCode)
+import "rider-app" SharedLogic.SharedCab.SpotBooking (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, chooseWalkUp, isStickerCode, probeBus, resolveCode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -37,6 +37,11 @@ tests =
             [cabRouteRequest (Just ["SC-A-F", "SC-A-R"]) ["SC-A-F"], cabRouteRequest (Just ["SC-A-F"]) ["SC-A-F", "MTC-1"], cabRouteRequest (Just ["SC-A-F"]) []] @?= [True, False, False],
           testCase "a failed or absent feed read (OTP down, no shared-cab feed) leaves the request on the bus path" $
             cabRouteRequest Nothing ["SC-A-F"] @?= False,
+          testCase "the bus probe passes a found vehicle on, reports an unknown number as Nothing, and counts a failed lookup as not found (so a transient error can let exactly one live cab win, but never fails the walk-up)" $ do
+            found <- probeBus (pure (Just ("bus", 1 :: Int)))
+            unknown <- probeBus (pure (Nothing :: Maybe (String, Int)))
+            failed <- probeBus (ioError (userError "nandi down") :: IO (Maybe (String, Int)))
+            (found, unknown, failed) @?= (Just ("bus", 1), Nothing, Nothing),
           testCase "four digits only" $ map isStickerCode ["9999", "ML05", "99999", "999", ""] @?= [True, False, False, False, False]
         ]
     ]
