@@ -1,6 +1,7 @@
 module SharedLogic.External.Nandi.API.Nandi where
 
 import Data.Aeson
+import Data.Time (Day)
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Servant
@@ -16,7 +17,7 @@ type ClusterRoutesBetweenStopsAPI = "cluster" :> Capture "gtfs_id" Text :> "rout
 
 type RoutesByRouteIdsAPI = "getRoutesByIds" :> Capture "gtfs_id" Text :> ReqBody '[JSON] [Text] :> Post '[JSON] [RouteInfoNandi]
 
-type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> QueryParam "vehicleNumber" Text :> Get '[JSON] BusScheduleDetails
+type BusRouteScheduleAPI = "bus-route-schedule" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> QueryParam "vehicleNumber" Text :> QueryParam "maxDutyDate" Day :> Get '[JSON] BusScheduleDetails
 
 type BusTripScheduleAPI = "bus-trip-schedule" :> Capture "gtfs_id" Text :> Capture "waybill_no" Text :> Capture "trip_number" Int :> Capture "route_id" Text :> Get '[JSON] BusScheduleDetails
 
@@ -184,7 +185,7 @@ getNandiClusterRoutesBetweenStops = ET.client nandiClusterRoutesBetweenStopsAPI
 getNandiRoutesByRouteIds :: Text -> [Text] -> ET.EulerClient [RouteInfoNandi]
 getNandiRoutesByRouteIds = ET.client nandiRoutesByRouteIdsAPI
 
-getNandiBusRouteSchedule :: Text -> Text -> Maybe Text -> ET.EulerClient BusScheduleDetails
+getNandiBusRouteSchedule :: Text -> Text -> Maybe Text -> Maybe Day -> ET.EulerClient BusScheduleDetails
 getNandiBusRouteSchedule = ET.client nandiBusRouteScheduleAPI
 
 getNandiBusTripSchedule :: Text -> Text -> Int -> Text -> ET.EulerClient BusScheduleDetails
@@ -305,6 +306,10 @@ type OperatorOperatorsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :
 
 type OperatorWaybillStatusAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "status" :> ReqBody '[JSON] UpdateWaybillStatusReq :> Post '[JSON] RowsAffectedResp
 
+type OperatorGetScheduleTripRepeatAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "schedule-trip" :> Capture "schedule_trip_id" Text :> "repeat" :> Get '[JSON] ScheduleTripRepeatConfig
+
+type OperatorSetScheduleTripRepeatAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "schedule-trip" :> Capture "schedule_trip_id" Text :> "repeat" :> ReqBody '[JSON] SetScheduleTripRepeatReq :> Post '[JSON] ScheduleTripRepeatConfig
+
 type OperatorWaybillFleetAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "fleet" :> ReqBody '[JSON] UpdateWaybillFleetReq :> Post '[JSON] RowsAffectedResp
 
 type OperatorWaybillDetailsAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "waybill" :> "details" :> "v2" :> ReqBody '[JSON] UpdateWaybillDetailsReq :> Post '[JSON] RowsAffectedResp
@@ -377,6 +382,12 @@ operatorOperatorsAPI = Proxy
 
 operatorWaybillStatusAPI :: Proxy OperatorWaybillStatusAPI
 operatorWaybillStatusAPI = Proxy
+
+operatorGetScheduleTripRepeatAPI :: Proxy OperatorGetScheduleTripRepeatAPI
+operatorGetScheduleTripRepeatAPI = Proxy
+
+operatorSetScheduleTripRepeatAPI :: Proxy OperatorSetScheduleTripRepeatAPI
+operatorSetScheduleTripRepeatAPI = Proxy
 
 operatorWaybillFleetAPI :: Proxy OperatorWaybillFleetAPI
 operatorWaybillFleetAPI = Proxy
@@ -453,6 +464,12 @@ getOperatorOperators = ET.client operatorOperatorsAPI
 
 postOperatorWaybillStatus :: Text -> UpdateWaybillStatusReq -> ET.EulerClient RowsAffectedResp
 postOperatorWaybillStatus = ET.client operatorWaybillStatusAPI
+
+getOperatorScheduleTripRepeat :: Text -> Text -> ET.EulerClient ScheduleTripRepeatConfig
+getOperatorScheduleTripRepeat = ET.client operatorGetScheduleTripRepeatAPI
+
+postOperatorScheduleTripRepeat :: Text -> Text -> SetScheduleTripRepeatReq -> ET.EulerClient ScheduleTripRepeatConfig
+postOperatorScheduleTripRepeat = ET.client operatorSetScheduleTripRepeatAPI
 
 postOperatorWaybillFleet :: Text -> UpdateWaybillFleetReq -> ET.EulerClient RowsAffectedResp
 postOperatorWaybillFleet = ET.client operatorWaybillFleetAPI

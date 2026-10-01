@@ -36,7 +36,12 @@ data DIRECTConfig = DIRECTConfig
     qrRefreshTtl :: Maybe Seconds,
     redisPrefix :: Maybe Text,
     busBlockExpiryTime :: Maybe Seconds,
-    busBlockMaxLimit :: Maybe Int
+    busBlockMaxLimit :: Maybe Int,
+    -- | How many days ahead a rider is shown upcoming duties on /bus-route-schedule. Nothing
+    -- (the default) means unbounded -- fine for almost every operator. Only needed when this
+    -- operator's gtfs_id has GIMS's repeater automation enabled, since that's the only case
+    -- where an `upcoming` waybill can be real and far in the future.
+    checkAheadDaysSchedule :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -86,6 +91,7 @@ data ONDCBecknConfig = ONDCBecknConfig
     redisPrefix :: Maybe Text,
     busBlockExpiryTime :: Maybe Seconds,
     busBlockMaxLimit :: Maybe Int,
+    checkAheadDaysSchedule :: Maybe Int,
     qrEncoding :: Maybe QREncoding
   }
   deriving stock (Eq, Generic)
