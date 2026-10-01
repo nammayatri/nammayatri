@@ -100,6 +100,7 @@ import qualified SharedLogic.CancellationFault as CancellationFault
 import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverPool as DP
+import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -245,6 +246,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverMoneyConsequence ctx.driver
     applyDriverCancellationRateCount ctx.driver
     applyAutoAcceptCancellationBehaviour
+    applyAvailableForRidesRevocation
   case resultE of
     Left err -> logError $ "applyImmediateConsequences failed for rideId " <> ctx.ride.id.getId <> ": " <> show err
     Right _ -> pure ()
@@ -284,6 +286,13 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
         fork "cancellationConsequenceDriverMoney" $ do
           let isWalletEnabled = fromMaybe False ctx.merchant.prepaidSubscriptionAndWalletEnabled || ctx.transporterConfig.driverWalletConfig.enableDriverWallet
           DCP.accumulateCancellationPenalty isWalletEnabled ctx.booking ctx.ride (Just signedAmount) ctx.transporterConfig driver
+
+    applyAvailableForRidesRevocation =
+      when (CancellationFault.isDriverAtFault ctx.decision.faultVerdict) $ do
+        now <- getCurrentTime
+        when (AvailableForRides.holdsLiveTag now ctx.driver.driverTag) $ do
+          logInfo $ "AvailableForRides turned off for driver " <> ctx.ride.driverId.getId <> " after at-fault cancellation of ride " <> ctx.ride.id.getId
+          AvailableForRides.dropTag AvailableForRides.DRIVER_AT_FAULT_CANCELLATION ctx.ride.driverId
 
     -- column: countsTowardDriverCancellationRate — driver-initiated cancels go through the
     -- full DriverScore event (rate counter + repeat-offender blocking); customer-initiated
