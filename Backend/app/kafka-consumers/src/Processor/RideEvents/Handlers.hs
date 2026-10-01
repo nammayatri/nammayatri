@@ -203,6 +203,7 @@ handleFleetOperatorStats ::
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
+    HasKafkaProducer r,
     CoreMetrics.CoreMetrics m,
     EncFlow m r,
     CHConfig.ClickhouseFlow m r

@@ -37,6 +37,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -159,7 +160,7 @@ handler merchantId req ride = do
       let newRatingValue = ratingValue
       QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       pure (newRatingValue - oldRatingValue, False)
-  newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
+  newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig ride.id.getId
   syncServiceTiersOnRatingChange driverStats newRating driverId ride.merchantOperatingCityId
 
 syncServiceTiersOnRatingChange ::
@@ -181,7 +182,7 @@ syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId =
       QVehicle.updateSelectedServiceTiers newTiers personId
 
 calculateAverageRating ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasKafkaProducer r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   Id DP.Person ->
   Int ->
   Bool ->
@@ -189,8 +190,9 @@ calculateAverageRating ::
   Maybe Int ->
   Maybe Int ->
   DTC.TransporterConfig ->
+  Text ->
   m (Maybe Centesimal)
-calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig = do
+calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig rideId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   let totalRatings = fromMaybe 0 mbtotalRatings
   let totalRatingScore = fromMaybe 0 mbtotalRatingScore
@@ -213,7 +215,7 @@ calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount rat
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue shouldIncrementCount
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue shouldIncrementCount rideId newRatingsCount
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
   let newRating =
         if newRatingsCount > 0

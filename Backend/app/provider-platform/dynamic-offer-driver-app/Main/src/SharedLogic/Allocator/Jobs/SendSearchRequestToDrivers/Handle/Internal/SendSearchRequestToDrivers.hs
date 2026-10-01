@@ -293,7 +293,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
   -- Update operator/fleet analytics: batch increment total request count for all drivers at once
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
     let allDriverIds = map (.driverId) searchRequestsForDrivers
-    Analytics.updateOperatorAnalyticsTotalRequestCountBatch allDriverIds transporterConfig
+    Analytics.updateOperatorAnalyticsTotalRequestCountBatch allDriverIds transporterConfig searchTry.id.getId
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -606,6 +606,7 @@ attemptPriorityDirectAssign ::
     HasField "driverUnlockDelay" r Seconds,
     TM.HasDriverSearchRequestResponseMetrics m r,
     EncFlow m r,
+    HasKafkaProducer r,
     JobCreator r m,
     LT.HasLocationService m r,
     C.MonadCatch m
@@ -695,7 +696,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                   -- The same post-accept bundle respondQuote runs, so silent and manual accepts
                   -- stay indistinguishable to analytics, funnel metrics and the score/pool counters.
                   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-                    Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
+                    Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False (Just searchTry.id.getId)
                   cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
                   TM.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show Accept) (SML.driverSearchReqFunnelLabels (SML.distanceBucketEdges transporterConfig) sReqFD)
                   SDP.recordQuoteResponseCounters searchReq.merchantOperatingCityId driverId Accept

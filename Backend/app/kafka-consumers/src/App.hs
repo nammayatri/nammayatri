@@ -39,6 +39,7 @@ import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
+import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
@@ -119,6 +120,8 @@ startKafkaTransport flowRt appEnv = do
           batchSize = maybe 100 (fromIntegral . (.batchSize)) appEnv.healthCheckAppCfg
       KafkaFlow.runBatch flowRt appEnv kc batchSize $ \batch ->
         LCProcessor.processLocationData enabledCityIds batch
+    FLEET_ANALYTICS_REALTIME ->
+      KafkaFlow.runPerEvent flowRt appEnv kc FleetAnalyticsProcessor.processFleetAnalytics
 
 ------------------------------------------------------------
 -- Redis-Stream transport dispatch
@@ -142,6 +145,8 @@ startRedisStreamTransport flowRt appEnv = do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
       RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->
         LCProcessor.processLocationData enabledCityIds (map (\e -> (e.locationUpdate, e.driverId)) entries)
+    FLEET_ANALYTICS_REALTIME ->
+      error "FLEET_ANALYTICS_REALTIME is a Kafka consumer. Set transport = Kafka."
 
 -- | Wire format for BROADCAST_MESSAGE on the Redis-Stream transport.
 -- Kafka carries the driver id in the message key; for RedisStream we bundle
