@@ -324,6 +324,15 @@ for item in report.get('run', {}).get('executions', []):
 " 2>/dev/null || true
 }
 
+# Env files use ${VAR:default} port placeholders (resolved by the dashboard, not by newman); fill them in before newman runs.
+resolve_env_file() {
+    local src="$1" out
+    mkdir -p "$REPORTS_DIR"
+    out="$REPORTS_DIR/.resolved-$(basename "$src")"
+    perl -pe 's/\$\{([A-Z_][A-Z0-9_]*)(?::([^}]*))?\}/defined $ENV{$1} && $ENV{$1} ne "" ? $ENV{$1} : (defined $2 ? $2 : "")/ge' "$src" > "$out"
+    echo "$out"
+}
+
 # ── Run a single collection with a given environment ──
 
 run_single() {
@@ -333,6 +342,7 @@ run_single() {
     suite_name=$(basename "$collection" .json)
     local env_name
     env_name=$(basename "$env_file" .json)
+    env_file=$(resolve_env_file "$env_file")
 
     flush_redis
     enable_all_drivers
@@ -590,7 +600,7 @@ run_scheduler() {
             echo "------------------------------------------------------------"
             echo "Running: $suite_name ($env_name)"
 
-            if newman run "$f" -e "$env_file" --bail --timeout-request 60000 --reporters cli; then
+            if newman run "$f" -e "$(resolve_env_file "$env_file")" --bail --timeout-request 60000 --reporters cli; then
                 echo "PASSED: $suite_name ($env_name)"
                 passed=$((passed + 1))
             else
