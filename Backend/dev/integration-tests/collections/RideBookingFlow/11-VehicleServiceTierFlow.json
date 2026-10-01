@@ -67,9 +67,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth"
-        },
+        "url": "{{baseURL_namma_P}}/auth",
         "body": {
           "mode": "raw",
           "raw": "{\"mobileNumber\":\"{{_test_driver_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
@@ -98,9 +96,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify"
-        },
+        "url": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
         "body": {
           "mode": "raw",
           "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-drivera\"}"
@@ -133,9 +129,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
         "body": {
           "mode": "raw",
           "raw": "{\"registrationNo\":\"{{_test_reg_no}}\",\"vehicleClass\":\"{{vehicle_class}}\",\"colour\":\"White\",\"model\":\"{{vehicle_model}}\",\"make\":\"{{vehicle_make}}\",\"vehicleCategory\":\"{{vehicle_category}}\",\"variant\":\"{{vehicle_variant}}\"}"
@@ -168,9 +162,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -203,9 +195,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe"
-        },
+        "url": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -234,9 +224,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth"
-        },
+        "url": "{{baseURL_namma_P}}/auth",
         "body": {
           "mode": "raw",
           "raw": "{\"mobileNumber\":\"{{_test_driver2_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
@@ -265,9 +253,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth/{{driver2_authId}}/verify"
-        },
+        "url": "{{baseURL_namma_P}}/auth/{{driver2_authId}}/verify",
         "body": {
           "mode": "raw",
           "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-driverb(oldvehicle)\"}"
@@ -300,9 +286,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/addVehicle"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/addVehicle",
         "body": {
           "mode": "raw",
           "raw": "{\"registrationNo\":\"{{_test_reg_no2}}\",\"vehicleClass\":\"{{vehicle_class}}\",\"colour\":\"White\",\"model\":\"{{vehicle_model}}\",\"make\":\"{{vehicle_make}}\",\"vehicleCategory\":\"{{vehicle_category}}\",\"variant\":\"{{vehicle_variant}}\", \"mYManufacturing\":\"2005-01-01\"}"
@@ -335,9 +319,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/enable"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/enable",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -370,9 +352,7 @@
             "value": "{{driver2_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe"
-        },
+        "url": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -401,9 +381,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth"
-        },
+        "url": "{{baseURL_namma_P}}/auth",
         "body": {
           "mode": "raw",
           "raw": "{\"mobileNumber\":\"{{_test_driver3_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
@@ -432,9 +410,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth/{{driver3_authId}}/verify"
-        },
+        "url": "{{baseURL_namma_P}}/auth/{{driver3_authId}}/verify",
         "body": {
           "mode": "raw",
           "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-driverc(acoff)\"}"
@@ -467,9 +443,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver3_id}}/addVehicle"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver3_id}}/addVehicle",
         "body": {
           "mode": "raw",
           "raw": "{\"registrationNo\":\"{{_test_reg_no3}}\",\"vehicleClass\":\"{{vehicle_class}}\",\"colour\":\"White\",\"model\":\"{{vehicle_model}}\",\"make\":\"{{vehicle_make}}\",\"vehicleCategory\":\"{{vehicle_category}}\",\"variant\":\"{{vehicle_variant}}\", \"airConditioned\":false}"
@@ -502,9 +476,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver3_id}}/enable"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver3_id}}/enable",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -537,9 +509,7 @@
             "value": "{{driver3_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe"
-        },
+        "url": "{{baseURL_namma_P}}/plan/{{car_plan_id}}/subscribe",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -568,9 +538,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth"
-        },
+        "url": "{{baseURL_namma_P}}/auth",
         "body": {
           "mode": "raw",
           "raw": "{\"mobileNumber\":\"{{_test_driver4_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
@@ -599,9 +567,7 @@
             "value": "application/json"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth/{{driver4_authId}}/verify"
-        },
+        "url": "{{baseURL_namma_P}}/auth/{{driver4_authId}}/verify",
         "body": {
           "mode": "raw",
           "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-driverauto\"}"
@@ -634,9 +600,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver4_id}}/addVehicle"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver4_id}}/addVehicle",
         "body": {
           "mode": "raw",
           "raw": "{\"registrationNo\":\"{{_test_reg_no4}}\",\"vehicleClass\":\"3w\",\"colour\":\"Green\",\"model\":\"AUTO RICKSHAW\",\"make\":\"Bajaj\",\"vehicleCategory\":\"AUTO_CATEGORY\"}"
@@ -669,9 +633,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver4_id}}/enable"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver4_id}}/enable",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -704,9 +666,7 @@
             "value": "{{driver4_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/plan/{{auto_plan_id}}/subscribe"
-        },
+        "url": "{{baseURL_namma_P}}/plan/{{auto_plan_id}}/subscribe",
         "body": {
           "mode": "raw",
           "raw": "{}"
@@ -770,9 +730,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "GET /driver/vehicleServiceTiers — response shape validation.\n\nChecks:\n  • tiers[] non-empty (driver has at least one eligible tier)\n  • enableForAirport field present (ENABLED/DISABLED/BLOCKED) — sourced directly\n    from driverInfo.enableForAirport; always present (non-null enum)\n  • Every tier has isUsageRestricted / isSelected / isDefault\n\nSaves full response as _vst_baseline for diff-based assertions in later steps."
     },
@@ -811,9 +769,7 @@
             "value": "{{driver4_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "GET /driver/vehicleServiceTiers for Driver AUTO (AUTO_RICKSHAW).\n\nTests filterVehicleTier in selectVehicleTierForDriverWithUsageRestriction:\n  filterVehicleTier tier = vehicle.variant `elem` tier.allowedVehicleVariant\n\nAUTO_RICKSHAW is not in allowedVehicleVariant of any CAB tier, so\nSEDAN / SUV / HATCHBACK / TAXI must be completely absent — not just restricted.\nThis is ineligibility: the tier is filtered out, not marked with isUsageRestricted."
     },
@@ -861,9 +817,7 @@
             "value": "{{driver2_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "GET /driver/vehicleServiceTiers for Driver B (mYManufacturing=2005-01-01).\n\nTests mfcCheck in selectVehicleTierForDriverWithUsageRestriction:\n  vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now\n  mfcCheck = case (vehicleAgeInMonths, tier.vehicleAgeThreshold) of\n    (Just (Months age), Just (Months threshold)) -> age < threshold\n    _ -> True\n\n2005-01-01 → age ≈ 240 months. Any tier with vehicleAgeThreshold < 240\nhas mfcCheck=False → isUsageRestricted=True.\n\nCompares against Driver A baseline (no mYManufacturing → age=Nothing → mfcCheck=True always).\nConditional: passes gracefully if no tier has vehicleAgeThreshold configured."
     },
@@ -918,9 +872,7 @@
             "value": "{{driver3_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "GET /driver/vehicleServiceTiers for Driver C (addVehicle with airConditioned=false).\n\nTests airConditionedCheck in selectVehicleTierForDriverWithUsageRestriction:\n  airConditionedCheck =\n    (tier.vehicleCategory == Just AMBULANCE)\n    || (compareNumber tier.airConditionedThreshold driverInfo.airConditionScore\n        && (isNothing tier.airConditionedThreshold || vehicle.airConditioned /= Just False))\n\nvehicle.airConditioned = Just False → the second condition fails for any tier\nwith an airConditionedThreshold → isUsageRestricted=True.\n\nAlso cross-checks: same tiers are unrestricted for Driver A (airConditioned=Nothing\n→ isNothing Nothing = True → check short-circuits to True → not restricted)."
     },
@@ -969,9 +921,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/updateServiceTiers"
-        },
+        "url": "{{baseURL_namma_P}}/driver/updateServiceTiers",
         "body": {
           "mode": "raw",
           "raw": "{{_vst_update_body}}"
@@ -1015,9 +965,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies the tier selection from the previous POST persisted.\n\nQVehicle.updateSelectedServiceTiers is called at the end of postDriverUpdateServiceTiers,\nso the next GET must reflect isSelected=true for the tier we sent."
     },
@@ -1067,9 +1015,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/updateServiceTiers"
-        },
+        "url": "{{baseURL_namma_P}}/driver/updateServiceTiers",
         "body": {
           "mode": "raw",
           "raw": "{{_vst_update_body}}"
@@ -1114,9 +1060,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies the default-tier protection from the previous step.\n\nThe tier where vehicle.variant ∈ tier.defaultForVehicleVariant must still\nhave isSelected=true, because the backend's isDefault check overrides isSelected=false."
     },
@@ -1146,9 +1090,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverVehicleQuality/updateVehicleRating"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverVehicleQuality/updateVehicleRating",
         "body": {
           "mode": "raw",
           "raw": "{\"registrationNo\":\"{{_test_reg_no}}\",\"rating\":1.0,\"remark\":\"integration-test-low-rating\"}"
@@ -1201,9 +1143,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Tests vehicleRatingCheck in selectVehicleTierForDriverWithUsageRestriction:\n  vehicleRatingCheck = compareNumber vehicle.vehicleRating tier.vehicleRating\n  compareNumber (Just 1.0) (Just threshold) = 1.0 >= threshold\n\nAny tier with vehicleRating threshold > 1.0 → vehicleRatingCheck=False → restricted.\nDetected by diffing against _vst_baseline_tiers.\nConditional: passes gracefully if no tier has a vehicleRating threshold."
     },
@@ -1233,9 +1173,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverVehicleQuality/updateVehicleRating"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverVehicleQuality/updateVehicleRating",
         "body": {
           "mode": "raw",
           "raw": "{\"registrationNo\":\"{{_test_reg_no}}\",\"rating\":5.0,\"remark\":\"integration-test-high-rating\"}"
@@ -1281,9 +1219,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies vehicleRatingCheck recovery:\n  compareNumber (Just 5.0) (Just threshold) = 5.0 >= threshold → True\n→ vehicleRatingCheck=True → tiers that were restricted with 1.0 are now unrestricted."
     },
@@ -1313,9 +1249,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/acRestriction/update"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/acRestriction/update",
         "body": {
           "mode": "raw",
           "raw": "{\"isWorking\":false,\"downgradeReason\":\"integration-test-ac-restriction\"}"
@@ -1370,9 +1304,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies both effects of dashboard acRestriction/update(isWorking=false):\n\n1. airConditionedCheck fails → isUsageRestricted=true:\n     vehicle.airConditioned=Just False → (vehicle.airConditioned /= Just False) = False\n\n2. shouldUpdateServiceTiers=True → auto-deselect:\n     fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)\n     uses autoSelectedVehicleVariant (not allowedVehicleVariant)\n     restricted tiers excluded → QVehicle.updateSelectedServiceTiers called\n     → AC-restricted tiers must not be isSelected=true"
     },
@@ -1402,9 +1334,7 @@
             "value": "{{dashboard_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/acRestriction/update"
-        },
+        "url": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/acRestriction/update",
         "body": {
           "mode": "raw",
           "raw": "{\"isWorking\":true}"
@@ -1449,9 +1379,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies recovery after dashboard acRestriction/update(isWorking=true).\n\nvehicle.airConditioned=Just True → (isNothing threshold || Just True /= Just False) = True\n→ airConditionedCheck passes → isUsageRestricted=False."
     },
@@ -1481,9 +1409,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/updateAirCondition"
-        },
+        "url": "{{baseURL_namma_P}}/driver/updateAirCondition",
         "body": {
           "mode": "raw",
           "raw": "{\"isAirConditioned\":false}"
@@ -1536,9 +1462,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies driver-side updateAirCondition(false) path:\n\n1. Same airConditionedCheck failure: vehicle.airConditioned=Just False → restricted.\n\n2. shouldUpdateServiceTiers=True auto-deselect:\n     fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)\n     → uses autoSelectedVehicleVariant\n     → restricted tiers excluded from new selectedServiceTiers"
     },
@@ -1568,9 +1492,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/updateAirCondition"
-        },
+        "url": "{{baseURL_namma_P}}/driver/updateAirCondition",
         "body": {
           "mode": "raw",
           "raw": "{\"isAirConditioned\":true}"
@@ -1613,9 +1535,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Same recovery as dashboard path: vehicle.airConditioned=Just True → airConditionedCheck passes → tiers unrestricted."
     },
@@ -1660,9 +1580,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/updateServiceTiers"
-        },
+        "url": "{{baseURL_namma_P}}/driver/updateServiceTiers",
         "body": {
           "mode": "raw",
           "raw": "{{_vst_update_body}}"
@@ -1707,9 +1625,7 @@
             "value": "{{driver_token}}"
           }
         ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
-        }
+        "url": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
       },
       "description": "Verifies enableForAirport was persisted and reflected in GET.\n\nIn getDriverVehicleServiceTiers:\n  response.enableForAirport = driverInfo.enableForAirport (always present, non-null enum)\n\nSo the toggled value (ENABLED/DISABLED) is always reflected — no skip case."
     }
