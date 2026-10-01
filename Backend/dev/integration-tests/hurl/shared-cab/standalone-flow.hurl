@@ -59,6 +59,29 @@ jsonpath "$.status" == "CONFIRMED"
 jsonpath "$.payment" == null
 jsonpath "$.tickets[0].status" == "ACTIVE"
 
+# opening the cab route from search: route serviceability answers from the cabs live on it (its own feed, not the bus one)
+POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false
+token: {{token}}
+Content-Type: application/json
+[Options]
+retry: 8
+retry-interval: 2000ms
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
+HTTP 200
+[Asserts]
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].number" == "{{plate}}"
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].serviceTierType" == "SHARED_CAB"
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].position.lat" isFloat
+
+# and narrowed to the booked cab by its plate (the tracking screen's call)
+POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false
+token: {{token}}
+Content-Type: application/json
+{"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}], "vehicleNumber": "{{plate}}"}
+HTTP 200
+[Asserts]
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].number" == "{{plate}}"
+
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}
 {"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
