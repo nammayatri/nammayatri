@@ -155,6 +155,16 @@ POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/cancel
 token: {{token}}
 HTTP 200
 
+# a cancelled only-cab journey is over, not live
+GET {{base_url}}/v2/multimodal/journey/{{journeyId}}/status
+token: {{token}}
+[Options]
+retry: 6
+retry-interval: 1000ms
+HTTP 200
+[Asserts]
+jsonpath "$.journeyStatus" == "CANCELLED"
+
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}
 {"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "next": "END", "force": true}
@@ -225,6 +235,16 @@ jsonpath "$.cabs[?(@.plateLast4 == '{{plate_code}}')].freeSeats" == 4
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/cancel
 token: {{token}}
 HTTP 200
+
+# a cancelled only-cab journey is over, not live
+GET {{base_url}}/v2/multimodal/journey/{{journeyId}}/status
+token: {{token}}
+[Options]
+retry: 6
+retry-interval: 1000ms
+HTTP 200
+[Asserts]
+jsonpath "$.journeyStatus" == "CANCELLED"
 
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}

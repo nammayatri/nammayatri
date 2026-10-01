@@ -49,6 +49,13 @@ tests =
           testCase "a missing party size counts as one" $ bookingSeats 0 [DFRFSTicket.ACTIVE] @?= 1
         ],
       testGroup
+        "a cancelled cab leg ends the journey only when it is the one non-walk leg"
+        [ testCase "a cab leg between walks is the only transit leg" $ onlyTransitLeg [DTrip.Walk, DTrip.SharedCab, DTrip.Walk] @?= True,
+          testCase "a lone cab leg is" $ onlyTransitLeg [DTrip.SharedCab] @?= True,
+          testCase "a cab leg beside a bus leg is not" $ onlyTransitLeg [DTrip.SharedCab, DTrip.Walk, DTrip.Bus] @?= False,
+          testCase "a journey of walks only has none" $ onlyTransitLeg [DTrip.Walk, DTrip.Walk] @?= False
+        ],
+      testGroup
         "driver info beside the session"
         [ testCase "round trips" $ decode (encode (CabDriverInfo (Just "Asha K") (Just "Maruti Dzire"))) @?= Just (CabDriverInfo (Just "Asha K") (Just "Maruti Dzire")),
           testCase "a field the driver-app did not send is Nothing" $ decode "{\"driverName\":\"Asha K\"}" @?= Just (CabDriverInfo (Just "Asha K") Nothing)

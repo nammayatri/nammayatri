@@ -24,8 +24,8 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler (JobCreator)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
-import SharedLogic.FRFSCancelJourney (cancelJourneyById)
-import SharedLogic.FRFSUtils (getJourneyIdFromBooking, markFRFSBookingStatus, noPaymentDue)
+import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
+import SharedLogic.FRFSUtils (markFRFSBookingStatus, noPaymentDue)
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.SharedCab.Allocation (cityConfig, claimable, clearAllocationKeys, readFindingSince, releaseCancelledBooking)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
@@ -130,7 +130,7 @@ cancelOne findingTimeoutSec stale = do
     refunded <- if owesRefund decision then startRefund b else pure True
     withTryCatch "sharedCab:findingTimeout:releaseCancelledBooking" (releaseCancelledBooking b)
       >>= either (\e -> logError $ "shared-cab finding-timeout release effects failed for booking " <> b.id.getId <> ": " <> show e) pure
-    void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
+    void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ cancelJourneyIfOnlyTransitLeg b.searchId.getId
     void . withTryCatch "sharedCab:findingTimeout:recordCancelReason" $ recordCancelReason b.id NO_CAB_FOUND
     Events.forBooking (Events.BookingCancelled "system" (refundWord decision) (Just "finding_timeout")) b
     Invariants.checkBooking b.id

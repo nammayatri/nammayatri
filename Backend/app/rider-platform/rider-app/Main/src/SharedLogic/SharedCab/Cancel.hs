@@ -14,6 +14,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..))
 import SharedLogic.SharedCab.Booking (readRiderFix, recordCancelReason, shared, withBookingLock)
@@ -46,6 +47,9 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
   when (stage == ConfirmCancel) $ do
     -- R55: the leg-state surface shows why; the R54 no-show cap writes its own reason from the tick. Swallowed:
     -- the booking is cancelled by now, so a Redis hiccup here must not error a finished cancel.
+    -- the leg is cancelled for good: the journey ends with it when it was the journey's only non-walk leg
+    withTryCatch "sharedCab:cancel:cancelJourney" (cancelJourneyIfOnlyTransitLeg booking.searchId.getId)
+      >>= either (\err -> logError $ "shared-cab journey not ended for cancelled booking " <> booking.id.getId <> ": " <> show err) pure
     withTryCatch "sharedCab:cancel:recordCancelReason" (recordCancelReason booking.id (reasonFor by))
       >>= either (\err -> logError $ "shared-cab cancel-reason not recorded for booking " <> booking.id.getId <> ": " <> show err) pure
     whenJust mbReason $ \reason -> logInfo $ "shared-cab booking " <> booking.id.getId <> " cancelled by " <> byText by <> ": " <> T.take 200 reason

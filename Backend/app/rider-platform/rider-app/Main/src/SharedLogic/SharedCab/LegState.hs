@@ -10,6 +10,7 @@ module SharedLogic.SharedCab.LegState
     fallbackTimeElapsed,
     isSharedCabAgency,
     sharedCabLegMode,
+    onlyTransitLeg,
     sharedCabFareTiers,
     deriveSharedCabState,
     isDroppable,
@@ -102,6 +103,11 @@ instance FromJSON SharedCabLegStatus where
 -- | Shared cabs ship in GTFS under the SHARED_CAB agency (agency gtfsId `<feed>:SHARED_CAB`).
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
+
+-- | Whether a journey with these leg modes has exactly one leg that is not a walk: only then does the cancel of that leg end
+-- the journey (a cab plus a bus leg stays alive when the cab is cancelled).
+onlyTransitLeg :: [DTrip.MultimodalTravelMode] -> Bool
+onlyTransitLeg modes = length (filter (/= DTrip.Walk) modes) == 1
 
 -- | A booking on the SHARED_CAB tier makes its leg a SharedCab leg, even when the leg came from a search whose agency
 -- was missing or shaped differently: the booking is what the rider paid for, so it has the last word on the mode.

@@ -131,7 +131,6 @@ import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 
@@ -697,7 +696,7 @@ cancelForNoShows b = do
   QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just charges) (Just True) b.id
   -- the journey-level part of a cancel (legs Finished, journey CANCELLED), as a rider cancel does
   void . withTryCatch "sharedCab:cancelForNoShows:cancelJourney" $
-    QJourneyLeg.findByLegSearchId (Just b.searchId.getId) >>= mapM_ (FRFSCancelJourney.cancelJourneyById . (.journeyId))
+    FRFSCancelJourney.cancelJourneyIfOnlyTransitLeg b.searchId.getId
   -- R55: the leg state shows 'cancelled after missed cabs'. clearAllocationKeys (next, in the caller) leaves this key.
   withTryCatch "sharedCab:cancelForNoShows:recordCancelReason" (recordCancelReason b.id NO_SHOW_CAP)
     >>= either (\e -> logError $ "shared-cab cancel-reason not recorded for booking " <> b.id.getId <> ": " <> show e) pure
