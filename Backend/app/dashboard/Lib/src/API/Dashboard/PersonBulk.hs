@@ -12,11 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Bulk creation of dashboard users from a CSV upload.
+-- | Merchant-scoped dashboard-user administration: bulk CSV upsert and the PT
+-- staff listing.
 --
 -- Like 'API.Dashboard.Entity', this sits under the V1 BAP path
--- (@\/bap\/{merchantId}\/person\/bulkCreate@), so the merchant capture is
--- reproduced and the path is unchanged.
+-- (@\/bap\/{merchantId}\/person\/...@), so the merchant capture is reproduced
+-- and the paths are unchanged.
 module API.Dashboard.PersonBulk
   ( API,
     handler,
@@ -25,6 +26,7 @@ where
 
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Types.Merchant as DMerchant
+import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (FlowHandlerR, FlowServerR)
 import Servant
@@ -34,17 +36,35 @@ import Tools.Auth.DashboardLoginFlow (DashboardLoginFlow, withDashboardDbFlowHan
 type API =
   Capture "merchantId" (ShortId DMerchant.Merchant)
     :> "person"
-    :> "bulkCreate"
-    :> DashboardAuth 'DASHBOARD_USER
-    :> ReqBody '[JSON] DPerson.BulkUpsertPersonReq
-    :> Post '[JSON] DPerson.BulkUpsertPersonResp
+    :> ( "bulkUpsert"
+           :> DashboardAuth 'DASHBOARD_USER
+           :> ReqBody '[JSON] DPerson.BulkUpsertPersonReq
+           :> Post '[JSON] DPerson.BulkUpsertPersonResp
+           -- TODO : Deprecated alias for bulkUpsert, remove once every CSV caller has moved.
+           :<|> "bulkCreate"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> ReqBody '[JSON] DPerson.BulkUpsertPersonReq
+             :> Post '[JSON] DPerson.BulkUpsertPersonResp
+           :<|> "list"
+             :> DashboardAuth 'DASHBOARD_USER
+             :> QueryParam "searchString" Text
+             :> QueryParam "roleName" Text
+             :> QueryParam "entityShortId" Text
+             :> QueryParam "tokenNo" Text
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] DPerson.ListPTEmployeeRes
+       )
 
 handler :: DashboardLoginFlow r => FlowServerR r API
-handler = bulkCreate
+handler merchantId = bulkUpsert merchantId :<|> bulkUpsert merchantId :<|> listPerson merchantId
 
--- Delegates to lib-dashboard's consolidated bulkUpsert (Domain.Action.Dashboard.Person),
--- which carries the capability gate. This module only mounts the route on the
--- direct-dashboard tree; the implementation is shared with provider-dashboard.
-bulkCreate :: DashboardLoginFlow r => ShortId DMerchant.Merchant -> TokenInfo -> DPerson.BulkUpsertPersonReq -> FlowHandlerR r DPerson.BulkUpsertPersonResp
-bulkCreate merchantId tokenInfo req =
+-- Both route names share one handler: the upsert semantics were always what the
+-- action did, so the deprecated bulkCreate path keeps working unchanged.
+bulkUpsert :: DashboardLoginFlow r => ShortId DMerchant.Merchant -> TokenInfo -> DPerson.BulkUpsertPersonReq -> FlowHandlerR r DPerson.BulkUpsertPersonResp
+bulkUpsert merchantId tokenInfo req =
   withDashboardDbFlowHandlerAPI (DPerson.bulkUpsert tokenInfo merchantId req)
+
+listPerson :: DashboardLoginFlow r => ShortId DMerchant.Merchant -> TokenInfo -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandlerR r DPerson.ListPTEmployeeRes
+listPerson merchantId tokenInfo mbSearchString mbRoleName mbEntityShortId mbTokenNo mbLimit =
+  withDashboardDbFlowHandlerAPI . DPerson.ptList tokenInfo merchantId mbSearchString mbRoleName mbEntityShortId mbTokenNo mbLimit
