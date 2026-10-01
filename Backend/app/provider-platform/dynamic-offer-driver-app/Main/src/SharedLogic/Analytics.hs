@@ -14,6 +14,7 @@
 
 module SharedLogic.Analytics where
 
+import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as DBooking
@@ -30,10 +31,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.AnalyticsExtra
 import qualified SharedLogic.DriverFlowStatus as SDFStatus
+import SharedLogic.FleetAnalytics.Realtime
 import qualified SharedLogic.FleetOperatorStats as SFleetOperatorStats
 import qualified Storage.Clickhouse.DriverInformation as CDI
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFleetOpDailyStats
@@ -52,6 +55,8 @@ updateCancellationAnalyticsAndDriverStats ::
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,
+    MonadReader r m,
+    HasKafkaProducer r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
@@ -63,12 +68,10 @@ updateCancellationAnalyticsAndDriverStats transporterConfig ride source = do
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   case source of
     SBCR.ByDriver -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-        updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
+      recordFleetOperatorAnalytics transporterConfig (DriverCancelled ride.driverId ride.id.getId)
       QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
     SBCR.ByUser -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-        updateFleetOwnerAnalyticsCustomerCancelCount ride.driverId transporterConfig
+      recordFleetOperatorAnalytics transporterConfig (CustomerCancelled ride.driverId)
       QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
     _ -> pure ()
 
@@ -130,240 +133,113 @@ data PeriodRes = PeriodRes
   }
   deriving (Show, Eq)
 
--- | Update the operator analytics cancel count for a driver
-updateOperatorAnalyticsCancelCount ::
-  ( MonadFlow m,
-    EsqDBReplicaFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  TC.TransporterConfig ->
-  Id DP.Person ->
-  m ()
-updateOperatorAnalyticsCancelCount transporterConfig driverId = do
-  -- Find all operator IDs for this driver
-  operatorIds <- findOperatorIdForDriver driverId
-  when (null operatorIds) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No operator found for driver: " <> show driverId
-  forM_ operatorIds $ \operatorId -> do
-    let cancelCountKey = makeOperatorAnalyticsKey operatorId CANCEL_COUNT
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $ do
-      SFleetOperatorStats.incrementDriverCancellationCount operatorId transporterConfig
-      SFleetOperatorStats.incrementDriverCancellationCountDaily operatorId driverId.getId transporterConfig
-    -- Ensure Redis keys exist
-    ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId cancelCountKey Redis.incrby 1
+-- | One fact per thing that happened. Postgres columns and the operator Redis
+-- message for that fact live in the same case, so a new metric cannot be added
+-- to one path and forgotten on the other.
+data FleetOperatorAnalytics
+  = RideCompleted (Id DP.Person) DR.Ride DBooking.Booking
+  | DriverCancelled (Id DP.Person) Text
+  | CustomerCancelled (Id DP.Person)
+  | SearchRequested [Id DP.Person] Text
+  | OfferAccepted (Id DP.Person) Text
+  | OfferRejected (Id DP.Person) Text
+  | OfferPulled (Id DP.Person) Text
+  | RatingSubmitted (Id DP.Person) Int Bool Text Int
 
-  mbFleetOwner <- QFDA.findByDriverId driverId True
-  when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No fleet owner found for driver: " <> show driverId
-  whenJust mbFleetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
-      SFleetOperatorStats.incrementDriverCancellationCount fleetOwner.fleetOwnerId transporterConfig
-      SFleetOperatorStats.incrementDriverCancellationCountDaily fleetOwner.fleetOwnerId driverId.getId transporterConfig
-
-updateFleetOwnerAnalyticsCustomerCancelCount ::
+recordFleetOperatorAnalytics ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
+    MonadReader r m,
+    HasKafkaProducer r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
-  Id DP.Person ->
   TC.TransporterConfig ->
+  FleetOperatorAnalytics ->
   m ()
-updateFleetOwnerAnalyticsCustomerCancelCount driverId transporterConfig = do
-  -- Update operator-level stats
-  operatorIds <- findOperatorIdForDriver driverId
-  when (null operatorIds) $ logTagInfo "AnalyticsUpdateCustomerCancelCount" $ "No operator found for driver: " <> show driverId
-  forM_ operatorIds $ \operatorId -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $ do
-      SFleetOperatorStats.incrementCustomerCancellationCount operatorId transporterConfig
-      SFleetOperatorStats.incrementCustomerCancellationCountDaily operatorId driverId.getId transporterConfig
-
-  -- Update fleet owner-level stats
-  mbFleetOwner <- QFDA.findByDriverId driverId True
-  when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateCustomerCancelCount" $ "No fleet owner found for driver: " <> show driverId
-  whenJust mbFleetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
-      SFleetOperatorStats.incrementCustomerCancellationCount fleetOwner.fleetOwnerId transporterConfig
-      SFleetOperatorStats.incrementCustomerCancellationCountDaily fleetOwner.fleetOwnerId driverId.getId transporterConfig
-
-updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  Id DP.Person ->
-  TC.TransporterConfig ->
-  Bool ->
-  Bool ->
-  Bool ->
-  Bool ->
-  m ()
-updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig incrementTotalRequestCount incrementAcceptationCount incrementRejectedRequestCount incrementPulledRequestCount = do
-  operatorIds <- findOperatorIdForDriver driverId
-  when (null operatorIds) $ logTagInfo "AnalyticsUpdateAcceptationAndTotalRequestCount" $ "No operator found for driver: " <> show driverId
-  forM_ operatorIds $ \operatorId -> do
-    when (incrementRejectedRequestCount || incrementPulledRequestCount || incrementTotalRequestCount || incrementAcceptationCount) $
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $ do
-        when (incrementTotalRequestCount || incrementAcceptationCount) $
-          SFleetOperatorStats.incrementRequestCounts
-            operatorId
-            (transporterConfig :: TC.TransporterConfig)
-            incrementAcceptationCount
-            incrementTotalRequestCount
-        SFleetOperatorStats.incrementRequestCountsDaily
-          operatorId
-          driverId.getId
-          (transporterConfig :: TC.TransporterConfig)
-          incrementAcceptationCount
-          incrementTotalRequestCount
-          incrementRejectedRequestCount
-          incrementPulledRequestCount
-    when incrementAcceptationCount $ updateAcceptationCountRedisKey operatorId
-    when incrementTotalRequestCount $ updateTotalRequestCountRedisKey operatorId
-
-  mbFleetOwner <- QFDA.findByDriverId driverId True
-  when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateAcceptationAndTotalRequestCount" $ "No fleet owner found for driver: " <> show driverId
-  whenJust mbFleetOwner $ \fleetOwner -> do
-    when (incrementRejectedRequestCount || incrementPulledRequestCount || incrementTotalRequestCount || incrementAcceptationCount) $
-      Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
-        -- Update overall stats
-        when (incrementTotalRequestCount || incrementAcceptationCount) $
-          SFleetOperatorStats.incrementRequestCounts
-            fleetOwner.fleetOwnerId
-            (transporterConfig :: TC.TransporterConfig)
-            incrementAcceptationCount
-            incrementTotalRequestCount
-        -- Update daily stats
-        SFleetOperatorStats.incrementRequestCountsDaily
-          fleetOwner.fleetOwnerId
-          driverId.getId
-          (transporterConfig :: TC.TransporterConfig)
-          incrementAcceptationCount
-          incrementTotalRequestCount
-          incrementRejectedRequestCount
-          incrementPulledRequestCount
+recordFleetOperatorAnalytics transporterConfig fact =
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+    messages <- case fact of
+      DriverCancelled driverId rideId -> do
+        operatorIds <- forOperatorAndFleet "AnalyticsUpdateCancelCount" driverId $ \entityId -> do
+          SFleetOperatorStats.incrementDriverCancellationCount entityId transporterConfig
+          SFleetOperatorStats.incrementDriverCancellationCountDaily entityId driverId.getId transporterConfig
+        pure [("ride.cancelled:" <> rideId, operatorDeltas operatorIds "CANCEL_COUNT" 1)]
+      CustomerCancelled driverId -> do
+        void $
+          forOperatorAndFleet "AnalyticsUpdateCustomerCancelCount" driverId $ \entityId -> do
+            SFleetOperatorStats.incrementCustomerCancellationCount entityId transporterConfig
+            SFleetOperatorStats.incrementCustomerCancellationCountDaily entityId driverId.getId transporterConfig
+        pure []
+      OfferAccepted driverId searchTryId -> do
+        operatorIds <- forOperatorAndFleet "AnalyticsUpdateAcceptationAndTotalRequestCount" driverId $ \entityId -> do
+          SFleetOperatorStats.incrementRequestCounts entityId transporterConfig True False
+          SFleetOperatorStats.incrementRequestCountsDaily entityId driverId.getId transporterConfig True False False False
+        pure [("quote.responded:" <> searchTryId <> ":" <> driverId.getId <> ":Accept", operatorDeltas operatorIds "ACCEPTATION_COUNT" 1)]
+      OfferRejected driverId _searchTryId -> do
+        void $
+          forOperatorAndFleet "AnalyticsUpdateAcceptationAndTotalRequestCount" driverId $ \entityId ->
+            SFleetOperatorStats.incrementRequestCountsDaily entityId driverId.getId transporterConfig False False True False
+        pure []
+      OfferPulled driverId _searchTryId -> do
+        void $
+          forOperatorAndFleet "AnalyticsUpdateAcceptationAndTotalRequestCount" driverId $ \entityId ->
+            SFleetOperatorStats.incrementRequestCountsDaily entityId driverId.getId transporterConfig False False False True
+        pure []
+      SearchRequested driverIds searchTryId -> do
+        operatorAssociations <- QDOA.findAllByDriverIds driverIds
+        let operatorDriverPairs = [(oa.operatorId, oa.driverId.getId) | oa <- operatorAssociations]
+        unless (null operatorDriverPairs) $
+          SFleetOperatorStats.incrementTotalRequestCountBatch operatorDriverPairs transporterConfig
+        fleetAssociations <- QFDA.findAllByDriverIds driverIds
+        let fleetDriverPairs = [(fa.fleetOwnerId, fa.driverId.getId) | fa <- fleetAssociations]
+        unless (null fleetDriverPairs) $
+          SFleetOperatorStats.incrementTotalRequestCountBatch fleetDriverPairs transporterConfig
+        let byDriver = Map.fromListWith (++) [(oa.driverId.getId, [oa.operatorId]) | oa <- operatorAssociations]
+        pure
+          [ ( "search.requested:" <> searchTryId <> ":" <> drvId,
+              operatorDeltas (List.nub ops) "TOTAL_REQUEST_COUNT" 1
+            )
+            | (drvId, ops) <- Map.toList byDriver
+          ]
+      RatingSubmitted driverId ratingValue shouldIncrementCount rideId totalRatingCount -> do
+        operatorIds <- forOperatorAndFleet "AnalyticsUpdateRatingScoreKey" driverId $ \entityId -> do
+          SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore entityId transporterConfig ratingValue shouldIncrementCount
+          SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily entityId driverId.getId transporterConfig ratingValue shouldIncrementCount
+        pure
+          [ ( "rating.submitted:" <> rideId <> ":" <> show totalRatingCount <> ":" <> show ratingValue,
+              concatMap
+                ( \operatorId ->
+                    [ OperatorRedisDelta operatorId "RATING_SUM" (fromIntegral ratingValue),
+                      OperatorRedisDelta operatorId "RATING_COUNT" (if shouldIncrementCount then 1 else 0)
+                    ]
+                )
+                operatorIds
+            )
+          ]
+      RideCompleted driverId ride booking -> do
+        operatorIds <- forOperatorAndFleet "AnalyticsUpdateTotalRideCount" driverId $ \entityId -> do
+          SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning entityId ride transporterConfig
+          SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily entityId ride booking transporterConfig
+        pure [("ride.completed:" <> ride.id.getId, operatorDeltas operatorIds "TOTAL_RIDE_COUNT" 1)]
+    syncOperatorRedis transporterConfig messages
   where
-    updateAcceptationCountRedisKey operatorId = do
-      let acceptationCountKey = makeOperatorAnalyticsKey operatorId ACCEPTATION_COUNT
-      ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId acceptationCountKey Redis.incrby 1
-    updateTotalRequestCountRedisKey operatorId = do
-      let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
-      ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId totalRequestCountKey Redis.incrby 1
-
--- | Batch update total request count for multiple drivers at once
--- This is more efficient than calling updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount for each driver
-updateOperatorAnalyticsTotalRequestCountBatch ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  [Id DP.Person] ->
-  TC.TransporterConfig ->
-  m ()
-updateOperatorAnalyticsTotalRequestCountBatch driverIds transporterConfig = do
-  -- Fetch all operator associations for drivers in batch
-  operatorAssociations <- QDOA.findAllByDriverIds driverIds
-  let operatorDriverPairs = [(oa.operatorId, oa.driverId.getId) | oa <- operatorAssociations]
-
-  -- Update operator stats in batch (both overall and daily)
-  unless (null operatorDriverPairs) $
-    SFleetOperatorStats.incrementTotalRequestCountBatch operatorDriverPairs transporterConfig
-
-  -- Keep the all-time Redis TOTAL_REQUEST_COUNT in step with the DB counter above. Nothing else
-  -- writes this key: updateTotalRequestCountRedisKey is gated on incrementTotalRequestCount,
-  -- which is False at every call site, so it was only ever populated by a ClickHouse rebuild.
-  -- Meanwhile ACCEPTATION_COUNT is incremented live on every accept, so acceptanceRate
-  -- (acceptations / totalRequests) drifted upward between rebuilds and could exceed 100%.
-  -- One request is dispatched per driver, so an operator's increment is its number of drivers.
-  forM_ (Map.toList $ Map.fromListWith (+) [(oa.operatorId, 1 :: Integer) | oa <- operatorAssociations]) $ \(operatorId, requestCount) -> do
-    let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
-    ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId totalRequestCountKey Redis.incrby requestCount
-
-  -- Fetch all fleet associations for drivers in batch
-  fleetAssociations <- QFDA.findAllByDriverIds driverIds
-  let fleetDriverPairs = [(fa.fleetOwnerId, fa.driverId.getId) | fa <- fleetAssociations]
-
-  -- Update fleet owner stats in batch (both overall and daily)
-  unless (null fleetDriverPairs) $
-    SFleetOperatorStats.incrementTotalRequestCountBatch fleetDriverPairs transporterConfig
-
--- | Update the operator analytics rating score for a driver
-updateOperatorAnalyticsRatingScoreKey ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  Id DP.Person ->
-  TC.TransporterConfig ->
-  Int ->
-  Bool ->
-  m ()
-updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue shouldIncrementCount = do
-  operatorIds <- findOperatorIdForDriver driverId
-  when (null operatorIds) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No operator found for driver: " <> show driverId
-
-  -- Operator analytics
-  forM_ operatorIds $ \operatorId -> do
-    let ratingSumKey = makeOperatorAnalyticsKey operatorId RATING_SUM
-    let ratingCountKey = makeOperatorAnalyticsKey operatorId RATING_COUNT
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $ do
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue shouldIncrementCount
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily operatorId driverId.getId transporterConfig ratingValue shouldIncrementCount
-    -- Ensure Redis keys exist
-    ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId ratingSumKey Redis.incrby (fromIntegral ratingValue)
-    ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId ratingCountKey Redis.incrby (if shouldIncrementCount then 1 else 0)
-
-  -- Fleet owner analytics
-  mbFLeetOwner <- QFDA.findByDriverId driverId True
-  when (isNothing mbFLeetOwner) $ logTagInfo "AnalyticsUpdateRatingScoreKey" $ "No fleet owner found for driver: " <> show driverId
-  whenJust mbFLeetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore fleetOwner.fleetOwnerId transporterConfig ratingValue shouldIncrementCount
-      SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScoreDaily fleetOwner.fleetOwnerId driverId.getId transporterConfig ratingValue shouldIncrementCount
-
-updateOperatorAnalyticsTotalRideCount ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  TC.TransporterConfig ->
-  Id DP.Person ->
-  DR.Ride ->
-  DBooking.Booking ->
-  m ()
-updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride booking = do
-  operatorIds <- findOperatorIdForDriver driverId
-  when (null operatorIds) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No operator found for driver: " <> show driverId
-  forM_ operatorIds $ \operatorId -> do
-    let totalRideCountKey = makeOperatorAnalyticsKey operatorId TOTAL_RIDE_COUNT
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $ do
-      SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning operatorId ride transporterConfig
-      SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily operatorId ride booking transporterConfig
-    -- Ensure Redis keys exist
-    ensureRedisKeysExistForAllTimeCommon transporterConfig DP.OPERATOR operatorId totalRideCountKey Redis.incrby 1
-
-  mbFLeetOwner <- QFDA.findByDriverId driverId True
-  when (isNothing mbFLeetOwner) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No fleet owner found for driver: " <> show driverId
-  whenJust mbFLeetOwner $ \fleetOwner -> do
-    Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $ do
-      SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning fleetOwner.fleetOwnerId ride transporterConfig
-      SFleetOperatorStats.incrementTotalEarningDistanceAndCompletedRidesDaily fleetOwner.fleetOwnerId ride booking transporterConfig
+    operatorDeltas operatorIds metric amount =
+      map (\operatorId -> OperatorRedisDelta operatorId metric amount) operatorIds
+    forOperatorAndFleet tag driverId step = do
+      operatorIds <- findOperatorIdForDriver driverId
+      when (null operatorIds) $ logTagInfo tag $ "No operator found for driver: " <> show driverId
+      forM_ operatorIds $ \operatorId ->
+        Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId) 10 5000 $
+          step operatorId
+      mbFleetOwner <- QFDA.findByDriverId driverId True
+      when (isNothing mbFleetOwner) $ logTagInfo tag $ "No fleet owner found for driver: " <> show driverId
+      whenJust mbFleetOwner $ \fleetOwner ->
+        Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey fleetOwner.fleetOwnerId) 10 5000 $
+          step fleetOwner.fleetOwnerId
+      pure operatorIds
 
 -- case newTotalRides of
 --   2 -> updatePeriodicMetrics transporterConfig operatorId GREATER_THAN_ONE_RIDE Redis.incr

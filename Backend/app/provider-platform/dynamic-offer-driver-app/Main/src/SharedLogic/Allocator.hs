@@ -112,6 +112,7 @@ data AllocatorJobType
   | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
   | BulkUserCohortMappingUpload
+  | FleetAnalyticsRedisRecon
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -177,6 +178,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
   restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
+  restoreAnyJobInfo SFleetAnalyticsRedisRecon jobData = AnyJobInfo <$> restoreJobInfo SFleetAnalyticsRedisRecon jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -821,3 +823,12 @@ data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
 instance JobInfoProcessor 'BulkUserCohortMappingUpload
 
 type instance JobContent 'BulkUserCohortMappingUpload = BulkUserCohortMappingUploadJobData
+
+data FleetAnalyticsRedisReconJobData = FleetAnalyticsRedisReconJobData
+  { intervalSeconds :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'FleetAnalyticsRedisRecon
+
+type instance JobContent 'FleetAnalyticsRedisRecon = FleetAnalyticsRedisReconJobData

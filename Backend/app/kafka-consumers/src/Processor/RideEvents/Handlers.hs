@@ -203,6 +203,8 @@ handleFleetOperatorStats ::
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
+    HasKafkaProducer r,
+    MonadReader r m,
     CoreMetrics.CoreMetrics m,
     EncFlow m r,
     CHConfig.ClickhouseFlow m r
@@ -211,8 +213,8 @@ handleFleetOperatorStats ::
   m ()
 handleFleetOperatorStats ev = withRideAndBooking ev $ \ride booking -> do
   thresholdConfig <- fetchTransporterConfig ride
-  when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-    Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig ride.driverId ride booking
+  Analytics.recordFleetOperatorAnalytics thresholdConfig (Analytics.RideCompleted ride.driverId ride booking)
+  when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
     whenJust ride.fleetOwnerId $ \fleetOwnerId ->
       FVS.updateFleetVehicleDailyStats fleetOwnerId.getId thresholdConfig ride
 

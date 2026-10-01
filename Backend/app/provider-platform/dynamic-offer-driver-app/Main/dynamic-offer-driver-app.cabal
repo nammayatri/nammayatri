@@ -555,6 +555,7 @@ library
       SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS
       SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
       SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert
+      SharedLogic.Allocator.Jobs.FleetAnalytics.RedisRecon
       SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload
       SharedLogic.Allocator.Jobs.Insurance.IffcoTokioInsurance
       SharedLogic.Allocator.Jobs.Mandate.Execution
@@ -698,6 +699,7 @@ library
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
+      SharedLogic.FleetAnalytics.Realtime
       SharedLogic.FleetEngine
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
@@ -991,6 +993,7 @@ library
       Storage.Queries.FleetMemberAssociationExtra
       Storage.Queries.FleetOperatorAssociationExtra
       Storage.Queries.FleetOperatorDailyStatsExtra
+      Storage.Queries.FleetOperatorStatsExtra
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.FleetRcDailyStatsExtra
