@@ -573,6 +573,9 @@ library
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LocationAddressEnrichment
+      SharedLogic.LocationFallback
+      SharedLogic.LocationFallbackEnrich
+      SharedLogic.LocationFallbackTypes
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
@@ -2156,8 +2159,7 @@ test-suite rider-app-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
-      FRFS.DirectQR
-      Paths_rider_app
+      LocationFallbackTests
   hs-source-dirs:
       test
   default-extensions:

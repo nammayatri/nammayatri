@@ -411,6 +411,7 @@ data LocationMappingError
   | FromLocationNotFound Text
   | StopsLocationMappingNotFound Text
   | StopsLocationNotFound Text
+  | ToLocationNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''LocationMappingError
@@ -421,6 +422,7 @@ instance IsBaseError LocationMappingError where
     FromLocationNotFound id_ -> Just $ "From location not found for locationId: " <> id_ <> "."
     StopsLocationMappingNotFound id_ -> Just $ "Stops location mapping not found for entity id: " <> id_ <> "."
     StopsLocationNotFound id_ -> Just $ "Stops location not found for locationId: " <> id_ <> "."
+    ToLocationNotFound id_ -> Just $ "To location not found for locationId: " <> id_ <> "."
 
 instance IsHTTPError LocationMappingError where
   toErrorCode = \case
@@ -428,6 +430,7 @@ instance IsHTTPError LocationMappingError where
     FromLocationNotFound _ -> "FROM_LOCATION_NOT_FOUND"
     StopsLocationMappingNotFound _ -> "STOPS_LOCATION_MAPPING_NOT_FOUND"
     StopsLocationNotFound _ -> "STOPS_LOCATION_NOT_FOUND"
+    ToLocationNotFound _ -> "TO_LOCATION_NOT_FOUND"
 
   toHttpCode _ = E500
 

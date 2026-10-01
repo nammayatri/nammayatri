@@ -236,6 +236,8 @@ tests:
   rider-app-test:
     main: Main.hs
     source-dirs: test
+    other-modules:
+      - LocationFallbackTests
     ghc-options:
       - -threaded
       - -rtsopts

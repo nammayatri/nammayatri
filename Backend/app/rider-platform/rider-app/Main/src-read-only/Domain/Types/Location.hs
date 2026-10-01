@@ -22,7 +22,7 @@ data Location = Location
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, Show, Eq, Kernel.External.Maps.HasCoordinates, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, (Show), (Eq), (Kernel.External.Maps.HasCoordinates), (ToJSON), (FromJSON), (ToSchema))
 
 data LocationAPIEntity = LocationAPIEntity
   { area :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -34,6 +34,7 @@ data LocationAPIEntity = LocationAPIEntity
     extras :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.Location.Location,
     instructions :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isUnavailable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

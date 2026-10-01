@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
+import SharedLogic.LocationFallback (withLenientLocationReads)
 import qualified SharedLogic.SilentReallocation as SilentRealloc
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
@@ -71,7 +72,7 @@ data NotifyEventReq = NotifyEventReq
 type NotifyEventResp = APISuccess
 
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
-getPersonFlowStatus personId merchantId _ pollActiveBooking = do
+getPersonFlowStatus personId merchantId _ pollActiveBooking = withLenientLocationReads $ do
   now <- getCurrentTime
   activeJourneys <- QJourney.findAllActiveByRiderId personId
   processedActiveJourneys <- processJourneys now activeJourneys
