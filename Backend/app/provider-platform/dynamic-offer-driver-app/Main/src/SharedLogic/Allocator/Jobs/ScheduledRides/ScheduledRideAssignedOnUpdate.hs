@@ -138,8 +138,8 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           mbActivationData
 
     handleScheduledActivation ride (driverInfo, booking, driver, vehicle, transporterConfig)
-      | transporterConfig.enableScheduleReallocation == Just False = do
-        logWarning "enableScheduleReallocation is disabled, activating scheduled ride without scheduler checks"
+      | transporterConfig.scheduledRideConfig.enableScheduledRideActivationChecks == Just False = do
+        logWarning "enableScheduledRideActivationChecks is disabled, activating scheduled ride without scheduler checks"
         activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig
         return Complete
       | otherwise =
