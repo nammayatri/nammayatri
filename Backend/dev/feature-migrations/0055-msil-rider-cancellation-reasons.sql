@@ -11,10 +11,10 @@
 --
 -- Two groups, matching the two halves of the resolution ladder:
 --
---   ONDC_*         the eight buyer-side codes ONDC defines (000-007). Wording
---                  follows ONDC's own definitions, not MSIL's matrix labels —
---                  the code means what ONDC says it means, and the fee matrix
---                  decides separately whether it charges.
+--   ONDC_*         the buyer-side codes ONDC defines: 000-007, plus 999 as the
+--                  catch-all. Wording follows ONDC's own definitions, not MSIL's
+--                  matrix labels — the code means what ONDC says it means, and
+--                  the fee matrix decides separately whether it charges.
 --
 --   RIDER_CANCEL_* the five reasons in MSIL's matrix with no ONDC equivalent.
 --                  Provisional; see SharedLogic.RiderCancellationReason.
@@ -51,7 +51,9 @@ FROM (
     ('ONDC_SAFETY_CONCERN_WITH_DRIVER_OR_RIDE', 'ENGLISH', 'Safety concern with the driver or ride'),
     ('ONDC_SAFETY_CONCERN_WITH_DRIVER_OR_RIDE', 'HINDI',   'चालक या राइड को लेकर सुरक्षा चिंता'),
     ('ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT',    'ENGLISH', 'Vehicle appeared unsafe or non-compliant'),
-    ('ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT',    'HINDI',   'वाहन असुरक्षित या नियमों के विरुद्ध लगा')
+    ('ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT',    'HINDI',   'वाहन असुरक्षित या नियमों के विरुद्ध लगा'),
+    ('ONDC_OTHERS',                             'ENGLISH', 'Other reason'),
+    ('ONDC_OTHERS',                             'HINDI',   'अन्य कारण')
   ) AS v(message_key, language, message)
 ) t
 WHERE NOT EXISTS (

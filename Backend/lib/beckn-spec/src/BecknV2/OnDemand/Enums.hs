@@ -257,6 +257,7 @@ data CancellationReasonId
   | BOOKED_BY_MISTAKE -- 005 (v2.1.0)
   | SAFETY_CONCERN_WITH_DRIVER_OR_RIDE -- 006
   | VEHICLE_UNSAFE_OR_NON_COMPLIANT -- 007
+  | OTHERS -- 999
   deriving (Eq, Generic, ToJSON, FromJSON, Bounded, Enum)
 
 instance Show CancellationReasonId where
@@ -268,6 +269,7 @@ instance Show CancellationReasonId where
   show BOOKED_BY_MISTAKE = "005"
   show SAFETY_CONCERN_WITH_DRIVER_OR_RIDE = "006"
   show VEHICLE_UNSAFE_OR_NON_COMPLIANT = "007"
+  show OTHERS = "999"
 
 data CancellationReasonCode
   = -- message.order.cancellation.reason.descriptor.code -- sent by BPP in cancel
@@ -278,6 +280,7 @@ data CancellationReasonCode
   | STOPPED_BY_TRAFFIC_OFFICIALS -- 015
   | VEHICLE_ISSUE -- 016
   | CUSTOMER_MISCONDUCT_OR_SAFETY_CONCERN -- 017
+  | OTHERS_BPP -- 999
   deriving (Eq, Generic, ToJSON, FromJSON)
 
 instance Show CancellationReasonCode where
@@ -288,6 +291,7 @@ instance Show CancellationReasonCode where
   show STOPPED_BY_TRAFFIC_OFFICIALS = "015"
   show VEHICLE_ISSUE = "016"
   show CUSTOMER_MISCONDUCT_OR_SAFETY_CONCERN = "017"
+  show OTHERS_BPP = "999"
 
 data CancelReqMessageCancellationReasonId
   = CANCELLED_BY_CUSTOMER -- 001
