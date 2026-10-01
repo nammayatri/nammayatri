@@ -21,7 +21,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
-import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, setRefundDecision)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, refundWord, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -82,7 +82,4 @@ reasonFor = \case
   ByDriver -> DRIVER
 
 refundText :: Refund -> Text
-refundText = \case
-  FullRefund -> "full"
-  NoRefund -> "none"
-  NothingPaid -> "nothing_paid"
+refundText = refundWord

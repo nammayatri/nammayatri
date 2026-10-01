@@ -35,7 +35,7 @@ import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.LegState (CancelReason (NO_CAB_FOUND), SharedCabState (FINDING))
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, owesRefund, refundAmounts)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, owesRefund, refundAmounts, refundWord)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (..), CancelDecision (..), decideCancel)
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -132,7 +132,7 @@ cancelOne findingTimeoutSec stale = do
       >>= either (\e -> logError $ "shared-cab finding-timeout release effects failed for booking " <> b.id.getId <> ": " <> show e) pure
     void . withTryCatch "sharedCab:findingTimeout:cancelJourney" $ getJourneyIdFromBooking b >>= mapM_ cancelJourneyById
     void . withTryCatch "sharedCab:findingTimeout:recordCancelReason" $ recordCancelReason b.id NO_CAB_FOUND
-    Events.forBooking (Events.BookingCancelled "system" (case decision of FullRefund -> "full"; NoRefund -> "none"; NothingPaid -> "nothing_paid") (Just "finding_timeout")) b
+    Events.forBooking (Events.BookingCancelled "system" (refundWord decision) (Just "finding_timeout")) b
     Invariants.checkBooking b.id
     case decision of
       FullRefund -> when refunded $ Notify.notifyFindingTimeout b -- never "refunded in full" to a rider whose refund did not start

@@ -12,7 +12,7 @@ import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (RiderFix (..))
 import "rider-app" SharedLogic.SharedCab.DriverAction (SharedCabDriverActionError (..), requireReason)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..))
-import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, gateNoPayment, owesRefund, refundAmounts, refundWithheld)
+import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, gateNoPayment, owesRefund, refundAmounts, refundWithheld, refundWord)
 import "rider-app" SharedLogic.SharedCab.RefundPolicy
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -115,6 +115,7 @@ tests =
         [ testCase "a booking with no payment owes no refund, whatever the policy allowed" $ map (owesRefund . gateNoPayment False) [FullRefund, NoRefund] @?= [False, False],
           testCase "and is charged no cancellation fee either" $ map (refundAmounts 40 . gateNoPayment False) [FullRefund, NoRefund] @?= [(0, 0), (0, 0)],
           testCase "a paid booking keeps the policy's decision, whatever the tier's config says now" $ map (gateNoPayment True) [FullRefund, NoRefund] @?= [FullRefund, NoRefund],
+          testCase "every cancel path names the refund with the same word" $ map refundWord [FullRefund, NoRefund, NothingPaid] @?= ["full", "none", "nothing_paid"],
           testCase "the cancel rules still decide whether it may be cancelled" $ decideCancel ByRider BOARDED 0 [INPROGRESS] False @?= Rejected RideStarted
         ],
       testGroup

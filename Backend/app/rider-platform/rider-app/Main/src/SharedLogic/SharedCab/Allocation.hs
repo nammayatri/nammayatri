@@ -123,7 +123,7 @@ import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP), fallbackReach
 import qualified SharedLogic.SharedCab.Misses as Misses
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
-import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts, refundWord)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -770,7 +770,8 @@ afterClose cfg bookingId plate outcome closed =
     -- R54: the last allowed no-show cancelled the booking; that push replaces the reassign one.
     if autoCancelled
       then do
-        Events.emit cityId $ Events.bookingEvent (Events.BookingCancelled "system" "none" (Just "max_no_shows")) bookingId.getId (Just plate) Nothing now
+        decision <- maybe (pure NoRefund) (`gateByPayment` NoRefund) mbBooking
+        Events.emit cityId $ Events.bookingEvent (Events.BookingCancelled "system" (refundWord decision) (Just "max_no_shows")) bookingId.getId (Just plate) Nothing now
         mapM_ (\b -> Notify.notifyBookingCancelled b.sharedCabNoShows b) mbBooking
       else forM_ (Notify.reassignReasonFor outcome) $ \reason ->
         mapM_ (Notify.notifyReassigned reason) mbBooking
