@@ -373,6 +373,13 @@ jobs:
             | xargs -r sed -i "s/MOCK_SERVER_PORT:8080/MOCK_SERVER_PORT:$MOCK_PORT/g"
           grep -n "mock-server" Backend/nix/services/ports.nix
 
+      # TEMPORARY: the runner's locale archive has en_US.UTF-8 but not C.UTF-8, so services forced to C.UTF-8
+      # fall back to ASCII and driver-app crashes reading migrations with "—". Use en_US.UTF-8 in CI only.
+      - name: Use en_US.UTF-8 for services (temporary)
+        run: |
+          sed -i 's/LC_ALL = "C.UTF-8";/LC_ALL = "en_US.UTF-8";/' Backend/nix/services/nammayatri.nix
+          grep -n 'LC_ALL = ' Backend/nix/services/nammayatri.nix
+
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
         run: |
