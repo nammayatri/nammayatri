@@ -214,8 +214,8 @@ in
           RIDER_DASHBOARD_PORT = toString ports.rider-dashboard;
         } // lib.optionalAttrs pkgs.stdenv.isLinux {
           # On non-NixOS Linux (remote devbox), Nix-built binaries need
-          # LOCALE_ARCHIVE to find the system locale data.
-          LOCALE_ARCHIVE = "/usr/lib/locale/locale-archive";
+          # LOCALE_ARCHIVE to find locale data. System archive lacks C.UTF-8 (glibc >= 2.35 builds it in), so use nix's archive that has it.
+          LOCALE_ARCHIVE = glibcLocaleArchive;
           # Force UTF-8 so Haskell's hGetContents can read migration SQL files
           # that contain non-ASCII characters (e.g. × in comments). Without
           # this, a devbox with LC_ALL=C (ASCII-only) raises:
