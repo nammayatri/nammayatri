@@ -42,6 +42,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search as BecknSearchAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as BecknTags
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
@@ -339,6 +340,12 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
 syncSearchTimeoutMicros :: ET.Microseconds
 syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
+withDpInputsPublishTag :: DSearch.SearchRes -> DSearch.SearchRes
+withDpInputsPublishTag res =
+  res {DSearch.taggings = addPublishTag <$> res.taggings}
+  where
+    addPublishTag taggings = taggings {BecknTags.fulfillmentTags = taggings.fulfillmentTags <> [(BecknTags.PUBLISH_DYNAMIC_PRICING_INPUTS, Just "True")]}
+
 -- | The inline /rideSearch/:id/results payload when the sync path produced one, and whether
 -- any walk-and-save shape is being priced in the background for this search.
 data DispatchRes = DispatchRes
@@ -409,9 +416,10 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
   -- Everything the background dispatch will answer for, which is exactly what
   -- 'alternateSuggestions' on the results poll serves.
   let hasAlternates = maybe False (not . null . (.alternates)) mbSuggestedBuild
+      parentBecknRes = maybe dSearchRes (const $ withDpInputsPublishTag dSearchRes) mbSuggestedBuild
   if shouldSync
     then do
-      becknTaxiReqV2 <- withTimeAPI "rideSearch" "buildBecknSearchReqV2" $ TaxiACL.buildSearchReqV2 dSearchRes
+      becknTaxiReqV2 <- withTimeAPI "rideSearch" "buildBecknSearchReqV2" $ TaxiACL.buildSearchReqV2 parentBecknRes
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
       fork "search cabs" $ dispatch becknTaxiReqV2
       -- Publishes this search's dynamic-pricing inputs when a suggestion exists, so the
@@ -428,7 +436,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
       pure DispatchRes {inlineResults, hasAlternates}
     else do
       fork "search cabs" . withShortRetry $ do
-        becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+        becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 parentBecknRes
         let generatedJson = encode becknTaxiReqV2
         logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
         dispatch becknTaxiReqV2
