@@ -390,6 +390,14 @@ jobs:
             grep -n "ALTER TABLE" "$f"
           done
 
+      # TEMPORARY: rider seed 0008-config-pilot-resource-scope (5d2e134c4f) sets capability.resource_type, but only
+      # provider-dashboard got that column (0106-resource-scope). Add a rider copy in CI. Remove once fixed upstream.
+      - name: Add rider-dashboard resource-scope DDL (temporary)
+        run: |
+          sed 's/atlas_dashboard/atlas_bap_dashboard/g' Backend/dev/ddl-migrations/provider-dashboard/0106-resource-scope.sql \
+            > Backend/dev/ddl-migrations/rider-dashboard/0080-resource-scope.sql
+          grep -n "ALTER TABLE" Backend/dev/ddl-migrations/rider-dashboard/0080-resource-scope.sql
+
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
         run: |
