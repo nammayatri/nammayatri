@@ -277,6 +277,7 @@ liveRiderRows stopPoints plate = do
             ttl <- Booking.shared $ Redis.ttl key
             pure $ if ttl > 0 then Just (addUTCTime (fromInteger ttl) now) else Nothing
           Nothing -> pure Nothing
+        seatWeight <- Booking.bookingSeatWeight b (length statuses)
         mbFix <- Booking.readRiderFix b.id
         let minutesAway = case (mbFix, Map.lookup b.fromStationCode pointsByCode) of
               (Just lastFix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters lastFix.position stopPoint))
@@ -285,7 +286,7 @@ liveRiderRows stopPoints plate = do
           View.RiderRow
             { bookingId = b.id.getId,
               firstName = nameOf b,
-              seats = seatsHeld statuses,
+              seats = seatsHeld statuses * seatWeight,
               boardStopCode = b.fromStationCode,
               dropStopCode = b.toStationCode,
               boarded,

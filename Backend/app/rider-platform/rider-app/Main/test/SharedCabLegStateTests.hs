@@ -17,6 +17,7 @@ import qualified "mobility-core" Kernel.External.MultiModal.Interface.Types as M
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
+import "rider-app" SharedLogic.SharedCab.Booking (seatWeight)
 import "rider-app" SharedLogic.SharedCab.LegState
 import "rider-app" SharedLogic.SharedCab.Session (CabDriverInfo (..))
 import Test.Tasty (TestTree, testGroup)
@@ -32,6 +33,13 @@ tests =
         [ testCase "SHARED_CAB agency" $ isSharedCabAgency "shillong_shared_cab:SHARED_CAB" @?= True,
           testCase "bus agency" $ isSharedCabAgency "chennai_bus:MTC" @?= False,
           testCase "bare SHARED_CAB id" $ isSharedCabAgency "SHARED_CAB" @?= True
+        ],
+      testGroup
+        "seats follow the party size, not the ticket rows"
+        [ testCase "a party of two on one group ticket weighs two seats per row" $ seatWeight 2 1 @?= 2,
+          testCase "a ticket per rider weighs one" $ seatWeight 2 2 @?= 1,
+          testCase "a single rider, and a missing quantity, weigh one" $ [seatWeight 1 1, seatWeight 0 1, seatWeight 1 0] @?= [1, 1, 1],
+          testCase "rows that do not divide the party round up (never under-count)" $ seatWeight 3 2 @?= 2
         ],
       testGroup
         "driver info beside the session"

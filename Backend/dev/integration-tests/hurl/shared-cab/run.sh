@@ -51,6 +51,6 @@ case ${1:-all} in
   boarding) boarding ;;
   standalone) standalone ;;
   quantity) quantity ;;
-  all) driver; flush; rider; boarding; standalone ;;
+  all) driver; flush; rider; boarding; standalone; quantity ;;
   *) echo "usage: $0 [driver|flush|rider|boarding|standalone|quantity|all]"; exit 2 ;;
 esac

@@ -4,7 +4,7 @@
 module Storage.Queries.IntegratedBPPConfigExtra where
 
 import qualified BecknV2.OnDemand.Enums
-import Data.List (sortBy)
+import Data.List (sortBy, sortOn)
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
@@ -16,6 +16,18 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.IntegratedBPPConfig as Beam
 import Storage.Queries.OrphanInstances.IntegratedBPPConfig
+
+-- | Which row an agency key names when several rows share it (the shared-cab feed has a MULTIMODAL row for journeys and an
+-- APPLICATION row for the driver proxy and session): the APPLICATION one, else the lowest id, never "whichever the DB lists first".
+pickAgencyRow :: (a -> (Domain.Types.IntegratedBPPConfig.PlatformType, Text)) -> [a] -> Maybe a
+pickAgencyRow key rows = listToMaybe (sortOn (\r -> let (platform, rowId) = key r in (platform /= Domain.Types.IntegratedBPPConfig.APPLICATION, rowId)) rows)
+
+findByAgencyIdDeterministic ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
+findByAgencyIdDeterministic agencyKey =
+  pickAgencyRow (\c -> (c.platformType, Kernel.Types.Id.getId c.id)) <$> findAllWithKV [Se.Is Beam.agencyKey $ Se.Eq agencyKey]
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

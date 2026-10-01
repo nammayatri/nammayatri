@@ -15,6 +15,8 @@ module SharedLogic.SharedCab.Booking
     shared,
     nonTerminalStatuses,
     liveBookingsForVehicle,
+    seatWeight,
+    bookingSeatWeight,
   )
 where
 
@@ -31,6 +33,7 @@ import SharedLogic.SharedCab.Allocation.Types (RiderFix)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LegState (CancelReason, seatsHeld)
 import SharedLogic.SharedCab.RefundDecision (isSharedCabBooking)
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
@@ -100,7 +103,19 @@ seatsOnVehicle keep plate = do
     then pure 0
     else do
       tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
-      pure $ sum [seatsHeld statuses | b <- counted, let statuses = [t.status | t <- tickets, t.frfsTicketBookingId == b.id], keep statuses]
+      fmap sum . forM counted $ \b -> do
+        let statuses = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
+        if keep statuses then (* seatsHeld statuses) <$> bookingSeatWeight b (length statuses) else pure 0
+
+-- | Seats per held ticket row: a booking of `quantity` riders on `rows` ticket rows. The direct seller issues one group
+-- ticket for the whole party (quantity 2 on 1 row weighs 2); a seller issuing a ticket per rider weighs 1.
+seatWeight :: Int -> Int -> Int
+seatWeight quantity rows = (max 1 quantity + r - 1) `div` r
+  where
+    r = max 1 rows
+
+bookingSeatWeight :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSTicketBooking.FRFSTicketBooking -> Int -> m Int
+bookingSeatWeight booking rows = (`seatWeight` rows) . sum . map (.selectedQuantity) <$> QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
 
 riderFixKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId
