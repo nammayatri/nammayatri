@@ -35,16 +35,7 @@ boarding() { h --variable token="$(token)" boarding-flow.hurl; }
 quantity() { h --variable token="$(token)" quantity-flow.hurl; }
 standalone() { h --variable token="$(token)" standalone-flow.hurl; }
 
-# Local only: two rider-DB rows (MULTIMODAL and APPLICATION) share the shared-cab agency key, and once the Redis cache entry of
-# findByAgencyId expires the DB lookup returns nothing (route select: INTEGRATED_BPP_CONFIG_NOT_FOUND). Re-prime it from the APPLICATION row, then restart rider-app.
-prime() {
-  ibc=$(sed -n 's/^app_ibc_id=//p' "$env"); ibc=${ibc:-52db1934-2ab7-bc8b-6b3f-b10f52fa47d0}
-  json=$(${REDIS_CLI:-redis-cli} get "app-backend:CachedQueries:IntegratedBPPConfig:Id-$ibc")
-  ${REDIS_CLI:-redis-cli} setex "app-backend:CachedQueries:IntegratedBPPConfig:AgencyId-$(var ibc_id)" 80000 "$json"
-}
-
 case ${1:-all} in
-  prime) prime ;;
   driver) driver ;;
   flush) flush ;;
   rider) rider ;;
