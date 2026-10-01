@@ -72,6 +72,15 @@ jsonpath "$.stops[0].lat" isFloat
 jsonpath "$.waypoints" count == 4
 jsonpath "$.waypoints[0].lat" isFloat
 
+# the rider app's own request shape for the same read (MULTIMODAL platform, lower-case city, trailing slash)
+GET {{base_url}}/v2/frfs/route/{{route_a}}/?city=chennai&platformType=%22MULTIMODAL%22&vehicleType=%22BUS%22
+token: {{token}}
+HTTP 200
+[Asserts]
+jsonpath "$.stops" count == 4
+jsonpath "$.stops[0].code" == "SC_IEWDUH"
+jsonpath "$.waypoints" count == 4
+
 # release the seat the booking holds, so later flows start from an empty cab
 POST {{base_url}}/v2/frfs/booking/{{bookingId}}/cancel
 token: {{token}}
