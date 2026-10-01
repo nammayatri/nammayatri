@@ -39,6 +39,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics, DeploymentVersion)
 import Kernel.Types.Id (Id)
 import Kernel.Types.Version (CloudType)
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
@@ -55,6 +56,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
+import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
@@ -144,7 +146,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
         return $ ReSchedule (addUTCTime transporterConfig.scheduledRideJobRescheduleTime now) -- might keep rescheduling, leaving it to ops
       | transporterConfig.scheduledRideConfig.enableScheduledRideActivationChecks == Just False = do
         logWarning "enableScheduledRideActivationChecks is disabled, activating scheduled ride without scheduler checks"
-        activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig
+        activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig Nothing
         return Complete
       | otherwise =
         maybe
@@ -187,7 +189,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                     }
             responseArray <- getDistancesWithRetry scheduledActivationDistanceRetries [req] (TMaps.getDistanceForScheduledRides merchantId ride.merchantOperatingCityId (Just ride.id.getId))
             whenDriverCanReachPickup ride transporterConfig scheduledPickupTime responseArray (RideCancel.ApplicationRequestorId id.getId) requestor $ do
-              activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig
+              activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig (Just currentDriverLocation)
               return Complete
         )
         mbCurrentDriverLocation
@@ -286,8 +288,9 @@ activateScheduledRide ::
   DP.Person ->
   DVeh.Vehicle ->
   DTC.TransporterConfig ->
+  Maybe LatLong ->
   m ()
-activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig = do
+activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig mbCurrentDriverLocation = do
   let merchantId = booking.providerId
       merchantOperatingCityId = booking.merchantOperatingCityId
   -- activation releases this hold: re-point the gate at the earliest remaining one (single-slot -> clear)
@@ -299,7 +302,25 @@ activateScheduledRide driverId bookingId booking ride driver vehicle transporter
     QDI.updateTripCategoryAndTripEndLocationByDriverId driverId (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
   void $ QRide.updateStatus ride.id DRide.NEW
   void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
-  void $ sendRideAssignedUpdateToBAP booking ride driver vehicle True -- TODO: handle error
+  -- Forked: a BAP NACK throws, and the tail below still has the pickup monitor to schedule.
+  fork "scheduled ride activation push to BAP" $ do
+    notifyDriverOnScheduledRideAssigned booking ride driver
+    -- The job still reports Complete so the pickup monitor gets scheduled, so a dropped push is only visible here: name the ids, since nothing retries.
+    let logPushFailure pushResult = case pushResult of
+          Left err -> logError $ "scheduled ride activation push to BAP failed; bookingId=" <> booking.id.getId <> " rideId=" <> ride.id.getId <> " bapId=" <> booking.bapId <> "; error: " <> show err
+          Right _ -> pure ()
+    -- 3P BAPs NACK a repeated RIDE_ASSIGNED; ours take it fine, so their activation message is unchanged.
+    isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+    if isValueAddNP
+      then withTryCatch "scheduledRideActivationPush" (sendRideAssignedUpdateToBAP booking ride driver vehicle) >>= logPushFailure
+      else do
+        now <- getCurrentTime
+        -- A driver already on the pin is arrived either way, since the app's geofence marks it on its next tick once the ride is NEW; announcing it here keeps this push and a /status pull agreeing from the first message. Decided before any IO, so a failure below can never be mistaken for "he is not there".
+        let pickupLoc = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+            isAtPickup = maybe False (\loc -> distanceBetweenInMeters loc pickupLoc < transporterConfig.arrivedPickupThreshold) mbCurrentDriverLocation
+        if isAtPickup
+          then withTryCatch "scheduledActivationArrival" (sendDriverArrivalUpdateToBAP booking ride (Just now) >> QRide.updateArrival ride.id now) >>= logPushFailure
+          else withTryCatch "scheduledRideActivationPush" (sendRideEnroutePickupStatusToBAP booking ride driver vehicle) >>= logPushFailure
   -- On activation, start the per-tick pickup monitor (distance or ETA per scheduledMonitoringMode); no-op when scheduled monitoring is unconfigured.
   whenJust transporterConfig.pickupStallMonitoringConfig $ \monitoringConfig ->
     when (isJust monitoringConfig.scheduledMonitoringMode) $

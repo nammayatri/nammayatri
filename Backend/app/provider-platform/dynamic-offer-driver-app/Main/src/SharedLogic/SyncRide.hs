@@ -75,7 +75,7 @@ syncUpcomingRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncUpcomingRide ride' booking' = do
   DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
   handle (errHandler (Just ride.status) booking.status "scheduled ride assigned") $ do
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
+    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
   pure $ Common.RideSyncRes Common.RIDE_UPCOMING "Success. Sent scheduled ride started update to bap"
 
 -- NEW --
@@ -83,8 +83,14 @@ syncUpcomingRide ride' booking' = do
 syncNewRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncNewRide ride' booking' = do
   DCommon.BookingDetails {..} <- fetchBookingDetails ride' booking'
-  handle (errHandler (Just ride.status) booking.status "ride assigned") $ do
-    CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle False
+  handle (errHandler (Just ride.status) booking.status "ride assigned") $
+    -- Mirrors the activation job and the /status pull: an activated 3P scheduled ride is past RIDE_ASSIGNED, and replaying it gets NACKed.
+    if booking.isScheduled && not isValueAddNP
+      then
+        if isJust ride.driverArrivalTime
+          then CallBAP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
+          else CallBAP.sendRideEnroutePickupStatusToBAP booking ride driver vehicle
+      else CallBAP.sendRideAssignedUpdateToBAP booking ride driver vehicle
   pure $ Common.RideSyncRes Common.RIDE_NEW "Success. Sent ride started update to bap"
 
 fetchBookingDetails :: DRide.Ride -> DB.Booking -> Flow DCommon.BookingDetails

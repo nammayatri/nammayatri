@@ -275,8 +275,8 @@ arrivedAtPickup rideId req = do
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
-  let distance = distanceBetweenInMeters req pickupLoc
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let distance = distanceBetweenInMeters req pickupLoc
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
@@ -337,7 +337,7 @@ otpRideCreate driver otpCode booking clientId = do
   AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
+  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 
   driverNumber <- RD.getDriverNumber rideDetails
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
