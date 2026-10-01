@@ -38,6 +38,7 @@ import qualified API.Internal.RefundLedger as RefundLedger
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.RiderConsent as RiderConsent
 import qualified API.Internal.SearchTryPoolStats as SearchTryPoolStats
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
 import qualified API.Internal.SendSMS as SendSMS
@@ -68,6 +69,7 @@ type API =
            :<|> CallCustomerFCM.API
            :<|> Cac.API
            :<|> FavouriteDrivers.API
+           :<|> RiderConsent.API
            :<|> BlackListedDrivers.API
            :<|> KnowYourDriver.API
            :<|> DriverCoordinates.API
@@ -120,6 +122,7 @@ handler env =
     :<|> CallCustomerFCM.handler
     :<|> Cac.handler
     :<|> FavouriteDrivers.handler
+    :<|> RiderConsent.handler
     :<|> BlackListedDrivers.handler
     :<|> KnowYourDriver.handler
     :<|> DriverCoordinates.handler

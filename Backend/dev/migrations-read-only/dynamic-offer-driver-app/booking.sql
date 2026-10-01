@@ -290,3 +290,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN add_on_data json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN booking_deposit double precision ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN number_share_consent boolean ;

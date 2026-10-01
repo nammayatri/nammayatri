@@ -84,6 +84,7 @@ data Booking = Booking
     maxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    numberShareConsent :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

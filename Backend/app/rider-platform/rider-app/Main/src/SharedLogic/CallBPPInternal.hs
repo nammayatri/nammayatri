@@ -275,6 +275,57 @@ getFavouriteDriverList apiKey internalUrl merchantId phoneNumber countryCode = d
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getFavouriteDriversClient merchantId (Just apiKey) (GetFavouriteDriverInfoReq phoneNumber countryCode)) "GetFavouriteDrivers" getFavouriteDriversApi
 
+data RiderConsentItem = RiderConsentItem
+  { customerMobileNumber :: Text,
+    customerMobileCountryCode :: Text,
+    city :: Context.City,
+    consentToShareMobileNumber :: Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data SetRiderConsentReq = SetRiderConsentReq
+  { bapId :: Text,
+    riders :: [RiderConsentItem]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data SetRiderConsentRes = SetRiderConsentRes
+  { updated :: Int,
+    created :: Int,
+    failedIndices :: [Int]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+type SetRiderConsentAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "riderDetails"
+    :> "consent"
+    :> Header "token" Text
+    :> ReqBody '[JSON] SetRiderConsentReq
+    :> Post '[JSON] SetRiderConsentRes
+
+setRiderConsentClient :: Text -> Maybe Text -> SetRiderConsentReq -> EulerClient SetRiderConsentRes
+setRiderConsentClient = client setRiderConsentApi
+
+setRiderConsentApi :: Proxy SetRiderConsentAPI
+setRiderConsentApi = Proxy
+
+setRiderConsent ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  SetRiderConsentReq ->
+  m SetRiderConsentRes
+setRiderConsent apiKey internalUrl merchantId req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (setRiderConsentClient merchantId (Just apiKey) req) "SetRiderConsent" setRiderConsentApi
+
 type RemoveFavouriteDriverAPI =
   "internal"
     :> Capture "merchantId" Text
