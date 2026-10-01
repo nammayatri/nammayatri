@@ -26,6 +26,7 @@ module Domain.Action.UI.Ride.EndRide
     driverEndRide,
     dashboardEndRide,
     cronJobEndRide,
+    isPickupDropOutsideOfThreshold,
   )
 where
 
@@ -102,6 +103,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
+import qualified SharedLogic.ManualTollCharge as ManualTollCharge
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.RuleBasedTierUpgrade
@@ -151,7 +153,8 @@ data DriverEndRideReq = DriverEndRideReq
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
     odometer :: Maybe DRide.OdometerReading,
-    driverGpsTurnedOff :: Maybe Bool
+    driverGpsTurnedOff :: Maybe Bool,
+    manualTollCharge :: Maybe HighPrecMoney
   }
 
 data DashboardEndRideReq = DashboardEndRideReq
@@ -506,27 +509,47 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
                 -- Toll reconciliation matrix lives in the pure, unit-tested
                 -- Domain.Action.UI.Ride.EndRide.TollDecision (behavior-identical
-                -- extraction of the if-tree that used to be inline here).
-                let tollBilling =
-                      TD.decideTollBilling
-                        TD.TollInput
-                          { distanceCalculationFailed = distanceCalculationFailed,
-                            numberOfSelfTuned = updRide.numberOfSelfTuned,
-                            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
-                            estimatedTollCharges = updRide.estimatedTollCharges,
-                            estimatedTollNames = updRide.estimatedTollNames,
-                            estimatedTollIds = updRide.estimatedTollIds,
-                            detectedTollCharges = updRide.tollCharges,
-                            detectedTollNames = updRide.tollNames,
-                            detectedTollIds = updRide.tollIds,
-                            driverDeviatedToTollRoute = updRide.driverDeviatedToTollRoute,
-                            validatedPendingToll = mbValidatedPendingToll,
-                            enableEstimatedTollFallback = (RD.mkRecomputeConfig thresholdConfig).cfgEstimatedTollFallback
-                          }
+                -- extraction of the if-tree that used to be inline here); this input also feeds
+                -- the manual-toll-charge signal below.
+                let tollInput =
+                      TD.TollInput
+                        { distanceCalculationFailed = distanceCalculationFailed,
+                          numberOfSelfTuned = updRide.numberOfSelfTuned,
+                          pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+                          estimatedTollCharges = updRide.estimatedTollCharges,
+                          estimatedTollNames = updRide.estimatedTollNames,
+                          estimatedTollIds = updRide.estimatedTollIds,
+                          detectedTollCharges = updRide.tollCharges,
+                          detectedTollNames = updRide.tollNames,
+                          detectedTollIds = updRide.tollIds,
+                          driverDeviatedToTollRoute = updRide.driverDeviatedToTollRoute,
+                          validatedPendingToll = mbValidatedPendingToll,
+                          enableEstimatedTollFallback = (RD.mkRecomputeConfig thresholdConfig).cfgEstimatedTollFallback
+                        }
+                    tollBilling = TD.decideTollBilling tollInput
+                    manualTollChargeSignal = ManualTollCharge.ManualTollChargeSignal {tollConfidence = tollBilling.tollConfidence, hasNoTollEvidence = TD.hasNoTollEvidence tollInput}
+                mbManualTollChargeResolution <- case req of
+                  DriverReq driverReq -> forM driverReq.manualTollCharge $ ManualTollCharge.resolveManualTollChargeForEndRide thresholdConfig rideOld booking.tripCategory booking.vehicleServiceTier booking.id.getId manualTollChargeSignal
+                  _ -> pure Nothing
+                let (tollCharges, tollNames, tollIds, tollConfidence) = case mbManualTollChargeResolution of
+                      -- A driver-declared 0 means no toll was paid, so the estimated toll's name/id
+                      -- shouldn't linger on a ride the driver says had none.
+                      Just manualTollChargeResolution
+                        | manualTollChargeResolution.amount == 0 -> (Just 0, Nothing, Nothing, Just (ManualTollCharge.manualTollChargeConfidence manualTollChargeResolution.confirmedBy))
+                        | otherwise -> (Just manualTollChargeResolution.amount, updRide.estimatedTollNames, updRide.estimatedTollIds, Just (ManualTollCharge.manualTollChargeConfidence manualTollChargeResolution.confirmedBy))
+                      Nothing -> (tollBilling.tollCharges, tollBilling.tollNames, tollBilling.tollIds, tollBilling.tollConfidence)
+                    manualTollChargeTags =
+                      ( \manualTollChargeResolution ->
+                          ManualTollCharge.manualTollChargeTag manualTollChargeResolution.confirmedBy :
+                          case ManualTollCharge.manualTollChargeRejectionTag manualTollChargeResolution.rejectedAmounts of
+                            Just rejectionTag -> [rejectionTag]
+                            Nothing -> []
+                      )
+                        <$> mbManualTollChargeResolution
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
-                let ride = updRide{tollCharges = tollBilling.tollCharges, tollNames = tollBilling.tollNames, tollIds = tollBilling.tollIds, tollConfidence = tollBilling.tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
+                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed, rideTags = updRide.rideTags <> manualTollChargeTags}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams, mbApproxUsed) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -745,7 +768,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         Left someException ->
           case fromException someException of
             Just NoFareProduct -> return defaultVal
-            _ -> throwError $ InternalError (Text.pack $ displayException someException)
+            _ -> case fromException someException of
+              Just (manualTollChargeError :: ManualTollChargeError) -> throwError manualTollChargeError
+              Nothing -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
 
 -- | Shadow-mode evaluation of the pure recompute decision core. Read-only:
@@ -992,6 +1017,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
               nightShiftOverlapChecking = DTC.isFixedNightCharge booking.tripCategory,
               timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc,
               tollCharges = ride.tollCharges,
+              isManualTollCharge = ManualTollCharge.isManualTollChargeRide ride,
               vehicleAge = vehicleAge,
               currency = booking.currency,
               noOfStops = length ride.stops,

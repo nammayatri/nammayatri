@@ -26,6 +26,16 @@ data EditLocation = EditLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+-- A toll amount the driver has sent for the rider to approve, while the ride is still in progress.
+data TollChargeApprovalRequestRes = TollChargeApprovalRequestRes
+  { tollNames :: Maybe [Kernel.Prelude.Text],
+    amount :: Kernel.Types.Common.HighPrecMoney,
+    currency :: Kernel.Types.Common.Currency,
+    requestedAt :: Kernel.Prelude.UTCTime,
+    expiresAt :: Kernel.Prelude.UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
 data RideAPIEntity = RideAPIEntity
   { allowedEditLocationAttempts :: Kernel.Prelude.Int,
     allowedEditPickupLocationAttempts :: Kernel.Prelude.Int,
@@ -85,6 +95,9 @@ data RideAPIEntity = RideAPIEntity
     selectedOffers :: Kernel.Prelude.Maybe SharedLogic.Offer.OffersRespAPIEntity,
     isTierUpgrade :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     assignedServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    -- Rentals poll the full booking rather than the v2 status endpoint, so a pending toll approval
+    -- has to be readable from here too. Mirrors BookingStatusAPIEntity.tollChargeApproval.
+    tollChargeApproval :: Maybe TollChargeApprovalRequestRes
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

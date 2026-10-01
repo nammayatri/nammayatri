@@ -363,6 +363,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
           nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
           timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
           tollCharges = Nothing,
+          isManualTollCharge = False,
           vehicleAge = vehicleAge,
           currency = searchReq.currency,
           distanceUnit = searchReq.distanceUnit,
