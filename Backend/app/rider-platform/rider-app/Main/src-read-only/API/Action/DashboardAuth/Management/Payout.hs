@@ -22,12 +22,27 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("payout" :> GetPayoutPayoutOrder)
+type API = ("payout" :> (GetPayoutPayoutOrder :<|> PostPayoutPayoutRetrigger))
 
 type GetPayoutPayoutOrder = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER" :> API.Types.RiderPlatform.Management.Payout.GetPayoutPayoutOrder)
 
+type PostPayoutPayoutRetrigger =
+  ( DashboardUserAuth
+      'APP_BACKEND_MANAGEMENT
+      "RIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRIGGER"
+      :> API.Types.RiderPlatform.Management.Payout.PostPayoutPayoutRetrigger
+  )
+
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPayoutPayoutOrder merchantId city
+handler merchantId city = getPayoutPayoutOrder merchantId city :<|> postPayoutPayoutRetrigger merchantId city
 
 getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutOrderResp)
 getPayoutPayoutOrder a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Payout.getPayoutPayoutOrder a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
+
+postPayoutPayoutRetrigger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.RiderPlatform.Management.Payout.RetriggerPayoutReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Payout.RetriggerPayoutResp)
+postPayoutPayoutRetrigger a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_PAYOUT_RETRIGGER" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Payout.postPayoutPayoutRetrigger a4 a3 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)) a1
+    )

@@ -31,6 +31,7 @@ module Lib.Payment.Domain.Action
     createRefundService,
     chargePaymentIntentService,
     createPayoutService,
+    isNeverSentPayoutOrder,
     PayoutStatusServiceReq (..),
     mkPayoutOrderStatusReq,
     CreatePayoutServiceReq (..),
@@ -2692,8 +2693,16 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
   mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
-      payoutOrder <- buildInitialPayoutOrder createPayoutServiceReq
-      QPayoutOrder.create payoutOrder
+      buildInitialPayoutOrder Nothing createPayoutServiceReq >>= QPayoutOrder.create
+      sendPayoutOrder
+    -- Never reached the PG (status API E09): re-send under the same order id.
+    Just existingPayoutOrder
+      | isNeverSentPayoutOrder existingPayoutOrder -> do
+        buildInitialPayoutOrder (Just existingPayoutOrder) createPayoutServiceReq >>= QPayoutOrder.updateByPrimaryKey
+        sendPayoutOrder
+      | otherwise -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
+  where
+    sendPayoutOrder = do
       createPayoutOrderResp <- createPayoutOrderCall createPayoutServiceReq -- api call
       -- Record PG fee ledger entries if configured
       mbFeeResult <- case mbPGFeeConfig of
@@ -2721,12 +2730,11 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       forM_ latestPayoutOrder $ \order ->
         void $ withTryCatch "afterPayoutOrderCreated" (afterPayoutOrderCreated order)
       return (Just createPayoutOrderResp, latestPayoutOrder)
-    Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
-  where
-    buildInitialPayoutOrder req = do
+
+    buildInitialPayoutOrder mbExisting req = do
       now <- getCurrentTime
-      uuid <- generateGUID
-      shortId <- generateShortId
+      uuid <- maybe generateGUID (pure . (.id)) mbExisting
+      shortId <- maybe (Just <$> generateShortId) (pure . (.shortId)) mbExisting
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
       let transferStatus = case createPayoutServiceReq.payoutServiceFlow of
@@ -2735,7 +2743,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       pure $
         Payment.PayoutOrder
           { id = uuid,
-            shortId = Just shortId,
+            shortId,
             customerId = req.customerId,
             orderId = req.orderId,
             merchantId = merchantId.getId,
@@ -2759,10 +2767,16 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             pgBaseFee = Nothing,
             pgGst = Nothing,
             merchantTopUpAmount = Nothing,
-            createdAt = now,
+            createdAt = maybe now (.createdAt) mbExisting,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
           }
+
+isNeverSentPayoutOrder :: Payment.PayoutOrder -> Bool
+isNeverSentPayoutOrder order =
+  order.status == Payout.INITIATED
+    && isNothing order.idAssignedByServiceProvider
+    && isNothing order.responseCode
 
 data PayoutStatusServiceReq = PayoutStatusServiceReq
   { orderId :: Text,

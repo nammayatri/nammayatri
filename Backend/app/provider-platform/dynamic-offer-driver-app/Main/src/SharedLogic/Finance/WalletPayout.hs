@@ -209,6 +209,7 @@ initiateWalletPayout ctx payoutType WalletPayoutPlan {..} = do
             coverageFrom = Nothing,
             coverageTo = Just cutoff,
             ledgerEntryIds = [],
+            reuseOrderId = Nothing,
             payoutServiceFlow
           }
       payoutCall = Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount

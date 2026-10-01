@@ -119,7 +119,7 @@ postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QPerson.updatePayoutVpa (Just req.vpa) personId
   fork ("processing backlog payout for customer while vpa updation" <> personId.getId) $
-    processBacklogReferralPayout personId req.vpa person.merchantOperatingCityId
+    processBacklogReferralPayout personId req.vpa person.merchantOperatingCityId Nothing
   pure Success
 
 processBacklogReferralPayout ::
@@ -135,8 +135,9 @@ processBacklogReferralPayout ::
   Id Person.Person ->
   Text ->
   Id MerchantOpCity.MerchantOperatingCity ->
+  Maybe Text ->
   m ()
-processBacklogReferralPayout personId vpa merchantOpCityId = do
+processBacklogReferralPayout personId vpa merchantOpCityId mbReuseOrderId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
   personStats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
@@ -158,7 +159,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
         Just payoutConfig -> do
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
-          uid <- generateGUID
+          uid <- maybe generateGUID pure mbReuseOrderId
           let payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
           let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
