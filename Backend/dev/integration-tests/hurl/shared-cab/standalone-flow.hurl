@@ -59,6 +59,11 @@ jsonpath "$.status" == "CONFIRMED"
 jsonpath "$.payment" == null
 jsonpath "$.tickets[0].status" == "ACTIVE"
 
+# release the seat the booking holds, so later flows start from an empty cab
+POST {{base_url}}/v2/frfs/booking/{{bookingId}}/cancel
+token: {{token}}
+HTTP 200
+
 # opening the cab route from search: route serviceability answers from the cabs live on it (its own feed, not the bus one)
 POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false
 token: {{token}}
