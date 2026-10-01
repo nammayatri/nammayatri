@@ -15,6 +15,8 @@
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
+    sendRideEnroutePickupStatusToBAP,
+    notifyDriverOnScheduledRideAssigned,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
@@ -123,6 +125,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -797,9 +800,8 @@ sendRideAssignedUpdateToBAP ::
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
-  Bool ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = do
+sendRideAssignedUpdateToBAP booking ride driver veh = do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -809,10 +811,61 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   -- Applies the ride-assigned ONDC overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, gated on booking.isScheduled, since pilot merchants need them on this push too.
   patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId False booking.addOnData rideAssignedMsgV2'.onUpdateReqMessage
   let rideAssignedMsgV2 = rideAssignedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
-  let generatedMsg = A.encode rideAssignedMsgV2
-  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show (A.encode rideAssignedMsgV2))
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
+
+-- | Activation push for 3P BAPs, which NACK a repeat of the RIDE_ASSIGNED on_update sent at accept. Same order body, only the fulfillment state swapped.
+sendRideEnroutePickupStatusToBAP ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m ()
+sendRideEnroutePickupStatusToBAP booking ride driver veh = do
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  retryConfig <- asks (.shortDurationRetryCfg)
+  rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  enrouteMsgV2' <- OSROnStatus.ondcScheduledRideOnStatusMessageBuild booking.isScheduled booking.quoteId booking.addOnData rideAssignedMsgV2
+  let enrouteMsgV2 = enrouteMsgV2' {Spec.onStatusReqMessage = patchEnrouteState <$> enrouteMsgV2'.onStatusReqMessage}
+  logDebug $ "ride enroute pickup on_status request bppv2: " <> T.pack (show (A.encode enrouteMsgV2))
+  void $ callOnStatusV2 enrouteMsgV2 retryConfig merchant.id
+  where
+    patchEnrouteState msg = msg {Spec.confirmReqMessageOrder = OSRCommon.overrideOrderFulfillmentStateCode Enums.RIDE_ENROUTE_PICKUP msg.confirmReqMessageOrder}
+
+-- | Outside both pushes, since the driver must be told whichever one the BAP gets.
+notifyDriverOnScheduledRideAssigned ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  m ()
+notifyDriverOnScheduledRideAssigned booking ride driver =
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
