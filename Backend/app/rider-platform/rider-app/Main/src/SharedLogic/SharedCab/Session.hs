@@ -9,6 +9,9 @@ module SharedLogic.SharedCab.Session
     resume,
     getSession,
     readSession,
+    CabDriverInfo (..),
+    setCabDriverInfo,
+    readCabDriverInfo,
     withPlateLock,
     activeSessionsOnRoute,
     setWalkupCount,
@@ -45,6 +48,20 @@ sessionKey plate = "sharedcab:session:" <> plate
 
 routeKey :: Text -> Text
 routeKey routeCode = "sharedcab:route:" <> routeCode
+
+-- | What the driver-app knows about the cab's driver, handed over once at route select (so no per-poll call).
+-- Display only, so it lives beside the session with the session's lifetime, not inside it.
+data CabDriverInfo = CabDriverInfo {driverName :: Maybe Text, vehicleModel :: Maybe Text}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+driverInfoKey :: Text -> Text
+driverInfoKey plate = "sharedcab:driverinfo:" <> plate
+
+setCabDriverInfo :: (Redis.HedisFlow m r, MonadFlow m) => Text -> CabDriverInfo -> m ()
+setCabDriverInfo plate info = shared $ Redis.setExp (driverInfoKey plate) info sessionTtlSec
+
+readCabDriverInfo :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe CabDriverInfo)
+readCabDriverInfo = shared . Redis.safeGet . driverInfoKey
 
 lockKey :: Text -> Text
 lockKey plate = "sharedcab:lock:" <> plate

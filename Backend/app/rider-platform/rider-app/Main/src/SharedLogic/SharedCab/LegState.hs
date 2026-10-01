@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.LegState
     fallbackReached,
     fallbackTimeElapsed,
     isSharedCabAgency,
+    sharedCabLegMode,
     sharedCabFareTiers,
     deriveSharedCabState,
     isDroppable,
@@ -24,6 +25,7 @@ import Data.Time (diffUTCTime)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
+import qualified Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -100,6 +102,12 @@ instance FromJSON SharedCabLegStatus where
 -- | Shared cabs ship in GTFS under the SHARED_CAB agency (agency gtfsId `<feed>:SHARED_CAB`).
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
+
+-- | A booking on the SHARED_CAB tier makes its leg a SharedCab leg, even when the leg came from a search whose agency
+-- was missing or shaped differently: the booking is what the rider paid for, so it has the last word on the mode.
+sharedCabLegMode :: Maybe ServiceTierType -> DTrip.MultimodalTravelMode -> DTrip.MultimodalTravelMode
+sharedCabLegMode (Just SHARED_CAB) _ = DTrip.SharedCab
+sharedCabLegMode _ mode = mode
 
 -- | Shared cabs are frequency-based GTFS (no fixed trips), so the GIMS bus-schedule availability filter
 -- always returns nothing for them; availability is already decided by the search gate. A shared-cab leg
