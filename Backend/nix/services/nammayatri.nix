@@ -213,7 +213,9 @@ in
           PROVIDER_DASHBOARD_PORT = toString ports.provider-dashboard;
           RIDER_DASHBOARD_PORT = toString ports.rider-dashboard;
         } // lib.optionalAttrs pkgs.stdenv.isLinux {
-          # LOCALE_ARCHIVE is not set here: the system archive lacks C.UTF-8, so services inherit nix's archive exported by the run-mobility-stack-* scripts.
+          # On non-NixOS Linux (remote devbox), Nix-built binaries need
+          # LOCALE_ARCHIVE to find the system locale data.
+          LOCALE_ARCHIVE = "/usr/lib/locale/locale-archive";
           # Force UTF-8 so Haskell's hGetContents can read migration SQL files
           # that contain non-ASCII characters (e.g. × in comments). Without
           # this, a devbox with LC_ALL=C (ASCII-only) raises:
