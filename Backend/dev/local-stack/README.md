@@ -976,6 +976,12 @@ the batch pace. Raising it from 10 to 60 took three rounds of five drivers from
 
 ## Driver freshness — `./drivers-keepalive.sh`
 
+**Uninstalled on the live server 2026-10-01**, with the simulated fleet and
+every test account (see *The test fleet*). It re-stamped every row of
+`driver_location`, real drivers' included, so an offline real driver's last
+position looked fresh to the dispatcher. The trap below is real again on a dev
+stack; on the live one, positions now come only from driver apps.
+
 **The single most misleading failure in this stack.** The dispatch pool only
 considers drivers whose recorded position is recent. Real drivers send one
 constantly; the seeded ones are rows nobody updates. So a stack that worked
@@ -1714,6 +1720,9 @@ them.
 probe was proven against, and `setup.sh`'s smoke test recreates him on login.
 
 ### Keep it running — `./fleet-service.sh`
+
+**Uninstalled on the live server 2026-10-01**: the simulated cars answered real
+ride requests in Nouakchott. Dev stacks only.
 
 ```bash
 ./fleet-service.sh install     # run the fleet, and keep it running
@@ -3245,6 +3254,23 @@ site fixes the rider and the provider together.
 **When a component reports no error, read what its caller received.**
 
 ### The test fleet
+
+**Erased on the live server 2026-10-01, with every other test account (the
+owner's decision, before launch).** 37 drivers — the 8 simulated cars, the
+pilot's parked Algiers drivers, every « Test » / « Boss Test » / Moha account,
+the two `algerian-test-accounts.sh` drivers, and upstream's 2022 sample rows —
+and 69 passengers on invented numbers, each through the console's own
+`db/deletion/anonymise.sql` (website repo): names, numbers, sessions,
+positions, cars and papers erased, rides, bookings and wallet history kept, an
+audit row per account (`actor_email` = `owner: test accounts removed
+2026-10-01`). Their 23 document files deleted and their cached sessions
+(`*authTokenCacheKey:*` in Redis) dropped. `movin-fleet` and `movin-drivers`
+uninstalled. Kept: the 11 accounts on real phones (the owner's, the boss's, and
+three drivers who signed up by WhatsApp). Before it, a full off-site backup and
+a root-only dump of the three account schemas in `/root/pre-removal/`.
+
+Consequence: no car on the map in either country until a real driver is
+online, and the bot's « aucun chauffeur en ligne » is now simply true.
 
 `./seed-mauritanian-fleet.sh` — two drivers per sellable variant in Nouakchott,
 Mauritanian names and plates, all enrolled in the guard. Two per type because

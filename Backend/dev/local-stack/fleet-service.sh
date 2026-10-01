@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 #
+# ── RETIRED 2026-10-01 ── uninstalled on the live server before launch (the owner's
+# decision): the simulated cars answered real ride requests. Do not `install`
+# it there again.
+#
 # Keep the simulated fleet answering, permanently.
 #
 # ── The failure this exists to stop ─────────────────────────────────────────

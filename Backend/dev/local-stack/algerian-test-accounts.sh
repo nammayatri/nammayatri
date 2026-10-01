@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 #
+# ── RETIRED 2026-10-01 ── these accounts were erased and SMS_BYPASS emptied
+# (the owner's decision). Running this on the live server recreates test
+# accounts next to real riders.
+#
 # Algerian test accounts that sign in WITHOUT an SMS or WhatsApp (2026-09-13).
 # Algeria is open to everyone since 2026-09-27, by WhatsApp only (SMS_COUNTRIES).
 #

@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 #
+# ── RETIRED 2026-10-01 ── these drivers were erased and the simulated fleet
+# uninstalled before launch (the owner's decision). Running this on the live
+# server puts fake cars back in front of real Mauritanian passengers.
+#
 # A test fleet in Nouakchott — two drivers per sellable vehicle type.
 #
 # The Mauritanian replacement for `setup.sh drivers`, which places drivers in

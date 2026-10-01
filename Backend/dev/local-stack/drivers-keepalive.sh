@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 #
+# ── RETIRED 2026-10-01 ── uninstalled on the live server before launch. It
+# re-stamped EVERY driver's position, real ones included, so an offline real
+# driver's last position looked fresh. Do not `install` it there again.
+#
 # Keep the seeded drivers visible to the dispatch pool.
 #
 # ── The problem this exists for ─────────────────────────────────────────────

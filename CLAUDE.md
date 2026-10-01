@@ -261,14 +261,15 @@ the registry or the map.
 - Tariffs: `mauritania-tariff.sql` (MRU, the Algerian table × 0.30, a
   **placeholder**) and `algeria-tariff.sql` (DA, the Mauritanian ÷ 0.30).
   Each is keyed to its own merchant.
-- Test fleets: `./seed-mauritanian-fleet.sh` (two per sellable variant in
-  Nouakchott, driven by the simulator — never sign in as one) and the pilot's
-  twelve `+213` drivers parked in Algiers under `algeria0`. **Since
-  2026-10-01 no test number skips the SMS in either country**: `SMS_BYPASS`
-  and the drivers' personal codes are empty (old files kept as
-  `/opt/ny/secrets/*.before-*`), so `./algerian-test-accounts.sh` accounts can
-  no longer sign in. Their rows, and the pilot's parked drivers (a real rider
-  could book one), must still go before the first real Algerian rider.
+- **No test accounts on the live server since 2026-10-01** (owner's
+  decision, before launch). `SMS_BYPASS` and the drivers' personal codes are
+  empty (old files `/opt/ny/secrets/*.before-*`); every account on an invented
+  number — 37 drivers incl. the simulated Nouakchott fleet and the pilot's
+  parked Algiers drivers, and 69 passengers — was erased with the console's
+  `anonymise.sql`, and `movin-fleet` / `movin-drivers` are uninstalled. The
+  scripts that made them (`seed-mauritanian-fleet.sh`, `fleet-service.sh`,
+  `drivers-keepalive.sh`, `algerian-test-accounts.sh`) are marked RETIRED:
+  dev stacks only. local-stack README → *The test fleet*.
 - **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
   only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
   rides. Without credit for a day and no day paid for, he may not work, and
@@ -289,8 +290,10 @@ the header of that script.
 ## Traps that have each cost an afternoon
 
 - **Driver locations go stale silently.** The dispatch pool ignores old
-  positions, so search returns zero estimates with no error anywhere. Run
-  `./setup.sh drivers` before any demo.
+  positions, so search returns zero estimates with no error anywhere. On a dev
+  stack, run `./setup.sh drivers` before any demo. On the live server there is
+  no fake fleet any more (2026-10-01): zero estimates there means no real
+  driver is online.
 - **`docker exec -i` inside `ssh host "bash -s" <<EOF` eats the rest of the
   script** from stdin. Drop the `-i`.
 - **`ufw limit` rejects the sixth SSH connection in 30 seconds** — exit 255 and
