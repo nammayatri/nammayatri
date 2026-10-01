@@ -23,23 +23,17 @@ for i in $(seq 1 30); do
 done
 curl -sf http://127.0.0.1:8030/healthz >/dev/null && ok "shim healthy" || bad "shim not healthy"
 
-say "sign-in: +213 refused as not open, +222 still reaches the backend"
-code=$(curl -s -o /tmp/g213.json -w '%{http_code}' -X POST "$API/v2/auth" \
-  -H 'content-type: application/json' \
-  -d '{"mobileCountryCode":"+213","mobileNumber":"0550123456","merchantId":"YATRI"}')
-if [ "$code" = "403" ] && grep -q COUNTRY_NOT_OPEN /tmp/g213.json; then
-  ok "+213 -> 403 COUNTRY_NOT_OPEN"
+# Asks which ways in each country has, and starts no sign-in. The two probes
+# that stood here started real ones: the +213 one expected COUNTRY_NOT_OPEN,
+# stale since Algeria opened (2026-09-27), and the +222 one relied on an
+# SMS_BYPASS test number -- with that list empty (2026-10-01) it would have
+# texted an invented number at Moorsyl's price.
+say "sign-in: each country's ways in"
+code=$(curl -s -o /tmp/gch.json -w '%{http_code}' "$API/v2/auth/channels")
+if [ "$code" = "200" ] && grep -q '"sms":\["+222"\]' /tmp/gch.json && grep -q '"smsIn":\["+213"\]' /tmp/gch.json; then
+  ok "channels -> $(head -c 160 /tmp/gch.json)"
 else
-  bad "+213 -> $code $(head -c 160 /tmp/g213.json)"
-fi
-# The SMS_BYPASS test rider: no SMS is sent and no credit spent.
-code=$(curl -s -o /tmp/g222.json -w '%{http_code}' -X POST "$API/v2/auth" \
-  -H 'content-type: application/json' \
-  -d '{"mobileCountryCode":"+222","mobileNumber":"22778899","merchantId":"YATRI"}')
-if [ "$code" = "200" ] && grep -q authId /tmp/g222.json; then
-  ok "+222 test rider -> 200 with an authId"
-else
-  bad "+222 -> $code $(head -c 160 /tmp/g222.json)"
+  bad "channels -> $code $(head -c 160 /tmp/gch.json)"
 fi
 
 say "wallet: both countries' rows loaded"

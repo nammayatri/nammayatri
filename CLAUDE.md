@@ -263,10 +263,12 @@ the registry or the map.
   Each is keyed to its own merchant.
 - Test fleets: `./seed-mauritanian-fleet.sh` (two per sellable variant in
   Nouakchott, driven by the simulator — never sign in as one) and the pilot's
-  twelve `+213` drivers parked in Algiers under `algeria0`. Algerian test
-  accounts that sign in without SMS: `./algerian-test-accounts.sh` — Algeria
-  is open now, so they must go before the first real Algerian rider, and so
-  must the pilot's parked drivers (a real rider could book one).
+  twelve `+213` drivers parked in Algiers under `algeria0`. **Since
+  2026-10-01 no test number skips the SMS in either country**: `SMS_BYPASS`
+  and the drivers' personal codes are empty (old files kept as
+  `/opt/ny/secrets/*.before-*`), so `./algerian-test-accounts.sh` accounts can
+  no longer sign in. Their rows, and the pilot's parked drivers (a real rider
+  could book one), must still go before the first real Algerian rider.
 - **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
   only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
   rides. Without credit for a day and no day paid for, he may not work, and

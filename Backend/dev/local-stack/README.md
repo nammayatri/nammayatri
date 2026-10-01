@@ -3371,7 +3371,18 @@ lists as `countries`. Proved live through the edge the same day: `+213` by SMS
 `wa.me` link; `+222` unchanged. When Algeria gets an SMS provider, adding
 `+213` to `SMS_COUNTRIES` is the whole switch.
 
-Numbers on `SMS_BYPASS` pass both gates, which is how the test accounts work:
+**No test number skips the SMS any more, in either country (2026-10-01, the
+owner's decision).** `SMS_BYPASS` is empty and so is `driver-codes.json` —
+every one of its 21 personal codes belonged to an invented test number (the
+Algerian test drivers, the boss's « Patron » accounts, the two `+22222000001/2`
+accounts and the simulated fleet). Both old files are kept, root-only, as
+`/opt/ny/secrets/*.before-<timestamp>`. The simulated fleet is not affected:
+it signs in on the backend's own port (8017) with the backend's fixed code and
+never meets the guard. `deploy-shims.sh` no longer probes a sign-in; it reads
+`/v2/auth/channels`, which sends nothing.
+
+Until then, numbers on `SMS_BYPASS` passed both gates, which is how the test
+accounts worked:
 
     bash algerian-test-accounts.sh
       passengers  +213 0555000001..3      the private test code
@@ -3509,7 +3520,9 @@ and one environment variable away — it sends our own French wording under
   (`too_small` otherwise), and `sms` mode matches it deliberately so the app is
   built once and the switch is invisible to it. `CODE_LENGTH` in the app's
   `config.ts` must agree with `codeDigits` on the guard's routes.
-- **`SMS_BYPASS` is not a convenience.** Moorsyl only delivers to real `+222`
+- **`SMS_BYPASS` is empty since 2026-10-01** (see *Test accounts* above);
+  what follows is why it existed, for the day a test number is needed again.
+  It is not a convenience. Moorsyl only delivers to real `+222`
   mobiles, and everyone building this tests from Algeria with invented numbers.
   Without the exemption list this change locks the team out of the product.
   The exempt numbers send nothing and use `SMS_BYPASS_CODE`. **Both live in
