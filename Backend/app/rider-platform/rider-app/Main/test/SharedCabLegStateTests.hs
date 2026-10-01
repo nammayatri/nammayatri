@@ -7,6 +7,7 @@ import qualified "beckn-spec" BecknV2.FRFS.Enums as Spec
 import Data.Aeson (decode, encode)
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import Data.List (isInfixOf)
+import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import Data.Time (NominalDiffTime, UTCTime (..), addUTCTime, fromGregorian, secondsToDiffTime)
 import qualified "beckn-spec" Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -17,7 +18,7 @@ import qualified "mobility-core" Kernel.External.MultiModal.Interface.Types as M
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Booking (bookingSeats)
+import "rider-app" SharedLogic.SharedCab.Booking (bookingSeats, partyMap)
 import "rider-app" SharedLogic.SharedCab.LegState
 import "rider-app" SharedLogic.SharedCab.Session (CabDriverInfo (..))
 import Test.Tasty (TestTree, testGroup)
@@ -39,6 +40,11 @@ tests =
         [ testCase "a group ticket for two holds two seats" $ bookingSeats 2 [DFRFSTicket.ACTIVE] @?= 2,
           testCase "a party of three on two rows (adult and child) holds three, not four" $ bookingSeats 3 [DFRFSTicket.ACTIVE, DFRFSTicket.ACTIVE] @?= 3,
           testCase "a ticket per rider still holds the party once" $ bookingSeats 2 [DFRFSTicket.ACTIVE, DFRFSTicket.ACTIVE] @?= 2,
+          testCase "a party of three on one group row holds three" $ bookingSeats 3 [DFRFSTicket.ACTIVE] @?= 3,
+          testCase "a party of three on three rows holds the whole party until the last row is dropped (conservative; never over-books)" $
+            [bookingSeats 3 [DFRFSTicket.ACTIVE, DFRFSTicket.USED, DFRFSTicket.USED], bookingSeats 3 [DFRFSTicket.USED, DFRFSTicket.USED, DFRFSTicket.CANCELLED]] @?= [3, 0],
+          testCase "party sizes: the quote's quantities summed, shared by bookings of one quote, one when there is no category row" $
+            partyMap [("b1", "q1"), ("b2", "q1"), ("b3", "q2")] [("q1", 2), ("q1", 1)] @?= Map.fromList [("b1", 3), ("b2", 3), ("b3", 1)],
           testCase "a booking with every row dropped holds nothing" $ bookingSeats 2 [DFRFSTicket.USED, DFRFSTicket.CANCELLED] @?= 0,
           testCase "a missing party size counts as one" $ bookingSeats 0 [DFRFSTicket.ACTIVE] @?= 1
         ],

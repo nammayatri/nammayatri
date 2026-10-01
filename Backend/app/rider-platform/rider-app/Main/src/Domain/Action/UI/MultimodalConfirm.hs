@@ -875,20 +875,26 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
     Nothing
       | SharedCabSpot.isStickerCode vehicleNumber -> do
         -- a typed four-digit code is a bus first (the existing lookup keeps its meaning); a cab of the rider's city is tried only when it found nothing
-        busResult <- withTryCatch "walkUp:busFirst" busPath
-        resolution <- case busResult of
-          Right _ -> pure SharedCabSpot.NoCab
-          Left _ ->
-            UISharedCab.findSharedCabConfig mbPersonId >>= \case
-              Nothing -> pure SharedCabSpot.NoCab
-              Just ibc -> SharedCabSpot.liveSharedCabByCode ibc vehicleNumber
-        case SharedCabSpot.chooseWalkUp busResult resolution of
-          SharedCabSpot.UseBus bus -> pure bus
-          SharedCabSpot.UseCab plate -> SharedCabSpot.liveSharedCab plate >>= maybe (either throwM pure busResult) SharedCabSpot.sharedCabVehicleData
+        busVehicleFound <- busKnowsVehicle
+        resolution <-
+          if busVehicleFound
+            then pure SharedCabSpot.NoCab
+            else
+              UISharedCab.findSharedCabConfig mbPersonId >>= \case
+                Nothing -> pure SharedCabSpot.NoCab
+                Just ibc -> SharedCabSpot.liveSharedCabByCode ibc vehicleNumber
+        case SharedCabSpot.chooseWalkUp busVehicleFound resolution of
+          SharedCabSpot.UseBus -> busPath
+          SharedCabSpot.UseCab plate -> SharedCabSpot.liveSharedCab plate >>= maybe busPath SharedCabSpot.sharedCabVehicleData
           SharedCabSpot.PickRoute -> throwError CodeAmbiguous
-          SharedCabSpot.NotFound err -> throwM err
       | otherwise -> busPath
   where
+    -- the bus fleet's own lookup (it swallows its errors): does it know a live vehicle by this number in the rider's city
+    busKnowsVehicle = do
+      personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+      person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+      isJust <$> JLU.getVehicleLiveRouteInfo configs vehicleNumber Nothing
     busPath = case vehicleType of
       BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
       _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)

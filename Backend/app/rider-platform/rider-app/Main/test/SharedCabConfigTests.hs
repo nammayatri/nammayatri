@@ -3,6 +3,8 @@
 
 module SharedCabConfigTests (tests) where
 
+import Control.Applicative ((<|>))
+import Control.Monad (mfilter)
 import Data.Text (Text)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.SharedCab.Config
@@ -46,8 +48,16 @@ tests =
             map (fmap snd . pickAgencyRow MULTIMODAL fst) rows @?= [Just "multi", Just "multi"],
           testCase "the driver proxy (APPLICATION) gets the APPLICATION row, whatever order" $
             map (fmap snd . pickAgencyRow APPLICATION fst) rows @?= [Just "app", Just "app"],
-          testCase "a caller whose platform has no row gets the lowest id, deterministically" $
-            map (fmap snd . pickAgencyRow PARTNERORG fst) rows @?= [Just "app", Just "app"],
+          testCase "a key shared by several rows of the caller's platform (one per city) names no row: the caller falls back to its city lookup" $
+            fmap snd (pickAgencyRow MULTIMODAL fst ([((MULTIMODAL, "a"), "chennai"), ((MULTIMODAL, "b"), "delhi"), ((APPLICATION, "c"), "app")] :: [((PlatformType, Text), String)])) @?= Nothing,
+          testCase "a caller whose platform has no row gets the key's only row, and Nothing when several rows are left to choose from" $
+            [fmap snd (pickAgencyRow PARTNERORG fst [((APPLICATION, "52"), "app")]), fmap snd (pickAgencyRow PARTNERORG fst rowsOfTwo)] @?= [Just "app", Nothing],
+          testCase "an agency with only an APPLICATION row, asked by a journey caller: the pick still names it, ConfigPilot's platform filter drops it, and the caller falls back to the city lookup" $
+            let onlyApp = [((APPLICATION, "52"), "app")] :: [((PlatformType, Text), String)]
+                picked = pickAgencyRow MULTIMODAL fst onlyApp
+                afterConfigPilotFilter = mfilter ((== MULTIMODAL) . fst . fst) picked
+                cityFallback = Just (((MULTIMODAL, "b7"), "city lookup") :: ((PlatformType, Text), String))
+             in (fmap snd picked, fmap snd (afterConfigPilotFilter <|> cityFallback)) @?= (Just "app", Just "city lookup"),
           testCase "no rows is Nothing" $
             fmap snd (pickAgencyRow APPLICATION fst ([] :: [((PlatformType, Text), String)])) @?= Nothing
         ]
@@ -55,3 +65,5 @@ tests =
   where
     rows :: [[((PlatformType, Text), String)]]
     rows = [[((MULTIMODAL, "a9"), "multi"), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]]
+    rowsOfTwo :: [((PlatformType, Text), String)]
+    rowsOfTwo = head rows

@@ -55,17 +55,20 @@ cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
 cabRouteRequest Nothing _ = False
 cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
 
-data WalkUpChoice b e = UseBus b | UseCab Text | PickRoute | NotFound e
+data WalkUpChoice = UseBus | UseCab Text | PickRoute
   deriving (Show, Eq)
 
--- | A typed four-digit code is a bus first: the bus/plate lookup keeps its meaning and a cab is tried only when it found
--- nothing. Ambiguity then applies among cabs only.
-chooseWalkUp :: Either e b -> CodeResolution -> WalkUpChoice b e
-chooseWalkUp (Right bus) _ = UseBus bus
-chooseWalkUp (Left err) resolution = case resolution of
-  OneCab plate -> UseCab plate
-  ManyCabs -> PickRoute
-  NoCab -> NotFound err
+-- | A typed four-digit code is a bus first: when the bus lookup found a live vehicle for it the bus path keeps its meaning;
+-- only otherwise a cab is tried (the bus path answers an unknown number with the whole feed, so "found" is decided from
+-- the vehicle lookup, not from the bus path succeeding). Ambiguity applies among cabs only, and no cab leaves the bus
+-- path's own answer for an unknown number.
+chooseWalkUp :: Bool -> CodeResolution -> WalkUpChoice
+chooseWalkUp busVehicleFound resolution
+  | busVehicleFound = UseBus
+  | otherwise = case resolution of
+    OneCab plate -> UseCab plate
+    ManyCabs -> PickRoute
+    NoCab -> UseBus
 
 -- | A typed sticker code resolved among the cabs live on the city's shared-cab routes (one route-set read per route,
 -- the same index the route view uses), never the whole fleet.

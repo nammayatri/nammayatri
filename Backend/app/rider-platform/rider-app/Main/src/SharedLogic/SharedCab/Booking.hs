@@ -17,6 +17,7 @@ module SharedLogic.SharedCab.Booking
     liveBookingsForVehicle,
     bookingSeats,
     partySizes,
+    partyMap,
     partyOf,
   )
 where
@@ -119,8 +120,14 @@ partySizes bookings
   | null bookings = pure Map.empty
   | otherwise = do
     categories <- QFRFSQuoteCategory.findAllByQuoteIds (map (.quoteId) bookings)
-    let byQuote = Map.fromListWith (+) [(c.quoteId.getId, c.selectedQuantity) | c <- categories]
-    pure $ Map.fromList [(b.id.getId, Map.findWithDefault 1 b.quoteId.getId byQuote) | b <- bookings]
+    pure $ partyMap [(b.id.getId, b.quoteId.getId) | b <- bookings] [(c.quoteId.getId, c.selectedQuantity) | c <- categories]
+
+-- | (booking id, quote id) pairs and (quote id, selected quantity) category rows to a party size per booking: the quote's
+-- quantities summed, one when the quote has no category row.
+partyMap :: [(Text, Text)] -> [(Text, Int)] -> Map.Map Text Int
+partyMap bookingQuotes categoryRows = Map.fromList [(bookingId, Map.findWithDefault 1 quoteId byQuote) | (bookingId, quoteId) <- bookingQuotes]
+  where
+    byQuote = Map.fromListWith (+) categoryRows
 
 partyOf :: Map.Map Text Int -> DFRFSTicketBooking.FRFSTicketBooking -> Int
 partyOf parties b = max 1 (Map.findWithDefault 1 b.id.getId parties)

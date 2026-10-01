@@ -27,10 +27,12 @@ tests =
           testCase "no cab ends in the code" $ resolveCode "1234" ["ML05A9999", "ML05B8888"] @?= NoCab,
           testCase "two cabs end in the code: the rider picks a route" $ resolveCode "9999" ["ML05A9999", "ML07C9999"] @?= ManyCabs,
           testCase "one cab on two routes is still one cab" $ resolveCode "9999" ["ML05A9999", "ML05A9999"] @?= OneCab "ML05A9999",
-          testCase "a bus with a four-digit code still resolves to the bus, even if exactly one cab ends in it" $ (chooseWalkUp (Right "bus" :: Either String String) (OneCab "ML05A9999") :: WalkUpChoice String String) @?= UseBus "bus",
-          testCase "nor does several cabs ending in it shadow a bus" $ (chooseWalkUp (Right "bus" :: Either String String) ManyCabs :: WalkUpChoice String String) @?= UseBus "bus",
-          testCase "no bus: the one cab, else the route picker, else the bus lookup's own error" $
-            [chooseWalkUp (Left "no bus" :: Either String String) (OneCab "ML05A9999"), chooseWalkUp (Left "no bus") ManyCabs, chooseWalkUp (Left "no bus") NoCab] @?= [UseCab "ML05A9999", PickRoute, NotFound "no bus"],
+          testCase "a bus the fleet lookup knows by a four-digit code still resolves to the bus, even if cabs end in it" $
+            [chooseWalkUp True (OneCab "ML05A9999"), chooseWalkUp True ManyCabs, chooseWalkUp True NoCab] @?= [UseBus, UseBus, UseBus],
+          testCase "an unknown number (the bus path answers with the whole feed, no vehicle found) resolves to the one cab" $
+            chooseWalkUp False (OneCab "ML05A9999") @?= UseCab "ML05A9999",
+          testCase "several cabs, and no bus vehicle: the route picker; no cab either: the bus path's own answer" $
+            [chooseWalkUp False ManyCabs, chooseWalkUp False NoCab] @?= [PickRoute, UseBus],
           testCase "serviceability answers from the cabs only for routes of a readable shared-cab feed" $
             [cabRouteRequest (Just ["SC-A-F", "SC-A-R"]) ["SC-A-F"], cabRouteRequest (Just ["SC-A-F"]) ["SC-A-F", "MTC-1"], cabRouteRequest (Just ["SC-A-F"]) []] @?= [True, False, False],
           testCase "a failed or absent feed read (OTP down, no shared-cab feed) leaves the request on the bus path" $
