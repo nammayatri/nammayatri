@@ -443,6 +443,10 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
+            # Same as run-mobility-stack-dev-on-available-ports: give every service a locale archive with C.UTF-8 (CI runs this command).
+            ${lib.optionalString pkgs.stdenv.isLinux ''
+              export LOCALE_ARCHIVE="${localeArchive}"
+            ''}
             # -S NAME forces stable sort by process name (no re-ordering on status change).
             # -d hides `disabled = true` processes (the ones this profile never
             # starts) so the list only shows what the profile actually runs;
