@@ -32,6 +32,7 @@
      "    pm.collectionVariables.set(\"_test_driver_number\", dNum);",
      "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
      "    pm.collectionVariables.set(\"_test_reg_no\", regNo);",
+     "    pm.collectionVariables.set(\"_test_push_only_number\", \"7\" + Math.floor(100000000 + Math.random() * 899999999));",
      "    console.log(\"Test driver:\", dNum, \"rider:\", rNum, \"reg:\", regNo);",
      "}"
     ],
@@ -493,6 +494,150 @@
      ]
     }
    }
+  },
+  {
+   "name": "Internal Consent Rejects Bad Token",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "not-the-internal-api-key"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_namma_P_root}}/internal/{{driver_merchant_id}}/riderDetails/consent",
+     "host": [
+      "{{baseURL_namma_P_root}}"
+     ],
+     "path": [
+      "internal",
+      "{{driver_merchant_id}}",
+      "riderDetails",
+      "consent"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"bapId\": \"x\", \"riders\": []}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('rejects a wrong internal token with AUTH_BLOCKED', function () {",
+       "  pm.response.to.have.status(400);",
+       "  pm.expect(pm.response.json().errorCode).to.eql('AUTH_BLOCKED');",
+       "});"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Internal Consent Creates Row For New Rider",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bpp_internal_api_key}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_namma_P_root}}/internal/{{driver_merchant_id}}/riderDetails/consent",
+     "host": [
+      "{{baseURL_namma_P_root}}"
+     ],
+     "path": [
+      "internal",
+      "{{driver_merchant_id}}",
+      "riderDetails",
+      "consent"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"bapId\": \"{{bap_id}}\", \"riders\": [{\"customerMobileNumber\": \"{{_test_push_only_number}}\", \"customerMobileCountryCode\": \"+91\", \"city\": \"{{city}}\", \"consentToShareMobileNumber\": false}]}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('push alone creates a rider row', function () {",
+       "  pm.response.to.have.status(200);",
+       "  var r = pm.response.json();",
+       "  pm.expect(r.created).to.eql(1);",
+       "  pm.expect(r.updated).to.eql(0);",
+       "  pm.expect(r.failedIndices).to.eql([]);",
+       "});"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Internal Consent Updates Existing Row",
+   "request": {
+    "method": "POST",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{bpp_internal_api_key}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_namma_P_root}}/internal/{{driver_merchant_id}}/riderDetails/consent",
+     "host": [
+      "{{baseURL_namma_P_root}}"
+     ],
+     "path": [
+      "internal",
+      "{{driver_merchant_id}}",
+      "riderDetails",
+      "consent"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"bapId\": \"{{bap_id}}\", \"riders\": [{\"customerMobileNumber\": \"{{_test_push_only_number}}\", \"customerMobileCountryCode\": \"+91\", \"city\": \"{{city}}\", \"consentToShareMobileNumber\": true}]}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('push alone updates the existing row', function () {",
+       "  pm.response.to.have.status(200);",
+       "  var r = pm.response.json();",
+       "  pm.expect(r.created).to.eql(0);",
+       "  pm.expect(r.updated).to.eql(1);",
+       "  pm.expect(r.failedIndices).to.eql([]);",
+       "});"
+      ]
+     }
+    }
+   ]
   },
   {
    "name": "Get Emergency Settings (Default Unset)",
@@ -982,6 +1127,95 @@
    }
   },
   {
+   "name": "Grant Consent Mid-Ride (Ride 1)",
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseUrl_app}}/profile/updateEmergencySettings",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "profile",
+      "updateEmergencySettings"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"consentToShareMobileNumber\": true}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "console.log('Consent set to True');"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Get Ride After Mid-Ride Grant (Ride 1)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var ride = pm.response.json().list[0];",
+       "pm.test('mid-ride grant does not unmask the current ride', function () {",
+       "    pm.expect(ride.callingNumber.numberType).to.eql('ANONYMOUS');",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{driver_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+     "host": [
+      "{{baseURL_namma_P}}"
+     ],
+     "path": [
+      "driver",
+      "ride",
+      "list"
+     ],
+     "query": [
+      {
+       "key": "limit",
+       "value": "1"
+      },
+      {
+       "key": "isActive",
+       "value": "true"
+      }
+     ]
+    }
+   }
+  },
+  {
    "name": "Start Ride (Ride 1)",
    "event": [
     {
@@ -1077,48 +1311,6 @@
      ]
     }
    }
-  },
-  {
-   "name": "Enable Phone Share Consent",
-   "request": {
-    "method": "PUT",
-    "header": [
-     {
-      "key": "Content-Type",
-      "value": "application/json"
-     },
-     {
-      "key": "token",
-      "value": "{{rider_token}}"
-     }
-    ],
-    "url": {
-     "raw": "{{baseUrl_app}}/profile/updateEmergencySettings",
-     "host": [
-      "{{baseUrl_app}}"
-     ],
-     "path": [
-      "profile",
-      "updateEmergencySettings"
-     ]
-    },
-    "body": {
-     "mode": "raw",
-     "raw": "{\"consentToShareMobileNumber\": true}"
-    }
-   },
-   "event": [
-    {
-     "listen": "test",
-     "script": {
-      "type": "text/javascript",
-      "exec": [
-       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-       "console.log('Consent set to True');"
-      ]
-     }
-    }
-   ]
   },
   {
    "name": "Get Emergency Settings (Consent Granted)",
@@ -1612,6 +1804,96 @@
    }
   },
   {
+   "name": "Revoke Consent Mid-Ride (Ride 2)",
+   "request": {
+    "method": "PUT",
+    "header": [
+     {
+      "key": "Content-Type",
+      "value": "application/json"
+     },
+     {
+      "key": "token",
+      "value": "{{rider_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseUrl_app}}/profile/updateEmergencySettings",
+     "host": [
+      "{{baseUrl_app}}"
+     ],
+     "path": [
+      "profile",
+      "updateEmergencySettings"
+     ]
+    },
+    "body": {
+     "mode": "raw",
+     "raw": "{\"consentToShareMobileNumber\": false}"
+    }
+   },
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+       "console.log('Consent set to False');"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "name": "Get Ride After Mid-Ride Revoke (Ride 2)",
+   "event": [
+    {
+     "listen": "test",
+     "script": {
+      "type": "text/javascript",
+      "exec": [
+       "var ride = pm.response.json().list[0];",
+       "pm.test('mid-ride revoke masks the current ride immediately', function () {",
+       "    pm.expect(ride.callingNumber.numberType).to.eql('ANONYMOUS');",
+       "    pm.expect(ride.callingNumber.number).to.eql(ride.exoPhone);",
+       "});"
+      ]
+     }
+    }
+   ],
+   "request": {
+    "method": "GET",
+    "header": [
+     {
+      "key": "token",
+      "value": "{{driver_token}}"
+     }
+    ],
+    "url": {
+     "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+     "host": [
+      "{{baseURL_namma_P}}"
+     ],
+     "path": [
+      "driver",
+      "ride",
+      "list"
+     ],
+     "query": [
+      {
+       "key": "limit",
+       "value": "1"
+      },
+      {
+       "key": "isActive",
+       "value": "true"
+      }
+     ]
+    }
+   }
+  },
+  {
    "name": "Start Ride (Ride 2)",
    "event": [
     {
@@ -1707,48 +1989,6 @@
      ]
     }
    }
-  },
-  {
-   "name": "Revoke Phone Share Consent",
-   "request": {
-    "method": "PUT",
-    "header": [
-     {
-      "key": "Content-Type",
-      "value": "application/json"
-     },
-     {
-      "key": "token",
-      "value": "{{rider_token}}"
-     }
-    ],
-    "url": {
-     "raw": "{{baseUrl_app}}/profile/updateEmergencySettings",
-     "host": [
-      "{{baseUrl_app}}"
-     ],
-     "path": [
-      "profile",
-      "updateEmergencySettings"
-     ]
-    },
-    "body": {
-     "mode": "raw",
-     "raw": "{\"consentToShareMobileNumber\": false}"
-    }
-   },
-   "event": [
-    {
-     "listen": "test",
-     "script": {
-      "type": "text/javascript",
-      "exec": [
-       "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-       "console.log('Consent set to False');"
-      ]
-     }
-    }
-   ]
   },
   {
    "name": "Get Emergency Settings (Consent Revoked)",
@@ -2346,6 +2586,10 @@
   },
   {
    "key": "_test_reg_no",
+   "value": ""
+  },
+  {
+   "key": "_test_push_only_number",
    "value": ""
   }
  ]

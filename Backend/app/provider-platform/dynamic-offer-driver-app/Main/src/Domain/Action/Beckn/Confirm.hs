@@ -129,8 +129,11 @@ handler merchant req validatedQuote = do
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
-  unless isNewRider $ QRD.updateNightSafetyChecksAndConsent req.nightSafetyCheck req.consentToShareMobileNumber riderDetails.id
+  (storedRiderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
+  unless isNewRider $ do
+    QRD.updateNightSafetyChecks req.nightSafetyCheck storedRiderDetails.id
+    whenJust req.consentToShareMobileNumber $ \consent -> QRD.updateConsentToShareMobileNumber (Just consent) storedRiderDetails.id
+  let riderDetails = storedRiderDetails {DRD.consentToShareMobileNumber = maybe storedRiderDetails.consentToShareMobileNumber Just req.consentToShareMobileNumber}
 
   case validatedQuote of
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails
@@ -239,7 +242,7 @@ handler merchant req validatedQuote = do
 
     updateBookingDetails isNewRider booking riderDetails = do
       when isNewRider $ QRD.create riderDetails
-      QRB.updateRiderId booking.id riderDetails.id
+      QRB.updateRiderIdAndConsentSnapshot booking.id riderDetails.id riderDetails.consentToShareMobileNumber
       QL.updateAddress booking.fromLocation.id req.fromAddress
       whenJust booking.toLocation $ \toLocation -> do
         whenJust req.toAddress $ \toAddress -> QL.updateAddress toLocation.id toAddress

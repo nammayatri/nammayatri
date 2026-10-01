@@ -180,6 +180,7 @@ data RiderConfigT f = RiderConfigT
     policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     postRideSafetyNotificationDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     ptCircuitBreakerConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    pushConsentToBpp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     qrTicketRestrictionEndTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
     qrTicketRestrictionStartTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
     refundBufferTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

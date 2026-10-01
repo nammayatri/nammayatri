@@ -183,6 +183,7 @@ data RiderConfig = RiderConfig
     policeTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
     ptCircuitBreakerConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    pushConsentToBpp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     qrTicketRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     qrTicketRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     refundBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
