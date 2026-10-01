@@ -745,11 +745,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
-        offersByProduct <-
-          concat
-            <$> forM
-              productsWithAmount
-              (\productWithAmount@(productId, _) -> DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId [productWithAmount] currency (domainContextFor productId) mbRider)
+        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
             language = fromMaybe ENGLISH person.language
