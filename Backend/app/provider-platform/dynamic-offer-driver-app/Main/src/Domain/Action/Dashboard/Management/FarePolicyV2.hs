@@ -418,6 +418,7 @@ postFarePolicyV2Preview merchantShortId opCity req = do
               isScheduled = isJust trip.rideTime,
               timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
               tollCharges = Nothing,
+              isManualTollCharge = False,
               noOfStops = 0,
               currency = domainPolicy.currency,
               distanceUnit = domainPolicy.distanceUnit,

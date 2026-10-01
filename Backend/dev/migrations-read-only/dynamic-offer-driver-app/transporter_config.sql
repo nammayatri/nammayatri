@@ -1266,3 +1266,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN fare_recomput
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN fare_recompute_daily_extra_kms_threshold DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_distance_diff_threshold DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_charge_config json ;

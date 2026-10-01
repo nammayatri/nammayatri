@@ -47,6 +47,7 @@ module Domain.Action.UI.Ride.EndRide.TollDecision
   ( TollInput (..),
     TollBilling (..),
     decideTollBilling,
+    hasNoTollEvidence,
   )
 where
 
@@ -135,3 +136,12 @@ decideTollBilling TollInput {..} = do
         if maybe False (> 0) estimatedTollCharges
           then detected (Just Sure)
           else detected Nothing
+
+-- | True when a toll was estimated but nothing corroborates it (no detection, no matched pending
+-- toll, no GPS-uncertain deviation) — flags a Sure from decideTollBilling as hollow in that case.
+hasNoTollEvidence :: TollInput -> Bool
+hasNoTollEvidence TollInput {..} =
+  maybe False (> 0) estimatedTollCharges && isNothing detectedTollCharges && not rawGpsSawToll && not pendingTollMatched
+  where
+    pendingTollMatched = not pickupDropOutsideOfThreshold && isJust validatedPendingToll
+    rawGpsSawToll = (distanceCalculationFailed || maybe False (> 0) numberOfSelfTuned) && driverDeviatedToTollRoute == Just True
