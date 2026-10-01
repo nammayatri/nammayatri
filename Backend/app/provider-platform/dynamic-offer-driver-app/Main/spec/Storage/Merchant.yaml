@@ -1183,6 +1183,7 @@ TransporterConfig:
     authIpBlockedUntilInMins: Maybe Minutes
     pickupLocThreshold: Meters
     dropLocThreshold: Meters
+    interCityDropLocThreshold: Maybe Meters
     tripStartGeofenceRadius: Maybe Meters
     tripEndGeofenceRadius: Maybe Meters
     tripStartLeadTime: Maybe Minutes

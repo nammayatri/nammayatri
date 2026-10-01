@@ -629,6 +629,8 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         passedThroughDestination = Nothing,
         deliveryFileIds = Nothing,
         destinationReachedAt = Nothing,
+        returnOtp = Nothing,
+        returnStartedAt = Nothing,
         estimatedEndTimeRange = Nothing,
         rideTags = Nothing,
         hasStops = booking.hasStops,

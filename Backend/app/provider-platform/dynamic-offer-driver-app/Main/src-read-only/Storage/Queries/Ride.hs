@@ -173,6 +173,14 @@ updateReferralFlagReason referralFlagReason id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.referralFlagReason referralFlagReason, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateReturnOtp :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateReturnOtp returnOtp id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.returnOtp returnOtp, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateReturnStartedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateReturnStartedAt returnStartedAt id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.returnStartedAt returnStartedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateRideTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateRideTags rideTags id = do
   _now <- getCurrentTime

@@ -104,6 +104,8 @@ data RideT f = RideT
     previousRideTripEndTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     reactBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     referralFlagReason :: (B.C f (Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason)),
+    returnOtp :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    returnStartedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     rideEndedBy :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy)),
     rideTags :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     safetyAlertTriggered :: (B.C f Kernel.Prelude.Bool),

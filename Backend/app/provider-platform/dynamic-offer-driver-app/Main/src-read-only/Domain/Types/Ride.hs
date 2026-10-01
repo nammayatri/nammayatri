@@ -109,6 +109,8 @@ data Ride = Ride
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referralFlagReason :: Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason,
+    returnOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    returnStartedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,

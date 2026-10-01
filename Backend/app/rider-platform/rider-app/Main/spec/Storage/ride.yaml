@@ -87,6 +87,7 @@ Ride:
     vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
     endOtp: Maybe Text
+    returnOtp: Maybe Text
     trackingUrl: Maybe BaseUrl
     fare: Maybe Price
     totalFare: Maybe Price
@@ -131,6 +132,7 @@ Ride:
     favCount: Maybe Int
     safetyJourneyStatus: Maybe SosJourneyStatus
     destinationReachedAt: Maybe UTCTime
+    returnStartedAt: Maybe UTCTime
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     tipAmount: Maybe Price
     wasRideSafe: Maybe Bool
@@ -313,6 +315,10 @@ Ride:
     shortId: SecondaryKey
 
   queries:
+    updateReturnOtp:
+      kvFunction: updateOneWithKV
+      params: [returnOtp]
+      where: id
     findById:
       kvFunction: findOneWithKV
       where: id
@@ -336,6 +342,10 @@ Ride:
     updateDestinationReachedAt:
       kvFunction: updateOneWithKV
       params: [destinationReachedAt]
+      where: id
+    updateReturnStartedAt:
+      kvFunction: updateOneWithKV
+      params: [returnStartedAt]
       where: id
     updateTipByRideId:
       kvFunction: updateOneWithKV

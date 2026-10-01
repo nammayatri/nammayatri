@@ -26,6 +26,7 @@ module Beckn.ACL.Common.Order
     tfCancelReqToOrder,
     tfArrivedReqToOrder,
     tfReachedDestinationReqToOrder,
+    tfReturnTripStartedReqToOrder,
   )
 where
 
@@ -420,8 +421,32 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
 tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
 tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   let BookingDetails {..} = bookingDetails
-      driverReachedDestinationTags = if isValueAddNP then Utils.mkDestinationReachedTimeTagGroupV2 destinationArrivalTime else Nothing
+      destinationReachedTimeTags = if isValueAddNP then Utils.mkDestinationReachedTimeTagGroupV2 destinationArrivalTime else Nothing
+      returnTripOtpTags = Utils.mkReturnTripOtpTagGroup ride.returnOtp
+      driverReachedDestinationTags = destinationReachedTimeTags <> returnTripOtpTags
   fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing driverReachedDestinationTags Nothing False False Nothing (Just $ show EventEnum.DRIVER_REACHED_DESTINATION) isValueAddNP Nothing False 0
+  pure $
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing,
+        orderTags = Nothing,
+        orderStatus = Nothing,
+        orderCreatedAt = Just booking.createdAt,
+        orderUpdatedAt = Just booking.updatedAt
+      }
+
+tfReturnTripStartedReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DReturnTripStartedReq -> m Spec.Order
+tfReturnTripStartedReqToOrder OU.DReturnTripStartedReq {..} = do
+  let BookingDetails {..} = bookingDetails
+      returnTripStartedTimeTags = if isValueAddNP then Utils.mkReturnTripStartedTimeTagGroup returnStartedAt else Nothing
+  fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing returnTripStartedTimeTags Nothing False False Nothing (Just $ show EventEnum.RETURN_TRIP_STARTED) isValueAddNP Nothing False 0
   pure $
     Spec.Order
       { orderId = Just $ booking.id.getId,

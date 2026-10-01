@@ -308,6 +308,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.graceTimeForScheduledRidePickup (Kernel.Prelude.Just $ Kernel.Utils.Common.nominalDiffTimeToSeconds graceTimeForScheduledRidePickup),
       Se.Set Beam.includeDriverCurrentlyOnRide includeDriverCurrentlyOnRide,
       Se.Set Beam.individualPANCheck individualPANCheck,
+      Se.Set Beam.interCityDropLocThreshold interCityDropLocThreshold,
       Se.Set Beam.invoiceConfig (Data.Aeson.toJSON <$> invoiceConfig),
       Se.Set Beam.isAAEnabledForRecurring isAAEnabledForRecurring,
       Se.Set Beam.isAvoidToll isAvoidToll,

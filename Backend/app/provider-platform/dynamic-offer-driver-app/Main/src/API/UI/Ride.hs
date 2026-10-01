@@ -134,6 +134,12 @@ type API =
                     :> Post '[JSON] APISuccess
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
+                    :> "returnTrip"
+                    :> "start"
+                    :> ReqBody '[JSON] StartReturnTripReq
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
                     :> Capture "stopId" (Id DL.Location)
                     :> "stop"
@@ -157,6 +163,11 @@ data StartRideReq = StartRideReq
   { rideOtp :: Text,
     point :: LatLong,
     odometer :: Maybe Ride.OdometerReading
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data StartReturnTripReq = StartReturnTripReq
+  { returnOtp :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -190,6 +201,7 @@ handler =
              :<|> uploadOdometerReading
              :<|> uploadDeliveryImage
              :<|> arrivedAtDestination
+             :<|> startReturnTrip
              :<|> arrivedStop
              :<|> departedStop
              :<|> markDriverGpsTurnedOff
@@ -306,6 +318,9 @@ uploadDeliveryImage (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploa
 
 arrivedAtDestination :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtDestination (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtDestination rideId req
+
+startReturnTrip :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartReturnTripReq -> FlowHandler APISuccess
+startReturnTrip (_, _, _) rideId StartReturnTripReq {..} = withFlowHandlerAPI $ DRide.startReturnTrip rideId returnOtp
 
 markDriverGpsTurnedOff :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> FlowHandler APISuccess
 markDriverGpsTurnedOff (_, _, _) rideId = withFlowHandlerAPI $ DRide.setDriverGpsTurnedOff rideId

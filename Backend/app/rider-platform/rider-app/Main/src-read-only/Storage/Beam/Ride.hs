@@ -95,6 +95,8 @@ data RideT f = RideT
     pickupRouteCallCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     pickupSpeedInMPS :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     refundRequestStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus)),
+    returnOtp :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    returnStartedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     rideEndTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     rideRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     rideStartTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),

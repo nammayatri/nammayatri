@@ -1211,3 +1211,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_share_li
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_share_link_expiry_hours integer ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_legal_compliance_documents boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_go_online_policy_blocker boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN inter_city_drop_loc_threshold integer ;

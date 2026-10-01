@@ -330,3 +330,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN pickup_distance_calculation_f
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN scheduled_acceptance_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN return_started_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN return_otp text ;
