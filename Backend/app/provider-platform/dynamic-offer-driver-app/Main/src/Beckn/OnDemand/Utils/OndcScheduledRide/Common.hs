@@ -5,6 +5,7 @@ module Beckn.OnDemand.Utils.OndcScheduledRide.Common
     scheduledCategoryCode,
     overrideOrderCategoryIds,
     overrideOrderFulfillmentState,
+    overrideOrderFulfillmentStateCode,
     overrideFulfillmentType,
     patchOrderFulfillmentTypes,
     patchProviderFulfillmentTypes,
@@ -114,6 +115,15 @@ overrideOrderFulfillmentState order =
       | code == show Enums.NEW = show Enums.RIDE_CONFIRMED
       | code == show Enums.SCHEDULED_RIDE_ASSIGNED = show Enums.RIDE_ASSIGNED
       | otherwise = code
+
+-- Forces every fulfillment's state code to the given one, for a push that reuses an already-built message whose Layer 1 state names a different event than the one being sent. Cancellation terms are left alone -- they enumerate states, they don't report the current one.
+overrideOrderFulfillmentStateCode :: Enums.FulfillmentState -> Spec.Order -> Spec.Order
+overrideOrderFulfillmentStateCode state order =
+  order {Spec.orderFulfillments = map fixFulfillment <$> order.orderFulfillments}
+  where
+    fixFulfillment fulfillment = fulfillment {Spec.fulfillmentState = setState <$> fulfillment.fulfillmentState}
+    setState fulfillmentState = fulfillmentState {Spec.fulfillmentStateDescriptor = setDescriptor <$> fulfillmentState.fulfillmentStateDescriptor}
+    setDescriptor descriptor = descriptor {Spec.descriptorCode = Just (show state)}
 
 -- FulfillmentType --------------------------------------------------------
 
