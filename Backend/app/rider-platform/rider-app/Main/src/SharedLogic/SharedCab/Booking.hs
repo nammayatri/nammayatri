@@ -15,13 +15,15 @@ module SharedLogic.SharedCab.Booking
     shared,
     nonTerminalStatuses,
     liveBookingsForVehicle,
-    seatWeight,
-    bookingSeatWeight,
+    bookingSeats,
+    partySizes,
+    partyOf,
   )
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -103,19 +105,25 @@ seatsOnVehicle keep plate = do
     then pure 0
     else do
       tickets <- QFRFSTicket.findAllByTicketBookingIds (map (.id) counted)
-      fmap sum . forM counted $ \b -> do
-        let statuses = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
-        if keep statuses then (* seatsHeld statuses) <$> bookingSeatWeight b (length statuses) else pure 0
+      parties <- partySizes counted
+      pure $ sum [bookingSeats (partyOf parties b) statuses | b <- counted, let statuses = [t.status | t <- tickets, t.frfsTicketBookingId == b.id], keep statuses]
 
--- | Seats per held ticket row: a booking of `quantity` riders on `rows` ticket rows. The direct seller issues one group
--- ticket for the whole party (quantity 2 on 1 row weighs 2); a seller issuing a ticket per rider weighs 1.
-seatWeight :: Int -> Int -> Int
-seatWeight quantity rows = (max 1 quantity + r - 1) `div` r
-  where
-    r = max 1 rows
+-- | A booking holds its whole party's seats while any of its ticket rows is still held, whatever the seller's row
+-- shape (one group ticket for the party, or one ticket per rider), and none once every row is dropped.
+bookingSeats :: Int -> [DFRFSTicket.FRFSTicketStatus] -> Int
+bookingSeats party statuses = if seatsHeld statuses > 0 then max 1 party else 0
 
-bookingSeatWeight :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DFRFSTicketBooking.FRFSTicketBooking -> Int -> m Int
-bookingSeatWeight booking rows = (`seatWeight` rows) . sum . map (.selectedQuantity) <$> QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+-- | The party size (riders) of each booking: the sum of its quote's selected categories, one query for all of them.
+partySizes :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => [DFRFSTicketBooking.FRFSTicketBooking] -> m (Map.Map Text Int)
+partySizes bookings
+  | null bookings = pure Map.empty
+  | otherwise = do
+    categories <- QFRFSQuoteCategory.findAllByQuoteIds (map (.quoteId) bookings)
+    let byQuote = Map.fromListWith (+) [(c.quoteId.getId, c.selectedQuantity) | c <- categories]
+    pure $ Map.fromList [(b.id.getId, Map.findWithDefault 1 b.quoteId.getId byQuote) | b <- bookings]
+
+partyOf :: Map.Map Text Int -> DFRFSTicketBooking.FRFSTicketBooking -> Int
+partyOf parties b = max 1 (Map.findWithDefault 1 b.id.getId parties)
 
 riderFixKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
 riderFixKey bookingId = "sharedcab:riderfix:" <> bookingId.getId

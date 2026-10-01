@@ -79,6 +79,7 @@ import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.Person as QP
@@ -591,9 +592,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               else do
                 QJourneyLeg.updateMode legMode leg.id
                 legs <- QJourneyLeg.getJourneyLegs leg.journeyId
-                mbJourney <- QJourney.findByPrimaryKey leg.journeyId
-                whenJust mbJourney $ \journey ->
-                  QJourney.updateByPrimaryKey journey {DJ.modes = [if l.id == leg.id then legMode else l.mode | l <- sortOn (.sequenceNumber) legs]}
+                QJourneyExtra.updateModes [if l.id == leg.id then legMode else l.mode | l <- sortOn (.sequenceNumber) legs] leg.journeyId
                 pure leg {DJL.mode = legMode}
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)

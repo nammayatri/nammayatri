@@ -5,6 +5,9 @@ module SharedLogic.SharedCab.SpotBooking
     liveSharedCabByCode,
     CodeResolution (..),
     resolveCode,
+    WalkUpChoice (..),
+    cabRouteRequest,
+    chooseWalkUp,
     isStickerCode,
     sharedCabVehicleData,
   )
@@ -45,6 +48,24 @@ resolveCode code plates = case nub (filter ((== code) . T.takeEnd 4) plates) of
   [] -> NoCab
   [plate] -> OneCab plate
   _ -> ManyCabs
+
+-- | Whether route serviceability is answered from the cabs: only when the shared-cab feed's route list could be read (Nothing
+-- = no feed in this city, or the OTP call failed, so the unchanged bus path runs) and every requested route is one of its routes.
+cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
+cabRouteRequest Nothing _ = False
+cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
+
+data WalkUpChoice b e = UseBus b | UseCab Text | PickRoute | NotFound e
+  deriving (Show, Eq)
+
+-- | A typed four-digit code is a bus first: the bus/plate lookup keeps its meaning and a cab is tried only when it found
+-- nothing. Ambiguity then applies among cabs only.
+chooseWalkUp :: Either e b -> CodeResolution -> WalkUpChoice b e
+chooseWalkUp (Right bus) _ = UseBus bus
+chooseWalkUp (Left err) resolution = case resolution of
+  OneCab plate -> UseCab plate
+  ManyCabs -> PickRoute
+  NoCab -> NotFound err
 
 -- | A typed sticker code resolved among the cabs live on the city's shared-cab routes (one route-set read per route,
 -- the same index the route view uses), never the whole fleet.

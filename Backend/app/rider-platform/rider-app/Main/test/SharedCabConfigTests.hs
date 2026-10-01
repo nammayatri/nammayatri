@@ -41,12 +41,17 @@ tests =
               noLocationSpotBookingsPerVehiclePerDay = 5
             },
       testGroup
-        "agency key shared by several integrated configs"
-        [ testCase "the APPLICATION row wins, whatever order the DB lists them in" $
-            map (fmap snd . pickAgencyRow fst) [[((MULTIMODAL, "a9"), "multi" :: String), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]] @?= [Just "app", Just "app"],
-          testCase "without an APPLICATION row the lowest id is picked, deterministically" $
-            fmap snd (pickAgencyRow fst [((MULTIMODAL, "b"), "second" :: String), ((PARTNERORG, "a"), "first")]) @?= Just "first",
+        "agency key shared by several integrated configs: each caller gets the row of its own platform"
+        [ testCase "a journey caller (MULTIMODAL) gets the MULTIMODAL row, whatever order the DB lists them in" $
+            map (fmap snd . pickAgencyRow MULTIMODAL fst) rows @?= [Just "multi", Just "multi"],
+          testCase "the driver proxy (APPLICATION) gets the APPLICATION row, whatever order" $
+            map (fmap snd . pickAgencyRow APPLICATION fst) rows @?= [Just "app", Just "app"],
+          testCase "a caller whose platform has no row gets the lowest id, deterministically" $
+            map (fmap snd . pickAgencyRow PARTNERORG fst) rows @?= [Just "app", Just "app"],
           testCase "no rows is Nothing" $
-            fmap snd (pickAgencyRow fst ([] :: [((PlatformType, Text), String)])) @?= Nothing
+            fmap snd (pickAgencyRow APPLICATION fst ([] :: [((PlatformType, Text), String)])) @?= Nothing
         ]
     ]
+  where
+    rows :: [[((PlatformType, Text), String)]]
+    rows = [[((MULTIMODAL, "a9"), "multi"), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]]

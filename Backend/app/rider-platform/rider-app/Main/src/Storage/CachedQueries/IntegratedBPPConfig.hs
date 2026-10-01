@@ -64,15 +64,16 @@ findById integratedBPPConfigId = do
                 pure dataToBeCached
           )
 
-findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
-findByAgencyId agencyKey = do
-  let cacheKey = buildAgencyCacheKey agencyKey
+-- | The row of an agency key for the caller's platform type (journeys want MULTIMODAL, the driver proxy APPLICATION).
+findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m (Maybe IntegratedBPPConfig)
+findByAgencyId agencyKey platformType = do
+  let cacheKey = buildAgencyCacheKey agencyKey platformType
   -- Redis only: an in-memory layer would pin a miss for an hour, and a Nothing is never cached anywhere
   Hedis.safeGet cacheKey
     >>= ( \case
             Just a -> pure a
             Nothing -> do
-              dataToBeCached <- QueriesExtra.findByAgencyIdDeterministic agencyKey
+              dataToBeCached <- QueriesExtra.findByAgencyIdDeterministic agencyKey platformType
               when (isJust dataToBeCached) $ do
                 expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
                 Hedis.setExp cacheKey dataToBeCached expTime
@@ -111,8 +112,8 @@ buildDomainCacheKey domain merchantOperatingCityId vehicleCategory platformType 
 buildIdCacheKey :: Id IntegratedBPPConfig -> Text
 buildIdCacheKey integratedBPPConfigId = "CachedQueries:IntegratedBPPConfig:Id-" <> getId integratedBPPConfigId
 
-buildAgencyCacheKey :: Text -> Text
-buildAgencyCacheKey agencyKey = "CachedQueries:IntegratedBPPConfig:AgencyId-" <> agencyKey
+buildAgencyCacheKey :: Text -> PlatformType -> Text
+buildAgencyCacheKey agencyKey platformType = "CachedQueries:IntegratedBPPConfig:AgencyId-" <> agencyKey <> ":" <> show platformType
 
 buildPlatformCacheKey :: Text -> VehicleCategory -> PlatformType -> Text
 buildPlatformCacheKey domain vehicleCategory platformType =

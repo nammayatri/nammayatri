@@ -7,6 +7,7 @@ import Control.Monad.Extra (mapMaybeM)
 import Data.List (maximumBy, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Types.Common
 import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as JL
@@ -25,6 +26,13 @@ import qualified Storage.Queries.FRFSTicketBooking as QTicketBooking
 import Storage.Queries.OrphanInstances.Journey
 
 -- Extra code goes here --
+
+-- | Targeted write of the modes column only, so a concurrent status or payment update of the journey is not overwritten.
+updateModes :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.Common.MultimodalTravelMode] -> Kernel.Types.Id.Id DJ.Journey -> m ()
+updateModes modes journeyId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.modes modes, Se.Set Beam.updatedAt now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+
 findAllActiveByRiderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m [DJ.Journey]
 findAllActiveByRiderId riderId = do
   now <- getCurrentTime

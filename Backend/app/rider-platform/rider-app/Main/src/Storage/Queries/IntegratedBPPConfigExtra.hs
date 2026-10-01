@@ -18,16 +18,18 @@ import qualified Storage.Beam.IntegratedBPPConfig as Beam
 import Storage.Queries.OrphanInstances.IntegratedBPPConfig
 
 -- | Which row an agency key names when several rows share it (the shared-cab feed has a MULTIMODAL row for journeys and an
--- APPLICATION row for the driver proxy and session): the APPLICATION one, else the lowest id, never "whichever the DB lists first".
-pickAgencyRow :: (a -> (Domain.Types.IntegratedBPPConfig.PlatformType, Text)) -> [a] -> Maybe a
-pickAgencyRow key rows = listToMaybe (sortOn (\r -> let (platform, rowId) = key r in (platform /= Domain.Types.IntegratedBPPConfig.APPLICATION, rowId)) rows)
+-- APPLICATION row for the driver proxy and session): the caller's platform type first, else the lowest id, never "whichever
+-- the DB lists first" (the generated findOne returns Nothing when two rows match).
+pickAgencyRow :: Domain.Types.IntegratedBPPConfig.PlatformType -> (a -> (Domain.Types.IntegratedBPPConfig.PlatformType, Text)) -> [a] -> Maybe a
+pickAgencyRow preferred key rows = listToMaybe (sortOn (\r -> let (platform, rowId) = key r in (platform /= preferred, rowId)) rows)
 
 findByAgencyIdDeterministic ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Prelude.Text ->
+  Domain.Types.IntegratedBPPConfig.PlatformType ->
   m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
-findByAgencyIdDeterministic agencyKey =
-  pickAgencyRow (\c -> (c.platformType, Kernel.Types.Id.getId c.id)) <$> findAllWithKV [Se.Is Beam.agencyKey $ Se.Eq agencyKey]
+findByAgencyIdDeterministic agencyKey preferred =
+  pickAgencyRow preferred (\c -> (c.platformType, Kernel.Types.Id.getId c.id)) <$> findAllWithKV [Se.Is Beam.agencyKey $ Se.Eq agencyKey]
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

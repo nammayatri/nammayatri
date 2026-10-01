@@ -113,7 +113,7 @@ import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (bookingSeatWeight, liveSeatsOnVehicle, recordCancelReason, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, partyOf, partySizes, recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.DegradedSweepSchedule (sharedCabAllocationEnabled)
@@ -911,10 +911,11 @@ allocationPass cityId = do
       -- expired timers first: the seats they free are claimable in this same tick
       let silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (fromMaybe [] (lookup route positionsByRoute))
       expireTimers cfg now movingOn silentOn live
-      findings <- forM (mapMaybe (\entry -> (\fb -> (fst entry, length (snd entry), fb)) <$> findingOf entry) live) $ \(b, rows, fb) -> do
+      let findingEntries = mapMaybe (\entry -> (fst entry,) <$> findingOf entry) live
+      parties <- partySizes (map fst findingEntries) -- one query for the tick; a party needs all its seats
+      findings <- forM findingEntries $ \(b, fb) -> do
         since <- readFindingSince fb.bookingId fb.findingSince
-        weight <- bookingSeatWeight b rows -- a party of two on one group ticket needs two seats
-        pure (b, fb {findingSince = since, seats = fb.seats * weight})
+        pure (b, fb {findingSince = since, seats = partyOf parties b})
       pushTimeFallbacks cfg now findings
       forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
         whenJust (lookup routeCode positionsByRoute) $ \positions -> do

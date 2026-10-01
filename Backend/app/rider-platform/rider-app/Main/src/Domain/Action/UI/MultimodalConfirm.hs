@@ -112,6 +112,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Types.APISuccess
@@ -871,24 +872,26 @@ getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber
   -- A plate with a live shared-cab session is a spot booking's first step (05 §4), whatever vehicleType the app sent.
   SharedCabSpot.liveSharedCab vehicleNumber >>= \case
     Just session -> SharedCabSpot.sharedCabVehicleData session
-    Nothing -> do
-      -- a typed four-digit sticker code: the one live cab of the rider's city that ends in it, else the bus path (no cab) or a pick-a-route error (several)
-      mbCodeSession <-
-        if SharedCabSpot.isStickerCode vehicleNumber
-          then
+    Nothing
+      | SharedCabSpot.isStickerCode vehicleNumber -> do
+        -- a typed four-digit code is a bus first (the existing lookup keeps its meaning); a cab of the rider's city is tried only when it found nothing
+        busResult <- withTryCatch "walkUp:busFirst" busPath
+        resolution <- case busResult of
+          Right _ -> pure SharedCabSpot.NoCab
+          Left _ ->
             UISharedCab.findSharedCabConfig mbPersonId >>= \case
-              Nothing -> pure Nothing
-              Just ibc ->
-                SharedCabSpot.liveSharedCabByCode ibc vehicleNumber >>= \case
-                  SharedCabSpot.OneCab plate -> SharedCabSpot.liveSharedCab plate
-                  SharedCabSpot.ManyCabs -> throwError CodeAmbiguous
-                  SharedCabSpot.NoCab -> pure Nothing
-          else pure Nothing
-      case mbCodeSession of
-        Just session -> SharedCabSpot.sharedCabVehicleData session
-        Nothing -> case vehicleType of
-          BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
-          _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
+              Nothing -> pure SharedCabSpot.NoCab
+              Just ibc -> SharedCabSpot.liveSharedCabByCode ibc vehicleNumber
+        case SharedCabSpot.chooseWalkUp busResult resolution of
+          SharedCabSpot.UseBus bus -> pure bus
+          SharedCabSpot.UseCab plate -> SharedCabSpot.liveSharedCab plate >>= maybe (either throwM pure busResult) SharedCabSpot.sharedCabVehicleData
+          SharedCabSpot.PickRoute -> throwError CodeAmbiguous
+          SharedCabSpot.NotFound err -> throwM err
+      | otherwise -> busPath
+  where
+    busPath = case vehicleType of
+      BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing (Just True) Nothing (Just vehicleNumber) (Just BUS) True mbNewServiceTiers
+      _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
 
 -- Bus block/unblock helpers (Redis-backed, TTL'd). Bus-only, so kept local to this module.
 
@@ -2126,21 +2129,27 @@ postMultimodalRouteServiceability ::
   )
 postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes req =
   findSharedCabRoutes >>= \case
-    Just (cabIbc, legReqs, cabRouteCodes)
-      | all (`elem` cabRouteCodes) (concatMap (.routeCodes) legReqs) ->
+    Just (cabIbc, legReqs, feedRouteCodes)
+      | SharedCabSpot.cabRouteRequest feedRouteCodes (concatMap (.routeCodes) legReqs) ->
         authenticateRider >>= \person -> sharedCabRouteServiceability person cabIbc req.vehicleNumber legReqs
     _ -> postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req
   where
     authenticateRider = do
       personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
       QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    -- a request naming only routes of the city's shared-cab feed (own IBC, not the bus one) is answered from the cabs live on them
+    -- a request naming only routes of the city's shared-cab feed (own IBC, not the bus one) is answered from the cabs live on them.
+    -- Only a city with a shared-cab feed pays for the route list (cached for five minutes), and any failure of it leaves the
+    -- request on the unchanged bus path, so a cab-feed hiccup never fails bus serviceability.
     findSharedCabRoutes = case req.routeCodes of
       Just legReqs@(_ : _)
         | not (null (concatMap (.routeCodes) legReqs)) ->
-          UISharedCab.findSharedCabConfig mbPersonId >>= \case
-            Just cabIbc -> (\routes -> Just (cabIbc, legReqs, map (.code) routes)) <$> OTPRest.getRoutesByGtfsId cabIbc
-            Nothing -> pure Nothing
+          withTryCatch "routeServiceability:sharedCabFeed" (UISharedCab.findSharedCabConfig mbPersonId) >>= \case
+            Right (Just cabIbc) -> do
+              feed <-
+                withTryCatch "routeServiceability:sharedCabFeedRoutes" $
+                  IM.withInMemCache ["SharedCabFeedRoutes:" <> cabIbc.id.getId] 300 (map (.code) <$> OTPRest.getRoutesByGtfsId cabIbc)
+              pure $ Just (cabIbc, legReqs, either (const Nothing) Just feed)
+            _ -> pure Nothing
       _ -> pure Nothing
 
 -- | The cabs live on a shared-cab route as route serviceability's live vehicles: the route's active sessions with their

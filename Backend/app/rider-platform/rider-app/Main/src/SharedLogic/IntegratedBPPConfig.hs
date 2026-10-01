@@ -52,7 +52,7 @@ findMaybeIntegratedBPPConfigFromAgency ::
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
   let fallback = findByDomainAndCityCP (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' |<|>| fallback) agencyId
+   in maybe fallback (\agencyId' -> findByAgencyIdCP agencyId' platformType |<|>| fallback) agencyId
 
 findIntegratedBPPConfigById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -222,6 +222,6 @@ findByDomainAndCityCP domain mocId vc pt = do
   configs <- getConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = mocId.getId, configId = Nothing, agencyKey = Nothing, domain = Just domain, vehicleCategory = Just vc, platformType = Just pt}) (Just (CQIBC.findAllByDomainAndCityAndVehicleCategory domain mocId vc pt))
   pure $ listToMaybe $ sortBy (\a b -> compare b.createdAt a.createdAt) configs
 
-findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
-findByAgencyIdCP agencyKey =
-  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey))
+findByAgencyIdCP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> PlatformType -> m (Maybe IntegratedBPPConfig)
+findByAgencyIdCP agencyKey platformType =
+  getOneConfig (IntegratedBPPConfigDimensions {merchantOperatingCityId = "", configId = Nothing, agencyKey = Just agencyKey, domain = Nothing, vehicleCategory = Nothing, platformType = Just platformType}) (Just (maybeToList <$> CQIBC.findByAgencyId agencyKey platformType))

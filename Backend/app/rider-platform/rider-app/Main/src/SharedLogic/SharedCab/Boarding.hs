@@ -52,7 +52,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Location as JMLocation
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
-import SharedLogic.SharedCab.Booking (bookingSeatWeight, isSharedCabBooking, liveSeatsOnVehicle, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (bookingSeats, isSharedCabBooking, liveSeatsOnVehicle, partyOf, partySizes, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.DegradedSweepSchedule as DegradedSweepSchedule
@@ -284,8 +284,8 @@ commitBoarding journeyLeg booking target mbOld =
           unless (freshBooking.status == DBookingStatus.CONFIRMED) $ throwError BoardingFailed
           -- the cab this boarding was resolved against (isRebind/forced/proximity) must still be the booking's, or the CAS below would no-op after the tickets flipped
           unless (bindingUnmoved plate booking.vehicleNumber freshBooking.vehicleNumber) $ throwError BoardingFailed
-          weight <- bookingSeatWeight freshBooking (length myTickets)
-          unless (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (length eligible * weight)) $
+          parties <- partySizes [freshBooking]
+          unless (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (bookingSeats (partyOf parties freshBooking) (map (.status) eligible))) $
             throwError CabFull
           -- Ticket FIRST: INPROGRESS — never postFrfsTicketVerify, which marks USED and the journey
           -- layer reads USED as leg completed (05 §2 "Why not USED at boarding").

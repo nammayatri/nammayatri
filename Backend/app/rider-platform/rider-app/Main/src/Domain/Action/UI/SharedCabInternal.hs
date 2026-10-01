@@ -38,7 +38,6 @@ import qualified SharedLogic.SharedCab.Booking as Booking
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.LegState (seatsHeld)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
@@ -70,7 +69,7 @@ getIntegratedBppConfig ibcId = CQIBC.findById ibcId >>= fromMaybeM IntegratedBPP
 -- integrated_bpp_config.agency_key, the GTFS agency gtfsId of the shared-cab feed
 -- ("<feed>:SHARED_CAB", e.g. "shillong_shared_cab:SHARED_CAB").
 getIntegratedBppConfigByAgency :: Text -> Environment.Flow DIBC.IntegratedBPPConfig
-getIntegratedBppConfigByAgency agencyId = CQIBC.findByAgencyId agencyId >>= fromMaybeM IntegratedBPPConfigNotFound
+getIntegratedBppConfigByAgency agencyId = CQIBC.findByAgencyId agencyId DIBC.APPLICATION >>= fromMaybeM IntegratedBPPConfigNotFound
 
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
@@ -130,8 +129,7 @@ postSharedCabRouteSelect mbToken req = do
       pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
     Right session -> do
       void $ seeded session
-      when (isJust req.driverName || isJust req.vehicleModel) $
-        Session.setCabDriverInfo req.vehicleNumber Session.CabDriverInfo {driverName = req.driverName, vehicleModel = req.vehicleModel}
+      Session.setCabDriverInfo req.vehicleNumber Session.CabDriverInfo {driverName = req.driverName, vehicleModel = req.vehicleModel}
       -- 05 §8.7: a route change leaves the unboarded riders of the old route behind (a queued change hasn't happened yet)
       when (maybe False (/= session.routeCode) priorRoute) $ void $ releasing AllocTypes.RouteChanged session
       session' <-
@@ -265,6 +263,7 @@ liveRiderRows stopPoints plate = do
           -- NY sign-up often stores the whole name in firstName; show one word, render a blank as a placeholder.
           nameOf b = fromMaybe "Rider" $ listToMaybe [w | p <- persons, p.id == b.riderId, Just n <- [p.firstName], w <- T.words n]
           statusesOf b = [t.status | t <- tickets, t.frfsTicketBookingId == b.id]
+      parties <- Booking.partySizes bookings
       forM bookings $ \b -> do
         let statuses = statusesOf b
             boarded = DFRFSTicket.INPROGRESS `elem` statuses
@@ -277,7 +276,6 @@ liveRiderRows stopPoints plate = do
             ttl <- Booking.shared $ Redis.ttl key
             pure $ if ttl > 0 then Just (addUTCTime (fromInteger ttl) now) else Nothing
           Nothing -> pure Nothing
-        seatWeight <- Booking.bookingSeatWeight b (length statuses)
         mbFix <- Booking.readRiderFix b.id
         let minutesAway = case (mbFix, Map.lookup b.fromStationCode pointsByCode) of
               (Just lastFix, Just stopPoint) -> Just $ View.walkMinutesAway (realToFrac (distanceBetweenInMeters lastFix.position stopPoint))
@@ -286,7 +284,7 @@ liveRiderRows stopPoints plate = do
           View.RiderRow
             { bookingId = b.id.getId,
               firstName = nameOf b,
-              seats = seatsHeld statuses * seatWeight,
+              seats = Booking.bookingSeats (Booking.partyOf parties b) statuses,
               boardStopCode = b.fromStationCode,
               dropStopCode = b.toStationCode,
               boarded,

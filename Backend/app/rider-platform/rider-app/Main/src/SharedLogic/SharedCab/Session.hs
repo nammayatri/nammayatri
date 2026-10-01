@@ -11,6 +11,7 @@ module SharedLogic.SharedCab.Session
     readSession,
     CabDriverInfo (..),
     setCabDriverInfo,
+    clearCabDriverInfo,
     readCabDriverInfo,
     withPlateLock,
     activeSessionsOnRoute,
@@ -57,8 +58,15 @@ data CabDriverInfo = CabDriverInfo {driverName :: Maybe Text, vehicleModel :: Ma
 driverInfoKey :: Text -> Text
 driverInfoKey plate = "sharedcab:driverinfo:" <> plate
 
+-- | Written on every route select, so a new driver on the plate (or an older app that sends nothing) never shows the
+-- previous driver: an empty info removes the key.
 setCabDriverInfo :: (Redis.HedisFlow m r, MonadFlow m) => Text -> CabDriverInfo -> m ()
-setCabDriverInfo plate info = shared $ Redis.setExp (driverInfoKey plate) info sessionTtlSec
+setCabDriverInfo plate info
+  | isNothing info.driverName && isNothing info.vehicleModel = clearCabDriverInfo plate
+  | otherwise = shared $ Redis.setExp (driverInfoKey plate) info sessionTtlSec
+
+clearCabDriverInfo :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m ()
+clearCabDriverInfo = void . shared . Redis.del . driverInfoKey
 
 readCabDriverInfo :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m (Maybe CabDriverInfo)
 readCabDriverInfo = shared . Redis.safeGet . driverInfoKey
@@ -198,6 +206,7 @@ finish reason s = do
   -- never a phantom ACTIVE cab that keeps taking bookings.
   ended <- saveSession (Just s) (endSession s)
   closeLiveTrip s.vehicleNumber reason now
+  clearCabDriverInfo s.vehicleNumber
   detach s
   ended <$ Events.forSession (Events.Ended (show reason)) s
 
