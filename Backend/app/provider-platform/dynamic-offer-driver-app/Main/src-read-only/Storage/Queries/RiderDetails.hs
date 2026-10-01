@@ -35,6 +35,11 @@ updateCancellationDues cancellationDues id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateConsentToShareMobileNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateConsentToShareMobileNumber consentToShareMobileNumber id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCustomerProfile ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.Person.Gender -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())

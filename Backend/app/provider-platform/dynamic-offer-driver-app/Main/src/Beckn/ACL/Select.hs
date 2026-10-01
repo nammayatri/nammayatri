@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Select (buildSelectReqV2) where
 
+import qualified Beckn.OnDemand.Utils.Common as OUtils
 import Beckn.OnDemand.Utils.Init
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -83,6 +84,7 @@ buildSelectReqV2 subscriber req = do
       customerRating = readTag Tag.CUSTOMER_RATING item.itemTags
       customerTotalRatings = readTag Tag.CUSTOMER_TOTAL_RATINGS item.itemTags
       customerGender = readTag Tag.CUSTOMER_GENDER item.itemTags
+      consentToShareMobileNumber = OUtils.getConsentToShareMobileNumberTag item.itemTags
   logDebug $ "billingCategory: select request" <> show billingCategory <> "transactionId: " <> transactionId
   fulfillment <- case order.orderFulfillments of
     Just [fulfillment] -> pure $ Just fulfillment
@@ -121,6 +123,7 @@ buildSelectReqV2 subscriber req = do
         customerRating = customerRating,
         customerTotalRatings = customerTotalRatings,
         customerGender = customerGender,
+        consentToShareMobileNumber = consentToShareMobileNumber,
         billingCategory = billingCategory,
         ..
       }

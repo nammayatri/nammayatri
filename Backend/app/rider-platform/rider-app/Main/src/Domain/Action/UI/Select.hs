@@ -82,9 +82,11 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
+import qualified Safety.Storage.Queries.SafetySettingsExtra as QSafety
 import qualified SharedLogic.LocationAddressEnrichment as LAE
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Person as SLP
 import SharedLogic.Quote
 import SharedLogic.Type
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -228,7 +230,8 @@ data DSelectRes = DSelectRes
     emailDomain :: Maybe Text,
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Int,
-    customerGender :: DPerson.Gender
+    customerGender :: DPerson.Gender,
+    consentToShareMobileNumber :: Maybe Bool
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -357,6 +360,12 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   decryptedEmail <- mapM decrypt emailToUse
   let emailDomain = T.strip . snd <$> (decryptedEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))
   let emailDomain' = T.drop 1 <$> emailDomain -- drop the leading '@'
+  consentToShareMobileNumber <-
+    if isValueAddNP && fromMaybe False (riderConfig >>= (.enableShareNumberWithDriver))
+      then do
+        safetySettings <- QSafety.findSafetySettingsWithFallback (cast personId) (QSafety.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
+        pure $ Just (fromMaybe False safetySettings.consentToShareMobileNumber)
+      else pure Nothing
   pure
     DSelectRes
       { providerId = estimate.providerId,
