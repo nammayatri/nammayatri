@@ -88,6 +88,12 @@ spec = describe "BecknV2.OnDemand.Enums" $ do
       DRIVER_ASKED_TO_CANCEL `showsAs` "003"
       INCORRECT_PICKUP_LOCATION `showsAs` "004"
 
+    it "OTHERS shows as \"999\"" $ do
+      OTHERS `showsAs` "999"
+
+    it "OTHERS_BPP shares code 999 with OTHERS" $ do
+      OTHERS_BPP `showsAs` "999"
+
   -- ================================================================
   -- CancellationReasonCode (new: UNABLE_TO_CONTACT_RIDER)
   -- ================================================================

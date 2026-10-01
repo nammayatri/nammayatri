@@ -295,7 +295,7 @@ mkReason mbCode mbShortDesc =
 
 ondcCancellationReason :: Text -> (Maybe Text, Maybe Text)
 ondcCancellationReason = \case
-  "DRIVER_CANCEL_CUSTOMER_NO_SHOW" -> (Just "012", Just "Customer did not show up")
+  "DRIVER_CANCEL_CUSTOMER_NO_SHOW" -> (Just "012", Just "Rider not present at location")
   "DRIVER_CANCEL_PASSENGER_UNREACHABLE" -> (Just "014", Just "Passenger unreachable after multiple attempts")
   "DRIVER_CANCEL_INVALID_BOOKING" -> (Just "013", Just "Incorrect, duplicate or cancelled booking")
   "DRIVER_CANCEL_SAFETY_OR_MISCONDUCT" -> (Just "017", Just "Customer misconduct or safety concern")
@@ -312,6 +312,7 @@ ondcCancellationReason = \case
   "ONDC_BOOKED_BY_MISTAKE" -> (Just "005", Just "Customer booked the ride by mistake")
   "ONDC_SAFETY_CONCERN_WITH_DRIVER_OR_RIDE" -> (Just "006", Just "Safety concern with the driver or ride")
   "ONDC_VEHICLE_UNSAFE_OR_NON_COMPLIANT" -> (Just "007", Just "Vehicle appeared unsafe or non-compliant")
+  "ONDC_OTHERS" -> (Just "999", Just "Others")
   _ -> (Nothing, Nothing)
 
 mkCancellationReason :: Bool -> Maybe Text -> Maybe Text -> Maybe Spec.Reason
