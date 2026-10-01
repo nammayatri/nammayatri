@@ -3,8 +3,11 @@
 
 module SharedCabPlateTests (tests) where
 
+import qualified "rider-app" API.Types.UI.FRFSTicketService as ApiFRFS
+import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
+import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate)
-import "rider-app" SharedLogic.SharedCab.SpotBooking (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, chooseWalkUp, isStickerCode, probeBus, resolveCode)
+import "rider-app" SharedLogic.SharedCab.SpotBooking (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteStations, chooseWalkUp, isStickerCode, probeBus, resolveCode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -42,6 +45,11 @@ tests =
             unknown <- probeBus (pure (Nothing :: Maybe (String, Int)))
             failed <- probeBus (ioError (userError "nandi down") :: IO (Maybe (String, Int)))
             (found, unknown, failed) @?= (Just ("bus", 1), Nothing, Nothing),
+          testCase "a cab route's stops come back in stop order with their points and the route's code" $
+            map
+              (\ApiFRFS.FRFSStationAPI {ApiFRFS.code = c, ApiFRFS.sequenceNum = n, ApiFRFS.lat = la, ApiFRFS.routeCodes = rc} -> (c, n, la, rc))
+              (cabRouteStations (Id "ibc") "SC-A-F" Nothing "A to C" [("C", "Charlie", 3, LatLong 25.3 91.3), ("A", "Alpha", 1, LatLong 25.1 91.1), ("B", "Bravo", 2, LatLong 25.2 91.2)])
+              @?= [("A", Just 1, Just 25.1, Just ["SC-A-F"]), ("B", Just 2, Just 25.2, Just ["SC-A-F"]), ("C", Just 3, Just 25.3, Just ["SC-A-F"])],
           testCase "four digits only" $ map isStickerCode ["9999", "ML05", "99999", "999", ""] @?= [True, False, False, False, False]
         ]
     ]

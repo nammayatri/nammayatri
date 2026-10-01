@@ -9,11 +9,13 @@ module SharedLogic.SharedCab.SpotBooking
     cabRouteRequest,
     chooseWalkUp,
     probeBus,
+    cabRouteStations,
     isStickerCode,
     sharedCabVehicleData,
   )
 where
 
+import qualified API.Types.UI.FRFSTicketService as ApiFRFS
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Char as Char
@@ -21,8 +23,10 @@ import Data.List (nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Environment
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -61,6 +65,31 @@ cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`
 -- four digits resolves to the cab (the alternative, failing the walk-up on every transient error, hurts riders more).
 probeBus :: (Monad m, TryException m) => m (Maybe a) -> m (Maybe a)
 probeBus lookupBus = either (const Nothing) identity <$> withTryCatch "walkUp:busProbe" lookupBus
+
+-- | A shared-cab route has no scheduled trip to read its stops from (the feed is frequency based), so its stops and its shape
+-- come from the route's stop mapping, in stop order: the same stops the cab serviceability path and the LTS route geojson
+-- (a LineString through the stops) are built from. (code, name, sequence number, point) per stop.
+cabRouteStations :: Id DIBC.IntegratedBPPConfig -> Text -> Maybe Text -> Text -> [(Text, Text, Int, LatLong)] -> [ApiFRFS.FRFSStationAPI]
+cabRouteStations integratedBppConfigId routeCode color longName stops =
+  [ ApiFRFS.FRFSStationAPI
+      { address = Nothing,
+        code,
+        color,
+        distance = Nothing,
+        integratedBppConfigId,
+        lat = Just point.lat,
+        lon = Just point.lon,
+        name = Just name,
+        parentStopCode = Nothing,
+        routeCodes = Just [routeCode],
+        routeDetails = Just longName,
+        sequenceNum = Just sequenceNum,
+        stationType = Nothing,
+        timeTakenToTravelUpcomingStop = Nothing,
+        towards = Nothing
+      }
+    | (code, name, sequenceNum, point) <- sortOn (\(_, _, sequenceNum, _) -> sequenceNum) stops
+  ]
 
 data WalkUpChoice = UseBus | UseCab Text | PickRoute
   deriving (Show, Eq)

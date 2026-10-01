@@ -107,6 +107,8 @@ import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.PTCircuitBreaker as PTCircuitBreaker
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified SharedLogic.SharedCab.Cancel as SharedCabCancel
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
+import qualified SharedLogic.SharedCab.SpotBooking as SharedCabSpot
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -303,6 +305,11 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
           Nothing -> return []
       else return []
 
+  -- a shared-cab route has no scheduled trip, so its stops (and the shape through them, as the LTS route geojson draws it) come from the stop mapping
+  let cabStops = [(s.stopCode, s.stopName, s.sequenceNum, s.stopPoint) | isSharedCabAgency integratedBPPConfig.agencyKey, s <- stopsSortedBySequenceNumber]
+      stations = if null stops && not (null cabStops) then SharedCabSpot.cabRouteStations integratedBPPConfig.id route.code route.color route.longName cabStops else map snd stops
+      polylineWaypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude})
+      waypoints' = polylineWaypoints <|> (if null cabStops then Nothing else Just [point | (_, _, _, point) <- cabStops])
   return $
     FRFSTicketService.FRFSRouteAPI
       { code = route.code,
@@ -310,10 +317,10 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
         longName = route.longName,
         startPoint = route.startPoint,
         endPoint = route.endPoint,
-        totalStops = Just $ length stops,
-        stops = Just $ map snd stops,
+        totalStops = Just $ length stations,
+        stops = Just stations,
         timeBounds = Just route.timeBounds,
-        waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude}),
+        waypoints = waypoints',
         integratedBppConfigId = integratedBPPConfig.id
       }
   where

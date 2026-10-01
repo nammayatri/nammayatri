@@ -59,6 +59,19 @@ jsonpath "$.status" == "CONFIRMED"
 jsonpath "$.payment" == null
 jsonpath "$.tickets[0].status" == "ACTIVE"
 
+# the shuttle map's route read: a cab route has no scheduled trip, so its stops and shape come from the stop mapping, in order
+GET {{base_url}}/v2/frfs/route/{{route_a}}?city=std:044&vehicleType=%22BUS%22&platformType=%22APPLICATION%22
+token: {{token}}
+HTTP 200
+[Asserts]
+jsonpath "$.stops" count == 4
+jsonpath "$.totalStops" == 4
+jsonpath "$.stops[0].code" == "SC_IEWDUH"
+jsonpath "$.stops[3].code" == "SC_MAWLAI"
+jsonpath "$.stops[0].lat" isFloat
+jsonpath "$.waypoints" count == 4
+jsonpath "$.waypoints[0].lat" isFloat
+
 # release the seat the booking holds, so later flows start from an empty cab
 POST {{base_url}}/v2/frfs/booking/{{bookingId}}/cancel
 token: {{token}}
