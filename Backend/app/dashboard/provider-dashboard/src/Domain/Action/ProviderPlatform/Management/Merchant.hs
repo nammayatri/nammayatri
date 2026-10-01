@@ -81,6 +81,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
     postMerchantCloudUpdate,
+    postMerchantCloudCityUpdate,
   )
 where
 
@@ -761,3 +762,9 @@ postMerchantCloudUpdate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantCloudUpdate) req
+
+postMerchantCloudCityUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateReq -> Environment.Flow Dashboard.Common.Merchant.MerchantOperatingCityCloudUpdateRes)
+postMerchantCloudCityUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.ActionAPI apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantCloudCityUpdate) req
