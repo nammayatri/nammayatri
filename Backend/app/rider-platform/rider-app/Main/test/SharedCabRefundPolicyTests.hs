@@ -12,7 +12,7 @@ import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "rider-app" SharedLogic.SharedCab.Allocation.Types (RiderFix (..))
 import "rider-app" SharedLogic.SharedCab.DriverAction (SharedCabDriverActionError (..), requireReason)
 import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..))
-import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, gatePayOnBoard, owesRefund, refundAmounts, refundWithheld)
+import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..), cancelRefund, gateNoPayment, owesRefund, refundAmounts, refundWithheld)
 import "rider-app" SharedLogic.SharedCab.RefundPolicy
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -111,10 +111,10 @@ tests =
           testCase "plate, timer armed" $ cancelState t0 (Just "ML05A9999") (Just t0) @?= ARRIVING
         ],
       testGroup
-        "pay on board: nothing was paid in-app, so a cancel never produces refund money or a refund marker"
-        [ testCase "a pay-on-board cab owes no refund, whatever the policy allowed" $ map (owesRefund . gatePayOnBoard True) [FullRefund, NoRefund] @?= [False, False],
-          testCase "a pay-on-board cab is charged no cancellation fee either" $ map (refundAmounts 40 . gatePayOnBoard True) [FullRefund, NoRefund] @?= [(0, 0), (0, 0)],
-          testCase "an in-app-paid cab keeps the policy's decision" $ map (gatePayOnBoard False) [FullRefund, NoRefund] @?= [FullRefund, NoRefund],
+        "no payment row (pay on board): a cancel never produces refund money, charges or a refund marker"
+        [ testCase "a booking with no payment owes no refund, whatever the policy allowed" $ map (owesRefund . gateNoPayment False) [FullRefund, NoRefund] @?= [False, False],
+          testCase "and is charged no cancellation fee either" $ map (refundAmounts 40 . gateNoPayment False) [FullRefund, NoRefund] @?= [(0, 0), (0, 0)],
+          testCase "a paid booking keeps the policy's decision, whatever the tier's config says now" $ map (gateNoPayment True) [FullRefund, NoRefund] @?= [FullRefund, NoRefund],
           testCase "the cancel rules still decide whether it may be cancelled" $ decideCancel ByRider BOARDED 0 [INPROGRESS] False @?= Rejected RideStarted
         ],
       testGroup

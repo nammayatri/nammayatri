@@ -3,7 +3,8 @@
 module SharedLogic.SharedCab.RefundDecision
   ( Refund (..),
     isSharedCabBooking,
-    gatePayOnBoard,
+    gateByPayment,
+    gateNoPayment,
     owesRefund,
     refundAmounts,
     refundWithheld,
@@ -20,8 +21,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import SharedLogic.FRFSUtils (getServiceTierTypeFromRouteStationsJson)
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 
 data Refund = FullRefund | NoRefund | NothingPaid
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -37,10 +39,15 @@ refundAmounts baseFare = \case
   NoRefund -> (baseFare, 0)
   NothingPaid -> (0, 0)
 
--- | A pay-on-board booking was never charged in-app, so the cancel policy decides only whether the cancel is allowed
--- (the near-stop, boarded and no-show rules), never money. The one gate every refund decision passes through.
-gatePayOnBoard :: Bool -> Refund -> Refund
-gatePayOnBoard payOnBoard refund = if payOnBoard then NothingPaid else refund
+-- | A booking with no payment row (pay on board, or a pass-covered fare) was never charged in-app: there is nothing to
+-- refund and nothing to keep, whatever the cancel policy decided. The decision is keyed on the payment itself, not on
+-- the tier's current config, so a booking that was paid keeps its refund even if the tier later turns pay-on-board.
+gateNoPayment :: Bool -> Refund -> Refund
+gateNoPayment hasPayment refund = if hasPayment then refund else NothingPaid
+
+-- | The one gate every refund decision passes through.
+gateByPayment :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> Refund -> m Refund
+gateByPayment booking refund = (\mbPayment -> gateNoPayment (isJust mbPayment) refund) <$> QFRFSTicketBookingPayment.findTicketBookingPayment booking
 
 -- | Only FullRefund starts a refund: NoRefund keeps the fare and NothingPaid has none to give back.
 owesRefund :: Refund -> Bool

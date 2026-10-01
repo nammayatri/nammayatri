@@ -49,6 +49,7 @@ module SharedLogic.SharedCab.Allocation
     withCityTickLease,
     allocationPass,
     readRoutePositions,
+    readRoutePosition,
     shared,
     -- pure phase-1 pieces, exported for unit tests (rider-app-test SharedCab suites exist)
     planRouteAllocation,
@@ -110,7 +111,6 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
-import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, recordCancelReason, shared, withBookingLock)
@@ -123,7 +123,7 @@ import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP), fallbackReach
 import qualified SharedLogic.SharedCab.Misses as Misses
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
-import SharedLogic.SharedCab.RefundDecision (Refund (..), gatePayOnBoard, refundAmounts)
+import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -292,6 +292,19 @@ readRoutePositions routeCode = do
   fmap catMaybes . forM pairs $ \(plate, raw) -> case A.fromJSON raw of
     A.Success info -> pure (Just (LT.VehicleTrackingOnRouteResp plate info))
     A.Error err -> Nothing <$ logWarning ("shared-cab tick: dropping LTS field " <> plate <> " on route " <> routeCode <> ": " <> T.pack err)
+
+-- | One cab's field of the same hash (a single HGET): the rider's status poll knows the plate, so it never decodes the
+-- route's other cabs. Nothing on a missing or undecodable field.
+readRoutePosition ::
+  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Text ->
+  Text ->
+  m (Maybe LT.VehicleTrackingOnRouteResp)
+readRoutePosition routeCode plate = do
+  fields <- Redis.runInMultiCloudLTSRedisForListFromReplica $ maybeToList <$> Redis.hGet @A.Value ("route:" <> routeCode) plate
+  pure $ case listToMaybe fields of
+    Just raw | A.Success info <- A.fromJSON raw -> Just (LT.VehicleTrackingOnRouteResp plate info)
+    _ -> Nothing
 
 --------------------------------------------------------------------------------
 -- Phase 1 -- lock-free, once per route (05 §3)
@@ -679,8 +692,8 @@ cancelForNoShows b = do
   void $ QFRFSTicketBooking.updateStatusById CANCELLED b.id
   void $ QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED b.id
   void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) b.id
-  payOnBoard <- FRFSUtils.isPayOnBoard b
-  let (charges, refundAmount) = refundAmounts (fromMaybe b.totalPrice.amount b.overriddenAmount) (gatePayOnBoard payOnBoard NoRefund)
+  decision <- gateByPayment b NoRefund
+  let (charges, refundAmount) = refundAmounts (fromMaybe b.totalPrice.amount b.overriddenAmount) decision
   QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just charges) (Just True) b.id
   -- the journey-level part of a cancel (legs Finished, journey CANCELLED), as a rider cancel does
   void . withTryCatch "sharedCab:cancelForNoShows:cancelJourney" $
