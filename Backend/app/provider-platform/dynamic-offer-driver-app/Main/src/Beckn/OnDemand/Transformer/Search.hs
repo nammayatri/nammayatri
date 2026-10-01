@@ -154,8 +154,7 @@ buildSearchReqRaw messageId bapSubscriberId _bapSubscriberUrl req context actual
         -- The Beckn path never carries a shadow search; only the internal sync_search
         -- endpoint sets this, after building the request.
         isShadowSearch = False,
-        -- Only the internal sync path carries one; a gateway search shares with nobody.
-        parentTransactionId = Nothing,
+        parentTransactionId = if getPublishDynamicPricingInputs req then Just transactionId_ else Nothing,
         ..
       }
 
@@ -233,6 +232,13 @@ getPhoneNumberFromTag customerPhoneNum_ = do
           return Nothing
     Nothing -> do
       return Nothing
+
+getPublishDynamicPricingInputs :: Spec.SearchReqMessage -> Bool
+getPublishDynamicPricingInputs req = fromMaybe False $ do
+  intent <- req.searchReqMessageIntent
+  fulfillment <- intent.intentFulfillment
+  tags <- fulfillment.fulfillmentTags
+  readMaybe . T.unpack =<< Utils.getTag Tags.PUBLISH_DYNAMIC_PRICING_INPUTS (Just tags)
 
 getFromSpecialLocationId :: Spec.SearchReqMessage -> Maybe Text
 getFromSpecialLocationId req = do
