@@ -25,3 +25,6 @@ SET driver_calling_option = 'DirectCall';
 
 UPDATE atlas_app.rider_config
 SET enable_share_number_with_driver = true;
+
+UPDATE atlas_app.rider_config
+SET push_consent_to_bpp = true;

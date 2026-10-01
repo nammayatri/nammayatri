@@ -3,91 +3,96 @@
 E2E coverage for the rider phone-sharing consent gate: the driver app **dials** the
 rider's real mobile number (`callingNumber`) only when the merchant's
 `driver_calling_option` allows direct calling **and** the rider consented
-(`SafetySettings.consentToShareMobileNumber`, carried to the BPP as the
-`CONSENT_TO_SHARE_MOBILE_NUMBER` BECKN tag at confirm). The legacy
+(`SafetySettings.consentToShareMobileNumber`, pushed to the BPP through its
+internal consent API whenever the rider changes it while
+`rider_config.push_consent_to_bpp` is on, and also sent in the confirm tag
+`CONSENT_TO_SHARE_MOBILE_NUMBER`). The legacy
 `riderMobileNumber` field is gated by the merchant option alone.
 
-The consent flow itself is gated on the BAP by
-`atlas_app.rider_config.enable_share_number_with_driver` (default `false`). The
-BPP infers the flow's state from the tag: absent means the flow is off and the
-number is shared regardless of consent; only a present-but-unparseable value
-falls back to "no consent". So the suite must seed the flag `true` — see
-[Seeding](#seeding-the-suite-needs-directcall-and-the-consent-flow-flag-locally).
-
-Spec: `docs/superpowers/specs/2026-07-22-rider-phone-sharing-consent-design.md`.
+`rider_config.enable_share_number_with_driver` (BAP) controls whether the rider
+app shows the consent toggle and auto opt-in, and whether confirm carries the
+consent tag. The BPP writes the tag's value only when the tag is present.
 
 ## What the suite asserts
 
-One collection, three rides by the same (random) rider, under seeded `DirectCall`
-and `enable_share_number_with_driver = true`:
+One collection, three rides by the same (random) rider, under seeded `DirectCall`.
+The rider's consent reaches the BPP (`RiderDetails.consentToShareMobileNumber`)
+through the internal consent API and the confirm tag, and is snapshotted on the
+booking at confirm (`Booking.numberShareConsent`).
 
-| Ride | Rider consent state       | `riderMobileNumber` | `callingNumber.number` | `callingNumber.countryCode` | `callingNumber.numberType` |
-|------|---------------------------|---------------------|-------------------|-----------------------------|---------------------|
-| 1    | never set (tri-state null)| the real number     | equals `exoPhone` | `null`                      | `ANONYMOUS`         |
-| 2    | granted (`true`)          | the real number     | real number, bare (= `riderMobileNumber`) | the rider's country code (e.g. `+91`) | `DIRECT`            |
-| 3    | revoked (`false`)         | the real number     | equals `exoPhone` | `null`                      | `ANONYMOUS`         |
+Calling rule: `callingNumber` is `DIRECT` only when `forceDirectCalling` is on, or
+the merchant option allows direct calling AND the booking snapshot is `true` AND
+the rider's live consent is still `true`. Anything else is `ANONYMOUS`.
+`riderMobileNumber` is unchanged: present whenever the option allows direct calling.
 
-`callingNumber.number` is always bare — no country code, the same format as
-`riderMobileNumber` and `exoPhone`. The client applies its own local dialling
-prefix.
+| Step | Rider consent state | snapshot | live | `riderMobileNumber` | `callingNumber.numberType` |
+|------|---------------------|----------|------|---------------------|----------------------------|
+| Ride 1 | never set | `false` (the confirm tag sends `false` for an unset consent) | `false` | the real number | `ANONYMOUS` (number = `exoPhone`, `countryCode` null) |
+| Ride 1, after mid-ride grant | granted during the ride | `false` | `true` | the real number | `ANONYMOUS` (grant does not unmask the current ride) |
+| Ride 2 | granted before booking | `true` | `true` | the real number | `DIRECT` (bare real number, rider's country code) |
+| Ride 2, after mid-ride revoke | revoked during the ride | `true` | `false` | the real number | `ANONYMOUS` (number = `exoPhone`, immediately) |
+| Ride 3 | revoked before booking | `false` | `false` | the real number | `ANONYMOUS` |
 
-Note the deliberate split: `riderMobileNumber` predates the consent feature
-(PR #15876) and keeps its original behaviour — present whenever the merchant
-enables direct calling, regardless of consent — so already-released driver app
-builds are unaffected. Consent gates only `callingNumber`, which is the field
-new builds dial. Rides 1 and 3 are what prove it: the real number is still in
-`riderMobileNumber`, while `callingNumber` correctly falls back to the exophone.
+`callingNumber.number` is always bare, the same format as `riderMobileNumber` and
+`exoPhone`. The client applies its own local dialling prefix.
+
+`riderMobileNumber` predates the consent feature and keeps its original
+behaviour, so already-released driver app builds are unaffected. Consent gates
+only `callingNumber`, the field new builds dial.
+
+The two mid-ride steps (`Grant Consent Mid-Ride (Ride 1)`,
+`Revoke Consent Mid-Ride (Ride 2)`) each follow with a `Get Ride After ...` fetch of
+the still-active ride. `forceDirectCalling` cities are not covered in-collection
+(ConfigPilot in-memory cache, see below).
 
 Between rides it also asserts the rider API's tri-state directly via
 `GET /profile/getEmergencySettings`: `null` (never asked) → `true` → explicit
 `false` — `null` and `false` are deliberately distinct states.
 
-Before the first consent update, `Enable SOS Contact Settings` sets
-`autoCallDefaultContact` and `notifySosWithEmergencyContacts` to `true`; both
-consent read-backs assert they are still `true`. A consent-only PUT (which is
-what the consumer app's auto opt-in and preference toggle send) must not touch
-them — `updateEmergencySettings` used to default both to `shareEmergencyContacts`,
-i.e. `false`, whenever the request omitted them.
-
-Ride 2 vs ride 3 additionally exercises the BPP's repeat-rider update path
-(`unless isNewRider $ updateNightSafetyChecksAndConsent` at confirm): the
+Ride 2 vs ride 3 additionally exercises the BPP's repeat-rider path: the
 `RiderDetails` row created during ride 1 is flipped to `true` then back to
-`false` by subsequent confirms, proving "consent applies from the next ride".
+`false` by the pushes (the next confirm's tag carries the same value), and each confirm
+snapshots the row's current value onto the booking, proving "consent applies
+from the next ride".
 
-## Seeding: the suite needs `DirectCall` **and** the consent-flow flag locally
+Two steps call the BPP internal API directly (`POST /internal/{merchantId}/riderDetails/consent`,
+mounted at the driver-app root, not under `/ui`; env var `baseURL_namma_P_root`,
+`token` header = env var `bpp_internal_api_key`, `bapId` = env var `bap_id`):
 
-`setup-phone-share-consent.sql` seeds two rows, one per side:
+- `Internal Consent Rejects Bad Token`: a wrong token returns HTTP 400 with `errorCode` `AUTH_BLOCKED`.
+- `Internal Consent Creates Row For New Rider` then `Internal Consent Updates Existing Row`:
+  with a fresh random number (`_test_push_only_number`, never booked)
+  the push alone creates the `RiderDetails` row (`created == 1`, `updated == 0`), and a
+  second push with consent `true` updates it (`updated == 1`, `created == 0`);
+  `failedIndices` is empty in both. This proves the push alone maintains the BPP copy.
 
-- `atlas_driver_offer_bpp.transporter_config.driver_calling_option = 'DirectCall'`
-  (BPP). The upstream/config-synced value is `'AnonymousCall'` for the test
-  cities, under which consent can never expose the number — ride 2's positive
-  assertion fails with `riderMobileNumber = null` even though the consent tag
-  demonstrably reached `rider_details` (this exact failure was observed on
-  2026-07-22; the DB showed `consent_to_share_mobile_number = true` next to
-  `AnonymousCall`, i.e. the kill switch working as designed).
-- `atlas_app.rider_config.enable_share_number_with_driver = true` (BAP). It
-  defaults to `false`, under which the BAP omits the consent tag entirely and
-  the BPP therefore shares the number on every ride — rides 1 and 3, which
-  assert `ANONYMOUS`, would both fail.
+## Seeding: the suite needs `DirectCall` locally
 
-Both are applied to every city so the collection stays city-agnostic.
+`setup-phone-share-consent.sql` seeds, in `atlas_driver_offer_bpp`,
+`transporter_config.driver_calling_option = 'DirectCall'` for every city. The
+upstream/config-synced value is `'AnonymousCall'` for the test cities, under which
+consent can never expose the number: ride 2's positive assertion fails with
+`riderMobileNumber = null` even though the consent reached `rider_details` (the
+kill switch working as designed).
+
+The seed also sets `atlas_app.rider_config.enable_share_number_with_driver = true`
+(BAP), which makes confirm carry the consent tag, and
+`atlas_app.rider_config.push_consent_to_bpp = true`, which turns on the push.
+Without the push flag, a mid-ride revoke is not seen until the next confirm.
 
 Three run paths, each with its own seeding story:
 
-1. **`./run-tests.sh phone-consent`** — self-contained: applies
+1. **`./run-tests.sh phone-consent`**: self-contained: applies
    `setup-phone-share-consent.sql` and then **flushes Redis**, because both
-   tables are cached and running services would otherwise keep serving the stale
-   `AnonymousCall` / `false`.
-2. **Test dashboard** — the dashboard invokes newman directly and never runs the
+   tables are cached and running services would otherwise keep serving stale values.
+2. **Test dashboard**: the dashboard invokes newman directly and never runs the
    seed above. Instead, `dev/config-sync/assets/patches.json` carries
    `dimension_overrides` entries for both
-   (`atlas_driver_offer_bpp.transporter_config` → `driver_calling_option =
-   DirectCall`, `atlas_app.rider_config` → `enable_share_number_with_driver =
-   true`; both present in `patches.json.example` under all three `*_to_local`
-   directions), so every config-sync import re-applies them and flushes Redis
-   itself. **Both are synced tables** — without the patch entries, each sync
-   silently reverts the seed.
-3. **Raw newman** — apply the SQL and flush Redis manually first.
+   (`atlas_driver_offer_bpp.transporter_config` -> `driver_calling_option =
+   DirectCall`, `atlas_app.rider_config` -> `enable_share_number_with_driver =
+   true`), so every config-sync import re-applies them and flushes Redis itself.
+   Both are synced tables, so without the patch entries each sync silently reverts the seed.
+3. **Raw newman**: apply the SQL and flush Redis manually first.
 
 ### The in-process (L1) cache — why "seed + flush Redis" can still not be enough
 
@@ -120,26 +125,13 @@ table has the same staleness window.
   suite (no `tests:` stanza in `Main/package.yaml`), so the kill-switch case
   — `AnonymousCall` + consent `true` → still masked — has no automated
   coverage. Adding that suite is tracked separately.
-- **The flow-off case** (`enable_share_number_with_driver = false` → tag absent →
-  `DIRECT` regardless of consent). Untestable in-collection for the same reason
-  as the kill switch: `rider_config` is ConfigPilot-served, so flipping it
-  between Newman steps needs a Redis flush *plus* a rider-app restart to clear
-  the in-process cache — neither of which newman can do.
-  **Do not "fix" this toward preserving a stored consent.** Cities without the
-  consent flow must always dial directly, and `RiderDetails` is per merchant,
-  not per city: carrying a `false` stored from a consent-flow city into an
-  absent-tag confirm would mask calls in a direct-calling city. The overwrite
-  to `Nothing` is therefore intentional — the BAP's `SafetySettings` is the
-  source of truth and re-sends the explicit value on every consent-flow confirm.
 - **`forceDirectCalling`** (`transporter_config` break-glass override that serves
   the rider's real number as `DIRECT` on active rides regardless of the merchant
   option or rider consent, for use while exophones are down). Untestable
   in-collection for the same cache reason as the kill switch: raising it needs a
   Redis flush plus a `dynamic-offer-driver-app` restart between Newman steps. The
   default-false path is what this suite exercises.
-- **Third-party BAP/BPP behaviour** — out of scope per the spec; the BPP refuses
-  the consent tag from non-value-add NPs (not currently covered by automated
-  tests).
+- **Third-party BAP/BPP behaviour** — out of scope per the spec.
 - **Actual call bridging** (Exotel webhooks) — the suite asserts `exoPhone` is
   present as the fallback, not that a call connects.
 

@@ -148,11 +148,14 @@ updateStopArrival bookingId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Id RiderDetails -> m ()
-updateRiderId rbId riderId = do
+updateRiderIdAndConsentSnapshot :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Id RiderDetails -> Maybe Bool -> m ()
+updateRiderIdAndConsentSnapshot rbId riderId consent = do
   now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamB.riderId $ Just $ getId riderId, Se.Set BeamB.updatedAt now]
+    [ Se.Set BeamB.riderId $ Just $ getId riderId,
+      Se.Set BeamB.numberShareConsent consent,
+      Se.Set BeamB.updatedAt now
+    ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
 updateRiderName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
