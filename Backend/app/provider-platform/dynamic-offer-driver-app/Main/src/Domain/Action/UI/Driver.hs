@@ -2018,7 +2018,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               -- Static-offer: the booking already exists (created at confirm) and the ride is
               -- initialized inside the accept, so it returns the assigned-ride payload too.
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId transporterConfig Nothing Nothing
-            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
+            when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False (Just searchTry.id.getId)
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             cityLabel <- SML.getCityLabel merchantOpCityId
             Metrics.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)
@@ -2034,7 +2034,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
                 pure Nothing
     Reject -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False True False (Just searchTry.id.getId)
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       -- bt: QUOTE_RESPONSE_REJECT, anchored to the committed response (same series the
       -- POOLING ruleset reads via getSrdStatsCountersBulk).
@@ -2076,7 +2076,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlockRedisQuoteKeys
       pure Nothing
     Pulled -> do
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True (Just searchTry.id.getId)
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       (merchantLabel, cityLabel) <- SML.getMetricsLabels merchantId merchantOpCityId
       Metrics.incrementDriverResponseCounter merchantLabel cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show req.response) (SML.driverSearchReqFunnelLabels metricsDistanceBucketEdges sReqFD)

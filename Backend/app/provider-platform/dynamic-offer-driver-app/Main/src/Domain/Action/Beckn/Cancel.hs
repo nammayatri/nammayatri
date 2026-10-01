@@ -43,6 +43,7 @@ import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -267,6 +268,7 @@ cancelSearch ::
     EsqDBFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
     Esq.EsqDBReplicaFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -304,7 +306,7 @@ cancelSearch merchantId searchTry = do
       DP.decrementSrdSentCount driverReq.createdAt driverReq.driverId
       whenJust mbTransporterConfig $ \transporterConfig ->
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-          Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverReq.driverId transporterConfig False False False True
+          Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverReq.driverId transporterConfig False False False True (Just searchTry.id.getId)
       driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
       Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
   where

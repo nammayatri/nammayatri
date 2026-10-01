@@ -48,6 +48,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -688,6 +689,7 @@ pullExistingRideRequests ::
     Redis.HedisFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
@@ -716,7 +718,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
       let driverId = driverReq.driverId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
       DP.decrementSrdSentCount driverReq.createdAt driverId
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True (Just driverReq.searchTryId.getId)
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare
