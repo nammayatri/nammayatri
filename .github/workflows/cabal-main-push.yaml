@@ -373,14 +373,6 @@ jobs:
             | xargs -r sed -i "s/MOCK_SERVER_PORT:8080/MOCK_SERVER_PORT:$MOCK_PORT/g"
           grep -n "mock-server" Backend/nix/services/ports.nix
 
-      # Runner env has LC_ALL=C.UTF-8, which nix's glibc can't load, so Haskell falls back to ASCII and
-      # driver-app crashes reading migrations with non-ASCII chars (e.g. "—" in 0864). Point nix at glibcLocales.
-      - name: Set UTF-8 locale for nix processes
-        run: |
-          echo "LANG=C.UTF-8" >> $GITHUB_ENV
-          echo "LC_ALL=C.UTF-8" >> $GITHUB_ENV
-          echo "LOCALE_ARCHIVE=$(nix build --no-link --print-out-paths nixpkgs#glibcLocales)/lib/locale/locale-archive" >> $GITHUB_ENV
-
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
         run: |
