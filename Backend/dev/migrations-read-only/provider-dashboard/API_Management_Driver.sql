@@ -233,3 +233,12 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostDriverVehicleRemoveSelectedServiceTiers","migration":"capability","param":"city-operations.vehicle.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_VEHICLE_REMOVE_SELECTED_SERVICE_TIERS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetDriverPlanDrivers","migration":"capability","param":"city-operations.subscription.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.subscription.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_PLAN_DRIVERS' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverPlanMigrate","migration":"capability","param":"city-operations.subscription.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.subscription.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PLAN_MIGRATE' ) ON CONFLICT DO NOTHING;

@@ -54,6 +54,8 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverDriverDataDecryption,
     getDriverPanAadharSelfieDetailsList,
     postDriverBulkSubscriptionServiceUpdate,
+    getDriverPlanDrivers,
+    postDriverPlanMigrate,
     getDriverStats,
     checkDriverOperatorAssociation,
     checkFleetOperatorAssociation,
@@ -171,6 +173,7 @@ import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.DriverPlan as CHDriverPlan
 import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -195,6 +198,7 @@ import qualified Storage.Queries.IdfyVerification as QIdfyVerification
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.OnboardingList.DriverList as QDriverList
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Plan as QPlan
 import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
@@ -1516,6 +1520,73 @@ postDriverBulkSubscriptionServiceUpdate merchantShortId _opCity req = do
   let services = nub $ map DCommon.mapServiceName (req.serviceNames <> [Common.YATRI_SUBSCRIPTION])
   QDriverInfo.updateServicesEnabled req.driverIds services
   return Success
+
+getDriverPlanDrivers :: ShortId DM.Merchant -> Context.City -> Id Common.Plan -> Flow Common.GetDriversOnPlanRes
+getDriverPlanDrivers merchantShortId opCity planId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let planId' = cast @Common.Plan @Plan planId
+  plan <- QPlan.findByPrimaryKey planId' >>= fromMaybeM (PlanNotFound planId'.getId)
+  unless (plan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Plan does not belong to the authorized city")
+  driverIds <- CHDriverPlan.findDriverIdsByPlanId planId' merchantOpCityId
+  let status = if null driverIds then Common.NOT_FOUND else Common.FOUND
+  return $ Common.GetDriversOnPlanRes {driverIds = map (cast @DP.Person @Common.Driver) driverIds, status = status}
+
+postDriverPlanMigrate :: ShortId DM.Merchant -> Context.City -> Common.MigratePlanReq -> Flow Common.MigratePlanRes
+postDriverPlanMigrate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let currentPlanId = cast @Common.Plan @Plan req.currentPlanId
+      newPlanId = cast @Common.Plan @Plan req.newPlanId
+  when (null req.driverIds) $
+    throwError (InvalidRequest "Driver IDs list cannot be empty")
+  when (length req.driverIds > 500) $
+    throwError (InvalidRequest "Driver IDs list cannot exceed 500")
+  currentPlan <- QPlan.findByPrimaryKey currentPlanId >>= fromMaybeM (PlanNotFound currentPlanId.getId)
+  newPlan <- QPlan.findByPrimaryKey newPlanId >>= fromMaybeM (PlanNotFound newPlanId.getId)
+  when (currentPlanId == newPlanId) $
+    throwError (InvalidRequest "Current and new plan cannot be the same")
+  unless (currentPlan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Current plan does not belong to the authorized city")
+  unless (newPlan.merchantOpCityId == merchantOpCityId) $
+    throwError (InvalidRequest "Target plan does not belong to the authorized city")
+  unless (currentPlan.serviceName == newPlan.serviceName) $
+    throwError (InvalidRequest "Plans must have the same service name")
+  unless (currentPlan.vehicleCategory == newPlan.vehicleCategory) $
+    throwError (InvalidRequest "Plans must have the same vehicle category")
+  when newPlan.isDeprecated $
+    throwError (InvalidRequest "Cannot migrate drivers to a deprecated plan")
+  let driverIds = map (cast @Common.Driver @DP.Person) req.driverIds
+  results <- fmap concat $
+    forM (chunksOf 100 driverIds) $ \chunk ->
+      forM chunk $ \driverId -> do
+        mbDriverPlan <- QDP.findByDriverIdAndServiceName driverId newPlan.serviceName
+        case mbDriverPlan of
+          Nothing -> return $ Left (cast @DP.Person @Common.Driver driverId, "NOT_ON_PLAN")
+          Just dp
+            | dp.planId /= currentPlanId -> return $ Left (cast @DP.Person @Common.Driver driverId, "NOT_ON_CURRENT_PLAN")
+            | otherwise -> do
+              res <-
+                withTryCatch "planMigrate" $
+                  DTPlan.planSwitchGeneric newPlan.serviceName newPlanId (driverId, merchant.id, merchantOpCityId)
+              case res of
+                Right _ -> return $ Right ()
+                Left err -> do
+                  logInfo $ "Plan migrate failed for driverId: " <> driverId.getId <> " error: " <> show err
+                  return $ Left (cast @DP.Person @Common.Driver driverId, show err)
+  let failures = [f | Left f <- results]
+      notOnPlanCount = length [() | Left (_, reason) <- results, reason == "NOT_ON_PLAN" || reason == "NOT_ON_CURRENT_PLAN"]
+      failCount = length failures - notOnPlanCount
+      successCount = length [() | Right _ <- results]
+  logInfo $ "Plan migrate completed: " <> show successCount <> " success, " <> show failCount <> " failed, " <> show notOnPlanCount <> " not on current plan"
+  return $
+    Common.MigratePlanRes
+      { success = successCount,
+        failed = failCount,
+        notOnCurrentPlan = notOnPlanCount,
+        failures = map (\(dId, errMsg) -> Common.MigratePlanFailure {driverId = dId, reason = T.pack errMsg}) failures
+      }
 
 getDriverStats :: ShortId DM.Merchant -> Context.City -> Maybe (Id Common.Driver) -> Maybe Day -> Maybe Day -> Text -> Flow Common.DriverStatsRes
 getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId = do

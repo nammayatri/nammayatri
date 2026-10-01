@@ -997,7 +997,7 @@ instance IsHTTPError SubscriptionError where
     OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
     NoSubscriptionConfigForService _ _ -> "NO_SUBSCRIPTION_CONFIG_FOR_SERVICE"
   toHttpCode = \case
-    PlanNotFound _ -> E500
+    PlanNotFound _ -> E400
     MandateNotFound _ -> E500
     ActiveMandateExists _ -> E400
     ActiveMandateDoNotExist _ -> E400

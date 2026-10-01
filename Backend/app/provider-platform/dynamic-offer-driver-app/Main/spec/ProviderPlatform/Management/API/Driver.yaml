@@ -42,6 +42,7 @@ imports:
   DisabledReasonFlag: Dashboard.Common.Driver
   DriverAssociationInfo: Dashboard.Common.Driver
   ApprovalStatusFilter: Dashboard.Common.Driver
+  Plan: Dashboard.Common
 
 module: Driver
 
@@ -471,6 +472,26 @@ apis:
         type: BulkServiceUpdateReq
       response:
         type: APISuccess
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS BULK_SERVICE_UPDATE
+  - GET:
+      endpoint: /plan/drivers
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - planId: Id Plan
+      response:
+        type: GetDriversOnPlanRes
+      migrate:
+        capability: city-operations.subscription.read
+  - POST:
+      endpoint: /plan/migrate
+      auth: ApiAuthV2
+      request:
+        type: MigratePlanReq
+      response:
+        type: MigratePlanRes
+      migrate:
+        capability: city-operations.subscription.write
 
   - GET: # DriverStatsAPI
       endpoint: /stats
@@ -881,6 +902,24 @@ types:
   BulkServiceUpdateReq:
     - driverIds : [Text]
     - serviceNames : [ServiceNames]
+    - derive: "'HideSecrets"
+  GetDriversOnPlanRes:
+    - driverIds : [Id Driver]
+    - derive: "'HideSecrets"
+  MigratePlanReq:
+    - driverIds : [Id Driver]
+    - currentPlanId : Id Plan
+    - newPlanId : Id Plan
+    - derive: "'HideSecrets"
+  MigratePlanRes:
+    - success : Int
+    - failed : Int
+    - notOnCurrentPlan : Int
+    - failures : [MigratePlanFailure]
+    - derive: "'HideSecrets"
+  MigratePlanFailure:
+    - driverId : Id Driver
+    - reason : Text
     - derive: "'HideSecrets"
   DriverStatsRes:
     - numDriversOnboarded: Int
