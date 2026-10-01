@@ -6,6 +6,7 @@ import qualified Domain.Action.Internal.Payout as DPayout
 import qualified Domain.Action.UI.Payout as UIPayout
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as MerchantOpCity
+import qualified Domain.Types.PayoutConfig as DPayoutConfig
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonStats as PS
 import qualified Domain.Types.VehicleCategory as VehicleCategory
@@ -122,7 +123,7 @@ postPayoutVpaUpsert (mbPersonId, _mbMerchantId) req = do
     processBacklogReferralPayout personId req.vpa person.merchantOperatingCityId
   pure Success
 
-processBacklogReferralPayout ::
+type BacklogReferralPayoutFlow m r =
   ( CacheFlow m r,
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
@@ -131,40 +132,37 @@ processBacklogReferralPayout ::
     HasKafkaProducer r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
-  ) =>
-  Id Person.Person ->
-  Text ->
-  Id MerchantOpCity.MerchantOperatingCity ->
-  m ()
-processBacklogReferralPayout personId vpa merchantOpCityId = do
+  )
+
+processBacklogReferralPayout :: BacklogReferralPayoutFlow m r => Id Person.Person -> Text -> Id MerchantOpCity.MerchantOperatingCity -> m ()
+processBacklogReferralPayout personId vpa merchantOpCityId =
+  Redis.withWaitOnLockRedisWithExpiry (Common.payoutProcessingLockKey personId.getId) 3 3 $
+    payBacklogReferralPayoutUnderLock personId vpa merchantOpCityId Nothing
+
+-- | The caller must hold 'Common.payoutProcessingLockKey' for this person: the payout statuses are read and set here.
+payBacklogReferralPayoutUnderLock :: BacklogReferralPayoutFlow m r => Id Person.Person -> Text -> Id MerchantOpCity.MerchantOperatingCity -> Maybe Text -> m ()
+payBacklogReferralPayoutUnderLock personId vpa merchantOpCityId mbReuseOrderId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
+  mbPayoutConfig <- findReferralPayoutConfig person.merchantOperatingCityId
   personStats <- PStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   let toPayReferredByReward = personStats.referredByEarnings > 0 && isNothing personStats.referredByEarningsPayoutStatus
       toPayBacklogAmount = personStats.backlogPayoutAmount > 0 && isNothing personStats.backlogPayoutStatus
   when (toPayReferredByReward || toPayBacklogAmount) $ do
-    Redis.withWaitOnLockRedisWithExpiry (Common.payoutProcessingLockKey personId.getId) 3 3 $ do
-      let amount = (bool 0 personStats.backlogPayoutAmount toPayBacklogAmount) + (bool 0 personStats.referredByEarnings toPayReferredByReward)
-          entityName = getEntityName toPayReferredByReward toPayBacklogAmount
-      case entityName of
-        DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> PStats.updateBacklogAndReferredByPayoutStatus (Just PS.Processing) (Just PS.Processing) personId
-        DPayment.REFERRED_BY_AWARD -> PStats.updateReferredByEarningsPayoutStatus (Just PS.Processing) personId
-        DPayment.BACKLOG -> PStats.updateBacklogPayoutStatus (Just PS.Processing) personId
-        _ -> pure ()
-      handlePayout person amount mbPayoutConfig entityName
+    let amount = (bool 0 personStats.backlogPayoutAmount toPayBacklogAmount) + (bool 0 personStats.referredByEarnings toPayReferredByReward)
+        entityName = getEntityName toPayReferredByReward toPayBacklogAmount
+    case entityName of
+      DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> PStats.updateBacklogAndReferredByPayoutStatus (Just PS.Processing) (Just PS.Processing) personId
+      DPayment.REFERRED_BY_AWARD -> PStats.updateReferredByEarningsPayoutStatus (Just PS.Processing) personId
+      DPayment.BACKLOG -> PStats.updateBacklogPayoutStatus (Just PS.Processing) personId
+      _ -> pure ()
+    handlePayout person amount mbPayoutConfig entityName
   where
     handlePayout person amount mbPayoutConfig entityName = do
       case mbPayoutConfig of
         Just payoutConfig -> do
-          phoneNo <- mapM decrypt person.mobileNumber
-          emailId <- mapM decrypt person.email
-          uid <- generateGUID
-          let payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
-          let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing
+          uid <- maybe generateGUID pure mbReuseOrderId
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-          let createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId)
-          merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated
+          mbPayoutOrderResp <- withTryCatch "createPayoutService:processBacklogReferralPayout" $ createReferralPayoutOrder person vpa merchantOpCityId payoutConfig uid amount (Just []) entityName (isJust mbReuseOrderId)
           case mbPayoutOrderResp of
             Left err -> logError $ "Error in calling create order for backlog payout for riderId: " <> show person.id.getId <> " and orderId: " <> show uid <> "with error " <> show err
             _ -> pure ()
@@ -174,3 +172,33 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
       (True, True) -> DPayment.REFERRED_BY_AND_BACKLOG_AWARD
       (True, False) -> DPayment.REFERRED_BY_AWARD
       (False, _) -> DPayment.BACKLOG
+
+findReferralPayoutConfig :: BacklogReferralPayoutFlow m r => Id MerchantOpCity.MerchantOperatingCity -> m (Maybe DPayoutConfig.PayoutConfig)
+findReferralPayoutConfig merchantOpCityId =
+  getOneConfig
+    (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+    (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory merchantOpCityId VehicleCategory.AUTO_CATEGORY (Just [])))
+
+-- | Creates a referral payout order through Juspay. With allowResend, an existing order with this id
+--   that never reached Juspay is re-sent; otherwise an existing order id is an error.
+createReferralPayoutOrder ::
+  BacklogReferralPayoutFlow m r =>
+  Person.Person ->
+  Text ->
+  Id MerchantOpCity.MerchantOperatingCity ->
+  DPayoutConfig.PayoutConfig ->
+  Text ->
+  HighPrecMoney ->
+  Maybe [Text] ->
+  DPayment.EntityName ->
+  Bool ->
+  m ()
+createReferralPayoutOrder person vpa merchantOpCityId payoutConfig orderId amount mbEntityIds entityName allowResend = do
+  phoneNo <- mapM decrypt person.mobileNumber
+  emailId <- mapM decrypt person.email
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  let payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
+      createPayoutOrderReq = Payout.mkCreatePayoutServiceReq orderId amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType payoutServiceFlow Nothing
+      createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId)
+      createPayout = if allowResend then Payout.resendNeverSentPayoutService else Payout.createPayoutService
+  void $ createPayout (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) mbEntityIds (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing afterPayoutOrderCreated

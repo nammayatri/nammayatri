@@ -13,7 +13,20 @@ default:
       - requestorId: Text
     actorInfo: requestorId
 
-types: {}
+types:
+  RetriggerPayoutStatus:
+    - enum: "RESENT, TRIGGERED, ALREADY_TRIGGERED, ALREADY_RETRIGGERED, ORDER_NOT_FOUND, NOT_E09, UNSUPPORTED_TYPE, STATUS_CHECK_FAILED, NO_VPA, NOTHING_PENDING, FAILED"
+  RetriggerPayoutReq:
+    - orderIds: [Text]
+    - derive: "'HideSecrets"
+  RetriggerPayoutResult:
+    - orderId: Text
+    - customerId: Maybe Text
+    - entityName: Maybe Text
+    - status: RetriggerPayoutStatus
+    - message: Maybe Text
+  RetriggerPayoutResp:
+    - results: [RetriggerPayoutResult]
 
 apis:
   - GET:
@@ -23,3 +36,12 @@ apis:
         payoutOrderId: Text
       response:
         type: PayoutOrderResp
+  - POST:
+      endpoint: /payout/retrigger
+      auth: ApiAuthV2
+      request:
+        type: RetriggerPayoutReq
+      response:
+        type: RetriggerPayoutResp
+      migrate:
+        capability: finance.payout.write

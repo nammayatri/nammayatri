@@ -133,7 +133,7 @@ computePayoutFee (Just feeConfig) amount =
 --   initiate (payout request + OwnerPayoutLiability hold) both run inside it.
 runWalletPayout :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m ()
 runWalletPayout ctx params =
-  PayoutRequest.runPayoutUnderLock (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) (initiateWalletPayout ctx params.payoutType)
+  void $ PayoutRequest.runPayoutUnderLock (makeWalletRunningBalanceLockKey ctx.driverId.getId) 10 (findWalletPayoutAmount ctx params) (initiateWalletPayout ctx params.payoutType)
 
 findWalletPayoutAmount :: (WalletPayoutFlow m r) => PayoutContext -> WalletPayoutParams -> m (Maybe WalletPayoutPlan)
 findWalletPayoutAmount ctx params = do
@@ -209,6 +209,7 @@ initiateWalletPayout ctx payoutType WalletPayoutPlan {..} = do
             coverageFrom = Nothing,
             coverageTo = Just cutoff,
             ledgerEntryIds = [],
+            reuseOrderId = Nothing,
             payoutServiceFlow
           }
       payoutCall = Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount
