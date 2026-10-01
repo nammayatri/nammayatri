@@ -121,7 +121,8 @@ bookingStatus bookingId (personId, _merchantId) mbDontNeedFareBreakup = runInMul
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
-  SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)
+  mbSilentCtx <- SilentRealloc.getSilentReallocation booking.riderId
+  SilentRealloc.maskSilentReallocationBooking mbSilentCtx <$> SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
 bookingStatusPolling bookingId _ = runInMultiCloud $ do
