@@ -266,7 +266,7 @@ buildAssignedDriverRideRes driver driverInfo transporterConfig booking ride ride
   let driverLanguage = fromMaybe KET.ENGLISH driver.language
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- listToMaybe <$> getConfig (ExophoneDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, phoneNumber = Just booking.primaryExophone, callService = Nothing, exophoneType = Nothing}) (Just (maybeToList <$> CQExophone.findByPrimaryPhone booking.primaryExophone))
-  bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) BecknDomain.MOBILITY
+  bapMetadata <- CQSM.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) BecknDomain.MOBILITY booking.providerId booking.merchantOperatingCityId
   resolvedCalling <- DRideUI.resolveCallingNumber booking ride transporterConfig.driverCallingOption (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else pure []
