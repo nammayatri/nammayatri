@@ -133,9 +133,14 @@ RiderDetails:
     #   where:
     #     and: [mobileNumberHash, merchantId]
 
-    updateNightSafetyChecksAndConsent:
+    updateNightSafetyChecks:
       kvFunction: updateOneWithKV
-      params: [nightSafetyChecks, consentToShareMobileNumber]
+      params: [nightSafetyChecks]
+      where: id
+
+    updateConsentToShareMobileNumber:
+      kvFunction: updateOneWithKV
+      params: [consentToShareMobileNumber]
       where: id
 
     updateCancellationDues:

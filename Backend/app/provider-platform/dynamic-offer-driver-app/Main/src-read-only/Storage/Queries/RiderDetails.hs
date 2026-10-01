@@ -35,6 +35,11 @@ updateCancellationDues cancellationDues id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationDues cancellationDues, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateConsentToShareMobileNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateConsentToShareMobileNumber consentToShareMobileNumber id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCustomerProfile ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.Person.Gender -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
@@ -91,17 +96,10 @@ updateIsFlagConfirmed isFlagConfirmed id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isFlagConfirmed isFlagConfirmed, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateNightSafetyChecksAndConsent ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
-updateNightSafetyChecksAndConsent nightSafetyChecks consentToShareMobileNumber id = do
+updateNightSafetyChecks :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
+updateNightSafetyChecks nightSafetyChecks id = do
   _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.nightSafetyChecks nightSafetyChecks,
-      Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.nightSafetyChecks nightSafetyChecks, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateOtpCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails -> m ())
 updateOtpCode otpCode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.otpCode otpCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

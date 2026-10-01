@@ -66,6 +66,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
@@ -114,7 +115,8 @@ oneShotAssign OneShotAssignReq {..} = do
               riderId = searchReq.riderId,
               riderName = searchReq.riderName
             }
-    booking <- DInit.buildBooking bArgs searchReq driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now Nothing Nothing (Just driverQuote.distanceToPickup) Nothing searchReq.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
+    mbRiderConsent <- maybe (pure Nothing) (fmap (>>= (.consentToShareMobileNumber)) . QRD.findById) searchReq.riderId
+    booking <- (\b -> b {DRB.numberShareConsent = mbRiderConsent}) <$> DInit.buildBooking bArgs searchReq driverQuote searchTry.billingCategory driverQuote.id.getId driverQuote.tripCategory now Nothing Nothing (Just driverQuote.distanceToPickup) Nothing searchReq.configInExperimentVersions driverQuote.coinsRewardedOnGoldTierRide driverQuote.preferenceMatchScore (Just driverQuote.searchTryId) (Just driverQuote.durationToPickup) searchTry.emailDomain searchTry.businessEmailDomain driverQuote.isAutoAccepted searchTry.addOnData
     triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = merchant.id}
     QRB.createBooking booking
     -- One-shot bypasses the Beckn confirm handler, whose mkDConfirmResp is the only other

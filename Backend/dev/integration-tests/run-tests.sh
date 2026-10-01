@@ -673,9 +673,9 @@ run_gohome() {
 }
 
 # Phone share consent: the gate is merchant-option AND rider-consent, and the consent
-# flow itself is gated by rider_config.enable_share_number_with_driver. Local defaults
-# are 'AnonymousCall' (consent can never share the number) and false (the BAP omits the
-# consent tag, so the number is shared on every ride). Seed both so the suite can
+# toggle in the rider app is gated by rider_config.enable_share_number_with_driver. Local
+# defaults are 'AnonymousCall' (consent can never share the number) and false (the rider
+# app hides the consent toggle). Seed both so the suite can
 # exercise the gate, then flush Redis — both tables are cached, and stale cached values
 # would make the assertions fail spuriously.
 seed_phone_consent_config() {

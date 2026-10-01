@@ -88,6 +88,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.RiderConsent
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
@@ -332,6 +333,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.RiderConsent
       Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS

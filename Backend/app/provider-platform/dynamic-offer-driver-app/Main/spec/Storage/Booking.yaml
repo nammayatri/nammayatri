@@ -65,6 +65,7 @@ Booking:
     bapCountry: Maybe Country
     startTime: UTCTime
     riderId: Maybe (Id RiderDetails)
+    numberShareConsent: Maybe Bool
     fromLocation: Location
     toLocation: Maybe Location
     stops: "[Location]"

@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride
     listDriverRides,
     getDriverRideById,
     resolveCallingNumber,
+    mayDialDirectly,
     arrivedAtPickup,
     arrivedAtDestination,
     otpRideCreate,
@@ -557,12 +558,9 @@ arrivedAtDestination rideId pt = do
   where
     isValidRideStatus status = status == DRide.INPROGRESS
 
--- | The rider's real number reaches the driver only when the merchant has enabled
--- direct calling AND the rider consented to sharing it. Consent can restrict but
--- never expand what the merchant configured.
-shouldShareRiderMobileNumber :: DTC.CallingOption -> Bool -> Bool
-shouldShareRiderMobileNumber option riderConsented =
-  riderConsented && (option == DTC.DirectCall || option == DTC.DualCall)
+mayDialDirectly :: Bool -> DTC.CallingOption -> Maybe Bool -> Maybe Bool -> Bool
+mayDialDirectly forceDirect option snapshot live =
+  forceDirect || (allowsDirectCalling option && snapshot == Just True && live == Just True)
 
 allowsDirectCalling :: DTC.CallingOption -> Bool
 allowsDirectCalling option = option == DTC.DirectCall || option == DTC.DualCall
@@ -584,7 +582,9 @@ getRiderNumbers booking option forceDirect
           Nothing -> pure Nothing
           Just rider -> do
             bareNumber <- decrypt rider.mobileNumber
-            pure $ Just (bareNumber, rider.mobileCountryCode, forceDirect || maybe True (shouldShareRiderMobileNumber option) rider.consentToShareMobileNumber)
+            when (forceDirect && rider.consentToShareMobileNumber == Just False) $
+              logWarning $ "forceDirectCalling overriding rider opt-out, merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId
+            pure $ Just (bareNumber, rider.mobileCountryCode, mayDialDirectly forceDirect option booking.numberShareConsent rider.consentToShareMobileNumber)
 
 resolveCallingNumber ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -604,11 +604,11 @@ resolveCallingNumber booking ride mbOption forceDirect exoPhone = do
   pure $ case mbNumbers of
     Nothing ->
       RideCommon.ResolvedCalling {riderMobileNumber = Nothing, callingNumber = anonymous}
-    Just (bareNumber, riderCountryCode, mayDialDirectly) ->
+    Just (bareNumber, riderCountryCode, dialDirectly) ->
       RideCommon.ResolvedCalling
         { riderMobileNumber = Just bareNumber,
           callingNumber =
-            if mayDialDirectly
+            if dialDirectly
               then RideCommon.CallingNumberAPIEntity {number = bareNumber, countryCode = Just riderCountryCode, numberType = RideCommon.DIRECT}
               else anonymous
         }
