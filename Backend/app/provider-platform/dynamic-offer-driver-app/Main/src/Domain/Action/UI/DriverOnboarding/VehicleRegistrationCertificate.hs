@@ -477,7 +477,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   let mbGrossVehicleWeight = rcVerificationResponse.grossVehicleWeight
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey transporterConfig) rcVerificationResponse.registrationNumber
+  mbFleetOwnerId <- maybe (pure Nothing) (Redis.runInMultiCloudRedisMaybeResult . Redis.safeGet . makeFleetOwnerKey transporterConfig) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
   rcValidationRules <- findByCityId person.merchantOperatingCityId
   let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer, model = rcVerificationResponse.manufacturerModel}
