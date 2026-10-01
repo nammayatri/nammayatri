@@ -423,6 +423,14 @@ jobs:
             > Backend/dev/ddl-migrations/dynamic-offer-driver-app/0894-widen-issue-message-message.sql
           cat Backend/dev/ddl-migrations/dynamic-offer-driver-app/0894-widen-issue-message-message.sql
 
+      # TEMPORARY: config-sync turns master's '' into NULL for nullable text columns; rider-app reads
+      # merchant.kapture_disposition as non-null Text and crashes (CMRL row). Restore '' after import, CI only.
+      - name: Restore empty merchant.kapture_disposition after sync (temporary)
+        run: |
+          echo "UPDATE atlas_app.merchant SET kapture_disposition = '' WHERE kapture_disposition IS NULL;" \
+            > Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
+          cat Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
+
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
         run: |
