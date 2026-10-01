@@ -380,6 +380,16 @@ jobs:
           sed -i 's/LC_ALL = "C.UTF-8";/LC_ALL = "en_US.UTF-8";/' Backend/nix/services/nammayatri.nix
           grep -n 'LC_ALL = ' Backend/nix/services/nammayatri.nix
 
+      # TEMPORARY: rider-dashboard 0078/0079 (d88026e228) target atlas_dashboard, but dev/CI rider-dashboard
+      # still runs on atlas_bap_dashboard -> "permission denied for schema". Remove once fixed upstream.
+      - name: Fix rider-dashboard 2FA migration schema (temporary)
+        run: |
+          for f in Backend/dev/ddl-migrations/rider-dashboard/0078-add-two-fa-exempt-to-person.sql \
+                   Backend/dev/ddl-migrations/rider-dashboard/0079-add-two-fa-exempt-to-role.sql; do
+            sed -i 's/atlas_dashboard\./atlas_bap_dashboard./' "$f"
+            grep -n "ALTER TABLE" "$f"
+          done
+
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
         run: |
