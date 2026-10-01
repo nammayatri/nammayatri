@@ -110,6 +110,7 @@ buildShadowSearchRes parentRes betterRoute mbPickupAddress mbDropAddress = do
     (Just toLoc, Just betterDrop) -> Just <$> relocate toLoc mbDropAddress betterDrop.point
     (mbToLoc, _) -> pure mbToLoc
   let childDistance = convertMetersToDistance parent.distanceUnit betterRoute.newRouteDistance
+      childRouteInfo = trimRouteInfo betterRoute parentRes.shortestRouteInfo
       child =
         parent
           { DSearchReq.id = childId,
@@ -117,9 +118,7 @@ buildShadowSearchRes parentRes betterRoute mbPickupAddress mbDropAddress = do
             DSearchReq.toLocation = childTo,
             DSearchReq.distance = Just childDistance,
             DSearchReq.estimatedRideDuration = betterRoute.newRouteDuration,
-            -- The trimmed leg's static duration is not separately known; leaving it
-            -- unset is better than carrying the parent's, which describes a longer route.
-            DSearchReq.estimatedRideStaticDuration = Nothing,
+            DSearchReq.estimatedRideStaticDuration = childRouteInfo >>= (.staticDuration),
             DSearchReq.parentSearchRequestId = Just parent.id,
             DSearchReq.betterPointWalkToPickup = (.walkDistance) <$> betterRoute.betterPickup,
             DSearchReq.betterPointWalkFromDrop = (.walkDistance) <$> betterRoute.betterDrop,
@@ -138,7 +137,6 @@ buildShadowSearchRes parentRes betterRoute mbPickupAddress mbDropAddress = do
       <> show ((.walkDistance) <$> betterRoute.betterPickup)
       <> ", walkFromDrop "
       <> show ((.walkDistance) <$> betterRoute.betterDrop)
-  let childRouteInfo = trimRouteInfo betterRoute parentRes.shortestRouteInfo
   pure $
     parentRes
       { SLS.searchRequest = child,
@@ -485,12 +483,18 @@ trimRouteInfo betterRoute =
         Maps.distance = Just betterRoute.newRouteDistance,
         Maps.distanceWithUnit = flip convertMetersToDistance betterRoute.newRouteDistance . (.unit) <$> routeInfo.distanceWithUnit,
         Maps.duration = betterRoute.newRouteDuration,
-        Maps.staticDuration = Nothing,
+        Maps.staticDuration = scaledStaticDuration routeInfo,
         -- Snapped waypoints and the bounding box describe the untrimmed route; a stale
         -- box would be worse than none.
         Maps.snappedWaypoints = [],
         Maps.boundingBox = Nothing
       }
+  where
+    scaledStaticDuration routeInfo = do
+      parentDistance <- routeInfo.distance
+      guard (parentDistance > 0)
+      staticDuration <- routeInfo.staticDuration
+      pure . Seconds . round $ fromIntegral (getSeconds staticDuration) * (fromIntegral (getMeters betterRoute.newRouteDistance) / fromIntegral (getMeters parentDistance) :: Double)
 
 -- | The BPP reads distance, duration and geometry off fulfillment tags
 -- (see @getRouteServiceability@ in the driver app), so the shadow's tags have to
