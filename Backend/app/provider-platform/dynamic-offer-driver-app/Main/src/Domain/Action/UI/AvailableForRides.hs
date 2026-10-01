@@ -18,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -37,30 +38,33 @@ postDriverAvailableForRidesActivate (mbPersonId, _, merchantOpCityId) = do
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   -- All three knobs must be set for the feature to be live in this city: a boost with no
   -- expiry, no daily cap or no request budget is not a boost we are willing to hand out.
-  (validity, dailyLimit, maxRequests) <-
-    (,,) <$> transporterConfig.availableForRidesTagValidityMinutes
-      <*> transporterConfig.availableForRidesDailyLimit
-      <*> transporterConfig.availableForRidesMaxSearchRequests
-      & fromMaybeM AvailableForRidesNotEnabled
-  unless (validity.getMinutes > 0 && dailyLimit > 0 && maxRequests > 0) $ throwError AvailableForRidesNotEnabled
+  (validity, dailyLimit, maxRequests) <- AvailableForRides.enabledConfig transporterConfig & fromMaybeM AvailableForRidesNotEnabled
+
+  case mfilter ((> 0) . (.getMinutes)) transporterConfig.availableForRidesMinIdleMinutes of
+    Nothing -> pure ()
+    Just minIdle -> do
+      mbIdleSeconds <- DriverIdleTime.getIdleTimeSeconds personId
+      when (maybe False (< fromIntegral (minIdle.getMinutes * 60)) mbIdleSeconds) $
+        throwError (AvailableForRidesNotIdleEnough minIdle.getMinutes)
 
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
   localDay <- DT.utctDay <$> getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  AvailableForRides.settleExpiredBoost personId localDay
   -- Claim the slot before doing anything else: the INCR is the atomic gate, so two
-  -- concurrent taps can't both slip through on a stale read. A rejected attempt leaves the
-  -- counter above the limit, which simply keeps the driver rejected for the rest of the day.
-  activationsUsedToday <- AvailableForRides.recordActivation personId localDay
-  when (activationsUsedToday > dailyLimit) $ throwError (AvailableForRidesDailyLimitExceeded dailyLimit)
+  -- concurrent taps can't both slip through on a stale read. A rejected attempt is handed
+  -- straight back, so the counter only ever counts boosts that were actually granted.
+  activationsUsedToday <- AvailableForRides.claimActivation personId localDay dailyLimit >>= fromMaybeM (AvailableForRidesDailyLimitExceeded dailyLimit)
 
   -- Re-activating on top of a live boost is allowed; it replaces the tag (so the expiry
-  -- restarts) and, below, resets the request budget.
+  -- restarts) and resets the request budget and rejection streak.
   let tag = AvailableForRides.mkAvailableForRidesTag validity now
+      validTill = addUTCTime (fromIntegral $ validity.getMinutes * 60) now
   QPerson.updateDriverTag (Just $ Yudhishthira.replaceTagNameValue person.driverTag tag) personId
-  AvailableForRides.startRequestBudget personId validity
+  AvailableForRides.startBoost personId localDay validity validTill
   pure
     APIT.AvailableForRidesRes
-      { validTill = addUTCTime (fromIntegral $ validity.getMinutes * 60) now,
+      { validTill,
         validityMinutes = validity,
         activationsUsedToday,
         activationsAllowedPerDay = dailyLimit,

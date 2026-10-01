@@ -1220,3 +1220,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN inter_city_drop
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_image_presigned_url_expiry integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_max_consecutive_rejections integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_min_idle_minutes integer ;

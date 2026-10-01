@@ -1237,6 +1237,10 @@ TransporterConfig:
     availableForRidesDailyLimit: Maybe Int
     # How many search requests the boost survives before the tag is dropped.
     availableForRidesMaxSearchRequests: Maybe Int
+    # How many boosted requests in a row the driver may reject before the boost is turned off.
+    availableForRidesMaxConsecutiveRejections: Maybe Int
+    # Online minutes without a single ride request the driver needs before they may switch the boost on.
+    availableForRidesMinIdleMinutes: Maybe Minutes
     fcmConfig: Kernel.External.Notification.FCM.Types.FCMConfig
     feedbackNotificationConfig: Maybe FeedbackNotificationConfig
     onboardingTryLimit: Int
@@ -1888,6 +1892,7 @@ TransporterConfig:
     authIpBlockedUntilInMins: integer
     scheduledRideOpenToAllThresholdMinutes: integer
     availableForRidesTagValidityMinutes: integer
+    availableForRidesMinIdleMinutes: integer
     pickupLocThreshold: bigint
     dropLocThreshold: bigint
     tripStartLeadTime: integer
@@ -2224,6 +2229,8 @@ TransporterConfig:
         - availableForRidesTagValidityMinutes
         - availableForRidesDailyLimit
         - availableForRidesMaxSearchRequests
+        - availableForRidesMaxConsecutiveRejections
+        - availableForRidesMinIdleMinutes
         - knowledgeCenterSopTypes
         - driverSearchBlacklistDurationSeconds
         - metricsDistanceBucketsKm
