@@ -42,6 +42,8 @@ types:
     routeCode: Text
     walkupCount: Int
     mode: Maybe SelectRouteMode
+    driverName: Maybe Text
+    vehicleModel: Maybe Text
 
   SeatsReq:
     driverId: Text

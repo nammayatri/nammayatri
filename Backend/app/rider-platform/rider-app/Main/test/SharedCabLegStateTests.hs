@@ -18,6 +18,7 @@ import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.LegState
+import "rider-app" SharedLogic.SharedCab.Session (CabDriverInfo (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 import Prelude
@@ -31,6 +32,16 @@ tests =
         [ testCase "SHARED_CAB agency" $ isSharedCabAgency "shillong_shared_cab:SHARED_CAB" @?= True,
           testCase "bus agency" $ isSharedCabAgency "chennai_bus:MTC" @?= False,
           testCase "bare SHARED_CAB id" $ isSharedCabAgency "SHARED_CAB" @?= True
+        ],
+      testGroup
+        "driver info beside the session"
+        [ testCase "round trips" $ decode (encode (CabDriverInfo (Just "Asha K") (Just "Maruti Dzire"))) @?= Just (CabDriverInfo (Just "Asha K") (Just "Maruti Dzire")),
+          testCase "a field the driver-app did not send is Nothing" $ decode "{\"driverName\":\"Asha K\"}" @?= Just (CabDriverInfo (Just "Asha K") Nothing)
+        ],
+      testGroup
+        "a shared-cab booking has the last word on its leg's mode"
+        [ testCase "a Bus leg with a SHARED_CAB booking becomes SharedCab" $ sharedCabLegMode (Just Spec.SHARED_CAB) DTrip.Bus @?= DTrip.SharedCab,
+          testCase "a bus tier or no tier leaves the mode alone" $ [sharedCabLegMode (Just Spec.AC) DTrip.Bus, sharedCabLegMode Nothing DTrip.Metro] @?= [DTrip.Bus, DTrip.Metro]
         ],
       testGroup
         "cab position and ETAs from LTS tracking"

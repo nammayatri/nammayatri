@@ -25,9 +25,11 @@ data SelectRouteReq = SelectRouteReq
   { agencyId :: Kernel.Prelude.Text,
     capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverId :: Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mode :: Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionState.SelectRouteMode,
     routeCode :: Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    vehicleModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
     walkupCount :: Kernel.Prelude.Int
   }

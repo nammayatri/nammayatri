@@ -130,6 +130,8 @@ postSharedCabRouteSelect mbToken req = do
       pure API.SelectRouteResp {session = Nothing, affectedRiders = Just affected}
     Right session -> do
       void $ seeded session
+      when (isJust req.driverName || isJust req.vehicleModel) $
+        Session.setCabDriverInfo req.vehicleNumber Session.CabDriverInfo {driverName = req.driverName, vehicleModel = req.vehicleModel}
       -- 05 §8.7: a route change leaves the unboarded riders of the old route behind (a queued change hasn't happened yet)
       when (maybe False (/= session.routeCode) priorRoute) $ void $ releasing AllocTypes.RouteChanged session
       session' <-

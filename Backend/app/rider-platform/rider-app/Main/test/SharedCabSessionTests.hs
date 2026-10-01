@@ -150,8 +150,16 @@ tests =
         let deadline = Just (addUTCTime 90 t0)
             arriving =
               View.RiderRow
-                { bookingId = "b1", firstName = "Asha", seats = 1, boardStopCode = "A", dropStopCode = "C", boarded = False, fare = 10,
-                  riderStatus = View.ARRIVING, minutesAway = Just 3, expiresAt = deadline
+                { bookingId = "b1",
+                  firstName = "Asha",
+                  seats = 1,
+                  boardStopCode = "A",
+                  dropStopCode = "C",
+                  boarded = False,
+                  fare = 10,
+                  riderStatus = View.ARRIVING,
+                  minutesAway = Just 3,
+                  expiresAt = deadline
                 }
          in View.groupRidersByStop routeStops [arriving]
               @?= [View.RidersAtStop "Alpha" [View.BoardingRider "b1" "Asha" 1 "Charlie" 10 View.ARRIVING (Just 3) deadline] []],

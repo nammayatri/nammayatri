@@ -19,6 +19,7 @@ Fill the `REPLACE_ME` values in `local.env` (or copy it and point `ENV` at the c
 ./run.sh flush      # 3.6 flush recovery (needs redis-cli on the rider-app's Redis; override with REDIS_CLI="redis-cli -p 6380")
 ./run.sh rider      # 6.8 rider flow (logs in via login.hurl, or reuse TOKEN=...)
 ./run.sh boarding   # 8.7 boarding flow (needs 8.1 and allocation on)
+./run.sh standalone # standalone pay-on-board booking: search, quote, confirm (no payment order)
 ```
 
 `run.sh` passes `date` (today in IST) for the trips history. Each file ends by closing the driver's session, so every file re-runs. The rider login is rate limited, so reuse `TOKEN` across runs.

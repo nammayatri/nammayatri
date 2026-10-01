@@ -63,6 +63,7 @@ import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
+import qualified SharedLogic.SharedCab.LegState as SharedCabLegState
 import qualified SharedLogic.SharedCab.RefundDecision as SharedCabRefundDecision
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
@@ -582,11 +583,23 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       when (mbServiceTierType == Just Spec.SHARED_CAB) $ SharedCabEvents.forBooking SharedCabEvents.BookingCreated booking
       Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show booking.status) "created"
 
+      -- a shared-cab booking makes its leg (and the journey's modes) SharedCab, whatever the search stamped
+      mbJourneyLeg' <- forM mbJourneyLeg $ \leg ->
+        let legMode = SharedCabLegState.sharedCabLegMode mbServiceTierType leg.mode
+         in if legMode == leg.mode
+              then pure leg
+              else do
+                QJourneyLeg.updateMode legMode leg.id
+                legs <- QJourneyLeg.getJourneyLegs leg.journeyId
+                mbJourney <- QJourney.findByPrimaryKey leg.journeyId
+                whenJust mbJourney $ \journey ->
+                  QJourney.updateByPrimaryKey journey {DJ.modes = [if l.id == leg.id then legMode else l.mode | l <- sortOn (.sequenceNumber) legs]}
+                pure leg {DJL.mode = legMode}
       -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
       let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
       let mbBookedServiceTierType = mbServiceTierType
       when (isJust mbBookedRouteShortName && isJust mbBookedServiceTierType) $
-        whenJust mbJourneyLeg $ \journeyLeg -> do
+        whenJust mbJourneyLeg' $ \journeyLeg -> do
           whenJust mbBookedRouteShortName $ \bookedRouteShortName ->
             QRouteDetails.updateUserBookedRouteShortName (Just bookedRouteShortName) journeyLeg.id.getId
           QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJL.userBookedBusServiceTierType = mbBookedServiceTierType}

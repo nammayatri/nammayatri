@@ -582,7 +582,10 @@ data BAPSelectRouteReq = BAPSelectRouteReq
     -- config row up by it (Storage.CachedQueries.IntegratedBPPConfig.findByAgencyId).
     agencyId :: Text,
     serviceTierType :: Text,
-    capacity :: Int
+    capacity :: Int,
+    -- display only: the dock shows who is driving which car
+    driverName :: Maybe Text,
+    vehicleModel :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON)

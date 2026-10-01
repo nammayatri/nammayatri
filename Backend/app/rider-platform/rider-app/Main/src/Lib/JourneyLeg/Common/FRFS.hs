@@ -120,8 +120,11 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   mbCabTracking <- case mbSession of
     Just session
       | session.status /= SharedCabSessionState.ENDED ->
-        withTryCatch "sharedCab:legState:readCabTracking" (SharedCabAllocation.readRoutePositions session.routeCode)
-          <&> either (const Nothing) (find (\veh -> veh.vehicleNumber == session.vehicleNumber))
+        withTryCatch "sharedCab:legState:readCabTracking" (SharedCabAllocation.readRoutePosition session.routeCode session.vehicleNumber)
+          <&> either (const Nothing) identity
+    _ -> pure Nothing
+  mbDriverInfo <- case mbSession of
+    Just session | session.status /= SharedCabSessionState.ENDED -> SharedCabSession.readCabDriverInfo session.vehicleNumber
     _ -> pure Nothing
   let cabTrack = do
         veh <- mbCabTracking
@@ -145,8 +148,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
               { state = st,
                 bookingId = booking.id.getId,
                 vehicleNumber = booking.vehicleNumber,
-                vehicleModel = Nothing,
-                driverName = Nothing,
+                vehicleModel = mbDriverInfo >>= (.vehicleModel),
+                driverName = mbDriverInfo >>= (.driverName),
                 driverPhotoUrl = Nothing,
                 etaToBoardStopSec = live >>= (\(_, board, _) -> board),
                 etaToDropStopSec = live >>= (\(_, _, dropEta) -> dropEta),

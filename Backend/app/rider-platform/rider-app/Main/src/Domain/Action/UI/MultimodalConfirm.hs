@@ -138,6 +138,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.Cancel as SharedCancel
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -149,8 +150,10 @@ import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Cancel as SharedCabCancel
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.Invariants as SharedCabInvariants
+import qualified SharedLogic.SharedCab.Plate as SharedCabPlate
 import qualified SharedLogic.SharedCab.RefundPolicy as SharedCabRefund
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
+import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified SharedLogic.SharedCab.SpotBooking as SharedCabSpot
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
@@ -2122,6 +2125,85 @@ postMultimodalRouteServiceability ::
     Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
   )
 postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes req =
+  findSharedCabRoutes >>= \case
+    Just (cabIbc, legReqs, cabRouteCodes)
+      | all (`elem` cabRouteCodes) (concatMap (.routeCodes) legReqs) ->
+        authenticateRider >>= \person -> sharedCabRouteServiceability person cabIbc req.vehicleNumber legReqs
+    _ -> postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req
+  where
+    authenticateRider = do
+      personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+      QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    -- a request naming only routes of the city's shared-cab feed (own IBC, not the bus one) is answered from the cabs live on them
+    findSharedCabRoutes = case req.routeCodes of
+      Just legReqs@(_ : _)
+        | not (null (concatMap (.routeCodes) legReqs)) ->
+          UISharedCab.findSharedCabConfig mbPersonId >>= \case
+            Just cabIbc -> (\routes -> Just (cabIbc, legReqs, map (.code) routes)) <$> OTPRest.getRoutesByGtfsId cabIbc
+            Nothing -> pure Nothing
+      _ -> pure Nothing
+
+-- | The cabs live on a shared-cab route as route serviceability's live vehicles: the route's active sessions with their
+-- LTS fix and upcoming-stop ETAs (a cab has no bus-fleet metadata, so the bus path would drop it). `mbPlate` narrows to one cab.
+sharedCabRouteServiceability ::
+  Domain.Types.Person.Person ->
+  DIBC.IntegratedBPPConfig ->
+  Maybe Text ->
+  [ApiTypes.RouteCodesWithLeg] ->
+  Environment.Flow ApiTypes.RouteServiceabilityResp
+sharedCabRouteServiceability person cabIbc mbPlate legReqs = do
+  now <- getCurrentTime
+  cfg <- SharedCabAllocation.cityConfig person.merchantOperatingCityId
+  legs <- forM legReqs $ \legReq -> do
+    routes <- forM (nub legReq.routeCodes) $ \code -> do
+      mbRoute <- OTPRest.getRouteByRouteId cabIbc code
+      sessions <- SharedCabSession.activeSessionsOnRoute code
+      let wanted = filter (\(sess :: SharedCabSessionState.Session) -> maybe True (\plate -> sess.vehicleNumber == SharedCabPlate.canonicalisePlate plate) mbPlate) sessions
+      vehicles <- fmap catMaybes . forM wanted $ \sess -> do
+        mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:routeServiceability:readRoutePosition" (SharedCabAllocation.readRoutePosition code sess.vehicleNumber)
+        pure $ do
+          track <- mbTrack
+          guard (SharedCabAllocation.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)
+          pure (mkLiveCab now sess.vehicleNumber track.vehicleInfo)
+      pure
+        ApiTypes.RouteWithLiveVehicle
+          { routeCode = code,
+            routeShortName = maybe code (.shortName) mbRoute,
+            overrideSourceStopCode = Nothing,
+            overrideDestinationStopCode = Nothing,
+            liveVehicles = vehicles,
+            schedules = []
+          }
+    pure ApiTypes.LegRouteWithLiveVehicle {legOrder = legReq.legOrder, routeWithLiveVehicles = routes}
+  pure ApiTypes.RouteServiceabilityResp {legs, effectiveStops = Nothing, alternateRouteCodes = Nothing}
+  where
+    mkLiveCab :: UTCTime -> Text -> LT.VehicleInfo -> ApiTypes.LiveVehicleInfo
+    mkLiveCab now plate vi =
+      ApiTypes.LiveVehicleInfo
+        { number = plate,
+          vehicleTagNumber = Nothing,
+          currentTripId = Nothing,
+          serviceTierType = Spec.SHARED_CAB,
+          serviceTierName = Nothing,
+          locationUTCTimestamp = now,
+          eta = Just [CQMMB.BusStopETA u.stop.stopCode (Just u.stop.name) u.eta (floor (utcTimeToPOSIXSeconds u.eta)) (Just (max 0 (floor (diffUTCTime u.eta now)))) | u <- fromMaybe [] vi.upcomingStops, u.status == LT.Upcoming],
+          position = LatLong vi.latitude vi.longitude,
+          serviceSubTypes = Nothing,
+          seatSelectionType = Nothing,
+          isUpcomingTrip = Nothing,
+          previousRouteId = Nothing,
+          bearing = Nothing
+        }
+
+postMultimodalRouteServiceabilityBus ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    API.Types.UI.MultimodalConfirm.RouteServiceabilityReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.RouteServiceabilityResp
+  )
+postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes req =
   BAPMetrics.withTimeFRFSMerchant "routeServiceability" "total" merchantId.getId $ do
     person <- authenticate mbPersonId
     -- Piggyback rider-location recording onto this already-frequent poll (the shuttle screen's ETA

@@ -115,6 +115,7 @@ setSharedCabSessionActiveBeforeSelect driverId = do
 selectSharedCabRoute :: DriverAuthInfo -> SelectRouteReq -> Flow SelectRouteResp
 selectSharedCabRoute (personId, merchantId, merchantOpCityId) req = do
   vehicle <- validateSharedCabDriver personId
+  driver <- QPerson.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
   integratedBPPConfig <- sharedCabBPPConfig merchantOpCityId
   bap <- bapInternal
   setSharedCabSessionActiveBeforeSelect personId
@@ -133,7 +134,9 @@ selectSharedCabRoute (personId, merchantId, merchantOpCityId) req = do
         SharedCabBAP.vehicleNumber = vehicle.registrationNo,
         SharedCabBAP.agencyId = integratedBPPConfig.agencyKey,
         SharedCabBAP.serviceTierType = sharedCabServiceTierType,
-        SharedCabBAP.capacity = fromMaybe sharedCabDefaultCapacity vehicle.capacity
+        SharedCabBAP.capacity = fromMaybe sharedCabDefaultCapacity vehicle.capacity,
+        SharedCabBAP.driverName = Just (unwords (catMaybes [Just driver.firstName, driver.lastName])),
+        SharedCabBAP.vehicleModel = Just vehicle.model
       }
 
 getSharedCabSession :: DriverAuthInfo -> Flow (Maybe SharedCabSession)
