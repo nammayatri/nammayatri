@@ -178,3 +178,20 @@ crossCloudProxyCacheKeyPrefix = "crossCloudProxy:mocCloud"
 
 crossCloudProxyCacheKeyParts :: Id MerchantOperatingCity -> [Text]
 crossCloudProxyCacheKeyParts mocId = [crossCloudProxyCacheKeyPrefix, mocId.getId]
+
+-- | Drop every cached view of a merchant-operating-city after it is updated
+clearCache :: (CacheFlow m r, MonadFlow m) => MerchantOperatingCity -> m ()
+clearCache merchantOperatingCity = do
+  Hedis.runInMultiCloudRedisWrite $ do
+    Hedis.del (makeMerchantOpCityIdKey merchantOperatingCity.id)
+    Hedis.del (makeMerchantOperatingCityCityKey merchantOperatingCity.city)
+    Hedis.del (makeAllByCityKey merchantOperatingCity.city)
+    Hedis.del (makeMerchantIdKey merchantOperatingCity.merchantId)
+    Hedis.del (makeMerchantShortIdKey merchantOperatingCity.merchantShortId)
+    Hedis.del (makeMerchantIdAndCityKey merchantOperatingCity.merchantId merchantOperatingCity.city)
+    Hedis.del (makeMerchantShortIdAndCityKey merchantOperatingCity.merchantShortId merchantOperatingCity.city)
+    Hedis.del (makeMerchantIdAndStateKey merchantOperatingCity.merchantId merchantOperatingCity.state)
+  IM.refreshInMem merchantOperatingCityCacheKeyPrefix
+
+merchantOperatingCityCacheKeyPrefix :: Text
+merchantOperatingCityCacheKeyPrefix = "CachedQueries:MerchantOperatingCity:"
