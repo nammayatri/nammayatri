@@ -727,7 +727,9 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           _ -> pure []
         today <- utctDay <$> getCurrentTime
         mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
-        let domainContext =
+        -- RideHailing product ids are service tiers (show vehicleServiceTierType), so each
+        -- product's eligibility runs with its own serviceTierType for tier-specific offer rules.
+        let domainContextFor productId =
               Just $
                 A.toJSON
                   OfferEligibilityInput
@@ -736,14 +738,18 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       deviceOfferStats = deviceOfferStats,
                       personDailyOfferStats = mbPersonDailyOfferStats,
                       personStats = mbPersonStats,
-                      serviceTierType = Nothing,
+                      serviceTierType = Just productId,
                       searchReq = mbSearchReqData,
                       hasTakenValidRide = person.hasTakenValidRide,
                       totalRidesCount = person.totalRidesCount,
                       personTags = offerEligibilityTags person.customerNammaTags
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
-        offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContext mbRider
+        offersByProduct <-
+          concat
+            <$> forM
+              productsWithAmount
+              (\productWithAmount@(productId, _) -> DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId [productWithAmount] currency (domainContextFor productId) mbRider)
         let mbRideData = mkRideData <$> mbRide
             mbBookingData = mkBookingData <$> mbBooking
             language = fromMaybe ENGLISH person.language
