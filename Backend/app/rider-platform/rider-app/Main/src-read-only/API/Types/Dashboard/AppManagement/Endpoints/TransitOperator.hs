@@ -39,7 +39,7 @@ data UpsertDeviceVehicleMappingResp = UpsertDeviceVehicleMappingResp {success ::
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("transitOperator" :> (TransitOperatorGetRow :<|> TransitOperatorGetAllRows :<|> TransitOperatorDeleteRow :<|> TransitOperatorUpsertRow :<|> TransitOperatorUpsertRows :<|> TransitOperatorQueryRows :<|> TransitOperatorGetServiceTypes :<|> TransitOperatorGetRoutes :<|> TransitOperatorGetDepots :<|> TransitOperatorGetShiftTypes :<|> TransitOperatorGetScheduleNumbers :<|> TransitOperatorGetDayTypes :<|> TransitOperatorGetTripTypes :<|> TransitOperatorGetBreakTypes :<|> TransitOperatorGetTripDetails :<|> TransitOperatorGetFleets :<|> TransitOperatorGetConductor :<|> TransitOperatorGetDriver :<|> TransitOperatorGetDeviceIds :<|> TransitOperatorGetTabletIds :<|> TransitOperatorGetOperators :<|> TransitOperatorUpdateWaybillStatus :<|> TransitOperatorUpdateWaybillFleet :<|> TransitOperatorUpdateWaybillDetails :<|> TransitOperatorUpdateWaybillTablet :<|> TransitOperatorGetWaybills :<|> TransitOperatorGetDeviceVehicleMappingList :<|> TransitOperatorUpsertDeviceVehicleMapping :<|> TransitOperatorUnblockBus :<|> TransitOperatorSearchStops :<|> TransitOperatorNearbyStops :<|> TransitOperatorBulkReplaceStops :<|> TransitOperatorRouteStops :<|> TransitOperatorInsertRouteStop :<|> TransitOperatorReprocessRoutes :<|> TransitOperatorExportRouteStopMapping :<|> TransitOperatorQueryVehicle :<|> TransitOperatorUpsertVehicles :<|> TransitOperatorDeleteVehicle))
+type API = ("transitOperator" :> (TransitOperatorGetRow :<|> TransitOperatorGetAllRows :<|> TransitOperatorDeleteRow :<|> TransitOperatorUpsertRow :<|> TransitOperatorUpsertRows :<|> TransitOperatorQueryRows :<|> TransitOperatorGetServiceTypes :<|> TransitOperatorGetRoutes :<|> TransitOperatorGetDepots :<|> TransitOperatorGetShiftTypes :<|> TransitOperatorGetScheduleNumbers :<|> TransitOperatorGetDayTypes :<|> TransitOperatorGetTripTypes :<|> TransitOperatorGetBreakTypes :<|> TransitOperatorGetTripDetails :<|> TransitOperatorGetFleets :<|> TransitOperatorGetConductor :<|> TransitOperatorGetDriver :<|> TransitOperatorGetDeviceIds :<|> TransitOperatorGetTabletIds :<|> TransitOperatorGetOperators :<|> TransitOperatorUpdateWaybillStatus :<|> TransitOperatorUpdateWaybillFleet :<|> TransitOperatorUpdateWaybillDetails :<|> TransitOperatorUpdateWaybillTablet :<|> TransitOperatorGetWaybills :<|> TransitOperatorGetDeviceVehicleMappingList :<|> TransitOperatorUpsertDeviceVehicleMapping :<|> TransitOperatorUnblockBus :<|> TransitOperatorSearchStops :<|> TransitOperatorNearbyStops :<|> TransitOperatorBulkReplaceStops :<|> TransitOperatorRouteStops :<|> TransitOperatorInsertRouteStop :<|> TransitOperatorReprocessRoutes :<|> TransitOperatorExportRouteStopMapping :<|> TransitOperatorQueryVehicle :<|> TransitOperatorUpsertVehicles :<|> TransitOperatorDeleteVehicle :<|> TransitOperatorGetScheduleTripRepeat :<|> TransitOperatorSetScheduleTripRepeat))
 
 type TransitOperatorGetRow =
   ( "row" :> QueryParam "column" Kernel.Prelude.Text :> MandatoryQueryParam "table" SharedLogic.External.Nandi.Types.NandiTable
@@ -313,6 +313,25 @@ type TransitOperatorDeleteVehicle =
       :> Delete '[JSON] SharedLogic.External.Nandi.Types.RowsAffectedResp
   )
 
+type TransitOperatorGetScheduleTripRepeat =
+  ( "scheduleTrip" :> Capture "scheduleTripId" Kernel.Prelude.Text :> "repeat"
+      :> MandatoryQueryParam
+           "vehicleCategory"
+           BecknV2.OnDemand.Enums.VehicleCategory
+      :> Get '[JSON] SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig
+  )
+
+type TransitOperatorSetScheduleTripRepeat =
+  ( "scheduleTrip" :> Capture "scheduleTripId" Kernel.Prelude.Text :> "repeat"
+      :> MandatoryQueryParam
+           "vehicleCategory"
+           BecknV2.OnDemand.Enums.VehicleCategory
+      :> ReqBody '[JSON] SharedLogic.External.Nandi.Types.SetScheduleTripRepeatReq
+      :> Post
+           '[JSON]
+           SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig
+  )
+
 data TransitOperatorAPIs = TransitOperatorAPIs
   { transitOperatorGetRow :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.NandiRow,
     transitOperatorGetAllRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.NandiRow],
@@ -352,13 +371,15 @@ data TransitOperatorAPIs = TransitOperatorAPIs
     transitOperatorExportRouteStopMapping :: BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.RouteStopMappingExport],
     transitOperatorQueryVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet],
     transitOperatorUpsertVehicles :: BecknV2.OnDemand.Enums.VehicleCategory -> [SharedLogic.External.Nandi.Types.VehicleUpsertRequest] -> EulerHS.Types.EulerClient [SharedLogic.External.Nandi.Types.Fleet],
-    transitOperatorDeleteVehicle :: BecknV2.OnDemand.Enums.VehicleCategory -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp
+    transitOperatorDeleteVehicle :: BecknV2.OnDemand.Enums.VehicleCategory -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.RowsAffectedResp,
+    transitOperatorGetScheduleTripRepeat :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig,
+    transitOperatorSetScheduleTripRepeat :: Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.SetScheduleTripRepeatReq -> EulerHS.Types.EulerClient SharedLogic.External.Nandi.Types.ScheduleTripRepeatConfig
   }
 
 mkTransitOperatorAPIs :: (Client EulerHS.Types.EulerClient API -> TransitOperatorAPIs)
 mkTransitOperatorAPIs transitOperatorClient = (TransitOperatorAPIs {..})
   where
-    transitOperatorGetRow :<|> transitOperatorGetAllRows :<|> transitOperatorDeleteRow :<|> transitOperatorUpsertRow :<|> transitOperatorUpsertRows :<|> transitOperatorQueryRows :<|> transitOperatorGetServiceTypes :<|> transitOperatorGetRoutes :<|> transitOperatorGetDepots :<|> transitOperatorGetShiftTypes :<|> transitOperatorGetScheduleNumbers :<|> transitOperatorGetDayTypes :<|> transitOperatorGetTripTypes :<|> transitOperatorGetBreakTypes :<|> transitOperatorGetTripDetails :<|> transitOperatorGetFleets :<|> transitOperatorGetConductor :<|> transitOperatorGetDriver :<|> transitOperatorGetDeviceIds :<|> transitOperatorGetTabletIds :<|> transitOperatorGetOperators :<|> transitOperatorUpdateWaybillStatus :<|> transitOperatorUpdateWaybillFleet :<|> transitOperatorUpdateWaybillDetails :<|> transitOperatorUpdateWaybillTablet :<|> transitOperatorGetWaybills :<|> transitOperatorGetDeviceVehicleMappingList :<|> transitOperatorUpsertDeviceVehicleMapping :<|> transitOperatorUnblockBus :<|> transitOperatorSearchStops :<|> transitOperatorNearbyStops :<|> transitOperatorBulkReplaceStops :<|> transitOperatorRouteStops :<|> transitOperatorInsertRouteStop :<|> transitOperatorReprocessRoutes :<|> transitOperatorExportRouteStopMapping :<|> transitOperatorQueryVehicle :<|> transitOperatorUpsertVehicles :<|> transitOperatorDeleteVehicle = transitOperatorClient
+    transitOperatorGetRow :<|> transitOperatorGetAllRows :<|> transitOperatorDeleteRow :<|> transitOperatorUpsertRow :<|> transitOperatorUpsertRows :<|> transitOperatorQueryRows :<|> transitOperatorGetServiceTypes :<|> transitOperatorGetRoutes :<|> transitOperatorGetDepots :<|> transitOperatorGetShiftTypes :<|> transitOperatorGetScheduleNumbers :<|> transitOperatorGetDayTypes :<|> transitOperatorGetTripTypes :<|> transitOperatorGetBreakTypes :<|> transitOperatorGetTripDetails :<|> transitOperatorGetFleets :<|> transitOperatorGetConductor :<|> transitOperatorGetDriver :<|> transitOperatorGetDeviceIds :<|> transitOperatorGetTabletIds :<|> transitOperatorGetOperators :<|> transitOperatorUpdateWaybillStatus :<|> transitOperatorUpdateWaybillFleet :<|> transitOperatorUpdateWaybillDetails :<|> transitOperatorUpdateWaybillTablet :<|> transitOperatorGetWaybills :<|> transitOperatorGetDeviceVehicleMappingList :<|> transitOperatorUpsertDeviceVehicleMapping :<|> transitOperatorUnblockBus :<|> transitOperatorSearchStops :<|> transitOperatorNearbyStops :<|> transitOperatorBulkReplaceStops :<|> transitOperatorRouteStops :<|> transitOperatorInsertRouteStop :<|> transitOperatorReprocessRoutes :<|> transitOperatorExportRouteStopMapping :<|> transitOperatorQueryVehicle :<|> transitOperatorUpsertVehicles :<|> transitOperatorDeleteVehicle :<|> transitOperatorGetScheduleTripRepeat :<|> transitOperatorSetScheduleTripRepeat = transitOperatorClient
 
 data TransitOperatorUserActionType
   = TRANSIT_OPERATOR_GET_ROW
@@ -400,6 +421,8 @@ data TransitOperatorUserActionType
   | TRANSIT_OPERATOR_QUERY_VEHICLE
   | TRANSIT_OPERATOR_UPSERT_VEHICLES
   | TRANSIT_OPERATOR_DELETE_VEHICLE
+  | TRANSIT_OPERATOR_GET_SCHEDULE_TRIP_REPEAT
+  | TRANSIT_OPERATOR_SET_SCHEDULE_TRIP_REPEAT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
