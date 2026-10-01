@@ -46,6 +46,8 @@ imports:
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
   MerchantCloudUpdateReq: Dashboard.Common.Merchant
   MerchantCloudUpdateRes: Dashboard.Common.Merchant
+  MerchantOperatingCityCloudUpdateReq: Dashboard.Common.Merchant
+  MerchantOperatingCityCloudUpdateRes: Dashboard.Common.Merchant
   Value: Data.Aeson
 
 module: Merchant
@@ -343,6 +345,16 @@ apis:
         type: MerchantCloudUpdateReq
       response:
         type: MerchantCloudUpdateRes
+      migrate:
+        capability: system-config.merchant.write
+
+  - POST:
+      endpoint: /cloud/city/update
+      auth: ApiAuthV2
+      request:
+        type: MerchantOperatingCityCloudUpdateReq
+      response:
+        type: MerchantOperatingCityCloudUpdateRes
       migrate:
         capability: system-config.merchant.write
 

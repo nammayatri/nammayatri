@@ -268,3 +268,5 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-config.launch.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/MERCHANT/GET_MERCHANT_CONFIG_ALLOWED_DESTINATION_STATES' ) ON CONFLICT DO NOTHING;
 -- {"api":"PostMerchantCloudUpdate","migration":"capability","param":"system-config.merchant.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CLOUD_UPDATE' ) ON CONFLICT DO NOTHING;
+-- {"api":"PostMerchantCloudCityUpdate","migration":"capability","param":"system-config.merchant.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.merchant.write', 'DASHBOARD', 'RIDER_MANAGEMENT/MERCHANT/POST_MERCHANT_CLOUD_CITY_UPDATE' ) ON CONFLICT DO NOTHING;
