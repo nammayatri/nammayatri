@@ -122,7 +122,6 @@ import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
-import qualified SharedLogic.RideWalletCharges as RideWalletCharges
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -348,10 +347,6 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   -- 2. Wallet Flow
   when walletFinanceEnabled $ do
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
-
-  -- 3. Wallet-settled driver charges, posted in one ledger block: airport entry fee, gate fee
-  --    items, then the wallet-settled platform fee (platformFeeChargesBy = WalletCharged).
-  RideWalletCharges.debitWalletChargesAtEndRide thresholdConfig driverInfo newFareParams ride booking
   where
     settlementOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
 

@@ -325,6 +325,7 @@ otpRideCreate driver otpCode booking clientId = do
   RideWalletCharges.checkWalletBalanceBeforeRide transporterConfig driverInfo driver.id booking
   mFleetOwnerId <- QFDA.findByDriverId driver.id True
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
+  RideWalletCharges.debitWalletChargesAtRideStart transporterConfig driverInfo ride booking
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
 

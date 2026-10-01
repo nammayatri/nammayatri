@@ -30,7 +30,7 @@
 --   one line to 'chargesForBooking' and 'chargesForRide'. Nothing else here changes.
 module SharedLogic.RideWalletCharges
   ( checkWalletBalanceBeforeRide,
-    debitWalletChargesAtEndRide,
+    debitWalletChargesAtRideStart,
   )
 where
 
@@ -115,13 +115,21 @@ checkWalletBalanceBeforeRide transporterConfig driverInfo driverId booking = do
           <> show available
       throwError $ InsufficientAirportBalance required available
 
--- | Post every wallet-settled charge for the ride in ONE ledger block.
+-- | Post every wallet-settled charge for the ride in ONE ledger block, once the ride has started.
+--
+--   Call this AFTER the ride is actually in progress. 'checkWalletBalanceBeforeRide' is the guard
+--   that refuses a driver who cannot cover the charges; by the time we reach here the ride has
+--   started, so this posts unconditionally and lets the wallet go negative rather than throwing
+--   and leaving a started ride unpaid -- a balance can be spent between the guard and here.
 --
 --   Charges post in list order, which is deliberate: third-party money (the airport operator)
 --   before platform revenue, so a driver who cannot cover everything ends up short on the charge
---   we own rather than on money owed to someone else. Allows the wallet to go negative, matching
---   the airport entry fee's existing behaviour.
-debitWalletChargesAtEndRide ::
+--   we own rather than on money owed to someone else.
+--
+--   Prices from the BOOKING's fare params. For the flat 'DFP.WalletCharged' platform fee and the
+--   gate-configured airport charges that is the same figure a ride-end recompute would produce --
+--   neither is distance-dependent.
+debitWalletChargesAtRideStart ::
   ( ChargeFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
@@ -129,16 +137,15 @@ debitWalletChargesAtEndRide ::
   ) =>
   DTConf.TransporterConfig ->
   DI.DriverInformation ->
-  DFare.FareParameters -> -- ride-end (recomputed) fare params
   DRide.Ride ->
   SRB.Booking ->
   m ()
-debitWalletChargesAtEndRide transporterConfig driverInfo newFareParams ride booking = do
-  charges <- walletCharges transporterConfig driverInfo ride.driverId newFareParams booking
+debitWalletChargesAtRideStart transporterConfig driverInfo ride booking = do
+  charges <- walletCharges transporterConfig driverInfo ride.driverId booking.fareParams booking
   unless (totalDebit charges <= 0) $ do
     isOnline <- Wallet.resolveIsOnlineFromBooking booking
     ctx <- Wallet.financeCtxFromRide transporterConfig booking ride Nothing isOnline
     result <- runFinance ctx $ traverse_ (.postLegs) charges
     case result of
-      Left err -> fromEitherM (\e -> InternalError ("Ride wallet charge deduction failed: " <> show e)) (Left err)
+      Left err -> fromEitherM (\e -> InternalError ("Ride wallet charge deduction at ride start failed: " <> show e)) (Left err)
       Right _ -> pure ()

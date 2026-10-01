@@ -258,6 +258,7 @@ startRideHandler ServiceHandle {..} rideId req = do
       whenWithLocationUpdatesLock driverId $ do
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer transporterConfig driverInfo
+        RideWalletCharges.debitWalletChargesAtRideStart transporterConfig driverInfo updatedRide booking
         when booking.isScheduled $
           -- recompute the gate under the per-driver hold lock to avoid racing an accept/release
           CS.withDriverScheduledHoldLock (cast driverId) $ do
