@@ -22,7 +22,10 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.RiderPlatform.Management.Payout.API)
-handler merchantId city = getPayoutPayoutOrder merchantId city
+handler merchantId city = getPayoutPayoutOrder merchantId city :<|> postPayoutPayoutRetrigger merchantId city
 
 getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutOrderResp)
 getPayoutPayoutOrder a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a1) $ Domain.Action.Dashboard.Payout.getPayoutPayoutOrder a4 a3 a2 a1
+
+postPayoutPayoutRetrigger :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.RiderPlatform.Management.Payout.RetriggerPayoutReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Payout.RetriggerPayoutResp)
+postPayoutPayoutRetrigger a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardMbPersonIdActorInfo (Kernel.Types.Id.Id <$> a2) $ Domain.Action.Dashboard.Payout.postPayoutPayoutRetrigger a4 a3 a2 a1
