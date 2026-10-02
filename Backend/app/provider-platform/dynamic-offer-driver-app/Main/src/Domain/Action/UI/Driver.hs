@@ -275,6 +275,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
 import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.EventTracking as ET
@@ -771,7 +772,8 @@ data DriverStatsRes = DriverStatsRes
     bonusEarningWithCurrency :: PriceAPIEntity,
     coinBalance :: Int,
     totalValidRidesOfDay :: Int,
-    tipsEarning :: PriceAPIEntity
+    tipsEarning :: PriceAPIEntity,
+    todayOnlineDuration :: Minutes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -2344,6 +2346,12 @@ getStats (driverId, _, merchantOpCityId) date = do
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   validRideCountOfDriver <- fromMaybe 0 <$> Coins.getValidRideCountByDriverIdKey driverId
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  now <- getCurrentTime
+  let today = DriverOnlineHoursCache.localDay transporterConfig.timeDiffFromUtc now
+  todayOnlineDuration <-
+    if date == today
+      then secondsToMinutes <$> DriverOnlineHoursCache.getTodayOnlineDuration driverId transporterConfig.timeDiffFromUtc
+      else pure (Minutes 0)
 
   let totalEarningsOfDay = maybe 0.0 (.totalEarnings) driverDailyStats
       tipsEarningOfDay = maybe 0.0 (.tipAmount) driverDailyStats
@@ -2365,7 +2373,8 @@ getStats (driverId, _, merchantOpCityId) date = do
         totalEarningsOfDayPerKm = roundToIntegral totalEarningsOfDayPerKm,
         totalEarningsOfDayPerKmWithCurrency = PriceAPIEntity totalEarningsOfDayPerKm currency,
         bonusEarning = roundToIntegral bonusEarning,
-        bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency
+        bonusEarningWithCurrency = PriceAPIEntity bonusEarning currency,
+        todayOnlineDuration = todayOnlineDuration
       }
 
 getEarnings :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> Flow DCommon.EarningPeriodStatsRes
