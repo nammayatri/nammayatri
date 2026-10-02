@@ -200,6 +200,8 @@ mkNotificationReq contact title body messageData =
       overlayNotificationData = Nothing
     }
 
+-- | Base request; @sendWhatsapp@ in the app handler injects @mediaUrl@ from the
+-- merchant_message row before dispatching to the provider.
 mkWhatsappReq :: Text -> Text -> [Maybe Text] -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
 mkWhatsappReq phone templateId variables =
   Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
@@ -207,7 +209,8 @@ mkWhatsappReq phone templateId variables =
       templateId = templateId,
       variables = variables,
       ctaButtonUrl = Nothing,
-      containsUrlButton = Nothing
+      containsUrlButton = Nothing,
+      mediaUrl = Nothing
     }
 
 -- | Send endpoint: resolve the recipient, build the request, dispatch on channel.

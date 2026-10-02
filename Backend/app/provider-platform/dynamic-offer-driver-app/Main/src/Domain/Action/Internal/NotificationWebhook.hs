@@ -96,11 +96,13 @@ listMerchantMessages' channel opCityId = do
   msgs <- QMM.findAllByMerchantOpCityId merchantOpCityId
   pure $ map toRaw (filter matchesChannel msgs)
   where
-    matchesChannel m = (m.channel >>= toNotifyChannel) == Just channel
+    matchesChannel m = case channel of
+      Webhook.WHATSAPP -> (m.channel >>= toNotifyChannel) == Just Webhook.WHATSAPP
+      _ -> True
     toRaw m =
       Webhook.RawTemplate
         { messageKey = show m.messageKey,
-          channel = Just channel,
+          channel = Just $ fromMaybe Webhook.SMS (m.channel >>= toNotifyChannel),
           templateId = m.templateId,
           message = m.message,
           senderHeader = m.senderHeader
@@ -123,8 +125,16 @@ sendSms' contact msg = do
 
 sendWhatsapp' :: Webhook.Contact -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq -> Flow ()
 sendWhatsapp' contact req = do
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI (Id contact.merchantId) (Id contact.merchantOperatingCityId) req
+  mediaUrl <- resolveMediaUrlForTemplate contact.merchantOperatingCityId req.templateId
+  let reqWithMedia = req {Whatsapp.mediaUrl = mediaUrl}
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI (Id contact.merchantId) (Id contact.merchantOperatingCityId) reqWithMedia
   when (result._response.status /= "success") $ throwError (InvalidRequest "WhatsApp send failed")
+
+resolveMediaUrlForTemplate :: Text -> Text -> Flow (Maybe Text)
+resolveMediaUrlForTemplate _ "" = pure Nothing
+resolveMediaUrlForTemplate opCityId templateId = do
+  mbRow <- QMM.findByMerchantOpCityIdAndTemplateId (Id opCityId :: Id DMOC.MerchantOperatingCity) templateId
+  pure $ mbRow >>= (.mediaUrl)
 
 sendEmail' :: Webhook.Contact -> Webhook.EmailArgs -> Flow ()
 sendEmail' _ args = do

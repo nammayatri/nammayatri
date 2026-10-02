@@ -6,6 +6,7 @@ where
 
 import qualified Control.Exception as E
 import qualified Data.Text as T
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Email.Flow as Email
@@ -92,16 +93,23 @@ listMerchantMessages' :: Webhook.NotifyChannel -> Text -> Flow [Webhook.RawTempl
 listMerchantMessages' channel opCityId = do
   let merchantOpCityId = Id opCityId :: Id DMOC.MerchantOperatingCity
   msgs <- QMM.findAllByMerchantOpCityId merchantOpCityId
-  pure $ map toRaw msgs
+  pure $ map toRaw (filter matchesChannel msgs)
   where
+    matchesChannel m = case channel of
+      Webhook.WHATSAPP -> (m.channel >>= toNotifyChannel) == Just Webhook.WHATSAPP
+      _ -> True
     toRaw m =
       Webhook.RawTemplate
         { messageKey = show m.messageKey,
-          channel = Just channel,
+          channel = Just $ fromMaybe Webhook.SMS (m.channel >>= toNotifyChannel),
           templateId = m.templateId,
           message = m.message,
           senderHeader = m.senderHeader
         }
+    toNotifyChannel = \case
+      DMM.SMS -> Just Webhook.SMS
+      DMM.WHATSAPP -> Just Webhook.WHATSAPP
+      _ -> Nothing
 
 sendPush' :: Webhook.Contact -> Notification.NotificationReq Value () -> Flow ()
 sendPush' contact req =
@@ -115,8 +123,16 @@ sendSms' contact msg = do
 
 sendWhatsapp' :: Webhook.Contact -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq -> Flow ()
 sendWhatsapp' contact req = do
-  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI (Id contact.merchantId) (Id contact.merchantOperatingCityId) req
+  mediaUrl <- resolveMediaUrlForTemplate contact.merchantOperatingCityId req.templateId
+  let reqWithMedia = req {Whatsapp.mediaUrl = mediaUrl}
+  result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI (Id contact.merchantId) (Id contact.merchantOperatingCityId) reqWithMedia
   when (result._response.status /= "success") $ throwError (InvalidRequest "WhatsApp send failed")
+
+resolveMediaUrlForTemplate :: Text -> Text -> Flow (Maybe Text)
+resolveMediaUrlForTemplate _ "" = pure Nothing
+resolveMediaUrlForTemplate opCityId templateId = do
+  mbRow <- QMM.findByMerchantOpCityIdAndTemplateId (Id opCityId :: Id DMOC.MerchantOperatingCity) templateId
+  pure $ mbRow >>= (.mediaUrl)
 
 sendEmail' :: Webhook.Contact -> Webhook.EmailArgs -> Flow ()
 sendEmail' _ args = do
