@@ -138,6 +138,10 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           mbActivationData
 
     handleScheduledActivation ride (driverInfo, booking, driver, vehicle, transporterConfig)
+      | transporterConfig.scheduledRideConfig.enableScheduledRideActivationChecks == Just False && driverInfo.onRide = do
+        now <- getCurrentTime
+        logWarning "Scheduled ride activation skipped because driver is on another ride and activation checks are disabled; ops intervention required"
+        return $ ReSchedule (addUTCTime transporterConfig.scheduledRideJobRescheduleTime now) -- might keep rescheduling, leaving it to ops
       | transporterConfig.scheduledRideConfig.enableScheduledRideActivationChecks == Just False = do
         logWarning "enableScheduledRideActivationChecks is disabled, activating scheduled ride without scheduler checks"
         activateScheduledRide driverId bookingId booking ride driver vehicle transporterConfig
