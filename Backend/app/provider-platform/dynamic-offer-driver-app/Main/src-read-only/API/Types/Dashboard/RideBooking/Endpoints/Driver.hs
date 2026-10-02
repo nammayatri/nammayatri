@@ -152,6 +152,7 @@ data DriverInfoRes = DriverInfoRes
     courtRecord :: Kernel.Prelude.Maybe CourtRecordResult,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disabledReasonFlag :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DisabledReasonFlag,
+    enableCashRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialLocWarriorInfo :: SpecialLocWarriorInfo,
     isPetModeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     tripDistanceMinThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
@@ -440,14 +441,14 @@ type PostDriverExemptDriverFeeV2Helper =
   )
 
 data DriverAPIs = DriverAPIs
-  { getDriverPaymentDue :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverOutstandingBalanceResp],
+  { getDriverPaymentDue :: Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverOutstandingBalanceResp],
     postDriverEnable :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverCollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverV2CollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverCollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postDriverV2CollectCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverExemptCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverV2ExemptCash :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> Dashboard.Common.Driver.ServiceNames -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient DriverInfoRes,
-    getDriverFeedbackList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient GetFeedbackListRes,
+    getDriverInfo :: Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient DriverInfoRes,
+    getDriverFeedbackList :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient GetFeedbackListRes,
     postDriverUnlinkVehicle :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverEndRCAssociation :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverDeleteAadhaar :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

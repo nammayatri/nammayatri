@@ -113,9 +113,10 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
   let fleetOwnerFOIMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, foi)) fleetOwnerInfos
 
   now <- getClockTimeInMs
-  pure $ mapMaybe (buildOne now diMap vMap pMap baMap faMap fleetOwnerFOIMap) driverIds
+  nowUtc <- getCurrentTime
+  pure $ mapMaybe (buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap) driverIds
   where
-    buildOne now diMap vMap pMap baMap faMap fleetOwnerFOIMap did = do
+    buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
@@ -124,10 +125,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             Just assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) baMap
             Nothing -> HashMap.lookup (cast did :: Id Person.Person) baMap
       let fleetOwnerEnableCashRide = fa >>= \assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) fleetOwnerFOIMap >>= (.enableCashRide)
-          associationEnableCashRide = fa >>= (.enableCashRide)
-          cashRideEnabled = case fa of
-            Just _ -> fromMaybe True fleetOwnerEnableCashRide && fromMaybe True associationEnableCashRide
-            Nothing -> fromMaybe True di.enableCashRide
+          cashRideEnabled = QFDA.effectiveEnableCashRide nowUtc di.enableCashRide fa fleetOwnerEnableCashRide
       Just
         DriverPoolData
           { driverId = did,

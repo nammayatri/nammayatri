@@ -11,6 +11,7 @@ import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBankAccount as DDBA
 import Domain.Types.DriverInformation
 import Domain.Types.FleetDriverAssociation
+import qualified Domain.Types.FleetDriverAssociation as DFDA
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person
@@ -47,6 +48,19 @@ import Storage.Queries.OrphanInstances.Person ()
 driverFleetLockKey :: Text -> Text -> Text
 driverFleetLockKey dId fId = "fleet_driver_association:driver:" <> dId <> ":fleet_owner:" <> fId
 
+isActiveFleetAssociation :: UTCTime -> FleetDriverAssociation -> Bool
+isActiveFleetAssociation now fda = fda.isActive && maybe False (> now) fda.associatedTill
+
+effectiveEnableCashRide ::
+  UTCTime ->
+  Maybe Bool ->
+  Maybe FleetDriverAssociation ->
+  Maybe Bool ->
+  Bool
+effectiveEnableCashRide now driverFlag mbFda fleetOwnerFlag = case mfilter (isActiveFleetAssociation now) mbFda of
+  Just fda -> fromMaybe True fleetOwnerFlag && fromMaybe True fda.enableCashRide
+  Nothing -> fromMaybe True driverFlag
+
 createFleetDriverAssociationIfNotExists ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
@@ -78,25 +92,25 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
             [Se.And [Se.Is BeamFDVA.id $ Se.Eq fleetDriverAssociation.id.getId]]
       Nothing -> do
         id <- generateGUID
-        let newAssociationEnableCashRide = Nothing
-        createWithKV $
-          FleetDriverAssociation
-            { associatedTill = defaultAssociationEnd,
-              driverId = driverId,
-              fleetOwnerId = fleetOwnerId.getId,
-              associatedOn = Just now,
-              onboardingVehicleCategory = Just onboardingVehicleCategory,
-              enableCashRide = newAssociationEnableCashRide,
-              onboardedOperatorId,
-              createdAt = now,
-              updatedAt = now,
-              responseReason = Nothing,
-              ..
-            }
+        let newAssociation =
+              FleetDriverAssociation
+                { associatedTill = defaultAssociationEnd,
+                  driverId = driverId,
+                  fleetOwnerId = fleetOwnerId.getId,
+                  associatedOn = Just now,
+                  onboardingVehicleCategory = Just onboardingVehicleCategory,
+                  enableCashRide = Nothing,
+                  onboardedOperatorId,
+                  createdAt = now,
+                  updatedAt = now,
+                  responseReason = Nothing,
+                  ..
+                }
+        createWithKV newAssociation
         (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
         mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
-        let fleetOwnerCashRideFlag = maybe True (fromMaybe True . (.enableCashRide)) mbFleetOwnerInfo
-            cashRideEffective = fleetOwnerCashRideFlag && fromMaybe True newAssociationEnableCashRide
+        mbDriverCashRide <- if isActive then pure Nothing else (>>= (.enableCashRide)) <$> QDIE.findById driverId
+        let cashRideEffective = effectiveEnableCashRide now mbDriverCashRide (Just newAssociation) (mbFleetOwnerInfo >>= (.enableCashRide))
         LTSSync.syncDriverPoolDataToLTS (cast driverId) $
           LTSSync.emptyUpdate
             { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
@@ -118,9 +132,9 @@ findAllActiveByFleetOwnerIds fleetOwnerIds = do
         ]
     ]
 
-fleetOwnerEnableCashRideFlags :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [FleetDriverAssociation] -> m (M.Map Text Bool)
+fleetOwnerEnableCashRideFlags :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [FleetDriverAssociation] -> m (M.Map Text (Maybe Bool))
 fleetOwnerEnableCashRideFlags assocs =
-  M.fromList . map (\o -> (o.fleetOwnerPersonId.getId, fromMaybe True o.enableCashRide))
+  M.fromList . map (\o -> (o.fleetOwnerPersonId.getId, o.enableCashRide))
     <$> FOI.findAllByPrimaryKeys (KTI.Id <$> M.keys (M.fromList [(a.fleetOwnerId, ()) | a <- assocs]))
 
 syncEnableCashRideToLTS ::
@@ -147,10 +161,11 @@ updateEnableCashRideForFleetOwnersWithSync ::
 updateEnableCashRideForFleetOwnersWithSync _ _ [] = pure ()
 updateEnableCashRideForFleetOwnersWithSync enableCashRide batchSize fleetOwnerPersonIds = do
   FOI.updateEnableCashRideForFleetOwners enableCashRide fleetOwnerPersonIds
+  now <- getCurrentTime
   assocs <- findAllActiveByFleetOwnerIds (getId <$> fleetOwnerPersonIds)
   syncEnableCashRideToLTS
     batchSize
-    [(a.driverId, fromMaybe True enableCashRide && fromMaybe True a.enableCashRide) | a <- assocs]
+    [(a.driverId, effectiveEnableCashRide now Nothing (Just a) enableCashRide) | a <- assocs]
 
 updateEnableCashRideForAssociations ::
   (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
@@ -167,7 +182,7 @@ updateEnableCashRideForAssociations enableCashRide batchSize assocs = do
   ownerFlag <- fleetOwnerEnableCashRideFlags assocs
   syncEnableCashRideToLTS
     batchSize
-    [(a.driverId, M.findWithDefault True a.fleetOwnerId ownerFlag && fromMaybe True enableCashRide) | a <- assocs]
+    [(a.driverId, effectiveEnableCashRide now Nothing (Just a {DFDA.enableCashRide = enableCashRide}) (join $ M.lookup a.fleetOwnerId ownerFlag)) | a <- assocs]
 
 updateEnableCashRideForDriversWithSync ::
   (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
@@ -178,14 +193,15 @@ updateEnableCashRideForDriversWithSync ::
 updateEnableCashRideForDriversWithSync _ _ [] = pure ()
 updateEnableCashRideForDriversWithSync enableCashRide batchSize driverIds = do
   QDIE.updateEnableCashRideForDrivers enableCashRide (cast <$> driverIds)
+  now <- getCurrentTime
   assocs <- findAllByDriverIds driverIds
   ownerFlag <- fleetOwnerEnableCashRideFlags assocs
   let assocByDriver = M.fromList [(a.driverId.getId, a) | a <- assocs]
   syncEnableCashRideToLTS batchSize $
     driverIds
-      <&> \d -> case M.lookup d.getId assocByDriver of
-        Just a -> (d, M.findWithDefault True a.fleetOwnerId ownerFlag && fromMaybe True a.enableCashRide)
-        Nothing -> (d, fromMaybe True enableCashRide)
+      <&> \d ->
+        let mbAssoc = M.lookup d.getId assocByDriver
+         in (d, effectiveEnableCashRide now enableCashRide mbAssoc (mbAssoc >>= \a -> join (M.lookup a.fleetOwnerId ownerFlag)))
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -521,7 +537,7 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
       [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
       [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
     mbDriverInfo <- QDIE.findById (Id driverId)
-    let effective = maybe True (fromMaybe True . (.enableCashRide)) mbDriverInfo
+    let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
     LTSSync.syncDriverPoolDataToLTS (Id driverId) $
       LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
 
@@ -919,8 +935,7 @@ approveFleetDriverAssociation driverId fleetOwnerId responseReason = do
     (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
     mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
     mbAssociation <- findByDriverIdAndFleetOwnerIdWithStatus driverId fleetOwnerId.getId
-    let fleetOwnerCashRideFlag = maybe True (fromMaybe True . (.enableCashRide)) mbFleetOwnerInfo
-        cashRideEffective = fleetOwnerCashRideFlag && maybe True (fromMaybe True . (.enableCashRide)) mbAssociation
+    let cashRideEffective = effectiveEnableCashRide now Nothing mbAssociation (mbFleetOwnerInfo >>= (.enableCashRide))
     LTSSync.syncDriverPoolDataToLTS (cast driverId) $
       LTSSync.emptyUpdate
         { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
@@ -960,7 +975,7 @@ revokeFleetDriverAssociation driverId fleetOwnerId = do
       ]
       [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
     mbDriverInfo <- QDIE.findById driverId
-    let effective = maybe True (fromMaybe True . (.enableCashRide)) mbDriverInfo
+    let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
     LTSSync.syncDriverPoolDataToLTS (cast driverId) $
       LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
 

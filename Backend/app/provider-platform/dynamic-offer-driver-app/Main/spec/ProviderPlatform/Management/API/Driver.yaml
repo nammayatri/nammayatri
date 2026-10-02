@@ -681,6 +681,7 @@ types:
     - recentFleetInfo: Maybe DriverAssociationInfo
     - hasActiveRc: Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
+    - enableCashRide: Maybe Bool
     - linkedVehicleInfo: [LinkedVehicleInfo]
   LinkedVehicleInfo:
     - rcId: Text
