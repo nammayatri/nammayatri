@@ -69,8 +69,8 @@ mkRiderStatsFieldKey :: Text -> Time.Day -> RiderStatEvent -> Text
 mkRiderStatsFieldKey riderId day event =
   mkRiderStatsKey riderId day <> ":" <> eventField event
 
-retentionDays :: Int
-retentionDays = 90
+completedRetentionDays :: Integer
+completedRetentionDays = 90
 
 data RiderStatEvent = Assigned | Completed | Cancelled
   deriving (Eq, Show)
@@ -115,11 +115,12 @@ incrementRiderStatToday ::
   Id DP.Person ->
   RiderStatEvent ->
   Integer ->
+  Integer ->
   m ()
-incrementRiderStatToday personId event count = Redis.withCrossAppRedis $ do
+incrementRiderStatToday personId event ttlDays count = Redis.withCrossAppRedis $ do
   today <- Time.utctDay <$> getCurrentTime
   let key = mkRiderStatsFieldKey personId.getId today event
-      ttl = retentionDays * 86400
+      ttl = fromIntegral $ ttlDays * 86400
   newCount <- Redis.incrby key count
   when (newCount == count) $
     Redis.expire key ttl
@@ -169,7 +170,7 @@ incrementCancelledCount ::
   Integer ->
   m ()
 incrementCancelledCount customerId _windowSize =
-  incrementRiderStatToday customerId Cancelled 1
+  incrementRiderStatToday customerId Cancelled (_windowSize + 1) 1
 
 incrementAssignedCount ::
   ( Redis.HedisFlow m r,
@@ -181,7 +182,7 @@ incrementAssignedCount ::
   Integer ->
   m ()
 incrementAssignedCount customerId _windowSize =
-  incrementRiderStatToday customerId Assigned 1
+  incrementRiderStatToday customerId Assigned (_windowSize + 1) 1
 
 incrementCompletedCount ::
   ( Redis.HedisFlow m r,
@@ -193,7 +194,7 @@ incrementCompletedCount ::
   Integer ->
   m ()
 incrementCompletedCount customerId count =
-  incrementRiderStatToday customerId Completed count
+  incrementRiderStatToday customerId Completed completedRetentionDays count
 
 getCancellationCount ::
   ( Redis.HedisFlow m r,
