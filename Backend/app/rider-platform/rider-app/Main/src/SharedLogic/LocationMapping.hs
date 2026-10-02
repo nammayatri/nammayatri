@@ -72,3 +72,17 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
       locationId = location.id
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
+
+-- | Builds a mapping for a newly created entity. A new entityId has no past versions, so this skips updatePastMappingVersions.
+buildFreshLocationMapping :: MonadFlow m => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildFreshLocationMapping locationId entityId tag merchantId merchantOperatingCityId order = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+  return DLM.LocationMapping {..}
+
+buildFreshStopsLocationMapping :: MonadFlow m => [DL.Location] -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
+buildFreshStopsLocationMapping locations entityId tag merchantId merchantOperatingCityId =
+  mapM (\(location, order) -> buildFreshLocationMapping location.id entityId tag merchantId merchantOperatingCityId order) $ zip locations [1 ..]
