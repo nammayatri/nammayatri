@@ -28,6 +28,8 @@ import Beckn.Types.Core.Taxi.API.Update as API
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as LT
+import qualified Data.Text.Lazy.Encoding as LTE
 import qualified Data.UUID as UUID
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Merchant as Merchant
@@ -486,6 +488,8 @@ callBecknAPIWithSignature' ::
   req ->
   m res
 callBecknAPIWithSignature' merchantId a b c d e req' = do
+  let reqJson = LT.toStrict (LTE.decodeUtf8 (Aeson.encode req'))
+  logDebug $ "OUTGOING BECKN PAYLOAD (" <> b <> ", " <> show (T.length reqJson) <> " chars): " <> reqJson
   fork ("sending " <> show b <> ", pushing ondc logs") do
     void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
   callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
