@@ -1005,6 +1005,103 @@ data BusScheduleDetail = BusScheduleDetail
 
 type BusScheduleDetails = [BusScheduleDetail]
 
+-- | A segment-time variant: a named set of stop-to-stop times. Which variant a trip uses is
+-- an explicit choice -- the schedule's default, or an ops override -- never automatic.
+data EtaVariant = EtaVariant
+  { variant_id :: Text,
+    gtfs_id :: Text,
+    code :: Text,
+    display_name :: Text,
+    is_default :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data EtaVariantUpsertReq = EtaVariantUpsertReq
+  { code :: Text,
+    displayName :: Text,
+    isDefault :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets EtaVariantUpsertReq where
+  hideSecrets = identity
+
+-- | Window bounds as epoch seconds. GIMS matches them against the trip's own clock, not against
+-- now(), so one window can cover the same schedule trip across several duty dates; it bounds how
+-- long the window may span.
+data SetTripEtaOverrideReq = SetTripEtaOverrideReq
+  { waybillNo :: Text,
+    tripNumber :: Int,
+    variantId :: Text,
+    effectiveFrom :: Int,
+    effectiveUntill :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets SetTripEtaOverrideReq where
+  hideSecrets = identity
+
+-- | Pins a schedule trip to a variant for good, as opposed to an override's bounded window.
+-- Omitting `tripNumber` pins every trip of the schedule; a null `variantId` clears the pin and
+-- puts the trip back on the feed's default.
+data SetScheduleDefaultVariantReq = SetScheduleDefaultVariantReq
+  { scheduleTripId :: Text,
+    tripNumber :: Maybe Int,
+    variantId :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets SetScheduleDefaultVariantReq where
+  hideSecrets = identity
+
+data ClearTripEtaOverrideReq = ClearTripEtaOverrideReq
+  { waybillNo :: Text,
+    tripNumber :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets ClearTripEtaOverrideReq where
+  hideSecrets = identity
+
+data StationEtaEntry = StationEtaEntry
+  { sourceStationCode :: Text,
+    destinationStationCode :: Text,
+    etaInSeconds :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data StationEtaBatchUpsertReq = StationEtaBatchUpsertReq
+  { variantId :: Maybe Text,
+    entries :: [StationEtaEntry]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+-- | A stored segment time with the variant it belongs to, so one read can span variants.
+data StationEtaRow = StationEtaRow
+  { variant_id :: Text,
+    source_station_code :: Text,
+    destination_station_code :: Text,
+    eta_in_seconds :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+instance HideSecrets StationEtaBatchUpsertReq where
+  hideSecrets = identity
+
+-- | An ETA override currently in force. Keyed the way this service addresses a trip
+-- (waybill_no + trip_number) rather than the way GIMS stores it. `route_id` scopes the
+-- route-schedule cache key so one override does not rotate every route's entry; it is nullable,
+-- so unattributed overrides are counted into that key instead of matched.
+data ActiveTripEtaOverride = ActiveTripEtaOverride
+  { waybill_no :: Text,
+    trip_number :: Int,
+    route_id :: Maybe Text,
+    variant_id :: Text,
+    effective_from :: UTCTime,
+    effective_untill :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data NandiTrip = NandiTrip
   { id :: Text,
     direction :: Maybe Text

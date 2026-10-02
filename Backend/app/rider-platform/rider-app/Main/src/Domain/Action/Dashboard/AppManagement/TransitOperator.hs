@@ -42,6 +42,15 @@ module Domain.Action.Dashboard.AppManagement.TransitOperator
     transitOperatorUpsertVehicles,
     transitOperatorDeleteVehicle,
     transitOperatorQueryVehicle,
+    transitOperatorGetEtaVariants,
+    transitOperatorUpsertEtaVariant,
+    transitOperatorDeleteEtaVariant,
+    transitOperatorGetStationEtas,
+    transitOperatorSetScheduleDefaultVariant,
+    transitOperatorUpsertStationEtas,
+    transitOperatorActiveTripEtaOverrides,
+    transitOperatorSetTripEtaOverride,
+    transitOperatorClearTripEtaOverride,
   )
 where
 
@@ -324,3 +333,39 @@ transitOperatorDeleteVehicle merchantShortId opCity vehicleCategory vehicleId =
 transitOperatorQueryVehicle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.Fleet])
 transitOperatorQueryVehicle merchantShortId opCity fleetNo tagNumber vehicleNo vehicleCategory =
   DTOp.transitOperatorQueryVehicleUtil merchantShortId opCity vehicleCategory vehicleNo tagNumber fleetNo
+
+transitOperatorGetEtaVariants :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.EtaVariant])
+transitOperatorGetEtaVariants merchantShortId opCity vehicleCategory =
+  DTOp.transitOperatorGetEtaVariantsUtil merchantShortId opCity vehicleCategory
+
+transitOperatorUpsertEtaVariant :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.EtaVariantUpsertReq -> Environment.Flow SharedLogic.External.Nandi.Types.EtaVariant)
+transitOperatorUpsertEtaVariant merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorUpsertEtaVariantUtil merchantShortId opCity vehicleCategory req
+
+transitOperatorDeleteEtaVariant :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorDeleteEtaVariant merchantShortId opCity variantId vehicleCategory =
+  DTOp.transitOperatorDeleteEtaVariantUtil merchantShortId opCity vehicleCategory variantId
+
+transitOperatorGetStationEtas :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.StationEtaRow])
+transitOperatorGetStationEtas merchantShortId opCity variantId vehicleCategory =
+  DTOp.transitOperatorGetStationEtasUtil merchantShortId opCity vehicleCategory variantId
+
+transitOperatorSetScheduleDefaultVariant :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.SetScheduleDefaultVariantReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorSetScheduleDefaultVariant merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorSetScheduleDefaultVariantUtil merchantShortId opCity vehicleCategory req
+
+transitOperatorUpsertStationEtas :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.StationEtaBatchUpsertReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorUpsertStationEtas merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorUpsertStationEtasUtil merchantShortId opCity vehicleCategory req
+
+transitOperatorActiveTripEtaOverrides :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.ActiveTripEtaOverride])
+transitOperatorActiveTripEtaOverrides merchantShortId opCity vehicleCategory =
+  DTOp.transitOperatorActiveTripEtaOverridesUtil merchantShortId opCity vehicleCategory
+
+transitOperatorSetTripEtaOverride :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.SetTripEtaOverrideReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+transitOperatorSetTripEtaOverride merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorSetTripEtaOverrideUtil merchantShortId opCity vehicleCategory req
+
+transitOperatorClearTripEtaOverride :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> BecknV2.OnDemand.Enums.VehicleCategory -> SharedLogic.External.Nandi.Types.ClearTripEtaOverrideReq -> Environment.Flow SharedLogic.External.Nandi.Types.RowsAffectedResp)
+transitOperatorClearTripEtaOverride merchantShortId opCity vehicleCategory req =
+  DTOp.transitOperatorClearTripEtaOverrideUtil merchantShortId opCity vehicleCategory req
