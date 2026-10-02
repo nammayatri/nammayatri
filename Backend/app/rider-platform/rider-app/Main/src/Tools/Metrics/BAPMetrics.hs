@@ -118,6 +118,13 @@ incrementFleetRouteMapMissingCounter merchantName merchantOperatingCityId vehicl
   let fleetRouteMapMissingCounter = bmContainer.fleetRouteMapMissingCounter
   liftIO $ P.withLabel fleetRouteMapMissingCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleNumber) P.incCounter
 
+incrementRouteNotFoundCounter :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementRouteNotFoundCounter merchantName merchantOperatingCityId routeCode = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let routeNotFoundCounter = bmContainer.routeNotFoundCounter
+  liftIO $ P.withLabel routeNotFoundCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, routeCode) P.incCounter
+
 incrementVehicleNoEtaCounter :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
 incrementVehicleNoEtaCounter merchantName merchantOperatingCityId source = do
   bmContainer <- asks (.bapMetrics)
