@@ -18,11 +18,14 @@ cabal.sandbox.config
 *.aux
 *.hp
 *.eventlog
+!cabal.project.eventlog
 .vscode/
 **/.DS_Store
 *.vim
 cabal.project.local
 cabal.project.local~
+cabal.project.*.local
+perf-runs/
 .HTF/
 .ghc.environment.*
 dhall-configs/dev/secrets/top-secret.dhall
