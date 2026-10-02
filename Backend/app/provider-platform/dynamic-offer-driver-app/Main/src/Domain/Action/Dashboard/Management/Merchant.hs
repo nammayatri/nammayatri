@@ -2300,13 +2300,9 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity req = do
       deletions = concatMap snd resolved
   forM_ keepers $ \k -> when (k.enabled /= req.enabled) $ SQF.updateFareProductEnabled req.enabled k.id
   forM_ deletions (CQFProduct.delete . (.id))
-  -- Clean up fare policies left with no referencing fare product (avoid orphans),
-  -- but only when nothing else references them.
-  forM_ (DL.nub (map (.farePolicyId) deletions)) $ \fpId -> do
-    stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
-    when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
   -- clearCache also drops the city-list key, so list/export see the new state immediately.
   forM_ (keepers <> deletions) CQFProduct.clearCache
+  deleteUnreferencedFarePoliciesDelayed (map (.farePolicyId) deletions)
   pure Success
 
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
@@ -2876,6 +2872,17 @@ deleteFarePolicyWithCharges farePolicyId = do
   charges <- QCC.findAllByFp farePolicyId.getId
   forM_ charges $ \charge -> QCC.deleteByFpAndCategory farePolicyId.getId charge.chargeCategory
 
+deleteUnreferencedFarePoliciesDelayed :: [Id FarePolicy.FarePolicy] -> Flow ()
+deleteUnreferencedFarePoliciesDelayed fpIds =
+  unless (null fpIds) $
+    fork "delete unreferenced fare policies" $ do
+      liftIO $ threadDelay (farePolicyDeleteDelaySecs * 1000000)
+      forM_ (DL.nub fpIds) $ \fpId -> do
+        stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
+        when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
+  where
+    farePolicyDeleteDelaySecs = 60
+
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -3155,18 +3162,15 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                                 markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                         return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
-              -- Delete old fare products first, then per unique FarePolicy check whether
-              -- ANY FareProduct (across all cities / merchants) still references it before
-              -- deleting the policy.  A per-city in-memory count would undercount policies
-              -- shared across cities (e.g. cloned via postMerchantConfigOperatingCityCreate),
+              -- Delete old fare products first.  Their fare policies are deleted later (see
+              -- deleteUnreferencedFarePoliciesDelayed), per unique FarePolicy, only if
+              -- no FareProduct (across all cities / merchants) still references it.  A
+              -- per-city in-memory count would undercount policies shared across cities (e.g. cloned via postMerchantConfigOperatingCityCreate),
               -- silently orphaning them.  One extra query per unique policy is cheap here.
               -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
               -- in the DB, to minimise the window where concurrent search requests could
               -- query an empty DB state and cache empty results.
               forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
-              forM_ (DL.nub (map (.farePolicyId) oldFareProducts)) $ \fpId -> do
-                stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
-                when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
@@ -3178,6 +3182,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- new record instead of caching an empty result.
               forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
+
+              deleteUnreferencedFarePoliciesDelayed (map (.farePolicyId) oldFareProducts)
 
               return (newErrors, newBoundedAlreadyDeletedMap)
 
