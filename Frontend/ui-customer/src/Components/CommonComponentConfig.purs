@@ -1,0 +1,210 @@
+module Components.CommonComponentConfig where
+
+import Prelude
+import Common.Types.App as Common
+import Screens.Types as ST
+import Components.PopUpModal as PopUpModal
+import Components.SelectListModal as SelectListModal
+import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import PrestoDOM (Gravity(..), Margin(..), Visibility(..), Padding(..), Length(..))
+import Data.Maybe as Mb
+import Data.Array as DA
+import Data.String as DS
+import Engineering.Helpers.Commons as EHC
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Common.Styles.Colors as Color
+import MerchantConfig.Types 
+import JBridge as JB
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Font.Style as FontStyle
+import Resources.LocalizableV2.Strings (getEN)
+
+type ContentConfig = 
+   { primaryText :: String,
+     secondaryText :: String,
+     imageUrl :: String,
+     videoUrl :: String, 
+     mediaType :: String,
+     listViewArray :: Array String,
+     videoId :: String
+   }
+
+
+accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> PopUpModal.Config
+accessibilityPopUpConfig selectedDisability purpleRideConfig = 
+   let 
+     config = PopUpModal.config
+     popupData = getAccessibilityPopupData selectedDisability purpleRideConfig
+     config' = config
+       {
+         gravity = CENTER,
+         margin = MarginHorizontal 24 24 ,
+         buttonLayoutMargin = Margin 16 0 16 20 ,
+         primaryText {
+           text = popupData.primaryText
+         , margin = Margin 16 16 16 4 
+         , padding = Padding 0 0 0 0},
+         secondaryText {
+           text = popupData.secondaryText
+         , padding = PaddingHorizontal 16 16
+         , margin = MarginVertical 8 8
+         , gravity = LEFT},
+         option1 {
+           text = getString GOT_IT
+         , background = Color.black900
+         , color = Color.yellow900
+         },
+         option2 {
+           visibility = false
+         },
+         backgroundClickable = false,
+         cornerRadius = (PTD.Corners 15.0 true true true true),
+         coverImageConfig {
+           imageUrl = popupData.imageUrl
+         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) || EHC.os == "IOS" then VISIBLE else GONE
+         , height = V 160
+         , width = MATCH_PARENT
+         , margin = Margin 16 20 16 0
+         }
+         , listViewArray = popupData.listViewArray
+          , coverMediaConfig {
+            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) && EHC.os /= "IOS" then VISIBLE else GONE 
+          , height = V 200
+          , width = MATCH_PARENT
+          , padding = Padding 16 16 16 0
+          , mediaType = popupData.mediaType
+          , mediaUrl = popupData.videoUrl
+          , id = popupData.videoId
+          }
+       }
+   in config'
+  
+
+getAccessibilityPopupData :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> ContentConfig
+getAccessibilityPopupData pwdtype purpleRideConfig = 
+   let accessibilityConfig' = accessibilityConfig Common.Config
+   in case pwdtype of 
+        Mb.Just disability -> case (disability.tag) of 
+          "BLIND_LOW_VISION" -> accessibilityConfig'
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
+                                                    videoUrl = purpleRideConfig.visualImpairmentVideo,
+                                                    mediaType = "VideoLink",
+                                                    listViewArray = [(getString VI_POINTER_1) , (getString VI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
+                                                    videoId = "VisualImpairmentCoverVideo"
+                                                  } 
+          "HEAR_IMPAIRMENT" ->     accessibilityConfig'
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
+                                                    videoUrl = purpleRideConfig.hearingImpairmentVideo,
+                                                    mediaType = "PortraitVideoLink",
+                                                    listViewArray = [(getString HI_POINTER_1) , (getString HI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
+                                                    videoId = "HearingImpairmentCoverVideo"
+                                                  }
+          "LOCOMOTOR_DISABILITY" -> accessibilityConfig'
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
+                                                    videoUrl = purpleRideConfig.physicalImpairmentVideo,
+                                                    mediaType = "PortraitVideoLink",
+                                                    listViewArray = [(getString PI_POINTER_1) , (getString PI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
+                                                    videoId = "PhysicalImpairmentCoverVideo"
+                                                  }     
+          _ ->     accessibilityConfig' 
+
+        Mb.Nothing -> accessibilityConfig' 
+
+accessibilityConfig :: Common.LazyCheck -> ContentConfig
+accessibilityConfig _ = { primaryText : (getString $ ACCESSIBILITY_TEXT "ACCESSIBILITY_TEXT"), secondaryText : (getString $ TO_CATER_YOUR_SPECIFIC_NEEDS "TO_CATER_YOUR_SPECIFIC_NEEDS"), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
+
+accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
+accessibilityListConfig disabilityData otherDisability config = 
+  let 
+    selectedDisability = (disabilityData.disabilityOptionList DA.!! disabilityData.specialAssistActiveIndex)
+    selectedDisabilityTag = case selectedDisability of 
+              Mb.Just ( disability) -> disability.tag 
+              Mb.Nothing -> ""
+  in SelectListModal.config
+        { 
+          selectionOptions = getDisabilityList disabilityData.disabilityOptionList
+          , primaryButtonTextConfig
+            { secondText = getString SUBMIT
+            , width = V (EHC.screenWidth unit - 40)
+
+            }
+          , activeIndex = Mb.Just disabilityData.specialAssistActiveIndex
+          , activeReasonCode = case (disabilityData.disabilityOptionList DA.!! disabilityData.specialAssistActiveIndex) of 
+                                  Mb.Just activeOption -> Mb.Just activeOption.tag
+                                  _ -> Mb.Nothing
+          , isLimitExceeded = false
+          , isSelectButtonActive = if selectedDisabilityTag == "OTHER" then (DS.length (otherDisability) >= 3) else true
+          , headingTextConfig{
+            text = (getString SPECIAL_ASSISTANCE)
+          , gravity = LEFT
+          }
+          , primaryButtonVisibility = false
+          , subHeadingTextConfig{
+            gravity = LEFT
+          , margin = MarginTop 36
+          , padding = (PaddingHorizontal 24 24)
+          , text = (getString SELECT_THE_CONDITION_THAT_IS_APPLICABLE)
+          }
+          , hint = if disabilityData.editedDisabilityReason == "" then "Enter nature of condition" else ""
+          , config = config
+          , hideOthers = false
+          , topLeftIcon = true
+          , showBgColor = true
+          , editTextBgColor = Color.white900
+          , defaultText = disabilityData.editedDisabilityReason
+        }
+
+getDisabilityList :: Array ST.DisabilityT ->  Array Common.OptionButtonList
+getDisabilityList =  map \item ->
+    { description: item.description
+    , reasonCode : item.tag
+    , textBoxRequired : item.tag == "OTHER"
+    , subtext :  Mb.Nothing
+    }
+
+contactSupportPopUpConfig :: AppConfig -> PopUpModal.Config
+contactSupportPopUpConfig appConfig =
+  let
+    config' = PopUpModal.config
+
+    popUpConfig' =
+      config'
+        { gravity = CENTER
+        , cornerRadius = (Corners 15.0 true true true true)
+        , margin = (MarginHorizontal 16 16)
+        , optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = (Margin 0 0 0 0)
+        , dismissPopup = true
+        , primaryText
+          { text = getString CONTACT_SUPPORT <> "?"
+          , margin = Margin 16 16 16 0
+          }
+        , secondaryText
+          { text = getString YOU_CAN_WRITE_TO_US_AT <> ": <br> <span style='color:#2194FF'>" <> appConfig.appData.supportMail <> "</span> <br> <br> OR"
+          , margin = Margin 0 16 0 16
+          , accessibilityHint = getEN YOU_CAN_WRITE_TO_US_AT <> appConfig.appData.supportMail 
+          }
+        , option1
+          { text = getString PLACE_A_CALL
+          , color = appConfig.primaryTextColor
+          , background = appConfig.primaryBackground
+          , strokeColor = Color.transparent
+          , textStyle = FontStyle.SubHeading1
+          , width = MATCH_PARENT
+          , enableRipple = true
+          , margin = (MarginHorizontal 16 16)
+          }
+        , option2
+          { text = getString CANCEL_
+          , textStyle = FontStyle.SubHeading1
+          , color = Color.black700
+          , background = Color.white900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = MarginBottom 10
+          }
+        }
+  in
+    popUpConfig'

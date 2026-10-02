@@ -1,0 +1,118 @@
+# A whole backend, brought up from nothing, and asked for a ride.
+#
+# ── Why this exists ─────────────────────────────────────────────────────────
+# The app's own tests prove the app. They cannot prove the SERVER: a change to
+# a seed, a migration, a merchant row, a geofence or a patched binary can break
+# a released app while every app test stays green. This is the other half.
+#
+# It starts Postgres, Redis, Kafka, passetto, both Haskell apps, the BECKN
+# gateway and the registry from the image CI publishes, seeds them exactly as a
+# laptop would, and then asks the two questions that matter:
+#
+#   1. Can an Algerian number sign in?  (the +222/+213 patches, passetto, the
+#      migrations, the merchant row)
+#   2. Does a ride search come back with a PRICE?  (rider -> gateway ->
+#      registry -> driver-app -> dispatch -> tariff -> back over BECKN)
+#
+# Every link in that second chain has broken at least once, and all but the
+# first are invisible from the passenger side: you get a route and no price,
+# whichever one it is.
+#
+# ── What it does NOT do ─────────────────────────────────────────────────────
+# No OSRM and no tiles (SKIP_OSRM=1): preparing the routing graph is a 285 MB
+# download and minutes of preprocessing for a machine that is deleted
+# afterwards, and it would make distances real without making the chain any
+# more tested. No secrets, no VPS, nothing published. A green run means the
+# stack still works when built from this repository; it says nothing about what
+# is deployed.
+name: "algeria: ride regression"
+
+on:
+  # The things that can break a ride without touching a line of Haskell.
+  push:
+    branches: ['algeria/**']
+    paths:
+      - 'Backend/dev/local-stack/setup.sh'
+      - 'Backend/dev/local-stack/docker-compose.yml'
+      - 'Backend/dev/local-stack/*.sql'
+      - 'Backend/dev/local-stack/Dockerfile.*'
+      - 'Backend/dev/local-stack/maps-shim/**'
+      - '.github/workflows/algeria-ride-regression.yml'
+  # Once a week, so a change to the published image or an upstream fetch that
+  # rots is found on a Monday rather than on a demo day.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: algeria-ride-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ride:
+    name: sign in, then ask for a price
+    runs-on: ubuntu-latest
+    # The stack itself comes up in a few minutes; the cap is for a pull that
+    # crawls or a search that never answers, so the logs still get uploaded.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Backend/dev/local-stack
+            .github
+          sparse-checkout-cone-mode: false
+
+      # The image every deployment runs, built by `algeria: build backend`.
+      # GITHUB_TOKEN is enough inside this org, so there is no secret here.
+      - name: Pull the backend image
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          docker pull "ghcr.io/$owner/ny-backend:latest"
+          # The compose file names this tag on all five services. Tagging is the
+          # whole "deploy" here, exactly as deploy-backend.sh does on the VPS.
+          docker tag "ghcr.io/$owner/ny-backend:latest" ny-rider:patched
+          docker run --rm --entrypoint ls ny-rider:patched -1 /opt/app | head -20
+
+      - name: Bring the stack up and verify it
+        working-directory: Backend/dev/local-stack
+        env:
+          SKIP_OSRM: '1'
+          # Published on the runner's loopback only; nothing here is reachable
+          # from outside the job in any case.
+          BIND_ADDR: '127.0.0.1'
+        run: bash setup.sh
+
+      # Driver positions go stale silently, and a stale pool answers a search
+      # with a route and no price -- the exact symptom this job exists to
+      # catch, so it must not be the job's own fault.
+      - name: Freshen the driver positions and ask again
+        working-directory: Backend/dev/local-stack
+        env:
+          SKIP_OSRM: '1'
+        run: |
+          set -euo pipefail
+          bash setup.sh drivers
+          bash setup.sh verify
+
+      - name: What was running, and what it said
+        if: ${{ always() }}
+        working-directory: Backend/dev/local-stack
+        run: |
+          docker compose ps
+          mkdir -p /tmp/logs
+          for c in ny-rider ny-driver ny-beckn-gateway ny-mock-registry ny-mock-google ny-maps-shim ny-postgres; do
+            docker logs --tail 400 "$c" > "/tmp/logs/$c.log" 2>&1 || true
+          done
+          tail -n 25 /tmp/logs/ny-driver.log || true
+
+      - name: Upload the logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: stack-logs-${{ github.run_id }}
+          path: /tmp/logs
+          if-no-files-found: warn
+          retention-days: 14

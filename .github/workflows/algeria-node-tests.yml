@@ -1,0 +1,95 @@
+# The Node services in front of the backend, tested on every push.
+#
+# ── What this covers, and why it is worth a workflow ────────────────────────
+# `auth-guard` and `maps-shim` are where this deployment's own rules live: who
+# may sign in, which country is open, who pays before working, and what a phone
+# is actually told when a ride changes. They are deployed by copying a file and
+# restarting a container — seconds, with no build — which is exactly why they
+# need a test that runs without one.
+#
+# Both tests are self-contained: they start the real module against a fake
+# Firebase, a fake APNs and a fake backend on loopback. No key, no secret, no
+# network, and nothing on the VPS is touched.
+#
+# ── What it does NOT do ─────────────────────────────────────────────────────
+# It does not build the Haskell backend (that is `algeria: build backend`, 44
+# minutes and its own trigger), and it does not deploy anything. A green tick
+# here means the guard and the relay still behave as written, not that the
+# server is running them.
+name: "algeria: node tests"
+
+on:
+  push:
+    branches: ['algeria/**']
+    paths:
+      - 'Backend/dev/local-stack/auth-guard/**'
+      - 'Backend/dev/local-stack/maps-shim/**'
+      - 'Backend/dev/local-stack/tests/**'
+      - '.github/workflows/algeria-node-tests.yml'
+  pull_request:
+    paths:
+      - 'Backend/dev/local-stack/auth-guard/**'
+      - 'Backend/dev/local-stack/maps-shim/**'
+      - 'Backend/dev/local-stack/tests/**'
+  workflow_dispatch:
+
+concurrency:
+  group: algeria-node-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: auth-guard and maps-shim
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Backend/dev/local-stack
+            .github
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v4
+        with:
+          # The container runs node:20-alpine. Testing on another major would
+          # prove the tests pass somewhere the code does not run.
+          node-version: 20
+
+      - name: Syntax
+        working-directory: Backend/dev/local-stack
+        run: |
+          node --check auth-guard/server.js
+          for f in maps-shim/*.js; do node --check "$f"; done
+          echo "every file parses"
+
+      # Starts the guard five times over, against a fake backend, and checks
+      # who may sign in: a new driver, an enrolled one, a closed country, a
+      # wrong code, and the same again with DRIVER_SIGNUP=closed.
+      - name: auth-guard
+        working-directory: Backend/dev/local-stack
+        run: node tests/auth-guard-signup.test.js
+
+      # The money path. A fake Moorsyl counts what it is asked to send, so this
+      # proves the global budget actually stops texts going out and that one
+      # host rotating phone numbers is capped -- the two controls added on
+      # 2026-09-23 after an audit found nothing bounded the SMS bill.
+      - name: auth-guard limits
+        working-directory: Backend/dev/local-stack
+        run: node tests/auth-guard-limits.test.js
+
+      # The bot. psql, Telegram and the host are all stubbed, so this needs no
+      # database and no network: it proves an alert is sent once, can fire
+      # again after its cause clears, and -- the one that matters -- that a
+      # database which does not answer is never reported as an outage.
+      - name: movin bot
+        working-directory: Backend/dev/local-stack
+        run: python3 tests/movin-bot.test.py
+
+      # Fake Firebase and a fake APNs on http2 with a self-signed certificate:
+      # proves an Android token is forwarded byte for byte, an iPhone token is
+      # sent to Apple in the app's own words, and Apple's refusal is reported
+      # rather than swallowed.
+      - name: maps-shim push relay
+        working-directory: Backend/dev/local-stack
+        run: node tests/push-relay.test.js
