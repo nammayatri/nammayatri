@@ -2094,6 +2094,7 @@ types:
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime
     - failedRules: Maybe [Text]
+    - enableCashRide: Maybe Bool
   EditVehicleReq:
     - manufacturer: Maybe Text
     - model: Maybe Text
@@ -2202,6 +2203,7 @@ types:
     - addressState: Maybe IndianState
     - addressDocumentType: Maybe AddressDocumentType
     - approved: Maybe Bool
+    - enableCashRide: Maybe Bool
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool

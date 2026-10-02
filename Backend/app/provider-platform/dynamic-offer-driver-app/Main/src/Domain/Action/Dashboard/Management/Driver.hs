@@ -428,6 +428,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
   phoneNo <- mapM decrypt person.mobileNumber
   linkedVehicleInfo <- mapM (mkLinkedVehicleInfo rcById) (HM.lookupDefault [] person.id linkedAssocsByDriver)
   let mbFda = HM.lookup person.id fleetAssocByDriver
+      mbFleetOwnerCashRide = mbFda >>= \fda -> HM.lookup fda.fleetOwnerId fleetOwnerInfoById >>= (.enableCashRide)
   mbRecentFleetInfo <- case mbFda of
     Nothing -> pure Nothing
     Just fda -> case HM.lookup fda.fleetOwnerId fleetOwnerById of
@@ -473,6 +474,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
         recentFleetInfo = mbRecentFleetInfo,
         hasActiveRc = HS.member person.id driversWithActiveRc,
         disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag,
+        enableCashRide = Just $ QFDA.effectiveEnableCashRide now driverInformation.enableCashRide mbFda mbFleetOwnerCashRide,
         linkedVehicleInfo
       }
   where

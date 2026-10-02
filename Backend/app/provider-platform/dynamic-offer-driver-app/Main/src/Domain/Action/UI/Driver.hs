@@ -469,6 +469,7 @@ data DriverInformationRes = DriverInformationRes
     enabledAt :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text, -- deprecate later
     operatorId :: Maybe Text, -- deprecate later
+    enableCashRide :: Maybe Bool,
     fleetRequest :: Maybe DOVT.FleetInfo,
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
@@ -1798,6 +1799,8 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
+  mbActiveFleetOwnerInfo <- maybe (pure Nothing) (\fda -> QFOI.findByPrimaryKey (Id fda.fleetOwnerId)) mbActiveFda
+  now <- getCurrentTime
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   membershipId <-
     if fromMaybe False merchantConfig.sendMembershipIdInProfile
@@ -1889,6 +1892,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           recentFleetInfo = activeFleet <|> fleetRequest,
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
+          enableCashRide = Just $ QFDA.effectiveEnableCashRide now driverInfo.enableCashRide mbActiveFda (mbActiveFleetOwnerInfo >>= (.enableCashRide)),
           onboardingAs = case activeFleet of
             Just _ -> Just DriverInfo.FLEET_DRIVER
             Nothing -> driverInfo.onboardingAs <|> merchantConfig.defaultOnboardingAs,
