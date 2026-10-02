@@ -408,13 +408,21 @@ findBookingDetialsByBookingId bookingId = do
           DRB.RentalDetails _ -> True
           DRB.InterCityDetails _ -> True
           _ -> False
-  if isOtpRideOrRentalIntercityRide || booking.isScheduled
-    then pure (Just booking)
-    else do
-      ride <- findOneWithKV [Se.Is BeamR.bookingId $ Se.Eq $ getId booking.id]
-      if isJust ride
+  -- A terminal booking is never active, whatever the ACBL cache still says. The cache is written
+  -- by QRB.updateStatus and the driver-assignment path, so a missed or lost write leaves a dead id
+  -- behind; without this guard the scheduled/rental/intercity branch below hands it back as live
+  -- and the rider sees a cancelled booking on Home. Recovery is stateless: it does not matter how
+  -- the id went stale.
+  if booking.status `elem` DRB.terminalBookingStatus
+    then pure Nothing
+    else
+      if isOtpRideOrRentalIntercityRide || booking.isScheduled
         then pure (Just booking)
-        else pure Nothing
+        else do
+          ride <- findOneWithKV [Se.Is BeamR.bookingId $ Se.Eq $ getId booking.id]
+          if isJust ride
+            then pure (Just booking)
+            else pure Nothing
 
 findOtherActivePartyBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe (Id Person) -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> m [Booking]
 findOtherActivePartyBooking mbPersonId mbBookingStatus mbClientId mbFromDate mbToDate = do
