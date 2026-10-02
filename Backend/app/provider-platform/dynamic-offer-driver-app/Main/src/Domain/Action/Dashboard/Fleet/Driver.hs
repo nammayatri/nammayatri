@@ -866,9 +866,6 @@ postDriverFleetCashRideUpdate merchantShortId opCity requestorId mbFleetOwnerId 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-
-  unless (merchant.onlinePayment) $
-    throwError $ InvalidRequest "Cash ride toggle needs online payment enabled for this merchant."
   let maxTargets = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxCashRideTargetIds))
       syncBatchSize = fromMaybe 100 (transporterConfig.limitsConfig >>= (.cashRideSyncBatchSize))
       enableCashRide = req.enableCashRide
