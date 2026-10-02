@@ -346,6 +346,16 @@ the header of that script.
   container restart and keep serving the old row until they expire. Found while
   pointing `fcm_url` at the push relay (2026-09-16): two stale entries still
   named Google. Drop the keys after writing either table.
+- **The backend clears a driver's cache BEFORE writing the row, so a read in
+  between re-caches the old state for a day.** `CQDriverInformation.update*`
+  (enable, block, unblock, activity…): delete the Redis key, then commit. The
+  driver's phone polls its profile every few seconds; on 2026-10-02 one poll
+  landed in that window during the boss's acceptance and
+  `driver-offer:CachedQueries:DriverInformation:DriverId-…` kept
+  `blocked: true` while the row said false — « compte bloqué », no way online.
+  The console now says every state change twice (`settle()` in the website's
+  `apps/api/src/shared/driver-app.ts`). Anything else that changes a driver's
+  state must do the same, or drop that key after its write.
 - **iPhone push does not go through Firebase.** `fcm_url` points at
   `maps-shim/push-relay.js`, which forwards FCM tokens to Google and sends iOS
   tokens to APNs with the app's own words. The notification text for iOS is a
