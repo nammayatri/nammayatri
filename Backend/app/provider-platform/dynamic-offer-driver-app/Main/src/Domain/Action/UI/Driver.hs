@@ -295,6 +295,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.SearchTryLocker as CS
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
@@ -1064,8 +1065,14 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           let (ownerType, ownerId) = case mbFleetAssociation of
                 Just fda -> (DSP.FLEET_OWNER, fda.fleetOwnerId)
                 Nothing -> (DSP.DRIVER, personId.getId)
-          -- Eligibility check for prepaid drivers:
-          if Plan.PREPAID_SUBSCRIPTION `elem` driverInfo.servicesEnabledForSubscription
+          let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+              isPrepaidDriver =
+                isPrepaidDriverWithCatalogueFallback
+                  isPrepaidEnabled
+                  (mbFleetAssociation <&> (.fleetOwnerId))
+                  driverInfo.rideBillingModel
+                  driverInfo.servicesEnabledForSubscription
+          if isPrepaidDriver
             then checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId (mbVehicle >>= (.category))
             else do
               DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
@@ -1091,24 +1098,15 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                 Nothing -> QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-          unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked || transporterConfig.enableBotFlow == Just True) $ throwError DriverUnsubscribed
-          -- BOT-flow go-online checks (separate): active vehicle required; a fleet driver needs their fleet
-          -- enabled with an active fleet subscription; an individual (non-fleet) driver needs their own subscription.
-          when (transporterConfig.enableBotFlow == Just True) $ do
+          unless isPrepaidDriver $
+            unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+          when isPrepaidEnabled $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
-            case mbFleetAssociation of
-              Just fda -> do
-                fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
-                unless fleetOwnerInfo.enabled $
-                  throwError $ InvalidRequest "Cannot go online: fleet is not enabled"
-                mbFleetSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) fda.fleetOwnerId DSP.FLEET_OWNER Plan.PREPAID_SUBSCRIPTION Nothing
-                unless (isJust mbFleetSub) $
-                  throwError $ InvalidRequest "Cannot go online: fleet subscription is not active"
-              Nothing -> do
-                mbDriverSub <- QSPE.findLatestActiveByOwnerAndServiceName (\_ -> pure ()) driverId.getId DSP.DRIVER Plan.PREPAID_SUBSCRIPTION Nothing
-                unless (isJust mbDriverSub) $
-                  throwError $ InvalidRequest "Cannot go online: driver subscription is not active"
+            whenJust mbFleetAssociation $ \fda -> do
+              fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId) >>= fromMaybeM (PersonNotFound fda.fleetOwnerId)
+              unless fleetOwnerInfo.enabled $
+                throwError $ InvalidRequest "Cannot go online: fleet is not enabled"
           when driverInfo.blocked $ do
             case driverInfo.blockExpiryTime of
               Just expiryTime -> do

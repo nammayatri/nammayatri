@@ -519,6 +519,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
             servicesEnabledForSubscription = DEP.YATRI_SUBSCRIPTION : [DEP.PREPAID_SUBSCRIPTION | autoEnrollPrepaid],
+            rideBillingModel = if autoEnrollPrepaid then Just DEP.PREPAID_SUBSCRIPTION else Nothing,
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
             onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
