@@ -6,6 +6,7 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   TimeBound: Kernel.Types.TimeBound
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
+  FleetOperatorTripActionV2: Domain.Types.FleetOperatorTripActionV2
 
 module: FRFSFleetOperator
 
@@ -120,6 +121,65 @@ types:
     manifest: "[PassengerStopManifest]"
     derive: "Show"
 
+  # ── transitV2 (runs / duties in GIMS; no Redis cursor, GIMS owns trip state) ──
+  FleetOperatorTripActionV2Req:
+    action: FleetOperatorTripActionV2
+    # Optional for start/end (GIMS picks the next / running trip); required for cancel/uncancel.
+    tripNumber: Maybe Int
+    # cancel / skip reason: OPERATOR | BREAKDOWN | ADMIN | DRIVER | OTHER (driver skips default to DRIVER)
+    reason: Maybe Text
+    gimsConductorId: Maybe Text
+    gimsDriverId: Maybe Text
+    vehicleNumber: Maybe Text
+    # Dashboard: act on a known run.
+    dutyGroupId: Maybe Text
+    location: Maybe LatLong
+    derive: "Show"
+
+  FleetOperatorCurrentOperationV2Req:
+    gimsConductorId: Maybe Text
+    gimsDriverId: Maybe Text
+    vehicleNumber: Maybe Text
+    dutyGroupId: Maybe Text
+    derive: "Show"
+
+  OperatorTripInfoV2:
+    dutyId: Text
+    tripId: Text
+    tripNumber: Int
+    routeId: Text
+    routeNumber: Maybe Text
+    routeName: Maybe Text
+    isBookable: Bool
+    scheduledStartAt: UTCTime
+    scheduledEndAt: UTCTime
+    recordedStartTime: Maybe UTCTime
+    recordedEndTime: Maybe UTCTime
+    driverTokenNumber: Maybe Text
+    driverName: Maybe Text
+    conductorTokenNumber: Maybe Text
+    conductorName: Maybe Text
+    # upcoming | active | completed | skipped | cancelled
+    status: Text
+    cancelReason: Maybe Text
+    skipReason: Maybe Text
+    derive: "Show"
+
+  FleetOperatorCurrentOperationV2Resp:
+    waybillNo: Text
+    dutyGroupId: Text
+    tripGroupCode: Text
+    operationDate: Text
+    gtfsId: Text
+    vehicleNumber: Maybe Text
+    serviceTypeId: Maybe Text
+    gimsDriverId: Maybe Text
+    gimsConductorId: Maybe Text
+    current: Maybe OperatorTripInfoV2
+    upcoming: "[OperatorTripInfoV2]"
+    history: "[OperatorTripInfoV2]"
+    derive: "Show"
+
   FleetBusStopETA:
     stopCode: Text
     stopName: Maybe Text
@@ -199,3 +259,28 @@ apis:
         tripNumber: Int
       response:
         type: BusTripScheduleResp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/v2/tripAction
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: FleetOperatorTripActionV2Req
+      response:
+        # the run after the action, same as currentOperation
+        type: FleetOperatorCurrentOperationV2Resp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/v2/currentOperation
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: FleetOperatorCurrentOperationV2Req
+      response:
+        type: FleetOperatorCurrentOperationV2Resp
+
+  - POST:
+      endpoint: /frfs/fleetOperator/v2/activeManifest
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: FRFSActiveManifestReq
+      response:
+        type: FRFSActiveManifestResp

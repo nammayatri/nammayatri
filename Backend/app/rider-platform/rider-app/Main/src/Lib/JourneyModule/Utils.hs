@@ -2150,6 +2150,10 @@ getWaybillNoAndTripNoFromTripId tripId =
       (waybillNo, fromMaybe 0 (readMaybe $ T.unpack tripNoTxt))
     _ -> (tripId, 0)
 
+-- | Trip number parsed from a trip id, or Nothing when it didn't parse (0).
+tripNoToMaybe :: Int -> Maybe Int
+tripNoToMaybe n = if n > 0 then Just n else Nothing
+
 makeTripIdFromWaybillNoAndTripNo :: T.Text -> Int -> T.Text
 makeTripIdFromWaybillNoAndTripNo waybillNo tripNo =
   waybillNo <> "-" <> T.pack (show tripNo)

@@ -799,8 +799,8 @@ syncFRFSBookingVehicleData booking integratedBppConfig = do
     case booking.tripId of
       Nothing -> pure Nothing
       Just tripId -> do
-        let (waybillNo, _) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
-        meta <- withTryCatch "syncFRFSBookingVehicleData:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
+        let (waybillNo, tripNo) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+        meta <- withTryCatch "syncFRFSBookingVehicleData:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo (JourneyUtils.tripNoToMaybe tripNo) integratedBppConfig)
         case meta of
           Left err -> do
             logWarning $ "Failed to fetch waybill metadata for waybillNo=" <> waybillNo <> ": " <> show err

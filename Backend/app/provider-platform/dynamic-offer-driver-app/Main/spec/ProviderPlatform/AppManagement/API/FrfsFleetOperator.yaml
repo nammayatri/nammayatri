@@ -3,6 +3,9 @@ imports:
   FleetOperatorCurrentOperationResp: API.Types.UI.FRFSFleetOperator
   FleetOperatorTripActionReq: API.Types.UI.FRFSFleetOperator
   FleetOperatorTripActionResp: API.Types.UI.FRFSFleetOperator
+  FleetOperatorCurrentOperationV2Req: API.Types.UI.FRFSFleetOperator
+  FleetOperatorCurrentOperationV2Resp: API.Types.UI.FRFSFleetOperator
+  FleetOperatorTripActionV2Req: API.Types.UI.FRFSFleetOperator
 
 importPackageOverrides:
   API.Types.UI.FRFSFleetOperator: "dynamic-offer-driver-app"
@@ -34,5 +37,43 @@ apis:
         type: FleetOperatorTripActionResp
       migrate:
         capability: transit-operations.trip.execute
+
+  # transitV2. `operatorId` scopes the call to one fleet operator (sent to GIMS as x-operator-id);
+  # the dashboard person is sent as x-actor-person-id.
+  - POST:
+      endpoint: /v2/currentOperation
+      auditRequestBody: false
+      name: PostFrfsFleetOperatorV2CurrentOperation
+      auth: ApiAuthV2
+      query:
+        operatorId: Text
+      request:
+        type: FleetOperatorCurrentOperationV2Req
+      response:
+        type: FleetOperatorCurrentOperationV2Resp
+      migrate:
+        capability: transit-operations.trip.execute
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+
+  - POST:
+      endpoint: /v2/tripAction
+      auditRequestBody: false
+      name: PostFrfsFleetOperatorV2TripAction
+      auth: ApiAuthV2
+      query:
+        operatorId: Text
+      request:
+        type: FleetOperatorTripActionV2Req
+      response:
+        type: FleetOperatorCurrentOperationV2Resp
+      migrate:
+        capability: transit-operations.trip.execute
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
 
 types: {}

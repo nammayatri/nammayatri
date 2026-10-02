@@ -549,6 +549,7 @@ library
       SharedLogic.External.LocationTrackingService.Types
       SharedLogic.External.Nandi.API.Nandi
       SharedLogic.External.Nandi.Flow
+      SharedLogic.External.Nandi.TransitV2Types
       SharedLogic.External.Nandi.Types
       SharedLogic.FareBreakupInfo
       SharedLogic.Finance.CashbackPayout

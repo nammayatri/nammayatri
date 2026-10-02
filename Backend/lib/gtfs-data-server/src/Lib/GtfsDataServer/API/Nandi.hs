@@ -127,3 +127,43 @@ getNandiStopCode = ET.client stopCodeAPI
 
 postOperatorVerify :: Text -> GimsVerifyReq -> ET.EulerClient GimsVerifyResp
 postOperatorVerify = ET.client operatorVerifyAPI
+
+-- ─── transitV2 ─────────────────────────────────────────────────────────────
+-- Headers: x-operator-id (optional, scopes the call) and x-actor-person-id (who did it).
+
+type GimsV2TripActionAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "v2" :> "tripAction"
+    :> Header "x-operator-id" Text
+    :> Header "x-actor-person-id" Text
+    :> ReqBody '[JSON] GimsV2TripActionReq
+    :> Post '[JSON] GimsV2CurrentOperationResp
+
+type GimsV2CurrentOperationAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "v2" :> "currentOperation"
+    :> Header "x-operator-id" Text
+    :> ReqBody '[JSON] GimsV2Anchor
+    :> Post '[JSON] GimsV2CurrentOperationResp
+
+type GimsV2ActiveTripAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "v2" :> "activeTrip"
+    :> Header "x-operator-id" Text
+    :> ReqBody '[JSON] GimsV2Anchor
+    :> Post '[JSON] GimsV2ActiveTripResp
+
+gimsV2TripActionAPI :: Proxy GimsV2TripActionAPI
+gimsV2TripActionAPI = Proxy
+
+gimsV2CurrentOperationAPI :: Proxy GimsV2CurrentOperationAPI
+gimsV2CurrentOperationAPI = Proxy
+
+gimsV2ActiveTripAPI :: Proxy GimsV2ActiveTripAPI
+gimsV2ActiveTripAPI = Proxy
+
+postGimsV2TripAction :: Text -> Maybe Text -> Maybe Text -> GimsV2TripActionReq -> ET.EulerClient GimsV2CurrentOperationResp
+postGimsV2TripAction = ET.client gimsV2TripActionAPI
+
+postGimsV2CurrentOperation :: Text -> Maybe Text -> GimsV2Anchor -> ET.EulerClient GimsV2CurrentOperationResp
+postGimsV2CurrentOperation = ET.client gimsV2CurrentOperationAPI
+
+postGimsV2ActiveTrip :: Text -> Maybe Text -> GimsV2Anchor -> ET.EulerClient GimsV2ActiveTripResp
+postGimsV2ActiveTrip = ET.client gimsV2ActiveTripAPI

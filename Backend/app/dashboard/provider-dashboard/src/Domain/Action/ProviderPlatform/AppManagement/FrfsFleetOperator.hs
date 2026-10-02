@@ -1,6 +1,8 @@
 module Domain.Action.ProviderPlatform.AppManagement.FrfsFleetOperator
   ( postFrfsFleetOperatorCurrentOperation,
     postFrfsFleetOperatorTripAction,
+    postFrfsFleetOperatorV2CurrentOperation,
+    postFrfsFleetOperatorV2TripAction,
   )
 where
 
@@ -29,3 +31,17 @@ postFrfsFleetOperatorTripAction merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.frfsFleetOperatorDSL.postFrfsFleetOperatorTripAction) req)
+
+postFrfsFleetOperatorV2CurrentOperation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Req -> Environment.Flow API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Resp)
+postFrfsFleetOperatorV2CurrentOperation merchantShortId opCity apiTokenInfo operatorId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = Kernel.Prelude.Just apiTokenInfo.personId.getId
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.frfsFleetOperatorDSL.postFrfsFleetOperatorV2CurrentOperation) operatorId requestorId req)
+
+postFrfsFleetOperatorV2TripAction :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo UserActionType -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionV2Req -> Environment.Flow API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Resp)
+postFrfsFleetOperatorV2TripAction merchantShortId opCity apiTokenInfo operatorId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let requestorId = Kernel.Prelude.Just apiTokenInfo.personId.getId
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.ActionAPI apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.frfsFleetOperatorDSL.postFrfsFleetOperatorV2TripAction) operatorId requestorId req)

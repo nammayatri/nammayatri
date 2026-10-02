@@ -36,7 +36,7 @@ type API =
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FRFSRouteAPI
       :<|> TokenAuth
       :> "v2"
@@ -51,37 +51,37 @@ type API =
            Data.Text.Text
       :> "manifest"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FRFSTripPassengerManifestResp
       :<|> TokenAuth
       :> "frfs"
       :> "fleetOperator"
       :> "tripAction"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionResp
       :<|> TokenAuth
       :> "frfs"
       :> "fleetOperator"
       :> "currentOperation"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationResp
       :<|> TokenAuth
       :> "frfs"
       :> "fleetOperator"
       :> "activeManifest"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FRFSActiveManifestReq
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
       :<|> TokenAuth
       :> "v2"
@@ -97,12 +97,45 @@ type API =
            "waybillNo"
            Data.Text.Text
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.FRFSFleetOperator.BusTripScheduleResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "v2"
+      :> "tripAction"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionV2Req
+      :> Post
+           ('[JSON])
+           API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Resp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "v2"
+      :> "currentOperation"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Req
+      :> Post
+           ('[JSON])
+           API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Resp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "fleetOperator"
+      :> "v2"
+      :> "activeManifest"
+      :> ReqBody
+           ('[JSON])
+           API.Types.UI.FRFSFleetOperator.FRFSActiveManifestReq
+      :> Post
+           ('[JSON])
+           API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
   )
 
 handler :: Environment.FlowServer API
-handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsFleetOperatorActiveManifest :<|> getV2FrfsBusTripSchedule
+handler = getV2FrfsRoute :<|> getV2FrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsFleetOperatorActiveManifest :<|> getV2FrfsBusTripSchedule :<|> postFrfsFleetOperatorV2TripAction :<|> postFrfsFleetOperatorV2CurrentOperation :<|> postFrfsFleetOperatorV2ActiveManifest
 
 getV2FrfsRoute ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -110,8 +143,8 @@ getV2FrfsRoute ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
-    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
     Kernel.Types.Beckn.Context.City ->
     BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSRouteAPI
@@ -170,3 +203,33 @@ getV2FrfsBusTripSchedule ::
     Environment.FlowHandler API.Types.UI.FRFSFleetOperator.BusTripScheduleResp
   )
 getV2FrfsBusTripSchedule a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a4) $ Domain.Action.UI.FRFSFleetOperator.getV2FrfsBusTripSchedule (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+postFrfsFleetOperatorV2TripAction ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.FRFSFleetOperator.FleetOperatorTripActionV2Req ->
+    Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Resp
+  )
+postFrfsFleetOperatorV2TripAction a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorV2TripAction (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsFleetOperatorV2CurrentOperation ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Req ->
+    Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FleetOperatorCurrentOperationV2Resp
+  )
+postFrfsFleetOperatorV2CurrentOperation a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorV2CurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsFleetOperatorV2ActiveManifest ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.FRFSFleetOperator.FRFSActiveManifestReq ->
+    Environment.FlowHandler API.Types.UI.FRFSFleetOperator.FRFSActiveManifestResp
+  )
+postFrfsFleetOperatorV2ActiveManifest a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.FRFSFleetOperator.postFrfsFleetOperatorV2ActiveManifest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

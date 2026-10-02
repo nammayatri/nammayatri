@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FleetOperatorTripAction
+import qualified Domain.Types.FleetOperatorTripActionV2
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -102,6 +103,32 @@ data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetOperatorCurrentOperationV2Req = FleetOperatorCurrentOperationV2Req
+  { dutyGroupId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorCurrentOperationV2Resp = FleetOperatorCurrentOperationV2Resp
+  { current :: Kernel.Prelude.Maybe OperatorTripInfoV2,
+    dutyGroupId :: Data.Text.Text,
+    gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gtfsId :: Data.Text.Text,
+    history :: [OperatorTripInfoV2],
+    operationDate :: Data.Text.Text,
+    serviceTypeId :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripGroupCode :: Data.Text.Text,
+    upcoming :: [OperatorTripInfoV2],
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    waybillNo :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FleetOperatorTripActionReq = FleetOperatorTripActionReq
   { action :: Domain.Types.FleetOperatorTripAction.FleetOperatorTripAction,
     gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -116,6 +143,19 @@ data FleetOperatorTripActionResp = FleetOperatorTripActionResp {currentTripNumbe
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FleetOperatorTripActionV2Req = FleetOperatorTripActionV2Req
+  { action :: Domain.Types.FleetOperatorTripActionV2.FleetOperatorTripActionV2,
+    dutyGroupId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
+    location :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    reason :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data OperatorTripInfo = OperatorTripInfo
   { dutyDate :: Kernel.Prelude.Maybe Data.Text.Text,
     endTime :: Kernel.Prelude.Maybe Data.Text.Text,
@@ -124,6 +164,29 @@ data OperatorTripInfo = OperatorTripInfo
     routeName :: Data.Text.Text,
     routeNumber :: Data.Text.Text,
     startTime :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripNumber :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OperatorTripInfoV2 = OperatorTripInfoV2
+  { cancelReason :: Kernel.Prelude.Maybe Data.Text.Text,
+    conductorName :: Kernel.Prelude.Maybe Data.Text.Text,
+    conductorTokenNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    driverTokenNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    dutyId :: Data.Text.Text,
+    isBookable :: Kernel.Prelude.Bool,
+    recordedEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    recordedStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    routeId :: Data.Text.Text,
+    routeName :: Kernel.Prelude.Maybe Data.Text.Text,
+    routeNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    scheduledEndAt :: Kernel.Prelude.UTCTime,
+    scheduledStartAt :: Kernel.Prelude.UTCTime,
+    skipReason :: Kernel.Prelude.Maybe Data.Text.Text,
+    status :: Data.Text.Text,
+    tripId :: Data.Text.Text,
     tripNumber :: Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
