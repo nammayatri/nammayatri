@@ -110,7 +110,8 @@ getTicketStatus config booking = do
                 { ticketNumber = ticketResp.qR_Tkt_Sl_No,
                   vehicleNumber = Nothing,
                   qrData = qrData,
-                  qrStatus = "ACTIVE",
+                  -- CMRL does not expose ticket scan state; treat an active QR as not-yet-used.
+                  qrStatus = "UNCLAIMED",
                   qrValidity = booking.validTill,
                   description = Nothing,
                   qrRefreshAt = Nothing,
