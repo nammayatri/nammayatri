@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import qualified Data.Aeson.Text as A
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -76,8 +77,16 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch mbParentTransactionId reqV2 = 
       -- A shadow search arrives under its own transaction id (the BAP creates a separate
       -- search request for it), so it never collides with the search it shadows here.
       isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
-      unless isFirst $
-        throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
-      (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
-      logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-      pure onSearchReq
+      if isFirst
+        then do
+          (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
+          logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+          pure onSearchReq
+        else do
+          logTagInfo "SyncSearchV2 Internal Flow" $ "Search already processed by beckn for txn " <> transactionId <> ", returning empty on_search"
+          pure $
+            Spec.OnSearchReq
+              { onSearchReqContext = context {Spec.contextAction = ContextUtils.mapToCbAction =<< context.contextAction},
+                onSearchReqError = Nothing,
+                onSearchReqMessage = Just $ Spec.OnSearchReqMessage $ Spec.Catalog Nothing Nothing
+              }
