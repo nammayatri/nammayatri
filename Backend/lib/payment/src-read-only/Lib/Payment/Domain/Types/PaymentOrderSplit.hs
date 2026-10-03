@@ -20,6 +20,7 @@ data PaymentOrderSplit = PaymentOrderSplit
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentOrderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vendorId :: Kernel.Prelude.Text

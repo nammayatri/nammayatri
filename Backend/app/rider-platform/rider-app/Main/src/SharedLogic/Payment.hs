@@ -172,8 +172,9 @@ orderStatusHandler ::
   DOrder.PaymentServiceType ->
   DOrder.PaymentOrder ->
   (Payment.OrderStatusReq -> m Payment.OrderStatusResp) ->
+  Maybe DPayment.RefundRequest ->
   m DPayment.PaymentStatusResp
-orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrder orderStatusCall = do
+orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrder orderStatusCall mbRefundRequest = do
   Redis.withWaitAndLockMasterCloudCrossAppRedis
     "payment"
     "waitForOrderStatusHandlerLock"
@@ -185,7 +186,7 @@ orderStatusHandler merchantOpCityId fulfillmentHandler paymentService paymentOrd
         orderStatusResponse <- DPayment.orderStatusService commonMerchantOperatingCityId paymentOrder.personId paymentOrder.id orderStatusCall
         mbUpdatedPaymentOrder <- QPaymentOrder.findById paymentOrder.id
         let updatedPaymentOrder = fromMaybe paymentOrder mbUpdatedPaymentOrder
-        orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse
+        orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder orderStatusResponse mbRefundRequest
     )
   where
     makePaymentOrderStatusHandlerLockKey :: Text
@@ -216,8 +217,10 @@ orderStatusHandlerWithRefunds ::
   DOrder.PaymentOrder ->
   DOrder.PaymentOrder ->
   DPayment.PaymentStatusResp ->
+  -- | Explicit refund (amount, optional per-vendor split) for the refund-pending path; Nothing refunds the full order.
+  Maybe DPayment.RefundRequest ->
   m DPayment.PaymentStatusResp
-orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder paymentStatusResponse = do
+orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder updatedPaymentOrder paymentStatusResponse mbRefundRequest = do
   refundStatusHandler paymentOrder paymentService
   eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId <-
     withTryCatch "orderStatusHandler:orderStatusHandler" $
@@ -229,10 +232,10 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
           Right paymentFullfillmentStatusWithEntityIdAndTransactionId ->
             case paymentFullfillmentStatusWithEntityIdAndTransactionId of
               (DPayment.FulfillmentFailed, domainEntityId, _) -> do
-                paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+                paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id Nothing
                 return $ mkPaymentStatusResp paymentStatusRespWithRefund (Just DPayment.FulfillmentFailed) domainEntityId
               (DPayment.FulfillmentRefundPending, domainEntityId, _) -> do
-                paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+                paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id mbRefundRequest
                 return $ mkPaymentStatusResp paymentStatusRespWithRefund (Just DPayment.FulfillmentRefundPending) domainEntityId
               -- If Payment Charged after the Order Validity, then initiate the Refund for the Customer
               (DPayment.FulfillmentPending, domainEntityId, _) -> do
@@ -241,7 +244,7 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
                   Just orderValidTill -> do
                     if now > orderValidTill
                       then do
-                        paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id
+                        paymentStatusRespWithRefund <- initiateRefundWithPaymentStatusRespSync (cast paymentOrder.personId) paymentOrder.id Nothing
                         return $ mkPaymentStatusResp paymentStatusRespWithRefund (Just DPayment.FulfillmentPending) domainEntityId
                       else return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentPending) domainEntityId
                   _ -> return $ mkPaymentStatusResp paymentStatusResponse (Just DPayment.FulfillmentPending) domainEntityId
@@ -628,8 +631,11 @@ initiateRefundWithPaymentStatusRespSync ::
   ) =>
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
+  -- | Explicit refund amount (e.g. an FRFS cancellation net of charges).
+  -- Nothing refunds the full order, as before.
+  Maybe DPayment.RefundRequest ->
   m DPayment.PaymentStatusResp
-initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
+initiateRefundWithPaymentStatusRespSync personId paymentOrderId mbRefundRequest = do
   paymentOrder <- QPaymentOrder.findById paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
   paymentServiceType <- paymentOrder.paymentServiceType & fromMaybeM (InvalidRequest "Payment service type not found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -660,7 +666,7 @@ initiateRefundWithPaymentStatusRespSync personId paymentOrderId = do
       riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
       let refundsOrderCall = TPayment.refundOrder (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion
       let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
-      mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId refundsOrderCall
+      mbRefundResp <- DPayment.createRefundService commonMerchantOperatingCityId paymentOrder.shortId mbRefundRequest refundsOrderCall
       whenJust mbRefundResp $ \refundResp -> do
         let refundRequestId = (listToMaybe refundResp.refunds) <&> (.requestId) -- TODO :: When will refunds be more than one ? even if more than 1 there requestId would be same right ?
         whenJust refundRequestId $ \refundId -> do
@@ -694,9 +700,9 @@ markRefundPendingWithAmount ::
   ) =>
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
-  HighPrecMoney ->
+  DPayment.RefundRequest ->
   m ()
-markRefundPendingWithAmount personId orderId amount = do
+markRefundPendingWithAmount personId orderId refundRequest = do
   paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   mbExistingRefund <- HQRefunds.findLatestByOrderId paymentOrder.shortId
   case mbExistingRefund of
@@ -709,12 +715,12 @@ markRefundPendingWithAmount personId orderId amount = do
           <> ", existingRefundAmount: "
           <> show existingRefund.refundAmount
           <> ", requestedAmount: "
-          <> show amount
+          <> show refundRequest.totalRefundAmount
           <> " - no further refund will be issued for this order"
     Nothing -> do
       bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId orderId
       mapM_ (FRFSUtils.markFRFSBookingPaymentStatus DFRFSTicketBookingPayment.REFUND_PENDING "refund_with_amount" Nothing) bookingPayments
-      void $ initiateRefundWithPaymentStatusRespSync personId orderId
+      void $ initiateRefundWithPaymentStatusRespSync personId orderId (Just refundRequest)
 
 markRefundPendingAndSyncOrderStatus ::
   forall m r c.
@@ -739,8 +745,11 @@ markRefundPendingAndSyncOrderStatus ::
   Id Merchant.Merchant ->
   Id Person.Person ->
   Id DOrder.PaymentOrder ->
+  -- | Explicit refund amount, e.g. an FRFS cancellation net of cancellation charges.
+  -- Nothing refunds the full order, which is the behaviour every caller had before.
+  Maybe DPayment.RefundRequest ->
   m DPayment.PaymentStatusResp
-markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
+markRefundPendingAndSyncOrderStatus merchantId personId orderId mbRefundRequest = do
   paymentOrder <- QPaymentOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
   case paymentServiceType of
@@ -752,7 +761,9 @@ markRefundPendingAndSyncOrderStatus merchantId personId orderId = do
     _ -> pure ()
   -- Hardcoded refund handler since this is only used for refund scenarios
   let refundFulfillmentHandler _ = pure (DPayment.FulfillmentRefundPending, Nothing, Nothing)
-  syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder
+  -- The amount rides along to the FulfillmentRefundPending branch inside the sync, which is where
+  -- the refund is actually created -- no refund is initiated ahead of the status refresh.
+  syncOrderStatus refundFulfillmentHandler merchantId personId paymentOrder mbRefundRequest
   where
     markBookingsRefundPending :: DOrder.PaymentOrder -> m ()
     markBookingsRefundPending paymentOrder = do
@@ -790,8 +801,10 @@ syncOrderStatus ::
   Id Merchant.Merchant ->
   Id Person.Person ->
   DOrder.PaymentOrder ->
+  -- | Explicit refund (amount, optional per-vendor split) for the refund-pending path; Nothing refunds the full order.
+  Maybe DPayment.RefundRequest ->
   m DPayment.PaymentStatusResp
-syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
+syncOrderStatus fulfillmentHandler merchantId personId paymentOrder mbRefundRequest = do
   person <- QPerson.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   commonMerchantOperatingCityId <- paymentOrder.merchantOperatingCityId & fromMaybeM (InternalError "MerchantOperatingCityId not found in payment order")
   let paymentServiceType = fromMaybe DOrder.Normal paymentOrder.paymentServiceType
@@ -804,7 +817,7 @@ syncOrderStatus fulfillmentHandler merchantId personId paymentOrder = do
       DOrder.RideBooking -> return Nothing
       _ -> return Nothing
   let orderStatusCall = TPayment.orderStatus merchantId mocId ticketPlaceId paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
-  orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
+  orderStatusHandler mocId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall mbRefundRequest
 
 -------------------------------------------------------------------------------------------------------
 ------------------------------------- Payment Utility Functions ---------------------------------------

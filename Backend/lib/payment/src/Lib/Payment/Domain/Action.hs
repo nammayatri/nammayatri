@@ -16,6 +16,8 @@
 
 module Lib.Payment.Domain.Action
   ( PaymentStatusResp (..),
+    mkRefundSplitSettlementDetails,
+    RefundRequest (..),
     createOrderService,
     orderStatusService,
     juspayWebhookService,
@@ -80,7 +82,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
-import Data.List (sortBy)
+import Data.List (nubBy, partition, sortBy)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
@@ -724,7 +726,7 @@ refundPaymentService req refundCall = do
     initiateNewRefund order = do
       let refundAmount = fromMaybe order.amount req.amount
       refundId <- generateGUID
-      refundsEntry <- mkRefundsEntry order.merchantId refundId order.shortId refundAmount PInterface.REFUND_PENDING
+      refundsEntry <- mkRefundsEntry order.merchantId refundId order.shortId refundAmount PInterface.REFUND_PENDING Nothing
       let mbAction = Just "unified refund payment service"
       HQRefunds.create req.merchantOpCityId refundsEntry mbAction
       let refundReq =
@@ -1134,6 +1136,7 @@ mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission transactionId 
         merchantCommission = mkPrice Nothing merchantCommission,
         merchantOperatingCityId = merchantOperatingCityId <&> (.getId),
         paymentOrderId = Id paymentOrderId,
+        refundAmount = Nothing,
         createdAt = now,
         updatedAt = now
       }
@@ -2508,9 +2511,10 @@ createRefundService ::
   ) =>
   Id MerchantOperatingCity ->
   ShortId DOrder.PaymentOrder ->
+  Maybe RefundRequest ->
   (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
   m (Maybe Payment.AutoRefundResp)
-createRefundService merchantOpCityId orderShortId refundsCall =
+createRefundService merchantOpCityId orderShortId mbRefundRequest refundsCall =
   do
     order <- QOrder.findByShortId orderShortId >>= fromMaybeM (PaymentOrderDoesNotExist orderShortId.getShortId)
     logDebug $ "Payment order details - shortId: " <> orderShortId.getShortId <> ", id: " <> order.id.getId <> ", status: " <> show order.status <> ", amount: " <> show order.amount.getHighPrecMoney <> ", currency: " <> show order.currency <> ", paymentServiceType: " <> show order.paymentServiceType <> ", paymentServiceOrderId: " <> order.paymentServiceOrderId
@@ -2522,19 +2526,27 @@ createRefundService merchantOpCityId orderShortId refundsCall =
       Right response -> return response
   where
     -- processRefund :: DOrder.PaymentOrder -> m (Maybe Payment.AutoRefundResp)
+    mbRefundAmount = (.totalRefundAmount) <$> mbRefundRequest
+    mbVendorRefunds = mbRefundRequest >>= (.vendorRefundAmounts)
     processRefund order = do
       existingOrderRefunds <- HQRefunds.findLatestByOrderId order.shortId
       if isNothing existingOrderRefunds
         then do
           paymentSplits <- QPaymentOrderSplit.findByPaymentOrder order.id
-          splitSettlementDetails <-
-            case order.effectAmount of
-              Just effectAmount | effectAmount /= order.amount -> return Nothing
-              _ -> mkSplitSettlementDetails paymentSplits
           refundId <- generateGUID
-          let refundAmount = case order.effectAmount of
-                Just effectAmount | effectAmount /= order.amount -> effectAmount
-                _ -> order.amount
+          let refundAmount = case mbRefundAmount of
+                Just callerAmount -> callerAmount
+                Nothing -> case order.effectAmount of
+                  Just effectAmount | effectAmount /= order.amount -> effectAmount
+                  _ -> order.amount
+          -- Split rows were written from order.amount at creation. When the gateway charged a
+          -- different amount (effectAmount, e.g. a gateway-side offer) and no caller amount was
+          -- given, those caps are stale, so send no split block -- as before this change.
+          mbRefundSplits <-
+            case (mbRefundAmount, order.effectAmount) of
+              (Nothing, Just effectAmount) | effectAmount /= order.amount -> return Nothing
+              _ -> mkRefundSplitSettlementDetails paymentSplits refundAmount mbVendorRefunds
+          let splitSettlementDetails = fst <$> mbRefundSplits
           let refundReq =
                 PInterface.AutoRefundReq
                   { orderId = order.shortId.getShortId,
@@ -2543,7 +2555,7 @@ createRefundService merchantOpCityId orderShortId refundsCall =
                     splitSettlementDetails
                   }
           logDebug $ "Refund request splitSettlementDetails : " <> show splitSettlementDetails
-          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount PInterface.REFUND_PENDING
+          refundsEntry <- mkRefundsEntry order.merchantId refundReq.requestId order.shortId refundAmount PInterface.REFUND_PENDING splitSettlementDetails
           let mbAction = Just "create refunds service"
           HQRefunds.create merchantOpCityId refundsEntry mbAction
           resp <- withTryCatch "refundsCall:refundService" (refundsCall refundReq)
@@ -2551,42 +2563,80 @@ createRefundService merchantOpCityId orderShortId refundsCall =
             Right response -> do
               mapM_ (upsertRefundStatus merchantOpCityId order) response.refunds
               HQRefunds.updateIsApiCallSuccess merchantOpCityId (Just True) refundsEntry mbAction
+              forM_ (maybe [] snd mbRefundSplits) $ \(splitId, splitRefundAmount) ->
+                QPaymentOrderSplit.updateRefundAmountById (Just splitRefundAmount) splitId
               return $ Just response
             Left err -> do
               logError $ "Refund API Call Failure with Error: " <> show err
               HQRefunds.updateIsApiCallSuccess merchantOpCityId (Just False) refundsEntry mbAction
               return Nothing
         else return Nothing
-    mkSplitSettlementDetails :: MonadFlow m => [DPaymentOrderSplit.PaymentOrderSplit] -> m (Maybe PInterface.RefundSplitSettlementDetails)
-    mkSplitSettlementDetails paymentSplits = do
-      if null paymentSplits
-        then return Nothing
-        else do
-          marketPlaceSplit <- find (\split -> split.vendorId == "marketPlace") paymentSplits & fromMaybeM (InternalError "marketPlace Split Detail not Found")
-          let vendorSplits =
-                map
-                  ( \split ->
-                      PInterface.RefundSplit
-                        { refundAmount = split.amount.amount,
-                          subMid = split.vendorId,
-                          uniqueSplitId = fromMaybe split.id.getId split.transactionId
-                        }
-                  )
-                  paymentSplits
-              mdrBorneBy = marketPlaceSplit.mdrBorneBy
-          return $
-            Just $
-              PInterface.RefundSplitSettlementDetails
-                { marketplace = PInterface.RefundMarketplace marketPlaceSplit.amount.amount,
-                  mdrBorneBy,
-                  vendor = PInterface.RefundVendor vendorSplits
-                }
+
+data RefundRequest = RefundRequest
+  { totalRefundAmount :: HighPrecMoney,
+    vendorRefundAmounts :: Maybe [(Text, HighPrecMoney)]
+  }
+  deriving (Show, Eq)
+
+mkRefundSplitSettlementDetails ::
+  MonadFlow m =>
+  [DPaymentOrderSplit.PaymentOrderSplit] ->
+  HighPrecMoney ->
+  Maybe [(Text, HighPrecMoney)] ->
+  m (Maybe (PInterface.RefundSplitSettlementDetails, [(Id DPaymentOrderSplit.PaymentOrderSplit, HighPrecMoney)]))
+mkRefundSplitSettlementDetails paymentSplits refundAmount mbVendorRefunds =
+  if null paymentSplits
+    then return Nothing
+    else do
+      -- Order creation currently writes each split row twice; collapse identical vendor rows
+      -- (same sub_mid and unique split id) so a vendor is never refunded twice.
+      let (marketPlaceRows, allVendorRows) = partition (\split -> split.vendorId == "marketPlace") paymentSplits
+          vendorRows = nubBy (\a b -> a.vendorId == b.vendorId && a.transactionId == b.transactionId) allVendorRows
+      marketPlaceSplit <- listToMaybe marketPlaceRows & fromMaybeM (InternalError "marketPlace Split Detail not Found")
+      let (vendorRefunds, marketPlaceRefund) = case mbVendorRefunds of
+            Just requested ->
+              let given = mapMaybe (\(subMid, amount) -> (,amount) <$> find (\split -> split.vendorId == subMid) vendorRows) requested
+               in (given, max 0 (min marketPlaceSplit.amount.amount (refundAmount - sum (map snd given))))
+            Nothing -> (map (\split -> (split, split.amount.amount)) vendorRows, marketPlaceSplit.amount.amount)
+          vendorSplits =
+            map
+              ( \(split, amount) ->
+                  PInterface.RefundSplit
+                    { refundAmount = amount,
+                      subMid = split.vendorId,
+                      uniqueSplitId = fromMaybe split.id.getId split.transactionId
+                    }
+              )
+              vendorRefunds
+      logDebug $
+        "Refund split: refundAmount=" <> show refundAmount
+          <> " marketplace="
+          <> show marketPlaceRefund
+          <> " vendors="
+          <> show (map (\(split, amount) -> (split.vendorId, amount)) vendorRefunds)
+      return $
+        Just
+          ( PInterface.RefundSplitSettlementDetails
+              { marketplace = PInterface.RefundMarketplace marketPlaceRefund,
+                mdrBorneBy = marketPlaceSplit.mdrBorneBy,
+                vendor = PInterface.RefundVendor vendorSplits
+              },
+            (marketPlaceSplit.id, marketPlaceRefund) : map (\(split, amount) -> (split.id, amount)) vendorRefunds
+          )
 
 refundProccessingKey :: Text -> Text
 refundProccessingKey refundId = "Refund:Processing:RefundId" <> refundId
 
-mkRefundsEntry :: PaymentBeamFlow.BeamFlow m r => Id Merchant -> Text -> ShortId DOrder.PaymentOrder -> HighPrecMoney -> PInterface.RefundStatus -> m Refunds
-mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
+mkRefundsEntry ::
+  PaymentBeamFlow.BeamFlow m r =>
+  Id Merchant ->
+  Text ->
+  ShortId DOrder.PaymentOrder ->
+  HighPrecMoney ->
+  PInterface.RefundStatus ->
+  Maybe PInterface.RefundSplitSettlementDetails ->
+  m Refunds
+mkRefundsEntry merchantId requestId orderShortId amount refundStatus mbSplit = do
   now <- getCurrentTime
   return $
     Refunds
@@ -2607,7 +2657,8 @@ mkRefundsEntry merchantId requestId orderShortId amount refundStatus = do
         referenceType = Nothing,
         completedAt = Nothing,
         arnGeneratedAt = Nothing,
-        actualRefundedAmount = Nothing
+        actualRefundedAmount = Nothing,
+        split = A.toJSON <$> mbSplit
       }
 
 upsertRefundStatus :: (BeamFlow m r, Finance.HasActorInfo m r) => Id MerchantOperatingCity -> DOrder.PaymentOrder -> Payment.RefundsData -> m (Maybe Refunds)
@@ -2625,7 +2676,7 @@ upsertRefundStatus merchantOpCityId order Payment.RefundsData {..} =
                 HQRefunds.updateRefundsEntryByResponse merchantOpCityId initiatedBy idAssignedByServiceProvider errorMessage errorCode status arn newCompletedAt newArnGeneratedAt (Just amount) refundEntry mbAction
                 return $ refundEntry {status = status, initiatedBy = initiatedBy, idAssignedByServiceProvider = idAssignedByServiceProvider, errorMessage = errorMessage, errorCode = errorCode, arn = arn, completedAt = newCompletedAt, arnGeneratedAt = newArnGeneratedAt, actualRefundedAmount = Just amount}
               Nothing -> do
-                refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status
+                refundEntry <- mkRefundsEntry order.merchantId requestId order.shortId order.amount status Nothing
                 HQRefunds.create merchantOpCityId refundEntry mbAction
                 return refundEntry
       )

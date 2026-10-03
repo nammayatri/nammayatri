@@ -21,6 +21,7 @@ data PaymentOrderSplitT f = PaymentOrderSplitT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentOrderId :: B.C f Kernel.Prelude.Text,
+    refundAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vendorId :: B.C f Kernel.Prelude.Text

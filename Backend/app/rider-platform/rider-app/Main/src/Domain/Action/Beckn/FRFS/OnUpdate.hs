@@ -57,7 +57,7 @@ onUpdate merchant booking' dOnUpdate = do
   let cancellationCharges = fromMaybe 0 dOnUpdate.cancellationCharges
   case dOnUpdate.orderStatus of
     Spec.CANCELLED -> do
-      (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
+      (mRiderNumber, mRiderMobileCountryCode, fareParameters) <- FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges Nothing dOnUpdate.messageId False
       FRFSCancel.handleCancelledSideEffects booking mRiderNumber mRiderMobileCountryCode fareParameters
       FRFSCancelJourney.cancelJourney booking
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"

@@ -150,7 +150,7 @@ validateRequest DOrder {..} = do
       void $ withTryCatch "onConfirmValidate:releaseTrip" (FRFSPassOverride.releasePassOverrideTripOnFailure booking)
       when (isNothing booking.parentBookingId) $
         whenJust mbBookingPayment $ \bookingPayment ->
-          void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId
+          void $ SPayment.markRefundPendingAndSyncOrderStatus merchantId booking.riderId bookingPayment.paymentOrderId Nothing
       let updatedBooking = booking {Booking.bppOrderId = Just bppOrderId}
       void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False Nothing updatedBooking
       throwM $ InvalidRequest "Booking expired, initated cancel request"
@@ -199,7 +199,7 @@ onConfirmFailure bapConfig ticketBooking = do
           <> " failed; leaving the parent's payment alone for rollbackFailedReschedule bookingId="
           <> ticketBooking.id.getId
     Nothing ->
-      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId
+      whenJust mbBookingPayment $ \bookingPayment -> void $ SPayment.markRefundPendingAndSyncOrderStatus merchant.id ticketBooking.riderId bookingPayment.paymentOrderId Nothing
   -- enforceCap=False: this is a Technical cancellation, so it must not consume the rider's
   -- cancellation allowance (see ExternalBPP.CallAPI.Cancel).
   void $ cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL Technical False Nothing ticketBooking
