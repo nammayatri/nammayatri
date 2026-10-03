@@ -3885,6 +3885,17 @@ own, on the first real use. `apply` now moves it to the new key in the same
 step (`avatars.moveRiderKey`); a driver's is keyed by his id and never moves.
 The app moves its own local copy the same way.
 
+**So does her rating (2026-10-03).** What drivers made of her is not on her
+person row but on the provider's `rider_details`, one row per number (unique
+on hash + country code), found by the number's hash on every booking. A change
+left it on the old number and her profile read « Nouveau ». `apply` now
+re-points that row at the new number in the same transaction as the person
+row, keeping its id so past bookings stay linked; if the new number already
+had a row, count and sum are added and the average recomputed (score ÷ count,
+as the provider does), and that row is set aside with its hash cleared —
+nothing deleted, bookings point at both. A driver's own rating is by id and
+never moves.
+
 `NUMBER_HASH_SALT` is in `/opt/ny/secrets/number-change.env` (the backend's
 encHashSalt — verified against stored hashes on both schemas before use); the
 shim answers `not_configured` without it. Proved by

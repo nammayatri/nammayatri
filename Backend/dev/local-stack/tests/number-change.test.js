@@ -43,12 +43,35 @@ const passetto = http.createServer((req, res) => {
 });
 
 /** A pool over two people: r1 (+222 41234567) and, on the same side, x9 holding 41777777. */
-function fakePool() {
+function fakePool(riderDetails = []) {
   const calls = [];
-  return {
+  // rider_details: { id, hash (hex), cc, total, score, rating, enc }
+  const rd = riderDetails.map((r) => ({ ...r }));
+  const pool = {
     calls,
+    rd,
+    async connect() {
+      return { query: pool.query, release() {} };
+    },
     async query(sql, params) {
       calls.push({ sql, params });
+      if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql)) return {};
+      if (/FROM atlas_driver_offer_bpp\.rider_details/.test(sql)) {
+        const row = rd.find((r) => r.hash === params[0] && r.cc === params[1]);
+        return { rows: row ? [{ id: row.id, total_ratings: row.total, total_rating_score: row.score }] : [] };
+      }
+      if (/UPDATE atlas_driver_offer_bpp\.rider_details/.test(sql)) {
+        if (/mobile_number_hash = NULL/.test(sql)) {
+          const row = rd.find((r) => r.id === params[0]);
+          row.hash = null;
+          row.enc = `merged:${row.id}`;
+        } else {
+          const row = rd.find((r) => r.id === params[4]);
+          Object.assign(row, { hash: params[0], enc: params[1], total: params[2], score: params[3],
+            rating: params[2] > 0 ? params[3] / params[2] : row.rating });
+        }
+        return { rowCount: 1 };
+      }
       if (/SELECT mobile_country_code AS cc/.test(sql)) {
         const id = params[0];
         if (id === 'r1') return { rows: [{ cc: '+222', num: '41234567', h: hash('41234567').toString('hex') }] };
@@ -63,7 +86,9 @@ function fakePool() {
       throw new Error(`unexpected SQL: ${sql}`);
     },
   };
+  return pool;
 }
+const hex = (n) => hash(n).toString('hex');
 const urls = { riderUrl: `http://127.0.0.1:${BACKEND}`, driverUrl: `http://127.0.0.1:${BACKEND}` };
 const ask = (pool, body) => numberChange.run(pool, urls, { dialCode: '+222', ...body });
 
@@ -110,6 +135,28 @@ const ask = (pool, body) => numberChange.run(pool, urls, { dialCode: '+222', ...
   const audit = pool.calls.find((c) => /admin_audit/.test(c.sql));
   check('one audit row, naming the account and neither number', audit && audit.params[0] === 'rider r1'
     && !JSON.stringify(audit.params).includes('4199') && !JSON.stringify(audit.params).includes('4123'), audit);
+
+  // Her ratings live on the provider's rider_details, found by her number's hash.
+  pool = fakePool([{ id: 'rdA', hash: hex('41234567'), cc: '+222', total: 4, score: 15, rating: 3.75, enc: 'x' }]);
+  r = await ask(pool, { step: 'apply', side: 'rider', token: 'rider-tok', number: '41999999' });
+  check('her ratings follow her: the same row, now found by the new number', r.ok === true
+    && pool.rd[0].hash === hex('41999999') && pool.rd[0].total === 4 && pool.rd[0].rating === 3.75
+    && pool.rd[0].enc === '0.1.0|0|CIPHER', pool.rd);
+
+  pool = fakePool([
+    { id: 'rdA', hash: hex('41234567'), cc: '+222', total: 4, score: 15, rating: 3.75, enc: 'x' },
+    { id: 'rdB', hash: hex('41999999'), cc: '+222', total: 1, score: 5, rating: 5, enc: 'y' },
+  ]);
+  r = await ask(pool, { step: 'apply', side: 'rider', token: 'rider-tok', number: '41999999' });
+  const kept = pool.rd.find((x) => x.id === 'rdA');
+  const aside = pool.rd.find((x) => x.id === 'rdB');
+  check('the new number already rated too: added together, one average, nothing deleted',
+    kept.hash === hex('41999999') && kept.total === 5 && kept.score === 20 && kept.rating === 4
+      && aside.hash === null && pool.rd.length === 2, pool.rd);
+
+  pool = fakePool([{ id: 'rdA', hash: hex('22100099'), cc: '+222', total: 2, score: 9, rating: 4.5, enc: 'x' }]);
+  r = await ask(pool, { step: 'apply', side: 'driver', token: 'driver-tok', number: '41999999' });
+  check('a driver\'s change never touches passenger ratings', pool.rd[0].hash === hex('22100099'), pool.rd);
 
   pool = fakePool();
   r = await ask(pool, { step: 'apply', side: 'driver', token: 'driver-tok', number: '41999999' });

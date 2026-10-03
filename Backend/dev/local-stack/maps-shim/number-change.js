@@ -104,13 +104,31 @@ async function run(pool, { riderUrl, driverUrl }, body) {
   if (step === 'check') return { ok: true };
 
   const encrypted = await encrypt(number);
-  const done = await pool.query(
-    `UPDATE ${schema}.person
-        SET mobile_country_code = $1, mobile_number_encrypted = $2, mobile_number_hash = $3,
-            unencrypted_mobile_number = $4, updated_at = now()
-      WHERE id = $5`,
-    [dialCode, encrypted, hash, number, who.id]);
-  if (done.rowCount !== 1) return { ok: false, error: 'not_signed_in' };
+
+  // One transaction: the person and, for a passenger, the record her ratings
+  // live on. Half of it -- the number changed, the ratings left on the old
+  // one -- is exactly the bug this exists to prevent.
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const done = await client.query(
+      `UPDATE ${schema}.person
+          SET mobile_country_code = $1, mobile_number_encrypted = $2, mobile_number_hash = $3,
+              unencrypted_mobile_number = $4, updated_at = now()
+        WHERE id = $5`,
+      [dialCode, encrypted, hash, number, who.id]);
+    if (done.rowCount !== 1) {
+      await client.query('ROLLBACK');
+      return { ok: false, error: 'not_signed_in' };
+    }
+    if (side === 'rider') await moveRiderDetails(client, oldHash, hash.toString('hex'), dialCode, encrypted);
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
 
   // A passenger's photograph is keyed by her number's hash (avatars.js), so it
   // follows her to the new one -- or it is gone from her profile. A driver's
@@ -132,4 +150,57 @@ async function run(pool, { riderUrl, driverUrl }, body) {
   return { ok: true };
 }
 
-module.exports = { run, hashOf };
+/**
+ * What drivers made of her follows her to the new number (the owner,
+ * 2026-10-03: a changed number showed « Nouveau »).
+ *
+ * Her ratings are not on her person row: drivers rate a passenger through
+ * the provider binary, which keeps them on `atlas_driver_offer_bpp.
+ * rider_details`, one row per number (unique on hash + country code), and
+ * the provider finds that row by the number's hash on every booking. So the
+ * row is re-pointed at the new number, keeping its id -- her past bookings
+ * stay linked, and her next ride with the new number lands on the same row
+ * and the same ratings. The encrypted copy is passetto's, as the backend
+ * writes it, so the provider can still read it.
+ *
+ * If the new number already has a row of its own (rides taken on it before),
+ * the two are added together -- count and sum, and the average recomputed
+ * from them exactly as the provider does -- and that row is set aside
+ * (hash cleared) so the unique index holds. Nothing is deleted: bookings
+ * point at both.
+ */
+async function moveRiderDetails(db, oldHashHex, newHashHex, countryCode, encrypted) {
+  if (!oldHashHex || oldHashHex === newHashHex) return 0;
+  const mine = await db.query(
+    `SELECT id, total_ratings, total_rating_score FROM atlas_driver_offer_bpp.rider_details
+      WHERE mobile_number_hash = decode($1, 'hex') AND mobile_country_code = $2 FOR UPDATE`,
+    [oldHashHex, countryCode]);
+  const row = mine.rows[0];
+  if (!row) return 0; // never rated, never ridden: nothing to carry
+  const theirs = await db.query(
+    `SELECT id, total_ratings, total_rating_score FROM atlas_driver_offer_bpp.rider_details
+      WHERE mobile_number_hash = decode($1, 'hex') AND mobile_country_code = $2 FOR UPDATE`,
+    [newHashHex, countryCode]);
+  const other = theirs.rows[0];
+  let count = Number(row.total_ratings || 0);
+  let score = Number(row.total_rating_score || 0);
+  if (other) {
+    count += Number(other.total_ratings || 0);
+    score += Number(other.total_rating_score || 0);
+    await db.query(
+      `UPDATE atlas_driver_offer_bpp.rider_details
+          SET mobile_number_hash = NULL, mobile_number_encrypted = 'merged:' || id, updated_at = now()
+        WHERE id = $1`, [other.id]);
+  }
+  await db.query(
+    `UPDATE atlas_driver_offer_bpp.rider_details
+        SET mobile_number_hash = decode($1, 'hex'), mobile_number_encrypted = $2,
+            total_ratings = $3, total_rating_score = $4,
+            rating = CASE WHEN $3::int > 0 THEN $4::float / $3::int ELSE rating END,
+            updated_at = now()
+      WHERE id = $5`,
+    [newHashHex, encrypted, count, score, row.id]);
+  return count;
+}
+
+module.exports = { run, hashOf, moveRiderDetails };
