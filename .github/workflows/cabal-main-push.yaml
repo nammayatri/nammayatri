@@ -328,3 +328,204 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: true
+
+  # Runs the working Postman collections (Backend/dev/integration-tests/collections/) against a
+  # freshly started local stack, so collections on main can't silently break.
+  integration-tests:
+    name: Integration Tests (collections/)
+    needs: [check-conditions, cabal-build]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64_main_push
+    timeout-minutes: 150
+    env:
+      CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
+      CONTEXT_API: http://localhost:7082
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Reuse the binaries cabal-build just produced (same trick as minio-push), so no rebuild.
+      - name: Relink cabal build cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
+          echo "CACHE_ROOT=$CACHE_ROOT" >> $GITHUB_ENV
+          mkdir -p "$CACHE_ROOT/dist-newstyle"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+          cd Backend
+          grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
+            [ -d "$pkg" ] || continue
+            mkdir -p "$CACHE_ROOT/hie/$pkg"
+            rm -rf "$pkg/.hie"
+            ln -sfn "$CACHE_ROOT/hie/$pkg" "$pkg/.hie"
+          done
+
+      # TEMPORARY: runner-exporter.py on the CI runner holds :8080, so move mock-server to 18080 for CI only.
+      # Rewrites the CI checkout copy, not the repo. Remove once the exporter moves off 8080.
+      - name: Move mock-server off 8080 (temporary)
+        run: |
+          MOCK_PORT=18080
+          echo "MOCK_SERVER_PORT=$MOCK_PORT" >> $GITHUB_ENV
+          sed -i "s/mock-server = 8080;/mock-server = $MOCK_PORT;/" Backend/nix/services/ports.nix
+          sed -i "s/8080 # mock-server (python)/$MOCK_PORT # mock-server (python)/" Backend/nix/scripts.nix
+          grep -rl 'localhost:8080' Backend/dev/feature-migrations Backend/dev/integration-tests/collections \
+            | xargs -r sed -i "s/localhost:8080/localhost:$MOCK_PORT/g"
+          grep -rl 'MOCK_SERVER_PORT:8080' Backend/dev/integration-tests/collections \
+            | xargs -r sed -i "s/MOCK_SERVER_PORT:8080/MOCK_SERVER_PORT:$MOCK_PORT/g"
+          grep -n "mock-server" Backend/nix/services/ports.nix
+
+      # TEMPORARY: the runner's locale archive has en_US.UTF-8 but not C.UTF-8, so services forced to C.UTF-8
+      # fall back to ASCII and driver-app crashes reading migrations with "—". Use en_US.UTF-8 in CI only.
+      - name: Use en_US.UTF-8 for services (temporary)
+        run: |
+          sed -i 's/LC_ALL = "C.UTF-8";/LC_ALL = "en_US.UTF-8";/' Backend/nix/services/nammayatri.nix
+          grep -n 'LC_ALL = ' Backend/nix/services/nammayatri.nix
+
+      # TEMPORARY: rider-dashboard 0078/0079 (d88026e228) target atlas_dashboard, but dev/CI rider-dashboard
+      # still runs on atlas_bap_dashboard -> "permission denied for schema". Remove once fixed upstream.
+      - name: Fix rider-dashboard 2FA migration schema (temporary)
+        run: |
+          for f in Backend/dev/ddl-migrations/rider-dashboard/0078-add-two-fa-exempt-to-person.sql \
+                   Backend/dev/ddl-migrations/rider-dashboard/0079-add-two-fa-exempt-to-role.sql; do
+            sed -i 's/atlas_dashboard\./atlas_bap_dashboard./' "$f"
+            grep -n "ALTER TABLE" "$f"
+          done
+
+      # TEMPORARY: rider seed 0008-config-pilot-resource-scope (5d2e134c4f) sets capability.resource_type, but only
+      # provider-dashboard got that column (0106-resource-scope). Add a rider copy in CI. Remove once fixed upstream.
+      - name: Add rider-dashboard resource-scope DDL (temporary)
+        run: |
+          sed 's/atlas_dashboard/atlas_bap_dashboard/g' Backend/dev/ddl-migrations/provider-dashboard/0106-resource-scope.sql \
+            > Backend/dev/ddl-migrations/rider-dashboard/0080-resource-scope.sql
+          grep -n "ALTER TABLE" Backend/dev/ddl-migrations/rider-dashboard/0080-resource-scope.sql
+
+      # TEMPORARY: rider-dashboard is legacy (its APIs moved into provider-dashboard) and its old migrations keep
+      # failing in CI; no collection uses it. Don't make test-context-api wait for it (CI copy only).
+      - name: Don't block test-context-api on rider-dashboard (temporary)
+        run: |
+          sed -i '/"rider-dashboard-exe".condition = "process_healthy";/d' Backend/nix/services/nammayatri.nix
+          echo "remaining rider-dashboard waits: $(grep -c '"rider-dashboard-exe".condition' Backend/nix/services/nammayatri.nix || true)"
+
+      # TEMPORARY: the config-sync S3 bucket is corp-network only (403 from this runner), so use a dump cached
+      # on the runner at ~/config-sync-cache/master_to_local instead of downloading. Remove once the runner can fetch.
+      - name: Use cached master dump (temporary)
+        run: |
+          SRC="$HOME/config-sync-cache/master_to_local"
+          DST=Backend/dev/config-sync/assets/data/master_to_local
+          [ -d "$SRC" ] || { echo "Missing $SRC: copy a master_to_local dump to the runner first"; exit 1; }
+          rm -rf "$DST" && mkdir -p "$(dirname "$DST")" && cp -r "$SRC" "$DST"
+          echo "files: $(find "$DST" -type f | wc -l)"
+
+      # TEMPORARY: driver issue_message.message is varchar(255) but master has messages up to 666 chars
+      # (rider side was widened by rider-app/1187). Add the driver widening in CI only. Remove once on main.
+      - name: Widen driver issue_message.message (temporary)
+        run: |
+          echo "ALTER TABLE atlas_driver_offer_bpp.issue_message ALTER COLUMN message TYPE character varying(1000);" \
+            > Backend/dev/ddl-migrations/dynamic-offer-driver-app/0900-widen-issue-message-message.sql
+          cat Backend/dev/ddl-migrations/dynamic-offer-driver-app/0900-widen-issue-message-message.sql
+
+      # TEMPORARY: config-sync turns master's '' into NULL for nullable text columns; rider-app reads
+      # merchant.kapture_disposition as non-null Text and crashes (CMRL row). Restore '' after import, CI only.
+      - name: Restore empty merchant.kapture_disposition after sync (temporary)
+        run: |
+          echo "UPDATE atlas_app.merchant SET kapture_disposition = '' WHERE kapture_disposition IS NULL;" \
+            > Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
+          cat Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
+
+      # TEMPORARY: patches.json's BG rule renames every master BG row to JUSPAY.BG.1 (same for some BAPs), leaving
+      # duplicate (subscriber_id, unique_key_id) rows; driver-app authCheck then fails search. Keep the newest, CI only.
+      - name: Dedupe registry subscribers after sync (temporary)
+        run: |
+          echo "DELETE FROM atlas_registry.subscriber s USING atlas_registry.subscriber t WHERE s.subscriber_id = t.subscriber_id AND s.unique_key_id = t.unique_key_id AND (s.created, s.ctid) < (t.created, t.ctid);" \
+            > Backend/dev/feature-migrations/9998-ci-dedupe-registry-subscriber.sql
+          cat Backend/dev/feature-migrations/9998-ci-dedupe-registry-subscriber.sql
+
+      # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
+      - name: Start mobility stack
+        run: |
+          nohup nix develop .#backend --command bash -c "
+            export CABAL_DIR=$CACHE_ROOT/.cabal-dir
+            export CABAL_CONFIG=$CACHE_ROOT/.cabal-dir/config
+            , run-mobility-stack-dev --tui=false
+          " > stack.log 2>&1 &
+          echo $! > stack.pid
+
+      - name: Wait for services
+        run: |
+          for i in $(seq 1 120); do          # 120 x 15s = 30 min
+            if curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null; then
+              echo "Services ready"; exit 0
+            fi
+            echo "waiting for services... ($((i*15))s)"; sleep 15
+          done
+          echo "Services not ready after 30 min"; tail -100 stack.log; exit 1
+
+      # Same path as the dashboard's Sync button: fetch master data -> import -> local-testing-data
+      # -> feature migrations -> restart rider/driver.
+      - name: Sync master config
+        run: |
+          curl -sf -X POST "$CONTEXT_API/api/config-sync/import" \
+               -H 'Content-Type: application/json' \
+               -d '{"from":"master","forceFetch":false}' | jq -e '.started == true'
+          for i in $(seq 1 80); do           # 80 x 15s = 20 min
+            STATUS=$(curl -sf "$CONTEXT_API/api/config-sync/status")
+            if [ "$(echo "$STATUS" | jq -r '.running')" = "false" ]; then
+              echo "$STATUS" | jq -r '.log[]?' | tail -50
+              echo "$STATUS" | jq -e '.exit_code == 0 and .error == null' >/dev/null \
+                && { echo "Config sync OK"; exit 0; } \
+                || { echo "Config sync FAILED"; exit 1; }
+            fi
+            echo "config sync running... ($((i*15))s)"; sleep 15
+          done
+          echo "Config sync timed out"; exit 1
+
+      - name: Wait for services after sync
+        run: |
+          sleep 30
+          for i in $(seq 1 60); do
+            curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null && { echo "Ready"; exit 0; }
+            sleep 15
+          done
+          echo "Services not ready after sync"; exit 1
+
+      # Runs every working collection. Doesn't stop at the first failure: runs all,
+      # prints a summary, and fails the job if any failed.
+      - name: Run collections
+        run: |
+          nix develop .#backend --command bash -s <<'EOF'
+          cd Backend/dev/integration-tests
+          FAILED=()
+          run() {
+            echo "::group::$*"
+            ./run-tests.sh "$@" || FAILED+=("$*")
+            echo "::endgroup::"
+          }
+          run auto    NY_Bangalore     # AutoRideFlow 01-03
+          run taxi    NY_Bangalore     # TaxiRideFlow 04-06
+          run rides   NY_Bangalore     # RideBookingFlow 07-12 + AutoRideLoadTest
+          run easy    NY_Bangalore     # EasyBookingRideFlow 01 (needs the 'easy' command in run-tests.sh)
+          run metro   FRFS_Bangalore   # MetroTicketBookingFlow 01
+          run loyalty FRFS_Chennai     # LoyaltyWalletFlow 01
+          run stcl                     # StclMembershipFlow 01-02 (BT_Delhi + NY_Bangalore)
+          echo "════════════════════════════════════════"
+          if [ ${#FAILED[@]} -eq 0 ]; then echo "ALL COLLECTIONS PASSED"; exit 0; fi
+          echo "FAILED:"; printf '  - %s\n' "${FAILED[@]}"; exit 1
+          EOF
+
+      # Only on failure: attach all service logs + newman reports so the failure can be debugged.
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs
+          path: |
+            stack.log
+            *.log
+            Backend/dev/integration-tests/reports/
+          retention-days: 5
+
+      # Always: stop the stack and free the ports for the next run.
+      - name: Stop mobility stack
+        if: always()
+        run: |
+          [ -f stack.pid ] && kill "$(cat stack.pid)" 2>/dev/null || true
+          nix develop .#backend --command , kill-svc-ports || true
