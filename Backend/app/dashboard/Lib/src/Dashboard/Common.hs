@@ -62,6 +62,8 @@ data User
 
 data Image
 
+data Plan
+
 data Ride
 
 data Sos
