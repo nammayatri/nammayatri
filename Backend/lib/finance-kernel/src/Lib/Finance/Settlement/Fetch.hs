@@ -35,8 +35,10 @@ fetchSettlementCsv ::
   SettlementServiceConfig ->
   Text ->
   Text ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
   m (Either Text (LBS.ByteString, Maybe SftpFetchMeta, Maybe SplitSettlementCustomerType))
-fetchSettlementCsv SettlementServiceConfig {..} merchantId merchantOperatingCityId =
+fetchSettlementCsv SettlementServiceConfig {..} merchantId merchantOperatingCityId mbStartTime mbEndTime =
   case sourceConfig of
     EmailSourceConfig emailCfg -> do
       eCsv <- EmailSource.fetchSettlementFile emailCfg
@@ -70,6 +72,10 @@ fetchSettlementCsv SettlementServiceConfig {..} merchantId merchantOperatingCity
           merchantOperatingCityId
           (settlementServiceToPaymentGatewayName settlementService)
           apiCfg
+          mbStartTime
+          mbEndTime
       pure $ case eCsv of
         Left err -> Left err
         Right (bs, meta) -> Right (bs, meta, Nothing)
+    BillDeskApiSourceConfig _ ->
+      pure $ Left "BillDeskApiSourceConfig is handled by Settlement-API-Strategy, not fetchSettlementCsv"
