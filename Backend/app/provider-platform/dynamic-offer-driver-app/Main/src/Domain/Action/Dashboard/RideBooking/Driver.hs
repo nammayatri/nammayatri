@@ -520,12 +520,12 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
   mbActiveFda <- B.runInReplica $ QFleetDriver.findByDriverId person.id True
   now <- getCurrentTime
+  mbActiveFleetOwnerInfo <- maybe (pure Nothing) (\fda -> B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)) mbActiveFda
   activeFleetInfo <- case mbActiveFda of
     Nothing -> pure Nothing
     Just fda -> do
       fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
-      fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo (Just fda) now
+      Just <$> buildDriverAssociationInfoFromPerson fleetOwner mbActiveFleetOwnerInfo (Just fda) now
   recentFleetInfo <- case activeFleetInfo of
     Just _ -> pure activeFleetInfo
     Nothing -> do
@@ -552,11 +552,9 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let bankVerificationStatus' = mbBankAccount <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
   mbIdentityInfo <- B.runInReplica $ QDII.findByDriverId person.id
   let courtRecord' = (mbIdentityInfo >>= (.courtRecord)) <&> \cr -> Common.CourtRecordResult {result = cr.result, errorMessage = cr.errorMessage}
-  tdsApplicableFlag' <- case mbActiveFda of
-    Just fda -> do
-      mbFleetInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-      pure $ isJust (mbFleetInfo >>= (.tdsRate))
-    Nothing -> pure $ isJust driverInfo.tdsRate
+  let tdsApplicableFlag' = case mbActiveFda of
+        Just _ -> isJust (mbActiveFleetOwnerInfo >>= (.tdsRate))
+        Nothing -> isJust driverInfo.tdsRate
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -645,6 +643,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         courtRecord = courtRecord',
         approved = driverInfo.approved,
         disabledReasonFlag = castDisabledReasonFlag <$> driverInfo.disabledReasonFlag,
+        enableCashRide = Just $ QFleetDriver.effectiveEnableCashRide now info.enableCashRide mbActiveFda (mbActiveFleetOwnerInfo >>= (.enableCashRide)),
         specialLocWarriorInfo =
           Common.SpecialLocWarriorInfo
             { isSpecialLocWarrior = driverInfo.isSpecialLocWarrior,

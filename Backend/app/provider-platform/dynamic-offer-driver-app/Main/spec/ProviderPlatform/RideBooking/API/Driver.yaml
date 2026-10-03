@@ -331,6 +331,7 @@ types:
     - courtRecord: Maybe CourtRecordResult
     - approved: Maybe Bool
     - disabledReasonFlag: Maybe DisabledReasonFlag
+    - enableCashRide: Maybe Bool
     - specialLocWarriorInfo: SpecialLocWarriorInfo
     - isPetModeEnabled: Maybe Bool
     - tripDistanceMinThreshold: Maybe Meters
