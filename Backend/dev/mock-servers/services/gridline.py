@@ -110,8 +110,12 @@ def _send_pan_callback(request_id, group_id, task_id, pan_number):
         log.error(f"PAN callback failed for {request_id}: {e}")
 
 
-def _send_rc_callback(request_id, group_id, task_id, rc_number):
-    """Send an RC verification webhook callback to BPP after a delay."""
+def _send_rc_callback(request_id, group_id, task_id, rc_number, override=None):
+    """Send an RC verification webhook callback to BPP after a delay.
+
+    WHY override: every other gridline path already honours the per-test _get_override payload;
+    the RC callback ignored it. COMPAT: override=None leaves the payload exactly as before.
+    """
     import time
     import urllib.request
     time.sleep(CALLBACK_DELAY)
@@ -147,6 +151,8 @@ def _send_rc_callback(request_id, group_id, task_id, rc_number):
         "task_id": task_id,
         "type": "ind_rc",
     }
+    if override:
+        payload = deep_merge(payload, override)
     body = json.dumps(payload).encode()
     req = urllib.request.Request(
         WEBHOOK_URL,
@@ -159,6 +165,143 @@ def _send_rc_callback(request_id, group_id, task_id, rc_number):
             log.info(f"RC callback sent for {request_id}: {resp.status}")
     except Exception as e:
         log.error(f"RC callback failed for {request_id}: {e}")
+
+
+def _send_dl_callback(request_id, group_id, task_id, dl_number):
+    """Send a DL verification webhook callback to BPP after a delay.
+
+    WHY: gridline used to answer DL verification with a bare ack, so the DL never resolved and a
+    driver could not finish onboarding. COV `LMV` is in the Delhi/MSIL DriverLicense
+    supported-classes list and nt_validity_to is far future, so validateDLStatus marks it VALID.
+
+    NOTE: unlike the GST callback this is NOT behind a flag, so any merchant routed to Gridline for
+    DL now gets an auto-VALID licence where it previously got nothing. Nothing does today (MSIL uses
+    Idfy for DL), but gate it on a config flag if that changes. The dob below is fixed, so a test
+    using a different DOB will fail the Aadhaar/DL cross-check.
+    """
+    import time
+    import urllib.request
+    time.sleep(CALLBACK_DELAY)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    payload = {
+        "action": "verify_with_source",
+        "completed_at": now,
+        "created_at": now,
+        "group_id": group_id,
+        "request_id": request_id,
+        "result": {
+            "source_output": {
+                "address": "Address as available on Gov. Source",
+                "badge_details": None,
+                "card_serial_no": None,
+                "city": "Delhi",
+                "cov_details": [
+                    {"category": "NT", "cov": "LMV", "issue_date": "2018-01-01"},
+                ],
+                "date_of_issue": "2018-01-01",
+                "date_of_last_transaction": None,
+                "dl_status": "Active",
+                "dob": "1988-03-12",
+                "face_image": None,
+                "gender": None,
+                "hazardous_valid_till": None,
+                "hill_valid_till": None,
+                "id_number": dl_number,
+                "issuing_rto_name": "DL, DELHI",
+                "last_transacted_at": None,
+                "name": "TEST DRIVER",
+                "nt_validity_from": "2018-01-01",
+                "nt_validity_to": "2035-02-14",
+                "relatives_name": None,
+                "source": "SARATHI",
+                "status": "id_found",
+                "t_validity_from": None,
+                "t_validity_to": None,
+            },
+        },
+        "status": "completed",
+        "task_id": task_id,
+        "type": "ind_driving_license",
+    }
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        WEBHOOK_URL,
+        data=body,
+        headers={"Content-Type": "application/json", "Authorization": WEBHOOK_SECRET},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            log.info(f"DL callback sent for {request_id}: {resp.status}")
+    except Exception as e:
+        log.error(f"DL callback failed for {request_id}: {e}")
+
+
+def _send_gst_callback(request_id, group_id, task_id, gstin):
+    """Send a GST verification webhook callback to BPP after a delay.
+
+    WHY: without a callback GST stays MANUAL_VERIFICATION_REQUIRED, so a business fleet can never
+    reach verified. onVerifyGstHandler writes VALID only when gstin_status == "Active" AND a
+    non-empty legal_name is present for a fleet role — both are supplied below.
+
+    COMPAT: OFF BY DEFAULT, fires only when idfy._CONFIG["gstCallback"] is true. Otherwise
+    ind_gst_certificate falls through to the bare ack exactly as before, so PanGstCrossCheckFlow
+    (which asserts only the synchronous 400/200 and SQL-sets driver_gstin itself) is unaffected.
+    """
+    import time
+    import urllib.request
+    time.sleep(CALLBACK_DELAY)
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    payload = {
+        "action": "verify_with_source",
+        "completed_at": now,
+        "created_at": now,
+        "group_id": group_id,
+        "request_id": request_id,
+        "result": {
+            "source_output": {
+                "additional_place_of_business_fields": None,
+                "centre_jurisdiction": "RANGE-I",
+                "centre_jurisdiction_code": "XX0101",
+                "constitution_of_business": "Private Limited Company",
+                "date_of_cancellation": None,
+                "date_of_registration": "2020-01-01",
+                "gstin": gstin,
+                "gstin_status": "Active",
+                "last_updated_date": "2020-01-01",
+                "legal_name": "TEST FLEET PVT LTD",
+                "nature_of_business_activity": None,
+                "principal_place_of_business_fields": {
+                    "pincode": "110001",
+                    "state_name": "Delhi",
+                },
+                "source": "GSTN",
+                "state_jurisdiction_code": "DL01",
+                "status": "id_found",
+                "taxpayer_type": "Regular",
+                "trade_name": "TEST FLEET",
+                "e_invoice_status": None,
+                "status_details": None,
+                "is_sez": False,
+                "filing_details": None,
+            },
+        },
+        "status": "completed",
+        "task_id": task_id,
+        "type": "ind_gst_certificate",
+    }
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        WEBHOOK_URL,
+        data=body,
+        headers={"Content-Type": "application/json", "Authorization": WEBHOOK_SECRET},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            log.info(f"GST callback sent for {request_id}: {resp.status}")
+    except Exception as e:
+        log.error(f"GST callback failed for {request_id}: {e}")
 
 
 def handle(handler, path, body):
@@ -201,6 +344,31 @@ def handle(handler, path, body):
                 daemon=True,
             ).start()
 
+        # GST callback — opt-in via /idfy/configure {"gstCallback": true}. Default off, so every
+        # existing flow keeps the old bare-ack behaviour.
+        if "ind_gst" in path:
+            from services import idfy as _idfy
+            with _idfy._LOCK:
+                _enabled = bool(_idfy._CONFIG.get("gstCallback"))
+            if _enabled:
+                parsed_body = {}
+                if body:
+                    try:
+                        text = body.decode("utf-8") if isinstance(body, bytes) else body
+                        parsed_body = json.loads(text)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+                gstin = ((parsed_body.get("data") or {}).get("gstin")
+                         or (parsed_body.get("data") or {}).get("id_number")
+                         or _idfy._CONFIG.get("gstNumber"))
+                group_id = parsed_body.get("group_id", "mock-group")
+                task_id = parsed_body.get("task_id", "mock-task")
+                threading.Thread(
+                    target=_send_gst_callback,
+                    args=(request_id, group_id, task_id, gstin),
+                    daemon=True,
+                ).start()
+
         # For RC verification, send a webhook callback after a delay
         if "ind_rc" in path:
             parsed_body = {}
@@ -215,7 +383,26 @@ def handle(handler, path, body):
             task_id = parsed_body.get("task_id", "mock-task")
             threading.Thread(
                 target=_send_rc_callback,
-                args=(request_id, group_id, task_id, rc_number),
+                args=(request_id, group_id, task_id, rc_number, extra),
+                daemon=True,
+            ).start()
+
+        # DL callback — resolves the licence to VALID. Always on; see _send_dl_callback for why
+        # that is safe today and what to watch for.
+        if "ind_dl" in path or "ind_driving_license" in path:
+            parsed_body = {}
+            if body:
+                try:
+                    text = body.decode("utf-8") if isinstance(body, bytes) else body
+                    parsed_body = json.loads(text)
+                except (json.JSONDecodeError, ValueError):
+                    pass
+            dl_number = (parsed_body.get("data") or {}).get("id_number", "UNKNOWN")
+            group_id = parsed_body.get("group_id", "mock-group")
+            task_id = parsed_body.get("task_id", "mock-task")
+            threading.Thread(
+                target=_send_dl_callback,
+                args=(request_id, group_id, task_id, dl_number),
                 daemon=True,
             ).start()
 
