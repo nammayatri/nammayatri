@@ -452,7 +452,8 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                    { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,
                      avgSpeedKmph = maybe config.scheduledRideConfig.avgSpeedKmph (.value) req.scheduledRideAvgSpeedKmph,
                      minLeadTime = maybe config.scheduledRideConfig.minLeadTime (.value) req.scheduledRideMinLeadTime,
-                     maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime
+                     maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime,
+                     enableScheduledRideActivationChecks = config.scheduledRideConfig.enableScheduledRideActivationChecks
                    }
               }
   whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
