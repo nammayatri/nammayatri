@@ -1,0 +1,79 @@
+imports:
+  FarePolicy: Domain.Types.FarePolicy
+  Minutes: Kernel.Types.Common
+  Hours: Kernel.Types.Common
+  WaitingCharge: Domain.Types.FarePolicy.Common
+  NightShiftCharge: Domain.Types.FarePolicy.Common
+  WaitingChargeInfo: Domain.Types.FarePolicy.Common
+
+FarePolicyInterCityDetails:
+  tableName: fare_policy_inter_city_details
+
+  fields:
+    farePolicyId: Text
+    baseFare: HighPrecMoney
+    perHourCharge: HighPrecMoney
+    perKmRateOneWay: HighPrecMoney
+    perKmRateRoundTrip: HighPrecMoney
+    perExtraKmRate: HighPrecMoney
+    perExtraMinRate: HighPrecMoney
+    kmPerPlannedExtraHour: Kilometers
+    deadKmFare: HighPrecMoney
+    perDayMaxHourAllowance: Hours
+    perDayMaxAllowanceInMins: Maybe Minutes
+    defaultWaitTimeAtDestination: Minutes
+    currency: Currency
+    stateEntryPermitCharges: Maybe HighPrecMoney
+    nightShiftCharge: Maybe NightShiftCharge
+    waitingChargeInfo: Maybe WaitingChargeInfo
+
+  beamType:
+    defaultWaitTimeAtDestination: Int
+    perDayMaxHourAllowance: Int
+    perDayMaxAllowanceInMins: Maybe Int
+
+  beamFields:
+    waitingChargeInfo:
+      waitingCharge: Maybe WaitingCharge
+      freeWatingTime: Maybe Int
+
+  fromTType:
+    defaultWaitTimeAtDestination: Kernel.Types.Common.Minutes|I
+    perDayMaxHourAllowance: Kernel.Types.Common.Hours|I
+    perDayMaxAllowanceInMins: Kernel.Prelude.fmap Kernel.Types.Common.Minutes|I
+    waitingChargeInfo: "((,) <$> waitingCharge <*> (Kernel.Types.Common.Minutes <$> freeWatingTime)) <&> (\\(wc, ft) -> Domain.Types.FarePolicy.Common.WaitingChargeInfo {waitingCharge = wc, freeWaitingTime = ft})|E"
+
+  toTType:
+    defaultWaitTimeAtDestination: Kernel.Types.Common.getMinutes|I
+    perDayMaxHourAllowance: Kernel.Types.Common.getHours|I
+    perDayMaxAllowanceInMins: Kernel.Prelude.fmap Kernel.Types.Common.getMinutes|I
+    waitingCharge: (.waitingCharge) <$> waitingChargeInfo|E
+    freeWatingTime: Kernel.Types.Common.getMinutes <$> (.freeWaitingTime) <$> waitingChargeInfo|E
+
+  beamInstance:
+    - MakeTableInstances
+    - Custom Domain.Types.UtilsTH.mkCacParseInstance
+
+  constraints:
+    farePolicyId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+  excludedDefaultQueries:
+    - create
+    - createMany
+  queries:
+    findByFarePolicyId:
+      kvFunction: findOneWithKV
+      where: farePolicyId
+
+    deleteByFarePolicyId:
+      kvFunction: deleteWithKV
+      where: farePolicyId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

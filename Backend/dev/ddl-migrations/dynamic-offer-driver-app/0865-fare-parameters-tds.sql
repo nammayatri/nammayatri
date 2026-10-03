@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 -- Per-ride TDS on fare_parameters.
 --
 -- tds_amount is the deduction actually applied to the driver's / fleet owner's
@@ -17,6 +18,7 @@
 -- It is set even when no TDS was due, so it distinguishes "not processed" from
 -- "processed, nothing deducted" -- which tds_amount alone cannot.
 
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN tds_amount numeric(30,2);
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN tds_rate double precision;
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN tds_processed_at timestamp with time zone;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS tds_amount numeric(30,2);
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS tds_rate double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS tds_processed_at timestamp with time zone;
+-- NOTE: dont need to run these queries

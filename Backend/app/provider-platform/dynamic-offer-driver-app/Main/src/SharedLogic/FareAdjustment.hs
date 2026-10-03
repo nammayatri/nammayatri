@@ -51,6 +51,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Types.SpecialLocation as SL
 import Numeric (readHex)
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 import qualified Storage.CachedQueries.FareAdjustment as CQFA
 import qualified Storage.Queries.FareAdjustment as QFA
 

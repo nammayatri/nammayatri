@@ -640,6 +640,83 @@ run_pangst() {
     run_frfs "$PANGST_DIR" "PAN-GST CROSS CHECK" "${1:-}" "${2:-}"
 }
 
+FAREPOLICY_COLLECTION="$RIDE_DIR/14-FarePolicyDSLMigrationVerification.json"
+FAREPOLICY_CLEANUP_SQL="$SCRIPT_DIR/../local-testing-data/farepolicy-cleanup.sql"
+
+run_farepolicy() {
+    local filter_env="${1:-NY_Bangalore}"
+    local env_file="$RIDE_DIR/Local/Local_${filter_env}.postman_environment.json"
+
+    if [ ! -f "$env_file" ]; then
+        echo "Environment not found: $env_file"
+        exit 1
+    fi
+
+    # Resolve ${VAR:default} patterns (Newman doesn't expand them)
+    local resolved_env
+    resolved_env=$(mktemp /tmp/farepolicy-env-XXXXXX.json)
+    trap 'rm -f "$resolved_env"' EXIT
+    sed -E 's/\$\{[A-Za-z_]+:([^}]+)\}/\1/g' "$env_file" > "$resolved_env"
+
+    echo ""
+    echo "════════════════════════════════════════════════════════════"
+    echo "  FarePolicy DSL Migration Verification / $filter_env"
+    echo "════════════════════════════════════════════════════════════"
+
+    # DB cleanup
+    if [ -f "$FAREPOLICY_CLEANUP_SQL" ]; then
+        echo ""
+        echo "Step 1: DB cleanup (keep one fare product per service tier)..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -v ON_ERROR_STOP=1 \
+            -f "$FAREPOLICY_CLEANUP_SQL" > /dev/null 2>&1 \
+            && echo "  Done" \
+            || echo "  WARNING: cleanup SQL failed"
+
+        echo ""
+        echo "  Fare products per service tier (Bangalore):"
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -tAc "
+SELECT '    ' || fp.vehicle_variant || ' | ' || fp.trip_category || ' | ' || fp.area || ' | ' || fp.fare_policy_id
+FROM atlas_driver_offer_bpp.fare_product fp
+JOIN atlas_driver_offer_bpp.merchant_operating_city moc ON fp.merchant_operating_city_id = moc.id
+WHERE moc.city = 'Bangalore'
+  AND fp.trip_category IN ('OneWay_OneWayOnDemandDynamicOffer','Rental_RideOtp','InterCity_OneWayRideOtp','Ambulance_OneWayOnDemandDynamicOffer')
+  AND fp.vehicle_variant IN ('AUTO_RICKSHAW','COMFY','ECO','AMBULANCE_TAXI','AMBULANCE_TAXI_OXY','SUV','SUV_PLUS')
+ORDER BY fp.trip_category, fp.vehicle_variant;" 2>/dev/null
+    fi
+
+    echo ""
+    mkdir -p "$REPORTS_DIR"
+
+    local verbose_flags=()
+    if [ "$VERBOSE" = true ]; then
+        verbose_flags+=(--verbose)
+    fi
+
+    local log_file="$REPORTS_DIR/farepolicy-dsl-migration-$(date +%Y%m%d_%H%M%S).log"
+
+    newman run "$FAREPOLICY_COLLECTION" \
+        -e "$resolved_env" \
+        --timeout-request 60000 \
+        --reporters cli \
+        --color on \
+        "${verbose_flags[@]+"${verbose_flags[@]}"}" \
+        2>&1 | tee >(sed 's/\x1b\[[0-9;]*m//g' > "$log_file")
+
+    local exit_code=${PIPESTATUS[0]}
+
+    echo ""
+    echo "════════════════════════════════════════════════════════════"
+    if [ "$exit_code" -eq 0 ]; then
+        echo "  PASSED: FarePolicy DSL Migration Verification ($filter_env)"
+    else
+        echo "  FAILED: FarePolicy DSL Migration Verification ($filter_env)"
+    fi
+    echo "  Log: $log_file"
+    echo "════════════════════════════════════════════════════════════"
+
+    return "$exit_code"
+}
+
 # Face match onboarding: enable the per-document face-match toggle (base data comes from config sync).
 seed_facematch_config() {
     echo "Seeding face-match config (document_verification_config.face_match_source_doc)..."
@@ -760,6 +837,7 @@ show_help() {
     echo "  gohome              Run Go-Home blocked special location suite (auto-seeds blocked airport special location)"
     echo "  phone-consent       Run rider phone-share consent gate suite (auto-seeds DirectCall + consent flag, flushes Redis)"
     echo "  event-tracking      Run S2S event tracking suite with Moengage, Clevertap and FirebaseAnalytics live (auto-seeds provider rows, flushes Redis)"
+    echo "  farepolicy          Run FarePolicy DSL migration verification (auto-runs cleanup SQL)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh rewards NY_Bangalore           # Rewards APIs (Namma Yatri)"
@@ -914,6 +992,9 @@ case "${1:-}" in
         ;;
     event-tracking|tracking)
         run_event_tracking "${2:-}" "${3:-}"
+        ;;
+    farepolicy|fare-policy)
+        run_farepolicy "${2:-}"
         ;;
     "")
         run_rides

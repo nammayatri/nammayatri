@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 -- Splits the Stripe payment charge from its VAT on fare_parameters.
 --
 -- payment_processing_fee previously held the VAT-INCLUSIVE blended amount
@@ -7,4 +8,5 @@
 -- fareSum and every partition total stay correct either way. Only the split
 -- differs, and only on invoices for rides priced before this deploy. Readers
 -- must treat a NULL vat as "legacy blended".
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN payment_processing_fee_vat double precision;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS payment_processing_fee_vat double precision;
+-- NOTE: dont need to run these queries

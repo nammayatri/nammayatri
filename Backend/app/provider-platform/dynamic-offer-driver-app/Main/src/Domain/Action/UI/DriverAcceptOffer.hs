@@ -65,6 +65,7 @@ import SharedLogic.CallBAP (sendDriverOffer)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
+import qualified SharedLogic.FarePolicy.Conversions as DFarePolicy
 import qualified SharedLogic.ParkingFeeExemption as SPFE
 import SharedLogic.Pricing
 import SharedLogic.Ride

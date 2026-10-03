@@ -156,7 +156,7 @@ checkParseField tableName tableColumn' value = do
     "fare_policy_rental_details_pricing_slabs" -> return $ checkParse (Proxy @[FPRDPS.FarePolicyRentalDetailsPricingSlabs]) tableColumn value
     "fare_policy_inter_city_details_pricing_slabs" -> return $ checkParse (Proxy @[FPICDPS.FarePolicyInterCityDetailsPricingSlabs]) tableColumn value
     "fare_policy_slabs_details_slab" -> return $ checkParse (Proxy @[FPSS.FarePolicySlabsDetailsSlab]) tableColumn value
-    "driver_extra_fee_bounds" -> return $ checkParse (Proxy @DEFB.DriverExtraFeeBoundsT) tableColumn value
+    "driver_extra_fee_bounds" -> return $ checkParse (Proxy @DEFB.FarePolicyDriverExtraFeeBoundsT) tableColumn value
     "fare_policy_progressive_details" -> return $ checkParse (Proxy @FPFB.FarePolicyProgressiveDetailsT) tableColumn value
     "fare_policy_rental_details" -> return $ checkParse (Proxy @FPRD.FarePolicyRentalDetailsT) tableColumn value
     "fare_policy" -> return $ checkParse (Proxy @FP.FarePolicyT) tableColumn value

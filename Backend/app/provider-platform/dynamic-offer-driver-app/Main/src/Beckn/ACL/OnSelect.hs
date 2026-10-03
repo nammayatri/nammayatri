@@ -31,7 +31,6 @@ import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.DriverQuote as DQuote
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -40,6 +39,7 @@ import qualified Kernel.Types.Common as Common (mkPrice)
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator (mkFareParamsBreakups)
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,

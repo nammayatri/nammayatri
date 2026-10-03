@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 -- RUN THIS BEFORE --
 CREATE OR REPLACE FUNCTION drop_not_null_if_exists(target_schema_name TEXT, target_table_name TEXT, target_column_name TEXT)
 RETURNS void AS $$
@@ -23,30 +24,30 @@ $$ LANGUAGE plpgsql;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'driver_quote', 'distance');
 
 -- FARE PARAMETERS --
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE;
 
 -- FARE PARAMETERS RENTAL DETAILS --
-CREATE TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ();
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN fare_parameters_id character varying(36);
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN time_based_fare numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN dist_based_fare numeric(30, 2);
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_parameters_rental_details ();
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN IF NOT EXISTS fare_parameters_id character varying(36);
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN IF NOT EXISTS time_based_fare numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN IF NOT EXISTS dist_based_fare numeric(30, 2);
 
 -- FARE POLICY RENTAL DETAILS --
-CREATE TABLE atlas_driver_offer_bpp.fare_policy_rental_details ();
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN fare_policy_id character varying(36);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN base_fare numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN per_hour_charge numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN planned_per_km_rate numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN included_km_per_hr int NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN per_extra_min_rate numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN per_extra_km_rate numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN night_shift_charge json;
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_policy_rental_details ();
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS fare_policy_id character varying(36);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS base_fare numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS per_hour_charge numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS planned_per_km_rate numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS included_km_per_hr int NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS per_extra_min_rate numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS per_extra_km_rate numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS night_shift_charge json;
 
 -- FARE POLICY RENTAL DETAILS DISTANCE BUFFERS --
-CREATE TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ();
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN fare_policy_id character varying(36);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN ride_duration integer;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN buffer_kms integer;
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ();
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN IF NOT EXISTS fare_policy_id character varying(36);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN IF NOT EXISTS ride_duration integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers ADD COLUMN IF NOT EXISTS buffer_kms integer;
 
 -- FARE PRODUCT --
 
@@ -64,9 +65,10 @@ ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN is_scheduled bo
 
 -- SEARCH TRY --
 -- FARE POLICY --
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN max_additional_kms_limit integer;
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN total_additional_kms_limit integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS max_additional_kms_limit integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN IF NOT EXISTS total_additional_kms_limit integer;
 
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --
--- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
+-- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ ---- NOTE: dont need to run these queries
+-- NOTE: dont need to run these queries

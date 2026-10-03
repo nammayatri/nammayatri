@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 CREATE TABLE atlas_driver_offer_bpp.search_request_special_zone (
 id character(36) NOT NULL,
 transaction_id character(36) NOT NULL,
@@ -19,7 +20,7 @@ CONSTRAINT  idx_search_request_special_zone_primary PRIMARY KEY (id)
 ALTER TABLE atlas_driver_offer_bpp.search_request_special_zone OWNER TO atlas_driver_offer_bpp_user;
 
 
-CREATE TABLE atlas_driver_offer_bpp.quote_special_zone (
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.quote_special_zone (
 id character(36) NOT NULL PRIMARY KEY,
 search_request_id character(36) REFERENCES atlas_driver_offer_bpp.search_request_special_zone (id) NOT NULL,
 provider_id character(36) REFERENCES atlas_driver_offer_bpp.merchant (id) NOT NULL,
@@ -34,3 +35,4 @@ created_at timestamp NOT NULL,
 updated_at timestamp NOT NULL
 );
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone OWNER TO atlas_driver_offer_bpp_user;
+-- NOTE: dont need to run these queries

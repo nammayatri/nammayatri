@@ -90,6 +90,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as SFC
+import qualified SharedLogic.FarePolicy.Conversions as DFP
 import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SpecialZone ()

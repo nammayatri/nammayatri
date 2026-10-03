@@ -1,0 +1,55 @@
+imports:
+  FareParameters: Domain.Types.FareParameters
+
+FareParametersProgressiveDetails:
+  tableName: fare_parameters_progressive_details
+
+  fields:
+    fareParametersId: Text
+    deadKmFare: HighPrecMoney
+    extraKmFare: Maybe HighPrecMoney
+    rideDurationFare: Maybe HighPrecMoney
+    currency: Currency
+
+  beamFields:
+    deadKmFare:
+      deadKmFare: Money
+      deadKmFareAmount: Maybe HighPrecMoney
+    extraKmFare:
+      extraKmFare: Maybe Money
+      extraKmFareAmount: Maybe HighPrecMoney
+    currency:
+      currency: Maybe Currency
+
+  beamType:
+    currency: Maybe Currency
+
+  fromTType:
+    deadKmFare: Kernel.Types.Common.mkAmountWithDefault deadKmFareAmount deadKmFare|E
+    extraKmFare: Kernel.Types.Common.mkAmountWithDefault extraKmFareAmount <$> extraKmFare|E
+    currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
+
+  toTType:
+    deadKmFare: Kernel.Prelude.roundToIntegral|I
+    deadKmFareAmount: Kernel.Prelude.Just|I
+    extraKmFare: Kernel.Prelude.roundToIntegral <$> extraKmFare|E
+    extraKmFareAmount: extraKmFare|E
+    currency: Kernel.Prelude.Just|I
+
+  constraints:
+    fareParametersId: PrimaryKey
+
+  excludedFields:
+    - merchantId
+    - merchantOperatingCityId
+    - createdAt
+    - updatedAt
+
+
+  queries:
+    findByFareParametersId:
+      kvFunction: findOneWithKV
+      where: fareParametersId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

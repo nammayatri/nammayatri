@@ -65,7 +65,7 @@ mkRideCompletedQuote isValueAddNP ride fareParams = do
           }
       fareBreakup =
         Fare.mkFareParamsBreakups isValueAddNP (mkPrice' currency) mkBreakupItem fareParams
-          & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
+          & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams.fareParametersDetails)
       tipBreakup = mkTipBreakup currency ride.tipAmount
       breakup = fareBreakup <> tipBreakup
   pure

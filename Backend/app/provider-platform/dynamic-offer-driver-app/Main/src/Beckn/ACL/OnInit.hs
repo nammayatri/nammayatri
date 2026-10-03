@@ -25,10 +25,10 @@ import qualified Data.List as L
 import Domain.Action.Beckn.Init as DInit
 import Domain.Types
 import Domain.Types.BecknConfig as DBC
-import qualified Domain.Types.FarePolicy as FarePolicyD
 import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Kernel.Utils.Common
+import qualified SharedLogic.FarePolicy.Conversions as FarePolicyD
 
 mkOnInitMessageV2 :: Utils.IsValueAddNP -> DInit.InitRes -> DBC.BecknConfig -> Maybe FarePolicyD.FullFarePolicy -> Spec.ConfirmReqMessage
 mkOnInitMessageV2 isValueAddNP res becknConfig mbFarePolicy =

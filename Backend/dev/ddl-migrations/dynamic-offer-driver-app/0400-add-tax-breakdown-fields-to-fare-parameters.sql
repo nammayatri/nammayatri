@@ -1,3 +1,4 @@
+-- NOTE: dont need to run these queries
 -- Add new fields to fare_parameters table for transparent tax breakdown
 -- These fields store individual tax components for compliance and transparency.
 -- This allows showing a detailed breakdown of charges to users (e.g., Finland requirements).
@@ -6,10 +7,10 @@
 -- fare_policy charge configurations (vat_charge_config, commission_charge_config, toll_tax_charge_config).
 
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters
-ADD COLUMN payment_processing_fee double precision,
-ADD COLUMN ride_vat double precision,
-ADD COLUMN toll_vat double precision,
-ADD COLUMN commission double precision;
+ADD COLUMN IF NOT EXISTS payment_processing_fee double precision,
+ADD COLUMN IF NOT EXISTS ride_vat double precision,
+ADD COLUMN IF NOT EXISTS toll_vat double precision,
+ADD COLUMN IF NOT EXISTS commission double precision;
 
 -- Field descriptions:
 -- payment_processing_fee: Payment processing fee (blended or method-specific)
@@ -20,5 +21,5 @@ ADD COLUMN commission double precision;
 --           Example: 25% on TollChargesComponent
 -- commission: Commission calculated based on commission_charge_config in fare_policy
 --             Example: 8% on RideFare
---             IMPORTANT: Commission is stored for breakdown but NOT included in final fare sum
-
+--             IMPORTANT: Commission is stored for breakdown but NOT included in final fare sum-- NOTE: dont need to run these queries
+-- NOTE: dont need to run these queries

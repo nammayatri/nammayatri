@@ -16,9 +16,10 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Beam.FarePolicy.FarePolicyInterCityDetails as BeamFPRD
+import qualified SharedLogic.FarePolicy.Conversions as Domain
+import Storage.Beam.FarePolicyInterCityDetails as BeamFPRD
 import qualified Storage.Cac.FarePolicy.FarePolicyInterCityDetailsPricingSlabs as CQFPTCDPS
-import Storage.Queries.FarePolicy.FarePolicyInterCityDetails (fromTTypeFarePolicyInterCityDetails)
+import Storage.Queries.FarePolicyInterCityDetailsExtra (fromTTypeFarePolicyInterCityDetails)
 import Utils.Common.CacUtils
 
 findFarePolicyInterCityDetailsFromCAC :: (CacheFlow m r, EsqDBFlow m r) => [(CacContext, Value)] -> String -> Id Domain.FarePolicy -> Int -> m (Maybe Domain.FullFarePolicyInterCityDetails)
