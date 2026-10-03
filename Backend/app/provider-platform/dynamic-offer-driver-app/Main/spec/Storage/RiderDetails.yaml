@@ -143,6 +143,11 @@ RiderDetails:
       params: [consentToShareMobileNumber]
       where: id
 
+    updateConsentToShareMobileNumber:
+      kvFunction: updateOneWithKV
+      params: [consentToShareMobileNumber]
+      where: id
+
     updateCancellationDues:
       kvFunction: updateOneWithKV
       params: [cancellationDues]

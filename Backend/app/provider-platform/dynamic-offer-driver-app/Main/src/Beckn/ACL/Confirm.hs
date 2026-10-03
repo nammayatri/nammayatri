@@ -100,12 +100,7 @@ getEnableOtpLessRideTag = maybe False getTagValue
 getConsentToShareMobileNumberTag :: Bool -> Maybe [Spec.TagGroup] -> Maybe Bool
 getConsentToShareMobileNumberTag isValueAddNP tagGroups
   | not isValueAddNP = Nothing
-  | otherwise =
-    case Utils.getTag Tag.CONSENT_TO_SHARE_MOBILE_NUMBER tagGroups of
-      Nothing -> Nothing
-      Just "True" -> Just True
-      Just "False" -> Just False
-      Just _ -> Just False
+  | otherwise = Utils.getConsentToShareMobileNumberTag tagGroups
 
 getDriverPreferenceTag :: Maybe [Spec.TagGroup] -> Maybe [Text]
 getDriverPreferenceTag Nothing = Nothing

@@ -110,6 +110,7 @@ data DSelectReq = DSelectReq
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Maybe Int,
     customerGender :: Maybe DP.Gender,
+    consentToShareMobileNumber :: Maybe Bool,
     businessEmailDomain :: Maybe Text,
     -- | A BAP can select more than one add-on on the same item (e.g. rider
     -- insurance plus a future second add-on) -- empty when none was
@@ -137,9 +138,12 @@ handler merchant sReq searchReq estimates addOnData = do
   mbRiderDetails <- case sReq.customerPhoneNum of
     Just number -> do
       let mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
-      -- consent tag is only emitted at confirm, not select, so no consent to record yet here
-      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number searchReq.bapId False Nothing
-      when isNewRider $ QRD.create riderDetails
+      isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
+      let consentToShareMobileNumber = if isValueAddNP then sReq.consentToShareMobileNumber else Nothing
+      (riderDetails, isNewRider) <- SRD.getRiderDetails searchReq.currency merchant.id mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) number searchReq.bapId False consentToShareMobileNumber
+      if isNewRider
+        then QRD.create riderDetails
+        else QRD.updateConsentToShareMobileNumber consentToShareMobileNumber riderDetails.id
       QRD.updateCustomerProfile sReq.customerRating sReq.customerTotalRatings sReq.customerGender riderDetails.id
       when sReq.toUpdateDeviceIdInfo do
         let mbFlag = mbGetPayoutFlag sReq.isMultipleOrNoDeviceIdExist

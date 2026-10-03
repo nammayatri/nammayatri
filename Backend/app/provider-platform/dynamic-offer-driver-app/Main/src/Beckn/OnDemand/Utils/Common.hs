@@ -1452,6 +1452,12 @@ mkForwardBatchTagGroupV2 previousRideDropLocation' =
         Tags.PREVIOUS_RIDE_DROP_LOCATION_LON ~= show previousRideDropLocation.lon
       ]
 
+getConsentToShareMobileNumberTag :: Maybe [Spec.TagGroup] -> Maybe Bool
+getConsentToShareMobileNumberTag tagGroups =
+  Utils.getTag Tags.CONSENT_TO_SHARE_MOBILE_NUMBER tagGroups <&> \case
+    "True" -> True
+    _ -> False
+
 getShouldFavouriteDriver :: Spec.Rating -> Maybe Bool
 getShouldFavouriteDriver req = do
   let tagGroups = req.ratingTag
