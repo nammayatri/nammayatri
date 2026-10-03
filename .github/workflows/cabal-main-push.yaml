@@ -420,8 +420,8 @@ jobs:
       - name: Widen driver issue_message.message (temporary)
         run: |
           echo "ALTER TABLE atlas_driver_offer_bpp.issue_message ALTER COLUMN message TYPE character varying(1000);" \
-            > Backend/dev/ddl-migrations/dynamic-offer-driver-app/0894-widen-issue-message-message.sql
-          cat Backend/dev/ddl-migrations/dynamic-offer-driver-app/0894-widen-issue-message-message.sql
+            > Backend/dev/ddl-migrations/dynamic-offer-driver-app/0900-widen-issue-message-message.sql
+          cat Backend/dev/ddl-migrations/dynamic-offer-driver-app/0900-widen-issue-message-message.sql
 
       # TEMPORARY: config-sync turns master's '' into NULL for nullable text columns; rider-app reads
       # merchant.kapture_disposition as non-null Text and crashes (CMRL row). Restore '' after import, CI only.
@@ -430,6 +430,14 @@ jobs:
           echo "UPDATE atlas_app.merchant SET kapture_disposition = '' WHERE kapture_disposition IS NULL;" \
             > Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
           cat Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
+
+      # TEMPORARY: patches.json's BG rule renames every master BG row to JUSPAY.BG.1 (same for some BAPs), leaving
+      # duplicate (subscriber_id, unique_key_id) rows; driver-app authCheck then fails search. Keep the newest, CI only.
+      - name: Dedupe registry subscribers after sync (temporary)
+        run: |
+          echo "DELETE FROM atlas_registry.subscriber s USING atlas_registry.subscriber t WHERE s.subscriber_id = t.subscriber_id AND s.unique_key_id = t.unique_key_id AND (s.created, s.ctid) < (t.created, t.ctid);" \
+            > Backend/dev/feature-migrations/9998-ci-dedupe-registry-subscriber.sql
+          cat Backend/dev/feature-migrations/9998-ci-dedupe-registry-subscriber.sql
 
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
