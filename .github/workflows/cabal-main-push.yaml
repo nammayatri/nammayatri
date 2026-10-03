@@ -511,7 +511,7 @@ jobs:
             ./run-tests.sh "$@" || FAILED+=("$*")
             echo "::endgroup::"
           }
-          run auto    NY_Bangalore     # AutoRideFlow 01-03
+          run auto    NY_Bangalore     # AutoRideFlow 01-02 (03 parked: no reallocation to D2 after driver cancel)
           run taxi    NY_Bangalore     # TaxiRideFlow 04-06
           run rides   NY_Bangalore     # RideBookingFlow 08-11 (07, 12, AutoRideLoadTest parked in thrash-collections)
           run easy    NY_Bangalore     # EasyBookingRideFlow 01 (needs the 'easy' command in run-tests.sh)
