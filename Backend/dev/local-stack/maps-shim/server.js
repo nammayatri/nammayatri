@@ -30,6 +30,7 @@ const restricted = require('./restricted');
 const deletion = require('./deletion');
 const pushRelay = require('./push-relay');
 const driverPush = require('./driver-push');
+const numberChange = require('./number-change');
 
 const PORT           = Number(process.env.PORT || 8020);
 const OSRM_URL       = (process.env.OSRM_URL || 'http://localhost:5000').replace(/\/$/, '');
@@ -575,6 +576,34 @@ http.createServer((req, res) => {
       }
       const r = await driverPush.notify(pool, driverId, type);
       send(res, r.ok ? 200 : 502, r);
+    });
+    return undefined;
+  }
+
+  // A person changing their own number, once the auth guard has proved the new
+  // one (2026-10-03). Loopback only: the guard is the one caller, and it runs
+  // on the host network. See number-change.js.
+  if (url.pathname === '/internal/number-change') {
+    const from = String(req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+    if (from !== '127.0.0.1' && from !== '::1') return send(res, 403, { error: 'local callers only' });
+    if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > 4096) return void req.destroy();
+      chunks.push(c);
+    });
+    req.on('end', async () => {
+      let body = {};
+      try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { /* refused below */ }
+      try {
+        const r = await numberChange.run(pool, { riderUrl: RIDER_URL, driverUrl: DRIVER_URL }, body);
+        send(res, r.ok ? 200 : 409, r);
+      } catch (e) {
+        console.error(`[number-change] ${e.message}`);
+        send(res, 502, { ok: false, error: 'failed' });
+      }
     });
     return undefined;
   }

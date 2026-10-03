@@ -3832,6 +3832,35 @@ a deleted person's phone that signs back in gets a **new** account, the same
 as signing up again — never the erased one. `/healthz` → `trustedPhones`
 counts them, never which. Proved by `tests/auth-guard-trusted.test.js`.
 
+### Changing one's own number, keeping the account (2026-10-03)
+
+Signing in with a new number made a **new** account, and a driver's wallet,
+papers and acceptance stayed on the old one. The boss approved a self-service
+change in « Mon compte », with no office step.
+
+| Step | Where | What |
+|---|---|---|
+| `POST {v2,ui}/number/change` | auth guard | needs the caller's session token; `{mobileCountryCode, mobileNumber, channel: sms\|whatsapp\|sms-in}`. Same gates as a sign-in start (open country, the channel available there, both throttles). Asks the shim to `check` **before** any code is spent, then sends one exactly as a sign-in would. Under the `signin` rate limit at the edge (exact location), since it texts. |
+| `GET {v2,ui}/number/change/{id}` | auth guard | WhatsApp / SMS-to-us: has the message come, from the new number? |
+| `POST {v2,ui}/number/change/{id}/confirm` | auth guard | the code, three strikes and locked like a sign-in; only the session that started it may finish it. Then the shim's `apply`, and a trusted-phone key for the new number. |
+| `POST /internal/number-change` | maps-shim | loopback only. Reads whose account it is **from the token** (identity.js), never from the request. Refuses `WRONG_COUNTRY`, `SAME_NUMBER`, `NUMBER_TAKEN` (country code + hash on that side, the way the backend looks a person up). Writes `mobile_number_encrypted` (passetto, `S"…"`), `mobile_number_hash` (sha256 of `NUMBER_HASH_SALT` + number) and `unencrypted_mobile_number`; one `admin_audit` row, `number.change`, with neither number. |
+
+Why not the backend's own dashboard `updatePhoneNumber` for drivers: it exists
+and is correct, but it signs the driver out of every session; doing both sides
+the same way here keeps the person signed in, and the rider side has no such
+route at all. Neither backend caches a person (checked at `03a7531`), so the
+very next sign-in finds the account by its new number.
+
+**Same country only.** A driver belongs to his country's merchant, tariff and
+wallet currency; that is a transfer, not a number change. **One side at a
+time:** the passenger and driver accounts are separate; the other is changed
+from its own « Mon compte », and the trusted-phone key spares the second code.
+
+`NUMBER_HASH_SALT` is in `/opt/ny/secrets/number-change.env` (the backend's
+encHashSalt — verified against stored hashes on both schemas before use); the
+shim answers `not_configured` without it. Proved by
+`tests/auth-guard-number-change.test.js` and `tests/number-change.test.js`.
+
 ## What a person may send — the bounds, audited 2026-09-27
 
 **No SQL is built from user input anywhere we own.** All 67 queries in

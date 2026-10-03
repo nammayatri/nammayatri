@@ -400,6 +400,12 @@ services:
     env_file:
       - path: /opt/ny/secrets/moosyl.env
         required: false
+      # number-change.env, 2026-10-03: NUMBER_HASH_SALT, the backend's own
+      # encHashSalt, so a changed number is hashed exactly as sign-in looks it
+      # up (maps-shim/number-change.js). Optional: without it a number change
+      # answers not_configured and nothing is written.
+      - path: /opt/ny/secrets/number-change.env
+        required: false
     volumes:
       - ./maps-shim:/app:ro
       - avatars:/data/avatars
