@@ -27,6 +27,10 @@ edge-webroot/
 # decides who may sign in at all. Written by ./enrol-driver.sh, lives only on
 # the VPS, and belongs in the backup set.
 auth-guard/driver-codes.json
+# Hashes of the keys phones sign back in with (trusted-phones.js). Not a
+# secret on its own, but it says which numbers use the service: keep it off git.
+auth-guard/trusted-phones.json
+auth-guard/trusted-phones.json.tmp-*
 
 # Per-machine settings, and from 2026-08-26 the Chargily Pay secret key -- a
 # credential that can move money. The repo-root .gitignore does not cover this

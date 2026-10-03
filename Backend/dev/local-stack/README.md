@@ -3801,6 +3801,37 @@ client's call, told to him on 2026-09-28. `tests/auth-guard-sms-inbox.test.js`.
 
 Secret: `/opt/ny/secrets/sms-inbox.env` (root, 600), `SMS_INBOX_TOKEN`.
 
+### Signing back in on a phone that already proved the number (2026-10-03)
+
+A session lasts a year, so a code was asked again only after « Se
+déconnecter », a reinstall or a new phone — and for anyone who is both
+passenger and driver, at every switch between the two, since those are two
+sign-ins on two backends. The boss: the phone that already confirmed the
+number should not be asked again.
+
+**How.** Every verify the backend accepts — SMS, WhatsApp, an SMS sent to us
+— comes back with a `deviceTrust` key beside the token
+(`auth-guard/trusted-phones.js`). The phone keeps it per number, through
+sign-out, and presents it to `POST /v2/auth/trusted` or `/ui/auth/trusted`
+with the number: a match is a start and a verify in one request, with the
+backend's fixed code, and nothing is texted. So the key is what proves the
+handset; the number alone opens nothing. One key opens both sides, which is
+the switch the boss asked about.
+
+| | |
+|---|---|
+| Kept | sha256 of each key only, in `/state/trusted-phones.json` on the `auth-guard-state` volume (`/app` is read-only, and the file must survive a recreate). `TRUSTED_PHONES_FILE`. |
+| Life | a year from last use (`TRUSTED_PHONES_TTL_DAYS`); at most 5 phones per number, least recently used dropped. |
+| Gates | every start gate still applies — open country, sign-up closed, both start throttles. Only the one about how a code travels does not, since none does. |
+| Edge | under the `^/v2/auth` / `^/ui/auth` rate limit, not the start's: it texts nobody, and a 32-byte key is not guessed. No nginx change. |
+| Refused | `401 PHONE_NOT_TRUSTED`; the app forgets the key and offers its usual buttons, so a lapsed key costs one code, never a sign-in. |
+| Fails closed | a missing or unreadable file trusts nobody: everyone gets a code, as before. |
+
+Not touched by an account deletion (`anonymise.sql` cannot reach the file):
+a deleted person's phone that signs back in gets a **new** account, the same
+as signing up again — never the erased one. `/healthz` → `trustedPhones`
+counts them, never which. Proved by `tests/auth-guard-trusted.test.js`.
+
 ## What a person may send — the bounds, audited 2026-09-27
 
 **No SQL is built from user input anywhere we own.** All 67 queries in

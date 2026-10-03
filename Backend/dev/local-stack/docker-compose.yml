@@ -481,6 +481,10 @@ services:
       # 2026-09-29: Algeria's SIM, the office phone (the client's number). No
       # Mauritanian SIM yet -- a +222 text to it would be international.
       SMS_INBOX_NUMBERS: "+213=+213783079161"
+      # 2026-10-03: phones that already proved their number sign back in with
+      # no code (auth-guard/trusted-phones.js). Hashes only, on the volume
+      # below, because /app is read-only and the file must survive a recreate.
+      TRUSTED_PHONES_FILE: "/state/trusted-phones.json"
       SMS_MODE: "verify"
       VERIFY_SEND_URL: "https://api.moorsyl.com/api/verify/send"
       VERIFY_CHECK_URL: "https://api.moorsyl.com/api/verify/check"
@@ -528,6 +532,7 @@ services:
         required: false
     volumes:
       - ./auth-guard:/app:ro
+      - auth-guard-state:/state
     restart: unless-stopped
 
   # ── The only thing the internet can reach, besides SSH ────────────────────
@@ -687,6 +692,9 @@ services:
 
 volumes:
   ny-pgdata:
+  # What the auth guard must remember across a recreate: the trusted
+  # phones (2026-10-03). Small, and only hashes.
+  auth-guard-state:
   # Built by ./osrm-prepare.sh rather than by compose, because preprocessing is
   # a one-off that takes far longer than a container start and should not be
   # repeated on every `up`.

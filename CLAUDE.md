@@ -356,6 +356,10 @@ the header of that script.
   The console now says every state change twice (`settle()` in the website's
   `apps/api/src/shared/driver-app.ts`). Anything else that changes a driver's
   state must do the same, or drop that key after its write.
+- **The auth guard's code folder is mounted read-only (`./auth-guard:/app:ro`).**
+  Anything it must write goes on the `auth-guard-state` volume at `/state` —
+  today only `trusted-phones.json` (2026-10-03: a phone that already proved its
+  number signs back in with no code). A write to `/app` fails with EROFS.
 - **iPhone push does not go through Firebase.** `fcm_url` points at
   `maps-shim/push-relay.js`, which forwards FCM tokens to Google and sends iOS
   tokens to APNs with the app's own words. The notification text for iOS is a

@@ -90,6 +90,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const whatsapp = require('./whatsapp');
 const smsInbox = require('./sms-inbox');
+const trusted = require('./trusted-phones');
 
 const PORT = Number(process.env.PORT || 8031);
 
@@ -782,6 +783,8 @@ const rx = {
   smsInCountries: (p) => new RegExp(`^${p}auth/sms-in/countries/?$`),
   // Which ways in each country has, for the phone screen (2026-09-30).
   channels: (p) => new RegExp(`^${p}auth/channels/?$`),
+  // Signing back in on a phone that already proved the number (2026-10-03).
+  trusted: (p) => new RegExp(`^${p}auth/trusted/?$`),
 };
 
 /**
@@ -986,6 +989,7 @@ async function handle(req, res) {
       ok: true,
       whatsapp: whatsapp.health(),
       smsInbox: smsInbox.health(),
+      trustedPhones: trusted.health(),
       routes: ROUTES.map((r) => ({
         prefix: r.prefix,
         upstream: r.upstream,
@@ -1077,6 +1081,75 @@ async function handle(req, res) {
       smsIn: smsInbox.countries().filter((c) => OPEN_COUNTRIES.has(c)),
       whatsapp: whatsapp.ready(),
     });
+  }
+
+  /* ── signing back in on a phone that already proved the number ───────────
+     The boss, 2026-10-03: after « Se déconnecter », or to switch between
+     passenger and driver, the phone that confirmed a number should not need
+     a code for it again. It presents the key it was given at that verify
+     (trusted-phones.js); a match opens the session here, start and verify in
+     one, with the backend's fixed code -- no SMS, no WhatsApp, nothing spent.
+     Every gate of a normal start still applies, bar the one about how a code
+     travels, since none does. No match is a plain 401: the app falls back to
+     the usual buttons. Under the `auth` rate limit at the edge, not the
+     start's: it texts nobody, and a 32-byte key is not guessed. */
+  if (rx.trusted(route.prefix).test(pathname) && req.method === 'POST') {
+    let parsed;
+    try { parsed = JSON.parse(body.toString('utf8')); } catch { parsed = null; }
+    if (!parsed || typeof parsed.mobileCountryCode !== 'string' || !parsed.mobileNumber) {
+      return send(res, 400, refusal('INVALID_REQUEST'));
+    }
+    const dialCode = parsed.mobileCountryCode;
+    const number = `${dialCode}${parsed.mobileNumber}`;
+
+    if (!OPEN_COUNTRIES.has(dialCode)) return send(res, 403, refusal('COUNTRY_NOT_OPEN'));
+    if (codes && !codes[number] && !DRIVER_SIGNUP_OPEN) return send(res, 403, refusal('NOT_REGISTERED'));
+    if (tooManyStarts(key(number)) || tooManyStartsFromIp(callerIp(req))) {
+      return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+        { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
+    }
+    if (!trusted.check(number, parsed.deviceTrust)) {
+      console.warn(`[guard] ${route.name}: phone not trusted for ${number}`);
+      return send(res, 401, refusal('PHONE_NOT_TRUSTED'));
+    }
+
+    const upstream = async (url, payload) => {
+      const out = Buffer.from(JSON.stringify(payload));
+      const proxied = Object.create(req);
+      proxied.url = url;
+      proxied.method = 'POST';
+      proxied.headers = { ...req.headers, 'content-type': 'application/json', 'content-length': String(out.length) };
+      return forward(route, proxied, out);
+    };
+    try {
+      const started = await upstream(`${route.prefix}auth`, {
+        mobileCountryCode: dialCode,
+        mobileNumber: parsed.mobileNumber,
+        merchantId: parsed.merchantId,
+      });
+      let authId = null;
+      try { ({ authId } = JSON.parse(started.text)); } catch { /* below */ }
+      if (started.status !== 200 || !authId) {
+        res.writeHead(started.status, { 'content-type': started.type || 'application/json' });
+        return res.end(started.text);
+      }
+      const verified = await upstream(`${route.prefix}auth/${encodeURIComponent(authId)}/verify`, {
+        otp: route.fixedOtp,
+        deviceToken: parsed.deviceToken,
+        ...(parsed.whatsappNotificationEnroll ? { whatsappNotificationEnroll: parsed.whatsappNotificationEnroll } : {}),
+      });
+      if (verified.status !== 200) {
+        res.writeHead(verified.status, { 'content-type': verified.type || 'application/json' });
+        return res.end(verified.text);
+      }
+      console.log(`[guard] ${route.name}: trusted phone signed in ${number}`);
+      let out = {};
+      try { out = JSON.parse(verified.text); } catch { /* the backend said 200 */ }
+      return send(res, 200, { ...out, deviceTrust: parsed.deviceTrust });
+    } catch (err) {
+      console.error(`[guard] ${route.name} upstream: ${err.message}`);
+      return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
+    }
   }
 
   /* ── starting a sign-in ──────────────────────────────────────────────────
@@ -1397,6 +1470,19 @@ async function handle(req, res) {
       console.log(`[guard] ${route.name}: verified ${id}`);
     } else {
       return countWrong();
+    }
+
+    // This phone has just proved this number: from now on it may sign back in
+    // without a code (trusted-phones.js). Added to the backend's own answer,
+    // which the app reads leniently.
+    if (s.number) {
+      try {
+        const answer = JSON.parse(up.text);
+        if (answer && typeof answer === 'object') {
+          const deviceTrust = trusted.issue(s.number);
+          if (deviceTrust) return send(res, 200, { ...answer, deviceTrust });
+        }
+      } catch { /* not JSON: pass it through untouched */ }
     }
 
     res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
