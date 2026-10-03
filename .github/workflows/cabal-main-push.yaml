@@ -485,7 +485,11 @@ jobs:
             curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null && { echo "Ready"; exit 0; }
             sleep 15
           done
-          echo "Services not ready after sync"; exit 1
+          # TEMPORARY: show which service is down and whether mock-registry is stuck (alive) or gone after the post-sync kill.
+          echo "Services not ready after sync"
+          curl -s "$CONTEXT_API/api/services-ready" | jq . || true
+          ps -eo pid,ppid,stat,etime,args | grep -E 'mock-registr[y]|rider-app-ex[e]|dynamic-offer-driver-app-ex[e]' || echo "no matching processes"
+          exit 1
 
       # Runs every working collection. Doesn't stop at the first failure: runs all,
       # prints a summary, and fails the job if any failed.
