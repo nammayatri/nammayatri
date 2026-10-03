@@ -327,7 +327,8 @@ buildReallocationHistory transactionId = do
           bookingStatus = castBookingStatus b.status,
           becameCurrentAt = b.createdAt,
           cancelledAt = if b.status == SRB.CANCELLED then Just b.updatedAt else Nothing,
-          cancellationSource = castCancellationSource . (.source) <$> mbBCReason,
+          -- per-ride column preferred (correct on a reused bookingId), BCR as fallback for old rows
+          cancellationSource = castCancellationSource <$> maybe (mbBCReason <&> (.source)) Just (mbRide >>= (.cancelledBy) >>= (readMaybe . T.unpack)),
           driverDistToPickupAtCancel = mbBCReason >>= (.driverDistToPickup)
         }
 

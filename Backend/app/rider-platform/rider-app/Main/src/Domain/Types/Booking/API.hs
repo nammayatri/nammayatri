@@ -640,7 +640,7 @@ makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancella
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
 buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   -- mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
-  mbRide <- runInReplica $ QRide.findByRBId booking.id
+  mbRide <- runInReplica $ QRide.findOneByBookingId booking.id
   let mbActiveRide = (\r -> if r.status == DRide.CANCELLED then Nothing else Just r) =<< mbRide
   -- nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
   (fareBreakups, estimatedFareBreakups) <- if dontNeedFareBreakup then pure ([], []) else getfareBreakups booking mbRide

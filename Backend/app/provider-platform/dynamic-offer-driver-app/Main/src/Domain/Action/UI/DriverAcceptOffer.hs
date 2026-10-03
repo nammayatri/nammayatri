@@ -23,6 +23,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Types as DTC
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverQuote as DDrQuote
 import qualified Domain.Types.DriverStats as DStats
 import qualified Domain.Types.FareParameters as Fare
@@ -74,6 +75,7 @@ import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
@@ -120,6 +122,8 @@ type AcceptDynamicOfferFlow m r c =
 -- | Extracted from respondQuote's Accept branch so DriverPoolUnified can replay it server-side for a silently-assigned driver.
 acceptDynamicOfferDriverRequest ::
   AcceptDynamicOfferFlow m r c =>
+  -- A reused-booking assign is Flow-only (initializeRide etc.); the polymorphic offer path can't run it, so the Flow caller injects it. Nothing on the allocator path, which never reaches a reused (NEW) booking.
+  Maybe (DDrQuote.DriverQuote -> DRB.Booking -> m [SearchRequestForDriver]) ->
   Maybe Text ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -142,7 +146,7 @@ acceptDynamicOfferDriverRequest ::
   -- Server-side replay paths (silent-assign) pass Nothing and keep the legacy on_select.
   Maybe (DDrQuote.DriverQuote -> m (Maybe RideCommon.DriverRideRes)) ->
   m ([SearchRequestForDriver], Maybe RideCommon.DriverRideRes)
-acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig mbOneShotAssign = do
+acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCityId merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue driverStats transporterConfig mbOneShotAssign = do
   let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
   logDebug $ "offered fare: " <> show reqOfferedValue
   quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -215,11 +219,22 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
           isScheduled = searchTry.isScheduled,
           ..
         }
+  mbReusedBooking <-
+    if transporterConfig.enableBppReallocation == Just True
+      then QBooking.findById (Id searchTry.messageId)
+      else pure Nothing
+  let mbReusedTarget = case (mbReusedBooking, mbReusedAssign) of
+        (Just reusedBooking, Just assignReused)
+          | reusedBooking.status == DRB.NEW && reusedBooking.transactionId == searchReq.transactionId ->
+            Just (assignReused, reusedBooking)
+        _ -> Nothing
   mbOneShotAction <- case mbOneShotAssign of
     Nothing -> pure Nothing
     Just action -> do
       eligible <-
-        if searchReq.autoAssignEnabled == Just True
+        -- a reused (reallocated) booking is assigned onto in place; one-shot would create a second booking
+        if isNothing mbReusedTarget
+          && searchReq.autoAssignEnabled == Just True
           && searchTry.tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer
           && not searchTry.isScheduled
           && isJust searchReq.riderId
@@ -237,20 +252,26 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
   void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
   triggerQuoteEvent QuoteEventData {quote = driverQuote}
   void $ QDrQt.create driverQuote
-  driverFCMPulledList <-
-    if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-      then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
-      else pure []
-  -- One-shot pulls the losers via deactivateExistingQuotes inside its own action; pulling
-  -- here too would double-notify them now that the pull loop runs forked.
-  when (isNothing mbOneShotAction) $
-    pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
-  mbOneShotRideRes <- case mbOneShotAction of
-    Just action -> action driverQuote
+  case mbReusedTarget of
+    -- BPP single-booking reallocation: assign onto the reused booking instead of offering it again.
+    Just (assignReused, reusedBooking) -> do
+      reusedPulledList <- assignReused driverQuote reusedBooking
+      return (reusedPulledList, Nothing)
     Nothing -> do
-      sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
-      pure Nothing
-  return (driverFCMPulledList, mbOneShotRideRes)
+      driverFCMPulledList <-
+        if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
+          then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
+          else pure []
+      -- One-shot pulls the losers via deactivateExistingQuotes inside its own action; pulling
+      -- here too would double-notify them now that the pull loop runs forked.
+      when (isNothing mbOneShotAction) $
+        pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) transporterConfig
+      mbOneShotRideRes <- case mbOneShotAction of
+        Just action -> action driverQuote
+        Nothing -> do
+          sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
+          pure Nothing
+      return (driverFCMPulledList, mbOneShotRideRes)
   where
     getQuoteLimit dist vehicleServiceTier tripCategory sr area searchRepeatType searchRepeatCounter = do
       L.setOptionLocal TxnIdKey sr.transactionId
