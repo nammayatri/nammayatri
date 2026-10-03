@@ -6,8 +6,6 @@ import qualified Constants as C
 import Control.Concurrent (forkIO, threadDelay)
 import Control.Concurrent.Async (async, cancel)
 import qualified DBSync.DBSync as DBSync
-import qualified Data.HashSet as HS
-import qualified "unordered-containers" Data.HashSet as HashSet
 import Data.Pool
 import Data.Pool.Internal
 import qualified Data.Text as T
@@ -38,7 +36,6 @@ main :: IO ()
 main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "driver-drainer"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let connString = getConnectionString $ appCfg.esqDBCfg
   connectionPool <- createDbPool appCfg.esqDBCfg
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg appCfg.kafkaProperties
@@ -60,9 +57,33 @@ main = do
             )
 
           dbSyncMetric <- Event.mkDBSyncMetric
+          let pgDropCols = appCfg.dropColumnsForDb <> appCfg.dropColumnsForBoth
+              chDropCols = appCfg.dropColumnsForCh <> appCfg.dropColumnsForBoth
+              pgDropTables = appCfg.dropTablesForDb <> appCfg.dropTablesForBoth
+              chDropTables = appCfg.dropTablesForCh <> appCfg.dropTablesForBoth
+              -- A dropColumns entry must be exactly "table.column" (single dot, snake_case, no db prefix).
+              -- Anything else silently no-ops at match time, so warn loudly at startup instead of wedging the
+              -- stream later when the still-emitted dropped column hits PostgreSQL.
+              malformedDropCols =
+                filter (\c -> let parts = T.splitOn "." c in length parts /= 2 || any T.null parts) $
+                  appCfg.dropColumnsForDb <> appCfg.dropColumnsForCh <> appCfg.dropColumnsForBoth
           normalThreadCount <- Env.getThreadPerPodCount
           criticalThreadCount <- Env.getCriticalThreadPerPodCount
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool appCfg.esqDBCfg
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools appCfg.dontEnableForDb appCfg.dontEnableForKafka connectionPool appCfg.esqDBCfg pgDropCols chDropCols pgDropTables chDropTables
+          R.runFlow flowRt $
+            L.logInfo ("SchemaDrop" :: T.Text) $
+              "[DropConfig] PG tables=" <> T.pack (show pgDropTables)
+                <> " PG cols="
+                <> T.pack (show pgDropCols)
+                <> " CH tables="
+                <> T.pack (show chDropTables)
+                <> " CH cols="
+                <> T.pack (show chDropCols)
+          unless (null malformedDropCols) $
+            R.runFlow flowRt $
+              L.logWarning ("SchemaDrop" :: T.Text) $
+                "[DropConfig] Ignoring malformed dropColumns entries (expected exactly 'table.column', snake_case, no db prefix): "
+                  <> T.pack (show malformedDropCols)
           R.runFlow flowRt (runReaderT DBSync.fetchAndSetKvConfigs environment)
           -- one thread per stream by default; set either env count to 0 to stop draining that stream
           spawnDrainerThread criticalThreadCount True flowRt environment
