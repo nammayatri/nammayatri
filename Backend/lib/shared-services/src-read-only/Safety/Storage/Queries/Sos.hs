@@ -38,6 +38,9 @@ findActiveByPersonId limit offset personId status = do
     limit
     offset
 
+findAllByIds :: (Safety.Storage.BeamFlow.BeamFlow m r) => ([Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos] -> m [Safety.Domain.Types.Sos.Sos])
+findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
+
 findByExternalReferenceId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Safety.Domain.Types.Sos.Sos))
 findByExternalReferenceId externalReferenceId = do findOneWithKV [Se.Is Beam.externalReferenceId $ Se.Eq externalReferenceId]
 
