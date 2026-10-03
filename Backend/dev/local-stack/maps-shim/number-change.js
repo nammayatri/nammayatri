@@ -43,6 +43,7 @@
  */
 const crypto = require('crypto');
 const identity = require('./identity');
+const avatars = require('./avatars');
 
 const PASSETTO_URL = (process.env.PASSETTO_URL || 'http://127.0.0.1:8021').replace(/\/$/, '');
 const SALT = process.env.NUMBER_HASH_SALT || '';
@@ -84,10 +85,11 @@ async function run(pool, { riderUrl, driverUrl }, body) {
 
   const schema = SCHEMA[side];
   const me = await pool.query(
-    `SELECT mobile_country_code AS cc, unencrypted_mobile_number AS num
+    `SELECT mobile_country_code AS cc, unencrypted_mobile_number AS num,
+            encode(mobile_number_hash, 'hex') AS h
        FROM ${schema}.person WHERE id = $1`, [who.id]);
   if (!me.rows[0]) return { ok: false, error: 'not_signed_in' };
-  const { cc, num } = me.rows[0];
+  const { cc, num, h: oldHash } = me.rows[0];
 
   if (cc && cc !== dialCode) return { ok: false, error: 'WRONG_COUNTRY' };
   if (num === number) return { ok: false, error: 'SAME_NUMBER' };
@@ -109,6 +111,17 @@ async function run(pool, { riderUrl, driverUrl }, body) {
       WHERE id = $5`,
     [dialCode, encrypted, hash, number, who.id]);
   if (done.rowCount !== 1) return { ok: false, error: 'not_signed_in' };
+
+  // A passenger's photograph is keyed by her number's hash (avatars.js), so it
+  // follows her to the new one -- or it is gone from her profile. A driver's
+  // is keyed by his id and stays where it is.
+  if (side === 'rider') {
+    try {
+      avatars.moveRiderKey(oldHash, hash.toString('hex'));
+    } catch (e) {
+      console.error(`[number-change] photograph not moved: ${e.message}`);
+    }
+  }
 
   // Who and when, never what: neither number goes into the trail.
   await pool.query(

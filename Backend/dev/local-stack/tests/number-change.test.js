@@ -3,12 +3,16 @@
 // says whose token it is; a fake passetto encrypts.
 const http = require('http');
 const crypto = require('crypto');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const SALT = 'test-salt';
 const PASSETTO = 18521, BACKEND = 18522;
 process.env.NUMBER_HASH_SALT = SALT;
 process.env.PASSETTO_URL = `http://127.0.0.1:${PASSETTO}`;
+const AVATARS = fs.mkdtempSync(path.join(os.tmpdir(), 'avatars-'));
+process.env.AVATAR_DIR = AVATARS;
 const numberChange = require(path.join(__dirname, '..', 'maps-shim', 'number-change.js'));
 
 let failed = 0;
@@ -47,8 +51,8 @@ function fakePool() {
       calls.push({ sql, params });
       if (/SELECT mobile_country_code AS cc/.test(sql)) {
         const id = params[0];
-        if (id === 'r1') return { rows: [{ cc: '+222', num: '41234567' }] };
-        if (id === 'd1') return { rows: [{ cc: '+222', num: '22100099' }] };
+        if (id === 'r1') return { rows: [{ cc: '+222', num: '41234567', h: hash('41234567').toString('hex') }] };
+        if (id === 'd1') return { rows: [{ cc: '+222', num: '22100099', h: hash('22100099').toString('hex') }] };
         return { rows: [] };
       }
       if (/SELECT 1 FROM/.test(sql)) {
@@ -86,8 +90,17 @@ const ask = (pool, body) => numberChange.run(pool, urls, { dialCode: '+222', ...
   r = await ask(pool, { step: 'check', side: 'rider', token: 'rider-tok', number: '41999999' });
   check('check: yes, and writes nothing', r.ok === true && !pool.calls.some((c) => /UPDATE|INSERT/.test(c.sql)), pool.calls);
 
+  // Her photograph, under the key her OLD number gives (avatars.js: h_ + hash).
+  const keyOf = (n) => 'h_' + hash(n).toString('hex').slice(0, 32);
+  fs.writeFileSync(path.join(AVATARS, keyOf('41234567') + '.jpg'), 'face');
+  fs.writeFileSync(path.join(AVATARS, 'd_d1.jpg'), 'his face');
+
   pool = fakePool();
   r = await ask(pool, { step: 'apply', side: 'rider', token: 'rider-tok', number: '41999999' });
+  check('her photograph follows her to the new number, and leaves the old one',
+    fs.existsSync(path.join(AVATARS, keyOf('41999999') + '.jpg'))
+      && fs.readFileSync(path.join(AVATARS, keyOf('41999999') + '.jpg'), 'utf8') === 'face'
+      && !fs.existsSync(path.join(AVATARS, keyOf('41234567') + '.jpg')), fs.readdirSync(AVATARS));
   const upd = pool.calls.find((c) => /UPDATE atlas_app\.person/.test(c.sql));
   check('apply: the rider row, all three places the number lives', r.ok === true && upd
     && upd.params[0] === '+222' && upd.params[1] === '0.1.0|0|CIPHER'
@@ -100,6 +113,8 @@ const ask = (pool, body) => numberChange.run(pool, urls, { dialCode: '+222', ...
 
   pool = fakePool();
   r = await ask(pool, { step: 'apply', side: 'driver', token: 'driver-tok', number: '41999999' });
+  check('a driver\'s photograph is keyed by his id and does not move',
+    fs.existsSync(path.join(AVATARS, 'd_d1.jpg')), fs.readdirSync(AVATARS));
   check('a driver: his own schema, his own id', r.ok === true
     && pool.calls.some((c) => /UPDATE atlas_driver_offer_bpp\.person/.test(c.sql) && c.params[4] === 'd1'), pool.calls);
 

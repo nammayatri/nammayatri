@@ -348,8 +348,37 @@ function remove(key, res) {
   res.end('{"ok":true}');
 }
 
+/**
+ * A passenger changed her number (number-change.js, 2026-10-03): her
+ * photograph moves to the key the new number gives. Keyed by the number's
+ * hash, it stayed under the old one and vanished from her profile -- the
+ * owner's own, the first time it was used. A driver is keyed by his id and
+ * never moves. Moves, never copies: the old key must not keep a face for a
+ * number that is no longer hers. Returns whether a file moved.
+ */
+function moveRiderKey(oldHashHex, newHashHex) {
+  if (!oldHashHex || !newHashHex || oldHashHex === newHashHex) return false;
+  const from = 'h_' + String(oldHashHex).slice(0, 32);
+  const to = 'h_' + String(newHashHex).slice(0, 32);
+  let moved = false;
+  for (const e of ['.jpg', '.png']) {
+    const src = path.join(DIR, from + e);
+    if (!fs.existsSync(src)) continue;
+    // One file per person, as `store` keeps it: whatever sat at the new key
+    // (a stale one, a different extension) goes first.
+    for (const x of ['.jpg', '.png']) {
+      const dst = path.join(DIR, to + x);
+      if (fs.existsSync(dst)) fs.unlinkSync(dst);
+    }
+    fs.renameSync(src, path.join(DIR, to + e));
+    moved = true;
+  }
+  return moved;
+}
+
 module.exports = {
   DIR,
+  moveRiderKey,
   keyForPhone,
   keyForRiderId,
   driverKey,

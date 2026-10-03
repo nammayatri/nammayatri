@@ -3878,6 +3878,13 @@ wallet currency; that is a transfer, not a number change. **One side at a
 time:** the passenger and driver accounts are separate; the other is changed
 from its own « Mon compte », and the trusted-phone key spares the second code.
 
+**The passenger's photograph moves with the number (2026-10-03).** It is
+stored under her number's hash (`avatars.js`, `h_<hash>`), so the first
+change left it under the old key and her profile went blank — the owner's
+own, on the first real use. `apply` now moves it to the new key in the same
+step (`avatars.moveRiderKey`); a driver's is keyed by his id and never moves.
+The app moves its own local copy the same way.
+
 `NUMBER_HASH_SALT` is in `/opt/ny/secrets/number-change.env` (the backend's
 encHashSalt — verified against stored hashes on both schemas before use); the
 shim answers `not_configured` without it. Proved by
