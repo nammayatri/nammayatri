@@ -50,6 +50,8 @@ apis:
         rideId: Id Ride
         driverId: Id Driver
         paymentMode: PaymentMode
+        paymentCollectedBy: PaymentCollector
+        hasSos: Bool
         fromAmount: HighPrecMoney
         toAmount: HighPrecMoney
         customerPhoneNo: Text
@@ -78,6 +80,8 @@ apis:
               rideId: Id Ride
               driverId: Id Driver
               paymentMode: PaymentMode
+              paymentCollectedBy: PaymentCollector
+              hasSos: Bool
               fromAmount: HighPrecMoney
               toAmount: HighPrecMoney
               currency: Currency
@@ -293,6 +297,18 @@ types:
     - tripStartTime: Maybe UTCTime
     - tripEndTime: Maybe UTCTime
     - rideTags: Maybe [TagNameValue]
+    - driverId: Maybe (Id Driver)
+    - fleetOwnerId: Maybe Text
+    - bapId: Maybe Text
+    - bapName: Maybe Text
+    - paymentCollectedBy: Maybe Text
+    - isScheduled: Maybe Bool
+    - driverDeviatedFromRoute: Maybe Bool
+    - hasSos: Maybe Bool
+    - sosStatus: Maybe Text
+    - safetyAlertTriggered: Maybe Bool
+    - gstAmount: Maybe HighPrecMoney
+    - tdsAmount: Maybe HighPrecMoney
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
@@ -319,6 +335,9 @@ types:
 
   PaymentMode:
     - enum: "CASH, ONLINE"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  PaymentCollector:
+    - enum: "BAP, BPP"
     - derive: "Read, Kernel.Prelude.ToParamSchema"
   BookingStatus:
     - enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
@@ -442,6 +461,22 @@ types:
     - rating: Maybe Int
     - estimatedTollInfo: Maybe [TollInfoAPIEntity]
     - actualTollInfo: Maybe [TollInfoAPIEntity]
+    - actualPickupLocation: Maybe LatLong
+    - isScheduled: Maybe Bool
+    - bapId: Maybe Text
+    - bapName: Maybe Text
+    - paymentCollectedBy: Maybe Text
+    - fleetOwnerName: Maybe Text
+    - fleetOwnerPhoneNo: Maybe Text
+    - sosId: Maybe Text
+    - sosStatus: Maybe Text
+    - sosCreatedAt: Maybe UTCTime
+    - sosTicketId: Maybe Text
+    - safetyAlertTriggered: Maybe Bool
+    - plannedPickupCluster: Maybe Text
+    - plannedDropCluster: Maybe Text
+    - actualPickupCluster: Maybe Text
+    - actualDropCluster: Maybe Text
   TollInfoAPIEntity:
     - id: Text
     - name: Text

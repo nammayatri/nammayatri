@@ -669,9 +669,12 @@ findAllRideItems ::
   Maybe Text ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe [Text] ->
+  Maybe Bool ->
   m [RideItem]
-findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
-  case mbRideShortId of
+findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount mbPaymentMethodIds mbHasSos
+  | mbPaymentMethodIds == Just [] = pure []
+  | otherwise = case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
       case mbFleetOwnerId of
@@ -693,7 +696,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
 
       payoutRequest <- QPR.findByEntity (getId ride.id) Nothing
       let item = (mkRideItem fleetOwnerMap fleetOwnerPersonMap vrcMap (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}
-      pure [item]
+      pure [item | matchesPaymentMethod booking, matchesSos ride]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -780,6 +783,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rid -> ride.id B.==?. B.val_ (getId rid)) mbRideId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\did -> ride.driverId B.==?. B.val_ did) mbDriverId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pm -> mkPaymentModeCond booking pm) mbPaymentMode
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ids -> B.sqlBool_ (booking.paymentMethodId `B.in_` (B.val_ . Just <$> ids))) mbPaymentMethodIds
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hasSos -> B.sqlBool_ (if hasSos then B.isJust_ ride.sosId else B.isNothing_ ride.sosId)) mbHasSos
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fa -> B.sqlBool_ $ ride.fareAmount B.>=. B.val_ (Just fa)) mbFromAmount
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\ta -> B.sqlBool_ $ ride.fareAmount B.<=. B.val_ (Just ta)) mbToAmount
                   )
@@ -875,6 +880,12 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       | ride.status == Ride.CANCELLED = Common.CANCELLED
       | otherwise = Common.ONGOING_6HRS
 
+    matchesSos :: Ride.Ride -> Bool
+    matchesSos ride = maybe True (== isJust ride.sosId) mbHasSos
+
+    matchesPaymentMethod :: Booking.Booking -> Bool
+    matchesPaymentMethod booking = maybe True (\ids -> maybe False ((`elem` ids) . getId) booking.paymentMethodId) mbPaymentMethodIds
+
     mkRideItemUsingMaps :: [DDR.Ride] -> [RideDetails.RideDetails] -> [Booking.Booking] -> [RiderDetails.RiderDetails] -> [RideItem]
     mkRideItemUsingMaps rides rideDetails bookings riderDetails =
       let rideDetailsMap = HMS.fromList [(rideDetail.id, rideDetail) | rideDetail <- rideDetails]
@@ -884,6 +895,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
             ( \ride -> do
                 rideDetail <- ride.id `HMS.lookup` rideDetailsMap
                 booking <- ride.bookingId `HMS.lookup` bookingsMap
+                guard (matchesPaymentMethod booking && matchesSos ride)
                 riderDetail <- booking.riderId >>= (`HMS.lookup` riderDetailsMap)
                 let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
                     fare = mkPrice (Just ride.currency) <$> ride.fare
