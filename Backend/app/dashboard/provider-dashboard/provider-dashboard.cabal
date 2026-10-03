@@ -39,6 +39,7 @@ library
       API.RiderPlatform
       API.SpecialZone
       App
+      Domain.Action.ProviderPlatform.AppManagement.DepotManager
       Domain.Action.ProviderPlatform.AppManagement.Driver
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.DriverWallet
@@ -167,6 +168,7 @@ library
       Storage.Beam.CommonInstances
       Tools.Beam.UtilsTH
       API.Action.ProviderPlatform.AppManagement
+      API.Action.ProviderPlatform.AppManagement.DepotManager
       API.Action.ProviderPlatform.AppManagement.Driver
       API.Action.ProviderPlatform.AppManagement.DriverSubscription
       API.Action.ProviderPlatform.AppManagement.DriverWallet
