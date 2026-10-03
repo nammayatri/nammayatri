@@ -364,6 +364,13 @@ the header of that script.
   Anything it must write goes on the `auth-guard-state` volume at `/state` —
   today only `trusted-phones.json` (2026-10-03: a phone that already proved its
   number signs back in with no code). A write to `/app` fails with EROFS.
+- **A passenger's own data is found by her phone number's hash, not her id.**
+  Her photograph (`maps-shim/avatars.js`, `h_<hash>`) and her rating (the
+  provider's `rider_details`, one row per number) both are. Since people can
+  change their number themselves (2026-10-03), anything keyed that way must
+  be moved in `maps-shim/number-change.js` — the first real change blanked
+  the owner's photograph, the second reset his rating to « Nouveau ». A
+  driver's data is keyed by his id and never needs it.
 - **iPhone push does not go through Firebase.** `fcm_url` points at
   `maps-shim/push-relay.js`, which forwards FCM tokens to Google and sends iOS
   tokens to APNs with the app's own words. The notification text for iOS is a
