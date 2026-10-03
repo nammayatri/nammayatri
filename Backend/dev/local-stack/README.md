@@ -3272,6 +3272,28 @@ a root-only dump of the three account schemas in `/root/pre-removal/`.
 Consequence: no car on the map in either country until a real driver is
 online, and the bot's « aucun chauffeur en ligne » is now simply true.
 
+**Back on 2026-10-03, for testing only — the launch was delayed** (the
+owner's request). `simulate-driver.py` now runs **both** countries: twelve
+cars, two per sold variant in each — six around central Nouakchott, and in
+Algiers one of each variant in the centre (Belcourt) and one in El Biar / Ben
+Aknoun, where the owner's test pickups are. The country follows from the
+number (eight digits Mauritania, ten with the trunk zero Algeria) and decides
+the dialling code, the merchant (`NAMMA_YATRI_PARTNER` / `MOVIN_DZ_PARTNER`)
+and where each car waits. `seed` also gives each a year's working day
+(`movin.wallet.day_until` only — no ledger entry, so no payment appears that
+nobody made, and revenue is still the sum of real `day` entries); without it
+the no-top-up rule would keep them off dispatch. `movin-fleet` installed again
+(`fleet-service.sh install`); `movin-drivers` deliberately not — the daemon
+heartbeats its own cars, and that timer re-stamped real drivers too.
+
+    Mauritania  22100001..06   Mohamed, Ahmed (SEDAN) · Cheikh, Brahim (HATCHBACK) · Moustapha, Abdallahi (SUV)
+    Algeria     0555100001..06 Karim, Bilal (SEDAN) · Yacine, Mehdi (HATCHBACK) · Sofiane, Amine (SUV)
+
+**They answer real ride requests.** Before the first real passenger:
+`./fleet-service.sh uninstall`, and erase the twelve accounts the same way as
+on 2026-10-01 (the console's `anonymise.sql`). Never sign in as one: it
+revokes the daemon's session.
+
 `./seed-mauritanian-fleet.sh` — two drivers per sellable variant in Nouakchott,
 Mauritanian names and plates, all enrolled in the guard. Two per type because
 one means a whole category dies the moment that driver takes a ride, and

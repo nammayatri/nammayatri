@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Play a driver, so the passenger app can be built and demonstrated on one phone.
 
-    ./simulate-driver.py seed       # one Algerian driver per sellable variant
+    ./simulate-driver.py seed       # two drivers per sellable variant, in each country
     ./simulate-driver.py status     # who exists, who is online, how fresh
     ./simulate-driver.py once       # take the next request, drive it, finish
     ./simulate-driver.py daemon     # all drivers online, keep accepting
@@ -63,7 +63,22 @@ from datetime import datetime, timedelta, timezone
 DRIVER_API = "http://localhost:8017"
 OSRM = "http://localhost:5000"
 OTP = "7891"
-CC = "+222"
+# Each driver's country follows from his number (2026-10-03, when Algeria got
+# a fleet of its own): eight digits is Mauritania, ten with the trunk zero is
+# Algeria -- the two formats are each other's inverse (CLAUDE.md). The country
+# decides the dialling code, the merchant he is filed under, and where he waits.
+COUNTRIES = {
+    "MR": {"cc": "+222", "merchant": "NAMMA_YATRI_PARTNER"},
+    "DZ": {"cc": "+213", "merchant": "MOVIN_DZ_PARTNER"},
+}
+
+
+def country_of(number):
+    return "DZ" if len(number) == 10 and number.startswith("0") else "MR"
+
+
+def cc_of(number):
+    return COUNTRIES[country_of(number)]["cc"]
 
 # How far back to look for a ride this driver should be driving. Longer than
 # any rider takes to choose an offer; shorter than an abandoned ride from a
@@ -101,6 +116,15 @@ FLEET = [
     ("22100004", "HATCHBACK", "Brahim",     "Dacia",   "Sandero",      "Rouge", "5391 DK 00"),
     ("22100002", "SEDAN",     "Ahmed",      "Hyundai", "Accent",       "Gris",  "3182 BM 00"),
     ("22100006", "SUV",       "Abdallahi",  "Nissan",  "Patrol",       "Noir",  "7135 FM 00"),
+    # Algiers, 2026-10-03: the owner's request while launch is delayed. Same
+    # two per row. Plates are the Algerian shape -- serial, then category and
+    # year, then the wilaya (16 is Algiers).
+    ("0555100001", "SEDAN",     "Karim",   "Renault",  "Symbol",  "Blanc", "10231 119 16"),
+    ("0555100002", "HATCHBACK", "Yacine",  "Suzuki",   "Swift",   "Rouge", "10232 118 16"),
+    ("0555100003", "SUV",       "Sofiane", "Hyundai",  "Tucson",  "Gris",  "10233 120 16"),
+    ("0555100004", "SEDAN",     "Bilal",   "Hyundai",  "Accent",  "Noir",  "10234 117 16"),
+    ("0555100005", "HATCHBACK", "Mehdi",   "Kia",      "Picanto", "Bleu",  "10235 119 16"),
+    ("0555100006", "SUV",       "Amine",   "Kia",      "Sportage", "Blanc", "10236 121 16"),
 ]
 
 # Where idle drivers wait: scattered around central Nouakchott, each several
@@ -110,10 +134,26 @@ FLEET = [
 #
 # Parked in Algiers, as these were until 2026-09-03, they are outside the
 # geofence and invisible -- the same silence in a different place.
-BASE = [
-    (18.0902, -15.9615), (18.0812, -15.9548), (18.0871, -15.9663),
-    (18.0838, -15.9502), (18.0925, -15.9571), (18.0790, -15.9628),
-]
+BASE = {
+    "MR": [
+        (18.0902, -15.9615), (18.0812, -15.9548), (18.0871, -15.9663),
+        (18.0838, -15.9502), (18.0925, -15.9571), (18.0790, -15.9628),
+    ],
+    # Two areas of Algiers, one car of each row in each: the centre (Belcourt,
+    # around the opening view) and El Biar / Ben Aknoun, where the owner's own
+    # test pickups are.
+    "DZ": [
+        (36.7562, 3.0571), (36.7521, 3.0629), (36.7585, 3.0648),
+        (36.7671, 2.9752), (36.7633, 2.9688), (36.7702, 2.9715),
+    ],
+}
+
+
+def base_for(number):
+    """Where this driver waits: his own spot among his country's."""
+    mine = [n for n, *_ in FLEET if country_of(n) == country_of(number)]
+    spots = BASE[country_of(number)]
+    return spots[mine.index(number) % len(spots)]
 
 _last_ts = {}
 
@@ -171,13 +211,15 @@ def die(msg):
 
 
 # ──────────────────────────────────────────────────────────────── the fleet
-def merchant_uuid():
+def merchant_uuid(number):
     """Driver auth wants the merchant UUID. The rider side wants the short id,
-    and getting them the wrong way round returns a bare 'Not found'."""
-    m = pg("SELECT id FROM atlas_driver_offer_bpp.merchant "
-           "WHERE short_id='NAMMA_YATRI_PARTNER';")
+    and getting them the wrong way round returns a bare 'Not found'. One per
+    country: a driver filed under the other country's merchant gets its tariff
+    and its service area, and no request of his own country ever reaches him."""
+    short = COUNTRIES[country_of(number)]["merchant"]
+    m = pg(f"SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id='{short}';")
     if not m:
-        die("merchant NAMMA_YATRI_PARTNER missing -- driver seed never migrated")
+        die(f"merchant {short} missing -- driver seed never migrated")
     return m
 
 
@@ -205,11 +247,11 @@ def login(number, patience=900):
     So: wait, out loud, and come back. A daemon that pauses for ten minutes is
     fixed by itself; a daemon that exits is fixed by a person.
     """
-    mid = merchant_uuid()
+    mid = merchant_uuid(number)
     waited = 0
     while True:
         a, code, raw = call("POST", f"{DRIVER_API}/ui/auth", {
-            "mobileNumber": number, "mobileCountryCode": CC, "merchantId": mid})
+            "mobileNumber": number, "mobileCountryCode": cc_of(number), "merchantId": mid})
         if code == 200 and a and "authId" in a:
             break
         if "HITS_LIMIT_EXCEED" in (raw or "") and waited < patience:
@@ -235,7 +277,7 @@ def login(number, patience=900):
 def driver_id(number):
     return pg(f"""SELECT id FROM atlas_driver_offer_bpp.person
                    WHERE unencrypted_mobile_number='{number}'
-                     AND mobile_country_code='{CC}' AND role='DRIVER';""")
+                     AND mobile_country_code='{cc_of(number)}' AND role='DRIVER';""")
 
 
 def current_position(number):
@@ -267,9 +309,9 @@ def seed():
     faked. Only the vehicle has to be written directly: there is no driver-side
     endpoint to register one on this binary.
     """
-    say("seeding the Algerian test fleet")
-    mid = merchant_uuid()
-    for i, (num, variant, name, make, model, colour, plate) in enumerate(FLEET):
+    say("seeding the test fleet, Mauritania and Algeria")
+    for num, variant, name, make, model, colour, plate in FLEET:
+        mid = merchant_uuid(num)
         did = driver_id(num)
         if not did:
             say(f"{num}: creating (unknown number self-registers a driver)", 1)
@@ -309,10 +351,20 @@ def seed():
         pg(f"""UPDATE atlas_driver_offer_bpp.person SET first_name='{name}'
                 WHERE id='{did}';""")
 
+        # No top-up, no work (the client's rule): a driver with no paid day is
+        # on the dispatch skip list and never offered a ride. A test driver is
+        # given a year's working day -- `day_until` only, no ledger entry, so
+        # no payment appears that nobody made and revenue stays the sum of
+        # real `day` entries.
+        pg(f"""INSERT INTO movin.wallet (driver_id, balance, day_until)
+               VALUES ('{did}', 0, now() + interval '365 days')
+               ON CONFLICT (driver_id) DO UPDATE
+                 SET day_until = greatest(movin.wallet.day_until, now() + interval '365 days');""")
+
         # Position via the API, never SQL: driver_location also carries a
         # PostGIS `point` and the pool tests THAT, not lat/lon.
         tok, _ = login(num)
-        post_position(tok, BASE[i % len(BASE)])
+        post_position(tok, base_for(num))
         say(f"{num}: {name} — {variant} {make} {model} {colour} [{plate}]", 2)
 
     say("fleet ready")
@@ -331,12 +383,13 @@ def status():
                   JOIN atlas_driver_offer_bpp.driver_information di ON di.driver_id=p.id
                   LEFT JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id=p.id
                   LEFT JOIN atlas_driver_offer_bpp.driver_location dl ON dl.driver_id=p.id
-                 WHERE p.mobile_country_code='+222' AND p.role='DRIVER'
-                 ORDER BY v.variant;"""))
-    missing = [v for _, v, *_ in FLEET if not pg(
+                 WHERE p.mobile_country_code IN ('+222', '+213') AND p.role='DRIVER'
+                   AND p.unencrypted_mobile_number IS NOT NULL
+                 ORDER BY p.mobile_country_code, v.variant;"""))
+    missing = [f"{cc_of(n)} {v}" for n, v, *_ in FLEET if not pg(
         f"""SELECT 1 FROM atlas_driver_offer_bpp.vehicle v
              JOIN atlas_driver_offer_bpp.person p ON p.id=v.driver_id
-            WHERE v.variant='{v}' AND p.mobile_country_code='+222' LIMIT 1;""")]
+            WHERE v.variant='{v}' AND p.mobile_country_code='{cc_of(n)}' LIMIT 1;""")]
     if missing:
         print(f"\n  \033[1;31mno driver for: {', '.join(missing)}\033[0m"
               f"  -- those rows in the app will wait 300s and return nothing")
@@ -534,7 +587,7 @@ def run_ride(number, token, ride, speed):
 # ─────────────────────────────────────────────────────────────────── modes
 def online(number):
     tok, _ = login(number)
-    post_position(tok, BASE[[n for n, *_ in FLEET].index(number) % len(BASE)])
+    post_position(tok, base_for(number))
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/setActivity?active=true",
                         None, tok)
     if code != 200:
@@ -694,7 +747,7 @@ def cmd_daemon(args):
     rides = 0
     try:
         while True:
-            for i, (num, variant, *_) in enumerate(FLEET):
+            for num, variant, *_ in FLEET:
                 # Ride first, request second. Offering on a request does not
                 # create a ride: the RIDER creates it by tapping that offer,
                 # which takes as long as a person takes. Anything that assumed
@@ -718,7 +771,7 @@ def cmd_daemon(args):
                     # He may have been left mid-state; put him back on duty.
                     call("POST", f"{DRIVER_API}/ui/driver/setActivity?active=true",
                          None, toks[num])
-                    post_position(toks[num], BASE[i % len(BASE)])
+                    post_position(toks[num], base_for(num))
                     continue
 
                 req = poll(toks[num])
@@ -731,8 +784,8 @@ def cmd_daemon(args):
             # An idle driver whose position goes stale drops out of the pool
             # silently -- searches then return zero estimates with no error.
             if time.time() - last_beat > 30:
-                for i, (num, *_) in enumerate(FLEET):
-                    post_position(toks[num], BASE[i % len(BASE)])
+                for num, *_ in FLEET:
+                    post_position(toks[num], base_for(num))
                 last_beat = time.time()
             time.sleep(2)
     except KeyboardInterrupt:

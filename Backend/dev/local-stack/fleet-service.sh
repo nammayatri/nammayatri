@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
-# ── RETIRED 2026-10-01 ── uninstalled on the live server before launch (the owner's
-# decision): the simulated cars answered real ride requests. Do not `install`
-# it there again.
+# ── ON THE LIVE SERVER AGAIN, 2026-10-03, FOR TESTING ONLY ── uninstalled on
+# 2026-10-01 before launch, re-installed by the owner when the launch was
+# delayed: twelve simulated cars, Nouakchott and Algiers (simulate-driver.py).
+# They answer REAL ride requests -- `uninstall` it, and erase the twelve
+# accounts, before the first real passenger. local-stack README → *The test fleet*.
 #
 # Keep the simulated fleet answering, permanently.
 #

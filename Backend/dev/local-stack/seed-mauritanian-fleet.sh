@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# ── RETIRED 2026-10-01 ── these drivers were erased and the simulated fleet
-# uninstalled before launch (the owner's decision). Running this on the live
-# server puts fake cars back in front of real Mauritanian passengers.
+# ── RETIRED 2026-10-01 ── superseded on 2026-10-03 by `simulate-driver.py seed`,
+# which seeds both countries' test fleets and gives each a paid working day.
+# Dev stacks only.
 #
 # A test fleet in Nouakchott — two drivers per sellable vehicle type.
 #
