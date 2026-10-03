@@ -237,7 +237,8 @@ reSchedule (Id jobId) newScheduleTime = do
   now <- getCurrentTime
   updateWithKVScheduler
     [ Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now),
-      Se.Set BeamST.scheduledAt (T.utcToLocalTime T.utc newScheduleTime)
+      Se.Set BeamST.scheduledAt (T.utcToLocalTime T.utc newScheduleTime),
+      Se.Set BeamST.status Pending
     ]
     [Se.Is BeamST.id (Se.Eq jobId)]
 
@@ -256,6 +257,7 @@ reScheduleOnError (Id jobId) newCountValue newScheduleTime = do
   updateWithKVScheduler
     [ Se.Set BeamST.scheduledAt (T.utcToLocalTime T.utc newScheduleTime),
       Se.Set BeamST.currErrors newCountValue,
-      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now)
+      Se.Set BeamST.updatedAt (T.utcToLocalTime T.utc now),
+      Se.Set BeamST.status Pending
     ]
     [Se.Is BeamST.id (Se.Eq jobId)]
