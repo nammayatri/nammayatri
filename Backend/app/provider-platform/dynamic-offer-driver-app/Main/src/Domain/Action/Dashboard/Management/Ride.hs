@@ -68,25 +68,28 @@ getRideList ::
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
+  Maybe [Common.RideDetailGroup] ->
   Maybe Text ->
   Maybe (Id Common.Driver) ->
   Maybe Text ->
   Maybe Text ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
+  Maybe Bool ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Common.PaymentCollector ->
   Maybe Common.PaymentMode ->
   Maybe (Id Common.Ride) ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDetailGroups mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbHasSos mbLimit mbOffset mbPaymentCollectedBy mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
   logInfo $ "Ride list requested by: " <> requestorId
   let customerCountryCode = DCommon.appendPlusInMobileCountryCode mbCustomerCountryCode
       driverCountryCode = DCommon.appendPlusInMobileCountryCode mbDriverCountryCode
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) customerCountryCode driverCountryCode mbPaymentCollectedBy mbHasSos (fromMaybe [] mbDetailGroups) requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -144,11 +147,11 @@ postRideCancelMultiple merchantShortId opCity _mbRequestorId req = do
     pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
   pure $ Common.MultipleRideSyncResp {list = respItems}
 
-getRideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Bool -> Flow Common.RideInfoRes
-getRideInfo merchantShortId opCity rideId mbFinanceData = do
+getRideInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe [Common.RideDetailGroup] -> Maybe Bool -> Flow Common.RideInfoRes
+getRideInfo merchantShortId opCity rideId mbDetailGroups mbFinanceData = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  DRide.rideInfo merchant.id merchantOpCityId rideId mbFinanceData
+  DRide.rideInfo merchant.id merchantOpCityId rideId mbFinanceData (fromMaybe [] mbDetailGroups)
 
 postRideSync :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideSyncRes
 postRideSync = DRide.rideSync

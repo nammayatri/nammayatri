@@ -20,6 +20,7 @@ imports:
   PayoutRequest: Lib.Payment.Domain.Types.PayoutRequest
   Lib.Payment.Domain.Types.PayoutRequest: payment
   TagNameValue: Lib.Yudhishthira.Types
+  SosStatus: Safety.Domain.Types.Sos
 
 module: Ride
 
@@ -50,6 +51,9 @@ apis:
         rideId: Id Ride
         driverId: Id Driver
         paymentMode: PaymentMode
+        paymentCollectedBy: PaymentCollector
+        hasSos: Bool
+        detailGroups: [RideDetailGroup]
         fromAmount: HighPrecMoney
         toAmount: HighPrecMoney
         customerPhoneNo: Text
@@ -78,6 +82,9 @@ apis:
               rideId: Id Ride
               driverId: Id Driver
               paymentMode: PaymentMode
+              paymentCollectedBy: PaymentCollector
+              hasSos: Bool
+              detailGroups: [RideDetailGroup]
               fromAmount: HighPrecMoney
               toAmount: HighPrecMoney
               currency: Currency
@@ -165,6 +172,7 @@ apis:
       auth: ApiAuthV2
       query:
         financeData: Bool
+        detailGroups: [RideDetailGroup]
       params:
         rideId: Id Ride
       response:
@@ -294,6 +302,14 @@ types:
     - tripEndTime: Maybe UTCTime
     - rideTags: Maybe [TagNameValue]
     - invoiceId: Maybe Text # Finance invoice id linked to the ride's booking (booking.financeInvoiceId)
+    - driverId: Maybe (Id Driver)
+    - fleetOwnerId: Maybe Text
+    - driverDeviatedFromRoute: Maybe Bool
+    - hasSos: Maybe Bool
+    - sosStatus: Maybe SosStatus
+    - safetyAlertTriggered: Maybe Bool
+    - gstAmount: Maybe HighPrecMoney
+    - tdsAmount: Maybe HighPrecMoney
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
@@ -320,6 +336,12 @@ types:
 
   PaymentMode:
     - enum: "CASH, ONLINE"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  PaymentCollector:
+    - enum: "BAP, BPP"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  RideDetailGroup:
+    - enum: "SAFETY, TAX, FLEET_INFO, BUYER_APP, PAYMENT, CLUSTERS, DRIVER_INFO, TRIP, FINANCE"
     - derive: "Read, Kernel.Prelude.ToParamSchema"
   BookingStatus:
     - enum: "UPCOMING, UPCOMING_6HRS, ONGOING, ONGOING_6HRS, COMPLETED, CANCELLED"
@@ -443,6 +465,22 @@ types:
     - rating: Maybe Int
     - estimatedTollInfo: Maybe [TollInfoAPIEntity]
     - actualTollInfo: Maybe [TollInfoAPIEntity]
+    - actualPickupLocation: Maybe LatLong
+    - isScheduled: Maybe Bool
+    - bapId: Maybe Text
+    - bapName: Maybe Text
+    - paymentCollectedBy: Maybe PaymentCollector
+    - fleetOwnerName: Maybe Text
+    - fleetOwnerPhoneNo: Maybe Text
+    - sosId: Maybe Text
+    - sosStatus: Maybe SosStatus
+    - sosCreatedAt: Maybe UTCTime
+    - sosTicketId: Maybe Text
+    - safetyAlertTriggered: Maybe Bool
+    - plannedPickupCluster: Maybe Text
+    - plannedDropCluster: Maybe Text
+    - actualPickupCluster: Maybe Text
+    - actualDropCluster: Maybe Text
   TollInfoAPIEntity:
     - id: Text
     - name: Text
