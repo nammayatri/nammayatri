@@ -3327,8 +3327,14 @@ Restarting `movin-fleet` mid-ride is safe: the new daemon resumes an
 COMPLETED at a price in the country's currency with the driver's wallet
 respected. Its passengers are **test accounts**: `+222 22778899` and
 `+213 0555000199`, created by signing in directly on the rider API (the fixed
-code 7891 behind the guard). First full run 2026-10-04: all three Mauritanian
-rows passed (102 / 70 / 140 MRU over 2.5 km); see the Algerian result below.
+code 7891 behind the guard). First full run 2026-10-04, **six of six**:
+Mauritania 102 / 70 / 140 MRU (sedan, hatchback, SUV, 2.5 km), Algeria
+917 / 641 / 1212 DZD (14 km, ~7 min each at 3×). The Algerian rows first
+"failed" twice for reasons that were not the product: the probe's wait was
+shorter than a 14 km trip, and the hatchback got no offer because the
+simulator was busy driving another car — the bug fixed above. Run the test
+with no simulated ride open: the one passenger cannot hold two bookings
+(`ACTIVE_BOOKING_PRESENT`).
 
 `./seed-mauritanian-fleet.sh` — two drivers per sellable variant in Nouakchott,
 Mauritanian names and plates, all enrolled in the guard. Two per type because
