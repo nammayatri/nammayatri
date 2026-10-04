@@ -428,13 +428,7 @@ remapBreakupTitle title
   | title == show Enums.DRIVER_ALLOWANCE = Just "DRIVER_BATA"
   | title `elem` [show Enums.SGST, show Enums.CGST, show Enums.FIXED_GOVERNMENT_RATE, show Enums.RIDE_VAT, show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX, show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE, show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX] = Just "TAX"
   | title `elem` [show Enums.SERVICE_CHARGE, show Enums.EXTRA_TIME_FARE, show Enums.RIDE_STOP_CHARGES, show Enums.PER_STOP_CHARGES, show Enums.LUGGAGE_CHARGE, show Enums.AIRPORT_CONVENIENCE_FEE, show Enums.RETURN_FEE, show Enums.BOOTH_CHARGE, show Enums.PLATFORM_FEE, show Enums.DRIVER_SELECTED_FARE, show Enums.ADD_ON_CHARGES] = Just "ADD_ONS"
-  -- The accepted Pre-Order Bid's adjustment to the ride fare. It has to stay in the breakup -- drop it
-  -- and the lines no longer sum to the negotiated total the BAP was quoted -- but it cannot keep its own
-  -- title: NEGOTIATED_FARE_DELTA is not in ONDC's fixed breakup-title enum, so the Workbench NACKs the
-  -- whole message with VALID_ENUM_message_order_quote_breakup_title. ADD_ONS is the closest valid title
-  -- that tolerates an arbitrary fare adjustment. Note the value is signed: a downward negotiation sends
-  -- a negative ADD_ONS line.
-  | title == show Enums.NEGOTIATED_FARE_DELTA = Just "ADD_ONS" -- Temporary Added this in AddONS tag because ondc still not supported it. After ONDC changes, we will put the appropiate tag here
+  | title == show Enums.NEGOTIATED_FARE_DELTA = Just "NEGOTIATED_FARE_DELTA"
   | otherwise = Nothing
 
 -- | Applies remapBreakupTitle to every breakup line on an already-built
