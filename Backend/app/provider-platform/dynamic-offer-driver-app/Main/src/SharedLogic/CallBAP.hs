@@ -84,8 +84,8 @@ import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time hiding (getCurrentTime)
 import qualified Data.UUID as UUID
-import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.BapMetadata as DBapMetadata
+import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR

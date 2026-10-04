@@ -44,6 +44,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
+import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
@@ -58,6 +59,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
 import Storage.Beam.Toll ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -160,7 +162,9 @@ updateDeviation transportConfig safetyCheckEnabled (Just ride) batchWaypoints = 
           nightSafetyRouteDeviationThreshold = transportConfig.nightSafetyRouteDeviationThreshold
           key = multipleRouteKey booking.transactionId
           shouldPerformSafetyCheck = safetyCheckEnabled && not safetyAlertAlreadyTriggered
-          isOndcScheduledRideSupportEnabled = fromMaybe False transportConfig.enableOndcScheduledRideSupport
+      -- Pilot flag lives on the BAP's metadata (per merchant/city), not on TransporterConfig.
+      mbBapMetadata <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Domain.MOBILITY booking.providerId booking.merchantOperatingCityId
+      let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
       multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.withMasterRedis $ Redis.get key
       case multipleRoutes of
         Just routes -> do

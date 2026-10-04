@@ -19,7 +19,9 @@ AddOnConfig:
 
     AddOnData:
       configId: Id AddOnConfig
-      selectedQuantity: Int
+      selectedQuantity: Maybe Int
+      maxQuantity: Int
+      pricePerQuantity: Maybe HighPrecMoney
       derive: Eq
 
   fields:

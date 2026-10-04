@@ -19,8 +19,8 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import Domain.Types
-import Domain.Types.Booking as DRB
 import qualified Domain.Types.BapMetadata as DBapMetadata
+import Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
@@ -336,7 +336,7 @@ validateRequest subscriber transporterId req now mbBapMetadata = do
         OneWay OneWayOnDemandStaticOffer -> isOndcScheduledRideSupportEnabled
         _ -> False
   when isOndcScheduledRideSupportEnabled $
-    SAddOn.verifyAddOnEcho booking.addOnData booking.merchantOperatingCityId (Just booking.vehicleServiceTier) req.addOns
+    SAddOn.verifyAddOnEcho booking.addOnData req.addOns
   when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of

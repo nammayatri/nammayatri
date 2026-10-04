@@ -328,7 +328,7 @@ getBaseFare searchTry searchReq farePolicy vehicleAge tripQuoteDetail transporte
             DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
           } ::
           DFP.FullFarePolicy
-  addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
+  let addOnCharges = SAddOn.addOnChargesTotal searchTry.addOnData
   fareParams <-
     Fare.calculateFareParameters
       Fare.CalculateFareParametersParams
