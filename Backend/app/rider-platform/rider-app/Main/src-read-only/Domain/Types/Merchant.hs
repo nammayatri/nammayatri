@@ -45,7 +45,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     geofencingConfig :: Kernel.Types.Geofencing.GeofencingConfig,
     id :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     isAvoidToll :: Kernel.Prelude.Bool,
-    kaptureDisposition :: Kernel.Prelude.Text,
+    kaptureDisposition :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     minimumDriverRatesCount :: Kernel.Prelude.Int,
@@ -66,7 +66,7 @@ data MerchantD (s :: UsageSafety) = Merchant
   }
   deriving (Generic, Show)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 
