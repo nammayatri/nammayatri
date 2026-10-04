@@ -405,15 +405,13 @@ jobs:
           sed -i '/"rider-dashboard-exe".condition = "process_healthy";/d' Backend/nix/services/nammayatri.nix
           echo "remaining rider-dashboard waits: $(grep -c '"rider-dashboard-exe".condition' Backend/nix/services/nammayatri.nix || true)"
 
-      # TEMPORARY: the config-sync S3 bucket is corp-network only (403 from this runner), so use a dump cached
-      # on the runner at ~/config-sync-cache/master_to_local instead of downloading. Remove once the runner can fetch.
-      - name: Use cached master dump (temporary)
+      # The config-sync S3 bucket only allows whitelisted IPs; fail fast with a clear message if this runner isn't one.
+      - name: Check config-sync bucket access
         run: |
-          SRC="$HOME/config-sync-cache/master_to_local"
-          DST=Backend/dev/config-sync/assets/data/master_to_local
-          [ -d "$SRC" ] || { echo "Missing $SRC: copy a master_to_local dump to the runner first"; exit 1; }
-          rm -rf "$DST" && mkdir -p "$(dirname "$DST")" && cp -r "$SRC" "$DST"
-          echo "files: $(find "$DST" -type f | wc -l)"
+          URL=https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v3/master_to_local.zip
+          CODE=$(curl -s -I -o /dev/null -w '%{http_code}' "$URL")
+          echo "GET $URL -> HTTP $CODE"
+          [ "$CODE" = 200 ] || { echo "Runner can't read the config-sync bucket (is its IP whitelisted?)"; exit 1; }
 
       # TEMPORARY: patches.json's BG rule renames every master BG row to JUSPAY.BG.1 (same for some BAPs), leaving
       # duplicate (subscriber_id, unique_key_id) rows; driver-app authCheck then fails search. Keep the newest, CI only.
@@ -457,7 +455,7 @@ jobs:
         run: |
           curl -sf -X POST "$CONTEXT_API/api/config-sync/import" \
                -H 'Content-Type: application/json' \
-               -d '{"from":"master","forceFetch":false}' | jq -e '.started == true'
+               -d '{"from":"master","forceFetch":true}' | jq -e '.started == true'
           for i in $(seq 1 80); do           # 80 x 15s = 20 min
             STATUS=$(curl -sf "$CONTEXT_API/api/config-sync/status")
             if [ "$(echo "$STATUS" | jq -r '.running')" = "false" ]; then
