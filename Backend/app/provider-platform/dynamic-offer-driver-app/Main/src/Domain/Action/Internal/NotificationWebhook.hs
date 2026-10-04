@@ -4,8 +4,6 @@ module Domain.Action.Internal.NotificationWebhook
   )
 where
 
-import qualified Control.Exception as E
-import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -13,7 +11,6 @@ import qualified Domain.Types.Person as DP
 import qualified Email.Flow as Email
 import Environment
 import EulerHS.Prelude hiding (id, map)
-import qualified IssueManagement.Utils.RemoteFile as RemoteFile
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
@@ -23,6 +20,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.CommunicationEngine.Webhook as Webhook
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified SharedLogic.EmailDelivery as EmailDelivery
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import qualified Storage.Queries.MerchantMessage as QMM
@@ -127,25 +125,17 @@ sendWhatsapp' contact req = do
   when (result._response.status /= "success") $ throwError (InvalidRequest "WhatsApp send failed")
 
 sendEmail' :: Webhook.Contact -> Webhook.EmailArgs -> Flow ()
-sendEmail' _ args = do
-  emailServiceConfig <- asks (.emailServiceConfig)
-  attachments <- traverse (fetchAttachment emailServiceConfig.maxAttachmentBytes) args.attachments
-  result <- liftIO $
-    E.try @E.SomeException $ case attachments of
-      [] -> Email.sendPlainEmail emailServiceConfig args.from [args.to] args.subject args.body args.bodyFormat
-      _ -> Email.sendEmailWithAttachments emailServiceConfig args.from [args.to] args.subject args.body args.bodyFormat attachments
-  case result of
-    Left err -> throwError (InternalError $ "Email send failed: " <> show err)
-    Right () -> pure ()
-
-fetchAttachment :: Int -> Webhook.EmailAttachment -> Flow Email.EmailAttachment
-fetchAttachment maxBytes att = do
-  mbFetched <- liftIO $ E.try @E.SomeException $ RemoteFile.fetchRemoteFile att.url maxBytes
-  rf <- case mbFetched of
-    Right (Just x) -> pure x
-    Right Nothing -> throwError (InvalidRequest $ "Attachment exceeds " <> T.pack (show maxBytes) <> " bytes: " <> att.url)
-    Left err -> throwError (InvalidRequest $ "Attachment fetch failed for " <> att.url <> ": " <> T.pack (show err))
-  let resolvedCT = case att.contentType of
-        Just ct -> ct
-        Nothing -> if T.null rf.contentType then "application/octet-stream" else rf.contentType
-  pure Email.EmailAttachment {content = rf.content, filename = att.filename, contentType = resolvedCT}
+sendEmail' _ args =
+  void $
+    EmailDelivery.sendEmail
+      EmailDelivery.EmailRequest
+        { from = args.from,
+          to = [args.to],
+          subject = args.subject,
+          body = args.body,
+          bodyFormat = args.bodyFormat,
+          attachments = toAttachmentRef <$> args.attachments,
+          options = Email.noEmailSendOptions
+        }
+  where
+    toAttachmentRef att = EmailDelivery.EmailAttachmentRef {url = att.url, filename = att.filename, contentType = att.contentType}

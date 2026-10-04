@@ -22,6 +22,7 @@
 module IssueManagement.Utils.RemoteFile
   ( RemoteFile (..),
     fetchRemoteFile,
+    fetchRemoteFilePrefix,
   )
 where
 
@@ -100,6 +101,35 @@ fetchRemoteFile url maxBytes = liftIO $ do
   HC.withResponse req manager $ \resp -> do
     mbBody <- readAtMost (HC.responseBody resp) maxBytes
     pure $ (\body -> RemoteFile body (responseContentType resp)) <$> mbBody
+
+-- | GET only the first @prefixBytes@ bytes of the url (e.g. to sniff a file's type without downloading it).
+--
+-- Asks for a byte range, and stops reading at @prefixBytes@ even if the server ignores the range and sends the
+-- whole body. Same timeout, redirect and destination rules as 'fetchRemoteFile'; a non-2xx response throws.
+fetchRemoteFilePrefix :: MonadIO m => Text -> Int -> m BS.ByteString
+fetchRemoteFilePrefix url prefixBytes = liftIO $ do
+  parsed <- HC.parseUrlThrow (T.unpack url)
+  let req =
+        parsed
+          { HC.responseTimeout = HC.responseTimeoutMicro (fetchTimeoutSeconds * 1000000),
+            HC.redirectCount = 0,
+            HC.requestHeaders = ("Range", "bytes=0-" <> show (max 0 (prefixBytes - 1))) : HC.requestHeaders parsed
+          }
+  assertDestinationAllowed (HC.host req) (HC.port req)
+  manager <- getManager
+  HC.withResponse req manager $ \resp -> readPrefix (HC.responseBody resp) prefixBytes
+
+-- | Read up to @limit@ bytes of a streaming response body and abandon the rest.
+readPrefix :: HC.BodyReader -> Int -> IO BS.ByteString
+readPrefix bodyReader limit = go 0 []
+  where
+    go acc chunks
+      | acc >= limit = pure . BS.take limit . BS.concat $ reverse chunks
+      | otherwise = do
+        chunk <- HC.brRead bodyReader
+        if BS.null chunk
+          then pure . BS.concat $ reverse chunks
+          else go (acc + BS.length chunk) (chunk : chunks)
 
 -- | Read a streaming response body, giving up as soon as @limit@ is exceeded.
 readAtMost :: HC.BodyReader -> Int -> IO (Maybe BS.ByteString)

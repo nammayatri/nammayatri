@@ -1,5 +1,7 @@
 imports:
   TDSDistributionRecord: Domain.Types.TDSDistributionRecord
+  TDSDistributionBatch: Domain.Types.TDSDistributionBatch
+  Person: Domain.Types.Person
 
 TDSDistributionPdfFile:
   tableName: tds_distribution_pdf_file
@@ -7,21 +9,46 @@ TDSDistributionPdfFile:
   # dsl-config.dhall injects merchantId / merchantOperatingCityId / timestamps by default; omit them for this table.
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
 
+  types:
+    TDSFileValidationStatus:
+      enum: "PENDING, READY, SKIPPED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    TDSFileIssue:
+      enum: "INVALID_NAME, NOT_PDF, WRONG_QUARTER, WRONG_FY, TOO_LARGE, MISSING_UPLOAD, DUPLICATE_PAN, PAN_NOT_FOUND, AMBIGUOUS_PAN, ALREADY_SENT"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    TDSRecipientType:
+      enum: "DRIVER, FLEET_OWNER"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
   fields:
     id: Id TDSDistributionPdfFile
     tdsDistributionRecordId: Maybe (Id TDSDistributionRecord)
     s3FilePath: Text
+    # Original file name from the uploaded folder, e.g. ABCPG1234K_Q2_2026-27.pdf (the PAN is parsed from it)
     fileName: Text
+    # Set for files uploaded through the dashboard batch flow
+    batchId: Maybe (Id TDSDistributionBatch)
+    sizeBytes: Maybe Int
+    validationStatus: Maybe TDSFileValidationStatus
+    issue: Maybe TDSFileIssue
+    matchedPersonId: Maybe (Id Person)
+    recipientType: Maybe TDSRecipientType
     createdAt: UTCTime
     updatedAt: UTCTime
 
   constraints:
     id: PrimaryKey
     tdsDistributionRecordId: "!SecondaryKey"
+    batchId: "!SecondaryKey"
 
   sqlType:
     s3FilePath: character varying(512)
     fileName: character varying(512)
+    batchId: character varying(36)
+    validationStatus: character varying(30)
+    issue: character varying(30)
+    matchedPersonId: character varying(36)
+    recipientType: character varying(30)
 
   queries:
     findById:
@@ -31,6 +58,25 @@ TDSDistributionPdfFile:
     findAllByTdsDistributionRecordId:
       kvFunction: findAllWithKV
       where: tdsDistributionRecordId
+
+    findAllByBatchId:
+      kvFunction: findAllWithKV
+      where: batchId
+
+    updateValidationResult:
+      kvFunction: updateOneWithKV
+      params: [validationStatus, issue, matchedPersonId, recipientType, sizeBytes]
+      where: id
+
+    updateTdsDistributionRecordId:
+      kvFunction: updateOneWithKV
+      params: [tdsDistributionRecordId]
+      where: id
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSFileValidationStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSFileIssue>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSRecipientType>
 
   extraOperations:
     - EXTRA_QUERY_FILE

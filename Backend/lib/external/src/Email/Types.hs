@@ -19,6 +19,10 @@ module Email.Types
     EmailServiceConfig (..),
     EmailAttachment (..),
     EmailBodyFormat (..),
+    EmailProvider (..),
+    EmailSendOptions (..),
+    EmailSendResult (..),
+    noEmailSendOptions,
   )
 where
 
@@ -48,6 +52,28 @@ data EmailAttachment = EmailAttachment
 
 data EmailBodyFormat = Text | HtmlText
   deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema)
+
+data EmailProvider = SES | SENDGRID
+  deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
+
+-- | Delivery-tracking options for a send. On SES, 'configurationSet' routes the message's delivery and
+-- bounce events to that configuration set's event destinations, and 'tags' come back on every event.
+-- On SendGrid, 'tags' are sent as custom_args, which SendGrid echoes on its event webhook.
+data EmailSendOptions = EmailSendOptions
+  { configurationSet :: Maybe Text,
+    tags :: [(Text, Text)]
+  }
+  deriving (Show, Eq)
+
+noEmailSendOptions :: EmailSendOptions
+noEmailSendOptions = EmailSendOptions {configurationSet = Nothing, tags = []}
+
+-- | The provider that accepted the message and the id it gave it (SES MessageId / SendGrid X-Message-Id).
+data EmailSendResult = EmailSendResult
+  { provider :: EmailProvider,
+    messageId :: Maybe Text
+  }
+  deriving (Show, Eq)
 
 data EmailOTPConfig = EmailOTPConfig
   { fromEmail :: Text,
