@@ -30,12 +30,18 @@ data AddOnConfig = AddOnConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data AddOnData = AddOnData {configId :: Kernel.Types.Id.Id Domain.Types.AddOnConfig.AddOnConfig, selectedQuantity :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+data AddOnData = AddOnData
+  { configId :: Kernel.Types.Id.Id Domain.Types.AddOnConfig.AddOnConfig,
+    maxQuantity :: Kernel.Prelude.Int,
+    pricePerQuantity :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    selectedQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data AddOnMetadata = AddOnMetadata {title :: Kernel.Prelude.Text, value :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data AddOnType = RIDER_INSURANCE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddOnType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AddOnType))
 
-$(mkHttpInstancesForEnum ''AddOnType)
+$(mkHttpInstancesForEnum (''AddOnType))

@@ -34,7 +34,6 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
@@ -233,7 +232,7 @@ validateRequest merchantId sReq isOndcScheduledRideSupportEnabled = do
       -- Synchronous NACK, before any fork. Resolved once here and handed to 'handler' (which runs after this, inside its own fork) so it doesn't re-query for the same rows.
       addOnData <-
         if isOndcScheduledRideSupportEnabled
-          then SAddOn.resolveAddOnData searchReq.merchantOperatingCityId (Just estimate.vehicleServiceTier) sReq.addOns
+          then SAddOn.resolveAddOnData searchReq.offeredAddOns sReq.addOns
           else pure []
       return (merchant, searchReq, [estimate] <> xs, addOnData)
 
@@ -264,20 +263,20 @@ validateQuoteSelect merchantId quoteId sReq = do
   searchReq <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
   unless (searchReq.transactionId == sReq.transactionId) $
     throwError $ InvalidRequest "select transaction_id does not match the search context this quote belongs to"
-  quote' <- applyNegotiatedFare searchReq.merchantOperatingCityId quoteId sReq
+  quote' <- applyNegotiatedFare searchReq quoteId sReq
   return (merchant, searchReq, quote')
 
 -- | Validates and persists whatever /select actually sent -- the negotiated fare tolerance check (if a bid was made) and the add-on selection (if one was made) -- in a single update to the Quote row, instead of two separate ones.
-applyNegotiatedFare :: Id DMOC.MerchantOperatingCity -> Id DQuote.Quote -> DSelectReq -> Flow DQuote.Quote
-applyNegotiatedFare merchantOpCityId quoteId sReq =
+applyNegotiatedFare :: DSR.SearchRequest -> Id DQuote.Quote -> DSelectReq -> Flow DQuote.Quote
+applyNegotiatedFare searchReq quoteId sReq =
   -- Concurrent /select calls on the same quote would race their reads/writes.
   -- This locks per quoteId and re-fetches the quote inside the lock.
   Redis.withLockRedisAndReturnValue (quoteNegotiationLockKey quoteId.getId) 60 $ do
     quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
-    addOnData <- computeAddOnData quote
+    addOnData <- computeAddOnData
     -- Priced once, here, and frozen into the quote's FareParameters: the catalogue is what's on offer, the fare parameters are what was charged.
-    addOnCharges <- SAddOn.addOnChargesTotal addOnData
-    let fareParams = quote.fareParams
+    let addOnCharges = SAddOn.addOnChargesTotal addOnData
+        fareParams = quote.fareParams
         -- estimatedFare carries whatever an earlier /select already applied, so strip both parts off to recover the fare originally quoted. Everything below is computed from that, which is what keeps repeated /selects from ratcheting the fare.
         originalFare = quote.estimatedFare - fromMaybe 0 fareParams.negotiatedFareDelta - fromMaybe 0 fareParams.addOnCharges
     negotiatedFareDelta <- computeNegotiatedFareDelta quote originalFare
@@ -314,9 +313,9 @@ applyNegotiatedFare merchantOpCityId quoteId sReq =
         -- Total delta from the original fare, not just this negotiation round's step.
         pure $ Just (negotiatedFare - originalFare)
 
-    computeAddOnData quote
+    computeAddOnData
       | Kernel.Prelude.null sReq.addOns = pure [] -- if same request will come which already processed then we should process the latest addOns information not the esisting one
-      | otherwise = SAddOn.resolveAddOnData merchantOpCityId (Just quote.vehicleServiceTier) sReq.addOns
+      | otherwise = SAddOn.resolveAddOnData searchReq.offeredAddOns sReq.addOns
 
 quoteNegotiationLockKey :: Text -> Text
 quoteNegotiationLockKey id = "Driver:Select:Negotiate:QuoteId-" <> id

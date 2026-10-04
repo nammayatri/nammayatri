@@ -219,5 +219,20 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN rider_name text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN offered_add_ons json ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN pickup_area text ;
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN drop_area text ;
