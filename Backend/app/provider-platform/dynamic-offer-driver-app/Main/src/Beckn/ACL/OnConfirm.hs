@@ -165,7 +165,7 @@ tfPayments res bppConfig = do
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
       -- Echo the resolved instrument; omitting it lets the far side default to Cash.
       mPaymentInstrument = show <$> res.booking.paymentInstrument
-  Just . L.singleton $ mkPayment (show res.booking.bapCity) (show bppConfig.collectedBy) NOT_PAID mPrice res.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Just . L.singleton $ mkPayment (show res.booking.bapCity) (Utils.resolvePaymentCollectedBy res.paymentMethodInfo bppConfig) NOT_PAID mPrice res.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res = do

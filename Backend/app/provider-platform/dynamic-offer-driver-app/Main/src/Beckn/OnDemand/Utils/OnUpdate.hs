@@ -292,18 +292,18 @@ mkRideCompletedQuote isValueAddNP ride fareParams = do
         _ -> True
 
 mkPaymentParams :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> DRB.Booking -> Spec.Payment
-mkPaymentParams _paymentMethodInfo _paymentUrl merchant bppConfig booking = do
+mkPaymentParams paymentMethodInfo _paymentUrl merchant bppConfig booking = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
       -- Echo the resolved instrument; omitting it lets the far side default to Cash.
       mPaymentInstrument = show <$> booking.paymentInstrument
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  mkPayment (show merchant.city) (Utils.resolvePaymentCollectedBy paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 mkPaymentParamsSoftUpdate :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Merchant -> DBC.BecknConfig -> HighPrecMoney -> Currency -> Spec.Payment
-mkPaymentParamsSoftUpdate _paymentMethodInfo _paymentUrl merchant bppConfig estimatedFare currency = do
+mkPaymentParamsSoftUpdate paymentMethodInfo _paymentUrl merchant bppConfig estimatedFare currency = do
   let mPrice = Just $ Common.mkPrice (Just currency) estimatedFare
   let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bppConfig.paymentParamsJson
-  mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
+  mkPayment (show merchant.city) (Utils.resolvePaymentCollectedBy paymentMethodInfo bppConfig) Enums.NOT_PAID mPrice Nothing mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing Nothing
 
 mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
 mkDistanceTagGroup ride = do

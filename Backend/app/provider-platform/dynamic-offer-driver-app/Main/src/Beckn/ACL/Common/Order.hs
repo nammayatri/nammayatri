@@ -368,7 +368,7 @@ tfCancelReqToOrder Common.DBookingCancelledReq {..} becknConfig = do
     let image = Nothing
     let arrivalTimeTagGroup = if isValueAddNP then Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime else Nothing
     Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing (Just $ show EventEnum.RIDE_CANCELLED) isValueAddNP riderPhone False 0
-  let payment = fmap (\bd -> L.singleton $ UtilsOU.mkPaymentParams Nothing Nothing bd.merchant becknConfig booking) bookingDetails
+  let payment = fmap (\bd -> L.singleton $ UtilsOU.mkPaymentParams bd.paymentMethodInfo Nothing bd.merchant becknConfig booking) bookingDetails
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,

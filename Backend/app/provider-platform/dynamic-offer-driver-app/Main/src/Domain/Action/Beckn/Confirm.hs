@@ -24,6 +24,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
@@ -113,6 +114,7 @@ data DConfirmResp = DConfirmResp
     quoteType :: ValidatedQuote,
     cancellationFee :: Maybe PriceAPIEntity,
     paymentId :: Maybe Text,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int
   }
@@ -272,6 +274,7 @@ handler merchant req validatedQuote = do
             case isAlreadyFav' of
               Just _ -> pure $ Just True
               Nothing -> pure $ Just False
+      merchantPaymentMethod <- maybe (return Nothing) QMPM.findById uBooking.paymentMethodId
       pure $
         DConfirmResp
           { booking = uBooking,
@@ -287,6 +290,7 @@ handler merchant req validatedQuote = do
             quoteType = validatedQuote,
             cancellationFee = Nothing,
             paymentId = req.paymentId,
+            paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod,
             isAlreadyFav = isFav,
             favCount = mDriverStats <&> (.favRiderCount)
           }

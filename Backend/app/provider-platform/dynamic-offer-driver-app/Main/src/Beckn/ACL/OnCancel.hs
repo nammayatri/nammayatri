@@ -37,6 +37,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnCancel as Reexport
 import qualified Domain.Types.OnCancel as OC
 import Domain.Types.Ride
@@ -52,7 +53,9 @@ import Kernel.Utils.Common hiding (mkPrice)
 import qualified Kernel.Utils.Common as Common (mkPrice)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
+import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -114,7 +117,8 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   -- Needed only by the ONDC override below; resolved here rather than threaded through
   -- buildOnCancelReq, which every other cancel path also calls.
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  onCancelReq <- buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating
+  mbPaymentMethodInfo <- fmap mkPaymentMethodInfo <$> maybe (pure Nothing) CQMPM.findById booking.paymentMethodId
+  onCancelReq <- buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo
   patchedMessage <- OSRCommon.applyOnCancelOrderOverridesIfEnabled isValueAddNP booking onCancelReq.onCancelReqMessage
   pure onCancelReq {Spec.onCancelReqMessage = patchedMessage}
 
@@ -142,8 +146,9 @@ buildOnCancelReq ::
   Maybe Text -> -- collection mode
   Maybe Text ->
   Maybe Text -> -- driverRating
+  Maybe DMPM.PaymentMethodInfo ->
   m Spec.OnCancelReq
-buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating = do
+buildOnCancelReq action domain messageId bppSubscriberId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) rideStatus becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo = do
   ttl <- becknConfig.onCancelTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   bapUri <- Kernel.Prelude.parseBaseUrl booking.bapUri
   context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId bapUri (Just bppSubscriberId) (Just bppUri) city country (Just ttl)
@@ -151,18 +156,18 @@ buildOnCancelReq action domain messageId bppSubscriberId bppUri city country can
     Spec.OnCancelReq
       { onCancelReqError = Nothing,
         onCancelReqContext = context,
-        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating
+        onCancelReqMessage = buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo
       }
 
-buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Spec.ConfirmReqMessage
-buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCollectionMode mbCustomerNotificationKey driverRating = do
+buildOnCancelMessageReqV2 :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DMPM.PaymentMethodInfo -> Maybe Spec.ConfirmReqMessage
+buildOnCancelMessageReqV2 booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo = do
   Just $
     Spec.ConfirmReqMessage
-      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCollectionMode mbCustomerNotificationKey driverRating
+      { confirmReqMessageOrder = tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo
       }
 
-tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Text -> Maybe Text -> Spec.Order
-tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCollectionMode mbCustomerNotificationKey driverRating = do
+tfOrder :: DRB.Booking -> Text -> SBCR.CancellationSource -> Maybe PriceAPIEntity -> Maybe Text -> DM.Merchant -> Maybe Text -> Maybe Text -> Text -> DBC.BecknConfig -> Maybe RideStatus -> Maybe DVeh.Vehicle -> Maybe FarePolicyD.FullFarePolicy -> Maybe Text -> Maybe DCDD.CancellationDuesDetails -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DMPM.PaymentMethodInfo -> Spec.Order
+tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReasonCode merchant driverName driverGender customerPhoneNo becknConfig rideStatus mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails' mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo = do
   Spec.Order
     { orderId = Just booking.id.getId,
       -- Cancellation-consequence handoff to the BAP: how the fee is collected
@@ -174,7 +179,7 @@ tfOrder booking cancelStatus cancellationSource cancellationFee cancellationReas
       orderBilling = Nothing,
       orderCancellationTerms = Just $ tfCancellationTerms cancellationFee,
       orderItems = tfItems booking merchant mbFarePolicy,
-      orderPayments = tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId (show <$> booking.paymentInstrument),
+      orderPayments = tfPayments (Common.mkPrice (Just booking.currency) booking.estimatedFare) merchant becknConfig booking.paymentId (show <$> booking.paymentInstrument) mbPaymentMethodInfo,
       orderProvider = BUtils.tfProvider becknConfig,
       orderQuote = tfQuotation booking mbCancellationDuesDetails',
       orderCreatedAt = Just booking.createdAt,
@@ -248,11 +253,11 @@ mkQuotationBreakup booking mbCancellationDuesDetails' =
           quotationBreakupInnerTitle = Just title
         }
 
-tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe Text -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments estimatedFare merchant bppConfig mbPaymentId mPaymentInstrument = do
+tfPayments :: Price -> DM.Merchant -> DBC.BecknConfig -> Maybe Text -> Maybe Text -> Maybe DMPM.PaymentMethodInfo -> Maybe [Spec.Payment]
+tfPayments estimatedFare merchant bppConfig mbPaymentId mPaymentInstrument mbPaymentMethodInfo = do
   let mPrice = Just estimatedFare
   let mkParams :: Maybe BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
-  Just . L.singleton $ mkPayment (show merchant.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Just . L.singleton $ mkPayment (show merchant.city) (BUtils.resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig) Enums.NOT_PAID mPrice mbPaymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 tfItems :: DRB.Booking -> DM.Merchant -> Maybe FarePolicyD.FullFarePolicy -> Maybe [Spec.Item]
 tfItems booking merchant mbFarePolicy =
