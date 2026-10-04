@@ -510,3 +510,107 @@ data GimsEmployeeLoginResp = GimsEmployeeLoginResp
     role :: Maybe GimsEmployeeRole
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+-- ─── transitV2 (GIMS /internal/fleet-operator/{gtfs_id}/v2) ────────────────
+-- Runs (duty groups) and their trips (duties). JSON is camelCase on the GIMS side, which the
+-- generic instances produce from these field names. Plan: scripts/plans/gims/transitV2.
+
+-- | Exactly one of the fields; `dutyGroupId` is for dashboard calls acting on a known run.
+data GimsV2Anchor = GimsV2Anchor
+  { vehicleNumber :: Maybe Text,
+    driverToken :: Maybe Text,
+    conductorToken :: Maybe Text,
+    dutyGroupId :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data GimsV2TripAction
+  = GimsV2Start
+  | GimsV2End
+  | GimsV2Rollback
+  | GimsV2Skip
+  | GimsV2Cancel
+  | GimsV2Uncancel
+  deriving (Generic, Show, Read, Eq, Ord)
+
+gimsV2TripActionText :: GimsV2TripAction -> Text
+gimsV2TripActionText = \case
+  GimsV2Start -> "start"
+  GimsV2End -> "end"
+  GimsV2Rollback -> "rollback"
+  GimsV2Skip -> "skip"
+  GimsV2Cancel -> "cancel"
+  GimsV2Uncancel -> "uncancel"
+
+instance ToJSON GimsV2TripAction where
+  toJSON = toJSON . gimsV2TripActionText
+
+instance FromJSON GimsV2TripAction where
+  parseJSON = withText "GimsV2TripAction" $ \case
+    "start" -> pure GimsV2Start
+    "end" -> pure GimsV2End
+    "rollback" -> pure GimsV2Rollback
+    "skip" -> pure GimsV2Skip
+    "cancel" -> pure GimsV2Cancel
+    "uncancel" -> pure GimsV2Uncancel
+    v -> fail $ "Unknown GimsV2TripAction: " <> T.unpack v
+
+data GimsV2TripActionReq = GimsV2TripActionReq
+  { vehicleNumber :: Maybe Text,
+    driverToken :: Maybe Text,
+    conductorToken :: Maybe Text,
+    dutyGroupId :: Maybe Text,
+    action :: GimsV2TripAction,
+    tripNumber :: Maybe Int,
+    -- | epoch millis
+    timestamp :: Maybe Int64,
+    -- | cancel / skip reason: OPERATOR | BREAKDOWN | ADMIN | DRIVER | OTHER
+    reason :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data GimsV2TripView = GimsV2TripView
+  { dutyId :: Text,
+    tripId :: Text,
+    tripNumber :: Int,
+    tripOrder :: Int,
+    routeId :: Text,
+    isBookable :: Bool,
+    scheduledStartAt :: UTCTime,
+    scheduledEndAt :: UTCTime,
+    recordedStartTime :: Maybe UTCTime,
+    recordedEndTime :: Maybe UTCTime,
+    driverTokenNumber :: Maybe Text,
+    driverName :: Maybe Text,
+    conductorTokenNumber :: Maybe Text,
+    conductorName :: Maybe Text,
+    -- | upcoming | active | completed | skipped | cancelled
+    status :: Text,
+    cancelReason :: Maybe Text,
+    skipReason :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data GimsV2CurrentOperationResp = GimsV2CurrentOperationResp
+  { waybillNo :: Text,
+    dutyGroupId :: Text,
+    tripGroupCode :: Text,
+    operationDate :: Text,
+    vehicleNumber :: Maybe Text,
+    serviceTypeId :: Maybe Text,
+    driverToken :: Maybe Text,
+    conductorToken :: Maybe Text,
+    active :: Maybe GimsV2TripView,
+    upcoming :: [GimsV2TripView],
+    history :: [GimsV2TripView]
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data GimsV2ActiveTripResp = GimsV2ActiveTripResp
+  { waybillNo :: Text,
+    dutyGroupId :: Text,
+    tripId :: Text,
+    tripNumber :: Int,
+    routeId :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
