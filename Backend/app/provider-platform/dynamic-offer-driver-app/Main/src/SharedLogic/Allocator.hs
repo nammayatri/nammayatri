@@ -41,6 +41,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.TDSDistributionBatch as DTDB
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.External.Maps (LatLong)
@@ -767,7 +768,10 @@ type instance JobContent 'TriggerSpecialZoneNotify = TriggerSpecialZoneNotifyJob
 data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    batchSize :: Maybe Int
+    batchSize :: Maybe Int,
+    -- | Set when started from the dashboard for one upload: send that batch's pending records, then stop.
+    -- Unset: the daily sweep of legacy (non-batch) records.
+    batchId :: Maybe (Id DTDB.TDSDistributionBatch)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

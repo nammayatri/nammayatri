@@ -19,6 +19,7 @@ module Email.Flow
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
     sendEmailWithAttachments,
+    sendEmailWithAttachmentsTracked,
     module Email.Types,
   )
 where
@@ -111,6 +112,27 @@ sendEmailWithAttachments serviceConfig from to subject bodyText bodyFormat attac
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email with attachments"
+
+-- | 'sendEmailWithAttachments' with delivery-tracking options; returns which provider accepted the message
+-- and its message id. Throws, like the other senders, when the provider rejects the request.
+sendEmailWithAttachmentsTracked ::
+  EmailServiceConfig ->
+  EmailSendOptions ->
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  EmailBodyFormat ->
+  [EmailAttachment] ->
+  IO EmailSendResult
+sendEmailWithAttachmentsTracked serviceConfig options from to subject bodyText bodyFormat attachments = do
+  cloudType <- if serviceConfig.isForcedAWS then pure AWS else lookupCloudType
+  case cloudType of
+    AWS -> EmailSendResult SES . Just <$> AWS.sendEmailWithAttachmentsTracked options from to subject bodyText bodyFormat attachments
+    GCP -> EmailSendResult SENDGRID <$> GCP.sendEmailWithAttachmentsTracked (getSendGridUrl serviceConfig) options from to subject bodyText bodyFormat attachments
+    UNAVAILABLE -> do
+      putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
+      error "CloudType UNAVAILABLE: Cannot route email with attachments"
 
 handleEmailRouting :: EmailServiceConfig -> Text -> (CloudType -> IO ()) -> IO ()
 handleEmailRouting config _ action = do

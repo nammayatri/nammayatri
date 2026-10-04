@@ -1,0 +1,92 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+# One row per email sent through SharedLogic.EmailDelivery with tracking: the row id goes on the message as the
+# "emailDeliveryId" tag, and provider events (SES via SNS, SendGrid event webhook) move its status forward.
+# ownerType + ownerId name the record the email belongs to (a tds_distribution_record, a communication_delivery).
+EmailDelivery:
+  tableName: email_delivery
+
+  types:
+    EmailDeliveryOwnerType:
+      enum: "TDS_RECORD, COMM_DELIVERY"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    EmailDeliveryProvider:
+      enum: "SES, SENDGRID"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    EmailDeliveryStatus:
+      enum: "SENDING, SENT, DELAYED, DELIVERED, BOUNCED, REJECTED, COMPLAINED, FAILED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id EmailDelivery
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    ownerType: EmailDeliveryOwnerType
+    ownerId: Text
+    toAddress: Text
+    provider: Maybe EmailDeliveryProvider
+    providerMessageId: Maybe Text
+    status: EmailDeliveryStatus
+    # Send error, or the provider's bounce / reject detail
+    failureReason: Maybe Text
+    bounceType: Maybe Text
+    bounceSubType: Maybe Text
+    # Dashboard person who triggered a manual resend
+    triggeredBy: Maybe Text
+    sentAt: Maybe UTCTime
+    deliveredAt: Maybe UTCTime
+    lastEventAt: Maybe UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    ownerId: SecondaryKey
+    providerMessageId: SecondaryKey
+
+  sqlType:
+    ownerType: character varying(30)
+    ownerId: character varying(36)
+    toAddress: character varying(255)
+    provider: character varying(20)
+    providerMessageId: character varying(255)
+    status: character varying(20)
+    failureReason: text
+    bounceType: character varying(50)
+    bounceSubType: character varying(50)
+    triggeredBy: character varying(36)
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByOwnerId:
+      kvFunction: findAllWithKV
+      where: ownerId
+
+    findByProviderMessageId:
+      kvFunction: findOneWithKV
+      where: providerMessageId
+
+    updateSent:
+      kvFunction: updateOneWithKV
+      params: [status, provider, providerMessageId, sentAt]
+      where: id
+
+    updateFailed:
+      kvFunction: updateOneWithKV
+      params: [status, failureReason]
+      where: id
+
+    updateProviderMessage:
+      kvFunction: updateOneWithKV
+      params: [provider, providerMessageId, sentAt]
+      where: id
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EmailDeliveryOwnerType>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EmailDeliveryProvider>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <EmailDeliveryStatus>

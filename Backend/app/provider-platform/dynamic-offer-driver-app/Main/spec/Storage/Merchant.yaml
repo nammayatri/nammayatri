@@ -1518,6 +1518,12 @@ TransporterConfig:
     driverLocationStalenessThresholdSeconds: Maybe Seconds
     driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
+    # SES configuration set for TDS certificate emails; its event destination publishes delivery events to emailEventSnsTopicArn
+    tdsEmailConfigurationSet: Maybe Text
+    # SNS topic whose email delivery events are accepted for this city (/internal/email/sesEvents)
+    emailEventSnsTopicArn: Maybe Text
+    # Token the SendGrid event webhook URL must carry for this city (/internal/email/sendgridEvents)
+    emailEventWebhookToken: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
     favouriteDriverDailyCoinRideThreshold: Int

@@ -68,6 +68,7 @@ library
       API.Internal.DriverReachedDestination
       API.Internal.DriverReferee
       API.Internal.DriverSourceDeparted
+      API.Internal.EmailEvents
       API.Internal.Estimate
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
@@ -272,6 +273,7 @@ library
       Domain.Action.Dashboard.Management.SosMedia
       Domain.Action.Dashboard.Management.SpecialZoneQueue
       Domain.Action.Dashboard.Management.System
+      Domain.Action.Dashboard.Management.TdsDistribution
       Domain.Action.Dashboard.Management.Vehicle
       Domain.Action.Dashboard.Management.VehicleDetails
       Domain.Action.Dashboard.Management.VehicleInfo
@@ -321,6 +323,7 @@ library
       Domain.Action.Internal.DriverReachedDestination
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.DriverSourceDeparted
+      Domain.Action.Internal.EmailEvents
       Domain.Action.Internal.Estimate
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
@@ -663,6 +666,8 @@ library
       SharedLogic.DriverSupplyMetrics
       SharedLogic.DummySignatureAuth
       SharedLogic.DynamicPricing
+      SharedLogic.EmailDelivery
+      SharedLogic.EmailDeliveryEvents
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill
       SharedLogic.External.LocationTrackingService.API.DriverLocation
@@ -756,6 +761,8 @@ library
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
+      SharedLogic.TdsDistribution
+      SharedLogic.TdsDistribution.Delivery
       SharedLogic.TollDashboard
       SharedLogic.TollUpsert
       SharedLogic.Type
@@ -1061,6 +1068,7 @@ library
       Storage.Queries.Status
       Storage.Queries.StclMembershipExtra
       Storage.Queries.SubscriptionPurchaseExtra
+      Storage.Queries.TDSDistributionBatchExtra
       Storage.Queries.TDSDistributionPdfFileExtra
       Storage.Queries.TDSDistributionRecordExtra
       Storage.Queries.Transformers.Booking
@@ -1215,6 +1223,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.SpecialZoneQueue
       API.Action.Dashboard.Management.System
+      API.Action.Dashboard.Management.TdsDistribution
       API.Action.Dashboard.Management.Vehicle
       API.Action.Dashboard.Management.VehicleDetails
       API.Action.Dashboard.Management.VehicleInfo
@@ -1288,6 +1297,7 @@ library
       API.Action.DashboardAuth.Management.SosMedia
       API.Action.DashboardAuth.Management.SpecialZoneQueue
       API.Action.DashboardAuth.Management.System
+      API.Action.DashboardAuth.Management.TdsDistribution
       API.Action.DashboardAuth.Management.Vehicle
       API.Action.DashboardAuth.Management.VehicleDetails
       API.Action.DashboardAuth.Management.VehicleInfo
@@ -1455,6 +1465,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
       API.Types.ProviderPlatform.Management.Endpoints.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.Endpoints.System
+      API.Types.ProviderPlatform.Management.Endpoints.TdsDistribution
       API.Types.ProviderPlatform.Management.Endpoints.Vehicle
       API.Types.ProviderPlatform.Management.Endpoints.VehicleDetails
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
@@ -1484,6 +1495,7 @@ library
       API.Types.ProviderPlatform.Management.SosMedia
       API.Types.ProviderPlatform.Management.SpecialZoneQueue
       API.Types.ProviderPlatform.Management.System
+      API.Types.ProviderPlatform.Management.TdsDistribution
       API.Types.ProviderPlatform.Management.Vehicle
       API.Types.ProviderPlatform.Management.VehicleDetails
       API.Types.ProviderPlatform.Management.VehicleInfo
@@ -1612,6 +1624,7 @@ library
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
       Domain.Types.DriverUdyam
+      Domain.Types.EmailDelivery
       Domain.Types.EntityInfo
       Domain.Types.Estimate
       Domain.Types.Exophone
@@ -1724,6 +1737,7 @@ library
       Domain.Types.SubscriptionPurchase
       Domain.Types.SurgeConfig
       Domain.Types.SurgePricing
+      Domain.Types.TDSDistributionBatch
       Domain.Types.TDSDistributionPdfFile
       Domain.Types.TDSDistributionRecord
       Domain.Types.Translations
@@ -1808,6 +1822,7 @@ library
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
       Storage.Beam.DriverUdyam
+      Storage.Beam.EmailDelivery
       Storage.Beam.EntityInfo
       Storage.Beam.Estimate
       Storage.Beam.Exophone
@@ -1920,6 +1935,7 @@ library
       Storage.Beam.SubscriptionPurchase
       Storage.Beam.SurgeConfig
       Storage.Beam.SurgePricing
+      Storage.Beam.TDSDistributionBatch
       Storage.Beam.TDSDistributionPdfFile
       Storage.Beam.TDSDistributionRecord
       Storage.Beam.Translations
@@ -2009,6 +2025,7 @@ library
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
       Storage.Queries.DriverUdyam
+      Storage.Queries.EmailDelivery
       Storage.Queries.EntityInfo
       Storage.Queries.Estimate
       Storage.Queries.Exophone
@@ -2168,6 +2185,7 @@ library
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StclMembership
       Storage.Queries.OrphanInstances.SubscriptionPurchase
+      Storage.Queries.OrphanInstances.TDSDistributionBatch
       Storage.Queries.OrphanInstances.TDSDistributionPdfFile
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
@@ -2224,6 +2242,7 @@ library
       Storage.Queries.SubscriptionPurchase
       Storage.Queries.SurgeConfig
       Storage.Queries.SurgePricing
+      Storage.Queries.TDSDistributionBatch
       Storage.Queries.TDSDistributionPdfFile
       Storage.Queries.TDSDistributionRecord
       Storage.Queries.Translations

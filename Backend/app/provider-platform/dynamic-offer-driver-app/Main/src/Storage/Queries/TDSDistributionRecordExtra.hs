@@ -1,6 +1,7 @@
 module Storage.Queries.TDSDistributionRecordExtra where
 
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.TDSDistributionBatch (TDSDistributionBatch)
 import Domain.Types.TDSDistributionRecord (TDSDistributionRecord, TDSDistributionStatus)
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -27,3 +28,21 @@ findAllByStatusWithLimit limit offset merchantOperatingCityId status =
     (Se.Asc Beam.createdAt)
     limit
     offset
+
+-- | A batch's records in the given statuses, oldest first.
+findAllByBatchIdAndStatusesWithLimit ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id TDSDistributionBatch ->
+  [TDSDistributionStatus] ->
+  Int ->
+  m [TDSDistributionRecord]
+findAllByBatchIdAndStatusesWithLimit batchId statuses limit =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.batchId $ Se.Eq (Just batchId.getId),
+          Se.Is Beam.status $ Se.In statuses
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    (Just limit)
+    Nothing
