@@ -415,14 +415,6 @@ jobs:
           rm -rf "$DST" && mkdir -p "$(dirname "$DST")" && cp -r "$SRC" "$DST"
           echo "files: $(find "$DST" -type f | wc -l)"
 
-      # TEMPORARY: driver issue_message.message is varchar(255) but master has messages up to 666 chars
-      # (rider side was widened by rider-app/1187). Add the driver widening in CI only. Remove once on main.
-      - name: Widen driver issue_message.message (temporary)
-        run: |
-          echo "ALTER TABLE atlas_driver_offer_bpp.issue_message ALTER COLUMN message TYPE character varying(1000);" \
-            > Backend/dev/ddl-migrations/dynamic-offer-driver-app/0900-widen-issue-message-message.sql
-          cat Backend/dev/ddl-migrations/dynamic-offer-driver-app/0900-widen-issue-message-message.sql
-
       # TEMPORARY: config-sync turns master's '' into NULL for nullable text columns; rider-app reads
       # merchant.kapture_disposition as non-null Text and crashes (CMRL row). Restore '' after import, CI only.
       - name: Restore empty merchant.kapture_disposition after sync (temporary)
