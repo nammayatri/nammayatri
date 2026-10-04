@@ -3100,6 +3100,23 @@ Nightly, encrypted with GPG AES-256, uploaded off the server with `rclone`.
 **1.8 MB** per backup out of a 183 MB database, which is the whole point of the
 next two sections.
 
+**What runs is `/root/backup.sh`, and since 2026-10-04 this file is it, byte
+for byte.** `movin-backup.service` executes the copy in `/root` (`ExecStart`,
+set by `install`). Until 2026-10-04 that copy — 488 lines, with the driver
+papers and the `movin` schema — existed only on the server; git held an older
+422-line version and `/opt/ny/local-stack/backup.sh` a third, 407 lines, that
+nothing runs. Git now carries the running one unchanged. A change here is not
+live until it is copied to `/root/backup.sh`; check with
+`sha256sum /root/backup.sh` against git.
+
+**The off-site copy has an expiry date.** On 2026-10-04 rclone warned:
+*« This remote uses rclone's shared Google Drive client_id, which is being
+retired and will stop working during 2026. »* When it stops, every backup stays
+on the VPS — the script says `upload failed` in the journal, which nobody
+reads. The fix is a Google Cloud client id of the company's own, set once in
+`rclone config` (https://rclone.org/drive/#making-your-own-client-id); it needs
+the Google account that owns the Drive.
+
 ### It is not `pg_dump atlas_dev`, for two reasons
 
 **The encryption keys are in a different container.** `atlas_app` stores rider

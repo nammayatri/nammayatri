@@ -48,6 +48,12 @@ PASSETTO_DB="${PASSETTO_DB:-passetto}"
 PASSETTO_USER="${PASSETTO_USER:-passetto}"
 
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/movin}"
+
+# The volume admin-api writes driver papers to. Set DOCS_VOLUME="" to skip it
+# deliberately; leaving it unset and absent is a stop, not a skip, because a
+# backup that quietly holds half the picture is the failure this file exists
+# against.
+DOCS_VOLUME="${DOCS_VOLUME-local-stack_movin-driver-docs}"
 PASS_FILE="${PASS_FILE:-/root/.movin-backup-pass}"
 
 # Enough to go back a month, which is the point: a problem noticed on Friday may
@@ -177,6 +183,30 @@ take() {
     info "no driver-codes.json to include"
   fi
 
+  # Driver papers: identity documents, the only user-created files on this box
+  # outside a database, and the evidence for why a driver was approved. The
+  # rows in movin.driver_document come with the `movin` schema; without this
+  # they would restore as rows pointing at files that no longer exist.
+  #
+  # Read through a container and never from /var/lib/docker/volumes/… on the
+  # host: that path is docker's own business, it has changed across versions,
+  # and reaching into it behind docker's back is how a backup breaks on an
+  # upgrade morning.
+  local docs_note="not included"
+  if [ -n "$DOCS_VOLUME" ]; then
+    docker volume inspect "$DOCS_VOLUME" >/dev/null 2>&1 \
+      || die "volume $DOCS_VOLUME is missing — driver documents would be left out. Set DOCS_VOLUME='' to skip on purpose."
+    docker run --rm -v "$DOCS_VOLUME":/v:ro -v "$work":/out alpine \
+        tar -czf /out/documents.tar.gz -C /v . \
+      || die "could not read $DOCS_VOLUME"
+    local nfiles
+    nfiles=$(docker run --rm -v "$DOCS_VOLUME":/v:ro alpine sh -c 'find /v -type f | wc -l' | tr -d '[:space:]')
+    docs_note="$nfiles file(s), $(du -h "$work/documents.tar.gz" | cut -f1) compressed"
+    ok "documents: $docs_note"
+  else
+    info "DOCS_VOLUME is empty — driver documents deliberately excluded"
+  fi
+
   # A restore months from now is done by someone who was not here today.
   cat > "$work/MANIFEST.txt" <<EOF
 Movin DZ backup
@@ -185,6 +215,10 @@ host             $(hostname)
 atlas database   $DB_NAME, schemas: $DATA_SCHEMAS
 passetto         $PASSETTO_DB
 driver codes     $codes_note
+documents        $docs_note
+                 driver papers from the $DOCS_VOLUME volume; restore with
+                 docker run --rm -v $DOCS_VOLUME:/v -v \$PWD:/in alpine \\
+                   tar -xzf /in/documents.tar.gz -C /v
                  restore by hand to local-stack/auth-guard/driver-codes.json;
                  without it no driver can sign in, whatever the database says
 postgres         $(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -At -c 'SHOW server_version;' 2>/dev/null)
@@ -210,6 +244,7 @@ EOF
   # list, so its failure is the line's exit status.
   local members=(atlas.sql passetto.sql MANIFEST.txt)
   if [ -f "$work/driver-codes.json" ]; then members+=(driver-codes.json); fi
+  if [ -f "$work/documents.tar.gz" ]; then members+=(documents.tar.gz); fi
   tar -czf "$work/bundle.tar.gz" -C "$work" "${members[@]}" \
     || die "tar failed"
   gpg --batch --yes --symmetric --cipher-algo AES256 \
@@ -319,6 +354,37 @@ restore() {
       bad "$label: manifest says $want, restored $got"; fail=1
     fi
   done
+
+  # The documents, unpacked into scratch and actually opened. A tar that lists
+  # cleanly can still hold truncated files, and "the archive exists" is not the
+  # claim anybody needs.
+  if [ -f "$work/documents.tar.gz" ]; then
+    say "checking the driver documents"
+    mkdir -p "$work/documents"
+    tar -xzf "$work/documents.tar.gz" -C "$work/documents" \
+      || die "documents archive is corrupt"
+    local dgot dwant dfirst dmagic
+    dgot=$(find "$work/documents" -type f | wc -l | tr -d '[:space:]')
+    dwant=$(grep -E '^documents ' "$work/MANIFEST.txt" | awk '{print $2}')
+    if [ "$dgot" = "$dwant" ]; then
+      ok "documents $dgot"
+    else
+      bad "documents: manifest says $dwant, restored $dgot"; fail=1
+    fi
+    dfirst=$(find "$work/documents" -type f | head -1)
+    if [ -n "$dfirst" ]; then
+      dmagic=$(head -c 4 "$dfirst" | od -An -tx1 | tr -d ' \n')
+      case "$dmagic" in
+        ffd8ff*)   ok "first file opens: JPEG" ;;
+        89504e47)  ok "first file opens: PNG" ;;
+        25504446)  ok "first file opens: PDF" ;;
+        52494646)  ok "first file opens: WEBP" ;;
+        *)         bad "first file is not an image or a PDF (magic $dmagic)"; fail=1 ;;
+      esac
+    else
+      info "no document files in this backup yet"
+    fi
+  fi
 
   docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d postgres -c \
     "DROP DATABASE IF EXISTS $scratch;" >/dev/null
