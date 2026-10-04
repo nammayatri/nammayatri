@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Step 8 of the two-country plan: a whole ride in each country, and its charge.
 
-    python3 probe-two-country-rides.py mr     # Mauritania only
-    python3 probe-two-country-rides.py dz     # Algeria only (needs the +213 build)
-    python3 probe-two-country-rides.py both
+    python3 probe-two-country-rides.py mr          # Mauritania, SEDAN
+    python3 probe-two-country-rides.py dz          # Algeria, SEDAN
+    python3 probe-two-country-rides.py both all    # both, every row the app sells
 
 Runs ON the VPS: rider API on loopback 8013, driver API on loopback 8017, so the
 auth guard is not in the way and the backend's fixed code (7891) applies.
@@ -16,9 +16,15 @@ in as 22100009 would sign the developer's phone out. So the probe is the
 PASSENGER only, and the simulator is the driver -- which is also the more honest
 test, since it is the path a real passenger takes.
 
-ALGERIA: the simulator does not know the Algerian merchant. The probe signs in
-as one of the pilot's parked +213 drivers (no daemon holds them) and plays that
-side itself: offer, arrive, start with the passenger's code, end.
+ALGERIA, since 2026-10-03: the same. The simulator drives its own Algiers fleet
+(0555100001-06), so the probe is the passenger there too. The parked +213
+drivers it used to sign in as were erased on 2026-10-01; `drive_self` is kept
+for a stack with drivers and no simulator.
+
+── The passengers are test accounts ───────────────────────────────────────────
+22778899 and 0555000199. Since 2026-10-01 the live server has no test accounts
+(owner's decision); these exist while the launch is delayed, with the simulated
+fleet, and are erased with it before the first real passenger.
 
 ── What counts as proof ───────────────────────────────────────────────────────
   * the ride ends COMPLETED, with a price in the country's own scale
@@ -49,9 +55,10 @@ COUNTRIES = {
     "dz": dict(name="Algeria", rider=("+213", "0555000199"),
                merchant="algeria0-0000-0000-0000-00000algeria",
                pickup=(36.7538, 3.0588), drop=(36.7050, 3.1750),
-               currency="DZD", day=100, drive_self=True),
+               currency="DZD", day=100, drive_self=False),
 }
-VARIANT = "SEDAN"
+# The three rows the app sells, two simulated cars per row in each country.
+VARIANTS = ["SEDAN", "HATCHBACK", "SUV"]
 
 
 def say(msg):
@@ -102,9 +109,9 @@ def sign_in(base, path, cc, number, merchant):
     return tok
 
 
-def run(key):
+def run(key, VARIANT):
     c = COUNTRIES[key]
-    say(f"===== {c['name']} =====")
+    say(f"===== {c['name']} · {VARIANT} =====")
     ok = True
 
     # ── the driver side, when the probe plays it ──────────────────────────
@@ -224,7 +231,9 @@ def run(key):
         say(f"  end -> {code}")
 
     final = {}
-    for _ in range(150):      # the simulator drives at 8x; allow 5 minutes
+    # The simulator drives at 3x: a 14 km Algiers trip is ~9 minutes, which the
+    # old 5-minute wait reported as a failure while the ride was still going.
+    for _ in range(450):      # allow 15 minutes
         b, _, _ = call("POST", f"{R}/v2/rideBooking/{booking}", None, token=rtok)
         final = (b.get("rideList") or [{}])[0] if isinstance(b, dict) else {}
         if final.get("status") in ("COMPLETED", "CANCELLED"):
@@ -256,7 +265,10 @@ def run(key):
 
 
 which = (sys.argv[1] if len(sys.argv) > 1 else "both").lower()
+rows = (sys.argv[2] if len(sys.argv) > 2 else "SEDAN").upper()
 keys = ["mr", "dz"] if which == "both" else [which]
-results = {k: run(k) for k in keys}
-say("RESULT  " + "  ".join(f"{COUNTRIES[k]['name']}={'PASS' if v else 'FAIL'}" for k, v in results.items()))
+variants = VARIANTS if rows == "ALL" else [rows]
+results = {(k, v): run(k, v) for k in keys for v in variants}
+say("RESULT  " + "  ".join(f"{COUNTRIES[k]['name']}/{v}={'PASS' if ok else 'FAIL'}"
+                           for (k, v), ok in results.items()))
 sys.exit(0 if all(results.values()) else 1)

@@ -54,6 +54,7 @@ import re
 import signal
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -527,7 +528,7 @@ def accept(token, req):
     # is lost, offering again is what produces FOUND_ACTIVE_QUOTES.
     _offered.add((token, sid))
     say(f"offering on {sid[:8]} -- {req.get('distance', 0)/1000:.1f} km, "
-        f"base {req.get('baseFare')} DZD", 1)
+        f"base {req.get('baseFare')}", 1)
     # Omitting offeredFare accepts at base fare. It is the EXTRA on top, capped
     # at driverMaxExtraFee -- sending the total gives EXTRA_FEE_NOT_ALLOWED.
     _, code, raw = call("POST", f"{DRIVER_API}/ui/driver/searchRequest/quote/respond",
@@ -580,7 +581,7 @@ def run_ride(number, token, ride, speed):
         say(f"could not end: {raw[:160]}", 2)
         return False
     fare = pg(f"SELECT fare FROM atlas_driver_offer_bpp.ride WHERE id='{rid}';")
-    say(f"finished -- {fare or '?'} DZD", 2)
+    say(f"finished -- {fare or '?'} {'DZD' if country_of(number) == 'DZ' else 'MRU'}", 2)
     return True
 
 
@@ -744,10 +745,38 @@ def cmd_daemon(args):
     say(f"{len(toks)} drivers online, one per row the app sells. Ctrl-C to stop.")
 
     last_beat = time.time()
-    rides = 0
+    rides = [0]
+    # ── One car on a ride must not freeze the other eleven (2026-10-04) ────
+    # The ride used to be driven inline, in this loop. A 14 km Algiers trip at
+    # 3x is nine minutes, and for those nine minutes no other car polled for a
+    # request or sent a heartbeat -- in either country. The ride test found it:
+    # an Algerian hatchback request got no offer at all, and every idle car's
+    # position was six minutes old, past the pool's cut-off. Each ride now
+    # drives on its own thread; the loop goes on serving everyone else.
+    busy = {}
+    lock = threading.Lock()
+
+    def drive_it(num, variant, token, ride):
+        try:
+            if run_ride(num, token, ride, args.speed):
+                with lock:
+                    rides[0] += 1
+                    say(f"{rides[0]} ride(s) completed")
+            # He may have been left mid-state; put him back on duty.
+            call("POST", f"{DRIVER_API}/ui/driver/setActivity?active=true", None, token)
+            post_position(token, base_for(num))
+        except Exception as e:
+            say(f"{variant} {num}: ride thread failed: {e}")
+        finally:
+            with lock:
+                busy.pop(num, None)
+
     try:
         while True:
             for num, variant, *_ in FLEET:
+                with lock:
+                    if num in busy:
+                        continue
                 # Ride first, request second. Offering on a request does not
                 # create a ride: the RIDER creates it by tapping that offer,
                 # which takes as long as a person takes. Anything that assumed
@@ -764,14 +793,12 @@ def cmd_daemon(args):
                     continue
 
                 if ride:
-                    say(f"{variant} driver has a ride")
-                    if run_ride(num, toks[num], ride, args.speed):
-                        rides += 1
-                        say(f"{rides} ride(s) completed")
-                    # He may have been left mid-state; put him back on duty.
-                    call("POST", f"{DRIVER_API}/ui/driver/setActivity?active=true",
-                         None, toks[num])
-                    post_position(toks[num], base_for(num))
+                    say(f"{variant} driver {num} has a ride")
+                    t = threading.Thread(target=drive_it, args=(num, variant, toks[num], ride),
+                                         daemon=True, name=f"ride-{num}")
+                    with lock:
+                        busy[num] = t
+                    t.start()
                     continue
 
                 req = poll(toks[num])
@@ -785,7 +812,10 @@ def cmd_daemon(args):
             # silently -- searches then return zero estimates with no error.
             if time.time() - last_beat > 30:
                 for num, *_ in FLEET:
-                    post_position(toks[num], base_for(num))
+                    with lock:
+                        driving = num in busy
+                    if not driving:          # a driving car posts its own route
+                        post_position(toks[num], base_for(num))
                 last_beat = time.time()
             time.sleep(2)
     except KeyboardInterrupt:

@@ -3290,9 +3290,28 @@ heartbeats its own cars, and that timer re-stamped real drivers too.
     Algeria     0555100001..06 Karim, Bilal (SEDAN) · Yacine, Mehdi (HATCHBACK) · Sofiane, Amine (SUV)
 
 **They answer real ride requests.** Before the first real passenger:
-`./fleet-service.sh uninstall`, and erase the twelve accounts the same way as
-on 2026-10-01 (the console's `anonymise.sql`). Never sign in as one: it
-revokes the daemon's session.
+`./fleet-service.sh uninstall`, and erase the twelve accounts **and the two test
+passengers below** the same way as on 2026-10-01 (the console's
+`anonymise.sql`). Never sign in as one of the cars: it revokes the daemon's
+session.
+
+**Each car drives its own ride, in parallel (2026-10-04).** The daemon used to
+drive a ride inline, and for the whole trip no other car polled for requests
+or sent a heartbeat — in either country. Found by the first full ride test: a
+14 km Algiers ride at 3× is nine minutes, an Algerian hatchback request during
+it got no offer at all, and every idle car's position was six minutes old. Now
+a ride runs on a thread of its own and the loop keeps serving the rest.
+Restarting `movin-fleet` mid-ride is safe: the new daemon resumes an
+`INPROGRESS` ride towards its destination.
+
+**The ride test** — `probe-two-country-rides.py both all` (on the server, from
+`/tmp`): one passenger per country books every row the app sells
+(SEDAN, HATCHBACK, SUV), the simulated fleet drives it, and the ride must end
+COMPLETED at a price in the country's currency with the driver's wallet
+respected. Its passengers are **test accounts**: `+222 22778899` and
+`+213 0555000199`, created by signing in directly on the rider API (the fixed
+code 7891 behind the guard). First full run 2026-10-04: all three Mauritanian
+rows passed (102 / 70 / 140 MRU over 2.5 km); see the Algerian result below.
 
 `./seed-mauritanian-fleet.sh` — two drivers per sellable variant in Nouakchott,
 Mauritanian names and plates, all enrolled in the guard. Two per type because

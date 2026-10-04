@@ -272,8 +272,9 @@ the registry or the map.
   dev stacks only. local-stack README → *The test fleet*. **Exception since
   2026-10-03, while the launch is delayed:** a simulated fleet is back —
   twelve cars, six in Nouakchott and six in Algiers (`simulate-driver.py`,
-  service `movin-fleet`). They answer real requests: uninstall and erase them
-  before the first real passenger.
+  service `movin-fleet`), plus the ride test's two passengers (`+222 22778899`,
+  `+213 0555000199`, `probe-two-country-rides.py`). They answer real
+  requests: uninstall and erase all fourteen before the first real passenger.
 - **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
   only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
   rides. Without credit for a day and no day paid for, he may not work, and
