@@ -102,7 +102,8 @@ sendIssue (personId, merchantId) request = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
+  -- kaptureDisposition is nullable now; an empty value goes to Kapture as "" (same as before)
+  ticketRequest <- mkTicket newIssue person phoneNumber (fromMaybe "" merchant.kaptureDisposition) riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
   ticketResponse <- withTryCatch "createTicket:sendIssue" (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
     Right (primaryResp, _) -> do

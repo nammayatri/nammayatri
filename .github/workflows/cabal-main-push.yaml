@@ -415,14 +415,6 @@ jobs:
           rm -rf "$DST" && mkdir -p "$(dirname "$DST")" && cp -r "$SRC" "$DST"
           echo "files: $(find "$DST" -type f | wc -l)"
 
-      # TEMPORARY: config-sync turns master's '' into NULL for nullable text columns; rider-app reads
-      # merchant.kapture_disposition as non-null Text and crashes (CMRL row). Restore '' after import, CI only.
-      - name: Restore empty merchant.kapture_disposition after sync (temporary)
-        run: |
-          echo "UPDATE atlas_app.merchant SET kapture_disposition = '' WHERE kapture_disposition IS NULL;" \
-            > Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
-          cat Backend/dev/feature-migrations/9999-ci-merchant-kapture-disposition-not-null.sql
-
       # TEMPORARY: patches.json's BG rule renames every master BG row to JUSPAY.BG.1 (same for some BAPs), leaving
       # duplicate (subscriber_id, unique_key_id) rows; driver-app authCheck then fails search. Keep the newest, CI only.
       - name: Dedupe registry subscribers after sync (temporary)
