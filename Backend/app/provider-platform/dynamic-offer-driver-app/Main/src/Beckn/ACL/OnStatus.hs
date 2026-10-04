@@ -254,7 +254,7 @@ tfOrder (DStatus.BookingReallocationBuildReq DBookingReallocationBuildReq {booki
         orderBilling = Nothing,
         orderCancellationTerms = Just $ Utils.tfCancellationTerms Nothing Nothing,
         orderItems = Nothing,
-        orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig,
+        orderPayments = Utils.tfPayments booking bookingDetails.merchant becknConfig bookingDetails.paymentMethodInfo,
         orderProvider = Utils.tfProvider becknConfig,
         orderQuote = Nothing,
         orderCreatedAt = Just booking.createdAt,
