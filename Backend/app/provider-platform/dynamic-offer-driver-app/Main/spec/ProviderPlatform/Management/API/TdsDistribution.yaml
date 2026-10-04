@@ -1,0 +1,357 @@
+# TDS certificate (Form 16A) disbursement: an admin uploads a quarter's certificate folder for one city.
+#   POST /batch                     : create the batch from the folder's file list; returns a presigned S3 PUT per accepted file
+#   POST /batch/{batchId}/validate  : after the browser uploads, check each object in S3 and match its PAN to a driver / fleet owner
+#   GET  /batch/{batchId}           : batch header and counts (review screen)
+#   GET  /batch/{batchId}/files     : files with their match / issue (review screen table)
+#   POST /batch/{batchId}/cancel    : discard a batch that has not been sent (also used for "Replace folder")
+#   POST /batch/{batchId}/confirm   : create one record per ready file and start emailing them
+#   GET  /batch/{batchId}/records   : recipients of a sent batch with their delivery status (report screen)
+#   POST /batch/{batchId}/retryFailed : re-queue every failed recipient of the batch
+#   GET  /batches, GET /summary     : recent uploads and the four quarter cards of a financial year
+#   GET  /person/{personId}/certificates, GET /record/{recordId}/downloadUrl, POST /record/{recordId}/retry : profile tab
+
+imports:
+  Day: Data.Time
+
+module: TdsDistribution
+
+apis:
+  - POST: # CreateTdsBatchAPI
+      endpoint: /batch
+      auth: ApiAuthV2
+      request:
+        type: CreateTdsBatchReq
+      response:
+        type: CreateTdsBatchResp
+      migrate:
+        capability: finance.tds_distribution.write
+      helperApi:
+        - POST:
+            endpoint: /batch
+            auth: ApiAuthV2
+            request:
+              type: CreateTdsBatchReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: CreateTdsBatchResp
+
+  - POST: # ValidateTdsBatchAPI
+      endpoint: /batch/{batchId}/validate
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      response:
+        type: TdsBatchResp
+      migrate:
+        capability: finance.tds_distribution.write
+
+  - GET: # GetTdsBatchAPI
+      endpoint: /batch/{batchId}
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      response:
+        type: TdsBatchResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - GET: # GetTdsBatchFilesAPI
+      endpoint: /batch/{batchId}/files
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      query:
+        - fileFilter: TdsFileFilter
+        - search: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: TdsFileListResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - POST: # CancelTdsBatchAPI
+      endpoint: /batch/{batchId}/cancel
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.tds_distribution.write
+
+  - POST: # ConfirmTdsBatchAPI
+      endpoint: /batch/{batchId}/confirm
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      request:
+        type: TdsConfirmReq
+      response:
+        type: TdsBatchResp
+      migrate:
+        capability: finance.tds_distribution.write
+      helperApi:
+        - POST:
+            endpoint: /batch/{batchId}/confirm
+            auth: ApiAuthV2
+            params:
+              batchId: Text
+            request:
+              type: TdsConfirmReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: TdsBatchResp
+
+  - GET: # GetTdsBatchRecordsAPI
+      endpoint: /batch/{batchId}/records
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      query:
+        - recordFilter: TdsRecordFilter
+        - search: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: TdsRecordListResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - POST: # RetryFailedTdsBatchAPI
+      endpoint: /batch/{batchId}/retryFailed
+      auth: ApiAuthV2
+      params:
+        batchId: Text
+      response:
+        type: APISuccess
+      migrate:
+        capability: finance.tds_distribution.write
+      helperApi:
+        - POST:
+            endpoint: /batch/{batchId}/retryFailed
+            auth: ApiAuthV2
+            params:
+              batchId: Text
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+
+  - GET: # ListTdsBatchesAPI
+      endpoint: /batches
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: TdsBatchListResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - GET: # GetTdsSummaryAPI
+      endpoint: /summary
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - financialYear: Text
+      response:
+        type: TdsSummaryResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - GET: # GetTdsPersonCertificatesAPI
+      endpoint: /person/{personId}/certificates
+      auth: ApiAuthV2
+      params:
+        personId: Text
+      mandatoryQuery:
+        - financialYear: Text
+      response:
+        type: TdsPersonCertificatesResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - GET: # GetTdsRecordDownloadUrlAPI
+      endpoint: /record/{recordId}/downloadUrl
+      auth: ApiAuthV2
+      params:
+        recordId: Text
+      response:
+        type: TdsDownloadUrlResp
+      migrate:
+        capability: finance.tds_distribution.read
+
+  - POST: # RetryTdsRecordAPI
+      endpoint: /record/{recordId}/retry
+      auth: ApiAuthV2
+      params:
+        recordId: Text
+      request:
+        type: TdsRetryReq
+      response:
+        type: TdsRecordItem
+      migrate:
+        capability: finance.tds_distribution.write
+      helperApi:
+        - POST:
+            endpoint: /record/{recordId}/retry
+            auth: ApiAuthV2
+            params:
+              recordId: Text
+            request:
+              type: TdsRetryReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: TdsRecordItem
+
+types:
+  TdsQuarter:
+    - enum: "Q1, Q2, Q3, Q4"
+    - derive: "HttpInstance"
+  TdsBatchStatus:
+    - enum: "DRAFT, VALIDATED, SENDING, COMPLETED, CANCELLED"
+  TdsFileStatus:
+    - enum: "PENDING, READY, SKIPPED"
+  TdsFileIssue:
+    - enum: "INVALID_NAME, NOT_PDF, WRONG_QUARTER, WRONG_FY, TOO_LARGE, MISSING_UPLOAD, DUPLICATE_PAN, PAN_NOT_FOUND, AMBIGUOUS_PAN, ALREADY_SENT"
+  TdsRecipientType:
+    - enum: "DRIVER, FLEET_OWNER"
+  TdsFileFilter:
+    - enum: "FILTER_ALL, FILTER_READY, FILTER_ISSUES"
+    - derive: "HttpInstance"
+  TdsFileInput:
+    - fileName: Text
+    - sizeBytes: Int
+    - mimeType: Text
+  CreateTdsBatchReq:
+    # Financial year, e.g. "2026-27"
+    - financialYear: Text
+    - quarter: TdsQuarter
+    - folderName: Maybe Text
+    # Filled by provider-dashboard from the logged-in admin; ignored if sent by the client
+    - uploadedByName: Maybe Text
+    - files: "[TdsFileInput]"
+    - derive: "'HideSecrets"
+  TdsFileUpload:
+    - fileId: Text
+    - fileName: Text
+    - uploadUrl: Text
+  TdsRejectedFile:
+    - fileId: Text
+    - fileName: Text
+    - issue: TdsFileIssue
+  CreateTdsBatchResp:
+    - batchId: Text
+    - uploads: "[TdsFileUpload]"
+    - rejected: "[TdsRejectedFile]"
+  TdsBatchResp:
+    - batchId: Text
+    - financialYear: Text
+    - quarter: TdsQuarter
+    - folderName: Maybe Text
+    - status: TdsBatchStatus
+    - totalFiles: Int
+    - parsedFiles: Int
+    - readyCount: Int
+    - driverCount: Int
+    - fleetOwnerCount: Int
+    - panNotFoundCount: Int
+    - invalidCount: Int
+    - uploadedByName: Maybe Text
+    - createdAt: UTCTime
+    - validatedAt: Maybe UTCTime
+    - confirmedAt: Maybe UTCTime
+    - confirmedByName: Maybe Text
+    - completedAt: Maybe UTCTime
+    # Recipient counts once the batch is confirmed
+    - pendingCount: Int
+    - sentCount: Int
+    - deliveredCount: Int
+    - failedCount: Int
+  TdsFileItem:
+    - fileId: Text
+    - fileName: Text
+    - pan: Maybe Text
+    - matchedName: Maybe Text
+    - recipientType: Maybe TdsRecipientType
+    - status: TdsFileStatus
+    - issue: Maybe TdsFileIssue
+  TdsFileListResp:
+    - files: "[TdsFileItem]"
+    - totalCount: Int
+  TdsRecordStatus:
+    - enum: "REC_PENDING, REC_SENDING, REC_SENT, REC_DELIVERED, REC_FAILED"
+  TdsFailureReason:
+    - enum: "MISSING_EMAIL, ADDRESS_NOT_FOUND, MAILBOX_FULL, ATTACHMENT_TOO_LARGE, REJECTED, SUPPRESSED, TIMEOUT, SEND_ERROR, MISSING_PDF"
+  TdsRecordFilter:
+    - enum: "REC_FILTER_ALL, REC_FILTER_DELIVERED, REC_FILTER_FAILED, REC_FILTER_PENDING"
+    - derive: "HttpInstance"
+  TdsQuarterState:
+    - enum: "QS_UPCOMING, QS_READY_TO_UPLOAD, QS_IN_PROGRESS, QS_SENT"
+  TdsConfirmReq:
+    # Filled by provider-dashboard from the logged-in admin; ignored if sent by the client
+    - confirmedByName: Maybe Text
+    - derive: "'HideSecrets"
+  TdsRecordItem:
+    - recordId: Text
+    - personId: Maybe Text
+    - name: Maybe Text
+    - recipientType: Maybe TdsRecipientType
+    - pan: Maybe Text
+    - fileName: Maybe Text
+    # The address the last attempt went to, else the profile email
+    - email: Maybe Text
+    - status: TdsRecordStatus
+    - failureReason: Maybe TdsFailureReason
+    - attemptCount: Int
+    - lastAttemptAt: Maybe UTCTime
+    - deliveredAt: Maybe UTCTime
+  TdsRecordListResp:
+    - records: "[TdsRecordItem]"
+    - totalCount: Int
+  TdsBatchListItem:
+    - batchId: Text
+    - financialYear: Text
+    - quarter: TdsQuarter
+    - status: TdsBatchStatus
+    - uploadedByName: Maybe Text
+    - createdAt: UTCTime
+    - confirmedAt: Maybe UTCTime
+    - sentCount: Int
+    - deliveredCount: Int
+    - failedCount: Int
+  TdsBatchListResp:
+    - batches: "[TdsBatchListItem]"
+  TdsQuarterSummary:
+    - quarter: TdsQuarter
+    - state: TdsQuarterState
+    # Form 16A is due to deductees 15 days after the quarterly TDS return
+    - dueDate: Day
+    - latestBatchId: Maybe Text
+    - uploadedAt: Maybe UTCTime
+    - sentCount: Int
+    - deliveredCount: Int
+    - failedCount: Int
+  TdsSummaryResp:
+    - financialYear: Text
+    - quarters: "[TdsQuarterSummary]"
+  TdsCertificateItem:
+    - quarter: TdsQuarter
+    # Nothing = not uploaded yet
+    - certificate: Maybe TdsRecordItem
+  TdsPersonCertificatesResp:
+    - personId: Text
+    - email: Maybe Text
+    - certificates: "[TdsCertificateItem]"
+  TdsDownloadUrlResp:
+    - url: Text
+    - fileName: Text
+  TdsRetryReq:
+    # Send to this address instead of the profile email
+    - email: Maybe Text
+    # Also save the address as the person's email
+    - saveToProfile: Bool
+    - derive: "'HideSecrets"

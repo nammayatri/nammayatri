@@ -19,19 +19,22 @@ module Email.GCP.Flow
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
     sendEmailWithAttachments,
+    sendEmailWithAttachmentsTracked,
   )
 where
 
 import Data.Aeson (object, (.=))
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.CaseInsensitive as CI
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Email.Types as Email
 import Kernel.Prelude
-import Network.HTTP.Client (RequestBody (..), httpLbs, method, newManager, parseRequest, requestBody, requestHeaders, responseBody, responseStatus)
+import Network.HTTP.Client (RequestBody (..), httpLbs, method, newManager, parseRequest, requestBody, requestHeaders, responseBody, responseHeaders, responseStatus)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
 import System.Directory (doesFileExist)
@@ -42,19 +45,22 @@ data SendGridEmail = SendGridEmail
     from :: EmailAddress,
     subject :: Text,
     content :: [Content],
-    attachments :: Maybe [Attachment]
+    attachments :: Maybe [Attachment],
+    -- | Echoed on every SendGrid event-webhook event for this message; omitted when empty
+    customArgs :: [(Text, Text)]
   }
   deriving (Generic)
 
 instance ToJSON SendGridEmail where
   toJSON email =
-    object
+    object $
       [ "personalizations" .= email.personalizations,
         "from" .= email.from,
         "subject" .= email.subject,
         "content" .= email.content,
         "attachments" .= email.attachments
       ]
+        <> ["custom_args" .= object [AK.fromText k .= v | (k, v) <- email.customArgs] | not (null email.customArgs)]
 
 data Personalization = Personalization
   { to :: [EmailAddress]
@@ -103,7 +109,11 @@ instance ToJSON Attachment where
       ]
 
 sendViaSendGrid :: String -> SendGridEmail -> IO ()
-sendViaSendGrid apiUrl emailData = do
+sendViaSendGrid apiUrl emailData = void $ sendViaSendGridTracked apiUrl emailData
+
+-- | Send and return SendGrid's X-Message-Id response header.
+sendViaSendGridTracked :: String -> SendGridEmail -> IO (Maybe Text)
+sendViaSendGridTracked apiUrl emailData = do
   manager <- newManager tlsManagerSettings
   initialRequest <- parseRequest apiUrl
   mbApiKey <- lookupEnv "SENDGRID_API_KEY"
@@ -126,6 +136,7 @@ sendViaSendGrid apiUrl emailData = do
   when (status < 200 || status >= 300) $ do
     let errBody = TE.decodeUtf8 $ BSL.toStrict $ responseBody response
     error $ "SendGrid API error (status " <> T.pack (show status) <> "): " <> errBody
+  pure $ TE.decodeUtf8 <$> lookup (CI.mk "X-Message-Id") (responseHeaders response)
 
 buildEmail :: Text -> [Text] -> Text -> Text -> Email.EmailBodyFormat -> Maybe [Attachment] -> SendGridEmail
 buildEmail from to subject body bodyFormat attachments =
@@ -136,7 +147,8 @@ buildEmail from to subject body bodyFormat attachments =
       content = case bodyFormat of
         Email.HtmlText -> [Content "text/plain" (htmlToPlaintextGcp body), Content "text/html" body]
         Email.Text -> [Content "text/plain" body],
-      attachments = attachments
+      attachments = attachments,
+      customArgs = []
     }
 
 htmlToPlaintextGcp :: Text -> Text
@@ -218,10 +230,25 @@ sendEmailWithAttachments ::
   Email.EmailBodyFormat ->
   [Email.EmailAttachment] ->
   IO ()
-sendEmailWithAttachments apiUrl from to subject bodyText bodyFormat attachments = do
+sendEmailWithAttachments apiUrl from to subject bodyText bodyFormat attachments =
+  void $ sendEmailWithAttachmentsTracked apiUrl Email.noEmailSendOptions from to subject bodyText bodyFormat attachments
+
+-- | Same message as 'sendEmailWithAttachments' with the options' tags as custom_args; returns
+-- SendGrid's message id. Configuration sets are SES-only and ignored here.
+sendEmailWithAttachmentsTracked ::
+  String ->
+  Email.EmailSendOptions ->
+  Text ->
+  [Text] ->
+  Text ->
+  Text ->
+  Email.EmailBodyFormat ->
+  [Email.EmailAttachment] ->
+  IO (Maybe Text)
+sendEmailWithAttachmentsTracked apiUrl options from to subject bodyText bodyFormat attachments = do
   let sgAttachments = map toSg attachments
-      emailData = buildEmail from to subject bodyText bodyFormat (Just sgAttachments)
-  sendViaSendGrid apiUrl emailData
+      emailData = (buildEmail from to subject bodyText bodyFormat (Just sgAttachments)) {customArgs = options.tags}
+  sendViaSendGridTracked apiUrl emailData
   where
     toSg a =
       Attachment

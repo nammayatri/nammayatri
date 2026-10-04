@@ -17,21 +17,33 @@ instance FromTType' Beam.TDSDistributionPdfFile Domain.Types.TDSDistributionPdfF
     pure $
       Just
         Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile
-          { createdAt = createdAt,
+          { batchId = Kernel.Types.Id.Id <$> batchId,
+            createdAt = createdAt,
             fileName = fileName,
             id = Kernel.Types.Id.Id id,
+            issue = issue,
+            matchedPersonId = Kernel.Types.Id.Id <$> matchedPersonId,
+            recipientType = recipientType,
             s3FilePath = s3FilePath,
+            sizeBytes = sizeBytes,
             tdsDistributionRecordId = Kernel.Types.Id.Id <$> tdsDistributionRecordId,
-            updatedAt = updatedAt
+            updatedAt = updatedAt,
+            validationStatus = validationStatus
           }
 
 instance ToTType' Beam.TDSDistributionPdfFile Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile where
   toTType' (Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile {..}) = do
     Beam.TDSDistributionPdfFileT
-      { Beam.createdAt = createdAt,
+      { Beam.batchId = Kernel.Types.Id.getId <$> batchId,
+        Beam.createdAt = createdAt,
         Beam.fileName = fileName,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.issue = issue,
+        Beam.matchedPersonId = Kernel.Types.Id.getId <$> matchedPersonId,
+        Beam.recipientType = recipientType,
         Beam.s3FilePath = s3FilePath,
+        Beam.sizeBytes = sizeBytes,
         Beam.tdsDistributionRecordId = Kernel.Types.Id.getId <$> tdsDistributionRecordId,
-        Beam.updatedAt = updatedAt
+        Beam.updatedAt = updatedAt,
+        Beam.validationStatus = validationStatus
       }
