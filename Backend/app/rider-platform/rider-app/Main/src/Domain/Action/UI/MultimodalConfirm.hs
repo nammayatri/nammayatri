@@ -2282,6 +2282,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                   [ API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle
                       { routeCode = routeId,
                         routeShortName = route.shortName,
+                        routeTag = route.routeTag,
                         liveVehicles = maybeToList mbLiveVehicle,
                         schedules = allSchedules,
                         overrideSourceStopCode = Nothing,

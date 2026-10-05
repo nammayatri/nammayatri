@@ -1238,6 +1238,8 @@ FRFSGtfsStageFare:
     merchantOperatingCityId: Id MerchantOperatingCity
     cessCharge: Maybe HighPrecMoney
     discountIds: "[Id FRFSTicketCategoryMetadataConfig]"
+    # A null routeTag is the catch-all fare, charged for any route GIMS reports without a tag.
+    routeTag: Maybe Text
   constraints:
     id: PrimaryKey
   default:
@@ -1254,6 +1256,10 @@ FRFSGtfsStageFare:
       kvFunction: findAllWithKV
       where:
         and: [vehicleType, stage, merchantOperatingCityId]
+    findAllByVehicleTypeAndMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [vehicleType, merchantOperatingCityId]
 
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare

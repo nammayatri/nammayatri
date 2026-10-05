@@ -1859,6 +1859,7 @@ postFrfsRouteServiceability (mbPersonId, _merchantId) routeId req = do
             schedules = [],
             routeCode = routeId,
             routeShortName = "",
+            routeTag = Nothing,
             overrideSourceStopCode = Nothing,
             overrideDestinationStopCode = Nothing
           }
