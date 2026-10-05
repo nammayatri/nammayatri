@@ -4,6 +4,7 @@ imports:
   Int: Kernel.Prelude
   Text: Kernel.Prelude
   Bool: Kernel.Prelude
+  Double: Kernel.Prelude
 
 module: DemandHotspots
 types:
@@ -16,6 +17,7 @@ types:
     location: LatLong
     frequency: Int
     categories: [HotspotCategoryCount]
+    multiplier: Maybe Double
   HotspotCategoryCount:
     tripOption: Text
     isScheduled: Bool

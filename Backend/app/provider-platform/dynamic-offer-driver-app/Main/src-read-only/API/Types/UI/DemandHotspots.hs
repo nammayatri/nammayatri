@@ -25,7 +25,8 @@ data HotspotCategoryCount = HotspotCategoryCount
 data HotspotsDetails = HotspotsDetails
   { frequency :: Kernel.Prelude.Int,
     location :: Kernel.External.Maps.Types.LatLong,
-    categories :: [HotspotCategoryCount]
+    categories :: [HotspotCategoryCount],
+    multiplier :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic)
   deriving anyclass (ToSchema)
@@ -35,14 +36,16 @@ instance ToJSON HotspotsDetails where
     Ae.object
       [ "frequency" Ae..= details.frequency,
         "location" Ae..= details.location,
-        "categories" Ae..= details.categories
+        "categories" Ae..= details.categories,
+        "multiplier" Ae..= details.multiplier
       ]
 
 -- Older cached payloads only have frequency and location. Missing categories
--- means a member written before the product was stored.
+-- or multiplier means a member written before the product was stored.
 instance FromJSON HotspotsDetails where
   parseJSON = Ae.withObject "HotspotsDetails" $ \obj ->
     HotspotsDetails
       <$> obj Ae..: "frequency"
       <*> obj Ae..: "location"
       <*> obj Ae..:? "categories" Ae..!= []
+      <*> obj Ae..:? "multiplier"

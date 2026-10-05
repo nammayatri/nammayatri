@@ -3,6 +3,7 @@ module Domain.Action.UI.DemandHotspots
     tripOptionFromCategories,
     updateDemandHotspotsOnSearch,
     removeDemandHotspot,
+    updateDemandHotspotMultiplierObservations,
     getActiveSearchLocations,
   )
 where
@@ -12,16 +13,20 @@ import Data.Aeson (withArray)
 import qualified Data.Aeson as Ae
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub)
+import qualified Data.Map.Strict as Map
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
 import qualified Data.Vector as V
+import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.SearchRequest
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Trip as Trip
+import Domain.Types.VehicleVariant (castVariantToServiceTier)
 import Environment
 import EulerHS.Prelude hiding (foldr', groupBy, id, length, map, mapM_, null, sum, whenJust)
 import GHC.Num.Integer (integerToInt)
@@ -39,17 +44,22 @@ import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Vehicle as QVehicle
 
 -- What it is:
--- Entire city is divided into geohashes. A search adds a member and a ride start
--- removes that same member, so hotspots depict searches that have not started.
+-- The city is divided into geohashes. Each cell holds a sorted set of the searches whose riders
+-- are committed to a trip there but have not started it, so a hotspot is unserved demand in that cell.
+--
+-- How it works:
 --
 -- Redis data structures we are using - set and sorted set
 -- Set - For storing all geohashes we have in a city
 -- Sorted Set - Storing searches categorised by cityId and geohash
 --
--- On Search - We add the search to the sorted set of that city and geohash
--- On Ride start - We remove that search. Booking no longer removes it.
+-- On Select     - EstimateBased flows: the rider tapped a fare, so we add the search to the cell's
+--                  sorted set. QuoteBased flows (airport OTP, rental) have no Select, so they're
+--                  added on Search instead.
+-- On Ride start - We remove that search from the cell's sorted set (removeDemandHotspot).
 --
 -- Member encoding:
 --   new writes: ["id6", lat, lon, product, isScheduled]
@@ -60,6 +70,13 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 -- There is no product, so it cannot be split. It decodes as product Nothing, isScheduled False,
 -- and the hotspot category is tripOption "Unknown".
 --   ["a1b2c3", 12.9716, 77.5946]
+--
+-- Each hotspot also carries a congestion fare multiplier, built from real committed demand.
+-- On Select - For every estimate the rider selected we bump a count for its (service tier,
+--   multiplier bin) into a per-cell time-bucketed histogram (DH:mult).
+-- Recompute - For the returned cells we read the last few buckets and take the count-weighted
+--   mean multiplier per service tier, cached aligned with the hotspot list (DH:multByTier).
+-- On Read - We blend the means of the tiers the driver serves, weighted by count.
 
 data HotspotObject = HotspotObject
   { hotspotSearchId :: Text,
@@ -123,7 +140,7 @@ getDriverDemandHotspots ::
     ) ->
     Flow GetDemandHotspotsResp
   )
-getDriverDemandHotspots (_, _, merchantOpCityId) = do
+getDriverDemandHotspots (mbPersonId, _, merchantOpCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   case transporterConfig.demandHotspotsConfig of
@@ -131,7 +148,7 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
       | configs.enableDemandHotspots -> do
         let cachedResultKey = mkDemandHotspotCachedKey merchantOpCityId.getId
         cachedResult :: Maybe GetDemandHotspotsResp <- Redis.safeGet cachedResultKey
-        case cachedResult of
+        res <- case cachedResult of
           Just res -> do
             fork "Calculating demand hotpspots" $ do
               expirySec <- Redis.ttl cachedResultKey
@@ -139,6 +156,9 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
                 void $ calculateDemandHotspots configs cachedResultKey True
             return res
           Nothing -> calculateDemandHotspots configs cachedResultKey False
+        -- Frequency and location are cached per city. The multiplier depends on the driver's
+        -- service tiers, so it is blended in here once the driver is known.
+        overlayCongestionMultiplier res
     _ ->
       pure $
         GetDemandHotspotsResp
@@ -160,13 +180,15 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
             let allSortedSetsKeysWithGeohash :: [(Text, Text)] = map (\gh -> (mkDemandHotspotSortedSetKey merchantOpCityId.getId gh, gh)) activeGeohashes
                 expiryTimeForSSObjects = T.addUTCTime (- 1 * 60 * fromIntegral configs.analysisDurationMinutes) now
             mapM_ (\(key, _) -> Redis.zRemRangeByScore key 0 (utcToMilliseconds expiryTimeForSSObjects)) allSortedSetsKeysWithGeohash
-            freqWithSortedSetKey :: [(Int, Text)] <- mapM getFrequencyWithSSKey allSortedSetsKeysWithGeohash
-            finalResults <- mapM calculateResult $ take configs.noOfGeohashesToReturn $ sortBy (flip compare) $ filter (\(freq, _) -> freq > 0) freqWithSortedSetKey
+            freqWithSortedSetKey :: [(Int, (Text, Text))] <- mapM getFrequencyWithSSKey allSortedSetsKeysWithGeohash
+            finalResults :: [(HotspotsDetails, Text)] <- mapM calculateResult $ take configs.noOfGeohashesToReturn $ sortBy (flip compare) $ filter (\(freq, _) -> freq > 0) freqWithSortedSetKey
+            multByTier :: [Map.Map Text (Double, Int)] <- mapM (\(_, geohash) -> multiplierByTierForGeohash now geohash) finalResults
+            Redis.setExp (mkDemandHotspotMultByTierKey merchantOpCityId.getId) multByTier (60 * configs.resultDurationMinutes)
             let resp =
                   GetDemandHotspotsResp
                     { createdAt = now,
                       expiryAt = T.addUTCTime (60 * fromIntegral configs.resultDurationMinutes) now,
-                      hotspotsDetails = finalResults,
+                      hotspotsDetails = map fst finalResults,
                       enableDemandHotspots = True
                     }
             Redis.setExp cachedResultKey resp (60 * configs.resultDurationMinutes)
@@ -176,20 +198,78 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
       frequency <- fmap integerToInt (Redis.zCard sortedSetKey)
       when (frequency == 0) $ do
         void $ Redis.srem (mkGeohashSetKey merchantOpCityId.getId) [geohash]
-      return (frequency, sortedSetKey)
+      return (frequency, (sortedSetKey, geohash))
 
-    calculateResult (_, sortedSetKey) = do
+    calculateResult (_, (sortedSetKey, geohash)) = do
       res <- Redis.zRange sortedSetKey 0 1000000
       members :: [HotspotObject] <- mapM (\a -> fromMaybeM (HedisDecodeError $ cs a) . Ae.decode $ cs a) res
       let freq = length members
           (sumLat, sumLong) = foldr' (\member (accLat, accLong) -> (accLat + member.hotspotLat, accLong + member.hotspotLon)) (0, 0) members
           avgLatLong = LatLong (sumLat / fromIntegral freq) (sumLong / fromIntegral freq)
       return
-        HotspotsDetails
-          { frequency = freq,
-            location = avgLatLong,
-            categories = hotspotCategories members
-          }
+        ( HotspotsDetails
+            { frequency = freq,
+              location = avgLatLong,
+              categories = hotspotCategories members,
+              multiplier = Nothing
+            },
+          geohash
+        )
+
+    overlayCongestionMultiplier res = do
+      mbServiceTiers <- resolveDriverServiceTiers
+      case mbServiceTiers of
+        Nothing -> pure res
+        Just serviceTiers -> do
+          mbAligned :: Maybe [Map.Map Text (Double, Int)] <- Redis.safeGet (mkDemandHotspotMultByTierKey merchantOpCityId.getId)
+          case mbAligned of
+            Just aligned
+              | length aligned == length res.hotspotsDetails ->
+                pure res {hotspotsDetails = zipWith (attachMultiplier serviceTiers) res.hotspotsDetails aligned}
+            _ -> pure res
+
+    resolveDriverServiceTiers = case mbPersonId of
+      Nothing -> pure Nothing
+      Just personId -> do
+        mbVehicle <- QVehicle.findById personId
+        pure $
+          ( \v -> case v.selectedServiceTiers of
+              [] -> [castVariantToServiceTier v.variant]
+              tiers -> tiers
+          )
+            <$> mbVehicle
+
+    attachMultiplier serviceTiers hotspot tierMap =
+      let picked = mapMaybe (\tier -> Map.lookup (show tier) tierMap) serviceTiers
+          totalCount = sum (map snd picked)
+       in if totalCount == 0
+            then hotspot
+            else hotspot {multiplier = Just (sum (map (\(avg, count) -> avg * fromIntegral count) picked) / fromIntegral totalCount)}
+
+    -- For one cell, read the last few histogram buckets and take the count-weighted mean
+    -- multiplier per service tier, keeping only tiers with enough observations.
+    multiplierByTierForGeohash now geohash = do
+      let bucketWidth = fromIntegral multiplierBucketWidthSec :: Integer
+          nowSec = floor (utcToMilliseconds now / 1000) :: Integer
+          currentBucket = (nowSec `div` bucketWidth) * bucketWidth
+          buckets = [currentBucket - fromIntegral i * bucketWidth | i <- [0 .. multiplierLookbackBuckets - 1]]
+      triples <- concat <$> mapM (readMultiplierHistogram geohash) buckets
+      let byTier =
+            Map.fromListWith
+              (\(s1, c1) (s2, c2) -> (s1 + s2, c1 + c2))
+              [(tier, (binValue * fromIntegral count, count)) | (tier, binValue, count) <- triples]
+      pure $
+        Map.mapMaybe
+          (\(weightedSum, total) -> if total >= multiplierMinCount then Just (weightedSum / fromIntegral total, total) else Nothing)
+          byTier
+
+    readMultiplierHistogram geohash bucket = do
+      raw <- Redis.zRangeWithScores (mkDemandHotspotMultBucketKey merchantOpCityId.getId geohash bucket) 0 (-1)
+      pure $ mapMaybe decodeMultiplierMember raw
+
+    decodeMultiplierMember (memberBs, score) =
+      (\(tier, binValue) -> (tier, fromIntegral binValue / 100.0, round score :: Int))
+        <$> (Ae.decode (cs memberBs) :: Maybe (Text, Int))
 
     hotspotCategories members =
       let sorted = sortBy (\a b -> compare (categoryKey a) (categoryKey b)) members
@@ -275,6 +355,56 @@ mkHotspotObject searchReqId latlong mbTripOption isScheduled =
       hotspotIsScheduled = isScheduled
     }
 
+-- For every estimate the rider selected we bump a count for its (service tier, multiplier bin)
+-- into a per-cell time-bucketed histogram. Nothing is removed - a bucket ages out with its key.
+-- A Select can legitimately be reprocessed for the same (search, estimate) pair (addOns resent,
+-- a retry that picked up a fresh messageId), so each estimate is only ever counted once via an
+-- atomic claim on its own dedup key.
+updateDemandHotspotMultiplierObservations ::
+  Id SearchRequest ->
+  Id MerchantOperatingCity ->
+  TransporterConfig ->
+  Maps.LatLong ->
+  [(Id DEst.Estimate, DVST.ServiceTierType, Double)] ->
+  Flow ()
+updateDemandHotspotMultiplierObservations searchReqId merchantOpCityId transporterConfig latlong tierMultipliers = do
+  now <- getCurrentTime
+  case transporterConfig.demandHotspotsConfig of
+    Just configs | configs.enableDemandHotspots -> do
+      let ttlSeconds = multiplierBucketWidthSec * (multiplierLookbackBuckets + 1)
+      newObservations <- filterM (\(estimateId, _, _) -> Redis.setNxExpire (mkMultiplierDedupKey searchReqId estimateId) ttlSeconds True) tierMultipliers
+      case newObservations of
+        [] -> pure ()
+        _ ->
+          whenJust (Geohash.encode configs.precisionOfGeohash (latlong.lat, latlong.lon)) $ \geohash -> do
+            let bucketWidth = fromIntegral multiplierBucketWidthSec :: Integer
+                nowSec = floor (utcToMilliseconds now / 1000) :: Integer
+                bucket = (nowSec `div` bucketWidth) * bucketWidth
+                histogramKey = mkDemandHotspotMultBucketKey merchantOpCityId.getId (T.pack geohash) bucket
+            mapM_ (\(_, tier, multiplier) -> Redis.zIncrBy histogramKey 1 (multiplierMember tier multiplier)) newObservations
+            Redis.expire histogramKey ttlSeconds
+    _ -> logDebug "Demand hotspots not enabled or configs not set on multiplier observation"
+
+multiplierMember :: DVST.ServiceTierType -> Double -> (Text, Int)
+multiplierMember tier multiplier =
+  (show tier, round (multiplier * 100 / fromIntegral multiplierBinPercent) * multiplierBinPercent)
+
+-- Histogram bucket width in seconds.
+multiplierBucketWidthSec :: Int
+multiplierBucketWidthSec = 300
+
+-- How many buckets back the recompute reads.
+multiplierLookbackBuckets :: Int
+multiplierLookbackBuckets = 2
+
+-- Minimum observations for a tier before its mean is shown.
+multiplierMinCount :: Int
+multiplierMinCount = 5
+
+-- Multiplier bin width, as a percentage. 5 means 0.05-wide bins.
+multiplierBinPercent :: Int
+multiplierBinPercent = 5
+
 -- CK2: cached aggregate now includes the product breakdown. DH:CK still holds the old shape until it expires.
 mkDemandHotspotCachedKey :: Text -> Text
 mkDemandHotspotCachedKey opCityId = "DH:CK2:cityId:" <> opCityId
@@ -287,6 +417,15 @@ mkDemandHotspotSortedSetKey opCityId geohash = "DH:cityId:" <> opCityId <> "GH:"
 
 mkHotspotsCalculationLockKey :: Text -> Text
 mkHotspotsCalculationLockKey opCityId = "DH:CalcLock:cityId:" <> opCityId
+
+mkDemandHotspotMultBucketKey :: Text -> Text -> Integer -> Text
+mkDemandHotspotMultBucketKey opCityId geohash bucket = "DH:mult:cityId:" <> opCityId <> ":GH:" <> geohash <> ":" <> show bucket
+
+mkDemandHotspotMultByTierKey :: Text -> Text
+mkDemandHotspotMultByTierKey opCityId = "DH:multByTier:cityId:" <> opCityId
+
+mkMultiplierDedupKey :: Id SearchRequest -> Id DEst.Estimate -> Text
+mkMultiplierDedupKey searchReqId estimateId = "DH:multDedup:searchId:" <> searchReqId.getId <> ":estimateId:" <> estimateId.getId
 
 -- | Returns active (unserved) search locations near a given point within radiusMeters.
 -- Only reads the geohash buckets that overlap the bounding box of the circle —

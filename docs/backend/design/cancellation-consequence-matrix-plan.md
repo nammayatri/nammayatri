@@ -223,6 +223,7 @@ attribution; every consequence becomes a legible, diffable table row.
 | `cancelledBy` | CancellationType | yes | same verdict can arise from either side's cancel (driver cancels a no-show vs customer cancels late); collection and messaging differ |
 | `tripCategory` | TripCategory | yes | user-proposed; intercity/rental cancellations carry different stakes |
 | `vehicleServiceTier` | ServiceTierType | yes | user-proposed |
+| `isAutoAccepted` | Bool | yes | auto-accepted assignments carry distinct policy; a null booking value (pre-migration data) resolves as false |
 | `area` | SL.Area | yes | SUGGESTED: airport/special-zone cancellations routinely need distinct policy (FareProduct is already area-keyed) |
 | `paymentInstrument` | Cash \| Prepaid… | yes | SUGGESTED: replaces `cancellationFeePaymentMethodExceptions` — a Cash row with zero charge instead of a code-level exemption |
 | `minDriverRating` / `maxDriverRating` | Centesimal | both null = wildcard | SHIPPED: driver-rating band (DriverStats.rating of the assigned driver). min INCLUSIVE, max EXCLUSIVE so "< 4.5" / ">= 4.5" rows tile without overlap; unrated drivers only match band-less rows. Specificity sits just above timeBounds (band = conditional override of the identical base row). Upsert allows same-dims rows with non-overlapping bands; rejects overlap. |
@@ -240,7 +241,7 @@ Fetch all active rows for the city where every non-null dimension matches the ev
 matched non-null dimensions with fixed precedence so ties are impossible by construction:
 
 ```
-faultRule (32) > faultVerdict (16) > cancelledBy (8) > tripCategory (4) > vehicleServiceTier (2) > area/paymentInstrument (1 each)
+faultRule (64) > faultVerdict (32) > cancelledBy (16) > tripCategory (8) > vehicleServiceTier (4) > isAutoAccepted (2) > area/paymentInstrument (1 each)
 ```
 
 - A city-only row (all wildcards) is the city default — exactly the user's "one entry with
