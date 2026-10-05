@@ -4,6 +4,8 @@
 
 module Storage.Queries.TDSDistributionPdfFile (module Storage.Queries.TDSDistributionPdfFile, module ReExport) where
 
+import qualified Domain.Types.Person
+import qualified Domain.Types.TDSDistributionBatch
 import qualified Domain.Types.TDSDistributionPdfFile
 import qualified Domain.Types.TDSDistributionRecord
 import Kernel.Beam.Functions
@@ -23,6 +25,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile] -> m ())
 createMany = traverse_ create
 
+findAllByBatchId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionBatch.TDSDistributionBatch) -> m ([Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile]))
+findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
+
 findAllByTdsDistributionRecordId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionRecord.TDSDistributionRecord) -> m ([Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile]))
@@ -33,6 +40,28 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile -> m (Maybe Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateTdsDistributionRecordId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionRecord.TDSDistributionRecord) -> Kernel.Types.Id.Id Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile -> m ())
+updateTdsDistributionRecordId tdsDistributionRecordId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.tdsDistributionRecordId (Kernel.Types.Id.getId <$> tdsDistributionRecordId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateValidationResult ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSFileValidationStatus -> Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSFileIssue -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSRecipientType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile -> m ())
+updateValidationResult validationStatus issue matchedPersonId recipientType sizeBytes id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.validationStatus validationStatus,
+      Se.Set Beam.issue issue,
+      Se.Set Beam.matchedPersonId (Kernel.Types.Id.getId <$> matchedPersonId),
+      Se.Set Beam.recipientType recipientType,
+      Se.Set Beam.sizeBytes sizeBytes,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile -> m (Maybe Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile))
@@ -42,9 +71,15 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.fileName fileName,
+    [ Se.Set Beam.batchId (Kernel.Types.Id.getId <$> batchId),
+      Se.Set Beam.fileName fileName,
+      Se.Set Beam.issue issue,
+      Se.Set Beam.matchedPersonId (Kernel.Types.Id.getId <$> matchedPersonId),
+      Se.Set Beam.recipientType recipientType,
       Se.Set Beam.s3FilePath s3FilePath,
+      Se.Set Beam.sizeBytes sizeBytes,
       Se.Set Beam.tdsDistributionRecordId (Kernel.Types.Id.getId <$> tdsDistributionRecordId),
-      Se.Set Beam.updatedAt _now
+      Se.Set Beam.updatedAt _now,
+      Se.Set Beam.validationStatus validationStatus
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

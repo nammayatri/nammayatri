@@ -1230,3 +1230,15 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_min_idle_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN scheduled_ride_config SET DEFAULT '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1, "enableScheduledRideActivationChecks": true}' :: json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN tds_email_configuration_set text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_event_webhook_token text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN email_event_sns_topic_arn text ;
+
+
+------- SQL updates -------
+

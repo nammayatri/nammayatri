@@ -2,13 +2,18 @@ imports:
   Person: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  TDSDistributionBatch: Domain.Types.TDSDistributionBatch
+  EmailDelivery: Domain.Types.EmailDelivery
 
 TDSDistributionRecord:
   tableName: tds_distribution_record
 
   types:
     TDSDistributionStatus:
-      enum: "PENDING, SENT, FAILED, MISSING_FILE, MISSING_MANIFEST, MISMATCH"
+      enum: "PENDING, SENDING, SENT, DELIVERED, FAILED, MISSING_FILE, MISSING_MANIFEST, MISMATCH"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    TDSFailureReason:
+      enum: "MISSING_EMAIL, ADDRESS_NOT_FOUND, MAILBOX_FULL, ATTACHMENT_TOO_LARGE, REJECTED, SUPPRESSED, TIMEOUT, SEND_ERROR"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   fields:
@@ -18,9 +23,19 @@ TDSDistributionRecord:
     # Manifest object in S3 (CSV/JSON); PDF rows live in tds_distribution_pdf_file
     fileName: Maybe Text
     assessmentYear: Text
+    # Financial year, e.g. "2026-27". Canonical period for dashboard-uploaded certificates; assessmentYear is legacy.
+    financialYear: Maybe Text
     quarter: Text
     status: TDSDistributionStatus
     retryCount: Int
+    # Set for certificates uploaded through the dashboard batch flow
+    batchId: Maybe (Id TDSDistributionBatch)
+    failureReason: Maybe TDSFailureReason
+    # The newest send attempt; delivery events for older attempts do not change this record
+    latestEmailDeliveryId: Maybe (Id EmailDelivery)
+    attemptCount: Maybe Int
+    lastAttemptAt: Maybe UTCTime
+    deliveredAt: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -29,13 +44,18 @@ TDSDistributionRecord:
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
+    batchId: "!SecondaryKey"
 
   sqlType:
     emailAddress: character varying(255)
     fileName: character varying(512)
     assessmentYear: character varying(20)
+    financialYear: character varying(10)
     quarter: character varying(10)
     status: character varying(30)
+    batchId: character varying(36)
+    failureReason: character varying(30)
+    latestEmailDeliveryId: character varying(36)
 
   queries:
     findById:
@@ -60,6 +80,26 @@ TDSDistributionRecord:
       params: [status]
       where: id
 
+    findAllByBatchId:
+      kvFunction: findAllWithKV
+      where: batchId
+
+    updateDelivered:
+      kvFunction: updateOneWithKV
+      params: [status, deliveredAt, failureReason]
+      where: id
+
+    updateStatusAndFailureReason:
+      kvFunction: updateOneWithKV
+      params: [status, failureReason]
+      where: id
+
+    updateForResend:
+      kvFunction: updateOneWithKV
+      params: [batchId, status, retryCount, failureReason]
+      where: id
+
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSDistributionStatus>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <TDSDistributionStatus>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <TDSFailureReason>
