@@ -22,6 +22,7 @@ types:
     seatType: Maybe SeatType
     isBookable: Maybe Bool
     isLadiesOnly: Maybe Bool
+    isDifferentlyAbled: Maybe Bool
     directionDegrees: Maybe Int
     minStopsRequired: Maybe Int
 

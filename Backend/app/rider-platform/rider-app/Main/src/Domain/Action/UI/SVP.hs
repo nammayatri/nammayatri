@@ -393,7 +393,7 @@ handleExit mobileNum mId stationCode exitTime = do
   let entryStation = fromMaybe "UNKNOWN" journey.entryStationCode
 
   integratedBPPConfig <-
-    SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId Spec.METRO DIBC.APPLICATION
+    SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId Spec.METRO DIBC.APPLICATION Nothing
   fares <-
     CallAPI.getFares
       person.id
@@ -402,6 +402,7 @@ handleExit mobileNum mId stationCode exitTime = do
       integratedBPPConfig
       (CallAPI.BasicRouteDetail {routeCode = "", startStopCode = entryStation, endStopCode = stationCode, color = Nothing} :| [])
       FRFSSpec.METRO
+      Nothing
       Nothing
       Nothing
   let fareAmount = case fares of

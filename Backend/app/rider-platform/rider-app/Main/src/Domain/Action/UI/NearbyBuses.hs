@@ -87,7 +87,7 @@ getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfi
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   vehicleType <- fromMaybeM (InvalidRequest "vehicleType is required when requireNearbyBuses is true") req.vehicleType
   let vehicleCategory = castToOnDemandVehicleCategory vehicleType
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory req.platformType Nothing
   case mbIntegratedBPPConfig of
     Just integratedBPPConfig -> do
       buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig integratedBPPConfig
@@ -167,7 +167,7 @@ getRecentRides person req = do
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
                           let fareRoute = CallAPI.FareRoute {segments = pure CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode, color = Nothing}, mbProviderRouteId = Nothing}
-                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRoute vehicleType Nothing Nothing [] [] False False
+                          snd <$> Flow.getFares person.id person.merchantId person.merchantOperatingCityId integratedBPPConfig fareRoute vehicleType Nothing Nothing [] [] False False Nothing
                       )
               return $
                 (mbFare >>= (\fare -> find (\category -> category.category == ADULT) fare.categories)) <&> \fare ->
