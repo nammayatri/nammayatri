@@ -13,3 +13,9 @@ ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD COLUMN vehicle_type text NOT NULL
 ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_gtfs_stage_fare ADD COLUMN route_tag text ;

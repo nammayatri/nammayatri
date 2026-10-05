@@ -988,7 +988,8 @@ data RouteInfoNandi = RouteInfoNandi
     stopCount :: Maybe Int,
     serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType,
     color :: Maybe Text,
-    encodedPolyline :: Maybe Text
+    encodedPolyline :: Maybe Text,
+    routeTag :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
