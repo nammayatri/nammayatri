@@ -157,6 +157,8 @@ apis:
         type: BlockDriverWithReasonReq
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.driver_block.write
       helperApi:
         - POST:
             endpoint: /{driverId}/blockWithReason/{dashboardUserName}
@@ -175,11 +177,15 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.driver_block.write
   - GET: # BlockReasonListAPI
       endpoint: /blockReasonList
       auth: ApiAuthV2
       response:
         type: "[BlockReason]"
+      migrate:
+        capability: city-operations.driver_block.read
   - POST: # UnblockDriverAPI
       endpoint: /{driverId}/unblock
       auth: ApiAuthV2
@@ -190,6 +196,8 @@ apis:
         - preventDailyCancellationRateBlockingTill: UTCTime
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.driver_block.write
       helperApi:
         - POST:
             endpoint: /{driverId}/unblock/{dashboardUserName}
@@ -546,6 +554,8 @@ apis:
         - specialZoneId: Text
       response:
         type: AirportPreferenceRes
+      migrate:
+        capability: city-operations.driver_block.read
 
   - POST: # SetAirportPreferenceAPI
       endpoint: /{driverId}/airportPreference
@@ -556,6 +566,8 @@ apis:
         type: AirportPreferenceReq
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.driver_block.write
 
   - GET: # DriverSearchRequestStatsAPI
       endpoint: /{driverId}/searchRequestStats
