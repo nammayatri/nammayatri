@@ -1,0 +1,24 @@
+name: backend-repl-check
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2023 Juspay Technologies Private Limited"
+
+description: Thin package whose sole purpose is to pull in both rider-app and dynamic-offer-driver-app (and transitively lib-dashboard, which both depend on) so a single cabal repl covers the entire rider + driver + dashboard dep tree.
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -fwrite-ide-info
+  - -hiedir=.hie
+
+library:
+  dependencies:
+    - base
+    - rider-app
+    - dynamic-offer-driver-app

@@ -7,6 +7,7 @@ packages:
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
   app/dashboard/Lib
+  app/backend-repl-check
   app/sdk-event-pipeline
   app/kafka-consumers
   lib/passetto-lib
