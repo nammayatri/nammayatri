@@ -55,7 +55,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.TransporterConfig as DTC
-import Domain.Types.Trip (isInterCityTrip)
+import Domain.Types.Trip (isInterCityTrip, isRideOtpTrip)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -313,6 +313,12 @@ otpRideCreate driver otpCode booking clientId = do
   when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
   let isVehicleServiceNotAllowed = booking.vehicleServiceTier `notElem` vehicle.selectedServiceTiers
   when isVehicleServiceNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Service Tier"
+  -- Spot ride (OTP ride at a non-special-zone pickup): the tier must have spot ride
+  -- explicitly enabled, same flag the search-time policy derivation checks.
+  when (isRideOtpTrip booking.tripCategory && booking.area == Just SL.Default) $ do
+    mbSpotVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId Nothing
+    unless ((mbSpotVehicleServiceTierItem >>= (.isSpotRideEnabled)) == Just True) $
+      throwError $ InvalidRequest "Spot ride not enabled for this service tier"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   mFleetOwnerId <- QFDA.findByDriverId driver.id True
