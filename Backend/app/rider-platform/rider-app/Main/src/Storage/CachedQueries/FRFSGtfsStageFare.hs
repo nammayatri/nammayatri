@@ -14,6 +14,7 @@
 
 module Storage.CachedQueries.FRFSGtfsStageFare
   ( findAllByVehicleTypeAndStageAndMerchantOperatingCityId,
+    clearCache,
   )
 where
 
@@ -35,6 +36,10 @@ findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchan
       fares <- Queries.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchantOperatingCityId
       Hedis.setExp (gtfsStageFareCacheKey vehicleType stage merchantOperatingCityId) fares expTime
       return fares
+
+clearCache :: CacheFlow m r => BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id MerchantOperatingCity -> m ()
+clearCache vehicleType stage merchantOperatingCityId =
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (gtfsStageFareCacheKey vehicleType stage merchantOperatingCityId)
 
 gtfsStageFareCacheKey :: BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id MerchantOperatingCity -> Text
 gtfsStageFareCacheKey vehicleType stage merchantOperatingCityId = "CachedQueries:FRFSGtfsStageFare:VehicleType-" <> show vehicleType <> ":Stage-" <> show stage <> ":MerchantOperatingCityId-" <> getId merchantOperatingCityId

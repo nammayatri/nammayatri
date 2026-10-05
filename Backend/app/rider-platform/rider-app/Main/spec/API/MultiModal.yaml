@@ -385,6 +385,7 @@ types:
   RouteWithLiveVehicle:
     routeCode: Text
     routeShortName: Text
+    routeTag: Maybe Text
     overrideSourceStopCode: Maybe Text
     overrideDestinationStopCode: Maybe Text
     liveVehicles: [LiveVehicleInfo]

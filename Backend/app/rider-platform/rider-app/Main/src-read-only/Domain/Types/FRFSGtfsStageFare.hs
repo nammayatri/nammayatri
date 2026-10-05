@@ -22,6 +22,7 @@ data FRFSGtfsStageFare = FRFSGtfsStageFare
     id :: Kernel.Types.Id.Id Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    routeTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     stage :: Kernel.Prelude.Int,
     vehicleServiceTierId :: Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,

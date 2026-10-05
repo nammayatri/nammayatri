@@ -398,6 +398,7 @@ data RouteWithLiveVehicle = RouteWithLiveVehicle
     overrideSourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCode :: Kernel.Prelude.Text,
     routeShortName :: Kernel.Prelude.Text,
+    routeTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     schedules :: [ScheduledVehicleInfo]
   }
   deriving stock (Generic)

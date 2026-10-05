@@ -144,6 +144,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               schedules,
               routeCode = routeInfo.routeId,
               routeShortName = route.shortName,
+              routeTag = route.routeTag,
               overrideSourceStopCode = mbOverrideSourceStopCode,
               overrideDestinationStopCode = mbOverrideDestinationStopCode
             }

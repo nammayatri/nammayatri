@@ -15,3 +15,12 @@ instance FromMultipart Tmp UpsertRouteFareReq where
 instance ToMultipart Tmp UpsertRouteFareReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
+instance FromMultipart Tmp UpsertStageFareReq where
+  fromMultipart form = do
+    UpsertStageFareReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpsertStageFareReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
