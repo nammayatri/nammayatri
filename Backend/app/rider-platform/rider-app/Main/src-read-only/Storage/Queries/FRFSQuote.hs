@@ -66,6 +66,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.providerId providerId,
       Se.Set Beam.providerName providerName,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.routeGroupKey routeGroupKey,
       Se.Set Beam.routeStationsJson routeStationsJson,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.stationsJson stationsJson,

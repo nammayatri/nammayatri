@@ -615,6 +615,7 @@ mkQuoteRes (quote, quoteCategories) = do
         routeDetails = Nothing,
         providerRouteId = quote.fareDetails <&> (.providerRouteId),
         ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode),
+        routeGroupKey = quote.routeGroupKey,
         ..
       }
 
@@ -707,7 +708,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.toStationName = Just toStation'.name,
                 DFRFSQuote.toStationPoint = Maps.LatLong <$> toStation'.lat <*> toStation'.lon,
                 DFRFSQuote.vehicleNumber = Nothing,
-                DFRFSQuote.offerSegment = Nothing
+                DFRFSQuote.offerSegment = Nothing,
+                DFRFSQuote.routeGroupKey = Nothing
               }
       quoteCategoryId <- generateGUID
       ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT fromStation'.vehicleType fromStation.merchantOperatingCityId

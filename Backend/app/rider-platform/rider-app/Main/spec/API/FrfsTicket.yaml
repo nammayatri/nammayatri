@@ -92,6 +92,7 @@ types:
     applicablePasses: "[FRFSPassOptionAPIEntity]"
     providerRouteId: Maybe Text
     ticketTypeCode: Maybe Text
+    routeGroupKey: Maybe Text # Quotes sharing this key are the service tier variants of one journey
 
     derive: "Show"
 
