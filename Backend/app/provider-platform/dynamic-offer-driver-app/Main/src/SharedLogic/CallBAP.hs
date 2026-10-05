@@ -81,7 +81,6 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.List as DL
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
-import qualified Data.Text as Text
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 import Data.Time hiding (getCurrentTime)
@@ -99,7 +98,6 @@ import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Estimate as DEst
 import Domain.Types.Extra.IdfyVerification (docTypeToText)
 import qualified Domain.Types.FareParameters as Fare
-import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
@@ -120,7 +118,6 @@ import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Types as Euler
-import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
@@ -144,7 +141,6 @@ import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
-import Network.URI (parseURI, uriQuery)
 import Servant (JSON, Post, ReqBody, (:>))
 import qualified SharedLogic.Allocator as Alloc
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -166,7 +162,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.IdfyVerification as QIV
-import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideDetails as QRideDetails
 import qualified Storage.Queries.RiderDetails as QRD
@@ -440,29 +435,6 @@ buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
-defaultDriverImagePresignedUrlExpiry :: Seconds
-defaultDriverImagePresignedUrlExpiry = 3600
-
-getQueryParam :: String -> String -> Maybe String
-getQueryParam paramName url = do
-  uri <- parseURI url
-  let query = uriQuery uri
-  let params = parseQueryParams query
-  DL.lookup paramName params
-
-parseQueryParams :: String -> [(String, String)]
-parseQueryParams qs = DL.map parseParam (DL.filter (/= "") (splitOn '&' (DL.drop 1 qs)))
-  where
-    parseParam p = let (k, v) = DL.break (== '=') p in (k, DL.drop 1 v)
-
-splitOn :: Char -> String -> [String]
-splitOn _ "" = [""]
-splitOn delim str =
-  let (firstV, remainder) = DL.break (== delim) str
-   in firstV : case remainder of
-        [] -> []
-        _ -> splitOn delim (DL.tail remainder)
-
 -- | Pre-loaded context for rideAssignedCommon. The one-shot assign flow already holds
 -- all of these from the accept request, so re-reading them here is wasted round trips —
 -- and the rideDetails re-read is worse than waste: it is a replica read of a row this
@@ -563,27 +535,7 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
       prefetch.rideDetails
   let bookingDetails = ACL.BookingDetails {..}
   -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
-  -- A value-add BAP resolves the S3 path of the driver's profile photo through its own media endpoint. Every other BAP gets a
-  -- pre-signed S3 url of the latest VALID selfie from the image table, expiring after transporterConfig.driverImagePresignedUrlExpiry.
-  image <-
-    if isValueAddNP
-      then fmap join . forM driver.faceImageId $ \mediaId -> do
-        mbMediaEntry <- runInReplica $ MFQuery.findById mediaId
-        case mbMediaEntry >>= \mediaEntry -> getQueryParam "filePath" (Text.unpack mediaEntry.url) of
-          Just imagePath -> pure $ Just (Text.pack imagePath)
-          Nothing -> do
-            logError $ "Driver image does not exist for driverId: " <> driver.id.getId <> ", mediaFileId: " <> mediaId.getId
-            pure Nothing
-      else do
-        mbSelfie <- runInReplica $ QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED
-        fmap join . forM mbSelfie $ \selfie -> do
-          let urlExpiry = fromMaybe defaultDriverImagePresignedUrlExpiry (mbTransporterConfig >>= (.driverImagePresignedUrlExpiry))
-          presignedUrlResult <- withTryCatch "S3:generateDownloadUrl:driverImage" $ S3.generateDownloadUrl (Text.unpack selfie.s3Path) urlExpiry
-          case presignedUrlResult of
-            Right presignedUrl -> pure $ Just presignedUrl
-            Left err -> do
-              logError $ "Unable to generate pre-signed driver image url for driverId: " <> driver.id.getId <> ", error: " <> show err
-              pure Nothing
+  image <- Utils.resolveDriverImageUrl isValueAddNP mbTransporterConfig driver True
 
   -- let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
@@ -1052,7 +1004,8 @@ sendBookingCancelledUpdateToBAP ::
     CacheFlow m r,
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    Alloc.SchedulerJobFlow r
+    Alloc.SchedulerJobFlow r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   DRB.Booking ->
   DM.Merchant ->

@@ -15,6 +15,7 @@
 
 module Beckn.OnDemand.Utils.Common where
 
+import qualified AWS.S3 as S3
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -38,12 +39,14 @@ import qualified Domain.Types as DT
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy as Policy
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -52,12 +55,15 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as Variant
 import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
+import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (find, length, map, null, readMaybe)
@@ -72,12 +78,15 @@ import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
+import Network.URI (parseURI, uriQuery)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Image as QImage
 import Tools.Error
 
 data Pricing = Pricing
@@ -1553,3 +1562,73 @@ checkWhitelisted subscriberId merchantId merchantOperatingCityId = do
 
 isNotWhiteListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain.Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
 isNotWhiteListed subscriberId domain merchantId merchantOperatingCityId = isNothing <$> QWhiteList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId
+
+defaultDriverImagePresignedUrlExpiry :: Seconds
+defaultDriverImagePresignedUrlExpiry = 3600
+
+-- | Driver photo url for fulfillments.agent.person.image.
+-- A value-add BAP resolves the S3 path of the driver's profile photo through its own media endpoint. Every other BAP gets a
+-- pre-signed S3 url of the latest VALID selfie from the image table, expiring after transporterConfig.driverImagePresignedUrlExpiry.
+-- The transporter config is only needed on the non-value-add path, so a caller that doesn't already have it passes
+-- Nothing and it's fetched here, only on that path; a caller that has it in hand passes it to skip the lookup.
+resolveDriverImageUrl ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "s3Env" r (S3.S3Env m)) =>
+  IsValueAddNP ->
+  Maybe DTC.TransporterConfig ->
+  SP.Person ->
+  Bool -> -- whether to resolve the image on the value-add path at all (callbacks that don't send it skip the media lookup)
+  m (Maybe Text)
+resolveDriverImageUrl isValueAddNP mbTransporterConfig driver includeValueAddNPImage = do
+  -- The image is optional on the wire, so a failing image-record lookup must not abort the caller's response.
+  result <- withTryCatch "resolveDriverImageUrl" resolve
+  case result of
+    Right mbUrl -> pure mbUrl
+    Left err -> do
+      logError $ "Unable to resolve driver image for driverId: " <> driver.id.getId <> ", error: " <> show err
+      pure Nothing
+  where
+    resolve =
+      if isValueAddNP
+        then
+          if not includeValueAddNPImage
+            then pure Nothing
+            else fmap join . forM driver.faceImageId $ \mediaId -> do
+              mbMediaEntry <- runInReplica $ MFQuery.findById mediaId
+              case mbMediaEntry >>= \mediaEntry -> getQueryParam "filePath" (T.unpack mediaEntry.url) of
+                Just imagePath -> pure $ Just (T.pack imagePath)
+                Nothing -> do
+                  logError $ "Driver image does not exist for driverId: " <> driver.id.getId <> ", mediaFileId: " <> mediaId.getId
+                  pure Nothing
+        else do
+          mbSelfie <- runInReplica $ QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED
+          fmap join . forM mbSelfie $ \selfie -> do
+            transporterConfig <- case mbTransporterConfig of
+              Just cfg -> pure (Just cfg)
+              Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing
+            let urlExpiry = fromMaybe defaultDriverImagePresignedUrlExpiry (transporterConfig >>= (.driverImagePresignedUrlExpiry))
+            presignedUrlResult <- withTryCatch "S3:generateDownloadUrl:driverImage" $ S3.generateDownloadUrl (T.unpack selfie.s3Path) urlExpiry
+            case presignedUrlResult of
+              Right presignedUrl -> pure $ Just presignedUrl
+              Left err -> do
+                logError $ "Unable to generate pre-signed driver image url for driverId: " <> driver.id.getId <> ", error: " <> show err
+                pure Nothing
+
+getQueryParam :: String -> String -> Maybe String
+getQueryParam paramName url = do
+  uri <- parseURI url
+  let query = uriQuery uri
+  let params = parseQueryParams query
+  List.lookup paramName params
+
+parseQueryParams :: String -> [(String, String)]
+parseQueryParams qs = List.map parseParam (List.filter (/= "") (splitOnChar '&' (List.drop 1 qs)))
+  where
+    parseParam p = let (k, v) = List.break (== '=') p in (k, List.drop 1 v)
+
+splitOnChar :: Char -> String -> [String]
+splitOnChar _ "" = [""]
+splitOnChar delim str =
+  let (firstV, remainder) = List.break (== delim) str
+   in firstV : case remainder of
+        [] -> []
+        _ -> splitOnChar delim (List.drop 1 remainder)
