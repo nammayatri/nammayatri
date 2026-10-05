@@ -26,6 +26,7 @@ import qualified BecknV2.OnDemand.Utils.Common as BUtils
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
+import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.ConditionalCharges as DAC
@@ -48,6 +49,7 @@ import qualified Kernel.Tools.Metrics.AppMetrics as Metrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -65,6 +67,7 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFareParams
@@ -72,6 +75,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics.ARDUBPPMetrics as BPPMetrics
 
 data DSelectReq = DSelectReq
@@ -121,6 +125,14 @@ data DSelectReq = DSelectReq
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> [DAddOnConfig.AddOnData] -> Flow ()
 handler merchant sReq searchReq estimates addOnData = do
   logDebug $ "DSelectReq: select request billingCategory: " <> show sReq.billingCategory <> "transactionId: " <> sReq.transactionId
+  -- EstimateBased demand signal and congestion multiplier. QuoteBased flows record demand on the search instead.
+  fork "Updating Demand Hotspots on select" $ do
+    let merchantOpCityId = searchReq.merchantOperatingCityId
+        pickup = Maps.LatLong searchReq.fromLocation.lat searchReq.fromLocation.lon
+        tierMultipliers = mapMaybe (\e -> (\cm -> (e.id, e.vehicleServiceTier, realToFrac cm)) <$> e.congestionMultiplier) estimates
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig pickup
+    DemandHotspots.updateDemandHotspotMultiplierObservations searchReq.id merchantOpCityId transporterConfig pickup tierMultipliers
   whenJust (listToMaybe estimates) $ \primaryEstimate -> do
     cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
     distanceEdges <- SML.getDistanceBucketEdges searchReq.merchantOperatingCityId
