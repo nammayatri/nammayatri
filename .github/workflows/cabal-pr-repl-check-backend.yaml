@@ -10,6 +10,7 @@ on:
       - "Backend/app/provider-platform/**"
       - "Backend/lib/**"
       - "Backend/app/dashboard/**"
+      - "Backend/app/backend-repl-check/**"
       - "Backend/cabal.project"
       - "Backend/default.nix"
       - "Backend/nix/**"
