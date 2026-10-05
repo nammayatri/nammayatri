@@ -96,7 +96,8 @@ data SendNotificationReq = SendNotificationReq
     sender :: Maybe Text,
     subject :: Maybe Text,
     attachments :: Maybe [EmailAttachment],
-    bodyFormat :: Maybe EmailT.EmailBodyFormat
+    bodyFormat :: Maybe EmailT.EmailBodyFormat,
+    mediaUrl :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -200,14 +201,15 @@ mkNotificationReq contact title body messageData =
       overlayNotificationData = Nothing
     }
 
-mkWhatsappReq :: Text -> Text -> [Maybe Text] -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
-mkWhatsappReq phone templateId variables =
+mkWhatsappReq :: Text -> Text -> [Maybe Text] -> Maybe Text -> Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+mkWhatsappReq phone templateId variables mediaUrl =
   Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
     { sendTo = phone,
       templateId = templateId,
       variables = variables,
       ctaButtonUrl = Nothing,
-      containsUrlButton = Nothing
+      containsUrlButton = Nothing,
+      mediaUrl = mediaUrl
     }
 
 -- | Send endpoint: resolve the recipient, build the request, dispatch on channel.
@@ -222,7 +224,13 @@ sendNotificationWebhook h req = do
       h.sendSms contact SmsMsg {phoneNumber = phone, body = req.body, sender = req.sender, templateId = fromMaybe "" req.templateId}
     WHATSAPP -> do
       phone <- fromMaybeM (InvalidRequest "Recipient phone not available") contact.phoneNumber
-      h.sendWhatsapp contact (mkWhatsappReq phone (fromMaybe "" req.templateId) (maybe [Just req.title, Just req.body] (map Just) req.variables))
+      let whatsappTemplateId = fromMaybe "" req.templateId
+          whatsappVars = case req.variables of
+            Just vs -> map Just vs
+            Nothing
+              | whatsappTemplateId == "" -> [Just req.title, Just req.body]
+              | otherwise -> []
+      h.sendWhatsapp contact (mkWhatsappReq phone whatsappTemplateId whatsappVars req.mediaUrl)
     EMAIL -> do
       toEmail <- fromMaybeM (InvalidRequest "Recipient email not available") contact.email
       from <- fromMaybeM (InvalidRequest "sender (from email) required for EMAIL channel") req.sender

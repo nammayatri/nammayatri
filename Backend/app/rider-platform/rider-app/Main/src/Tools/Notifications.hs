@@ -2063,6 +2063,7 @@ notifyRewardUnlock person rewardTitle sponsorName couponCode = do
                       whatsappVariables
                       Nothing
                       Nothing
+                      merchantMessage.mediaUrl
                   )
             case result of
               Right resp
@@ -2381,6 +2382,7 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
                           variables
                           Nothing
                           (Just merchantMessage.containsUrlButton)
+                          merchantMessage.mediaUrl
                       )
                 case result of
                   Right resp

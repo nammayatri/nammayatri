@@ -418,6 +418,7 @@ types:
     - jsonData: Maybe Value
     - messageType: Maybe Text
     - senderHeader: Maybe Text
+    - mediaUrl: Maybe Text
     - derive: "'HideSecrets"
 
 extraOperations:
