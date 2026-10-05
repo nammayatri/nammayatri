@@ -45,6 +45,7 @@ data FRFSQuote = FRFSQuote
     providerId :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    routeGroupKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     stationsJson :: Kernel.Prelude.Text,
