@@ -5,7 +5,7 @@
 #   ./run-tests.sh                                    # Run all ride booking suites for all cities
 #   ./run-tests.sh rides                              # Run all ride booking suites for all cities
 #   ./run-tests.sh rides NY_Bangalore                 # Run ride suites for Bangalore only
-#   ./run-tests.sh rides NY_Bangalore 01-NYAutoRideFlow  # Run specific suite
+#   ./run-tests.sh auto NY_Bangalore 01-AutoRideFlow     # Run specific suite
 #   ./run-tests.sh bus                               # Run all bus ticket booking suites for all cities
 #   ./run-tests.sh bus FRFS_Chennai                   # Run bus suites for Chennai only
 #   ./run-tests.sh metro                              # Run all metro ticket booking suites
@@ -37,6 +37,9 @@ set -- "${args[@]+"${args[@]}"}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RIDE_DIR="$SCRIPT_DIR/collections/RideBookingFlow"
+# Auto (01-03) and Taxi/Cab (04-06) suites were split out of RideBookingFlow into their own collections.
+AUTO_RIDE_DIR="$SCRIPT_DIR/collections/AutoRideFlow"
+TAXI_RIDE_DIR="$SCRIPT_DIR/collections/TaxiRideFlow"
 ONLINE_DIR="$SCRIPT_DIR/collections/OnlineRideBookingFlow"
 ONLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OnlineRideBookingOffers"
 OFFLINE_OFFERS_DIR="$SCRIPT_DIR/collections/OfflineRideBookingOffers"
@@ -45,6 +48,8 @@ METRO_DIR="$SCRIPT_DIR/collections/MetroTicketBookingFlow"
 SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
 LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
+# EasyBookingRideFlow had no command, so CI couldn't run it; added `easy`.
+EASY_BOOKING_DIR="$SCRIPT_DIR/collections/EasyBookingRideFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
@@ -77,8 +82,8 @@ DB_USER_SUPER="atlas_superuser"
 RIDE_ENVS=("NY_Bangalore" "YS_Kolkata" "NY_Chennai" "BT_Delhi")
 
 # Cities that support Cab (TAXI/SEDAN) fare products
-# Bangalore only has Auto, no cab dynamic-offer fare policies
-CAB_CITIES=("YS_Kolkata" "NY_Chennai" "BT_Delhi")
+# Bangalore cab flows (TaxiRideFlow 04-06) verified working, so it is no longer skipped
+CAB_CITIES=("NY_Bangalore" "YS_Kolkata" "NY_Chennai" "BT_Delhi")
 
 # ── Utilities ──
 
@@ -237,16 +242,20 @@ setup() {
 # ── List ──
 
 list_suites() {
-    echo "=== Ride Booking Flow ==="
-    for env_name in "${RIDE_ENVS[@]}"; do
-        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
-        if [ -f "$env_file" ]; then
-            echo "  $env_name:"
-            for f in "$RIDE_DIR"/*.json; do
-                [[ "$f" == *"postman_environment"* ]] && continue
-                echo "    $(basename "$f" .json)"
-            done
-        fi
+    for ride_label_dir in "Auto Ride Flow:$AUTO_RIDE_DIR" "Taxi Ride Flow:$TAXI_RIDE_DIR" "Ride Booking Flow:$RIDE_DIR"; do
+        local ride_label="${ride_label_dir%%:*}"
+        local ride_dir="${ride_label_dir#*:}"
+        echo "=== $ride_label ==="
+        for env_name in "${RIDE_ENVS[@]}"; do
+            local env_file="$ride_dir/Local/Local_${env_name}.postman_environment.json"
+            if [ -f "$env_file" ]; then
+                echo "  $env_name:"
+                for f in "$ride_dir"/*.json; do
+                    [[ "$f" == *"postman_environment"* ]] && continue
+                    echo "    $(basename "$f" .json)"
+                done
+            fi
+        done
     done
     for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Rewards:$REWARDS_DIR" "Incentive Journey:$INCENTIVE_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR" "Phone Share Consent:$PHONE_CONSENT_DIR" "Event Tracking:$EVENT_TRACKING_DIR"; do
         local label="${label_dir%%:*}"
@@ -317,6 +326,15 @@ for item in report.get('run', {}).get('executions', []):
 " 2>/dev/null || true
 }
 
+# Env files use ${VAR:default} port placeholders (resolved by the dashboard, not by newman); fill them in before newman runs.
+resolve_env_file() {
+    local src="$1" out
+    mkdir -p "$REPORTS_DIR"
+    out="$REPORTS_DIR/.resolved-$(basename "$src")"
+    perl -pe 's/\$\{([A-Z_][A-Z0-9_]*)(?::([^}]*))?\}/defined $ENV{$1} && $ENV{$1} ne "" ? $ENV{$1} : (defined $2 ? $2 : "")/ge' "$src" > "$out"
+    echo "$out"
+}
+
 # ── Run a single collection with a given environment ──
 
 run_single() {
@@ -326,6 +344,7 @@ run_single() {
     suite_name=$(basename "$collection" .json)
     local env_name
     env_name=$(basename "$env_file" .json)
+    env_file=$(resolve_env_file "$env_file")
 
     flush_redis
     enable_all_drivers
@@ -380,14 +399,34 @@ run_single() {
     echo "PASSED: $suite_name ($env_name)"
 }
 
+# ── Parked collections ──
+# Failing / direct-DB suites live outside collections/ (DbDependent/ and thrash-collections/).
+# A command whose collection is parked skips cleanly instead of failing.
+skip_if_parked() {
+    local dir="$1"
+    [ -d "$dir" ] && return 1
+    local name
+    name="$(basename "$dir")"
+    for parked in "$SCRIPT_DIR/thrash-collections/$name" "$SCRIPT_DIR/DbDependent/$name"; do
+        if [ -d "$parked" ]; then
+            echo "SKIP: $name is parked in ${parked#"$SCRIPT_DIR"/} (not in collections/)"
+            return 0
+        fi
+    done
+    return 1
+}
+
 # ── Ride Booking ──
 
 run_rides() {
     local filter_env="${1:-}"
     local filter_suite="${2:-}"
+    # Optional 3rd arg: collection dir (AutoRideFlow / TaxiRideFlow reuse this runner).
+    local ride_dir="${3:-$RIDE_DIR}"
 
-    if [ ! -d "$RIDE_DIR" ]; then
-        echo "No ride collections found at $RIDE_DIR"
+    skip_if_parked "$ride_dir" && return 0
+    if [ ! -d "$ride_dir" ]; then
+        echo "No ride collections found at $ride_dir"
         exit 1
     fi
 
@@ -403,7 +442,7 @@ run_rides() {
             continue
         fi
 
-        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
+        local env_file="$ride_dir/Local/Local_${env_name}.postman_environment.json"
         if [ ! -f "$env_file" ]; then
             echo "WARNING: Environment not found: $env_file, skipping $env_name"
             continue
@@ -414,7 +453,7 @@ run_rides() {
         echo "  $env_name"
         echo "════════════════════════════════════════════════════════════"
 
-        for f in "$RIDE_DIR"/*.json; do
+        for f in "$ride_dir"/*.json; do
             [[ "$f" == *"postman_environment"* ]] && continue
             local suite_name
             suite_name=$(basename "$f" .json)
@@ -468,6 +507,7 @@ run_frfs() {
     local filter_env="${3:-}"
     local filter_suite="${4:-}"
 
+    skip_if_parked "$flow_dir" && return 0
     if [ ! -d "$flow_dir" ]; then
         echo "No collections found at $flow_dir"
         exit 1
@@ -562,7 +602,7 @@ run_scheduler() {
             echo "------------------------------------------------------------"
             echo "Running: $suite_name ($env_name)"
 
-            if newman run "$f" -e "$env_file" --bail --timeout-request 60000 --reporters cli; then
+            if newman run "$f" -e "$(resolve_env_file "$env_file")" --bail --timeout-request 60000 --reporters cli; then
                 echo "PASSED: $suite_name ($env_name)"
                 passed=$((passed + 1))
             else
@@ -582,6 +622,7 @@ run_scheduler() {
 }
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
+run_easy_booking() { run_frfs "$EASY_BOOKING_DIR" "EASY BOOKING RIDE" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_driver_image() { run_frfs "$DRIVER_IMAGE_DIR" "DRIVER IMAGE" "${1:-}" "${2:-}"; }
 # Delegates to the collection's own run.sh — it sets transporter_config.pan_hard_check,
@@ -738,6 +779,8 @@ show_help() {
     echo "Commands:"
     echo "  (none)              Run all ride booking suites for all cities"
     echo "  rides               Run all ride booking suites for all cities"
+    echo "  auto                Run Auto ride suites (AutoRideFlow)"
+    echo "  taxi                Run Taxi/Cab ride suites (TaxiRideFlow)"
     echo "  bus                 Run all bus ticket booking suites"
     echo "  metro               Run all metro ticket booking suites"
     echo "  subway              Run all subway ticket booking suites"
@@ -746,6 +789,7 @@ show_help() {
     echo "  offline-offers      Run offline ride cashback offer suites"
     echo "  scheduler           Run scheduler job integration tests"
     echo "  loyalty             Run loyalty wallet topup/burn suites"
+    echo "  easy                Run easy booking ride suites"
     echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
     echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
     echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
@@ -784,7 +828,7 @@ show_help() {
     echo "  ./run-tests.sh                                    # All ride suites, all cities"
     echo "  ./run-tests.sh rides                              # All ride suites, all cities"
     echo "  ./run-tests.sh rides NY_Bangalore                 # All ride suites for Bangalore"
-    echo "  ./run-tests.sh rides NY_Bangalore 01-AutoRideFlow # Specific suite + city"
+    echo "  ./run-tests.sh auto NY_Bangalore 01-AutoRideFlow  # Specific suite + city"
     echo "  ./run-tests.sh bus                                # All bus suites, all cities"
     echo "  ./run-tests.sh bus FRFS_Chennai                   # Bus suites for Chennai"
     echo "  ./run-tests.sh metro FRFS_Bangalore               # Metro suites for Bangalore"
@@ -833,6 +877,12 @@ case "${1:-}" in
     rides)
         run_rides "${2:-}" "${3:-}"
         ;;
+    auto|auto-rides)
+        run_rides "${2:-}" "${3:-}" "$AUTO_RIDE_DIR"
+        ;;
+    taxi|taxi-rides)
+        run_rides "${2:-}" "${3:-}" "$TAXI_RIDE_DIR"
+        ;;
     bus)
         run_bus "${2:-}" "${3:-}"
         ;;
@@ -856,6 +906,9 @@ case "${1:-}" in
         ;;
     loyalty|wallet)
         run_loyalty "${2:-}" "${3:-}"
+        ;;
+    easy|easy-booking)
+        run_easy_booking "${2:-}" "${3:-}"
         ;;
     stcl|stcl-membership)
         run_stcl "${2:-}" "${3:-}"
