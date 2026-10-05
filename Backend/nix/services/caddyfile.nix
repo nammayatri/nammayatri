@@ -22,7 +22,7 @@ let
   exposedServices = [
     "rider-app"
     "dynamic-offer-driver-app"
-    "rider-dashboard"
+    # rider-dashboard isn't started in dev anymore; provider-dashboard serves /bap/*.
     "provider-dashboard"
     "beckn-gateway"
     "mock-registry"
