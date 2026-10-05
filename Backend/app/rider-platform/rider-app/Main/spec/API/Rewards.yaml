@@ -33,6 +33,19 @@ types:
     redemptionTargetUrl: Maybe Text
     couponValidTill: Maybe UTCTime
 
+  RewardHomeCard:
+    header: Maybe Text
+    title: Text
+    subtitle: Maybe Text
+    subtitleInfo: Maybe Text
+    image: Maybe Text
+    lottie: Maybe Text
+    textColor: Maybe Text
+    bgGradientColors: Maybe [Text]
+
+  RewardHomeCardResp:
+    card: Maybe RewardHomeCard
+
 apis:
   - GET:
       endpoint: /rewards
@@ -55,3 +68,9 @@ apis:
         unlockId: Id RewardUnlock
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /rewards/homeCard
+      auth: TokenAuth
+      response:
+        type: RewardHomeCardResp

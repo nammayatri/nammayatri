@@ -16,6 +16,7 @@ module Domain.Action.Dashboard.Rewards
 where
 
 import qualified API.Types.RiderPlatform.Management.Rewards as API
+import qualified API.Types.UI.Rewards as UIRewards
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Rewards.CampaignStatus as CampaignStatus
 import qualified Dashboard.Common.Rewards.ClaimMode as ClaimMode
@@ -474,6 +475,7 @@ validatePresentation v = case v of
       Just (A.Number n) | n == 1 -> pure ()
       Just _ -> throwError (InvalidRequest "presentation.schemaVersion must be 1")
       Nothing -> pure ()
+    whenJust (KM.lookup "homeCard" o) validateHomeCard
     case KM.lookup "detail" o of
       Just (A.Object d) -> case KM.lookup "body" d of
         Just (A.Object b) -> case (KM.lookup "type" b, KM.lookup "content" b) of
@@ -488,6 +490,12 @@ validatePresentation v = case v of
         _ -> pure ()
       _ -> pure ()
   _ -> throwError (InvalidRequest "presentation must be a JSON object")
+
+-- | @presentation.homeCard@ is the rider home-screen promo card served by GET /rewards/homeCard.
+validateHomeCard :: (MonadFlow m) => A.Value -> m ()
+validateHomeCard v = case (A.fromJSON v :: A.Result UIRewards.RewardHomeCard) of
+  A.Success _ -> pure ()
+  A.Error e -> throwError (InvalidRequest $ "presentation.homeCard is invalid: " <> T.pack e)
 
 toDomainSponsorType :: SponsorType.SponsorType -> DRCmp.SponsorType
 toDomainSponsorType SponsorType.Internal = DRCmp.Internal
