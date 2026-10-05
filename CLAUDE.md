@@ -207,8 +207,12 @@ So: prefer config, SQL, or a shim in front. The OTP attempt limit lives in
 nginx for exactly this reason, not in the Haskell that already had the counter.
 
 **The running binary is older than this tree, and on some paths they disagree
-outright.** `Backend/dev/local-stack/bin/MANIFEST.txt` names the build ref
-(`03a7531`), which is an *ancestor* of this branch. Upstream has since replaced
+outright.** It is built from upstream ref `03a7531`, an *ancestor* of this
+branch, plus our patches. **The rider and driver apps run from the image
+`ghcr.io/nammayatri-algeria/ny-backend:latest`** (CI run #10, 2026-09-14, tag
+`03a7531-10`, digest `108eca6c…`), **not from `bin/`**: `bin/MANIFEST.txt`
+describes the 5 August binaries in that folder, and only the gateway and the
+registry there are the ones running (measured by hash, 2026-10-05). Upstream has since replaced
 whole subsystems. Measured case: the tree says driver positions come from the
 location-tracking service, a separate Rust binary we do not run; the deployed
 binary still has `POST /ui/driver/location` writing Postgres directly, and that

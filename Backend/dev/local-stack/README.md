@@ -1022,8 +1022,8 @@ any driver code, because **the checked-out source describes a different system**
 
 ### The trap, first
 
-`Backend/dev/local-stack/bin/MANIFEST.txt` records the build ref the deployed
-binaries came from: `03a7531`. That ref **is an ancestor of this branch's HEAD**
+The deployed binaries are built from upstream ref `03a7531` plus our patches.
+That ref **is an ancestor of this branch's HEAD**
 — the running backend is *older* than the tree you are reading, and on this code
 path the two disagree completely.
 
@@ -4128,7 +4128,13 @@ rider-app has migrated.
   ignores the ones that fail, so this is noise, not breakage — the real BPP on
   `:8016` answers.
 - The binaries in `bin/` are gitignored. `MANIFEST.txt` alongside them records
-  which build produced them; `setup.sh` refuses to start without them.
+  which build produced **them** (5 August); `setup.sh` refuses to start without
+  them. **On the live server the rider and driver apps do not run from `bin/`**
+  but from the image `ghcr.io/nammayatri-algeria/ny-backend:latest` (`ny-rider:patched`),
+  CI run #10 of 2026-09-14 (tag `03a7531-10`, digest `108eca6c…`), which carries
+  the two-country patches. Hashed inside the containers on 2026-10-05: the
+  gateway and the registry match `bin/`, `rider-app-exe` and
+  `dynamic-offer-driver-app-exe` do not. Ask the containers, not the folder.
 
 ## Layout
 

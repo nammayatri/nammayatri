@@ -46,3 +46,21 @@ Three versions until today: git (422 lines), `/opt/ny/local-stack/backup.sh`
 (407, run by nothing) and `/root/backup.sh` (488, what `movin-backup.service`
 runs). Git and the unused copy now hold the running one, byte for byte
 (`sha256 e76d1189…`).
+
+## Phase 0 completed — 2026-10-05
+
+- `bin/MANIFEST.txt` put back on the server (added, nothing replaced). The four
+  binaries in `bin/` match it by sha256.
+- **What actually runs is not `bin/`.** Hashed inside the containers: the rider
+  and driver apps come from the image `ghcr.io/nammayatri-algeria/ny-backend:latest`
+  = `ny-rider:patched`, digest `sha256:108eca6c…`, created 2026-09-14 10:10 UTC by
+  **CI run #10** (`algeria-backend-build.yml`, branch commit `09dc606410`, image
+  tag `03a7531-10`), deployed 14:02 UTC that day. `rider-app-exe`
+  (`c1d32b83…`) and `dynamic-offer-driver-app-exe` (`c6481ff3…`) differ from
+  `bin/`; the gateway (`c2052525…`) and the registry (`f9a3f3d8…`) match it.
+  Older images kept for rollback: `ny-rider:rollback-20260914-1402` and three
+  before it.
+- `docker compose config` saved root-only beside the archive
+  (`/root/snapshots/2026-10-04/compose-config.yml`) — it holds secrets, so it is
+  not in this public repository.
+- The server notes the same beside the manifest: `bin/WHAT-RUNS.txt`.
