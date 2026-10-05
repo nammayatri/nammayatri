@@ -25,6 +25,7 @@ import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.FarePolicy as DFP
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
@@ -115,6 +116,7 @@ data AllocatorJobType
   | ConnectAccountChargeDeduction
   | BulkUserCohortMappingUpload
   | FleetEngineRetry
+  | DeleteUnreferencedFarePolicies
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -193,6 +195,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
   restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
   restoreAnyJobInfo SFleetEngineRetry jobData = AnyJobInfo <$> restoreJobInfo SFleetEngineRetry jobData
+  restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -865,3 +868,13 @@ data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
 instance JobInfoProcessor 'BulkUserCohortMappingUpload
 
 type instance JobContent 'BulkUserCohortMappingUpload = BulkUserCohortMappingUploadJobData
+
+-- | Fare policies whose FareProducts were replaced or removed. Deleted only if still unreferenced when the job runs.
+newtype DeleteUnreferencedFarePoliciesJobData = DeleteUnreferencedFarePoliciesJobData
+  { farePolicyIds :: [Id DFP.FarePolicy]
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'DeleteUnreferencedFarePolicies
+
+type instance JobContent 'DeleteUnreferencedFarePolicies = DeleteUnreferencedFarePoliciesJobData

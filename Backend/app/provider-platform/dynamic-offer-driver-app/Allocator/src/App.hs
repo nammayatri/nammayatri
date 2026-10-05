@@ -53,6 +53,7 @@ import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
 import SharedLogic.Allocator.Jobs.FCM.RunScheduledFCMS (runScheduledFCMS)
 import SharedLogic.Allocator.Jobs.FCM.SoftBlockNotification
+import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (deleteUnreferencedFarePolicies)
 import SharedLogic.Allocator.Jobs.FleetAlert.SendFleetAlert (sendFleetAlert)
 import SharedLogic.Allocator.Jobs.FleetEngine.Retry (fleetEngineRetryHandler)
 import SharedLogic.Allocator.Jobs.IncentiveJourney.BulkUserCohortMappingUpload (runBulkUserCohortMappingUploadJob)
@@ -198,6 +199,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runAggregatedCommissionInvoiceCreationJob
           & putJobHandlerInListWrapper flowRt env sendConnectAccountCharge
           & putJobHandlerInListWrapper flowRt env runBulkUserCohortMappingUploadJob
+          & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
     }
 
 runDriverOfferAllocator ::
