@@ -943,6 +943,7 @@ sendRideCompletedUpdateToBAP ::
   Bool ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
+  fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -969,7 +970,6 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   -- Applies the same overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, since this push's order builder has the same ONDC compliance gaps as the ride-assigned push.
   patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True booking.addOnData rideCompletedMsgV2'.onUpdateReqMessage
   let rideCompletedMsgV2 = rideCompletedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
-  fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
 
 sendBookingCancelledUpdateToBAP ::

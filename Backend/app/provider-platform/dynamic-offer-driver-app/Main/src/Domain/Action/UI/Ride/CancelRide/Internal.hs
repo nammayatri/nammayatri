@@ -181,6 +181,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
         ( do
             ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
             booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+            fork "FleetEngine: cancel trip" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
             isValueAddNP <- CQVAN.isValueAddNP booking.bapId
             let merchantId = booking.providerId
             merchant <-
@@ -204,8 +205,6 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                   pure $ BP.buildVehicleFromRideDetailsSnapshot booking ride rideDetails
                 | otherwise -> throwError (DriverWithoutVehicle ride.driverId.getId)
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy transporterConfig driver
-            -- Hoisted out of the ReAllocate-Notify-BAP fork below so a throw there can't leak the FE mirror.
-            fork "FleetEngine: cancel trip on driver cancel" $ FleetEngine.notifyTripCancelled booking.merchantOperatingCityId ride.id
             -- the decision above already consumed the live pickup journey; persist it on the ride
             fork "flush pickup journey on cancel" $ PickupStallState.flushPickupJourney ride Nothing
             -- Matrix-row-driven consequences (SharedLogic.CancellationOrchestrator):
