@@ -53,9 +53,8 @@ import Kernel.Utils.Common hiding (mkPrice)
 import qualified Kernel.Utils.Common as Common (mkPrice)
 import SharedLogic.FareCalculator
 import qualified SharedLogic.FarePolicy as SFP
-import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
+import SharedLogic.MerchantPaymentMethod (resolveBookingPaymentMethodInfo)
 import qualified Storage.CachedQueries.BecknConfig as QBC
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.CancellationConsequenceMatrix as QCCM
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -117,7 +116,7 @@ buildOnCancelMessageV2 merchant mbBapCity mbBapCountry cancelStatus (OC.BookingC
   -- Needed only by the ONDC override below; resolved here rather than threaded through
   -- buildOnCancelReq, which every other cancel path also calls.
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  mbPaymentMethodInfo <- fmap mkPaymentMethodInfo <$> maybe (pure Nothing) CQMPM.findById booking.paymentMethodId
+  mbPaymentMethodInfo <- resolveBookingPaymentMethodInfo booking
   onCancelReq <- buildOnCancelReq Context.ON_CANCEL Context.MOBILITY msgId bppId bppUri city country cancelStatus merchant driverName driverGender customerPhoneNo (OC.BookingCancelledBuildReqV2 OC.DBookingCancelledReqV2 {..}) (mbRide' <&> (.status)) becknConfig mbVehicle mbFarePolicy driverPhone mbCancellationDuesDetails mbCollectionMode mbCustomerNotificationKey driverRating mbPaymentMethodInfo
   patchedMessage <- OSRCommon.applyOnCancelOrderOverridesIfEnabled isValueAddNP booking onCancelReq.onCancelReqMessage
   pure onCancelReq {Spec.onCancelReqMessage = patchedMessage}
