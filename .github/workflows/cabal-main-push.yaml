@@ -184,7 +184,7 @@ jobs:
     needs: [check-conditions, cabal-build]
     if: needs.check-conditions.outputs.should-proceed == 'true'
     continue-on-error: true
-    runs-on: containerd-build
+    runs-on:  x86_64_main_push
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
     steps:
@@ -294,7 +294,7 @@ jobs:
     name: Analyze Cabal Build Times
     needs: [cabal-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: containerd-build
+    runs-on:  x86_64_main_push
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -335,7 +335,7 @@ jobs:
     name: Integration Tests (collections/)
     needs: [check-conditions, cabal-build]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: containerd-build
+    runs-on: x86_64_main_push
     timeout-minutes: 150
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
