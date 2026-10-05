@@ -413,14 +413,6 @@ jobs:
           echo "GET $URL -> HTTP $CODE"
           [ "$CODE" = 200 ] || { echo "Runner can't read the config-sync bucket (is its IP whitelisted?)"; exit 1; }
 
-      # TEMPORARY: patches.json's BG rule renames every master BG row to JUSPAY.BG.1 (same for some BAPs), leaving
-      # duplicate (subscriber_id, unique_key_id) rows; driver-app authCheck then fails search. Keep the newest, CI only.
-      - name: Dedupe registry subscribers after sync (temporary)
-        run: |
-          echo "DELETE FROM atlas_registry.subscriber s USING atlas_registry.subscriber t WHERE s.subscriber_id = t.subscriber_id AND s.unique_key_id = t.unique_key_id AND (s.created, s.ctid) < (t.created, t.ctid);" \
-            > Backend/dev/feature-migrations/9998-ci-dedupe-registry-subscriber.sql
-          cat Backend/dev/feature-migrations/9998-ci-dedupe-registry-subscriber.sql
-
       # TEMPORARY: feature-migration 0067 (PR #16987) seeds fcm_notification_type 'DRIVER_STARTED_RETURN_TRIP', which isn't a
       # shared-kernel Category; rider-app then fails every push-notification read (on_update/on_status). Use TRIP_STARTED, CI only.
       - name: Fix return-trip notification category after sync (temporary)
