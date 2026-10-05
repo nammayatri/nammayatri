@@ -351,10 +351,15 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount
   vpa <- case payoutServiceFlow of
     Payout.JuspayFlow -> Just <$> fromMaybeM (InvalidRequest $ "VPA is required for payout but missing in PayoutRequest " <> pr.id.getId) pr.customerVpa
     Payout.StripeFlow -> pure $ pr.customerVpa
+  -- Juspay rejects amounts with more than 2 decimal places (E01)
+  let amount = fromMaybe 0 pr.amount
+      sentAmount = DPayment.floorToTwoDecimalPlaces amount
+  when (sentAmount /= amount) $
+    logInfo $ "PayoutRequest " <> pr.id.getId <> " amount floored to 2 decimals: ledger=" <> show amount <> " sent=" <> show sentAmount <> " diff=" <> show (amount - sentAmount)
   pure $
     DPayment.mkCreatePayoutServiceReq
       orderId
-      (fromMaybe 0 pr.amount)
+      sentAmount
       currency
       pr.customerPhone
       pr.customerEmail
@@ -364,7 +369,7 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount
       vpa
       (fromMaybe "FULFILL_ONLY" pr.orderType)
       payoutServiceFlow
-      mbTransferAmount
+      (DPayment.floorToTwoDecimalPlaces <$> mbTransferAmount)
 
 -- | Build a PayoutRequest from a PayoutSubmission.
 buildPayoutRequest ::

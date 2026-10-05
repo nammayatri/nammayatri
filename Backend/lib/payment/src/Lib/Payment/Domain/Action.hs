@@ -71,6 +71,7 @@ module Lib.Payment.Domain.Action
     -- Offer computation and application
     ComputedOfferAmount (..),
     computeOfferAmount,
+    floorToTwoDecimalPlaces,
     OfferStatsInput (..),
     applyOfferService,
     applyOfferWithoutPaymentService,
@@ -1480,7 +1481,7 @@ computeOfferAmount offer amount =
         | otherwise = case offer.discountType of
           DOffer.FLAT -> min offer.discountValue amount
           DOffer.PERCENTAGE ->
-            let pctAmount = amount * offer.discountValue / 100
+            let pctAmount = floorToTwoDecimalPlaces (amount * offer.discountValue / 100)
              in maybe pctAmount (min pctAmount) offer.maxDiscount
       (discountAmount, payoutAmount) = case offer.offerType of
         DOffer.DISCOUNT -> (offerAmount, 0)
@@ -1491,6 +1492,9 @@ computeOfferAmount offer amount =
           postOfferAmount = max 0 (amount - discountAmount),
           amountSaved = discountAmount + payoutAmount
         }
+
+floorToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
+floorToTwoDecimalPlaces x = fromIntegral (floor (x * 100) :: Integer) / 100
 
 -- apply offer service ----------------------------------------------------
 
