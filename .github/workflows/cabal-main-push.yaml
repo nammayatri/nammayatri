@@ -359,52 +359,6 @@ jobs:
             ln -sfn "$CACHE_ROOT/hie/$pkg" "$pkg/.hie"
           done
 
-      # TEMPORARY: runner-exporter.py on the CI runner holds :8080, so move mock-server to 18080 for CI only.
-      # Rewrites the CI checkout copy, not the repo. Remove once the exporter moves off 8080.
-      - name: Move mock-server off 8080 (temporary)
-        run: |
-          MOCK_PORT=18080
-          echo "MOCK_SERVER_PORT=$MOCK_PORT" >> $GITHUB_ENV
-          sed -i "s/mock-server = 8080;/mock-server = $MOCK_PORT;/" Backend/nix/services/ports.nix
-          sed -i "s/8080 # mock-server (python)/$MOCK_PORT # mock-server (python)/" Backend/nix/scripts.nix
-          grep -rl 'localhost:8080' Backend/dev/feature-migrations Backend/dev/integration-tests/collections \
-            | xargs -r sed -i "s/localhost:8080/localhost:$MOCK_PORT/g"
-          grep -rl 'MOCK_SERVER_PORT:8080' Backend/dev/integration-tests/collections \
-            | xargs -r sed -i "s/MOCK_SERVER_PORT:8080/MOCK_SERVER_PORT:$MOCK_PORT/g"
-          grep -n "mock-server" Backend/nix/services/ports.nix
-
-      # TEMPORARY: the runner's locale archive has en_US.UTF-8 but not C.UTF-8, so services forced to C.UTF-8
-      # fall back to ASCII and driver-app crashes reading migrations with "—". Use en_US.UTF-8 in CI only.
-      - name: Use en_US.UTF-8 for services (temporary)
-        run: |
-          sed -i 's/LC_ALL = "C.UTF-8";/LC_ALL = "en_US.UTF-8";/' Backend/nix/services/nammayatri.nix
-          grep -n 'LC_ALL = ' Backend/nix/services/nammayatri.nix
-
-      # TEMPORARY: rider-dashboard 0078/0079 (d88026e228) target atlas_dashboard, but dev/CI rider-dashboard
-      # still runs on atlas_bap_dashboard -> "permission denied for schema". Remove once fixed upstream.
-      - name: Fix rider-dashboard 2FA migration schema (temporary)
-        run: |
-          for f in Backend/dev/ddl-migrations/rider-dashboard/0078-add-two-fa-exempt-to-person.sql \
-                   Backend/dev/ddl-migrations/rider-dashboard/0079-add-two-fa-exempt-to-role.sql; do
-            sed -i 's/atlas_dashboard\./atlas_bap_dashboard./' "$f"
-            grep -n "ALTER TABLE" "$f"
-          done
-
-      # TEMPORARY: rider seed 0008-config-pilot-resource-scope (5d2e134c4f) sets capability.resource_type, but only
-      # provider-dashboard got that column (0106-resource-scope). Add a rider copy in CI. Remove once fixed upstream.
-      - name: Add rider-dashboard resource-scope DDL (temporary)
-        run: |
-          sed 's/atlas_dashboard/atlas_bap_dashboard/g' Backend/dev/ddl-migrations/provider-dashboard/0106-resource-scope.sql \
-            > Backend/dev/ddl-migrations/rider-dashboard/0080-resource-scope.sql
-          grep -n "ALTER TABLE" Backend/dev/ddl-migrations/rider-dashboard/0080-resource-scope.sql
-
-      # TEMPORARY: rider-dashboard is legacy (its APIs moved into provider-dashboard) and its old migrations keep
-      # failing in CI; no collection uses it. Don't make test-context-api wait for it (CI copy only).
-      - name: Don't block test-context-api on rider-dashboard (temporary)
-        run: |
-          sed -i '/"rider-dashboard-exe".condition = "process_healthy";/d' Backend/nix/services/nammayatri.nix
-          echo "remaining rider-dashboard waits: $(grep -c '"rider-dashboard-exe".condition' Backend/nix/services/nammayatri.nix || true)"
-
       # The config-sync S3 bucket only allows whitelisted IPs; fail fast with a clear message if this runner isn't one.
       - name: Check config-sync bucket access
         run: |
@@ -412,14 +366,6 @@ jobs:
           CODE=$(curl -s -I -o /dev/null -w '%{http_code}' "$URL")
           echo "GET $URL -> HTTP $CODE"
           [ "$CODE" = 200 ] || { echo "Runner can't read the config-sync bucket (is its IP whitelisted?)"; exit 1; }
-
-      # TEMPORARY: feature-migration 0067 (PR #16987) seeds fcm_notification_type 'DRIVER_STARTED_RETURN_TRIP', which isn't a
-      # shared-kernel Category; rider-app then fails every push-notification read (on_update/on_status). Use TRIP_STARTED, CI only.
-      - name: Fix return-trip notification category after sync (temporary)
-        run: |
-          echo "UPDATE atlas_app.merchant_push_notification SET fcm_notification_type = 'TRIP_STARTED' WHERE fcm_notification_type = 'DRIVER_STARTED_RETURN_TRIP';" \
-            > Backend/dev/feature-migrations/9997-ci-fix-return-trip-notification-category.sql
-          cat Backend/dev/feature-migrations/9997-ci-fix-return-trip-notification-category.sql
 
       # Start the whole stack headless (--tui=false) in the background; its output goes to stack.log.
       - name: Start mobility stack
