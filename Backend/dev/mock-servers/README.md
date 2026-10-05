@@ -38,3 +38,4 @@ python dev/mock-servers/server.py --port 8080
 | `/gullak/*` | Gullak tokenization |
 | `/openai/*` | Azure OpenAI LLM |
 | `/health` | Health check |
+| `POST /mock/s3/put-text` | Write a text object into `Backend/s3/local/test-bucket/<key>` for the local mock bucket |

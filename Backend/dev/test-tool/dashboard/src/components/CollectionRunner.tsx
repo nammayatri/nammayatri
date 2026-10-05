@@ -352,6 +352,18 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     s.rawUrl.includes('{{mock_fcm_url}}')
   ), []);
   const visibleSteps = selectedEnvType === 'Local' ? steps : steps.filter(s => !isMockOnlyStep(s));
+
+  // Re-read the collection file so Run / Re-run pick up edits made after the
+  // suite was opened. Step state otherwise keeps the body parsed on first load.
+  const reloadVisibleSteps = useCallback(async (): Promise<ParsedStep[] | null> => {
+    if (!selectedDir || !selectedSuite || !currentEnv) return null;
+    const raw = await fetchCollection(selectedDir, selectedSuite);
+    if (!raw) return null;
+    const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
+    setSteps(parsed.steps);
+    setNodes(parsed.nodes);
+    return selectedEnvType === 'Local' ? parsed.steps : parsed.steps.filter(s => !isMockOnlyStep(s));
+  }, [selectedDir, selectedSuite, currentEnv, selectedEnvType, isMockOnlyStep]);
   const visibleStepIds = new Set(visibleSteps.map(s => s.id));
   const visibleNodes = nodes
     .map(n => ({ ...n, stepIds: n.stepIds.filter(id => visibleStepIds.has(id)) }))
@@ -517,10 +529,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       environment: { ...currentEnv!.variables },
       collection: {},
     };
-    // Fetch raw collection to re-run prerequest scripts
+    // Fetch raw collection to re-run prerequest scripts and to execute the
+    // steps currently on disk, not the copy parsed when the suite was opened.
+    let stepsForRun = visibleSteps;
     const raw = await fetchCollection(selectedDir, selectedSuite);
     if (raw) {
       const parsed = parseCollection(raw as PostmanCollection, currentEnv!.variables);
+      setSteps(parsed.steps);
+      setNodes(parsed.nodes);
+      stepsForRun = selectedEnvType === 'Local' ? parsed.steps : parsed.steps.filter(s => !isMockOnlyStep(s));
       freshStores.collection = { ...parsed.collectionVars };
       if (raw.event) {
         for (const ev of raw.event) {
@@ -535,9 +552,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) [${selectedEnvType}] --`);
     startNewCoverageRun(`collection-${selectedDir}-${selectedSuite}-${Date.now()}`);
 
-    for (let stepIdx = 0; stepIdx < visibleSteps.length; stepIdx++) {
+    for (let stepIdx = 0; stepIdx < stepsForRun.length; stepIdx++) {
       if (abortRef.current) break;
-      const step = visibleSteps[stepIdx];
+      const step = stepsForRun[stepIdx];
 
       setRunningStepId(step.id);
       setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
@@ -559,7 +576,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         setStepStates(prev => ({ ...prev, [step.id]: { status: 'skip', result, durationMs: 0, mockHits } }));
         onLog('info', `SKIP ${step.name}`);
         for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
-        if (stepIdx < visibleSteps.length - 1) await interStepWait(abortRef);
+        if (stepIdx < stepsForRun.length - 1) await interStepWait(abortRef);
         continue;
       }
 
@@ -594,7 +611,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         break; // bail on first failure
       }
 
-      if (stepIdx < visibleSteps.length - 1) {
+      if (stepIdx < stepsForRun.length - 1) {
         await interStepWait(abortRef);
       }
     }
@@ -602,7 +619,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Collection run complete --');
-  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, ensureTollDashboardSeed, onLog]);
+  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, ensureTollDashboardSeed, isMockOnlyStep, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
@@ -900,8 +917,10 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Re-run a single step in isolation (uses current variable state)
   const rerunStep = useCallback(async (stepId: string) => {
     if (isRunning) return;
-    const step = steps.find(s => s.id === stepId);
-    if (!step) return;
+    const clicked = steps.find(s => s.id === stepId);
+    if (!clicked) return;
+    const fresh = await reloadVisibleSteps();
+    const step = fresh?.find(s => s.name === clicked.name) ?? clicked;
 
     setIsRunning(true);
     setRunningStepId(stepId);
@@ -954,14 +973,18 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
     setIsRunning(false);
     setRunningStepId(null);
-  }, [isRunning, steps, onLog]);
+  }, [isRunning, steps, onLog, reloadVisibleSteps]);
 
   // Re-run from a given step through the end of the collection, reusing the
   // current variable state (does NOT reset stores or re-run the collection
   // prerequest) so it continues from where the prior run left off.
   const rerunFromStep = useCallback(async (stepId: string) => {
     if (isRunning) return;
-    const startIdx = visibleSteps.findIndex(s => s.id === stepId);
+    const clicked = visibleSteps.find(s => s.id === stepId);
+    if (!clicked) return;
+    const fresh = await reloadVisibleSteps();
+    const runSteps = fresh ?? visibleSteps;
+    const startIdx = runSteps.findIndex(s => s.name === clicked.name);
     if (startIdx < 0) return;
 
     abortRef.current = false;
@@ -970,15 +993,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     // Clear states for this step and everything after it; keep earlier results.
     setStepStates(prev => {
       const next = { ...prev };
-      for (let i = startIdx; i < visibleSteps.length; i++) delete next[visibleSteps[i].id];
+      for (let i = startIdx; i < runSteps.length; i++) delete next[runSteps[i].id];
       return next;
     });
 
-    onLog('info', `-- Re-running from step ${startIdx + 1} (${visibleSteps[startIdx].name}) to end --`);
+    onLog('info', `-- Re-running from step ${startIdx + 1} (${runSteps[startIdx].name}) to end --`);
 
-    for (let stepIdx = startIdx; stepIdx < visibleSteps.length; stepIdx++) {
+    for (let stepIdx = startIdx; stepIdx < runSteps.length; stepIdx++) {
       if (abortRef.current) break;
-      const step = visibleSteps[stepIdx];
+      const step = runSteps[stepIdx];
 
       setRunningStepId(step.id);
       setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
@@ -995,7 +1018,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         setStepStates(prev => ({ ...prev, [step.id]: { status: 'skip', result, durationMs: 0, mockHits } }));
         onLog('info', `SKIP ${step.name}`);
         for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
-        if (stepIdx < visibleSteps.length - 1) await interStepWait(abortRef);
+        if (stepIdx < runSteps.length - 1) await interStepWait(abortRef);
         continue;
       }
 
@@ -1027,7 +1050,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         break;
       }
 
-      if (stepIdx < visibleSteps.length - 1) {
+      if (stepIdx < runSteps.length - 1) {
         await interStepWait(abortRef);
       }
     }
@@ -1035,7 +1058,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Re-run from step complete --');
-  }, [isRunning, visibleSteps, selectedEnvType, onLog]);
+  }, [isRunning, visibleSteps, selectedEnvType, onLog, reloadVisibleSteps]);
 
   const toggleStep = (id: string) => {
     setExpandedSteps(prev => {
@@ -1178,7 +1201,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                     {node.prefixGroup && <span className={`cr-tag cr-tag-${step.tag}`}>{step.tag}</span>}
                     <span className="cr-step-method">{step.method}</span>
                     <span className="cr-step-name">{step.name}</span>
-                    {step.formdataFields?.some(f => f.type === 'file') && (
+                    {step.formdataFields?.some(f => f.type === 'file' && !f.value) && (
                       <span
                         className="cr-file-picker-wrap"
                         onClick={e => e.stopPropagation()}

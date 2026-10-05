@@ -22,7 +22,10 @@ module Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
 where
 
 import qualified API.Types.ProviderPlatform.IncentiveJourney.IncentiveJourney as Common
+import qualified AWS.S3 as S3
 import qualified Dashboard.Common
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
 import Data.Time (Day)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.VehicleCategory as DTV
@@ -39,6 +42,7 @@ import qualified Lib.IncentiveJourney as IJ
 import qualified Lib.IncentiveJourney.Common as IJC
 import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.Provider as LibProvider
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
+import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3 as DBulkAssign
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.Assignment as CQAssignment
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.AutoApplyCohortMapping as CQAuto
 import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourney as CQJourney
@@ -135,6 +139,10 @@ mkHandle =
             vehCategory
             Nothing,
       waiveRiderMilestone = Nothing,
+      putBulkAssignCsv = Just $ \s3Path filePath -> do
+        bytes <- liftIO $ BS.readFile filePath
+        when (BS.null bytes) $ throwError (InvalidRequest "csv file must not be empty")
+        S3.putRaw (T.unpack s3Path) bytes "text/csv",
       scheduleBulkUpload =
         Just $ \merchantId merchantOpCityId s3Path scheduledAt batchSize delaySecs runIdText -> do
           let jobData =
@@ -286,7 +294,7 @@ postIncentiveJourneyUnassign merchantShortId =
 postIncentiveJourneyAssignBulkFromS3 ::
   ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Common.BulkAssignUserCohortFromS3Req ->
+  DBulkAssign.BulkAssignUserCohortFromS3Req ->
   Environment.Flow Common.BulkAssignUserCohortFromS3Res
 postIncentiveJourneyAssignBulkFromS3 merchantShortId opCity =
   LibProvider.postIncentiveJourneyAssignBulkFromS3 mkHandle (ShortId merchantShortId.getShortId) opCity

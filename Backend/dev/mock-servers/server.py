@@ -248,6 +248,10 @@ class MockHandler(BaseHTTPRequestHandler):
         if path == "/mock/refunds/clear" and self.command == "POST":
             return self._mock_refunds_clear(body)
 
+        # Local mock S3 object. Allocator reads Backend/s3/local/test-bucket/<key>.
+        if path == "/mock/s3/put-text" and self.command == "POST":
+            return self._mock_s3_put_text(body)
+
         # ── Route to service handler with middleware override check ──
         for prefix, module, svc_name in ROUTES:
             if prefix in path:
@@ -1206,6 +1210,62 @@ class MockHandler(BaseHTTPRequestHandler):
 
     # ── Helpers ──
 
+    def _mock_s3_put_text(self, body):
+        """POST /mock/s3/put-text — write a text object into the local mock bucket.
+
+        Dev s3Config is S3MockConf with baseLocalDirectory ./s3/local and bucket
+        test-bucket, relative to the allocator working directory (Backend/).
+        Body: {"key": "incentive-journey/ucm.csv", "content": "..."}
+        """
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return self._json({"error": "invalid JSON"}, status=400)
+        key = data.get("key")
+        content = data.get("content")
+        if not _safe_mock_s3_key(key):
+            return self._json({"error": "key must be a relative object key with no '..'"}, status=400)
+        if not isinstance(content, str):
+            return self._json({"error": "content must be a string"}, status=400)
+        content = content.replace("\\n", "\n")
+        if len(content.encode("utf-8")) > 1_000_000:
+            return self._json({"error": "content too large"}, status=400)
+        here = os.path.dirname(os.path.abspath(__file__))
+        root = os.path.abspath(os.path.join(here, "..", "..", "s3", "local", "test-bucket"))
+        dest = os.path.abspath(os.path.join(root, key))
+        if os.path.commonpath([root, dest]) != root:
+            return self._json({"error": "key escapes mock bucket"}, status=400)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with open(dest, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        fixture_path = self._write_bulk_assign_fixture(data.get("fixture"), content)
+        log.info("mock s3 put %s (%s bytes)", key, len(content.encode("utf-8")))
+        body = {"key": key, "path": dest}
+        if fixture_path is not None:
+            body["fixture"] = fixture_path
+        return self._json(body)
+
+    def _write_bulk_assign_fixture(self, fixture, content):
+        """Optional copy for newman file upload. `fixture` is a single file name."""
+        if fixture is None:
+            return None
+        if (
+            not isinstance(fixture, str)
+            or not fixture
+            or fixture.startswith(".")
+            or any(c not in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-" for c in fixture)
+        ):
+            return None
+        here = os.path.dirname(os.path.abspath(__file__))
+        fixture_dir = os.path.abspath(
+            os.path.join(here, "..", "integration-tests", "collections", "IncentiveJourneyFlow", "fixtures")
+        )
+        os.makedirs(fixture_dir, exist_ok=True)
+        fixture_path = os.path.join(fixture_dir, fixture)
+        with open(fixture_path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        return fixture_path
+
     def _read_body(self):
         length = int(self.headers.get("Content-Length", 0))
         if length > 0:
@@ -1268,6 +1328,16 @@ class _QuietThreadingHTTPServer(ThreadingHTTPServer):
         super().handle_error(request, client_address)
 
 
+def _safe_mock_s3_key(key):
+    if not isinstance(key, str) or not key or key.startswith("/") or "\\" in key:
+        return False
+    parts = key.split("/")
+    if any(part in ("", ".", "..") for part in parts):
+        return False
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+    return all(set(part) <= allowed for part in parts)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Unified mock server for NammaYatri")
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
@@ -1275,7 +1345,7 @@ def main():
 
     server = _QuietThreadingHTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear, POST /mock/refunds/clear")
+    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear, POST /mock/refunds/clear, POST /mock/s3/put-text")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()

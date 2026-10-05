@@ -107,6 +107,7 @@ mkHandle =
             journey
             milestoneId
             periodKey,
+      putBulkAssignCsv = Nothing,
       scheduleBulkUpload = Nothing,
       findSpecialLocationNameById = Nothing,
       loadJourneyMilestones = SLJourney.loadJourneyMilestones
