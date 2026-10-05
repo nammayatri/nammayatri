@@ -349,6 +349,7 @@ let AllocatorJobType =
       | ConnectAccountChargeDeduction
       | BulkUserCohortMappingUpload
       | FleetEngineRetry
+      | DeleteUnreferencedFarePolicies
       >
 
 let jobRetryOnExceptionMapx =

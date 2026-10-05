@@ -199,6 +199,7 @@ import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
@@ -2300,13 +2301,9 @@ postMerchantConfigFareProductSetEnabled merchantShortId opCity req = do
       deletions = concatMap snd resolved
   forM_ keepers $ \k -> when (k.enabled /= req.enabled) $ SQF.updateFareProductEnabled req.enabled k.id
   forM_ deletions (CQFProduct.delete . (.id))
-  -- Clean up fare policies left with no referencing fare product (avoid orphans),
-  -- but only when nothing else references them.
-  forM_ (DL.nub (map (.farePolicyId) deletions)) $ \fpId -> do
-    stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
-    when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
   -- clearCache also drops the city-list key, so list/export see the new state immediately.
   forM_ (keepers <> deletions) CQFProduct.clearCache
+  scheduleDeleteUnreferencedFarePolicies merchant.id merchantOpCity.id (map (.farePolicyId) deletions)
   pure Success
 
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
@@ -2869,13 +2866,6 @@ createConditionalCharges farePolicyId charges = do
   forM_ (DL.nubBy (\a b -> a.chargeCategory == b.chargeCategory) charges) $ \charge ->
     QCC.create charge {DAC.farePolicyId = farePolicyId.getId, DAC.createdAt = now, DAC.updatedAt = now}
 
--- | 'CQFP.delete' leaves the policy's conditional charges behind; this removes them too.
-deleteFarePolicyWithCharges :: Id FarePolicy.FarePolicy -> Flow ()
-deleteFarePolicyWithCharges farePolicyId = do
-  CQFP.delete farePolicyId
-  charges <- QCC.findAllByFp farePolicyId.getId
-  forM_ charges $ \charge -> QCC.deleteByFpAndCategory farePolicyId.getId charge.chargeCategory
-
 postMerchantConfigFarePolicyUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertFarePolicyReq -> Flow Common.UpsertFarePolicyResp
 postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
@@ -3155,18 +3145,15 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                                 markBoundedAreadyDeleted merchanOperatingCityId vehicleServiceTier tripCategory area searchSource boundedAlreadyDeletedMap
                         return (fareProducts, updatedBoundedAlreadyDeletedMap)
 
-              -- Delete old fare products first, then per unique FarePolicy check whether
-              -- ANY FareProduct (across all cities / merchants) still references it before
-              -- deleting the policy.  A per-city in-memory count would undercount policies
-              -- shared across cities (e.g. cloned via postMerchantConfigOperatingCityCreate),
-              -- silently orphaning them.  One extra query per unique policy is cheap here.
+              -- Delete old fare products first.  Their fare policies are deleted by a delayed
+              -- job (scheduled below), which checks whether ANY FareProduct (across all
+              -- cities / merchants) still references each one.  A per-city in-memory count
+              -- would undercount policies shared across cities (e.g. cloned via
+              -- postMerchantConfigOperatingCityCreate), silently orphaning them.
               -- NOTE: Cache clearing is deferred until AFTER the new FareProduct is created
               -- in the DB, to minimise the window where concurrent search requests could
               -- query an empty DB state and cache empty results.
               forM_ oldFareProducts $ \fp -> CQFProduct.delete fp.id
-              forM_ (DL.nub (map (.farePolicyId) oldFareProducts)) $ \fpId -> do
-                stillReferenced <- SQF.findAllFareProductByFarePolicyId fpId
-                when (null stillReferenced) $ deleteFarePolicyWithCharges fpId
 
               id <- generateGUID
               let farePolicyId = finalFarePolicy.id
@@ -3178,6 +3165,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- new record instead of caching an empty result.
               forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
+
+              scheduleDeleteUnreferencedFarePolicies merchantOpCity.merchantId merchantOpCity.id (map (.farePolicyId) oldFareProducts)
 
               return (newErrors, newBoundedAlreadyDeletedMap)
 
