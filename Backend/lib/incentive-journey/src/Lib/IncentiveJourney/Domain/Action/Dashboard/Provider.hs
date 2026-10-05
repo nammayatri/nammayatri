@@ -39,6 +39,7 @@ import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.Core as Core
 import Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle (ServiceHandle (..))
 import qualified Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle as SH
 import qualified Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping as DAuto
+import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3 as DBulkAssign
 import qualified Lib.IncentiveJourney.Domain.Types.BulkUserCohortMappingRun as DBulkRun
 import qualified Lib.IncentiveJourney.Domain.Types.CohortDetails as DCD
 import qualified Lib.IncentiveJourney.Domain.Types.CohortJourneyMapping as DCJM
@@ -597,18 +598,22 @@ postIncentiveJourneyAssignBulkFromS3 ::
   ServiceHandle m ->
   ID.ShortId DIJC.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Common.BulkAssignUserCohortFromS3Req ->
+  DBulkAssign.BulkAssignUserCohortFromS3Req ->
   m Common.BulkAssignUserCohortFromS3Res
 postIncentiveJourneyAssignBulkFromS3 handle merchantShortId opCity req = do
   (merchant, merchantOpCityId) <- resolveMerchant handle merchantShortId opCity
   when (T.null (T.strip req.s3FilePath)) $
     throwError (InvalidRequest "s3FilePath must not be empty")
+  when (null req.file) $
+    throwError (InvalidRequest "csv file must not be empty")
   now <- getCurrentTime
   when (req.scheduledAt < now) $
     throwError (InvalidRequest "scheduledAt must be now or in the future")
   let batchSize = SH.clampBatchSize $ fromMaybe SH.defaultBatchSize req.batchSize
       delaySecs = max 0 $ fromMaybe SH.defaultRescheduleDelaySeconds req.rescheduleDelaySeconds
       s3Path = T.strip req.s3FilePath
+  uploadFn <- handle.putBulkAssignCsv & fromMaybeM (InvalidRequest "csv upload not configured")
+  uploadFn s3Path req.file
   runIdText <- generateGUIDText
   let runId = ID.Id runIdText
   -- Domain run row first so list API can show the schedule even before the first tick.
