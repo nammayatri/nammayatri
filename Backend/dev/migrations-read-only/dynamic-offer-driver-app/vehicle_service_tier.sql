@@ -473,3 +473,14 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN driver_cancel
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN auto_acceptance_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_spot_ride_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_service_tier_name text ;
+

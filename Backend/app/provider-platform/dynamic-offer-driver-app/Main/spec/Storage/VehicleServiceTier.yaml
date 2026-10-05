@@ -29,6 +29,8 @@ VehicleServiceTier:
     driverCancellationNotAllowed: Maybe Bool
     isIntercityEnabled: Maybe Bool
     isRentalsEnabled: Maybe Bool
+    isSpotRideEnabled: Maybe Bool
+    spotServiceTierName: Maybe Text
     oxygen: Maybe Double
     ventilator: Maybe Int
     luggageCapacity: Maybe Int

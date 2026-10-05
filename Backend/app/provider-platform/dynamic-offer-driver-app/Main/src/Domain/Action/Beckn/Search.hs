@@ -360,6 +360,9 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
+  -- Spot ride: tiers with isSpotRideEnabled get an extra OneWayRideOtp quote, identical in
+  -- fare to their normal one-way estimate -- see 'addSpotRidePolicies'.
+  let farePoliciesWithSpotRide = addSpotRidePolicies allFarePoliciesProduct.vehicleServiceTierMap resolvedArea possibleTripOption.isScheduled farePolicies
   (canQueueUp, mbDefaultDriverExtra, mbPickupGateId) <- withTimeAPI "search" "getSpecialZoneQueueInfo" $ getSpecialZoneQueueInfo resolvedArea fromLocation
   let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
@@ -406,12 +409,12 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
   -- considerDriversForSearch is permanently off platform-wide (confirmed, not just today's
   -- default) -- see selectDriversAndMatchFarePolicies for what that means for driver pool
   -- computation at this stage.
-  (pool, selectedFarePolicies) <- withTimeAPI "search" "selectDriversAndMatchFarePolicies" $ selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies
+  (pool, selectedFarePolicies) <- withTimeAPI "search" "selectDriversAndMatchFarePolicies" $ selectDriversAndMatchFarePolicies merchant merchantOpCityId fromLocation possibleTripOption.isScheduled allFarePoliciesProduct.area farePoliciesWithSpotRide
   let driverPool = nonEmpty pool
   navGateMap <- withTimeAPI "search" "buildNavGateMap" $ buildNavGateMap (SL.pickupSpecialZoneIdFromArea allFarePoliciesProduct.area)
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig navGateMap
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollInfo mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig navGateMap
-  logInfo $ "DEBUG: allFarePoliciesProduct area=" <> show allFarePoliciesProduct.area <> " farePoliciesCount=" <> show (length farePolicies) <> " selectedFarePoliciesCount=" <> show (length selectedFarePolicies) <> " tripCategories=" <> show possibleTripOption.tripCategories
+  logInfo $ "DEBUG: allFarePoliciesProduct area=" <> show allFarePoliciesProduct.area <> " farePoliciesCount=" <> show (length farePoliciesWithSpotRide) <> " selectedFarePoliciesCount=" <> show (length selectedFarePolicies) <> " tripCategories=" <> show possibleTripOption.tripCategories
   logInfo $ "DEBUG: selectedFarePolicies tripCategories=" <> show (map (\fp -> (fp.tripCategory, fp.vehicleServiceTier)) selectedFarePolicies)
   (estimates', quotes) <- withTimeAPI "search" "buildEstimatesAndQuotes" $ foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
   logInfo $ "DEBUG: estimates count=" <> show (length estimates') <> " quotes count=" <> show (length quotes)
@@ -491,7 +494,8 @@ handler ValidatedDSearchReq {..} sReq = withTimeAPI "search" "handler" $ do
           specialLocationName = listToMaybe products >>= (.specialLocationName),
           specialLocationSupportNumber = listToMaybe products >>= (.specialLocationSupportNumber),
           fareSettlementType = listToMaybe products >>= (.fareSettlementType),
-          mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea)
+          mbPickupDropArea = listToMaybe products >>= (.mbPickupDropArea),
+          vehicleServiceTierMap = foldMap (.vehicleServiceTierMap) products
         }
 
     processPolicy ::
@@ -872,6 +876,13 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
       isTollApplicable = isTollApplicableForTrip fullFarePolicy.vehicleServiceTier fullFarePolicy.tripCategory
       navigationInstruction = resolveGateNavigationInstruction navGateMap fullFarePolicy.mbArea (show fullFarePolicy.tripCategory)
+      isSpotRideQuote = fullFarePolicy.tripCategory == OneWay OneWayRideOtp && fullFarePolicy.mbArea == Just SL.Default
+      -- Dashboard-configured spotServiceTierName wins when set; otherwise "Spot " <> the
+      -- tier's normal name (e.g. "Spot Auto").
+      vehicleServiceTierDisplayName =
+        if isSpotRideQuote
+          then fromMaybe ("Spot " <> vehicleServiceTierItem.name) vehicleServiceTierItem.spotServiceTierName
+          else vehicleServiceTierItem.name
   pure
     DQuote.Quote
       { id = quoteId,
@@ -879,7 +890,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
         providerId = transporterId,
         distance = mbDistance,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
-        vehicleServiceTierName = Just vehicleServiceTierItem.name,
+        vehicleServiceTierName = Just vehicleServiceTierDisplayName,
         tripCategory = fullFarePolicy.tripCategory,
         farePolicy = Just $ DFP.fullFarePolicyToFarePolicy fullFarePolicy,
         tollNames = if isTollApplicable then vehicleTollNames else Nothing,

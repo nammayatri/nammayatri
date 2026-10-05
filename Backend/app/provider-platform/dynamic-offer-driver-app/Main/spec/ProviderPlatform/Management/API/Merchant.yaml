@@ -1228,6 +1228,8 @@ types:
     - driverCancellationNotAllowed: Maybe Bool
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
+    - isSpotRideEnabled: Maybe Bool
+    - spotServiceTierName: Maybe Text
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]
@@ -1262,6 +1264,8 @@ types:
     - driverCancellationNotAllowed: Maybe Bool
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
+    - isSpotRideEnabled: Maybe Bool
+    - spotServiceTierName: Maybe Text
     - allowedVehicleVariant: Maybe [VehicleVariant]
     - autoSelectedVehicleVariant: Maybe [VehicleVariant]
     - defaultForVehicleVariant: Maybe [VehicleVariant]
@@ -1299,6 +1303,8 @@ types:
     - driverCancellationNotAllowed: Maybe Bool
     - isIntercityEnabled: Maybe Bool
     - isRentalsEnabled: Maybe Bool
+    - isSpotRideEnabled: Maybe Bool
+    - spotServiceTierName: Maybe Text
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]

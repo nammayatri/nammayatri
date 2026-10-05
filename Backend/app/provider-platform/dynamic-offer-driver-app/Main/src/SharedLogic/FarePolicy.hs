@@ -83,7 +83,11 @@ data FarePoliciesProduct = FarePoliciesProduct
     specialLocationName :: Maybe Text,
     specialLocationSupportNumber :: Maybe Text,
     fareSettlementType :: Maybe SL.FareSettlementType,
-    mbPickupDropArea :: Maybe SL.Area
+    mbPickupDropArea :: Maybe SL.Area,
+    -- Vehicle-service-tier rows already resolved while building 'farePolicies' above
+    -- (one CQVST lookup per distinct tier, cached), keyed by tier so callers like
+    -- 'addSpotRidePolicies' can reuse them instead of looking the tier up again.
+    vehicleServiceTierMap :: HM.HashMap ServiceTierType DVST.VehicleServiceTier
   }
 
 makeFarePolicyByEstOrQuoteIdKey :: Text -> Text
@@ -251,6 +255,7 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
       _ -> pure []
   baseVariantFareAmountCar <- withTimeAPI "farePolicy" "getBaseVariantFarePolicy" $ getBaseVariantFarePolicy transporterConfig (Just fromlocaton) mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions allFareProducts.specialLocationName mbResolvedSpecialZoneId dpInputsList
   farePolicies <- withTimeAPI "farePolicy" "getFullFarePolicies" $ catMaybes <$> mapConcurrently (\(fareProduct, mbVehicleServiceTierItem) -> getFullFarePolicy (Just fromlocaton) mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing baseVariantFareAmountCar mbAppDynamicLogicVersion allFareProducts.specialLocationName mbResolvedSpecialZoneId fareProduct configsInExperimentVersions dpInputsList (Just transporterConfig) (Just mbVehicleServiceTierItem)) resolvedFareProducts
+  let vehicleServiceTierMap = HM.fromList [(vst.serviceTierType, vst) | (_, Just vst) <- resolvedFareProducts]
   return $
     FarePoliciesProduct
       { farePolicies,
@@ -259,8 +264,32 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         specialLocationName = allFareProducts.specialLocationName,
         specialLocationSupportNumber = allFareProducts.specialLocationSupportNumber,
         fareSettlementType = allFareProducts.fareSettlementType,
-        mbPickupDropArea = allFareProducts.mbPickupDropArea
+        mbPickupDropArea = allFareProducts.mbPickupDropArea,
+        vehicleServiceTierMap
       }
+
+-- | Spot ride: for each resolved one-way policy whose vehicle service tier has spot ride
+-- enabled, emit an additional policy identical to it except for its trip category. Nothing
+-- else differs -- same farePolicyId, same slabs, same charges -- so the spot fare IS the
+-- normal fare, by construction rather than by keeping two fare_product rows in sync.
+addSpotRidePolicies ::
+  HM.HashMap ServiceTierType DVST.VehicleServiceTier ->
+  SL.Area ->
+  Bool ->
+  [FarePolicyD.FullFarePolicy] ->
+  [FarePolicyD.FullFarePolicy]
+addSpotRidePolicies vehicleServiceTierMap area isScheduled farePolicies
+  | area /= SL.Default || isScheduled = farePolicies
+  | otherwise =
+    let derived = flip mapMaybe farePolicies $ \fp ->
+          case fp.tripCategory of
+            DTC.OneWay mode
+              | mode `elem` [DTC.OneWayOnDemandDynamicOffer, DTC.OneWayOnDemandStaticOffer],
+                not (Kernel.Prelude.any (\p -> p.tripCategory == DTC.OneWay DTC.OneWayRideOtp && p.vehicleServiceTier == fp.vehicleServiceTier) farePolicies),
+                (HM.lookup fp.vehicleServiceTier vehicleServiceTierMap >>= (.isSpotRideEnabled)) == Just True ->
+                Just fp {FarePolicyD.tripCategory = DTC.OneWay DTC.OneWayRideOtp}
+            _ -> Nothing
+     in farePolicies <> derived
 
 getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => TransporterConfig -> Maybe LatLong -> Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [LYT.ConfigVersionMap] -> Maybe Text -> Maybe Text -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> m (Maybe HighPrecMoney)
 getBaseVariantFarePolicy transporterConfig mbFromLocation mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions mbSpecialLocName mbSpecialZoneId dpInputsList = do
