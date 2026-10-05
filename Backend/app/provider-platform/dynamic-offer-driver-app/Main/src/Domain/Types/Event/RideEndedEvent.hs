@@ -15,6 +15,7 @@ module Domain.Types.Event.RideEndedEvent
 where
 
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import qualified Lib.Finance.Core.Types as Finance
 
 -- | IDs and enums are carried as Text to keep the cross-package JSON contract simple.
@@ -42,7 +43,8 @@ data RideEndedEvent = RideEndedEvent
     currency :: Text,
     fleetOwnerId :: Maybe Text,
     isValidRide :: Bool,
-    actorInfo :: Maybe Finance.ActorInfo
+    actorInfo :: Maybe Finance.ActorInfo,
+    fareBeforePaymentCharge :: Maybe HighPrecMoney
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
