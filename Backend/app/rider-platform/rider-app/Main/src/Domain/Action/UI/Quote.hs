@@ -443,9 +443,10 @@ loadAlternateSuggestions parent
   | isJust parent.parentSearchRequestId = pure Nothing
 loadAlternateSuggestions parent = do
   BRPC.getSuggestedSearchCtx parent.id >>= \case
-    -- No context means the search's cached shapes have expired. Nothing is still coming,
-    -- so this is loaded, not pending.
-    Nothing -> pure . Just $ AlternateSuggestionsRes {alternates = [], allLoaded = True}
+    Nothing -> do
+      dispatched <- BRPC.alternatesDispatched parent.id
+      now <- getCurrentTime
+      pure . Just $ AlternateSuggestionsRes {alternates = [], allLoaded = dispatched || parent.validTill < now}
     Just ctx -> do
       resolved <- forM ctx.alternates $ \alternate -> runMaybeT $ do
         shadow <- MaybeT $ QSR.findById alternate.searchId

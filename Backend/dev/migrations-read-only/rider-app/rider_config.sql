@@ -908,3 +908,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_go_online_policy_blocker bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN push_consent_to_bpp boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_distance_source text ;
