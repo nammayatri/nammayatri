@@ -1,5 +1,6 @@
 module SharedLogic.Booking where
 
+import qualified AWS.S3 as S3
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import Data.List (nub)
@@ -72,7 +73,8 @@ cancelBooking ::
     Alloc.SchedulerJobFlow r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -100,7 +102,8 @@ cancelBooking' ::
     Alloc.SchedulerJobFlow r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    BeamFlow m r
+    BeamFlow m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   Bool ->
   DRB.Booking ->
