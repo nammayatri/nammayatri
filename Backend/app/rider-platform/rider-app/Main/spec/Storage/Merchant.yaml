@@ -83,7 +83,7 @@ Merchant:
     scheduleRideBufferTime: NominalDiffTime
     fakeOtpMobileNumbers: "[Text]"
     fakeOtpEmails: "[Text]"
-    kaptureDisposition: Maybe Text # deprecated; Maybe because the DB column is nullable (a NULL crashed merchant loading)
+    kaptureDisposition: Text # deprecated
     arrivedPickupThreshold: Distance
     arrivingPickupThreshold: Distance
     driverOnTheWayNotifyExpiry: Seconds
@@ -226,7 +226,6 @@ Merchant:
     mediaFileSizeUpperLimit: "10000000"
     mediaFileUrlPattern: "'http://localhost:8013/v2/<DOMAIN>/media?filePath=<FILE_PATH>'"
     isAvoidToll: "true"
-    kaptureDisposition: "''"
     country: "'India'"
     cipherText: "'TXlTZWNyZXRLZXkxMjM0NQo='"
     geoHashPrecisionValue: "9"

@@ -120,14 +120,3 @@ ALTER TABLE atlas_app.merchant ADD COLUMN signing_private_key text ;
 
 ALTER TABLE atlas_app.merchant ADD COLUMN cloud_type text ;
 ALTER TABLE atlas_app.merchant ADD COLUMN cloud_base_url text ;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.merchant ALTER COLUMN kapture_disposition SET DEFAULT '';
-ALTER TABLE atlas_app.merchant ALTER COLUMN kapture_disposition DROP NOT NULL;
-
-
-------- SQL updates -------
-

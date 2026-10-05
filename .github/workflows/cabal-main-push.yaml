@@ -362,7 +362,7 @@ jobs:
       # The config-sync S3 bucket only allows whitelisted IPs; fail fast with a clear message if this runner isn't one.
       - name: Check config-sync bucket access
         run: |
-          URL=https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v8/master_to_local.zip
+          URL=https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v9/master_to_local.zip
           CODE=$(curl -s -I -o /dev/null -w '%{http_code}' "$URL")
           echo "GET $URL -> HTTP $CODE"
           [ "$CODE" = 200 ] || { echo "Runner can't read the config-sync bucket (is its IP whitelisted?)"; exit 1; }
@@ -393,7 +393,7 @@ jobs:
         run: |
           curl -sf -X POST "$CONTEXT_API/api/config-sync/import" \
                -H 'Content-Type: application/json' \
-               -d '{"from":"master","forceFetch":true,"version":"v8"}' | jq -e '.started == true'
+               -d '{"from":"master","forceFetch":true,"version":"v9"}' | jq -e '.started == true'
           for i in $(seq 1 80); do           # 80 x 15s = 20 min
             STATUS=$(curl -sf "$CONTEXT_API/api/config-sync/status")
             if [ "$(echo "$STATUS" | jq -r '.running')" = "false" ]; then
