@@ -54,7 +54,9 @@ buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
 tfMessage :: DFeedback.FeedbackRes -> Spec.RatingReqMessage
 tfMessage res = do
   Spec.RatingReqMessage
-    { ratingReqMessageRatings = Just [tfRating res]
+    { ratingReqMessageRatings = Just [tfRating res],
+      ratingReqMessageOrderId = Nothing,
+      ratingReqMessageFeedbacks = Nothing
     }
 
 tfRating :: DFeedback.FeedbackRes -> Spec.Rating
@@ -64,7 +66,9 @@ tfRating res@DFeedback.FeedbackRes {..} = do
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
       ratingFeedbackForm = Just $ tfFeedbackForm res,
-      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum res.filePath res.riderName
+      ratingTag = guard isValueAddNP >> mkRatingTags res.shouldFavDriver res.riderPhoneNum res.filePath res.riderName,
+      ratingRefType = Nothing,
+      ratingRefId = Nothing
     }
 
 tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]

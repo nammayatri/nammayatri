@@ -44,6 +44,8 @@ module BecknV2.OnDemand.Types
     Domain (..),
     Error (..),
     Fee (..),
+    Feedback (..),
+    FeedbackAdditionalDetail (..),
     FeedbackForm (..),
     Fulfillment (..),
     FulfillmentState (..),
@@ -1917,7 +1919,11 @@ data Rating = Rating
     -- | Rating value given to the object. This can be a single value or can also contain an inequality operator like gt, gte, lt, lte. This can also contain an inequality expression containing logical operators like && and ||.
     ratingValue :: Maybe Text,
     ratingFeedbackForm :: Maybe [FeedbackForm],
-    ratingTag :: Maybe [TagGroup]
+    ratingTag :: Maybe [TagGroup],
+    -- | v2.1.0: what is being rated (ITEM | ORDER | FULFILLMENT | PROVIDER | AGENT), kept as Text on the wire type and decoded by the consumer
+    ratingRefType :: Maybe Text,
+    -- | v2.1.0: id of the rated entity, in the namespace of ref_type
+    ratingRefId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -1937,7 +1943,9 @@ optionsRating =
     table =
       [ ("ratingId", "id"),
         ("ratingRatingCategory", "rating_category"),
-        ("ratingValue", "value")
+        ("ratingValue", "value"),
+        ("ratingRefType", "ref_type"),
+        ("ratingRefId", "ref_id")
       ]
 
 data FeedbackForm = FeedbackForm
@@ -1993,9 +2001,13 @@ optionsRatingReq =
 
 -- |
 -- |
-newtype RatingReqMessage = RatingReqMessage
+data RatingReqMessage = RatingReqMessage
   { -- |
-    ratingReqMessageRatings :: Maybe [Rating]
+    ratingReqMessageRatings :: Maybe [Rating],
+    -- | v2.1.0: the order the ratings belong to
+    ratingReqMessageOrderId :: Maybe Text,
+    -- | v2.1.0: free-text feedback, keyed to the rated entity by ref_type/ref_id
+    ratingReqMessageFeedbacks :: Maybe [Feedback]
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -2013,7 +2025,70 @@ optionsRatingReqMessage =
     }
   where
     table =
-      [ ("ratingReqMessageRatings", "ratings")
+      [ ("ratingReqMessageRatings", "ratings"),
+        ("ratingReqMessageOrderId", "order_id"),
+        ("ratingReqMessageFeedbacks", "feedbacks")
+      ]
+
+-- | v2.1.0 /rating message.feedbacks[]: a review or answer keyed to the rated entity.
+data Feedback = Feedback
+  { feedbackRefType :: Maybe Text,
+    feedbackRefId :: Maybe Text,
+    feedbackId :: Maybe Text,
+    feedbackType :: Maybe Text,
+    feedbackAsk :: Maybe Text,
+    feedbackComment :: Maybe Text,
+    feedbackAdditionalDetails :: Maybe [FeedbackAdditionalDetail]
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Feedback where
+  parseJSON = genericParseJSON optionsFeedback
+
+instance ToJSON Feedback where
+  toJSON = genericToJSON optionsFeedback
+
+optionsFeedback :: Options
+optionsFeedback =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("feedbackRefType", "ref_type"),
+        ("feedbackRefId", "ref_id"),
+        ("feedbackId", "id"),
+        ("feedbackType", "type"),
+        ("feedbackAsk", "ask"),
+        ("feedbackComment", "comment"),
+        ("feedbackAdditionalDetails", "additional_details")
+      ]
+
+data FeedbackAdditionalDetail = FeedbackAdditionalDetail
+  { feedbackAdditionalDetailShortDesc :: Maybe Text,
+    feedbackAdditionalDetailLongDesc :: Maybe Text,
+    feedbackAdditionalDetailImages :: Maybe [Image]
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON FeedbackAdditionalDetail where
+  parseJSON = genericParseJSON optionsFeedbackAdditionalDetail
+
+instance ToJSON FeedbackAdditionalDetail where
+  toJSON = genericToJSON optionsFeedbackAdditionalDetail
+
+optionsFeedbackAdditionalDetail :: Options
+optionsFeedbackAdditionalDetail =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("feedbackAdditionalDetailShortDesc", "short_desc"),
+        ("feedbackAdditionalDetailLongDesc", "long_desc"),
+        ("feedbackAdditionalDetailImages", "images")
       ]
 
 -- |
