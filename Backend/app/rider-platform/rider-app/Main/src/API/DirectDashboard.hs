@@ -38,6 +38,11 @@ import qualified API.Action.DashboardAuth.IncentiveJourney as IncentiveJourneyDS
 import qualified API.Action.DashboardAuth.IssueManagement as IssueManagementDSL
 import qualified API.Action.DashboardAuth.Management as ManagementDSL
 import qualified API.Action.DashboardAuth.RideBooking as RideBookingDSL
+-- Orphan FromMultipart instances for AppManagement multipart endpoints. The
+-- generated API.Types re-export for TransitOperator does not pull its
+-- OrphanInstances module in (unlike TicketDashboard / MerchantOnboarding),
+-- so the module serving the route has to import it for HasServer to resolve.
+import API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator ()
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Context as Context

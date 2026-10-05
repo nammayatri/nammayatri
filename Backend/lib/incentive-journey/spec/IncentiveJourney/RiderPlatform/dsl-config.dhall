@@ -31,8 +31,7 @@ let outputPath =
               outputPrefixApp ++ "Domain/Action/Dashboard/" ++ folderName
           , _domainHandlerDashboard = ""
           , _domainType = ""
-          , _servantApi =
-              outputPrefixAppReadOnly ++ "API/Action/Dashboard/" ++ folderName
+          , _servantApi = ""
           , _servantApiDashboardAuth =
                   outputPrefixAppReadOnly
               ++  "API/Action/DashboardAuth/"

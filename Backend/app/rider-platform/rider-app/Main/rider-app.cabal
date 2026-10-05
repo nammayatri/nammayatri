@@ -47,8 +47,8 @@ library
       API.Beckn.OnTrack
       API.Beckn.OnUpdate
       API.Conductor
-      API.Dashboard
       API.Dashboard.Exotel
+      API.DashboardExotel
       API.Depot
       API.DirectDashboard
       API.FleetEngineToken
@@ -916,63 +916,6 @@ library
       WhatsappBot.Adapter.SessionStore
       WhatsappBot.Adapter.Tracker
       WhatsappBot.Adapter.Translations
-      API.Action.Dashboard.AppManagement
-      API.Action.Dashboard.AppManagement.Customer
-      API.Action.Dashboard.AppManagement.EDCMachine
-      API.Action.Dashboard.AppManagement.EventManagement
-      API.Action.Dashboard.AppManagement.FRFSTicketService
-      API.Action.Dashboard.AppManagement.FrfsTripOperations
-      API.Action.Dashboard.AppManagement.MerchantOnboarding
-      API.Action.Dashboard.AppManagement.Pass
-      API.Action.Dashboard.AppManagement.Passetto
-      API.Action.Dashboard.AppManagement.PassOrganization
-      API.Action.Dashboard.AppManagement.Payment
-      API.Action.Dashboard.AppManagement.SeatLayout
-      API.Action.Dashboard.AppManagement.StopRouteDetails
-      API.Action.Dashboard.AppManagement.TicketDashboard
-      API.Action.Dashboard.AppManagement.Tickets
-      API.Action.Dashboard.AppManagement.TransitOperator
-      API.Action.Dashboard.AppManagement.VehicleSeatLayoutMapping
-      API.Action.Dashboard.IncentiveJourney
-      API.Action.Dashboard.IncentiveJourney.IncentiveJourney
-      API.Action.Dashboard.IssueManagement
-      API.Action.Dashboard.IssueManagement.Issue
-      API.Action.Dashboard.IssueManagement.IssueList
-      API.Action.Dashboard.Management
-      API.Action.Dashboard.Management.AlertIncident
-      API.Action.Dashboard.Management.Booking
-      API.Action.Dashboard.Management.Customer
-      API.Action.Dashboard.Management.FRFSAlerts
-      API.Action.Dashboard.Management.FRFSTicket
-      API.Action.Dashboard.Management.Invoice
-      API.Action.Dashboard.Management.Media
-      API.Action.Dashboard.Management.Merchant
-      API.Action.Dashboard.Management.NammaTag
-      API.Action.Dashboard.Management.Notification
-      API.Action.Dashboard.Management.Offer
-      API.Action.Dashboard.Management.Payout
-      API.Action.Dashboard.Management.PolicyDocument
-      API.Action.Dashboard.Management.Rewards
-      API.Action.Dashboard.Management.Ride
-      API.Action.Dashboard.Management.SearchTry
-      API.Action.Dashboard.Management.Sos
-      API.Action.Dashboard.Management.SosMedia
-      API.Action.Dashboard.Management.System
-      API.Action.Dashboard.RideBooking
-      API.Action.Dashboard.RideBooking.AddBaggage
-      API.Action.Dashboard.RideBooking.Booking
-      API.Action.Dashboard.RideBooking.Cancel
-      API.Action.Dashboard.RideBooking.ChangeServiceTier
-      API.Action.Dashboard.RideBooking.Confirm
-      API.Action.Dashboard.RideBooking.Frontend
-      API.Action.Dashboard.RideBooking.Maps
-      API.Action.Dashboard.RideBooking.MultiModal
-      API.Action.Dashboard.RideBooking.NotifyRideInfo
-      API.Action.Dashboard.RideBooking.Profile
-      API.Action.Dashboard.RideBooking.Quote
-      API.Action.Dashboard.RideBooking.Registration
-      API.Action.Dashboard.RideBooking.Search
-      API.Action.Dashboard.RideBooking.Select
       API.Action.DashboardAuth.AppManagement
       API.Action.DashboardAuth.AppManagement.Customer
       API.Action.DashboardAuth.AppManagement.EDCMachine

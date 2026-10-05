@@ -15,7 +15,6 @@
 module API where
 
 import qualified API.Beckn as Beckn
-import qualified API.Dashboard as Dashboard
 import qualified API.DashboardCacAuth as DashboardCacAuth
 import qualified API.DashboardDriverInfoByPhoneNumber as DashboardDriverInfo
 import qualified API.DashboardExotel as DashboardExotel
@@ -127,8 +126,6 @@ type MainAPI =
              :> "test"
              :> StripeAccount.AccountStripeWebhookAPI
          )
-    :<|> Dashboard.API -- TODO :: Needs to be deprecated
-    :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
     :<|> DirectDashboard.API
     :<|> DashboardLogin.API
@@ -167,8 +164,6 @@ mainServer env =
     :<|> stripeTestPayoutWebhookHandler
     :<|> stripeAccountWebhookHandler
     :<|> stripeTestAccountWebhookHandler
-    :<|> Dashboard.handler
-    :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
     :<|> DirectDashboard.handler
     :<|> DashboardLogin.handler

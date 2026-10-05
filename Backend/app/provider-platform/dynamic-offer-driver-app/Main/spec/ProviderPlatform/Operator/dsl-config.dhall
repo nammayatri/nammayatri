@@ -10,7 +10,6 @@ let outputPath =
               defaultOutput._apiRelatedTypes ++ "/" ++ folderName
           , _extraApiRelatedTypes =
               defaultOutput._extraApiRelatedTypes ++ "/" ++ folderName
-          , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
           , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
           , _servantApiDashboardAuth =
               defaultOutput._servantApiDashboardAuth ++ "/" ++ folderName

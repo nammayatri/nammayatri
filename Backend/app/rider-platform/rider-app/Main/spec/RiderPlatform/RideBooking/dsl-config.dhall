@@ -15,7 +15,6 @@ let outputPath =
               ++  "API/Types/Dashboard/"
               ++  folderName
               ++  "/OrphanInstances"
-          , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
           , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
           , _servantApiDashboardAuth =
               defaultOutput._servantApiDashboardAuth ++ "/" ++ folderName
@@ -29,7 +28,6 @@ in      common.defaultConfigs
         , _folderName = Some folderName
         , _packageMapping =
           [ { _1 = common.GeneratorType.API_TYPES, _2 = "rider-app" }
-          , { _1 = common.GeneratorType.SERVANT_API, _2 = "rider-app" }
           , { _1 = common.GeneratorType.DOMAIN_HANDLER, _2 = "rider-app" }
           , { _1 = common.GeneratorType.API_TREE_COMMON, _2 = "rider-app" }
           ]

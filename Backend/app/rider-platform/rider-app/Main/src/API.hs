@@ -21,7 +21,7 @@ where
 
 import qualified API.Beckn as Beckn
 import qualified API.Conductor as Conductor
-import qualified API.Dashboard as Dashboard
+import qualified API.DashboardExotel as DashboardExotel
 import qualified API.Depot as Depot
 import qualified API.DirectDashboard as DirectDashboard
 import qualified API.FRFS as FRFS
@@ -88,9 +88,9 @@ type MainAPI =
              :> "test"
              :> Stripe.StripeWebhookAPI
          )
-    :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
     :<|> DirectDashboard.API
+    :<|> DashboardExotel.API
     :<|> Internal.API
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> QueryParam "city" Context.City
@@ -125,9 +125,9 @@ mainServer =
     :<|> juspayWebhookHandler
     :<|> stripeWebhookHandler
     :<|> stripeTestWebhookHandler
-    :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
     :<|> DirectDashboard.handler
+    :<|> DashboardExotel.handler
     :<|> Internal.handler
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Conductor.handler

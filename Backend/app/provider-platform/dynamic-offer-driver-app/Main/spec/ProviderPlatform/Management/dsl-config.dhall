@@ -11,7 +11,6 @@ let outputPath =
           , _extraApiRelatedTypes =
               defaultOutput._extraApiRelatedTypes ++ "/" ++ folderName
           , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
-          , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
           , _servantApiDashboardAuth =
               defaultOutput._servantApiDashboardAuth ++ "/" ++ folderName
           }
