@@ -2,6 +2,7 @@ imports:
   Text: Data.Text
   APISuccess: Kernel.Types.APISuccess
   VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
   LatLong: Kernel.External.Maps.Types
   FilePath: EulerHS.Prelude
   TimeBound: Kernel.Types.TimeBound
@@ -19,6 +20,7 @@ types:
     startPoint: LatLong
     endPoint: LatLong
     integratedBppConfigId: Id IntegratedBPPConfig
+    routeTag: Maybe Text
 
   FRFSRouteReq:
     shortName: Text
@@ -80,6 +82,25 @@ types:
 
   UpsertRouteFareResp:
     unprocessedRouteFares: [Text]
+    success: Text
+
+  # A null routeTag is the catch-all fare, charged for any route GIMS reports without a tag.
+  FRFSStageFareAPI:
+    serviceTier: ServiceTierType
+    routeTag: Maybe Text
+    stage: Int
+    amount: HighPrecMoney
+    cessCharge: Maybe HighPrecMoney
+    currency: Currency
+    derive: "Show,Eq"
+
+  UpsertStageFareReq:
+    recordType: NewType
+    file: FilePath
+    derive: "'HideSecrets"
+
+  UpsertStageFareResp:
+    unprocessedStageFares: [Text]
     success: Text
 
   FRFSStatusUpdateReq:
@@ -158,6 +179,27 @@ apis:
       auth: ApiAuthV2
       response:
         type: UpsertRouteFareResp
+  - GET: # Stage fare grid for the city, across service tiers and route types
+      endpoint: /frfs/stageFare/list
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      auth: ApiAuthV2
+      response:
+        type: "[FRFSStageFareAPI]"
+      migrate:
+        capability: transit-operations.master.read
+  - PUT: # Upsert the stage fare grid through CSV
+      endpoint: /frfs/stageFare/upsert
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
+      multipart:
+        type: UpsertStageFareReq
+      auth: ApiAuthV2
+      response:
+        type: UpsertStageFareResp
+      migrate:
+        capability: transit-operations.master.write
   - GET: # List all stations
       endpoint: /frfs/route/stations
       mandatoryQuery:

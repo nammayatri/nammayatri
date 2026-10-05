@@ -34,6 +34,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
+import qualified Domain.Types.FRFSGtfsStageFare as DFRFSGtfsStageFare
 import qualified Domain.Types.FRFSQuote as Quote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
@@ -107,7 +108,6 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
-import qualified Storage.Queries.FRFSGtfsStageFare as QQFRFSGtfsStageFare
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -483,6 +483,84 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
         fareQuoteType = Nothing
       }
 
+-- | Operators type tags by hand in GIMS, so tags are compared case- and whitespace-insensitively.
+normalizeRouteTag :: Text -> Text
+normalizeRouteTag = T.toUpper . T.strip
+
+-- | A tag that is blank once trimmed is no tag, so a whitespace-tagged route prices as untagged.
+normalizedRouteTagOf :: Maybe Text -> Maybe Text
+normalizedRouteTagOf mbTag = case normalizeRouteTag <$> mbTag of
+  Just tag | not (T.null tag) -> Just tag
+  _ -> Nothing
+
+-- | One fare per tier -- this route's tagged row, else the untagged catch-all, since a missing tagged row would otherwise drop the leg out of search.
+selectStageFaresForRoute ::
+  Maybe Text ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare] ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare]
+selectStageFaresForRoute mbRouteTag stageFares =
+  mapMaybe pickForTier (M.toList stageFaresByTier)
+  where
+    normalizedRouteTag = normalizedRouteTagOf mbRouteTag
+    stageFaresByTier = M.fromListWith (<>) [(stageFare.vehicleServiceTierId, [stageFare]) | stageFare <- stageFares]
+    -- Normalized on the stored side too: an empty-string tag would match neither branch and price nothing.
+    matchesRouteTag stageFare = normalizedRouteTagOf stageFare.routeTag == normalizedRouteTag
+    pickForTier (_vehicleServiceTierId, tierStageFares) =
+      find matchesRouteTag tierStageFares <|> find (isNothing . normalizedRouteTagOf . (.routeTag)) tierStageFares
+
+stageFareFallbackLogTtlSec :: Int
+stageFareFallbackLogTtlSec = 600
+
+-- | getFares turns any exception here into an empty fare list, so a Redis outage must not take the fare down with it.
+rateLimitedFareLog :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m () -> m ()
+rateLimitedFareLog key act = do
+  shouldLog <- either (const False) (\granted -> granted) <$> withTryCatch "stageFareTagFallbackLog" (Redis.setNxExpire ("frfs:stageFareTagFallback:" <> key) stageFareFallbackLogTtlSec ())
+  when shouldLog act
+
+-- | A tagged route priced from the untagged fare is a config gap, not a failed request -- rate limited because this runs per route per search.
+logStageFareRouteTagFallbacks ::
+  (MonadFlow m, Redis.HedisFlow m r) =>
+  Spec.VehicleCategory ->
+  Id DMOC.MerchantOperatingCity ->
+  Int ->
+  Text ->
+  Maybe Text ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare] ->
+  [DFRFSGtfsStageFare.FRFSGtfsStageFare] ->
+  m ()
+logStageFareRouteTagFallbacks vehicleType merchantOperatingCityId stage routeCode mbRouteTag candidateStageFares selectedStageFares = do
+  -- Scoped per city/vehicle/stage/route, so one stage's warning does not mask every other stage's.
+  let scope = show vehicleType <> ":" <> merchantOperatingCityId.getId <> ":" <> show stage <> ":" <> routeCode
+      selectedTiers = map (.vehicleServiceTierId) selectedStageFares
+      droppedTiers = M.keys $ M.fromList [(stageFare.vehicleServiceTierId.getId, ()) | stageFare <- candidateStageFares, stageFare.vehicleServiceTierId `notElem` selectedTiers]
+  -- A tier holding only other routes' tagged rows prices nothing and vanishes from search silently.
+  unless (null droppedTiers) $
+    rateLimitedFareLog ("noFare:" <> scope) $
+      logError $
+        "FRFS stage fare has no row matching routeTag "
+          <> show (normalizedRouteTagOf mbRouteTag)
+          <> " and no untagged fallback on route "
+          <> routeCode
+          <> " stage "
+          <> show stage
+          <> " for vehicleServiceTierIds "
+          <> show droppedTiers
+          <> "; those tiers are dropped from search"
+  whenJust (normalizedRouteTagOf mbRouteTag) $ \routeTag -> do
+    let untaggedTiers = [stageFare.vehicleServiceTierId.getId | stageFare <- selectedStageFares, normalizedRouteTagOf stageFare.routeTag /= Just routeTag]
+    unless (null untaggedTiers) $
+      rateLimitedFareLog ("tagFallback:" <> routeTag <> ":" <> scope) $
+        logWarning $
+          "FRFS stage fare not configured for routeTag "
+            <> routeTag
+            <> " on route "
+            <> routeCode
+            <> " stage "
+            <> show stage
+            <> " for vehicleServiceTierIds "
+            <> show untaggedTiers
+            <> ", fell back to the untagged fare"
+
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
   tripDetails <- OTPRest.getExampleTrip integratedBPPConfig routeCode
@@ -507,11 +585,19 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
               let adjustedStage = case endIsStageStop of
                     Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
                     _ -> stage -- Use original stage if not found or Nothing
-              fares <- case serviceTier of
+              allStageFares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+              candidateStageFares <- case serviceTier of
                 Just serviceTier' -> do
                   vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
-                Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+                  return $ filter (\stageFare -> stageFare.vehicleServiceTierId == vehicleServiceTier.id) allStageFares
+                Nothing -> return allStageFares
+              -- Resolved only when a fare row is actually tagged, so a city that has not adopted route tags pays no extra GIMS call; an unreachable route prices from the untagged fare.
+              mbRouteTag <-
+                if any (isJust . (.routeTag)) candidateStageFares
+                  then (>>= (.routeTag)) <$> OTPRest.getRouteByRouteId integratedBPPConfig routeCode
+                  else pure Nothing
+              let fares = selectStageFaresForRoute mbRouteTag candidateStageFares
+              logStageFareRouteTagFallbacks vehicleType merchantOperatingCityId (max 0 adjustedStage) routeCode mbRouteTag candidateStageFares fares
               forM fares $ \fare -> do
                 vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
                 let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}

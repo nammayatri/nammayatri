@@ -31,12 +31,13 @@ import Tools.MultiModal as MM
 
 -- Route Queries
 
+-- 1800s, not 12h: routeTag is operational data an operator edits and expects to see priced, and GIMS serves this from memory.
 getRouteByRouteId ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->
   Text ->
   m (Maybe Route.Route)
-getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRouteId", integratedBPPConfig.id.getId, routeId] 43200 $ do
+getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRouteId", integratedBPPConfig.id.getId, routeId] 1800 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   route <- Flow.getRouteByRouteId baseUrl integratedBPPConfig.feedKey routeId
   case route of
@@ -445,6 +446,7 @@ parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOp
               vehicleType = route.mode,
               stopCount = route.stopCount,
               serviceTierType = route.serviceTierType,
+              routeTag = route.routeTag,
               timeBounds = Unbounded,
               createdAt = now,
               updatedAt = now
