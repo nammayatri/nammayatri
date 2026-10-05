@@ -10,6 +10,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   Day: Data.Time
   Value: Data.Aeson
+  BulkAssignUserCohortFromS3Req: Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3
 
 module: IncentiveJourney
 
@@ -212,7 +213,7 @@ apis:
   - POST:
       endpoint: /assign/bulkFromS3
       auth: ApiAuthV2
-      request:
+      multipart:
         type: BulkAssignUserCohortFromS3Req
       response:
         type: BulkAssignUserCohortFromS3Res
@@ -458,17 +459,10 @@ types:
     - enum: "Scheduled, Running, Succeeded, Failed, Cancelled"
     - derive: "HttpInstance"
 
-  # Schedules a checkpointed Allocator job that streams CSV rows from S3 into user_cohort_mapping.
+  # Request type BulkAssignUserCohortFromS3Req is hand-written (multipart file + form fields).
+  # file: CSV temp path. s3FilePath: object key only (no bucket, no s3://).
   # CSV headers: userId,cohortMappingId,validTill,enabled
   # scheduledAt is required (UTC); job first runs at that time, then continues in chunks.
-  # Also inserts a bulk_user_cohort_mapping_run row (runId) for Control Center list/progress.
-  BulkAssignUserCohortFromS3Req:
-    - s3FilePath: Text
-    - scheduledAt: UTCTime
-    - batchSize: Maybe Int
-    - rescheduleDelaySeconds: Maybe Int
-    - derive: "'HideSecrets"
-
   BulkAssignUserCohortFromS3Res:
     - runId: Text
     - scheduledAt: UTCTime

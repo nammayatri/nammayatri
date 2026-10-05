@@ -366,7 +366,7 @@ export async function callPostmanStep(
     // Any file field without an attachment => user did not opt in for this step;
     // treat as a skip so the rest of the collection still runs.
     const missingFile = step.formdataFields.find(
-      f => f.type === 'file' && !(attachments && attachments[f.key])
+      f => f.type === 'file' && !(attachments && attachments[f.key]) && !f.value
     );
     if (missingFile) {
       return {
@@ -386,8 +386,13 @@ export async function callPostmanStep(
     const fd = new FormData();
     for (const f of step.formdataFields) {
       if (f.type === 'file') {
-        const file = attachments![f.key];
-        fd.append(f.key, file, file.name);
+        const attached = attachments && attachments[f.key];
+        if (attached) {
+          fd.append(f.key, attached, attached.name);
+        } else {
+          const text = resolveVariables(f.value ?? '', stores).replace(/\\n/g, '\n');
+          fd.append(f.key, new Blob([text], { type: 'text/csv' }), 'assign.csv');
+        }
       } else {
         fd.append(f.key, resolveVariables(f.value ?? '', stores));
       }

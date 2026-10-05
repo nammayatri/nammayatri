@@ -40,6 +40,7 @@ library
       Lib.IncentiveJourney.Domain.Action.Dashboard.ServiceHandle
       Lib.IncentiveJourney.Domain.Action.Evaluate
       Lib.IncentiveJourney.Domain.Action.UI.IncentiveJourney
+      Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3
       Lib.IncentiveJourney.Domain.Types.Common
       Lib.IncentiveJourney.Eval
       Lib.IncentiveJourney.Idempotency
@@ -152,6 +153,7 @@ library
     , beam-mysql
     , beam-postgres
     , beckn-spec
+    , bytestring
     , containers
     , euler-hs
     , extra

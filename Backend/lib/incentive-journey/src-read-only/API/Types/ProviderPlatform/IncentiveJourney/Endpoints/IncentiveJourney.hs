@@ -6,6 +6,7 @@ module API.Types.ProviderPlatform.IncentiveJourney.Endpoints.IncentiveJourney wh
 import qualified Dashboard.Common
 import Data.Aeson
 import qualified Data.Aeson
+import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
@@ -14,12 +15,14 @@ import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Kernel.Utils.TH
+import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3
 import Servant hiding (Summary)
 import Servant.Client
 
@@ -83,18 +86,6 @@ data BulkAssignUserCohortFromS3ListItem = BulkAssignUserCohortFromS3ListItem
 data BulkAssignUserCohortFromS3ListRes = BulkAssignUserCohortFromS3ListRes {runs :: [BulkAssignUserCohortFromS3ListItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data BulkAssignUserCohortFromS3Req = BulkAssignUserCohortFromS3Req
-  { s3FilePath :: Kernel.Prelude.Text,
-    scheduledAt :: Kernel.Prelude.UTCTime,
-    batchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    rescheduleDelaySeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets BulkAssignUserCohortFromS3Req where
-  hideSecrets = Kernel.Prelude.identity
 
 data BulkAssignUserCohortFromS3Res = BulkAssignUserCohortFromS3Res
   { runId :: Kernel.Prelude.Text,
@@ -544,7 +535,13 @@ type GetIncentiveJourneyAutoApplyCohortList =
 
 type PostIncentiveJourneyUnassign = ("unassign" :> ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostIncentiveJourneyAssignBulkFromS3 = ("assign" :> "bulkFromS3" :> ReqBody '[JSON] BulkAssignUserCohortFromS3Req :> Post '[JSON] BulkAssignUserCohortFromS3Res)
+type PostIncentiveJourneyAssignBulkFromS3 =
+  ( "assign" :> "bulkFromS3"
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+      :> Post '[JSON] BulkAssignUserCohortFromS3Res
+  )
 
 type GetIncentiveJourneyAssignBulkFromS3List =
   ( "assign" :> "bulkFromS3" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -572,7 +569,11 @@ data IncentiveJourneyAPIs = IncentiveJourneyAPIs
     putIncentiveJourneyAutoApplyCohortUpdate :: UpdateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getIncentiveJourneyAutoApplyCohortList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient AutoApplyCohortMappingListRes,
     postIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postIncentiveJourneyAssignBulkFromS3 :: BulkAssignUserCohortFromS3Req -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res,
+    postIncentiveJourneyAssignBulkFromS3 ::
+      ( Data.ByteString.Lazy.ByteString,
+        Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+      ) ->
+      EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res,
     getIncentiveJourneyAssignBulkFromS3List :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BulkUserCohortMappingRunStatus -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3ListRes
   }
 
