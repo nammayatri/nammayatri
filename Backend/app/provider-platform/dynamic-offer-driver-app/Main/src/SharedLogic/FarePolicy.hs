@@ -302,7 +302,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
   now <- getCurrentTime
   let _bookingStartTime = fromMaybe now mbBookingStartTime
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
-  -- fare adjustments (dev/docs/fare-adjustments-plan.md): the arm was decided
+  -- fare adjustments (docs/backend/design/fare-adjustments-plan.md): the arm was decided
   -- and pinned at search time (Beckn.Search); here the pin is replayed against
   -- THIS fare product's scope. Later evaluations of the same transaction find
   -- the same pin, so activation/abort only ever affect new searches.
@@ -1204,7 +1204,7 @@ buildDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeo
     categoryInputs <- fetchCategoryDynamicPricingInputs now location radius mbDropQARConfig geohash mbToLocGeohash distance cityId vehicleCategory
     pure (vehicleCategory, mkDynamicPricingInputs shared categoryInputs)
 
--- | Phase-4 surge entrypoint (dev/docs/fare-policy-revamp-plan.md): an ACTIVE
+-- | Phase-4 surge entrypoint (docs/backend/design/fare-policy-revamp-plan.md): an ACTIVE
 -- typed SurgeConfig for (city, tier) replaces the json-logic path entirely; a
 -- SHADOW config evaluates on live traffic and only logs its outcome
 -- (SURGE_SHADOW_EVAL). With neither, this is a plain passthrough to the

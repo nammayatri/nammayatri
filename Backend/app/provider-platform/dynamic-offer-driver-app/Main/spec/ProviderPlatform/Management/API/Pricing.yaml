@@ -9,7 +9,7 @@ imports:
 
 module: Pricing
 
-# Phase 3+4 of the fare-policy revamp (dev/docs/fare-policy-revamp-plan.md):
+# Phase 3+4 of the fare-policy revamp (docs/backend/design/fare-policy-revamp-plan.md):
 # CRUD for the typed surge table (SurgeConfig — replaces DYNAMIC_PRICING_UNIFIED
 # json-logic; one ACTIVE version per city x tier x time window, SHADOW evaluates
 # and only logs) and pricing observability (estimate-level "why this price" +

@@ -5,20 +5,20 @@ alwaysApply: true
 ---
 # Nammayatri Backend — Cursor Documentation
 
-This project uses a **chunked documentation system**. All docs are in `.cursor/docs/`.
+This project uses a **chunked documentation system**. All docs are in `docs/backend/`.
 
 ## How It Works
 
 1. The root `.cursorrules` file is always loaded with critical rules and a routing table
-2. Read topic-specific docs from `.cursor/docs/` based on what you're working on
-3. See `.cursor/docs/00-index.md` for the full catalog
+2. Read topic-specific docs from `docs/backend/` based on what you're working on
+3. See `docs/backend/00-index.md` for the full catalog
 
 ## Quick Start
 
-- Working on rider-app? Read `.cursor/docs/03-rider-app.md`
-- Working on driver-app? Read `.cursor/docs/04-driver-app.md`
-- Working on BECKN protocol? Read `.cursor/docs/05-beckn-protocol-flow.md`
-- Creating APIs or DB tables? Read `.cursor/docs/07-namma-dsl.md`
+- Working on rider-app? Read `docs/backend/03-rider-app.md`
+- Working on driver-app? Read `docs/backend/04-driver-app.md`
+- Working on BECKN protocol? Read `docs/backend/05-beckn-protocol-flow.md`
+- Creating APIs or DB tables? Read `docs/backend/07-namma-dsl.md`
 - Need the full routing table? See `.cursorrules`
 
 ## Critical Rules (Always Apply)

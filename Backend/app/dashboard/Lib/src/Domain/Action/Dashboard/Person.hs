@@ -452,7 +452,7 @@ ptList ::
   Maybe Integer ->
   m ListPTEmployeeRes
 ptList tokenInfo merchantShortId mbSearchStringRaw mbRoleName mbEntityShortId mbTokenNo mbLimit mbOffset = do
-  -- DashboardAuth only checks the session, so Layer A is enforced here as in API.Dashboard.SpecialZone.
+  -- DashboardAuth only checks the session, so Layer A is enforced here as the retired special-zone dashboard tree did.
   actorPerson <- Verify.verifyAccessLevel (ApiAuth.showUserActionType DashAuth.DASHBOARD_USER_PT_LIST) tokenInfo.personId
   merchant <-
     QMerchant.findByShortId merchantShortId
@@ -1074,7 +1074,7 @@ bulkUpsert ::
   m BulkUpsertPersonResp
 bulkUpsert tokenInfo merchantShortId req = do
   let actorPersonId = tokenInfo.personId
-  -- DashboardAuth only checks the session, so Layer A is enforced here as in API.Dashboard.SpecialZone.
+  -- DashboardAuth only checks the session, so Layer A is enforced here as the retired special-zone dashboard tree did.
   actorPerson <- Verify.verifyAccessLevel (ApiAuth.showUserActionType DashAuth.DASHBOARD_USER_BULK_CREATE) actorPersonId
   let total = length req.persons
   when (total == 0) $

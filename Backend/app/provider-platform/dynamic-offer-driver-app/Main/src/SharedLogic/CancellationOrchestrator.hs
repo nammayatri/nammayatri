@@ -13,7 +13,7 @@
 -}
 
 -- | The single entry point for every consequence of a ride cancellation
--- (dev/docs/cancellation-consequence-matrix-plan.md).
+-- (docs/backend/design/cancellation-consequence-matrix-plan.md).
 --
 -- Both cancel flows (customer via Domain.Action.Beckn.Cancel, driver/ops via
 -- Domain.Action.UI.Ride.CancelRide.Internal) run the same three steps:

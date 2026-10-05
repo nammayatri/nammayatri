@@ -13,7 +13,7 @@
 -}
 
 -- | Thin helpers extracted from SharedLogic.Finance.Wallet, with no dependency on it -- lets
---   Wallet.hs and VehicleServiceTier.hs both use them without a Wallet<->PostActions import cycle (see the Import-cycle note in Backend/dev/docs/post-actions-finance-plan.md).
+--   Wallet.hs and VehicleServiceTier.hs both use them without a Wallet<->PostActions import cycle (see the Import-cycle note in docs/backend/design/post-actions-finance-plan.md).
 module SharedLogic.Finance.WalletAccount
   ( getWalletAccountByOwner,
     getControlAccountByOwner,

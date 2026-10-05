@@ -1,0 +1,51 @@
+# Nammayatri Documentation Index
+
+This directory (`docs/backend/`) is the unified home for backend documentation.
+Numbered files are topic guides; `design/` holds feature design docs and plans;
+the remaining files are deeper references (multimodal, reconciliation, schema,
+registry encryption/signatures). File paths inside the docs are relative to
+`Backend/` unless noted.
+
+## How to Use
+
+1. The root `CLAUDE.md` (and `.cursorrules`) are always loaded and contain critical rules + a routing table into this directory
+2. Read only the doc(s) relevant to your current task — don't load everything
+3. Each doc is self-contained with cross-references to related docs
+4. Tool-specific READMEs stay next to their tools (e.g. `Backend/dev/test-tool/README.md`, `Backend/dev/mock-servers/README.md`)
+
+## Document Catalog
+
+| Doc | Topic | Read when... |
+|-----|-------|-------------|
+| `01-architecture-overview.md` | Service map, ports, databases, BAP/BPP split | Starting a new task, need orientation on which service to modify |
+| `02-build-and-dev.md` | Build commands, nix, cabal, comma commands, code gen | Setting up dev environment, running builds, troubleshooting compilation |
+| `03-rider-app.md` | rider-app deep dive (81 UI handlers, Beckn, SharedLogic) | Working on customer-facing features (search, booking, payment, FRFS) |
+| `04-driver-app.md` | dynamic-offer-driver-app deep dive (71 UI handlers, Allocator) | Working on driver-facing features (ride management, onboarding, fees) |
+| `05-beckn-protocol-flow.md` | Full BAP/BPP file path table for all protocol steps | Implementing or debugging BECKN protocol interactions |
+| `06-ride-flow.md` | Complete 8-phase ride lifecycle with file paths | Understanding end-to-end ride flow from search to completion |
+| `07-namma-dsl.md` | YAML spec syntax, generator commands, output locations | Creating/modifying APIs or database schemas via YAML |
+| `08-database-patterns.md` | Queries, cached queries, migrations, Beam, KV functions | Writing database queries, caching, or migrations |
+| `09-dashboards.md` | Dashboard services, auth, API categories | Working on operations dashboards |
+| `10-frfs-public-transport.md` | FRFS architecture, ONDC vs Direct, ExternalBPP | Working on metro/bus/public transport features |
+| `11-libraries.md` | All lib/ packages with descriptions | Using or modifying shared libraries |
+| `12-multi-cloud.md` | AWS/GCP model, KV connector, Redis patterns | Debugging multi-cloud issues or understanding data replication |
+| `13-external-integrations.md` | Juspay, OSRM, Idfy, SMS, FCM, WhatsApp | Integrating with external services |
+| `14-testing-and-debugging.md` | Test infra, mock services, debugging patterns | Writing tests or debugging issues |
+| `15-conventions.md` | Module organization, naming, imports, extensions | Following project coding standards |
+| `16-status-definitions.md` | All status enums with state transition diagrams | Understanding booking/ride/ticket state machines |
+| `17-testing-framework.md` | Test-stack index → `Backend/dev/test-tool/README.md` | Running / extending the integration test stack |
+| `18-finance-module-guide.md` | Double-entry ledger, account types, driver wallet flow | Working on earnings, payouts, invoices, cancellation/refund accounting |
+| `20-onboarding-action-guard.md` | Actor/verb/target guard, admin-vs-fleet matrix, API map | Adding a guarded onboarding action, or debugging a `<Verb> not allowed` error |
+| `21-driver-pool-debugging.md` | Driver pool filter gates, table/column reference, ready-to-run SQL | Debugging why a specific driver never got a `NEW_RIDE_AVAILABLE` notification |
+
+## Cross-Reference Guide
+
+- **Adding a new API endpoint**: Read `07-namma-dsl.md` → `15-conventions.md`
+- **Adding a new DB table**: Read `07-namma-dsl.md` → `08-database-patterns.md`
+- **Debugging a ride issue**: Read `06-ride-flow.md` → `05-beckn-protocol-flow.md` → `16-status-definitions.md`
+- **Payment integration**: Read `13-external-integrations.md` → `11-libraries.md`
+- **FRFS feature**: Read `10-frfs-public-transport.md` → `05-beckn-protocol-flow.md`
+- **Multi-cloud bug**: Read `12-multi-cloud.md` → `08-database-patterns.md`
+- **Driver earnings / wallet / ledger**: Read `18-finance-module-guide.md` → `06-ride-flow.md`
+- **Driver / vehicle / fleet onboarding permissions**: Read `20-onboarding-action-guard.md` → `09-dashboards.md`
+- **Driver not receiving ride requests**: Read `21-driver-pool-debugging.md` → `06-ride-flow.md`

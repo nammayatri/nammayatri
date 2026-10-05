@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | One-shot assignment (dev/docs/one-shot-assign-plan.md): for enabled value-add-NP
+-- | One-shot assignment (docs/backend/design/one-shot-assign-plan.md): for enabled value-add-NP
 -- BAPs with auto-assign, the driver's accept creates booking + ride here in one
 -- synchronous sequence and informs the BAP through a single internal API call,
 -- replacing the on_select -> init -> on_init -> confirm -> on_confirm relay.

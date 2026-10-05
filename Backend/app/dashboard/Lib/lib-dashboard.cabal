@@ -37,7 +37,6 @@ library
       API.Dashboard.Registration
       API.Dashboard.ResourceScope
       API.Dashboard.Roles
-      API.Dashboard.SpecialZone
       API.Dashboard.TransactionView
       API.DashboardLogin
       Dashboard.Common
@@ -140,7 +139,6 @@ library
       Tools.InternalClient
       Tools.Metrics
       Tools.Servant.HeaderAuth
-      Tools.SpecialZoneClient
       Tools.Streaming.Kafka.Environment
       Tools.Utils
   other-modules:

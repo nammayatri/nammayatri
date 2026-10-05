@@ -1,6 +1,6 @@
 -- Cancellation Consequence Matrix — registry seed + per-city backfill (NO DDL here; the
 -- table/columns come from the NammaDSL generator). See
--- dev/docs/cancellation-consequence-matrix-plan.md.
+-- docs/backend/design/cancellation-consequence-matrix-plan.md.
 --
 -- JSON encodings (aeson generic TaggedObject, tag field "tag"):
 --   ConsequenceDeduction (direction is the CONSTRUCTOR; amounts/counts always POSITIVE):

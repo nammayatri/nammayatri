@@ -204,6 +204,7 @@ in
           MOCK_GOOGLE_PORT = toString ports.mock-google;
           MOCK_FCM_PORT = toString ports.mock-fcm;
           MOCK_IDFY_PORT = toString ports.mock-idfy;
+          MOCK_PAYMENT_PORT = toString ports.mock-payment;
           MOCK_REGISTRY_PORT = toString ports.mock-registry;
           LOCATION_TRACKING_SERVICE_PORT = toString ports.location-tracking-service;
           RIDER_APP_PORT = toString ports.rider-app;
@@ -1761,11 +1762,9 @@ in
                   schemas = [
                     ../../dev/sql-seed/pre-init.sql
                     ../../dev/sql-seed/rider-app-seed.sql
-                    ../../dev/sql-seed/public-transport-rider-platform-seed.sql
                     ../../dev/sql-seed/mock-registry-seed.sql
                     ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
                     ../../dev/sql-seed/dashboard-seed.sql
-                    ../../dev/sql-seed/special-zone-seed.sql
                     ../../dev/sql-seed/kaal-chakra-seed.sql
                     ../../dev/sql-seed/db-manager-seed.sql
                   ];

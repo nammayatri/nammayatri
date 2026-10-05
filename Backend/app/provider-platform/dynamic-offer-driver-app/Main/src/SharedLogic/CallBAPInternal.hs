@@ -286,7 +286,7 @@ getPickupInstructions apiKey internalUrl rideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getPickupInstructionsClient rideId (Just apiKey)) "GetPickupInstructions" getPickupInstructionsAPI
 
--- One-shot assignment (dev/docs/one-shot-assign-plan.md): the single callback that
+-- One-shot assignment (docs/backend/design/one-shot-assign-plan.md): the single callback that
 -- replaces on_select/init/on_init/confirm/on_confirm for enabled value-add-NP BAPs.
 -- Carries everything the BAP needs to create quote + booking + ride in one go.
 type OneShotAssignAPI =

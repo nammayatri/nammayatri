@@ -64,7 +64,7 @@ data CancellationPercentageTags = CancellationPercentageTags
 
 -- TODO: TEMPORARY — Chakra reads these base keys via REDIS queries with operation "sliding_window_count"
 -- (SWC.getCurrentWindowCount per user with window params). Remove those Chakra queries and tag rules
--- after the short-term release. See Backend/docs/chakra-cancellation-rate-plan.md.
+-- after the short-term release. See docs/backend/chakra-cancellation-rate-plan.md.
 mkRideAssignedKey :: Text -> Text
 mkRideAssignedKey driverId = "driver-offer:CR:assigned-dId:" <> driverId
 

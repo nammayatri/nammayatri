@@ -42,7 +42,7 @@ withRideIdLogTag rideId = withLogTag ("locupd-rideId-" <> rideId.getId)
 
 -- API
 -- All these functions take rideId such that it was possible later to fetch location updates
--- and interpolated route points from log files by the visualization tool (see <beckn>/app/utils/route-extractor and dev/visualize-ride)
+-- and interpolated route points from log files.
 
 initializeDistanceCalculation :: (Monad m, Log m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> LatLong -> m ()
 initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ do

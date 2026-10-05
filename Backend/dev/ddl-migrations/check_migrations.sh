@@ -255,15 +255,11 @@ ok "atlas_dev recreated"
 SEEDS=(
   dev/sql-seed/pre-init.sql
   dev/sql-seed/rider-app-seed.sql
-  dev/sql-seed/public-transport-rider-platform-seed.sql
-  dev/local-testing-data/public-transport-rider-platform.sql
   dev/sql-seed/mock-registry-seed.sql
   dev/local-testing-data/mock-registry.sql
   dev/sql-seed/dynamic-offer-driver-app-seed.sql
   dev/sql-seed/dashboard-seed.sql
   dev/local-testing-data/dashboard.sql
-  dev/sql-seed/special-zone-seed.sql
-  dev/local-testing-data/special-zone.sql
   dev/sql-seed/kaal-chakra-seed.sql
 )
 : > "$SEED_LOG"

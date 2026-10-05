@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Typed fare-policy management (dev/docs/fare-policy-revamp-plan.md).
+-- | Typed fare-policy management (docs/backend/design/fare-policy-revamp-plan.md).
 -- Replaces the 94-column CSV contract for the new editor. Invariants:
 --   * writes validate the COMPLETE policy before any DB mutation (no wipe-then-validate);
 --   * replace keeps the fare-policy id stable (delete+create under the same id);

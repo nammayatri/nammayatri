@@ -7,7 +7,7 @@
 --   0011-helsinki-cancellation-and-invoice-extras.sql
 --   0031-rider-cancellation-3min-rule.sql
 --
--- Design (see dev/docs/cancellation-fee-configuration-guide.md):
+-- Design (see docs/backend/design/cancellation-fee-configuration-guide.md):
 --   * transporter_config.can_add_cancellation_fee is the single master switch.
 --   * NammaTags gate ELIGIBILITY (the time/wait thresholds live ONLY here):
 --       - CustomerNoShowCancellation: driver cancels with a configured penalty

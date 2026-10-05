@@ -1982,7 +1982,6 @@ library
     , shared-services
     , singletons
     , singletons-th
-    , special-zone
     , special-zone-a
     , split
     , string-conversions

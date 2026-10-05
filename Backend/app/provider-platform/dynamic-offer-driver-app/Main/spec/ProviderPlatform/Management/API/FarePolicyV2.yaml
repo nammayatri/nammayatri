@@ -21,7 +21,7 @@ imports:
 
 module: FarePolicyV2
 
-# Typed fare-policy management API (dev/docs/fare-policy-revamp-plan.md).
+# Typed fare-policy management API (docs/backend/design/fare-policy-revamp-plan.md).
 # Replaces the 94-column CSV contract for the new fare-policy editor:
 # every field of the domain FarePolicy (all five variants) travels as typed
 # JSON, writes are full replacements validated BEFORE any DB write, and

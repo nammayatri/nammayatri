@@ -1,6 +1,6 @@
 # Extend Testing Framework
 
-You are extending the NammaYatri testing framework. Read `Backend/.cursor/docs/17-testing-framework.md` for the full architecture.
+You are extending the NammaYatri testing framework. Read `docs/backend/17-testing-framework.md` for the full architecture.
 
 ## Key directories
 - `Backend/dev/config-sync/` — Config sync tool (export/patch/import from master DB)

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Phase D of the cancellation unification (dev/docs/cancellation-consequence-matrix-plan.md):
+-- | Phase D of the cancellation unification (docs/backend/design/cancellation-consequence-matrix-plan.md):
 -- ONE dimensioned table decides every consequence of a cancellation — customer money,
 -- driver coins, driver penalty, collection mode, side effects — keyed on the fault
 -- verdict and its rule name. The matrix is AUTHORITATIVE: no matching row means no

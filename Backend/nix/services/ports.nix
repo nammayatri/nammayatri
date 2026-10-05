@@ -29,19 +29,16 @@
   # osrm-server port is not configurable atm
   # osrm-server = 5001;
 
-  # Mock services (Backend/app/mocks/*) — ports come from each mock's
-  # App.hs / dhall config. Used by `kill-svc-ports` and any tooling
-  # that talks to them directly during local dev.
+  # Legacy mock-service ports (the retired Haskell mocks under
+  # Backend/app/mocks/*). The python mock-server
+  # (dev/mock-servers/server.py) binds each of these as a legacy
+  # listener so seeded URLs keep working. Used by `kill-svc-ports`
+  # and any tooling that talks to them directly during local dev.
   mock-fcm = 4545;
   mock-sms = 4343;
   mock-idfy = 6235;
   mock-google = 8019;
-  mock-rider-platform = 8027;
-  # mock-payment and mock-public-transport-provider-platform share 8091
-  # in their dev dhall configs. They aren't run together in the local
-  # stack today, but if both get enabled at once one of them needs a bump.
   mock-payment = 8091;
-  mock-public-transport-provider-platform = 8091;
 
   # Application services
   rider-app = 8013;
@@ -52,9 +49,7 @@
   dynamic-offer-driver-app-internal = 8116;
   rider-app-scheduler = 8058;
   driver-offer-allocator = 8055;
-  search-result-aggregator = 8029;
   location-tracking-service = 8081;
-  image-api-helper = 8099;
 
   # Notification service
   notification-service-grpc = 50051;

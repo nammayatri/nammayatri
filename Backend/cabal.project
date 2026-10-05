@@ -7,10 +7,8 @@ packages:
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
   app/dashboard/Lib
-  app/special-zone
   app/sdk-event-pipeline
   app/kafka-consumers
-  app/mocks/payment
   lib/passetto-lib
   lib/beckn-spec
   lib/beckn-services

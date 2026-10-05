@@ -53,7 +53,7 @@
 
 ## Routing Table — Read the Right Doc
 
-When working on a topic, read the corresponding doc from `.cursor/docs/`:
+When working on a topic, read the corresponding doc from `docs/backend/`:
 
 | If you're working on... | Read this doc |
 |------------------------|---------------|

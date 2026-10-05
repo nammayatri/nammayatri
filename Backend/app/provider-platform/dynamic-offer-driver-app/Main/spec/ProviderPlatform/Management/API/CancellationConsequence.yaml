@@ -6,7 +6,7 @@ imports:
 
 module: CancellationConsequence
 
-# CRUD for the CancellationConsequenceMatrix (dev/docs/cancellation-consequence-matrix-plan.md)
+# CRUD for the CancellationConsequenceMatrix (docs/backend/design/cancellation-consequence-matrix-plan.md)
 # and the GLOBAL fault-rule name registry. Dimension values travel as Text (constructor
 # names, e.g. "CustomerAtFault", "CancellationByDriver"); the BPP handler parses and
 # validates them, checks fault-rule names against the registry, and rejects duplicate

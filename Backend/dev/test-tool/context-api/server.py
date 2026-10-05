@@ -1188,7 +1188,8 @@ NY_RN_REVERSE_PORTS = [
     # Metro defaults: 8088 (customer) / 8089 (driver). Picked
     # specifically to dodge every reservation in
     # Backend/nix/services/ports.nix — in particular 8081 (LTS),
-    # 8082 (kept as buffer), 8085 (nginx), 8091 (mock-payment).
+    # 8082 (kept as buffer), 8085 (nginx), 8091 (python mock-server's
+    # legacy juspay/payment listener).
     # find_free_port walks UP from these so spillover lands on
     # equally-unreserved ports.
     8088,
@@ -3218,6 +3219,8 @@ class ContextHandler(BaseHTTPRequestHandler):
             target_base = DRIVER_URL
             target_path = "/ui" + path[len("/proxy/driver"):]
         elif path.startswith("/proxy/juspay-payment/"):
+            # :8091 is the python mock-server's legacy juspay/payment
+            # listener (was the Haskell mock-payment service).
             target_base = os.environ.get("MOCK_SERVER_URL", "http://localhost:8091/")
             target_path = path[len("/proxy/juspay-payment"):]
         else:

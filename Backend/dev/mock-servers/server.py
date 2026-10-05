@@ -93,6 +93,9 @@ def record_hit(hit):
 # Route table: (path substring, module, service name for overrides)
 ROUTES = [
     ("/juspay",      juspay,      "juspay"),
+    # Retired Haskell mock-payment internal order-status path has no
+    # "/juspay" segment (/payment/internal/orders/{id}/status).
+    ("/payment/internal", juspay,  "juspay"),
     ("/stripe",      stripe,      "stripe"),
     ("/paytm",       paytm,       "paytm"),
     ("/exotel",      exotel,      "exotel"),
@@ -256,6 +259,21 @@ class MockHandler(BaseHTTPRequestHandler):
                 self._apply_overrides(svc_name, path, query, body)
                 module.handle(self, path, body)
                 return
+
+        # ── Legacy-port default service ──
+        # Listeners on the retired Haskell mock ports (8019 google, 4545 fcm,
+        # 6235 idfy, 4343 sms, 8091 juspay/payment) route every unmatched path to that port's
+        # service, so URLs seeded for the old per-service mocks (DB
+        # merchant_service_configs, dhall defaults) keep working verbatim —
+        # those clients hit root-level paths like /distancematrix/json with no
+        # /maps prefix for the ROUTES table to match on.
+        default_svc = getattr(self.server, "default_service", None)
+        if default_svc is not None:
+            module, svc_name = default_svc
+            self._hit_service = svc_name
+            self._apply_overrides(svc_name, path, query, body)
+            module.handle(self, path, body)
+            return
 
         self._json({"status": "ok", "mock": True, "path": path})
 
@@ -1277,6 +1295,34 @@ def main():
     log.info(f"Mock server running on :{args.port}")
     log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear, POST /mock/refunds/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
+
+    # Ports the retired Haskell mocks (mock-google-exe etc.) used to bind.
+    # Seeded service-config URLs and dhall defaults still point at them, so
+    # serve each one here with that service as the default handler.
+    legacy_ports = [
+        ("MOCK_GOOGLE_PORT", 8019, google, "google"),
+        ("MOCK_FCM_PORT", 4545, fcm, "fcm"),
+        ("MOCK_IDFY_PORT", 6235, idfy, "idfy"),
+        ("MOCK_SMS_PORT", 4343, sms, "sms"),
+        # Retired Haskell mock-payment (app/mocks/payment) — juspay.py now
+        # serves its /payment/external/... and /payment/internal/... routes.
+        ("MOCK_PAYMENT_PORT", 8091, juspay, "juspay"),
+    ]
+    for env_name, default_port, module, svc in legacy_ports:
+        port = int(os.environ.get(env_name, default_port))
+        if port == args.port:
+            continue
+        try:
+            legacy_server = _QuietThreadingHTTPServer(("0.0.0.0", port), MockHandler)
+        except OSError as e:
+            log.warning(f"Could not bind legacy {svc} port :{port}: {e}")
+            continue
+        legacy_server.default_service = (module, svc)
+        threading.Thread(
+            target=legacy_server.serve_forever, daemon=True, name=f"mock-{svc}-{port}"
+        ).start()
+        log.info(f"Legacy mock port :{port} -> {svc}")
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:

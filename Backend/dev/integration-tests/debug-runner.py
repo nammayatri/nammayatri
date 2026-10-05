@@ -19,7 +19,6 @@ SERVICE_LOGS = [
     "dynamic-offer-driver-app",
     "driver-offer-allocator",
     "beckn-gateway",
-    "mock-payment",
     "mock-google",
     "search-result-aggregator",
 ]

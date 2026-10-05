@@ -165,7 +165,7 @@ data InvoiceConfig = InvoiceConfig
   deriving (Eq, Show, Generic)
 
 -- | Identity fields of an Account for a caller to dispatch on -- no balance, deliberately, so it
---   can't be mistaken for a fresh read. See Backend/dev/docs/post-actions-finance-plan.md.
+--   can't be mistaken for a fresh read. See docs/backend/design/post-actions-finance-plan.md.
 data AffectedAccount = AffectedAccount
   { id :: Id Account,
     accountType :: AccountType,
@@ -186,7 +186,7 @@ toAffectedAccount acc =
     }
 
 -- | Accumulated state within a FinanceM computation: entry IDs and touched accounts, both
---   collected automatically by 'transfer' and friends. See Backend/dev/docs/post-actions-finance-plan.md.
+--   collected automatically by 'transfer' and friends. See docs/backend/design/post-actions-finance-plan.md.
 data FinanceState = FinanceState
   { collectedEntryIds :: [Id LE.LedgerEntry],
     affectedAccounts :: [AffectedAccount]

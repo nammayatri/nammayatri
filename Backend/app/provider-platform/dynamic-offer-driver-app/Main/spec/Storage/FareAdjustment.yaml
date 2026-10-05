@@ -4,7 +4,7 @@ imports:
   ServiceTierType: Domain.Types.Common
   Area: Lib.Types.SpecialLocation
 
-# Fare adjustments (dev/docs/fare-adjustments-plan.md): an overlay on the
+# Fare adjustments (docs/backend/design/fare-adjustments-plan.md): an overlay on the
 # RESOLVED fare policy — never a mutation of the rate card — so expiry/abort
 # needs zero cleanup and the standing peak/non-peak timeBounds structure keeps
 # resolving untouched. Two modes:

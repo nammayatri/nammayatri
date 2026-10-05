@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Phase C of the cancellation unification (see dev/docs/cancellation-fault-verdict-plan.md):
+-- | Phase C of the cancellation unification (see docs/backend/design/cancellation-fault-verdict-plan.md):
 -- one per-city CANCELLATION_FAULT_VERDICT rule pipeline decides who was at fault for a
 -- cancellation, evaluated once per ride and cached, so the dues, coin, and tag rules all
 -- see the same verdict instead of re-deriving fault independently. Currently ADVISORY:

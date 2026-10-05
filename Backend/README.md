@@ -340,7 +340,7 @@ cd dev/integration-tests
   export/patch/import reference.
 - [`dev/integration-tests/Rules.md`](./dev/integration-tests/Rules.md) —
   collection authoring conventions, mock auto-skip, "Adding a New City".
-- [`.cursor/docs/17-testing-framework.md`](./.cursor/docs/17-testing-framework.md)
+- [`docs/backend/17-testing-framework.md`](./docs/backend/17-testing-framework.md)
   — testing framework deep dive.
 
 ## Usage
