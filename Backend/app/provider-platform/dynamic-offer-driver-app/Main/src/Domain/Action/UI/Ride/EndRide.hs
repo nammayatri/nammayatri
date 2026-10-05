@@ -40,14 +40,12 @@ import qualified Data.Text as Text
 import Data.Time (utctDay)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Internal.ViolationDetection as VID
-import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.FareParameters as Fare
 import qualified Domain.Types.FarePolicy as DFP
@@ -58,7 +56,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
-import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
@@ -79,7 +76,6 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common hiding (Days)
 import Kernel.Types.Confidence
-import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -101,10 +97,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
-import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import qualified SharedLogic.ParkingFeeExemption as SPFE
-import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -113,14 +107,11 @@ import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverPanCard as DPQuery
-import qualified Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -131,7 +122,6 @@ import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
-import qualified Tools.SMS as Sms
 import Tools.Utils (isDropInsideThreshold)
 import Utils.Common.Cac.KeyNameConstants
 
@@ -194,7 +184,6 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: forall a. Id DP.Person -> m a -> m a,
     getRouteAndDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m ([LatLong], Meters),
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
-    sendDashboardSms :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Sms.DashboardMessageType -> Maybe DRide.Ride -> Id DP.Person -> Maybe SRB.Booking -> HighPrecMoney -> m (),
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m (),
     getCongestionChargeOnEndRide :: Seconds -> Maybe LatLong -> Maybe Text -> Maybe Text -> DVST.ServiceTierType -> Maybe Meters -> Maybe Seconds -> Maybe Double -> Maybe FarePolicy.DropQARConfig -> Maybe Text -> Maybe Int -> Id DMOC.MerchantOperatingCity -> Maybe Seconds -> Maybe Seconds -> Maybe DTC.TripCategory -> Maybe Text -> Maybe SL.Area -> m (Maybe FarePolicy.CongestionChargeDetailsModel)
   }
@@ -227,7 +216,6 @@ buildEndRideHandle merchantId merchantOpCityId rideId allowSnapshotVehicleFallba
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getRouteAndDistanceBetweenPoints = RideEndInt.getRouteAndDistanceBetweenPoints merchantId merchantOpCityId,
         findPaymentMethodByIdAndMerchantId = CQMPM.findByIdAndMerchantOpCityId,
-        sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation,
         getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbDropQARConfig mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur mbTripCategory mbTxnId mbArea ->
           -- mbTxnId (booking.transactionId) lets the surge wrapper replay the
@@ -656,9 +644,6 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) LYT.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
     let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
-    when (thresholdConfig.enableMobilityBilling == Just True) $
-      fork "report Google mobility billable event" $
-        GoogleMobilityBilling.reportNavBillableEvent booking updRide
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id
@@ -670,52 +655,14 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     -- Driver coins / incentive-journey evaluation moved to kafka-consumers
     -- RIDE_EVENTS_CONSUMER (SharedLogic.RideEvents.DriverCoinsAndJourney).
 
-    computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
         >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
     let mbPaymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
     notifyCompleteToBAPFork <- awaitableFork "endRide->notifyCompleteToBAP" $ withTimeAPI "endRide" "notifyCompleteToBAP" $ notifyCompleteToBAP booking updRide rideFareParams mbPaymentMethodInfo Nothing (Just tripEndPoint)
-    fork "sending dashboardSMS - CallbasedEndRide " $ do
-      case req of
-        CallBasedReq callBasedEndRideReq -> do
-          let requestor = callBasedEndRideReq.requestor
-          sendDashboardSms requestor.merchantId booking.merchantOperatingCityId Sms.ENDRIDE (Just ride) driverId (Just booking) finalFare
-        _ -> pure ()
-
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
 
     fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
-
-    fork "deferred PAN verification at ride-end" $
-      whenJust mbDriver $ \driverPerson -> do
-        mbDriverPanCard <- DPQuery.findByDriverId driverId
-        whenJust mbDriverPanCard $ \driverPanCard ->
-          when (driverPanCard.verificationStatus == Documents.PENDING) $ do
-            panDocCfg <-
-              getOneConfig
-                ( DocumentVerificationConfigDimensions
-                    { merchantOperatingCityId = booking.merchantOperatingCityId.getId,
-                      documentType = Just DTO.PanCard,
-                      vehicleCategory = Just DVC.CAR
-                    }
-                )
-                Nothing
-                >>= fromMaybeM (DocumentVerificationConfigNotFound booking.merchantOperatingCityId.getId (show DTO.PanCard))
-            when (fromMaybe False panDocCfg.doNotValidateDuringOnboarding) $ do
-              mbInFlight <- IVQueryExtra.findLatestPendingByDriverIdAndDocType driverId DTO.PanCard
-              when (isNothing mbInFlight) $ do
-                panNumber <- decrypt driverPanCard.panCardNumber
-                nowForDob <- getCurrentTime
-                let dob = fromMaybe nowForDob driverPanCard.driverDob
-                PanVerification.verifyPanFlow
-                  driverPerson
-                  driverPerson.merchantOperatingCityId
-                  panDocCfg
-                  panNumber
-                  dob
-                  driverPanCard.documentImageId1
-                  driverPanCard.driverNameOnGovtDB
 
     return updRide
   driverRideRes <- do
