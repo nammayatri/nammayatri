@@ -1281,8 +1281,9 @@
           "listen": "prerequest",
           "script": {
             "exec": [
+              "// Wait for LTS to index D2's location before D1 cancels; reallocation only finds drivers LTS already knows.",
               "const start = Date.now();",
-              "while (Date.now() - start < 1000) {}"
+              "while (Date.now() - start < 10000) {}"
             ],
             "type": "text/javascript"
           }
