@@ -69,13 +69,13 @@ jobs:
             rm -rf "$CACHE_ROOT/dist-newstyle"
             rm -rf "$CACHE_ROOT/.cabal-dir/store"
             rm -rf "$CACHE_ROOT/hie"
-            rm -rf "$CACHE_ROOT/dist-newrepl-dashboard-check"
+            rm -rf "$CACHE_ROOT/dist-newrepl-backend-check"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-dashboard-check"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-backend-check"
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
+          ln -sfn "$CACHE_ROOT/dist-newrepl-backend-check" Backend/dist-newrepl-backend-check
 
       - name: Link HIE dirs to persistent cache
         run: |
@@ -194,9 +194,9 @@ jobs:
       - name: Relink cache dirs
         run: |
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/dist-newrepl-dashboard-check"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/dist-newrepl-backend-check"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-          ln -sfn "$CACHE_ROOT/dist-newrepl-dashboard-check" Backend/dist-newrepl-dashboard-check
+          ln -sfn "$CACHE_ROOT/dist-newrepl-backend-check" Backend/dist-newrepl-backend-check
           cd "$GITHUB_WORKSPACE/Backend"
           grep -E '^[[:space:]]+(app|lib|test)' cabal.project | awk '{print $1}' | while read -r pkg; do
             [ -d "$pkg" ] || continue
@@ -251,7 +251,7 @@ jobs:
           mc cp cabal-dir-path.txt "minio/haskell-cache/cabal-build/${{ github.sha }}/cabal-dir-path.txt"
           rm -f dist-newstyle.tar.zst build-path.txt cabal-dir-path.txt
 
-      - name: Build repl artifacts (dashboard-repl-check)
+      - name: Build repl artifacts (backend-repl-check)
         run: |
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}/.cabal-dir
@@ -259,9 +259,9 @@ jobs:
             printf 'active-repositories: :none\n' > \$CABAL_DIR/config
             export CABAL_CONFIG=\$CABAL_DIR/config
             cd Backend
-            cabal repl dashboard-repl-check \
+            cabal repl backend-repl-check \
               --repl-options='-fno-code -fwrite-interface' \
-              --builddir=dist-newrepl-dashboard-check <<< ':quit'
+              --builddir=dist-newrepl-backend-check <<< ':quit'
           "
 
       - name: Push repl artifacts to MinIO
@@ -273,9 +273,9 @@ jobs:
 
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${CACHE_RUNNER}/${{ github.ref_name }}
 
-          tar -I 'zstd -T0 -3' -cf dashboard-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-dashboard-check/
-          mc cp dashboard-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dashboard-check.tar.zst"
-          rm -f dashboard-check.tar.zst
+          tar -I 'zstd -T0 -3' -cf backend-repl-check.tar.zst -C "$CACHE_ROOT" dist-newrepl-backend-check/
+          mc cp backend-repl-check.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/backend-repl-check.tar.zst"
+          rm -f backend-repl-check.tar.zst
 
           tar -I 'zstd -T0 -3' -cf repl-support.tar.zst -C "$CACHE_ROOT" --exclude='.cabal-dir/logs' hie/ .cabal-dir/ .nix-deps/
           mc cp repl-support.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/repl-support.tar.zst"
