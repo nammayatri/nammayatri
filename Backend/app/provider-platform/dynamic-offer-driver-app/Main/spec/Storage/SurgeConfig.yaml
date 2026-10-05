@@ -7,7 +7,7 @@ imports:
   Centesimal: Kernel.Types.Common
   Area: Lib.Types.SpecialLocation
 
-# Typed, versioned surge table (dev/docs/fare-policy-revamp-plan.md Phase 4).
+# Typed, versioned surge table (docs/backend/design/fare-policy-revamp-plan.md Phase 4).
 # One row per (city x service tier x time window) x version. Exactly one ACTIVE
 # version per key at a time (enforced by the activate handler, which archives
 # the previous ACTIVE). SHADOW versions evaluate on live searches and only log

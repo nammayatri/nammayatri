@@ -314,13 +314,6 @@ _:
             cd "''${FLAKE_ROOT}/Backend"
             cabal run alchemist-generator-exe -- "$@"
             cd ..
-            # Dashboard unification: NammaDSL writes BAP modules into
-            # rider-dashboard (which still serves prod BAP traffic), but
-            # provider-dashboard serves both trees and needs the same modules.
-            # The generated code is already provider-compatible thanks to
-            # importPackageOverrides in the RiderPlatform specs, so this is a
-            # plain mirror. Retire with rider-dashboard in Phase 7.
-            "''${FLAKE_ROOT}/Backend/dev/sync-rider-dashboard-modules.sh"
             treefmt --verbose
             hpack
 
@@ -381,9 +374,6 @@ _:
                 applyHint "''${FLAKE_ROOT}/Backend/lib/shared-services/src-read-only" "$allArg"
                 applyHint "''${FLAKE_ROOT}/Backend/lib/special-zone/src-read-only" "$allArg"
                 applyHint "''${FLAKE_ROOT}/Backend/lib/webhook/src-read-only" "$allArg"
-                applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/provider-dashboard/src-read-only" "$allArg"
-                applyHint "''${FLAKE_ROOT}/Backend/app/dashboard/rider-dashboard/src-read-only" "$allArg"
-                applyHint "''${FLAKE_ROOT}/Backend/app/safety-dashboard/src-read-only" "$allArg"
               else
                 applyHint "''${FLAKE_ROOT}/''${pathArg}" true
               fi
@@ -828,7 +818,6 @@ _:
                 8016 # driver-proxy (external driver-app port)
                 8116 # driver-app (internal, behind driver-proxy)
                 8015 # beckn-gateway
-                8018 # provider-dashboard
                 8019 # mock-google
                 8020 # mock-registry
                 8080 # mock-server (python)

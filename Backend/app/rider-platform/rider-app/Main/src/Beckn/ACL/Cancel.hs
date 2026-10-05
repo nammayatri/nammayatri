@@ -67,17 +67,20 @@ mkCancelMessageV2 res reallocate =
             }
     }
   where
-    -- Map rider cancellation reason text to BECKN CancellationReasonId codes (ONDC v2.1.0)
+    -- Map rider cancellation reason text to BECKN CancellationReasonId codes (ONDC v2.1.0).
     mapCancellationReasonId :: Maybe Text -> Text
     mapCancellationReasonId (Just reason)
-      | T.toUpper reason == "DRIVER_NOT_MOVING" = show Enums.DRIVER_NOT_MOVING
-      | T.toUpper reason == "DRIVER_NOT_REACHABLE" = show Enums.DRIVER_NOT_REACHABLE
-      | T.toUpper reason == "DRIVER_ASKED_TO_CANCEL" = show Enums.DRIVER_ASKED_TO_CANCEL
-      | T.toUpper reason == "INCORRECT_PICKUP_LOCATION" = show Enums.INCORRECT_PICKUP_LOCATION
-      | T.toUpper reason == "BOOKED_BY_MISTAKE" = show Enums.BOOKED_BY_MISTAKE
-      | T.toUpper reason == "TECHNICAL_CANCELLATION" = show Enums.TECHNICAL_CANCELLATION
-      | otherwise = show Enums.DRIVER_ASKED_TO_CANCEL -- fallback for unknown reason codes: "003"
-    mapCancellationReasonId Nothing = show Enums.DRIVER_ASKED_TO_CANCEL -- default for non-ValueAddNP: "003"
+      | norm == "DRIVER_NOT_MOVING" = show Enums.DRIVER_NOT_MOVING
+      | norm == "DRIVER_NOT_REACHABLE" = show Enums.DRIVER_NOT_REACHABLE
+      | norm == "DRIVER_ASKED_TO_CANCEL" = show Enums.DRIVER_ASKED_TO_CANCEL
+      | norm == "INCORRECT_PICKUP_LOCATION" = show Enums.INCORRECT_PICKUP_LOCATION
+      | norm == "BOOKED_BY_MISTAKE" = show Enums.BOOKED_BY_MISTAKE
+      | norm == "TECHNICAL_CANCELLATION" = show Enums.TECHNICAL_CANCELLATION
+      | norm == "OTHER" || norm == "OTHERS" || norm == "OTHER_REASON" = show Enums.OTHERS
+      | otherwise = show Enums.OTHERS
+      where
+        norm = T.replace " " "_" (T.strip (T.toUpper reason))
+    mapCancellationReasonId Nothing = show Enums.OTHERS
 
 buildCancelSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], CacheFlow m r, EsqDBFlow m r) =>

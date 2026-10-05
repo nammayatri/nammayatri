@@ -69,6 +69,10 @@ MerchantOperatingCity:
       kvFunction: findAllWithKV
       where:
         and: [merchantId]
+    updateCloudConfig:
+      kvFunction: updateWithKV
+      where: id
+      params: [cloudType, cloudBaseUrl]
 
   extraOperations:
     - EXTRA_QUERY_FILE

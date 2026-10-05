@@ -32,7 +32,6 @@ dependencies:
   - lib-dashboard
   - mobility-core
   - mock-sms
-  - provider-dashboard
   - record-dot-preprocessor
   - record-hasfield
   - rider-app

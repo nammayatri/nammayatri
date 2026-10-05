@@ -1,0 +1,256 @@
+-- {"api":"PostDriverPersonNumbers","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PERSON_NUMBERS'
+  WHERE endpoint = 'DriverAPI PostDriverPersonNumbersEndpoint';
+
+-- {"api":"PostDriverPersonId","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PERSON_ID'
+  WHERE endpoint = 'DriverAPI PostDriverpersonIdEndpoint';
+
+-- {"api":"PostDriverDisable","migration":"endpoint","param":"DriverAPI DisableDriverEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DISABLE'
+  WHERE endpoint = 'DriverAPI DisableDriverEndpoint';
+
+-- {"api":"PostDriverDisable","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DISABLE'
+  WHERE endpoint = 'DriverAPI PostDriverDisableEndpoint';
+
+-- {"api":"PostDriverAcRestrictionUpdate","migration":"endpoint","param":"DriverAPI RemoveACUsageRestrictionEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AC_RESTRICTION_UPDATE'
+  WHERE endpoint = 'DriverAPI RemoveACUsageRestrictionEndpoint';
+
+-- {"api":"PostDriverAcRestrictionUpdate","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AC_RESTRICTION_UPDATE'
+  WHERE endpoint = 'DriverAPI PostDriverAcRestrictionUpdateEndpoint';
+
+-- {"api":"PostDriverBlockWithReason","migration":"endpoint","param":"DriverAPI BlockDriverWithReasonEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK_WITH_REASON'
+  WHERE endpoint = 'DriverAPI BlockDriverWithReasonEndpoint';
+
+-- {"api":"PostDriverBlockWithReason","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK_WITH_REASON'
+  WHERE endpoint = 'DriverAPI PostDriverBlockWithReasonEndpoint';
+
+-- {"api":"PostDriverBlock","migration":"endpoint","param":"DriverAPI BlockDriverEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK'
+  WHERE endpoint = 'DriverAPI BlockDriverEndpoint';
+
+-- {"api":"PostDriverBlock","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK'
+  WHERE endpoint = 'DriverAPI PostDriverBlockEndpoint';
+
+-- {"api":"PostDriverUnblock","migration":"endpoint","param":"DriverAPI UnblockDriverEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNBLOCK'
+  WHERE endpoint = 'DriverAPI UnblockDriverEndpoint';
+
+-- {"api":"PostDriverUnblock","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNBLOCK'
+  WHERE endpoint = 'DriverAPI PostDriverUnblockEndpoint';
+
+-- {"api":"DeleteDriverPermanentlyDelete","migration":"endpoint","param":"DriverAPI DeleteDriverEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/DELETE_DRIVER_PERMANENTLY_DELETE'
+  WHERE endpoint = 'DriverAPI DeleteDriverEndpoint';
+
+-- {"api":"DeleteDriverPermanentlyDelete","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/DELETE_DRIVER_PERMANENTLY_DELETE'
+  WHERE endpoint = 'DriverAPI DeleteDriverPermanentlyDeleteEndpoint';
+
+-- {"api":"PostDriverUnlinkDL","migration":"endpoint","param":"DriverAPI UnlinkDLEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNLINK_DL'
+  WHERE endpoint = 'DriverAPI UnlinkDLEndpoint';
+
+-- {"api":"PostDriverUnlinkDL","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNLINK_DL'
+  WHERE endpoint = 'DriverAPI PostDriverUnlinkDLEndpoint';
+
+-- {"api":"PostDriverUnlinkAadhaar","migration":"endpoint","param":"DriverAPI UnlinkAadhaarEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNLINK_AADHAAR'
+  WHERE endpoint = 'DriverAPI UnlinkAadhaarEndpoint';
+
+-- {"api":"PostDriverUnlinkAadhaar","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNLINK_AADHAAR'
+  WHERE endpoint = 'DriverAPI PostDriverUnlinkAadhaarEndpoint';
+
+-- {"api":"PostDriverUpdatePhoneNumber","migration":"endpoint","param":"DriverAPI UpdatePhoneNumberEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_PHONE_NUMBER'
+  WHERE endpoint = 'DriverAPI UpdatePhoneNumberEndpoint';
+
+-- {"api":"PostDriverUpdatePhoneNumber","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_PHONE_NUMBER'
+  WHERE endpoint = 'DriverAPI PostDriverUpdatePhoneNumberEndpoint';
+
+-- {"api":"PostDriverUpdateName","migration":"endpoint","param":"DriverAPI UpdateDriverNameEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_NAME'
+  WHERE endpoint = 'DriverAPI UpdateDriverNameEndpoint';
+
+-- {"api":"PostDriverUpdateName","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_NAME'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateNameEndpoint';
+
+-- {"api":"PostDriverDeleteRC","migration":"endpoint","param":"DriverAPI DeleteRCEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DELETE_RC'
+  WHERE endpoint = 'DriverAPI DeleteRCEndpoint';
+
+-- {"api":"PostDriverDeleteRC","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_DELETE_RC'
+  WHERE endpoint = 'DriverAPI PostDriverDeleteRCEndpoint';
+
+-- {"api":"PostDriverSendDummyNotification","migration":"endpoint","param":"DriverAPI SendDummyRideRequestToDriverViaDashboardEndPoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SEND_DUMMY_NOTIFICATION'
+  WHERE endpoint = 'DriverAPI SendDummyRideRequestToDriverViaDashboardEndPoint';
+
+-- {"api":"PostDriverSendDummyNotification","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SEND_DUMMY_NOTIFICATION'
+  WHERE endpoint = 'DriverAPI PostDriverSendDummyNotificationEndpoint';
+
+-- {"api":"PostDriverChangeOperatingCity","migration":"endpoint","param":"DriverAPI ChangeOperatingCityEndpoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CHANGE_OPERATING_CITY'
+  WHERE endpoint = 'DriverAPI ChangeOperatingCityEndpoint';
+
+-- {"api":"PostDriverChangeOperatingCity","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CHANGE_OPERATING_CITY'
+  WHERE endpoint = 'DriverAPI PostDriverChangeOperatingCityEndpoint';
+
+-- {"api":"PostDriverPauseOrResumeServiceCharges","migration":"endpoint","param":"DriverAPI PauseOrResumeServiceChargesEndPoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PAUSE_OR_RESUME_SERVICE_CHARGES'
+  WHERE endpoint = 'DriverAPI PauseOrResumeServiceChargesEndPoint';
+
+-- {"api":"PostDriverPauseOrResumeServiceCharges","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_PAUSE_OR_RESUME_SERVICE_CHARGES'
+  WHERE endpoint = 'DriverAPI PostDriverPauseOrResumeServiceChargesEndpoint';
+
+-- {"api":"PostDriverUpdateRCInvalidStatus","migration":"endpoint","param":"DriverAPI UpdateRCInvalidStatusEndPoint65454","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_RC_INVALID_STATUS'
+  WHERE endpoint = 'DriverAPI UpdateRCInvalidStatusEndPoint65454';
+
+-- {"api":"PostDriverUpdateRCInvalidStatus","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_RC_INVALID_STATUS'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateRCInvalidStatusEndpoint';
+
+-- {"api":"PostDriverUpdateVehicleVariant","migration":"endpoint","param":"DriverAPI UpdateVehicleVariantEndPoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_VEHICLE_VARIANT'
+  WHERE endpoint = 'DriverAPI UpdateVehicleVariantEndPoint';
+
+-- {"api":"PostDriverUpdateVehicleVariant","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_VEHICLE_VARIANT'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateVehicleVariantEndpoint';
+
+-- {"api":"PostDriverBulkReviewRCVariant","migration":"endpoint","param":"DriverAPI BulkReviewRCVariantEndPoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BULK_REVIEW_RC_VARIANT'
+  WHERE endpoint = 'DriverAPI BulkReviewRCVariantEndPoint';
+
+-- {"api":"PostDriverBulkReviewRCVariant","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BULK_REVIEW_RC_VARIANT'
+  WHERE endpoint = 'DriverAPI PostDriverBulkReviewRCVariantEndpoint';
+
+-- {"api":"PostDriverUpdateDriverTag","migration":"endpoint","param":"DriverAPI UpdateDriverTagEndPoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_DRIVER_TAG'
+  WHERE endpoint = 'DriverAPI UpdateDriverTagEndPoint';
+
+-- {"api":"PostDriverUpdateDriverTag","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_DRIVER_TAG'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateDriverTagEndpoint';
+
+-- {"api":"PostDriverUpdateSpecialLocWarrior","migration":"endpoint","param":"DriverAPI UpdateSpecialLocWarriorEndPoint","schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_SPECIAL_LOC_WARRIOR'
+  WHERE endpoint = 'DriverAPI UpdateSpecialLocWarriorEndPoint';
+
+-- {"api":"PostDriverUpdateSpecialLocWarrior","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_SPECIAL_LOC_WARRIOR'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateSpecialLocWarriorEndpoint';
+
+-- {"api":"PostDriverClearFee","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_CLEAR_FEE'
+  WHERE endpoint = 'DriverAPI PostDriverClearFeeEndpoint';
+
+-- {"api":"PostDriverSyncDocAadharPan","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_SYNC_DOC_AADHAR_PAN'
+  WHERE endpoint = 'DriverAPI PostDriverSyncDocAadharPanEndpoint';
+
+------- SQL updates -------
+
+------- SQL updates -------
+
+------- SQL updates -------
+
+------- SQL updates -------
+
+-- {"api":"PostDriverUpdateTagBulk","migration":"endpointV2","param":null,"schema":"atlas_dashboard"}
+UPDATE atlas_dashboard.transaction
+  SET endpoint = 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UPDATE_TAG_BULK'
+  WHERE endpoint = 'DriverAPI PostDriverUpdateTagBulkEndpoint';
+
+------- SQL updates -------
+
+-- {"api":"GetDriverLoginOtp","migration":"capability","param":"city-operations.pii.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.pii.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_LOGIN_OTP' ) ON CONFLICT DO NOTHING;
+-- {"api":"GetDriverFyEarnings","migration":"capability","param":"finance.earnings.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'finance.earnings.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_FY_EARNINGS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverVehicleRemoveSelectedServiceTiers","migration":"capability","param":"city-operations.vehicle.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.vehicle.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_VEHICLE_REMOVE_SELECTED_SERVICE_TIERS' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverBlockWithReason","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK_WITH_REASON' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverBlock","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BLOCK' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetDriverBlockReasonList","migration":"capability","param":"city-operations.driver_block.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_BLOCK_REASON_LIST' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverUnblock","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_UNBLOCK' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"GetDriverAirportPreference","migration":"capability","param":"city-operations.driver_block.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_AIRPORT_PREFERENCE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostDriverAirportPreference","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AIRPORT_PREFERENCE' ) ON CONFLICT DO NOTHING;

@@ -115,6 +115,7 @@ data DriverInformationT f = DriverInformationT
     referredByDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByFleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    rideBillingModel :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Plan.ServiceNames),
     rideRequestVolume :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rideRequestVolumeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     ruleBasedUpgradeTiers :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

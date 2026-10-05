@@ -548,10 +548,6 @@ let dashboardDataServers =
         , url = "http://localhost:${riderAppPort}/"
         , token = sec.appBackendToken
         }
-      , { name = common.ServerName.SPECIAL_ZONE
-        , url = "http://localhost:8032/"
-        , token = sec.specialZoneToken
-        }
       ]
 
 in  { esqDBCfg

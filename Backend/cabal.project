@@ -6,14 +6,10 @@ packages:
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
-  app/dashboard/rider-dashboard
-  app/dashboard/provider-dashboard
-  app/dashboard/dashboard-repl-check
   app/dashboard/Lib
-  app/special-zone
+  app/backend-repl-check
   app/sdk-event-pipeline
   app/kafka-consumers
-  app/mocks/payment
   lib/passetto-lib
   lib/beckn-spec
   lib/beckn-services

@@ -24,6 +24,7 @@ import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
@@ -57,7 +58,6 @@ import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -113,6 +113,7 @@ data DConfirmResp = DConfirmResp
     quoteType :: ValidatedQuote,
     cancellationFee :: Maybe PriceAPIEntity,
     paymentId :: Maybe Text,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     isAlreadyFav :: Maybe Bool,
     favCount :: Maybe Int
   }
@@ -129,8 +130,11 @@ handler merchant req validatedQuote = do
   unless (booking.status == DRB.NEW) $ throwError (BookingInvalidStatus $ show booking.status)
   let mbMerchantOperatingCityId = Just booking.merchantOperatingCityId
 
-  (riderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
-  unless isNewRider $ QRD.updateNightSafetyChecksAndConsent req.nightSafetyCheck req.consentToShareMobileNumber riderDetails.id
+  (storedRiderDetails, isNewRider) <- SRD.getRiderDetails booking.currency merchant.id mbMerchantOperatingCityId req.customerMobileCountryCode req.customerPhoneNumber booking.bapId req.nightSafetyCheck req.consentToShareMobileNumber
+  unless isNewRider $ do
+    QRD.updateNightSafetyChecks req.nightSafetyCheck storedRiderDetails.id
+    whenJust req.consentToShareMobileNumber $ \consent -> QRD.updateConsentToShareMobileNumber (Just consent) storedRiderDetails.id
+  let riderDetails = storedRiderDetails {DRD.consentToShareMobileNumber = maybe storedRiderDetails.consentToShareMobileNumber Just req.consentToShareMobileNumber}
 
   case validatedQuote of
     DriverQuote driver driverQuote -> handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails
@@ -149,7 +153,7 @@ handler merchant req validatedQuote = do
       -- Accepted pickup-zone request for this driver (supply -1). Idempotent with StartRide.
       fork "specialZoneCompletePickupZoneOnConfirm" $
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show $ DV.castServiceTierToVariant uBooking2.vehicleServiceTier)
-      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
+      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails Nothing
 
     handleRideOtpFlow isNewRider _ booking riderDetails = do
       otpCode <- generateUniqueOTPCode booking.merchantOperatingCityId.getId (0 :: Integer)
@@ -161,7 +165,7 @@ handler merchant req validatedQuote = do
       -- OTP and StartRide fires. SETNX-idempotent on bookingId, so safe vs StartRide.
       fork "specialZoneDemandDecrementOnOtpConfirm" $
         SpecialZoneDriverDemand.runDemandDecrementForBooking uBooking.id.getId uBooking.pickupGateId (show $ DV.castServiceTierToVariant uBooking.vehicleServiceTier)
-      mkDConfirmResp Nothing uBooking riderDetails
+      mkDConfirmResp Nothing uBooking riderDetails Nothing
 
     handleMeterRideFlow isNewRider driver _ booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
@@ -178,7 +182,7 @@ handler merchant req validatedQuote = do
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       fork "specialZoneCompletePickupZoneOnMeterConfirm" $
         SpecialZoneDriverDemand.completePickupZoneRequestsForDriver driver.id uBooking2.id.getId uBooking2.pickupGateId (show $ DV.castServiceTierToVariant uBooking2.vehicleServiceTier)
-      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
+      mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails Nothing
 
     generateUniqueOTPCode merchantOperatingCityId cnt = do
       when (cnt == 100) $ throwError (InternalError "Please try again in some time") -- Avoiding infinite loop (Todo: fix with something like LRU later)
@@ -204,8 +208,7 @@ handler merchant req validatedQuote = do
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
       tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False booking.fareParams.congestionCharge booking.fareParams.petCharges booking.fareParams.priorityCharges booking.commission booking.fareParams.tollCharges booking.fareParams.govtCharges booking.fareParams.driverCancellationNotAllowed booking.fareParams.bufferedFare
-      merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
-      let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
+      paymentMethodInfo <- resolveBookingPaymentMethodInfo booking
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -235,11 +238,11 @@ handler merchant req validatedQuote = do
       -- through that flow's StartRide. SETNX-idempotent on bookingId.
       fork "specialZoneDemandDecrementOnStaticConfirm" $
         SpecialZoneDriverDemand.runDemandDecrementForBooking uBooking.id.getId uBooking.pickupGateId (show $ DV.castServiceTierToVariant uBooking.vehicleServiceTier)
-      mkDConfirmResp Nothing uBooking riderDetails
+      mkDConfirmResp Nothing uBooking riderDetails paymentMethodInfo
 
     updateBookingDetails isNewRider booking riderDetails = do
       when isNewRider $ QRD.create riderDetails
-      QRB.updateRiderId booking.id riderDetails.id
+      QRB.updateRiderIdAndConsentSnapshot booking.id riderDetails.id riderDetails.consentToShareMobileNumber
       QL.updateAddress booking.fromLocation.id req.fromAddress
       whenJust booking.toLocation $ \toLocation -> do
         whenJust req.toAddress $ \toAddress -> QL.updateAddress toLocation.id toAddress
@@ -251,7 +254,7 @@ handler merchant req validatedQuote = do
         QRB.updateBookingDeposit req.bookingDepositSecured booking.id
       QBE.logRideConfirmedEvent booking.id booking.distanceUnit
 
-    mkDConfirmResp mbRideInfo uBooking riderDetails = do
+    mkDConfirmResp mbRideInfo uBooking riderDetails mbPaymentMethodInfo = do
       cityLabel <- SML.getCityLabel uBooking.merchantOperatingCityId
       metricsDistanceBucketEdges <- SML.getDistanceBucketEdges uBooking.merchantOperatingCityId
       let (pickupZone, dropZone) = SML.specialZoneLabels uBooking.area
@@ -269,6 +272,9 @@ handler merchant req validatedQuote = do
             case isAlreadyFav' of
               Just _ -> pure $ Just True
               Nothing -> pure $ Just False
+      paymentMethodInfo <- case mbPaymentMethodInfo of
+        Just info -> pure $ Just info
+        Nothing -> resolveBookingPaymentMethodInfo uBooking
       pure $
         DConfirmResp
           { booking = uBooking,
@@ -284,6 +290,7 @@ handler merchant req validatedQuote = do
             quoteType = validatedQuote,
             cancellationFee = Nothing,
             paymentId = req.paymentId,
+            paymentMethodInfo,
             isAlreadyFav = isFav,
             favCount = mDriverStats <&> (.favRiderCount)
           }

@@ -78,7 +78,7 @@ For a dashboard `person` row, you need:
 | `mobile_number_hash`      | `sha256(salt + <mobile>)`, prefix `\x`          |
 | `password_hash`           | `sha256(salt + <password>)`, prefix `\x`        |
 
-Existing examples in `Backend/dev/local-testing-data/provider-dashboard.sql`
+Existing examples in `Backend/dev/local-testing-data/dashboard.sql`
 (juspay_admin, fleet) demonstrate the final SQL shape.
 
 ## Gotchas

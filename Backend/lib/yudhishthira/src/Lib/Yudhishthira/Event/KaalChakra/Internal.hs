@@ -744,7 +744,7 @@ executeZrange keys start stop =
   forM keys $ \key -> Hedis.withCrossAppRedis $ Hedis.runHedis $ Redis.zrange (TE.encodeUtf8 key) (fromIntegral start) (fromIntegral stop)
 
 -- Parse window period type from config text (for SLIDING_WINDOW_COUNT).
--- TODO: TEMPORARY – remove with Chakra cancellation-rate SWC query. See Backend/docs/chakra-cancellation-rate-plan.md
+-- TODO: TEMPORARY – remove with Chakra cancellation-rate SWC query. See docs/backend/chakra-cancellation-rate-plan.md
 parseWindowPeriodType :: Text -> Either Text SWCTypes.PeriodType
 parseWindowPeriodType "Minutes" = Right SWCTypes.Minutes
 parseWindowPeriodType "Hours" = Right SWCTypes.Hours
@@ -755,7 +755,7 @@ parseWindowPeriodType t = Left $ "Invalid windowPeriodType: " <> t <> ". Use Min
 
 -- Execute SLIDING_WINDOW_COUNT: for each user, build base key and call SWC.getCurrentWindowCount,
 -- return results as [Maybe ByteString] (JSON number) for formatRedisResults.
--- TODO: TEMPORARY – remove with Chakra cancellation-rate SWC query. See Backend/docs/chakra-cancellation-rate-plan.md
+-- TODO: TEMPORARY – remove with Chakra cancellation-rate SWC query. See docs/backend/chakra-cancellation-rate-plan.md
 executeSlidingWindowCount ::
   (CacheFlow m r, MonadThrow m, Log m, MonadFlow m) =>
   YT.RedisQueryConfig ->

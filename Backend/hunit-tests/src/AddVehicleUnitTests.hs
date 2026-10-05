@@ -3,9 +3,7 @@
 
 module AddVehicleUnitTests where
 
-import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet as FleetTypes
 import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
-import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Endpoints.Driver as FleetAPI
 import Control.Exception (SomeException, evaluate, try)
 import qualified "lib-dashboard" Dashboard.Common
 import qualified "lib-dashboard" Dashboard.Common.Driver as DDriverCommon
@@ -13,14 +11,12 @@ import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified "dynamic-offer-driver-app" Domain.Action.Dashboard.Fleet.Driver as DDriverFleet
-import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Fleet.Driver as DDriver
-import qualified "dynamic-offer-driver-app" Domain.Types.AccessMatrix as DMatrix
+import qualified "dynamic-offer-driver-app" Domain.Action.DashboardAuth.Fleet.Driver as DDriver
 import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DDM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.Role as DRole
 import qualified "dynamic-offer-driver-app" Environment as EnvDynamic
-import qualified "lib-dashboard" Environment as EnvDashboard
 import qualified "mobility-core" Kernel.External.Encryption
 import qualified "mobility-core" Kernel.Prelude
 import qualified "mobility-core" Kernel.Types.APISuccess
@@ -28,7 +24,7 @@ import qualified "mobility-core" Kernel.Types.Beckn.Context as Context
 import qualified "mobility-core" Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
-import qualified "lib-dashboard" Tools.Auth.ApiAuth as Tools.Auth.Api
+import qualified "dynamic-offer-driver-app" Tools.Auth.DashboardUser as DashboardUser
 import Prelude
 
 -- =============================================================================
@@ -159,12 +155,12 @@ createCustomVehicleRequest regNo vehicleClass capacity colour energyType model m
       Common.udinNumber = Nothing
     }
 
--- | Generate standard test API token info
-createTestApiTokenInfo :: Tools.Auth.Api.ApiTokenInfo
-createTestApiTokenInfo =
-  Tools.Auth.Api.ApiTokenInfo
-    { Tools.Auth.Api.personId = Kernel.Types.Id.Id "person-123",
-      Tools.Auth.Api.merchant =
+-- | Generate standard test dashboard user
+createTestDashboardUser :: DashboardUser.DashboardUser
+createTestDashboardUser =
+  DashboardUser.DashboardUser
+    { DashboardUser.personId = Kernel.Types.Id.Id "person-123",
+      DashboardUser.merchant =
         DM.Merchant
           { DM.id = Kernel.Types.Id.Id "merchant-123",
             DM.shortId = Kernel.Types.Id.ShortId "test-merchant",
@@ -183,9 +179,8 @@ createTestApiTokenInfo =
             DM.createdAt = UTCTime (fromGregorian 2023 1 1) 0,
             DM.singleActiveSessionOnly = Just False
           },
-      Tools.Auth.Api.city = Context.City "Delhi",
-      Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetTypes.DRIVER FleetAPI.POST_DRIVER_FLEET_ADD_VEHICLE),
-      Tools.Auth.Api.person = createTestPerson
+      DashboardUser.city = Context.City "Delhi",
+      DashboardUser.person = createTestPerson
     }
 
 -- | Validate a vehicle request structure
@@ -259,7 +254,7 @@ executeMultipleVehicleRequestsTest description executeFunction requests = do
     _ -> return () -- Handle other cases if needed
 
 -- | Generate standard test parameters
-createTestParameters :: (Kernel.Types.Id.ShortId DM.Merchant, Context.City, T.Text, Maybe T.Text, Maybe T.Text, Maybe Dashboard.Common.Role)
+createTestParameters :: (Kernel.Types.Id.ShortId DDM.Merchant, Context.City, T.Text, Maybe T.Text, Maybe T.Text, Maybe Dashboard.Common.Role)
 createTestParameters =
   ( Kernel.Types.Id.ShortId "test-merchant",
     Context.City "Delhi",
@@ -307,7 +302,7 @@ testPostDriverFleetAddVehicleWithRealExecution =
     [ testCase "Executes with valid add vehicle request and validates response structure" $ do
         let merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
-            apiTokenInfo = createTestApiTokenInfo
+            dashboardUser = createTestDashboardUser
             phoneNo = "8222222222"
             mbMobileCountryCode = Just "+91"
             mbFleetOwnerId = Just "fleet-owner-123"
@@ -317,28 +312,28 @@ testPostDriverFleetAddVehicleWithRealExecution =
         -- Execute and validate the vehicle request test
         executeVehicleRequestTest
           "postDriverFleetAddVehicle with validation"
-          (DDriver.postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId mbRole)
+          (DDriver.postDriverFleetAddVehicle merchantShortId opCity dashboardUser phoneNo mbMobileCountryCode mbFleetOwnerId mbRole)
           req
 
         -- Test that the function signature expects APISuccess response
         let expectedResponseType =
               DDriver.postDriverFleetAddVehicle ::
-                Kernel.Types.Id.ShortId DM.Merchant ->
+                Kernel.Types.Id.ShortId DDM.Merchant ->
                 Context.City ->
-                Tools.Auth.Api.ApiTokenInfo DMatrix.UserActionType ->
+                DashboardUser.DashboardUser ->
                 T.Text ->
                 Maybe T.Text ->
                 Maybe T.Text ->
                 Maybe Dashboard.Common.Role ->
                 Common.AddVehicleReq ->
-                EnvDashboard.Flow Kernel.Types.APISuccess.APISuccess
+                EnvDynamic.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different vehicle data and validates request handling" $ do
         let req1 = createCustomVehicleRequest "DL01AB1234" "Hatchback" (Just 4) "White" "Petrol" "Swift" "Maruti" (Just True) (Just "John Doe") (Just False)
             req2 = createCustomVehicleRequest "DL02CD5678" "SUV" (Just 6) "Black" "Diesel" "Innova" "Toyota" (Just True) (Just "Jane Smith") (Just True)
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.City "Delhi"
-            apiTokenInfo = createTestApiTokenInfo
+            dashboardUser = createTestDashboardUser
             phoneNo = "8222222222"
             mbMobileCountryCode = Just "+91"
             mbFleetOwnerId = Just "fleet-owner-123"
@@ -347,7 +342,7 @@ testPostDriverFleetAddVehicleWithRealExecution =
         -- Execute and validate multiple vehicle requests
         executeMultipleVehicleRequestsTest
           "postDriverFleetAddVehicle"
-          (DDriver.postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId mbRole)
+          (DDriver.postDriverFleetAddVehicle merchantShortId opCity dashboardUser phoneNo mbMobileCountryCode mbFleetOwnerId mbRole)
           [req1, req2]
     ]
 
@@ -455,12 +450,12 @@ testFlowExecutionWithExceptionHandling =
     "Flow Execution with Exception Handling"
     [ testCase "Attempts to execute Flow functions and handles exceptions gracefully" $ do
         let (merchantShortId, opCity, phoneNo, mbMobileCountryCode, mbFleetOwnerId, mbRole) = createTestParameters
-            apiTokenInfo = createTestApiTokenInfo
+            dashboardUser = createTestDashboardUser
             req = createTestVehicleRequest
 
         executeFlowTestWithExceptionHandling
           "Flow function execution"
-          (DDriver.postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode mbFleetOwnerId mbRole req)
+          (DDriver.postDriverFleetAddVehicle merchantShortId opCity dashboardUser phoneNo mbMobileCountryCode mbFleetOwnerId mbRole req)
     ]
 
 -- =============================================================================

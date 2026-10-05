@@ -62,8 +62,8 @@ castPaymentCollector "BAP" = return DMPM.BAP
 castPaymentCollector "BPP" = return DMPM.BPP
 castPaymentCollector _ = throwM $ InvalidRequest "Unknown Payment Collector"
 
-castPaymentInstrument :: MonadFlow m => Spec.PaymentParams -> Maybe [Spec.TagGroup] -> m DMPM.PaymentInstrument
-castPaymentInstrument params mPaymentTags = do
+castPaymentInstrument :: MonadFlow m => DMPM.PaymentCollector -> Spec.PaymentParams -> Maybe [Spec.TagGroup] -> m DMPM.PaymentInstrument
+castPaymentInstrument collectedBy params mPaymentTags = do
   -- First try to get payment instrument from tags (for newer BAP versions)
   case getPaymentInstrumentFromTags mPaymentTags of
     Just instrument -> return instrument
@@ -72,12 +72,17 @@ castPaymentInstrument params mPaymentTags = do
       if isJust $ params.paymentParamsVirtualPaymentAddress
         then return DMPM.UPI
         else do
+          let fallbackInstrument = case collectedBy of
+                DMPM.BAP -> DMPM.UPI
+                _ -> DMPM.Cash
           logWarning $
-            "castPaymentInstrument: no PAYMENT_INSTRUMENT tag and no VPA; defaulting to Cash. "
-              <> "This stamps the booking as a cash ride and changes how earnings are ledgered. "
-              <> "Raw tag value: "
+            "castPaymentInstrument: no PAYMENT_INSTRUMENT tag and no VPA; defaulting to "
+              <> show fallbackInstrument
+              <> " for collectedBy="
+              <> show collectedBy
+              <> ". This decides how earnings are ledgered. Raw tag value: "
               <> show (Utils.getTagV2Compat Tag.BPP_TERMS Tag.PAYMENT_INSTRUMENT mPaymentTags)
-          return DMPM.Cash
+          return fallbackInstrument
 
 -- Helper to extract payment instrument from tags
 getPaymentInstrumentFromTags :: Maybe [Spec.TagGroup] -> Maybe DMPM.PaymentInstrument
@@ -103,7 +108,7 @@ mkPaymentMethodInfo Spec.Payment {..} = do
   let _params = fromMaybe (Spec.PaymentParams Nothing Nothing Nothing Nothing Nothing) paymentParams
   collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
   pType <- fmap (fromMaybe DMPM.ON_FULFILLMENT . decodeFromText) (paymentType & fromMaybeM (InvalidRequest "Payment Params not found"))
-  paymentInstrument <- castPaymentInstrument _params paymentTags
+  paymentInstrument <- castPaymentInstrument collectedBy _params paymentTags
   return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}
 
 mkPaymentMode :: Spec.Payment -> Maybe DMPM.PaymentMode

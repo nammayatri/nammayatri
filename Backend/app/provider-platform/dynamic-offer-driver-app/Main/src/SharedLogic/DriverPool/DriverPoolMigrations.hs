@@ -69,7 +69,8 @@ migrations =
     MigrationEntry 3 backfillCloudType,
     MigrationEntry 4 backfillEnableForAirport,
     MigrationEntry 5 backfillEnableCashRide,
-    MigrationEntry 6 backfillMerchantOperatingCityId
+    MigrationEntry 6 backfillMerchantOperatingCityId,
+    MigrationEntry 7 backfillRideBillingModel
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -122,6 +123,25 @@ backfillEnabled entries = do
       (\e -> e {enabled = HashMap.lookupDefault e.enabled (cast e.driverId :: Id Person.Person) enabledMap})
       entries
 
+-- | v7: backfill 'rideBillingModel' from driver_information.
+--
+-- Legacy entries default to Nothing, which reads as postpaid
+-- (SharedLogic.Subscription.BillingModel). For a postpaid driver that is already
+-- correct, so this migration only matters for prepaid drivers -- without it they would
+-- keep being gated on 'subscribed' out of the cache until their next pool-data write,
+-- which is the exact bug this column exists to fix.
+backfillRideBillingModel ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillRideBillingModel entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let modelMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.rideBillingModel)) dis
+  pure $
+    map
+      (\e -> e {rideBillingModel = HashMap.lookupDefault e.rideBillingModel (cast e.driverId :: Id Person.Person) modelMap})
+      entries
+
 -- | v3: backfill the new 'cloudType' field from the person table.
 -- Without this, legacy entries would default to 'cloudType = Nothing'.
 backfillCloudType ::
@@ -155,9 +175,8 @@ backfillEnableForAirport entries = do
 -- active fleet association, the fleet governs entirely (its own flag AND
 -- this driver's association-level override) -- driver_information's admin
 -- flag is dormant and only takes effect once there's no active fleet
--- association at all (same rule as the effective-flag computation in
--- 'buildDriverPoolDataFromDB' and 'Storage.Queries.FleetDriverAssociationExtra'
--- 's updateEnableCashRideFor* helpers). Without this, legacy entries would
+-- association at all ('Storage.Queries.FleetDriverAssociationExtra.effectiveEnableCashRide',
+-- shared with 'buildDriverPoolDataFromDB', the cash-ride update APIs and the GET APIs). Without this, legacy entries would
 -- default to 'enableCashRide = True' regardless of what's actually stored,
 -- which is the safe direction (never wrongly deny cash rides) but still
 -- needs correcting once real data exists.
@@ -173,19 +192,21 @@ backfillEnableCashRide entries = do
   let faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId :: Id Person.Person, fa)) fleetAssocs
       fleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) fleetAssocs
   dis <- QDI.findAllByDriverIds driverIdTexts
-  let driverFlagMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, fromMaybe True di.enableCashRide)) dis
+  let driverFlagMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.enableCashRide)) dis
   fleetOwnerInfos <- if null fleetOwnerPersonIds then pure [] else QFOI.findAllByPrimaryKeys fleetOwnerPersonIds
-  let fleetOwnerFlagMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, fromMaybe True foi.enableCashRide)) fleetOwnerInfos
+  let fleetOwnerFlagMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, foi.enableCashRide)) fleetOwnerInfos
+  now <- getCurrentTime
   pure $
     map
       ( \e ->
           let pid = cast e.driverId :: Id Person.Person
               mbFa = HashMap.lookup pid faMap
-              effective = case mbFa of
-                Just fa ->
-                  fromMaybe True (HashMap.lookup (Id @Person.Person fa.fleetOwnerId) fleetOwnerFlagMap)
-                    && fromMaybe True fa.enableCashRide
-                Nothing -> HashMap.lookupDefault True pid driverFlagMap
+              effective =
+                QFDA.effectiveEnableCashRide
+                  now
+                  (join $ HashMap.lookup pid driverFlagMap)
+                  mbFa
+                  (mbFa >>= \fa -> join (HashMap.lookup (Id @Person.Person fa.fleetOwnerId) fleetOwnerFlagMap))
            in e {enableCashRide = Just effective}
       )
       entries

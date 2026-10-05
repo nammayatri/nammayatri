@@ -273,6 +273,7 @@ RiderConfig:
     enableOnlinePaymentRide: Maybe Bool
     enableEditLocationWithoutRide: Maybe Bool
     enableShareNumberWithDriver: Maybe Bool
+    pushConsentToBpp: Maybe Bool
     nearbyBusMaxTimeThreshold: Maybe Int
     specialVehicleNotificationConfigs: "Maybe [SpecialVehicleNotificationConfig]"
     offerListCacheVersion: Maybe Text
@@ -603,6 +604,7 @@ RiderConfig:
     enableOnlinePaymentRide: "false"
     enableEditLocationWithoutRide: "true"
     enableShareNumberWithDriver: "false"
+    pushConsentToBpp: "false"
     kafkaTopicName: "'gps-data'"
   queries:
     findByMerchantOperatingCityId:

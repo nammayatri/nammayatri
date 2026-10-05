@@ -340,7 +340,7 @@ cd dev/integration-tests
   export/patch/import reference.
 - [`dev/integration-tests/Rules.md`](./dev/integration-tests/Rules.md) —
   collection authoring conventions, mock auto-skip, "Adding a New City".
-- [`.cursor/docs/17-testing-framework.md`](./.cursor/docs/17-testing-framework.md)
+- [`docs/backend/17-testing-framework.md`](./docs/backend/17-testing-framework.md)
   — testing framework deep dive.
 
 ## Usage
@@ -382,8 +382,8 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 |   |   └── Main (dynamic-offer-driver-app-exe)     : Frontend facing APIs, driver app
 |   ├── driver-tracking-health-check
 ├── dashboard
-|   ├── rider-dashboard (rider-dashboard-exe)       : Rider specific ops dashboard APIs
-|   └── provider-dashboard (provider-dashboard-exe) : Provider specific ops dashboard APIs
+|   └── Lib (lib-dashboard)                         : Shared dashboard library; dashboard APIs are
+|                                                     served directly by the application servers
 ├── kafka-consumers                                 : Microservices that consume messages from kafka
 |                                                     to perform various tasks
 ├── mocks                                           : Mock servers that mock various

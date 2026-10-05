@@ -226,6 +226,14 @@ def handle(handler, path, body):
     if handler.command == "GET" and (path.endswith("/maps") or path.endswith("/maps/") or path.endswith("/health")):
         return handler._json({"status": "UP", "service": "mock-google"})
 
+    # Google OAuth2 token endpoint — the Haskell mock-google served this at
+    # :8019/token for the FCM client's service-account auth. Seeded
+    # service-configs still point there (now a legacy port of this server).
+    if "/token" in path:
+        return handler._json(
+            {"access_token": "mock-google-oauth-token", "expires_in": 3599, "token_type": "Bearer"}
+        )
+
     if "computeRoutes" in path or "/directions/v2" in path:
         return handler._json(_compute_routes(handler))
     if "/distancematrix" in path:

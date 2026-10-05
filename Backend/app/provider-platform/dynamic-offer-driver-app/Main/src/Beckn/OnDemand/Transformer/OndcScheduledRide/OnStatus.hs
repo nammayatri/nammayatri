@@ -6,13 +6,16 @@ module Beckn.OnDemand.Transformer.OndcScheduledRide.OnStatus
 where
 
 import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
 import qualified Domain.Types.Beckn.Status as DStatus
+import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow)
+import qualified SharedLogic.Beckn.Common as Common
 
 -- | Re-wraps an on_update message as on_status; overrides fulfillment.type and vehicle.energy_type, and echoes back the selected add-ons.
 ondcScheduledRideOnStatusMessageBuild :: (EsqDBFlow m r, CacheFlow m r) => Bool -> Text -> [DAddOnConfig.AddOnData] -> Spec.OnUpdateReq -> m Spec.OnStatusReq
@@ -43,4 +46,18 @@ ondcScheduledRideStatusReqBuild dStatusRes onStatusReq = do
       _ -> False
     patchOrder msg = do
       patchedOrder <- OSRCommon.applyOndcScheduledRideAssignedOrderOverrides booking.isScheduled booking.quoteId isRideStarted booking.addOnData msg.confirmReqMessageOrder
-      pure msg {Spec.confirmReqMessageOrder = patchedOrder}
+      let advancedOrder = case pulledFulfillmentState dStatusRes of
+            Just fulfillmentState -> OSRCommon.overrideOrderFulfillmentStateCode fulfillmentState patchedOrder
+            Nothing -> patchedOrder
+      pure msg {Spec.confirmReqMessageOrder = advancedOrder}
+
+-- | A scheduled 3P ride has already been pushed enroute/arrived by the time NEW is pulled, so answering RIDE_ASSIGNED would read as the ride moving backwards. Fulfillment only -- cancellation terms enumerate states, so they stay as Layer 1 built them.
+pulledFulfillmentState :: DStatus.DStatusRes -> Maybe Enums.FulfillmentState
+pulledFulfillmentState dStatusRes = case dStatusRes.info of
+  DStatus.RideAssignedReq req
+    | isValueAddNP || not booking.isScheduled || ride.status /= DRide.NEW -> Nothing
+    | isJust ride.driverArrivalTime -> Just Enums.RIDE_ARRIVED_PICKUP
+    | otherwise -> Just Enums.RIDE_ENROUTE_PICKUP
+    where
+      Common.BookingDetails {booking, ride, isValueAddNP} = req.bookingDetails
+  _ -> Nothing

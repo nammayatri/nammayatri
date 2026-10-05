@@ -9,9 +9,11 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantOperatingCity as Beam
@@ -23,12 +25,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity]))
+findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
 findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]
 
 findAllByMerchantIdAndState ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m ([Domain.Types.MerchantOperatingCity.MerchantOperatingCity]))
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.IndianState -> m [Domain.Types.MerchantOperatingCity.MerchantOperatingCity])
 findAllByMerchantIdAndState merchantId state = do findAllWithKV [Se.And [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId), Se.Is Beam.state $ Se.Eq state]]
 
 findById ::
@@ -45,3 +47,13 @@ findByMerchantShortIdAndCity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> m (Maybe Domain.Types.MerchantOperatingCity.MerchantOperatingCity))
 findByMerchantShortIdAndCity merchantShortId city = do findOneWithKV [Se.And [Se.Is Beam.merchantShortId $ Se.Eq (Kernel.Types.Id.getShortId merchantShortId), Se.Is Beam.city $ Se.Eq city]]
+
+updateCloudConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType -> Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+updateCloudConfig cloudType cloudBaseUrl id = do
+  updateWithKV
+    [ Se.Set Beam.cloudType (Kernel.Prelude.fmap Kernel.Prelude.show cloudType),
+      Se.Set Beam.cloudBaseUrl (Kernel.Prelude.fmap showBaseUrl cloudBaseUrl)
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

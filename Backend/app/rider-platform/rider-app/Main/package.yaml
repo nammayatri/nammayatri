@@ -189,7 +189,6 @@ library:
     - haskell-cac
     - beckn-spec
     - special-zone-a
-    - special-zone
     - payment
     - sessionizer-metrics
     - beckn-services

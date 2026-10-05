@@ -61,6 +61,8 @@ imports:
   Language: Kernel.External.Types
   MerchantCloudUpdateReq: Dashboard.Common.Merchant
   MerchantCloudUpdateRes: Dashboard.Common.Merchant
+  MerchantOperatingCityCloudUpdateReq: Dashboard.Common.Merchant
+  MerchantOperatingCityCloudUpdateRes: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -651,6 +653,16 @@ apis:
         type: MerchantCloudUpdateReq
       response:
         type: MerchantCloudUpdateRes
+      migrate:
+        capability: system-config.merchant.write
+
+  - POST:
+      endpoint: /cloud/city/update
+      auth: ApiAuthV2
+      request:
+        type: MerchantOperatingCityCloudUpdateReq
+      response:
+        type: MerchantOperatingCityCloudUpdateRes
       migrate:
         capability: system-config.merchant.write
 

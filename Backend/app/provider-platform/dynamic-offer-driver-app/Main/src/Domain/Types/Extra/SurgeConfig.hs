@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | The typed surge table (dev/docs/fare-policy-revamp-plan.md, Phase 4).
+-- | The typed surge table (docs/backend/design/fare-policy-revamp-plan.md, Phase 4).
 -- Replaces DYNAMIC_PRICING_UNIFIED json-logic: rows are evaluated top-down,
 -- FIRST MATCH WINS. A bound on a signal only matches when the signal is
 -- PRESENT — a missing signal (cold Redis key) never satisfies a bounded row,

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | One-shot assignment (dev/docs/one-shot-assign-plan.md): single internal callback
+-- | One-shot assignment (docs/backend/design/one-shot-assign-plan.md): single internal callback
 -- from a value-add-NP BPP replacing the on_select/init/on_init/confirm/on_confirm
 -- relay. Creates quote + booking + ride in one go; the booking row is born
 -- TRIP_ASSIGNED (no intermediate states), then the shared rideAssignedReqHandler

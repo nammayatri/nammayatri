@@ -264,7 +264,6 @@ library
     , servant-server
     , singletons
     , singletons-th
-    , special-zone
     , stm
     , string-conversions
     , template-haskell

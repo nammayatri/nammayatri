@@ -151,6 +151,7 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverFleetOperatorAssociation (checkDriverOperatorAssociation, checkFleetDriverAssociation, checkFleetOperatorAssociation, isAssociationBetweenTwoPerson)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverFyEarnings as SDFE
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
@@ -177,7 +178,6 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
-import qualified Storage.Queries.DriverFyEarnings as QDFE
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
@@ -428,6 +428,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
   phoneNo <- mapM decrypt person.mobileNumber
   linkedVehicleInfo <- mapM (mkLinkedVehicleInfo rcById) (HM.lookupDefault [] person.id linkedAssocsByDriver)
   let mbFda = HM.lookup person.id fleetAssocByDriver
+      mbFleetOwnerCashRide = mbFda >>= \fda -> HM.lookup fda.fleetOwnerId fleetOwnerInfoById >>= (.enableCashRide)
   mbRecentFleetInfo <- case mbFda of
     Nothing -> pure Nothing
     Just fda -> case HM.lookup fda.fleetOwnerId fleetOwnerById of
@@ -473,6 +474,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
         recentFleetInfo = mbRecentFleetInfo,
         hasActiveRc = HS.member person.id driversWithActiveRc,
         disabledReasonFlag = castDisabledReasonFlag <$> driverInformation.disabledReasonFlag,
+        enableCashRide = Just $ QFDA.effectiveEnableCashRide now driverInformation.enableCashRide mbFda mbFleetOwnerCashRide,
         linkedVehicleInfo
       }
   where
@@ -1546,9 +1548,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
 -- Omit @quarter@ for the whole financial year; pass 1..4 for a single quarter.
 getDriverFyEarnings :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Int -> Id Common.Driver -> Text -> Flow Common.FyEarningsRes
 getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requestorId = do
-  whenJust mbQuarter $ \q ->
-    unless (q >= 1 && q <= 4) $
-      throwError $ InvalidRequest "quarter must be between 1 and 4"
+  SDFE.validateQuarter mbQuarter
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   -- entityId is a person id: a driver, or a fleet owner. The accumulator is
@@ -1558,11 +1558,10 @@ getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requ
   person <- find (\e -> e.id == personId) entities & fromMaybeM (PersonDoesNotExist personId.getId)
   -- If requestor is not found at BPP (e.g. Admin), allow; only fleet/operator exist at BPP
   whenJust (find (\e -> e.id == Id requestorId) entities) $ \requestor -> do
-    isValid <- isAssociationWithDriver requestor person
+    isValid <- canReadFyEarnings requestor person
     unless isValid $ throwError AccessDenied
-  rows <- QDFE.findAllByPersonIdAndFinancialYear personId financialYear
-  let wanted = maybe rows (\q -> filter (\r -> r.quarter == q) rows) mbQuarter
-      quarters =
+  rows <- SDFE.getFyEarningsRows personId financialYear mbQuarter
+  let quarters =
         map
           ( \r ->
               Common.FyQuarterEarnings
@@ -1571,7 +1570,7 @@ getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requ
                   tdsDeducted = r.tdsAmountTotal
                 }
           )
-          (sortOn (.quarter) wanted)
+          rows
   pure
     Common.FyEarningsRes
       { financialYear = financialYear,
@@ -1579,6 +1578,13 @@ getDriverFyEarnings merchantShortId opCity mbQuarter financialYear entityId requ
         totalNetEarnings = sum (map (.netEarnings) quarters),
         totalTdsDeducted = sum (map (.tdsDeducted) quarters)
       }
+
+canReadFyEarnings :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+canReadFyEarnings requestor target
+  | requestor.id == target.id = pure True
+  | otherwise = case (requestor.role, target.role) of
+    (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation target.id requestor.id
+    _ -> pure (requestor.role == DP.ADMIN)
 
 isAssociationWithDriver :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
 isAssociationWithDriver requestedPersonDetails driverDetails =

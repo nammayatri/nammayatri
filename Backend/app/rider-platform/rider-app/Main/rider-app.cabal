@@ -601,6 +601,7 @@ library
       SharedLogic.Referral
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
+      SharedLogic.RiderConsentPush
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -1981,7 +1982,6 @@ library
     , shared-services
     , singletons
     , singletons-th
-    , special-zone
     , special-zone-a
     , split
     , string-conversions

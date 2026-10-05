@@ -1297,12 +1297,17 @@ pickAdvertisedPaymentInstrument collectedBy methods =
         collectedBy /= "BAP" || DMPM.isOnlinePaymentInstrument pmi.paymentInstrument
     ]
 
-tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe [Spec.Payment]
-tfPayments booking transporter bppConfig = do
+-- | collected_by for a booking's payment block: the booking's merchant payment method when it has one,
+-- else the BecknConfig default. Keeps the wire in step with the method init stamped on the booking.
+resolvePaymentCollectedBy :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Text
+resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig = maybe (show bppConfig.collectedBy) (show . (.collectedBy)) mbPaymentMethodInfo
+
+tfPayments :: DBooking.Booking -> DM.Merchant -> DBC.BecknConfig -> Maybe DMPM.PaymentMethodInfo -> Maybe [Spec.Payment]
+tfPayments booking transporter bppConfig mbPaymentMethodInfo = do
   let mPrice = Just $ Common.mkPrice (Just booking.currency) booking.estimatedFare
   let mkParams :: Maybe DT.BknPaymentParams = decodeFromText =<< bppConfig.paymentParamsJson
       mPaymentInstrument = show <$> booking.paymentInstrument
-  Just . List.singleton $ mkPayment (show transporter.city) (show bppConfig.collectedBy) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
+  Just . List.singleton $ mkPayment (show transporter.city) (resolvePaymentCollectedBy mbPaymentMethodInfo bppConfig) Enums.NOT_PAID mPrice booking.paymentId mkParams bppConfig.settlementType bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee False Nothing mPaymentInstrument
 
 tfProvider :: DBC.BecknConfig -> Maybe Spec.Provider
 tfProvider becknConfig =

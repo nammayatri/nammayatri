@@ -34,7 +34,7 @@ imports:
 # min/maxDriverRating (both null = wildcard) gate the row to a DriverStats.rating band:
 # min is INCLUSIVE, max is EXCLUSIVE (so "< 4.5" and ">= 4.5" rows tile without overlap).
 # An unrated driver only matches rows with no rating band.
-# See dev/docs/cancellation-consequence-matrix-plan.md.
+# See docs/backend/design/cancellation-consequence-matrix-plan.md.
 CancellationConsequenceMatrix:
   tableName: cancellation_consequence_matrix
   derives: "Generic,Show,ToJSON,FromJSON,Eq"

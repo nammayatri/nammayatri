@@ -13,7 +13,7 @@
 -}
 
 -- | Dashboard CRUD for the CancellationConsequenceMatrix and the GLOBAL fault-rule
--- registry (dev/docs/cancellation-consequence-matrix-plan.md). Validations:
+-- registry (docs/backend/design/cancellation-consequence-matrix-plan.md). Validations:
 --   * dimension values must parse (verdict/cancelledBy constructor names, TripCategory,
 --     ServiceTierType, Area, collection mode, scheduledAcceptanceMode);
 --   * a referenced faultRule must be an ACTIVE entry of the global registry;

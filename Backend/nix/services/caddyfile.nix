@@ -22,8 +22,6 @@ let
   exposedServices = [
     "rider-app"
     "dynamic-offer-driver-app"
-    "rider-dashboard"
-    "provider-dashboard"
     "beckn-gateway"
     "mock-registry"
     "location-tracking-service"

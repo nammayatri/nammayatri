@@ -107,6 +107,7 @@ import qualified SharedLogic.OTP as SOTP
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
+import qualified SharedLogic.RiderConsentPush as RCP
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -701,7 +702,18 @@ data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
 
 type UpdateEmergencySettingsResp = APISuccess.APISuccess
 
-updateEmergencySettings :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person.Person -> UpdateEmergencySettingsReq -> m UpdateEmergencySettingsResp
+updateEmergencySettings ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    CoreMetrics m,
+    HasRequestId r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Id Person.Person ->
+  UpdateEmergencySettingsReq ->
+  m UpdateEmergencySettingsResp
 updateEmergencySettings personId req = do
   personENList <- QPersonDEN.findAllByPersonId (cast personId)
   let shareTripOptions = case req.shareTripWithEmergencyContactOption of
@@ -713,6 +725,12 @@ updateEmergencySettings personId req = do
         _ -> req.shareTripWithEmergencyContactOption
   when (fromMaybe False req.shareEmergencyContacts && null personENList) do
     throwError (InvalidRequest "Add atleast one emergency contact.")
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  oldConsent <- (.consentToShareMobileNumber) <$> Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  whenJust req.consentToShareMobileNumber $ \newConsent ->
+    when (fromMaybe False riderConfig.pushConsentToBpp && oldConsent /= Just newConsent) $
+      RCP.pushConsent person newConsent
   void $ updateSafetySettings req
   when updateShareOptionForEmergencyContacts $ QPersonDEN.updateShareTripWithEmergencyContactOptions (cast personId) (convertToSafetyRideShareOptions <$> shareTripOptions)
   pure APISuccess.Success

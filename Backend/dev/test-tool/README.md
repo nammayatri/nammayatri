@@ -253,7 +253,7 @@ into it, resize the window, and stop it from the dashboard.
 ## See also
 
 - `Backend/README.md` — full backend dev setup.
-- `.cursor/docs/02-build-and-dev.md` — nix / cabal commands.
-- `.cursor/docs/17-testing-framework.md` — testing framework deep dive.
+- `docs/backend/02-build-and-dev.md` — nix / cabal commands.
+- `docs/backend/17-testing-framework.md` — testing framework deep dive.
 - `Backend/dev/integration-tests/Rules.md` — collection authoring conventions,
   mock-skip semantics, "Adding a New City" checklist.

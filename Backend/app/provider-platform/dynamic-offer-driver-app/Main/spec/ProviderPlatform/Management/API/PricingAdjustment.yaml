@@ -7,7 +7,7 @@ imports:
 
 module: PricingAdjustment
 
-# Fare adjustments (dev/docs/fare-adjustments-plan.md): scale-only overlays on
+# Fare adjustments (docs/backend/design/fare-adjustments-plan.md): scale-only overlays on
 # the resolved fare policy. EXPERIMENT = rolloutPercentage of riders
 # (deterministic salted phone hash, arm pinned per transaction, both arms
 # stamped on estimates); SPIKE = 100% of scope between validFrom/validTill,

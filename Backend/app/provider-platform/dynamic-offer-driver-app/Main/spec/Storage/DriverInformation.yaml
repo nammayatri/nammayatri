@@ -153,6 +153,7 @@ DriverInformation:
     isBlockedForScheduledPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
+    rideBillingModel: Maybe ServiceNames
     panNumber: Maybe (EncryptedHashedField e Text)
     tdsRate: Maybe Double
     aadhaarNumber: Maybe (EncryptedHashedField e Text)

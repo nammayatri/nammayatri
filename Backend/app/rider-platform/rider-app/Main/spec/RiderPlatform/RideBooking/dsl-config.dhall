@@ -1,4 +1,4 @@
-let common = ../rider-dashboard-common.dhall
+let common = ../dashboard-common.dhall
 
 let defaultOutput = common.defaultConfigs._output
 
@@ -15,16 +15,10 @@ let outputPath =
               ++  "API/Types/Dashboard/"
               ++  folderName
               ++  "/OrphanInstances"
-          , _domainHandlerDashboard =
-              defaultOutput._domainHandlerDashboard ++ "/" ++ folderName
           , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
           , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
-          , _servantApiDashboard =
-              defaultOutput._servantApiDashboard ++ "/" ++ folderName
           , _servantApiDashboardAuth =
               defaultOutput._servantApiDashboardAuth ++ "/" ++ folderName
-          , _servantApiClient =
-              defaultOutput._servantApiClient ++ "/" ++ folderName
           }
 
 let serverName = Some "APP_BACKEND"

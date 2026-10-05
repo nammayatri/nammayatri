@@ -5,7 +5,6 @@ module RegistrationUnitTests where
 
 -- Import the REAL functions from the codebase
 
-import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet as FleetAPI
 import qualified "dynamic-offer-driver-app" API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2 as Common
 import Control.Applicative ((<|>))
 import Control.Exception (evaluate, try)
@@ -14,12 +13,10 @@ import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), fromGregorian)
-import qualified "provider-dashboard" Domain.Action.ProviderPlatform.Fleet.RegistrationV2 as DRegistrationV2
-import qualified "dynamic-offer-driver-app" Domain.Types.AccessMatrix as DMatrix
+import qualified "dynamic-offer-driver-app" Domain.Action.DashboardAuth.Fleet.RegistrationV2 as DRegistrationV2
+import qualified "dynamic-offer-driver-app" Domain.Types.Merchant as DDM
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
-import qualified "lib-dashboard" Domain.Types.Person as DP
-import qualified "lib-dashboard" Domain.Types.Role as DRole
-import qualified "lib-dashboard" Environment (Flow)
+import qualified "dynamic-offer-driver-app" Environment (Flow)
 import Kernel.External.Encryption (decrypt, encrypt)
 import qualified "mobility-core" Kernel.Prelude
 import Kernel.Types.APISuccess
@@ -28,7 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase, (@?), (@?=))
-import qualified "lib-dashboard" Tools.Auth.ApiAuth as Tools.Auth.Api
+import qualified "dynamic-offer-driver-app" Tools.Auth.DashboardUser as DashboardUser
 import Prelude
 
 -- =============================================================================
@@ -83,7 +80,7 @@ testPostRegistrationV2LoginOtpWithRealExecution =
         (T.head countryCode == '+') @? "Country code should start with +"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2LoginOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerLoginReqV2 -> Environment.Flow APISuccess
+        let expectedResponseType = DRegistrationV2.postRegistrationV2LoginOtp :: ShortId DDM.Merchant -> Context.City -> Common.FleetOwnerLoginReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different mobile numbers and validates request handling" $ do
         let req1 = Common.FleetOwnerLoginReqV2 "9876543210" "+91" Nothing
@@ -139,7 +136,7 @@ testPostRegistrationV2VerifyOtpWithRealExecution =
         (T.length otpValue == 6) @? "OTP should be exactly 6 digits"
 
         -- Test that the function signature expects FleetOwnerVerifyResV2 response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2VerifyOtp :: ShortId DM.Merchant -> Context.City -> Common.FleetOwnerVerifyReqV2 -> Environment.Flow Common.FleetOwnerVerifyResV2
+        let expectedResponseType = DRegistrationV2.postRegistrationV2VerifyOtp :: ShortId DDM.Merchant -> Context.City -> Common.FleetOwnerVerifyReqV2 -> Environment.Flow Common.FleetOwnerVerifyResV2
         True @? "Function should return FleetOwnerVerifyResV2",
       testCase "Executes with different OTP values and validates request handling" $ do
         let req1 = Common.FleetOwnerVerifyReqV2 "6123456789" "+91" (Just "123456")
@@ -194,10 +191,10 @@ testPostRegistrationV2RegisterWithRealExecution =
                 }
             merchantShortId = ShortId "test-merchant"
             opCity = Context.City "Bangalore"
-            apiTokenInfo =
-              Tools.Auth.Api.ApiTokenInfo
-                { Tools.Auth.Api.personId = Id "person-123",
-                  Tools.Auth.Api.merchant =
+            dashboardUser =
+              DashboardUser.DashboardUser
+                { DashboardUser.personId = Id "person-123",
+                  DashboardUser.merchant =
                     DM.Merchant
                       { DM.id = Id "merchant-123",
                         DM.shortId = ShortId "test-merchant",
@@ -216,15 +213,14 @@ testPostRegistrationV2RegisterWithRealExecution =
                         DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0,
                         DM.singleActiveSessionOnly = Just False
                       },
-                  Tools.Auth.Api.city = Context.City "Bangalore",
-                  Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetAPI.REGISTRATION_V2 Common.POST_REGISTRATION_V2_REGISTER),
-                  Tools.Auth.Api.person = undefined
+                  DashboardUser.city = Context.City "Bangalore",
+                  DashboardUser.person = undefined
                 }
 
         -- Actually execute the Flow action and handle any exceptions
         executeFlowAction
           "postRegistrationV2Register with validation"
-          (evaluate $ DRegistrationV2.postRegistrationV2Register merchantShortId opCity apiTokenInfo req)
+          (evaluate $ DRegistrationV2.postRegistrationV2Register merchantShortId opCity dashboardUser req)
 
         -- Validate the request structure
         let Common.FleetOwnerRegisterReqV2 {Common.firstName = firstName, Common.lastName = lastName, Common.fleetType = fleetType, Common.email = email} = req
@@ -240,17 +236,17 @@ testPostRegistrationV2RegisterWithRealExecution =
         isJust fleetType @? "Fleet type should be specified"
 
         -- Test that the function signature expects APISuccess response
-        let expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DM.Merchant -> Context.City -> Tools.Auth.Api.ApiTokenInfo DMatrix.UserActionType -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
+        let expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DDM.Merchant -> Context.City -> DashboardUser.DashboardUser -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different fleet types and validates request handling" $ do
         let req1 = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing Nothing Nothing
             req2 = Common.FleetOwnerRegisterReqV2 "Jane" "Smith" Nothing Nothing (Just Common.BUSINESS_FLEET) Nothing Nothing Nothing Nothing Nothing Nothing
             merchantShortId = ShortId "test-merchant"
             opCity = Context.City "Bangalore"
-            apiTokenInfo =
-              Tools.Auth.Api.ApiTokenInfo
-                { Tools.Auth.Api.personId = Id "person-123",
-                  Tools.Auth.Api.merchant =
+            dashboardUser =
+              DashboardUser.DashboardUser
+                { DashboardUser.personId = Id "person-123",
+                  DashboardUser.merchant =
                     DM.Merchant
                       { DM.id = Id "merchant-123",
                         DM.shortId = ShortId "test-merchant",
@@ -269,18 +265,17 @@ testPostRegistrationV2RegisterWithRealExecution =
                         DM.createdAt = UTCTime (fromGregorian 2020 1 1) 0,
                         DM.singleActiveSessionOnly = Just False
                       },
-                  Tools.Auth.Api.city = Context.City "Bangalore",
-                  Tools.Auth.Api.userActionType = DMatrix.PROVIDER_FLEET (FleetAPI.REGISTRATION_V2 Common.POST_REGISTRATION_V2_REGISTER),
-                  Tools.Auth.Api.person = undefined
+                  DashboardUser.city = Context.City "Bangalore",
+                  DashboardUser.person = undefined
                 }
 
         -- Actually execute the Flow actions and handle any exceptions
         executeFlowAction
           "postRegistrationV2Register with req1"
-          (evaluate $ DRegistrationV2.postRegistrationV2Register merchantShortId opCity apiTokenInfo req1)
+          (evaluate $ DRegistrationV2.postRegistrationV2Register merchantShortId opCity dashboardUser req1)
         executeFlowAction
           "postRegistrationV2Register with req2"
-          (evaluate $ DRegistrationV2.postRegistrationV2Register merchantShortId opCity apiTokenInfo req2)
+          (evaluate $ DRegistrationV2.postRegistrationV2Register merchantShortId opCity dashboardUser req2)
 
         -- Validate that different fleet types are handled correctly
         let Common.FleetOwnerRegisterReqV2 {Common.fleetType = fleetType1, Common.firstName = firstName1} = req1

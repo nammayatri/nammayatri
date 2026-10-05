@@ -60,10 +60,12 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
@@ -282,6 +284,9 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
           _ -> return tripQuoteDetailsWithoutUpgrades
 
       mbRiderDetails <- maybe (pure Nothing) QRD.findById searchReq.riderId
+      -- The job data carries no payment method, and the pool treats a missing instrument as cash
+      -- (cash-wallet gate applies), so resolve it from the instrument stamped on the search try.
+      paymentMethodInfo <- resolvePaymentMethodInfo searchReq.merchantOperatingCityId searchTry.paymentInstrument
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -294,7 +299,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 isRepeatSearch = False,
                 isAllocatorBatch = True,
                 billingCategory = searchTry.billingCategory,
-                paymentMethodInfo = Nothing,
+                paymentMethodInfo,
                 riderDetails = mbRiderDetails,
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
@@ -304,6 +309,14 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
       (res, _, _) <- sendSearchRequestToDriversWithTopUp jobData.topUpSize driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
       return res
   where
+    -- Picks the city's merchant payment method for the instrument; only the instrument is consumed
+    -- downstream (pool gates, next search try), so the first match is sufficient.
+    resolvePaymentMethodInfo merchantOpCityId = \case
+      Nothing -> pure Nothing
+      Just instrument -> do
+        methods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
+        pure $ mkPaymentMethodInfo <$> find (\method -> method.paymentInstrument == instrument) methods
+
     buildEstimateTripQuoteDetails ::
       ( CacheFlow m r,
         EsqDBFlow m r,

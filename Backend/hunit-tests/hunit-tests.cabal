@@ -94,7 +94,6 @@ library
     , mobility-core
     , mock-sms
     , mtl
-    , provider-dashboard
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
@@ -171,7 +170,6 @@ executable hunit-tests
     , mobility-core
     , mock-sms
     , mtl
-    , provider-dashboard
     , record-dot-preprocessor
     , record-hasfield
     , rider-app

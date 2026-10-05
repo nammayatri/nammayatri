@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-Detailed topic docs live in `.cursor/docs/` — read the relevant one(s) for your current task.
+Detailed topic docs live in `docs/backend/` — read the relevant one(s) for your current task.
 
 ## Critical Rules (Always Apply)
 
@@ -40,7 +40,7 @@ cabal build <package-name>       # Build specific package (e.g., rider-app)
 , kill-svc-ports                 # Kill lingering service processes
 ```
 
-Full build details: `.cursor/docs/02-build-and-dev.md`
+Full build details: `docs/backend/02-build-and-dev.md`
 
 ## Architecture — Quick Reference
 
@@ -58,7 +58,7 @@ Full build details: `.cursor/docs/02-build-and-dev.md`
 BAP (rider-app) initiates BECKN calls → BPP (driver-app) responds with callbacks.
 ACL modules translate between BECKN protocol types and internal domain types.
 
-Full architecture: `.cursor/docs/01-architecture-overview.md`
+Full architecture: `docs/backend/01-architecture-overview.md`
 
 ## Key Directory Patterns
 
@@ -83,7 +83,7 @@ Full architecture: `.cursor/docs/01-architecture-overview.md`
 - Use camelCase for endpoint paths, full module paths for imports
 - Common auto-imported types: `Text`, `Maybe`, `Int`, `Bool`, `Id`, `UTCTime`, `HighPrecMoney`, `Currency`
 
-Full DSL reference: `.cursor/docs/07-namma-dsl.md`
+Full DSL reference: `docs/backend/07-namma-dsl.md`
 
 ## Haskell Conventions
 
@@ -92,13 +92,13 @@ Full DSL reference: `.cursor/docs/07-namma-dsl.md`
 - Use `fromTType`/`toTType` in YAML for domain-to-beam type transformations
 - `extraOperations`: `EXTRA_QUERY_FILE`, `EXTRA_DOMAIN_TYPE_FILE`, `EXTRA_CACHED_QUERY_FILE`
 
-Full conventions: `.cursor/docs/15-conventions.md`
+Full conventions: `docs/backend/15-conventions.md`
 
 ## BECKN Protocol
 
 Flow: `search` → `on_search` → `select` → `on_select` → `init` → `on_init` → `confirm` → `on_confirm`
-Protocol details: `.cursor/docs/05-beckn-protocol-flow.md`
-Ride lifecycle: `.cursor/docs/06-ride-flow.md`
+Protocol details: `docs/backend/05-beckn-protocol-flow.md`
+Ride lifecycle: `docs/backend/06-ride-flow.md`
 
 ## FRFS (Public Transport)
 
@@ -107,7 +107,7 @@ Ride lifecycle: `.cursor/docs/06-ride-flow.md`
 - `mkCloudBapUri` in `Beckn/ACL/FRFS/Utils.hs` handles multi-cloud callback routing
 - Constraint propagation: add to type aliases in `ExternalBPP/CallAPI/Types.hs` and `SharedLogic/CallFRFSBPP.hs`
 
-Full FRFS details: `.cursor/docs/10-frfs-public-transport.md`
+Full FRFS details: `docs/backend/10-frfs-public-transport.md`
 
 ## Commit / Branch Conventions
 
@@ -117,7 +117,7 @@ Branch: <sub-project>/<type>/<issue-number><description>
 Types: feat, fix, chore, ci, docs, perf, refactor, test
 ```
 
-## Deep Dive Docs (`.cursor/docs/`)
+## Deep Dive Docs (`docs/backend/`)
 
 | Doc | Read when working on... |
 |-----|------------------------|

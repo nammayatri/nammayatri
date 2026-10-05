@@ -1,4 +1,4 @@
--- Cancellation legacy cleanup (dev/docs/cancellation-consequence-matrix-plan.md).
+-- Cancellation legacy cleanup (docs/backend/design/cancellation-consequence-matrix-plan.md).
 -- Two independent sections with DIFFERENT timing — read before running.
 
 --------------------------------------------------------------------------------

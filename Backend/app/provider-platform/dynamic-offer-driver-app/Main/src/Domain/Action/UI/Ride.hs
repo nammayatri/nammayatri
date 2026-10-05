@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride
     listDriverRides,
     getDriverRideById,
     resolveCallingNumber,
+    mayDialDirectly,
     arrivedAtPickup,
     arrivedAtDestination,
     startReturnTrip,
@@ -89,6 +90,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
+import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -273,8 +275,8 @@ arrivedAtPickup rideId req = do
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let pickupLoc = getCoordinates booking.fromLocation
-  let distance = distanceBetweenInMeters req pickupLoc
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  let distance = distanceBetweenInMeters req pickupLoc
   unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
     now <- getCurrentTime
@@ -313,7 +315,17 @@ otpRideCreate driver otpCode booking clientId = do
   when isVehicleServiceNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Service Tier"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
-  unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
+  mFleetOwnerId <- QFDA.findByDriverId driver.id True
+  -- Postpaid-only dues gate: `subscribed` is never set for a prepaid driver, so applying it
+  -- to them would block every OTP ride. Prepaid solvency is enforced by the wallet hold in
+  -- initializeRide below, which is the authority for this ride's funding.
+  -- Uses the same exemption as pooling rather than the explicit model alone, so a fleet
+  -- driver under a prepaid merchant with a YATRI or null model is not admitted to the pool
+  -- and then refused here. The live association is the right one to read: the ride does not
+  -- exist yet, and initializeRide below is handed this very value.
+  let isPrepaidEnabled = fromMaybe False transporter.prepaidSubscriptionAndWalletEnabled
+  unless (isExemptFromPostpaidDuesFlag isPrepaidEnabled (mFleetOwnerId <&> (.fleetOwnerId)) driverInfo.rideBillingModel) $
+    unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
@@ -323,10 +335,9 @@ otpRideCreate driver otpCode booking clientId = do
   -- fee BEFORE creating the ride entity. Doing it here (instead of at StartRide)
   -- ensures we don't leave an orphan ride row when the balance is insufficient.
   AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
-  mFleetOwnerId <- QFDA.findByDriverId driver.id True
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
+  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 
   driverNumber <- RD.getDriverNumber rideDetails
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
@@ -585,12 +596,9 @@ startReturnTrip rideId enteredOtp = do
     QRide.updateReturnStartedAt (Just now) ride.id
   pure Success
 
--- | The rider's real number reaches the driver only when the merchant has enabled
--- direct calling AND the rider consented to sharing it. Consent can restrict but
--- never expand what the merchant configured.
-shouldShareRiderMobileNumber :: DTC.CallingOption -> Bool -> Bool
-shouldShareRiderMobileNumber option riderConsented =
-  riderConsented && (option == DTC.DirectCall || option == DTC.DualCall)
+mayDialDirectly :: Bool -> DTC.CallingOption -> Maybe Bool -> Maybe Bool -> Bool
+mayDialDirectly forceDirect option snapshot live =
+  forceDirect || (allowsDirectCalling option && snapshot == Just True && live == Just True)
 
 allowsDirectCalling :: DTC.CallingOption -> Bool
 allowsDirectCalling option = option == DTC.DirectCall || option == DTC.DualCall
@@ -612,7 +620,9 @@ getRiderNumbers booking option forceDirect
           Nothing -> pure Nothing
           Just rider -> do
             bareNumber <- decrypt rider.mobileNumber
-            pure $ Just (bareNumber, rider.mobileCountryCode, forceDirect || maybe True (shouldShareRiderMobileNumber option) rider.consentToShareMobileNumber)
+            when (forceDirect && rider.consentToShareMobileNumber == Just False) $
+              logWarning $ "forceDirectCalling overriding rider opt-out, merchantOperatingCityId: " <> booking.merchantOperatingCityId.getId
+            pure $ Just (bareNumber, rider.mobileCountryCode, mayDialDirectly forceDirect option booking.numberShareConsent rider.consentToShareMobileNumber)
 
 resolveCallingNumber ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -632,11 +642,11 @@ resolveCallingNumber booking ride mbOption forceDirect exoPhone = do
   pure $ case mbNumbers of
     Nothing ->
       RideCommon.ResolvedCalling {riderMobileNumber = Nothing, callingNumber = anonymous}
-    Just (bareNumber, riderCountryCode, mayDialDirectly) ->
+    Just (bareNumber, riderCountryCode, dialDirectly) ->
       RideCommon.ResolvedCalling
         { riderMobileNumber = Just bareNumber,
           callingNumber =
-            if mayDialDirectly
+            if dialDirectly
               then RideCommon.CallingNumberAPIEntity {number = bareNumber, countryCode = Just riderCountryCode, numberType = RideCommon.DIRECT}
               else anonymous
         }

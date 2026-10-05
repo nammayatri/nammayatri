@@ -1,6 +1,6 @@
 -- Driver (BPP) scoped project. Used by cabal-prod-hot-fix-push.yaml on prodHotPush-BPP.
--- Excludes rider-app and everything coupled to it: rider-dashboard, provider-dashboard,
--- lib-dashboard, kafka-consumers, producer (these depend on rider-app and must build on the
+-- Excludes rider-app and everything coupled to it: lib-dashboard, kafka-consumers,
+-- producer (these depend on rider-app and must build on the
 -- Common/International full branches, not here). See cabal.project for the full package set.
 
 packages:

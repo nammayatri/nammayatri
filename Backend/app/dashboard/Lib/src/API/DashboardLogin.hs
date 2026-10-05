@@ -37,7 +37,6 @@ import qualified API.Dashboard.PersonBulk as PersonBulk
 import qualified API.Dashboard.Registration as Registration
 import qualified API.Dashboard.ResourceScope as ResourceScope
 import qualified API.Dashboard.Roles as Roles
-import qualified API.Dashboard.SpecialZone as SpecialZone
 import qualified API.Dashboard.TransactionView as TransactionView
 import Kernel.Types.App (FlowServerR)
 import Servant
@@ -54,7 +53,6 @@ type API =
     :<|> TransactionView.API
     :<|> Entity.API
     :<|> PersonBulk.API
-    :<|> SpecialZone.API
 
 handler :: DashboardLoginFlow r => FlowServerR r API
 handler =
@@ -68,4 +66,3 @@ handler =
     :<|> TransactionView.handler
     :<|> Entity.handler
     :<|> PersonBulk.handler
-    :<|> SpecialZone.handler

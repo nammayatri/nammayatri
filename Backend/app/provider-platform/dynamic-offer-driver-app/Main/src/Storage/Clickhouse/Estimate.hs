@@ -294,7 +294,7 @@ pricingStatsByGeohash cityId from to =
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
 
--- arm-vs-arm readout for one FareAdjustment (dev/docs/fare-adjustments-plan.md):
+-- arm-vs-arm readout for one FareAdjustment (docs/backend/design/fare-adjustments-plan.md):
 -- estimates stamped with the adjustment id, grouped by tier and arm
 -- ("treatment"/"control"; spikes only ever produce treatment rows). Control
 -- rows exist because control estimates are stamped too at pricing time.

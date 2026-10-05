@@ -38,7 +38,6 @@ import Dashboard.Common (Summary)
 import qualified Dashboard.Common.Driver as Common
 import qualified Dashboard.Common.Exotel as Common
 import qualified Dashboard.Common.SpecialZone as Common
-import qualified Dashboard.SafetyPlatform as Safety
 import Data.Aeson (Value (..), object, (.=))
 import Data.OpenApi (NamedSchema (..), ToSchema (..))
 import qualified Data.Text as T
@@ -136,8 +135,7 @@ legacyPayloads :: [(Text, Text, Text -> Maybe Value)]
 legacyPayloads =
   [ ("DriverAPI ", "DriverAPI", \s -> toJSON <$> (readMaybe (T.unpack s) :: Maybe Common.DriverEndpoint)),
     ("ExotelAPI ", "ExotelAPI", \s -> toJSON <$> (readMaybe (T.unpack s) :: Maybe Common.ExotelEndpoint)),
-    ("SpecialZoneAPI ", "SpecialZoneAPI", \s -> toJSON <$> (readMaybe (T.unpack s) :: Maybe Common.SpecialZoneEndpoint)),
-    ("SafetyAPI ", "SafetyAPI", \s -> toJSON <$> (readMaybe (T.unpack s) :: Maybe Safety.SafetyEndpoint))
+    ("SpecialZoneAPI ", "SpecialZoneAPI", \s -> toJSON <$> (readMaybe (T.unpack s) :: Maybe Common.SpecialZoneEndpoint))
   ]
 
 -- | PLATFORM/RESOURCE/ACTION. Each platform's action union is a sum of

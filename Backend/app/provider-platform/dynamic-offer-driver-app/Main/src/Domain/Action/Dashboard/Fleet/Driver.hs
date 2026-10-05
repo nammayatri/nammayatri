@@ -866,9 +866,6 @@ postDriverFleetCashRideUpdate merchantShortId opCity requestorId mbFleetOwnerId 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-
-  unless (merchant.onlinePayment) $
-    throwError $ InvalidRequest "Cash ride toggle needs online payment enabled for this merchant."
   let maxTargets = fromMaybe 100 (transporterConfig.limitsConfig >>= (.maxCashRideTargetIds))
       syncBatchSize = fromMaybe 100 (transporterConfig.limitsConfig >>= (.cashRideSyncBatchSize))
       enableCashRide = req.enableCashRide
@@ -917,6 +914,10 @@ postDriverFleetCashRideUpdate merchantShortId opCity requestorId mbFleetOwnerId 
     _ -> pure Map.empty
 
   let directDriverIds = if isJust mbEffectiveFleetOwnerId then [] else map (.id) drivers
+  unless (null directDriverIds) $ do
+    fleetAssocs <- QFDAExtra.findAllByDriverIds directDriverIds
+    whenJust (listToMaybe fleetAssocs) $ \a ->
+      throwError $ InvalidRequest ("Driver " <> a.driverId.getId <> " is part of fleet " <> a.fleetOwnerId <> "; pass fleetOwnerId to update cash ride")
   unless (null fleetOwners) $
     QFDAExtra.updateEnableCashRideForFleetOwnersWithSync (Just enableCashRide) syncBatchSize (map (.id) fleetOwners)
   unless (Map.null driverAssocs) $
@@ -1942,7 +1943,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                   requestReason = requestReason,
                   responseReason = responseReason,
                   driverDob = driverDob,
-                  failedRules = failedRules
+                  failedRules = failedRules,
+                  enableCashRide = Just (fromMaybe True fda.enableCashRide)
                 }
         pure ls
     getVehicleDetails ::
@@ -2183,7 +2185,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   driverMobileCountryCode = driverMobileCountryCodeValue,
                   driverEmail = driverEmailValue,
                   driverDob = Nothing,
-                  failedRules = Just vrc.failedRules
+                  failedRules = Just vrc.failedRules,
+                  enableCashRide = Nothing
                 }
         pure ls
 
@@ -2794,7 +2797,8 @@ getFleetOrOperatorInfo person = do
             address = Nothing,
             addressState = Nothing,
             addressDocumentType = Nothing,
-            approved = Just True
+            approved = Just True,
+            enableCashRide = Nothing
           }
     Just fleetOwnerInfo -> do
       fleetConfig <- QFC.findByPrimaryKey personId
@@ -2908,6 +2912,7 @@ getFleetOrOperatorInfo person = do
             docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
             addressDocumentType = DDriver.castToCommon <$> addressDocumentType,
             disabledReasonFlag = castDisabledReasonFlag <$> disabledReasonFlag,
+            enableCashRide = Just (fromMaybe True enableCashRide),
             ..
           }
 
@@ -4840,7 +4845,7 @@ postDriverFleetVehicleChangeFleetOwner merchantShortId opCity rcNo req = do
   SGuard.guardOnboardingAction transporterConfig (SGuard.ActorFleet newFleetOwner.id) SGuard.ChangeFleetOwner (SGuard.TargetVehicle rcNo)
   -- Resolve the linked driver BEFORE the removal unlinks it; used only for the diagnostic
   -- log inside the analytics helpers (the counters themselves key off the fleet owner id).
-  mbLinkedDriverId <- (fmap (.driverId) . listToMaybe) <$> DRCAE.findAllActiveAssociationByRCId rc.id
+  mbLinkedDriverId <- fmap (.driverId) . listToMaybe <$> DRCAE.findAllActiveAssociationByRCId rc.id
   void $ postDriverFleetRemoveVehicle merchantShortId opCity currentFleetOwnerId rcNo Nothing
   linkRCToFleet transporterConfig newFleetOwner.id rc
   -- Neither postDriverFleetRemoveVehicle nor linkRCToFleet touches analytics, so without this

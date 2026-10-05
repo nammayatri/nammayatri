@@ -2,7 +2,7 @@
 -- MSIL cancellation policy on the consequence matrix
 -- ============================================================================
 -- Replaces the old USER-CANCELLATION-DUES fee rule, which no longer runs.
--- Two halves, per dev/docs/cancellation-consequence-matrix-plan.md:
+-- Two halves, per docs/backend/design/cancellation-consequence-matrix-plan.md:
 --
 --   1. CANCELLATION-FAULT-VERDICT JsonLogic  -> (atFault, rule)
 --      Decides WHETHER and WHY. Thresholds are literals in the rule (no-show wait 300s,

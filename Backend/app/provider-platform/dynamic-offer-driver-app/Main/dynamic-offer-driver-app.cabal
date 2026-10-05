@@ -89,6 +89,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.RiderConsent
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS
@@ -336,6 +337,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.RiderConsent
       Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
@@ -362,6 +364,7 @@ library
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverDocument
+      Domain.Action.UI.DriverFyEarnings
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverIncentiveCoins
@@ -751,6 +754,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
+      SharedLogic.Subscription.BillingModel
       SharedLogic.SurgeConfig
       SharedLogic.SyncRide
       SharedLogic.TollDashboard
@@ -1308,6 +1312,7 @@ library
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverAreaPreference
       API.Action.UI.DriverDocument
+      API.Action.UI.DriverFyEarnings
       API.Action.UI.DriverIncentiveCoins
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
@@ -1496,6 +1501,7 @@ library
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverAreaPreference
+      API.Types.UI.DriverFyEarnings
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile

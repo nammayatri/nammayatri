@@ -1225,9 +1225,19 @@ eligibleDomainOffers ::
   m [(DOffer.Offer, Maybe Int)]
 eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider = do
   now <- getCurrentTime
-  allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
-  let activeOffers = filter (\offer -> maybe True (<= now) offer.validFrom && maybe True (> now) offer.validTill) allActiveOffers
+  activeOffers <- activeDomainOffers merchantId merchantOperatingCityId now
   catMaybes <$> forM activeOffers (\offer -> offersEligibilityFlow offer mbDomainContext mbRider now)
+
+-- | Active offers of the merchant city that are inside their validity window at `now`.
+activeDomainOffers ::
+  (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  Text ->
+  Text ->
+  UTCTime ->
+  m [DOffer.Offer]
+activeDomainOffers merchantId merchantOperatingCityId now = do
+  allActiveOffers <- QOffer.findAllActiveByMerchant merchantId merchantOperatingCityId True
+  pure $ filter (\offer -> maybe True (<= now) offer.validFrom && maybe True (> now) offer.validTill) allActiveOffers
 
 listDomainOffers ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
@@ -1331,18 +1341,33 @@ buildDomainOfferList orderAmount eligible =
                             }
                       }
 
+-- | Offers per basket product. Each product's eligibility rules run against that product's own
+--   domain context (so a rule can target e.g. one service tier). The active offers are loaded once
+--   and the rider's usage limit is checked once per offer, only for offers some product passes.
 listDomainOffersWithBasket ::
   (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
   Text ->
   Text ->
   [(Text, HighPrecMoney)] -> -- [(productId, amount)]
   Currency ->
-  Maybe Value ->
+  (Text -> Maybe Value) -> -- domain context for a productId
   Maybe Counters.OfferRiderContext ->
   m [(Text, PInterface.OfferListResp)]
-listDomainOffersWithBasket merchantId merchantOperatingCityId products _currency mbDomainContext mbRider = do
-  eligible <- eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider
-  pure [(productId, (buildDomainOfferList amount eligible) {PInterface.bestOfferCombination = Nothing}) | (productId, amount) <- products]
+listDomainOffersWithBasket merchantId merchantOperatingCityId products _currency mkDomainContext mbRider = do
+  now <- getCurrentTime
+  activeOffers <- filter (.isActive) <$> activeDomainOffers merchantId merchantOperatingCityId now
+  passedIdsByProduct <-
+    forM products $ \(productId, _) ->
+      fmap catMaybes . forM activeOffers $ \offer -> do
+        passes <- passesEligibilityRule offer (mkDomainContext productId)
+        pure $ if passes then Just offer.id else Nothing
+  let passedByAnyProduct = filter (\offer -> any (offer.id `elem`) passedIdsByProduct) activeOffers
+  withinLimit <- catMaybes <$> forM passedByAnyProduct (\offer -> withinUsageLimit offer mbRider now)
+  pure
+    [ (productId, (buildDomainOfferList amount eligible) {PInterface.bestOfferCombination = Nothing})
+      | ((productId, amount), passedIds) <- zip products passedIdsByProduct,
+        let eligible = filter (\(offer, _) -> offer.id `elem` passedIds) withinLimit
+    ]
 
 -- | Split a PG basket OfferListResp into per-product responses using productDiscounts.
 --   For PRODUCT-level offers (productDiscounts present): creates per-product entries with product amounts.
@@ -1399,26 +1424,41 @@ offersEligibilityFlow ::
 offersEligibilityFlow offer mbDomainContext mbRider now
   | not offer.isActive = pure Nothing
   | otherwise = do
-    passesRule <- case offer.offerEligibilityJsonLogic of
-      Nothing -> pure True
-      Just logic -> do
-        let eligibilityData = case mbDomainContext of
-              Just ctx@(A.Object _) -> ctx
-              _ -> A.object []
-        logicResp <- LYUtils.runLogics [logic] eligibilityData
-        case logicResp.result of
-          A.Bool result -> pure result
-          _ -> do
-            logError $ "Offer eligibility logic returned non-boolean for offerId: " <> offer.id.getId <> " errors: " <> show logicResp.errors
-            pure False
-    if not passesRule
-      then pure Nothing
-      else do
-        mbUses <- forM mbRider $ \rider -> Counters.countUses rider now offer.id offer.frequencyType
-        let withheld = case mbUses of
-              Just uses -> Counters.isUsedUp offer.maxApplyCount uses
-              Nothing -> isJust offer.maxApplyCount
-        pure $ if withheld then Nothing else Just (offer, mbUses)
+    passesRule <- passesEligibilityRule offer mbDomainContext
+    if passesRule then withinUsageLimit offer mbRider now else pure Nothing
+
+-- | The offer's own offerEligibilityJsonLogic against the domain context; no rule means eligible.
+passesEligibilityRule ::
+  (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  DOffer.Offer ->
+  Maybe Value ->
+  m Bool
+passesEligibilityRule offer mbDomainContext = case offer.offerEligibilityJsonLogic of
+  Nothing -> pure True
+  Just logic -> do
+    let eligibilityData = case mbDomainContext of
+          Just ctx@(A.Object _) -> ctx
+          _ -> A.object []
+    logicResp <- LYUtils.runLogics [logic] eligibilityData
+    case logicResp.result of
+      A.Bool result -> pure result
+      _ -> do
+        logError $ "Offer eligibility logic returned non-boolean for offerId: " <> offer.id.getId <> " errors: " <> show logicResp.errors
+        pure False
+
+-- | Withholds the offer once the rider has used up its maxApplyCount; returns the offer with the rider's use count.
+withinUsageLimit ::
+  (EncFlow m r, PaymentBeamFlow.BeamFlow m r) =>
+  DOffer.Offer ->
+  Maybe Counters.OfferRiderContext ->
+  UTCTime ->
+  m (Maybe (DOffer.Offer, Maybe Int))
+withinUsageLimit offer mbRider now = do
+  mbUses <- forM mbRider $ \rider -> Counters.countUses rider now offer.id offer.frequencyType
+  let withheld = case mbUses of
+        Just uses -> Counters.isUsedUp offer.maxApplyCount uses
+        Nothing -> isJust offer.maxApplyCount
+  pure $ if withheld then Nothing else Just (offer, mbUses)
 
 -- offer computation functions ---------------------------------------------
 

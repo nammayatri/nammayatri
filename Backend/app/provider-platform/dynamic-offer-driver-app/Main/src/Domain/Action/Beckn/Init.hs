@@ -354,6 +354,7 @@ buildBooking bArgs searchRequest driverQuote billingCategory quoteId tripCategor
         bapCity = bArgs.bapCity,
         bapCountry = bArgs.bapCountry,
         riderId = bArgs.riderId,
+        numberShareConsent = Nothing,
         estimatedCongestionCharge = driverQuote.fareParams.congestionCharge,
         vehicleServiceTier = driverQuote.vehicleServiceTier,
         vehicleServiceTierName = vehicleServiceTierItem.name,

@@ -243,6 +243,7 @@ data DriverError
   | AvailableForRidesNotEnabled
   | AvailableForRidesDailyLimitExceeded Int
   | UnacceptedMandatoryPolicies [Common.PolicyType]
+  | AvailableForRidesNotIdleEnough Int
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -270,6 +271,7 @@ instance IsBaseError DriverError where
   toMessage AvailableForRidesNotEnabled = Just "Available for rides is not enabled for this city."
   toMessage (AvailableForRidesDailyLimitExceeded dailyLimit) = Just $ "Available for rides can be used at most " <> show dailyLimit <> " times a day."
   toMessage (UnacceptedMandatoryPolicies types) = Just $ "Cannot go online: unaccepted mandatory policies: " <> T.intercalate ", " (map (T.pack . show) types)
+  toMessage (AvailableForRidesNotIdleEnough minIdleMinutes) = Just $ "Available for rides can be turned on only after " <> show minIdleMinutes <> " minutes online without a ride request."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -295,6 +297,7 @@ instance IsHTTPError DriverError where
     AvailableForRidesNotEnabled -> "AVAILABLE_FOR_RIDES_NOT_ENABLED"
     AvailableForRidesDailyLimitExceeded _ -> "AVAILABLE_FOR_RIDES_DAILY_LIMIT_EXCEEDED"
     UnacceptedMandatoryPolicies _ -> "UNACCEPTED_MANDATORY_POLICIES"
+    AvailableForRidesNotIdleEnough _ -> "AVAILABLE_FOR_RIDES_NOT_IDLE_ENOUGH"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -318,6 +321,7 @@ instance IsHTTPError DriverError where
     AvailableForRidesNotEnabled -> E400
     AvailableForRidesDailyLimitExceeded _ -> E429
     UnacceptedMandatoryPolicies _ -> E403
+    AvailableForRidesNotIdleEnough _ -> E400
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload

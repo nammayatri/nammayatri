@@ -15,6 +15,8 @@
 
 module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
+    sendRideEnroutePickupStatusToBAP,
+    notifyDriverOnScheduledRideAssigned,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
@@ -123,6 +125,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Notification as Notification
+import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -154,7 +157,6 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
-import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -438,6 +440,9 @@ buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
+defaultDriverImagePresignedUrlExpiry :: Seconds
+defaultDriverImagePresignedUrlExpiry = 3600
+
 getQueryParam :: String -> String -> Maybe String
 getQueryParam paramName url = do
   uri <- parseURI url
@@ -535,10 +540,7 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
       (getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing) -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
       (pure . Just)
       prefetch.transporterConfig
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
   let paymentUrl = Nothing
   vehicle <-
     case mbTransporterConfig of
@@ -561,17 +563,27 @@ rideAssignedCommonPrefetched prefetch booking ride driver veh = do
       prefetch.rideDetails
   let bookingDetails = ACL.BookingDetails {..}
   -- resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
-  -- A driver onboarded through the document-upload flow has a ProfilePhoto row in the image table but no faceImageId,
-  -- so fall back to the latest VALID selfie instead of sending the ride-assigned update without a driver image.
-  let fetchLegacyProfileImagePath =
-        fmap (.s3Path) <$> runInReplica (QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED)
-  image <- case driver.faceImageId of
-    Just mediaId -> do
-      mediaEntry <- runInReplica $ MFQuery.findById mediaId >>= fromMaybeM (FileDoNotExist ("Driver image does not exist for ride:" <> driver.id.getId))
-      case getQueryParam "filePath" (Text.unpack mediaEntry.url) of
-        Just imagePath -> pure . Just $ Text.pack imagePath
-        Nothing -> maybe fetchLegacyProfileImagePath (pure . Just) mediaEntry.s3FilePath
-    Nothing -> fetchLegacyProfileImagePath
+  -- A value-add BAP resolves the S3 path of the driver's profile photo through its own media endpoint. Every other BAP gets a
+  -- pre-signed S3 url of the latest VALID selfie from the image table, expiring after transporterConfig.driverImagePresignedUrlExpiry.
+  image <-
+    if isValueAddNP
+      then fmap join . forM driver.faceImageId $ \mediaId -> do
+        mbMediaEntry <- runInReplica $ MFQuery.findById mediaId
+        case mbMediaEntry >>= \mediaEntry -> getQueryParam "filePath" (Text.unpack mediaEntry.url) of
+          Just imagePath -> pure $ Just (Text.pack imagePath)
+          Nothing -> do
+            logError $ "Driver image does not exist for driverId: " <> driver.id.getId <> ", mediaFileId: " <> mediaId.getId
+            pure Nothing
+      else do
+        mbSelfie <- runInReplica $ QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED
+        fmap join . forM mbSelfie $ \selfie -> do
+          let urlExpiry = fromMaybe defaultDriverImagePresignedUrlExpiry (mbTransporterConfig >>= (.driverImagePresignedUrlExpiry))
+          presignedUrlResult <- withTryCatch "S3:generateDownloadUrl:driverImage" $ S3.generateDownloadUrl (Text.unpack selfie.s3Path) urlExpiry
+          case presignedUrlResult of
+            Right presignedUrl -> pure $ Just presignedUrl
+            Left err -> do
+              logError $ "Unable to generate pre-signed driver image url for driverId: " <> driver.id.getId <> ", error: " <> show err
+              pure Nothing
 
   -- let image = join (eitherToMaybe resp)
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
@@ -784,9 +796,8 @@ sendRideAssignedUpdateToBAP ::
   SRide.Ride ->
   DP.Person ->
   DVeh.Vehicle ->
-  Bool ->
   m ()
-sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = do
+sendRideAssignedUpdateToBAP booking ride driver veh = do
   merchant <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -796,10 +807,61 @@ sendRideAssignedUpdateToBAP booking ride driver veh isScheduledRideAssignment = 
   -- Applies the ride-assigned ONDC overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, gated on booking.isScheduled, since pilot merchants need them on this push too.
   patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId False booking.addOnData rideAssignedMsgV2'.onUpdateReqMessage
   let rideAssignedMsgV2 = rideAssignedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
-  let generatedMsg = A.encode rideAssignedMsgV2
-  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
-  when isScheduledRideAssignment $ Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
+  logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show (A.encode rideAssignedMsgV2))
   void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig merchant.id
+
+-- | Activation push for 3P BAPs, which NACK a repeat of the RIDE_ASSIGNED on_update sent at accept. Same order body, only the fulfillment state swapped.
+sendRideEnroutePickupStatusToBAP ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "s3Env" r (S3.S3Env m),
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
+  m ()
+sendRideEnroutePickupStatusToBAP booking ride driver veh = do
+  merchant <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  retryConfig <- asks (.shortDurationRetryCfg)
+  rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 merchant booking Nothing rideAssignedBuildReq
+  enrouteMsgV2' <- OSROnStatus.ondcScheduledRideOnStatusMessageBuild booking.isScheduled booking.quoteId booking.addOnData rideAssignedMsgV2
+  let enrouteMsgV2 = enrouteMsgV2' {Spec.onStatusReqMessage = patchEnrouteState <$> enrouteMsgV2'.onStatusReqMessage}
+  logDebug $ "ride enroute pickup on_status request bppv2: " <> T.pack (show (A.encode enrouteMsgV2))
+  void $ callOnStatusV2 enrouteMsgV2 retryConfig merchant.id
+  where
+    patchEnrouteState msg = msg {Spec.confirmReqMessageOrder = OSRCommon.overrideOrderFulfillmentStateCode Enums.RIDE_ENROUTE_PICKUP msg.confirmReqMessageOrder}
+
+-- | Outside both pushes, since the driver must be told whichever one the BAP gets.
+notifyDriverOnScheduledRideAssigned ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  DP.Person ->
+  m ()
+notifyDriverOnScheduledRideAssigned booking ride driver =
+  Notify.notifyDriverWithProviders booking.merchantOperatingCityId notificationType notificationTitle (message booking) driver driver.deviceToken (Just ride.id) (Notify.RideAssignedNotificationData {isAutoAccepted = fromMaybe False booking.isAutoAccepted})
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
@@ -839,13 +901,10 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-      paymentUrl = Nothing
+  let paymentUrl = Nothing
       bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
       rideStartedBuildReq = ACL.RideStartedReq ACL.DRideStartedReq {..}
@@ -882,13 +941,10 @@ sendRideEstimatedEndTimeRangeUpdateToBAP booking ride = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-      paymentUrl = Nothing
+  let paymentUrl = Nothing
       bookingDetails = ACL.BookingDetails {..}
       endEstimateTimeRangeBuildReq = DOU.RideEstimatedEndTimeRangeBuildReq DOU.DRideEstimatedEndTimeRangeReq {..}
   retryConfig <- asks (.longDurationRetryCfg)
@@ -953,6 +1009,7 @@ sendRideCompletedUpdateToBAP ::
   Bool ->
   m ()
 sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation allowSnapshotVehicleFallback = do
+  fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   merchant <-
     CQM.findById booking.providerId
@@ -979,7 +1036,6 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   -- Applies the same overrides via OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled, since this push's order builder has the same ONDC compliance gaps as the ride-assigned push.
   patchedOnUpdateReqMessage <- OSRCommon.applyOndcScheduledRideOrderOverridesIfEnabled booking.merchantOperatingCityId booking.isScheduled booking.quoteId True booking.addOnData rideCompletedMsgV2'.onUpdateReqMessage
   let rideCompletedMsgV2 = rideCompletedMsgV2' {Spec.onUpdateReqMessage = patchedOnUpdateReqMessage}
-  fork "FleetEngine: complete trip on ride completed" $ FleetEngine.notifyRideCompleted booking ride
   void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig merchant.id
 
 sendBookingCancelledUpdateToBAP ::
@@ -1124,13 +1180,10 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+  paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
   riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
   riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-      paymentUrl = Nothing
+  let paymentUrl = Nothing
       bookingDetails = ACL.BookingDetails {..}
       estimateId = booking.estimateId <&> (.getId)
       driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
@@ -1217,10 +1270,7 @@ buildBookingDetails booking ride = do
       driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
       vehicle <- runInReplica $ QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
       let paymentUrl = Nothing
       riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
       riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
@@ -1246,10 +1296,7 @@ sendStopArrivalUpdateToBAP ::
   m ()
 sendStopArrivalUpdateToBAP booking ride driver vehicle = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
-  mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-  let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+  paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
   let paymentUrl = Nothing
   when isValueAddNP $ do
     merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -1289,10 +1336,7 @@ sendNewMessageToBAP booking ride message = do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
     vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
     let paymentUrl = Nothing
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
     riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
@@ -1333,10 +1377,7 @@ sendUpdateEditDestToBAP booking mbRide bookingUpdateReqDetails newDestination cu
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
       vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
       let paymentUrl = Nothing
       riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
       riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
@@ -1405,10 +1446,7 @@ sendSafetyAlertToBAP booking ride reason driver vehicle = do
           >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
       driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
       bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
       let paymentUrl = Nothing
       riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
       riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
@@ -1467,10 +1505,7 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource dri
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
     driverStats <- QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
     let paymentUrl = Nothing
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
@@ -1507,10 +1542,7 @@ sendQuoteRepetitionUpdateToBAP booking ride newBookingId cancellationSource driv
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
     driverStats <- QDriverStats.findById driver.id >>= fromMaybeM DriverInfoNotFound
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
     let paymentUrl = Nothing
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
     riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
@@ -1545,10 +1577,7 @@ sendTollCrossedUpdateToBAP (Just booking) (Just ride) driver driverStats vehicle
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+    paymentMethodInfo <- DMPM.resolveBookingPaymentMethodInfo booking
     let paymentUrl = Nothing
         riderPhone = Nothing
     bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")

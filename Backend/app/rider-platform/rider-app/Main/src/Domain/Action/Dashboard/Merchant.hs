@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantServiceUsageConfigMapsUpdate,
     postMerchantUpdate,
     postMerchantCloudUpdate,
+    postMerchantCloudCityUpdate,
     getMerchantServiceUsageConfig,
     postMerchantServiceConfigSmsUpdate,
     postMerchantServiceUsageConfigSmsUpdate,
@@ -2442,6 +2443,44 @@ postMerchantCloudUpdate pathMerchantShortId _city req = do
         previousCloudBaseUrl = showBaseUrl <$> merchant.cloudBaseUrl,
         updatedCloudType = req.cloudType,
         updatedCloudBaseUrl = showBaseUrl <$> req.cloudBaseUrl
+      }
+
+-- | Move a single operating city of a merchant to another cloud.
+postMerchantCloudCityUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.MerchantOperatingCityCloudUpdateReq ->
+  Flow Common.MerchantOperatingCityCloudUpdateRes
+postMerchantCloudCityUpdate pathMerchantShortId pathCity req = do
+  verifyCloudSwitchPassword req.password
+  cloudBaseUrl <-
+    req.cloudBaseUrl
+      & fromMaybeM (InvalidRequest "cloudBaseUrl is required for a city-level cloud switch")
+  when (null (baseUrlHost cloudBaseUrl)) $
+    throwError (InvalidRequest "cloudBaseUrl must have a non-empty host")
+  let targetMerchantShortId = maybe pathMerchantShortId (ShortId . getShortId) req.merchantShortId
+      targetCity = fromMaybe pathCity req.city
+  merchant <- findMerchantByShortId targetMerchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id targetCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> targetMerchantShortId.getShortId <> " ,city: " <> show targetCity)
+  QMOC.updateCloudConfig (Just req.cloudType) (Just cloudBaseUrl) merchantOpCity.id
+  CQMOC.clearCache merchantOpCity
+  CQMOC.clearAllCrossCloudProxyCache
+
+  logTagInfo "dashboard -> postMerchantCloudCityUpdate : " $
+    merchantOpCity.id.getId <> " -> " <> show req.cloudType
+
+  pure
+    Common.MerchantOperatingCityCloudUpdateRes
+      { merchantId = merchant.id.getId,
+        merchantShortId = merchant.shortId.getShortId,
+        merchantOperatingCityId = merchantOpCity.id.getId,
+        city = merchantOpCity.city,
+        previousCloudType = merchantOpCity.cloudType,
+        previousCloudBaseUrl = showBaseUrl <$> merchantOpCity.cloudBaseUrl,
+        updatedCloudType = req.cloudType,
+        updatedCloudBaseUrl = Just (showBaseUrl cloudBaseUrl)
       }
 
 verifyCloudSwitchPassword :: Text -> Flow ()

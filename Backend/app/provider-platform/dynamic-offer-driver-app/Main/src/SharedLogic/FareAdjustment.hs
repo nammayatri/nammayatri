@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Fare adjustments (dev/docs/fare-adjustments-plan.md): scale-only overlays
+-- | Fare adjustments (docs/backend/design/fare-adjustments-plan.md): scale-only overlays
 -- on the RESOLVED fare policy. Arm decisions are made ONCE per search
 -- transaction (deterministic salted hash of the customer phone for
 -- experiments; everyone for spikes) and pinned in Redis; every later

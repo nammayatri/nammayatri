@@ -17,6 +17,7 @@ module SharedLogic.DriverIdleTime
     bankIdleOnOffline,
     resumeIdleOnOnline,
     getIdleTimeSecondsBulk,
+    getIdleTimeSeconds,
   )
 where
 
@@ -63,6 +64,16 @@ resumeIdleOnOnline :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id 
 resumeIdleOnOnline driverId = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   Redis.setExp (mkIdleLastRequestAtKey driverId.getId) now idleKeyExpiry
+
+getIdleTimeSeconds :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Double)
+getIdleTimeSeconds driverId = Redis.withCrossAppRedis $ do
+  now <- getCurrentTime
+  mbBanked <- Redis.get @Double (mkIdleBankedKey driverId.getId)
+  mbLast <- Redis.get @UTCTime (mkIdleLastRequestAtKey driverId.getId)
+  pure $
+    if isNothing mbBanked && isNothing mbLast
+      then Nothing
+      else Just $ fromMaybe 0 mbBanked + maybe 0 (\lastAt -> max 0 (realToFrac (diffUTCTime now lastAt))) mbLast
 
 -- Fallback cap on drivers per pipelined MGET so a big pool never issues one unboundedly large
 -- multi-key Redis read in a single I/O. Overridable per pool via DriverPoolConfig.idleBulkChunkSize.

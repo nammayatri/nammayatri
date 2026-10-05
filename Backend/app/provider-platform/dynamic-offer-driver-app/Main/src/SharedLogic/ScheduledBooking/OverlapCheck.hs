@@ -116,31 +116,37 @@ isCandidateFeasible ::
   m Bool
 isCandidateFeasible merchantId merchantOpCityId transporterConfig candidate committed = do
   let (mbPredecessor, mbSuccessor) = selectNeighbours candidate.candidateStart committed
-  predecessorOk <- case mbPredecessor of
-    Nothing -> pure True
-    Just predecessor -> legFeasible predecessor.intervalDrop predecessor.intervalEnd candidate.candidatePickup candidate.candidateStart
+  (predecessorOk, mbPredecessorLeg) <- case mbPredecessor of
+    Nothing -> pure (True, Nothing)
+    Just predecessor -> legFeasible Nothing predecessor.intervalDrop predecessor.intervalEnd candidate.candidatePickup candidate.candidateStart
   if not predecessorOk
     then pure False
     else case mbSuccessor of
       Nothing -> pure True
       Just successor -> case candidate.candidateDrop of
         Nothing -> pure False -- unknown drop: cannot prove the gap to the next hold
-        Just candidateDrop -> legFeasible candidateDrop candidate.candidateEnd successor.intervalPickup successor.intervalStart
+        Just candidateDrop -> fst <$> legFeasible mbPredecessorLeg candidateDrop candidate.candidateEnd successor.intervalPickup successor.intervalStart
   where
     buffer = transporterConfig.scheduleRideBufferTime
-    legFeasible fromPos fromEnd toPos toStart
-      | legInfeasibleByTime buffer fromEnd toStart = pure False -- even a zero-length deadhead cannot make it
+    -- Both legs collapse to the same origin/destination when the driver's bookings repeat a pickup/drop pair
+    -- (recurring commute); reuse that distance so the second leg costs no maps call, only the time arithmetic.
+    legFeasible mbCachedLeg fromPos fromEnd toPos toStart
+      | legInfeasibleByTime buffer fromEnd toStart = pure (False, mbCachedLeg) -- even a zero-length deadhead cannot make it
       | otherwise = do
-        resp <-
-          TMaps.getDistanceForScheduledRides merchantId merchantOpCityId Nothing $
-            TMaps.GetDistanceReq
-              { origin = fromPos,
-                destination = toPos,
-                travelMode = Just TMaps.CAR,
-                sourceDestinationMapping = Nothing,
-                distanceUnit = Meter
-              }
-        pure $ legFeasibleWithDistance transporterConfig resp.distance fromEnd toStart
+        distance <- case mbCachedLeg of
+          Just (cachedFrom, cachedTo, cachedDistance) | cachedFrom == fromPos && cachedTo == toPos -> pure cachedDistance
+          _ -> do
+            resp <-
+              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId Nothing $
+                TMaps.GetDistanceReq
+                  { origin = fromPos,
+                    destination = toPos,
+                    travelMode = Just TMaps.CAR,
+                    sourceDestinationMapping = Nothing,
+                    distanceUnit = Meter
+                  }
+            pure resp.distance
+        pure (legFeasibleWithDistance transporterConfig distance fromEnd toStart, Just (fromPos, toPos, distance))
 
 -- | Predecessor = latest committed interval starting at/before the candidate; successor = earliest strictly after.
 selectNeighbours :: UTCTime -> [CommittedInterval] -> (Maybe CommittedInterval, Maybe CommittedInterval)

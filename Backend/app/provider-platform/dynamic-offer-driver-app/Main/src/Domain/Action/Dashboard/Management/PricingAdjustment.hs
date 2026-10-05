@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
--- | Fare-adjustment management (dev/docs/fare-adjustments-plan.md). Invariants:
+-- | Fare-adjustment management (docs/backend/design/fare-adjustments-plan.md). Invariants:
 --   * scales hard-capped to +-50%, spikes to <= 24h windows, experiments
 --     auto-conclude at <= 60d (validTill stamped at activation when absent);
 --   * OneWay + Progressive only: every (tier x area) in scope must resolve to
