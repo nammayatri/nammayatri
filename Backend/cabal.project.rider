@@ -1,7 +1,7 @@
 -- Rider (BAP) scoped project. Used by cabal-prod-hot-fix-push.yaml on prodHotPush-BAP.
--- Excludes dynamic-offer-driver-app and everything coupled to both platforms: rider-dashboard,
--- provider-dashboard, lib-dashboard, kafka-consumers, producer (these depend on both apps and
--- must build on the Common/International full branches, not here). See cabal.project for the full set.
+-- Excludes dynamic-offer-driver-app and everything coupled to both platforms: lib-dashboard,
+-- kafka-consumers, producer (these depend on both apps and must build on the
+-- Common/International full branches, not here). See cabal.project for the full set.
 
 packages:
   app/rider-platform/rider-app-drainer

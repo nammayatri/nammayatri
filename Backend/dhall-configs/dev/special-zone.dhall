@@ -1,4 +1,4 @@
-let sec = ./secrets/provider-dashboard.dhall
+let sec = ./secrets/dashboard.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"

@@ -301,8 +301,10 @@ export async function fetchCollection(directory: string, filename: string): Prom
 const ENV_VAR_TO_PORT_KEY: Record<string, string> = {
   RIDER_APP_PORT: 'rider-app',
   DRIVER_APP_PORT: 'dynamic-offer-driver-app',
-  RIDER_DASHBOARD_PORT: 'rider-dashboard',
-  PROVIDER_DASHBOARD_PORT: 'provider-dashboard',
+  // RIDER_DASHBOARD_PORT / PROVIDER_DASHBOARD_PORT: the standalone dashboard
+  // services were removed, so these resolve to the template defaults
+  // (8017/8018); the context-api /proxy/*-dashboard endpoints translate such
+  // legacy URLs to the app servers' /direct-dashboard routes.
   MOCK_SERVER_PORT: 'mock-server',
   LOCATION_TRACKING_SERVICE_PORT: 'location-tracking-service',
   TEST_CONTEXT_API_PORT: 'test-context-api',

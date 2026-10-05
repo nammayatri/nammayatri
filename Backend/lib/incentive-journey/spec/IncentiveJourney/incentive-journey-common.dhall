@@ -127,64 +127,6 @@ let mkDefaultImports =
           , _generationType = GeneratorType.SERVANT_API
           }
         , { _simpleImports =
-            [ "EulerHS.Prelude"
-            , "Servant"
-            , "Kernel.Utils.Common"
-            , "Storage.Beam.CommonInstances ()"
-            ]
-          , _qualifiedImports =
-            [ "Domain.Types.Person"
-            , "Kernel.Prelude"
-            , "Control.Lens"
-            , "Kernel.Types.Id"
-            , "Kernel.Types.Beckn.Context"
-            ]
-          , _packageImports =
-            [ { _importType = ImportType.SIMPLE
-              , _importPackageName = appName
-              , _importModuleName = "Domain.Types.AccessMatrix"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Domain.Types.Merchant"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Environment"
-              }
-            ]
-          , _generationType = GeneratorType.SERVANT_API_DASHBOARD
-          }
-        , { _simpleImports =
-            [ "EulerHS.Prelude"
-            , "Tools.Auth.Merchant"
-            , "Kernel.Utils.Common"
-            , "Storage.Beam.CommonInstances ()"
-            ]
-          , _qualifiedImports =
-            [ "Domain.Types.Person"
-            , "Kernel.Prelude"
-            , "Kernel.Types.Id"
-            , "Kernel.Types.Beckn.Context"
-            , "SharedLogic.Transaction"
-            ]
-          , _packageImports =
-            [ { _importType = ImportType.SIMPLE
-              , _importPackageName = appName
-              , _importModuleName = "Domain.Types.AccessMatrix"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Domain.Types.Merchant"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Environment"
-              }
-            ]
-          , _generationType = GeneratorType.DOMAIN_HANDLER_DASHBOARD
-          }
-        , { _simpleImports =
             [ "EulerHS.Prelude hiding (id, state)"
             , "Servant hiding (Summary)"
             , "Data.OpenApi (ToSchema)"
@@ -215,21 +157,6 @@ let mkDefaultImports =
           , _packageImports = [] : List PackageImport
           , _generationType = GeneratorType.API_TREE
           }
-        , { _simpleImports = [ "Servant" ]
-          , _qualifiedImports =
-            [ "Kernel.Types.Beckn.Context", "Kernel.Types.Id" ]
-          , _packageImports =
-            [ { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Domain.Types.Merchant"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Environment"
-              }
-            ]
-          , _generationType = GeneratorType.API_TREE_DASHBOARD
-          }
         , { _simpleImports = [ "EulerHS.Prelude", "Data.OpenApi (ToSchema)" ]
           , _qualifiedImports =
             [ "Kernel.Storage.Esqueleto"
@@ -241,32 +168,6 @@ let mkDefaultImports =
             ]
           , _packageImports = [] : List PackageImport
           , _generationType = GeneratorType.API_TREE_COMMON
-          }
-        , { _simpleImports = [ "Kernel.Prelude", "Servant" ]
-          , _qualifiedImports = [ "Kernel.Types.Beckn.City" ]
-          , _packageImports =
-            [ { _importType = ImportType.QUALIFIED
-              , _importPackageName = appName
-              , _importModuleName = "API.Dashboard"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Domain.Types.Merchant"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Domain.Types.ServerName"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Tools.Auth.Merchant"
-              }
-            , { _importType = ImportType.QUALIFIED
-              , _importPackageName = "lib-dashboard"
-              , _importModuleName = "Tools.Client"
-              }
-            ]
-          , _generationType = GeneratorType.API_TREE_CLIENT
           }
         , { _simpleImports =
             [ "EulerHS.Prelude hiding (id)"
@@ -329,16 +230,12 @@ let defaultConfigs =
       , _defaultTypeImportMapper = defaultTypeImportMapper
       , _generate =
         [ GeneratorType.DOMAIN_HANDLER
-        , GeneratorType.DOMAIN_HANDLER_DASHBOARD
         , GeneratorType.API_TYPES
         , GeneratorType.SERVANT_API
-        , GeneratorType.SERVANT_API_DASHBOARD
         , GeneratorType.SERVANT_API_DASHBOARD_AUTH
         , GeneratorType.API_TREE
-        , GeneratorType.API_TREE_DASHBOARD
         , GeneratorType.API_TREE_DASHBOARD_AUTH
         , GeneratorType.API_TREE_COMMON
-        , GeneratorType.API_TREE_CLIENT
         , GeneratorType.SQL
         ]
       , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }

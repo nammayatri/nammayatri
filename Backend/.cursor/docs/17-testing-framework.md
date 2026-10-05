@@ -207,7 +207,7 @@ Directories:
   ride combo; checks Customer/Driver/FleetOwner/AggregatedCommission invoices
   via `/financeManagement/financeInvoiceList`.
 
-Auth model: the dev `JUSPAY_ADMIN` (`local-testing-data/provider-dashboard.sql`
+Auth model: the dev `JUSPAY_ADMIN` (`local-testing-data/dashboard.sql`
 seed, token `local-admin-token-bangalore-namma-yatri`) already has cross-merchant
 + cross-city access (via `merchant_access CROSS JOIN
 unnest(supported_operating_cities)`). No separate "Admin Fleet" persona — that
@@ -410,7 +410,6 @@ Steps:
 | rider-app | 8013 | Haskell |
 | driver-app | 8016 | Haskell |
 | beckn-gateway | 8015 | Haskell |
-| provider-dashboard | 8018 | Haskell |
 | mock-google | 8019 | Haskell |
 | mock-registry | 8020 | Haskell |
 | mock-sms | 4343 | Haskell |

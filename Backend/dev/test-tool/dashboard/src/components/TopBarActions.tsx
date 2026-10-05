@@ -544,7 +544,7 @@ export const TopBarActions: React.FC = () => {
                     className={`tb-btn tb-modal-form-primary${ccIsStarting ? ' tb-busy' : ''}`}
                     onClick={handleControlCenterStart}
                     disabled={ccIsStarting}
-                    title="Clone-or-pull nammayatri/control-center, optionally checkout the chosen ref, npm install, run vite dev (VITE_BAP_URL=http://localhost:8017, VITE_BPP_URL=http://localhost:8018)"
+                    title="Clone-or-pull nammayatri/control-center, optionally checkout the chosen ref, npm install, run vite dev (VITE_DASHBOARD_DIRECT=true, VITE_BPP_DIRECT_URL=http://localhost:8016, VITE_BAP_DIRECT_URL=http://localhost:8013)"
                   >
                     {ccIsStarting ? (
                       <>

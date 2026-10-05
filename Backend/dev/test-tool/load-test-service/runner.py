@@ -183,9 +183,50 @@ def _reset_auth(stores: dict) -> None:
 
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit, urlunsplit
+
+# ── Dashboard unification ──
+# The standalone dashboard services (rider-dashboard :8017, provider-dashboard
+# :8018) were removed; their APIs are now served directly by the app servers
+# under /direct-dashboard. Old postman environments still resolve
+# ${PROVIDER_DASHBOARD_PORT:8018}-style placeholders to the dead ports, so every
+# final request URL is translated here before it is hit.
+_DRIVER_APP_PORT = os.environ.get('DRIVER_APP_PORT', '8016')
+_RIDER_APP_PORT  = os.environ.get('RIDER_APP_PORT',  '8013')
+_DEAD_DASHBOARD_PORTS = {
+    '8017', '8018',
+    os.environ.get('RIDER_DASHBOARD_PORT', '8017'),
+    os.environ.get('PROVIDER_DASHBOARD_PORT', '8018'),
+}
+
+def translate_dashboard_url(url: str) -> str:
+    """Rewrite an old standalone-dashboard URL to the app servers'
+    /direct-dashboard endpoints (no-op for any other URL):
+      :<dash-port>/bpp/driver-offer/<rest> → :DRIVER_APP_PORT/direct-dashboard/<rest>
+      :<dash-port>/bap/<rest>              → :RIDER_APP_PORT/direct-dashboard/<rest>
+      :<dash-port>/<anything else>         → :DRIVER_APP_PORT/direct-dashboard/<same>
+    (login/user-admin tree is served by the driver-app only)."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port
+    except ValueError:
+        return url
+    if port is None or str(port) not in _DEAD_DASHBOARD_PORTS:
+        return url
+    host = parts.hostname or 'localhost'
+    path = parts.path or '/'
+    if path.startswith('/bpp/driver-offer/'):
+        new_port, new_path = _DRIVER_APP_PORT, '/direct-dashboard/' + path[len('/bpp/driver-offer/'):]
+    elif path.startswith('/bap/'):
+        new_port, new_path = _RIDER_APP_PORT, '/direct-dashboard/' + path[len('/bap/'):]
+    else:
+        new_port, new_path = _DRIVER_APP_PORT, '/direct-dashboard' + path
+    return urlunsplit((parts.scheme or 'http', f'{host}:{new_port}',
+                       new_path, parts.query, parts.fragment))
 
 def _http(method: str, url: str, headers: dict, body: str | None):
     """Returns (status, body_str, headers_dict)."""
+    url = translate_dashboard_url(url)
     data = body.encode('utf-8') if body else None
     req = urllib.request.Request(url, data=data, method=method.upper())
     for k, v in headers.items():
@@ -256,7 +297,8 @@ def execute_step(step: dict, stores: dict, pool: PmNodePool) -> dict:
     if delay_ms > 0:
         time.sleep(delay_ms / 1000.0)
 
-    url = resolve_vars(step.get('rawUrl', ''), stores)
+    # Translate here too (besides _http) so reported step URLs show the real target.
+    url = translate_dashboard_url(resolve_vars(step.get('rawUrl', ''), stores))
 
     headers = {k: resolve_vars(v, stores) for k, v in step.get('headers', {}).items()
                if resolve_vars(v, stores)}
@@ -285,7 +327,7 @@ def execute_step(step: dict, stores: dict, pool: PmNodePool) -> dict:
     if required_key and passed and not _store_get(stores, required_key):
         for _kc in range(_VERIFY_RETRY_MAX):
             time.sleep(_VERIFY_RETRY_DELAY)
-            url2     = resolve_vars(step.get('rawUrl', ''), stores)
+            url2     = translate_dashboard_url(resolve_vars(step.get('rawUrl', ''), stores))
             headers2 = {k: resolve_vars(v, stores) for k, v in step.get('headers', {}).items()
                         if resolve_vars(v, stores)}
             body2    = resolve_vars(body_tmpl, stores) if body_tmpl else None
@@ -334,7 +376,7 @@ def execute_step(step: dict, stores: dict, pool: PmNodePool) -> dict:
     if _should_retry_empty():
         for _attempt in range(_RETRY_MAX):
             time.sleep(_RETRY_DELAY_S)
-            url_r = resolve_vars(step.get('rawUrl', ''), stores)
+            url_r = translate_dashboard_url(resolve_vars(step.get('rawUrl', ''), stores))
             status, resp_body, resp_headers = _http(method, url_r, headers, body)
             if test_scr:
                 retry_stores = copy.deepcopy(stores)

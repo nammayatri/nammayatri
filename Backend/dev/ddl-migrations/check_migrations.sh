@@ -12,7 +12,7 @@
 #
 # Usage:
 #   ./check_migrations.sh                    # full pipeline, all services
-#   ./check_migrations.sh --service=rider-app,provider-dashboard
+#   ./check_migrations.sh --service=rider-app,dashboard
 #   ./check_migrations.sh --top-errors       # also print top error categories
 #   ./check_migrations.sh --stop             # stop the standalone postgres
 #
@@ -260,12 +260,8 @@ SEEDS=(
   dev/sql-seed/mock-registry-seed.sql
   dev/local-testing-data/mock-registry.sql
   dev/sql-seed/dynamic-offer-driver-app-seed.sql
-  dev/sql-seed/rider-dashboard-seed.sql
-  dev/local-testing-data/rider-dashboard.sql
-  dev/sql-seed/provider-dashboard-seed.sql
-  dev/local-testing-data/provider-dashboard.sql
-  dev/sql-seed/safety-dashboard-seed.sql
-  dev/local-testing-data/safety-dashboard.sql
+  dev/sql-seed/dashboard-seed.sql
+  dev/local-testing-data/dashboard.sql
   dev/sql-seed/special-zone-seed.sql
   dev/local-testing-data/special-zone.sql
   dev/sql-seed/kaal-chakra-seed.sql
@@ -340,7 +336,7 @@ run_service() {
   fi
 }
 
-DEFAULT_SERVICES="rider-app dynamic-offer-driver-app provider-dashboard rider-dashboard"
+DEFAULT_SERVICES="rider-app dynamic-offer-driver-app dashboard"
 SERVICES="${SERVICES_ARG:-$DEFAULT_SERVICES}"
 SERVICES="${SERVICES//,/ }"
 
@@ -356,14 +352,11 @@ for svc in $SERVICES; do
         dev/migrations-read-only/dynamic-offer-driver-app \
         dev/migrations/dynamic-offer-driver-app \
         dev/migrations-after-release/dynamic-offer-driver-app ;;
-    provider-dashboard)
-      run_service provider-dashboard \
-        dev/migrations/provider-dashboard \
-        dev/migrations-read-only/provider-dashboard ;;
-    rider-dashboard)
-      run_service rider-dashboard \
-        dev/migrations/rider-dashboard \
-        dev/migrations-read-only/rider-dashboard ;;
+    dashboard)
+      run_service dashboard \
+        dev/ddl-migrations/dashboard \
+        dev/seed-migrations/dashboard \
+        dev/migrations-read-only/dashboard ;;
     *) echo "unknown service: $svc (known: $DEFAULT_SERVICES)" >&2; exit 1 ;;
   esac
 done

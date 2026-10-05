@@ -1,4 +1,4 @@
-let common = ../provider-dashboard-common.dhall
+let common = ../dashboard-common.dhall
 
 let defaultOutput = common.defaultConfigs._output
 
@@ -12,14 +12,8 @@ let outputPath =
               defaultOutput._extraApiRelatedTypes ++ "/" ++ folderName
           , _servantApi = defaultOutput._servantApi ++ "/" ++ folderName
           , _domainHandler = defaultOutput._domainHandler ++ "/" ++ folderName
-          , _domainHandlerDashboard =
-              defaultOutput._domainHandlerDashboard ++ "/" ++ folderName
-          , _servantApiDashboard =
-              defaultOutput._servantApiDashboard ++ "/" ++ folderName
           , _servantApiDashboardAuth =
               defaultOutput._servantApiDashboardAuth ++ "/" ++ folderName
-          , _servantApiClient =
-              defaultOutput._servantApiClient ++ "/" ++ folderName
           }
 
 let serverName = Some "DRIVER_OFFER_BPP_MANAGEMENT"

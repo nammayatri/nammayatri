@@ -19,7 +19,11 @@ Endpoints:
   POST /api/logs/stop            → Stop tails, return captured log text
   ANY  /proxy/rider/*            → Proxy to rider-app (localhost:8013)
   ANY  /proxy/driver/*           → Proxy to driver-app (localhost:8016)
-  ANY  /proxy/provider-dashboard/*  → Proxy to provider-dashboard (localhost:8018)
+  ANY  /proxy/provider-dashboard/*  → Translate old dashboard paths to the app
+                                      servers' /direct-dashboard endpoints
+                                      (dashboard unification; standalone
+                                      dashboard services were removed)
+  ANY  /proxy/rider-dashboard/*     → Same translation (rider-side)
 
 Port: 7082
 """
@@ -374,10 +378,6 @@ SERVICE_LOGS = {
     "search-result-aggregator": Path("/tmp/search-result-aggregator.log"),
     "producer": Path("/tmp/producer.log"),
     "rider-producer": Path("/tmp/rider-producer.log"),
-    "provider-dashboard": Path("/tmp/provider-dashboard.log"),
-    "provider-dashboard-eul": Path("/tmp/provider-dashboard-eul.log"),
-    "rider-dashboard": Path("/tmp/rider-dashboard.log"),
-    "rider-dashboard-eul": Path("/tmp/rider-dashboard-eul.log"),
 }
 MAX_LOG_DELTA_BYTES = 64 * 1024  # 64KB per service
 
@@ -468,7 +468,7 @@ TOLL_DASHBOARD_ACCESS_SQL = (
     PROJECT_ROOT / "Backend" / "dev" / "local-testing-data" / "toll-dashboard-access.sql"
 )
 PROVIDER_DASHBOARD_SEED_SQL = (
-    PROJECT_ROOT / "Backend" / "dev" / "local-testing-data" / "provider-dashboard.sql"
+    PROJECT_ROOT / "Backend" / "dev" / "local-testing-data" / "dashboard.sql"
 )
 
 
@@ -491,11 +491,11 @@ def _execute_sql_file(path: Path) -> tuple[bool, str | None]:
 
 
 def seed_toll_dashboard_access() -> dict:
-    """Idempotent toll dashboard access_matrix + provider-dashboard token/merchant_access."""
+    """Idempotent toll dashboard access_matrix + dashboard token/merchant_access."""
     results: dict[str, object] = {"ok": True, "files": []}
     for label, sql_path in (
         ("toll-dashboard-access", TOLL_DASHBOARD_ACCESS_SQL),
-        ("provider-dashboard", PROVIDER_DASHBOARD_SEED_SQL),
+        ("dashboard", PROVIDER_DASHBOARD_SEED_SQL),
     ):
         ok, err = _execute_sql_file(sql_path)
         results["files"].append({"name": label, "ok": ok, "error": err})
@@ -2123,7 +2123,7 @@ def get_variants(city_id=None):
 
 def get_admin_credentials():
     """Return known admin credentials per merchant for the test dashboard.
-    These are created in provider-dashboard seed migrations with known email/password."""
+    These are created in dashboard seed migrations with known email/password."""
     return {
         "MSIL_PARTNER_LOCAL": {"email": "admin@msil.test", "password": "msil1234"},
         "LYNX_PARTNER_LOCAL": {"email": "admin@lynx.test", "password": "lynx1234"},
@@ -2955,7 +2955,10 @@ def get_coverage_report(run_ids: list | None = None) -> dict:
         "rider": "rider",
         "driver": "driver",
         "lts": "driver",           # LTS endpoints are in driver OpenAPI
-        "provider-dashboard": None, # Dashboard endpoints are separate
+        # Dashboard endpoints are served by the app servers under
+        # /direct-dashboard but are not part of the rider/driver OpenAPI spec,
+        # so hits with these (legacy) service labels stay out of coverage.
+        "provider-dashboard": None,
         "rider-dashboard": None,
         "mock-idfy": None,
         "mock-server": None,
@@ -3164,17 +3167,29 @@ class ContextHandler(BaseHTTPRequestHandler):
 
         # Determine target — rider uses /v2 prefix, driver uses /ui prefix, lts direct, fleet direct
         LTS_URL = os.environ.get("LTS_URL", "http://localhost:8081")
-        PROVIDER_DASHBOARD_URL = os.environ.get(
-            "PROVIDER_DASHBOARD_URL", "http://localhost:8018")
         MOCK_IDFY_URL = os.environ.get(
             "MOCK_IDFY_URL", "http://localhost:6235")
         MOCK_SERVER_URL = os.environ.get(
             "MOCK_SERVER_URL", "http://localhost:8080")
-        RIDER_DASHBOARD_URL = os.environ.get(
-            "RIDER_DASHBOARD_URL", "http://localhost:8017")
+
+        def _dashboard_direct_target(remainder):
+            """Dashboard unification: the standalone dashboard services
+            (ports 8017/8018) are gone — dashboard APIs are served directly
+            by the app servers under /direct-dashboard. Translate old
+            dashboard public paths accordingly:
+              /bpp/driver-offer/<rest> → DRIVER_URL /direct-dashboard/<rest>
+              /bap/<rest>              → RIDER_URL  /direct-dashboard/<rest>
+              anything else (login/user-admin tree) → DRIVER_URL /direct-dashboard<remainder>
+            """
+            if remainder.startswith("/bpp/driver-offer/"):
+                return DRIVER_URL, "/direct-dashboard/" + remainder[len("/bpp/driver-offer/"):]
+            if remainder.startswith("/bap/"):
+                return RIDER_URL, "/direct-dashboard/" + remainder[len("/bap/"):]
+            return DRIVER_URL, "/direct-dashboard" + remainder
+
         if path.startswith("/proxy/rider-dashboard/"):
-            target_base = RIDER_DASHBOARD_URL
-            target_path = path[len("/proxy/rider-dashboard"):]
+            target_base, target_path = _dashboard_direct_target(
+                path[len("/proxy/rider-dashboard"):])
         elif path.startswith("/proxy/mock-server/"):
             target_base = MOCK_SERVER_URL
             target_path = path[len("/proxy/mock-server"):]
@@ -3194,8 +3209,8 @@ class ContextHandler(BaseHTTPRequestHandler):
             target_base = LTS_URL
             target_path = "/ui" + path[len("/proxy/lts"):]
         elif path.startswith("/proxy/provider-dashboard/"):
-            target_base = PROVIDER_DASHBOARD_URL
-            target_path = path[len("/proxy/provider-dashboard"):]
+            target_base, target_path = _dashboard_direct_target(
+                path[len("/proxy/provider-dashboard"):])
         elif path.startswith("/proxy/driver-raw/"):
             target_base = DRIVER_URL
             target_path = path[len("/proxy/driver-raw"):]

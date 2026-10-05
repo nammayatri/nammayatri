@@ -53,7 +53,10 @@ exec nix shell --inputs-from "$REPO_ROOT" \
   set -euo pipefail
   echo "node: $(node --version)  npm: $(npm --version)"
   npm install
-  export VITE_BPP_URL=http://localhost:8018
-  export VITE_BAP_URL=http://localhost:8017
+  # The standalone dashboard services are gone; dashboard APIs are served
+  # directly by the app servers (see Backend/dev/docs/dashboard-direct-serving.md).
+  export VITE_DASHBOARD_DIRECT=true
+  export VITE_BPP_DIRECT_URL=http://localhost:8016
+  export VITE_BAP_DIRECT_URL=http://localhost:8013
   exec npm run dev
 '

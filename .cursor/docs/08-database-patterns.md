@@ -115,9 +115,7 @@ toTType:
 |---------|------|
 | rider-app | `dev/migrations/rider-app/` |
 | driver-app | `dev/migrations/dynamic-offer-driver-app/` |
-| rider-dashboard | `dev/migrations/rider-dashboard/` |
-| provider-dashboard | `dev/migrations/provider-dashboard/` |
-| safety-dashboard | `dev/migrations/safety-dashboard/` |
+| dashboard (unified, `atlas_dashboard`) | `dev/ddl-migrations/dashboard/`, `dev/seed-migrations/dashboard/` |
 | scheduler | `dev/migrations/scheduler/` |
 | public-transport | `dev/migrations/public-transport-rider-platform/` |
 | special-zone | `dev/migrations/special-zone/` |

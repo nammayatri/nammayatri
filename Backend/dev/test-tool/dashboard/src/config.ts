@@ -87,8 +87,9 @@ const PORTS_CACHE_KEY = `ny.portsTable::${PROXY_BASE}`;
 const DEFAULT_PORTS: Record<string, number> = {
   'rider-app': 8013,
   'dynamic-offer-driver-app': 8016,
-  'rider-dashboard': 8017,
-  'provider-dashboard': 8018,
+  // rider-dashboard (8017) / provider-dashboard (8018) were removed —
+  // dashboard APIs are served directly by the app servers (/direct-dashboard);
+  // the context-api /proxy/*-dashboard endpoints translate old paths.
   'mock-server': 8080,
   'location-tracking-service': 8081,
   'beckn-gateway': 8015,
@@ -196,12 +197,11 @@ export async function refreshPortsTable(): Promise<void> {
 }
 
 export const LOCAL_API_BASE = process.env.REACT_APP_LOCAL_API_BASE || 'http://localhost:7083';
-// MOCK_SERVER_URL / RIDER_URL / DRIVER_URL / PROVIDER_DASHBOARD_URL are kept
+// MOCK_SERVER_URL / RIDER_URL / DRIVER_URL are kept
 // as live getters so they pick up runtime-resolved ports after refreshPortsTable.
 export const MOCK_SERVER_URL = process.env.REACT_APP_MOCK_SERVER_URL || getServiceUrl('mock-server');
 export const RIDER_URL = process.env.REACT_APP_RIDER_URL || getServiceUrl('rider-app');
 export const DRIVER_URL = process.env.REACT_APP_DRIVER_URL || getServiceUrl('dynamic-offer-driver-app');
-export const PROVIDER_DASHBOARD_URL = process.env.REACT_APP_PROVIDER_DASHBOARD_URL || getServiceUrl('provider-dashboard');
 const CONFIG_SYNC_BASE_OVERRIDE = process.env.REACT_APP_CONFIG_SYNC_BASE;
 
 function configSyncBaseDefault(): string {

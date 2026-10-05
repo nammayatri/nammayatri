@@ -210,8 +210,6 @@ in
           DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
           DRIVER_APP_INTERNAL_PORT = toString ports.dynamic-offer-driver-app-internal;
           BECKN_GATEWAY_PORT = toString ports.beckn-gateway;
-          PROVIDER_DASHBOARD_PORT = toString ports.provider-dashboard;
-          RIDER_DASHBOARD_PORT = toString ports.rider-dashboard;
         } // lib.optionalAttrs pkgs.stdenv.isLinux {
           # On non-NixOS Linux (remote devbox), Nix-built binaries need
           # LOCALE_ARCHIVE to find the system locale data.
@@ -230,8 +228,6 @@ in
       cabalExecutables = [
         "rider-app-exe"
         "dynamic-offer-driver-app-exe"
-        # rider-dashboard-exe is not run in dev/CI: provider-dashboard serves the /bap/* tree (dashboard unification).
-        "provider-dashboard-exe"
         "rider-app-drainer-exe"
         "dynamic-offer-driver-drainer-exe"
         "driver-offer-allocator-exe"
@@ -363,6 +359,10 @@ in
               depends_on =
                 {
                   "nammayatri-init".condition = "process_completed_successfully";
+                  # atlas_dashboard migrations run out-of-band (see
+                  # dashboard-migrations process); the app servers read that
+                  # schema at startup, so wait for it.
+                  "dashboard-migrations".condition = "process_completed_successfully";
                   "mock-registry".condition = "process_healthy";
                 } // (
                   if idx == 0 then { }
@@ -383,6 +383,7 @@ in
           "kafka-ride-events-consumer-exe"
           "ride-events-stream-groups"
           "nammayatri-init"
+          "dashboard-migrations"
           "log-cleaner"
           "cache-restore"
           "cabal-build"
@@ -523,6 +524,28 @@ in
             };
 
             # Things to do before local Haskell processes are started
+            # Apply the unified dashboard (atlas_dashboard) migrations as
+            # atlas_dashboard_user — the role provider-dashboard-exe used
+            # before it was retired. Kept OUT of the app servers'
+            # migrationPath: the in-app runner keys schema_migrations by file
+            # basename, so a dashboard file sharing a name with an app file
+            # (fleet_member_association.sql exists in both trees) would abort
+            # the server with a checksum mismatch.
+            dashboard-migrations = {
+              imports = [ common ];
+              depends_on = {
+                "db-primary".condition = "process_healthy";
+              };
+              command = pkgs.writeShellApplication {
+                name = "dashboard-migrations";
+                runtimeInputs = [ pkgs.postgresql_14 ];
+                text = ''
+                  DB_PRIMARY_PORT=${toString ports.db-primary} \
+                    exec ./dev/ddl-migrations/run_dashboard_migrations.sh
+                '';
+              };
+            };
+
             nammayatri-init = {
               imports = [ common ];
               depends_on = {
@@ -1078,7 +1101,7 @@ in
                 name = "db-manager-backend";
                 runtimeInputs = [ pkgs.nodejs_20 pkgs.coreutils ];
                 text = ''
-                  DBJSON='{"primary":{"cloudName":"local","db_configs":[{"name":"bap","label":"Rider (atlas_app)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_app"],"defaultSchema":"atlas_app"},{"name":"bpp","label":"Driver (atlas_driver_offer_bpp)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_driver_offer_bpp"],"defaultSchema":"atlas_driver_offer_bpp"},{"name":"bap-dashboard","label":"Rider Dashboard (atlas_bap_dashboard)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_bap_dashboard"],"defaultSchema":"atlas_bap_dashboard"},{"name":"dashboard","label":"Dashboard (atlas_dashboard)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_dashboard"],"defaultSchema":"atlas_dashboard"}]},"secondary":[],"history":{"host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev"}}'
+                  DBJSON='{"primary":{"cloudName":"local","db_configs":[{"name":"bap","label":"Rider (atlas_app)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_app"],"defaultSchema":"atlas_app"},{"name":"bpp","label":"Driver (atlas_driver_offer_bpp)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_driver_offer_bpp"],"defaultSchema":"atlas_driver_offer_bpp"},{"name":"dashboard","label":"Dashboard (atlas_dashboard)","host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev","schemas":["atlas_dashboard"],"defaultSchema":"atlas_dashboard"}]},"secondary":[],"history":{"host":"localhost","port":${toString ports.db-primary},"user":"atlas_superuser","password":"","database":"atlas_dev"}}'
                   DATABASE_CONFIGS=$(printf '%s' "$DBJSON" | base64 | tr -d '\n')
                   export DATABASE_CONFIGS
                   REDISJSON='{"services":[{"name":"cluster","label":"App Cluster","clusterMode":true,"primary":{"cloudName":"local","host":"localhost","port":${toString ports.redis-cluster-n1}},"secondary":[]},{"name":"standalone","label":"Standalone","clusterMode":false,"primary":{"cloudName":"local","host":"localhost","port":${toString ports.redis}},"secondary":[]}]}'
@@ -1248,7 +1271,6 @@ in
                 "kafka".condition = "process_healthy";
                 "passetto-service".condition = "process_started";
                 "rider-app-exe".condition = "process_healthy";
-                "provider-dashboard-exe".condition = "process_healthy";
                 "dynamic-offer-driver-app-exe".condition = "process_healthy";
                 "mock-registry".condition = "process_healthy";
                 "victoria-metrics".condition = "process_healthy";
@@ -1595,7 +1617,7 @@ in
 
             # Single reverse-proxy entry point for devbox access (via Tailscale).
             # Reads data/Caddyfile generated by build-caddyfile.sh.
-            # Routes: /rider-app/*, /driver-app/*, /provider-dashboard/*, etc.
+            # Routes: /rider-app/*, /driver-app/*, etc.
             caddy-reverse-proxy = {
               imports = [ common ];
               disabled = !cfg.useCaddy;
@@ -1663,42 +1685,6 @@ in
                   path = "/v2";
                 };
                 initial_delay_seconds = 90;
-                period_seconds = 10;
-                failure_threshold = 6;
-                timeout_seconds = 5;
-              };
-              availability = {
-                restart = "always";
-                backoff_seconds = 20;
-                max_restarts = 50;
-              };
-            };
-
-            provider-dashboard-exe = {
-              environment = {
-                SERVICE_PORT = toString ports.provider-dashboard;
-                METRICS_PORT = toString ports.provider-dashboard-metrics;
-                RIDER_APP_PORT = toString ports.rider-app;
-                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
-              };
-              readiness_probe = {
-                http_get = {
-                  host = "127.0.0.1";
-                  port = ports.provider-dashboard;
-                  path = "/";
-                };
-                initial_delay_seconds = 15;
-                period_seconds = 5;
-                failure_threshold = 30;
-                timeout_seconds = 3;
-              };
-              liveness_probe = {
-                http_get = {
-                  host = "127.0.0.1";
-                  port = ports.provider-dashboard;
-                  path = "/";
-                };
-                initial_delay_seconds = 30;
                 period_seconds = 10;
                 failure_threshold = 6;
                 timeout_seconds = 5;
@@ -1778,9 +1764,7 @@ in
                     ../../dev/sql-seed/public-transport-rider-platform-seed.sql
                     ../../dev/sql-seed/mock-registry-seed.sql
                     ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
-                    ../../dev/sql-seed/rider-dashboard-seed.sql
-                    ../../dev/sql-seed/provider-dashboard-seed.sql
-                    ../../dev/sql-seed/safety-dashboard-seed.sql
+                    ../../dev/sql-seed/dashboard-seed.sql
                     ../../dev/sql-seed/special-zone-seed.sql
                     ../../dev/sql-seed/kaal-chakra-seed.sql
                     ../../dev/sql-seed/db-manager-seed.sql

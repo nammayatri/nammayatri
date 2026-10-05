@@ -338,12 +338,15 @@ export async function callPostmanStep(
     headers[k] = resolveVariables(v, stores);
   }
 
+  // No X-Proxy-Target for provider-dashboard / rider-dashboard: their env vars
+  // (dashboard_base_url / bap_dashboard_url) still point at the removed
+  // standalone services (:8018/:8017). The context-api proxy translates those
+  // paths to the app servers' /direct-dashboard endpoints — an override header
+  // would re-target the dead ports.
   const _svcEnvVar: Record<string, string> = {
     driver: 'baseURL_namma_P',
     rider: 'baseUrl_app',
     lts: 'baseUrl_lts',
-    'provider-dashboard': 'dashboard_base_url',
-    'rider-dashboard': 'bap_dashboard_url',
   };
   const _baseUrlVar = _svcEnvVar[step.service];
   const _baseUrlVal = _baseUrlVar ? (stores.environment[_baseUrlVar] ?? stores.collection[_baseUrlVar] ?? '') : '';

@@ -26,7 +26,6 @@ module Domain.Types.Transaction where
 import qualified Dashboard.Common.Booking as Common
 import qualified Dashboard.Common.Exotel as Common
 import qualified Dashboard.Common.SpecialZone as Common
-import qualified Dashboard.SafetyPlatform as Safety
 import Data.OpenApi hiding (email, name)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -56,7 +55,6 @@ data Endpoint uat
     ActionAPI uat
   | ExotelAPI Common.ExotelEndpoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
-  | SafetyAPI Safety.SafetyEndpoint
   | DashboardUserLogin
   | DashboardUserLogout
   | DashboardTwoFactorAdminReset
@@ -83,7 +81,6 @@ instance Show uat => Text.Show.Show (Endpoint uat) where
     ActionAPI e -> show e
     ExotelAPI e -> "ExotelAPI " <> show e
     SpecialZoneAPI e -> "SpecialZoneAPI " <> show e
-    SafetyAPI e -> "SafetyAPI " <> show e
     DashboardUserLogin -> "DASHBOARD_USER/LOGIN"
     DashboardUserLogout -> "DASHBOARD_USER/LOGOUT"
     DashboardTwoFactorAdminReset -> "DASHBOARD_USER/TWO_FACTOR_ADMIN_RESET"

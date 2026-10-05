@@ -6,7 +6,7 @@
  */
 
 import axios from 'axios';
-import { PROXY_BASE, MOCK_SERVER_URL, RIDER_URL, DRIVER_URL, PROVIDER_DASHBOARD_URL } from '../config';
+import { PROXY_BASE, MOCK_SERVER_URL, RIDER_URL, DRIVER_URL } from '../config';
 
 export interface PostmanRuntimeResult {
   assertions: Array<{ name: string; passed: boolean; error?: string }>;
@@ -20,11 +20,15 @@ export interface VariableStores {
 }
 
 // Browser → mock-server / rider / driver direct calls fail CORS — route through the local proxy.
+// The last two entries match LEGACY standalone-dashboard URLs still baked into
+// collection scripts (the services on :8017/:8018 are gone); the context-api
+// proxy translates them to the app servers' /direct-dashboard endpoints.
 const SERVICE_URL_REWRITES: Array<[string, string]> = [
   [MOCK_SERVER_URL, PROXY_BASE + '/proxy/mock-server'],
   [RIDER_URL, PROXY_BASE + '/proxy/rider-raw'],
   [DRIVER_URL, PROXY_BASE + '/proxy/driver-raw'],
-  [PROVIDER_DASHBOARD_URL, PROXY_BASE + '/proxy/provider-dashboard'],
+  ['http://localhost:8018', PROXY_BASE + '/proxy/provider-dashboard'],
+  ['http://localhost:8017', PROXY_BASE + '/proxy/rider-dashboard'],
 ];
 
 function rewriteUrl(url: string): string {

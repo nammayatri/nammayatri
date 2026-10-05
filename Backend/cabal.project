@@ -6,9 +6,6 @@ packages:
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
-  app/dashboard/rider-dashboard
-  app/dashboard/provider-dashboard
-  app/dashboard/dashboard-repl-check
   app/dashboard/Lib
   app/special-zone
   app/sdk-event-pipeline

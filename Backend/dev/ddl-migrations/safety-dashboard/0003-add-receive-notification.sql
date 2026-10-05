@@ -1,1 +1,0 @@
-ALTER table atlas_safety_dashboard.person ADD COLUMN receive_notification boolean;

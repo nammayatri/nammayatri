@@ -17,7 +17,6 @@
         "mock-payment"
         "sdk-event-pipeline"
         "special-zone"
-        "safety-dashboard"
         "beckn-cli"
         "alchemist"
         "arion"
@@ -35,7 +34,6 @@
         "mock-payment-exe"
         "sdk-event-pipeline-exe"
         "special-zone-exe"
-        "safety-dashboard-exe"
         "trace"
         "alchemist-generator-exe"
       ];
@@ -129,7 +127,6 @@
         settings = {
           alchemist.custom = cacConfig;
           beckn-cli.custom = cacConfig;
-          provider-dashboard.custom = cacConfig;
           rider-app.custom = cacConfig;
           rider-app-drainer.custom = cacConfig;
           special-zone.custom = cacConfig;
@@ -139,7 +136,6 @@
           lib-dashboard.custom = cacConfig;
           kafka-consumers.custom = cacConfig;
           driver-offer-allocator.custom = cacConfig;
-          rider-dashboard.custom = cacConfig;
           namma-dsl.libraryProfiling = false;
           location-updates.check = false;
           singletons-th.jailbreak = true;

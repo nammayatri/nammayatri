@@ -50,8 +50,6 @@
   dynamic-offer-driver-app = 8016;
   # Internal port the driver-app actually binds to.
   dynamic-offer-driver-app-internal = 8116;
-  rider-dashboard = 8017;
-  provider-dashboard = 8018;
   rider-app-scheduler = 8058;
   driver-offer-allocator = 8055;
   search-result-aggregator = 8029;
@@ -66,8 +64,6 @@
   rider-app-metrics = 9999;
   driver-app-metrics = 9997;
   beckn-gateway-metrics = 9998;
-  rider-dashboard-metrics = 9991;
-  provider-dashboard-metrics = 9992;
   rider-producer-metrics = 9990;
   producer-metrics = 9993;
   rider-producer-healthcheck = 8114;

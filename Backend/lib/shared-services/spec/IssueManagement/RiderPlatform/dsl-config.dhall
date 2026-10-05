@@ -6,12 +6,6 @@ let defaultOutput = common.defaultConfigs._output
 
 let folderName = "IssueManagement"
 
-let outputPrefixDashboardReadOnly =
-      rootDir ++ "/Backend/app/dashboard/rider-dashboard/src-read-only/"
-
-let outputPrefixDashboard =
-      rootDir ++ "/Backend/app/dashboard/rider-dashboard/src/"
-
 let outputPrefixCommonApisReadOnly =
       rootDir ++ "/Backend/lib/shared-services/src-read-only/"
 
@@ -23,11 +17,7 @@ let outputPrefixAppReadOnly =
 let outputPrefixApp =
       rootDir ++ "/Backend/app/rider-platform/rider-app/Main/src/"
 
-let migrationPath =
-      rootDir ++ "/Backend/dev/migrations-read-only/rider-dashboard/"
-
-let unifiedMigrationPath =
-      rootDir ++ "/Backend/dev/migrations-read-only/provider-dashboard/"
+let migrationPath = rootDir ++ "/Backend/dev/migrations-read-only/dashboard/"
 
 let outputPath =
           defaultOutput
@@ -40,30 +30,17 @@ let outputPath =
               outputPrefixCommonApis ++ "IssueManagement/Common/Dashboard"
           , _domainHandler =
               outputPrefixApp ++ "Domain/Action/Dashboard/" ++ folderName
-          , _domainHandlerDashboard =
-                  outputPrefixDashboard
-              ++  "Domain/Action/RiderPlatform/"
-              ++  folderName
-          , _domainType =
-              outputPrefixDashboardReadOnly ++ "Domain/Types" ++ folderName
+          , _domainHandlerDashboard = ""
+          , _domainType = ""
           , _servantApi =
               outputPrefixAppReadOnly ++ "API/Action/Dashboard/" ++ folderName
           , _servantApiDashboardAuth =
                   outputPrefixAppReadOnly
               ++  "API/Action/DashboardAuth/"
               ++  folderName
-          , _servantApiDashboard =
-                  outputPrefixDashboardReadOnly
-              ++  "API/Action/RiderPlatform/"
-              ++  folderName
-          , _servantApiClient =
-                  outputPrefixDashboardReadOnly
-              ++  "API/Client/RiderPlatform/"
-              ++  folderName
-          , _sql =
-            [ { _1 = migrationPath, _2 = "atlas_bap_dashboard" }
-            , { _1 = unifiedMigrationPath, _2 = "atlas_dashboard" }
-            ]
+          , _servantApiDashboard = ""
+          , _servantApiClient = ""
+          , _sql = [ { _1 = migrationPath, _2 = "atlas_dashboard" } ]
           }
 
 let defaultStorageConfig = common.defaultConfigs._storageConfig

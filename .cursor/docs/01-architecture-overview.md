@@ -25,14 +25,13 @@ The backend is a multi-package Cabal project (~48 packages) following microservi
 
 ### Dashboards
 
+Dashboard APIs are served directly by rider-app and dynamic-offer-driver-app
+(`/direct-dashboard/` tree); the standalone dashboard services have been
+removed. See `09-dashboards.md`.
+
 | Package | Path | Purpose |
 |---------|------|---------|
-| rider-dashboard | `app/dashboard/rider-dashboard/` | Rider operations dashboard |
-| provider-dashboard | `app/dashboard/provider-dashboard/` | Provider operations dashboard |
-| safety-dashboard | `app/safety-dashboard/` | Safety operations |
-| unified-dashboard | `app/unified-dashboard/` | Unified dashboard APIs |
-| CommonAPIs | `app/dashboard/CommonAPIs/` | Shared dashboard API types |
-| Lib | `app/dashboard/Lib/` | Dashboard shared library |
+| Lib | `app/dashboard/Lib/` | Dashboard shared library (login, sessions, roles, audit) |
 
 ### Other Services
 

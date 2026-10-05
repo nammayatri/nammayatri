@@ -47,7 +47,6 @@ library
       Dashboard.Common.Exotel
       Dashboard.Common.FinanceManagement
       Dashboard.Common.GeohashArea
-      Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Rewards.CampaignStatus
       Dashboard.Common.Rewards.ClaimMode
@@ -57,7 +56,6 @@ library
       Dashboard.Common.Ride
       Dashboard.Common.RideDebug
       Dashboard.Common.SpecialZone
-      Dashboard.SafetyPlatform
       Domain.Action.Dashboard.AccessMatrix
       Domain.Action.Dashboard.Capability
       Domain.Action.Dashboard.EmailVerification

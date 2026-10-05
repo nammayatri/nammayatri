@@ -52,9 +52,7 @@
           rider-app-scheduler-exe.disabled = true;
           image-api-helper-exe.disabled = true;
           kafka-consumers-exe.disabled = true;
-          provider-dashboard-exe.disabled = true;
           producer-exe.disabled = true;
-          rider-dashboard-exe.disabled = true;
           search-result-aggregator-exe.disabled = true;
 
           load-test-init = {

@@ -18,8 +18,6 @@ let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 
 let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
 
-let providerDashboardPort = Natural/show (env:PROVIDER_DASHBOARD_PORT ? 8018)
-
 let logger_cfg = { level = LogLevel.INFO, log_to_file = False }
 
 let driver_internal_auth_config =
@@ -28,15 +26,9 @@ let driver_internal_auth_config =
       , auth_token_expiry = 86400
       }
 
-let driver_dashboard_internal_auth_config =
-      { auth_url = "http://127.0.0.1:${driverAppPort}/internal/auth"
-      , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
-      , auth_token_expiry = 86400
-      }
-
 let dashboard_internal_auth_config =
       { auth_url =
-          "http://127.0.0.1:${providerDashboardPort}/bpp/driver-offer/internal/auth"
+          "http://127.0.0.1:${driverAppPort}/direct-dashboard/internal/auth"
       , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
       , auth_token_expiry = 86400
       }
@@ -44,7 +36,8 @@ let dashboard_internal_auth_config =
 let tokenOriginInternalAuthMap =
       { DriverApp = driver_internal_auth_config
       , RiderApp = driver_internal_auth_config
-      , Dashboard = dashboard_internal_auth_config
+      , DriverDashboard = dashboard_internal_auth_config
+      , RiderDashboard = dashboard_internal_auth_config
       }
 
 in  { grpc_port = env:GRPC_PORT ? 50051

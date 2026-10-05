@@ -6,12 +6,6 @@ let defaultOutput = common.defaultConfigs._output
 
 let folderName = "IncentiveJourney"
 
-let outputPrefixDashboardReadOnly =
-      rootDir ++ "/Backend/app/dashboard/provider-dashboard/src-read-only/"
-
-let outputPrefixDashboard =
-      rootDir ++ "/Backend/app/dashboard/provider-dashboard/src/"
-
 let outputPrefixLibReadOnly =
       rootDir ++ "/Backend/lib/incentive-journey/src-read-only/"
 
@@ -25,8 +19,7 @@ let outputPrefixApp =
           rootDir
       ++  "/Backend/app/provider-platform/dynamic-offer-driver-app/Main/src/"
 
-let migrationPath =
-      rootDir ++ "/Backend/dev/migrations-read-only/provider-dashboard/"
+let migrationPath = rootDir ++ "/Backend/dev/migrations-read-only/dashboard/"
 
 let outputPath =
           defaultOutput
@@ -38,26 +31,16 @@ let outputPath =
           , _extraApiRelatedCommonTypes = ""
           , _domainHandler =
               outputPrefixApp ++ "Domain/Action/Dashboard/" ++ folderName
-          , _domainHandlerDashboard =
-                  outputPrefixDashboard
-              ++  "Domain/Action/ProviderPlatform/"
-              ++  folderName
-          , _domainType =
-              outputPrefixDashboardReadOnly ++ "Domain/Types" ++ folderName
+          , _domainHandlerDashboard = ""
+          , _domainType = ""
           , _servantApi =
               outputPrefixAppReadOnly ++ "API/Action/Dashboard/" ++ folderName
           , _servantApiDashboardAuth =
                   outputPrefixAppReadOnly
               ++  "API/Action/DashboardAuth/"
               ++  folderName
-          , _servantApiDashboard =
-                  outputPrefixDashboardReadOnly
-              ++  "API/Action/ProviderPlatform/"
-              ++  folderName
-          , _servantApiClient =
-                  outputPrefixDashboardReadOnly
-              ++  "API/Client/ProviderPlatform/"
-              ++  folderName
+          , _servantApiDashboard = ""
+          , _servantApiClient = ""
           , _sql = [ { _1 = migrationPath, _2 = "atlas_dashboard" } ]
           }
 
