@@ -4146,6 +4146,55 @@ rider-app has migrated.
   gateway and the registry match `bin/`, `rider-app-exe` and
   `dynamic-offer-driver-app-exe` do not. Ask the containers, not the folder.
 
+## Releasing — `ops/deploy.sh`
+
+Since 2026-10-06 (phase 3 of the backend restructuring plan) a release is one
+command, run from the laptop in WSL, anywhere in the repository:
+
+```bash
+Backend/dev/local-stack/ops/deploy.sh --dry-run   # what would change; writes nothing
+Backend/dev/local-stack/ops/deploy.sh             # release the commit you are on
+Backend/dev/local-stack/ops/deploy.sh status      # what is deployed; any hand edits since?
+Backend/dev/local-stack/ops/deploy.sh rollback    # put back what the last release replaced
+Backend/dev/local-stack/ops/deploy.sh tidy        # archive old .bak copies (root only)
+```
+
+On the server, `cat /opt/ny/local-stack/.shipped` answers *what is running*:
+the commit, when, by whom, and whether the checks passed. `.shipped.files`
+holds the sha256 of every file shipped.
+
+What it does, and what it will not do:
+
+- **Refuses** a dirty working tree or an unpushed commit, and takes `stack/`
+  from the commit (`git archive`), never from the folder.
+- **One scp and one ssh** — the firewall refuses the sixth SSH connection in
+  30 seconds.
+- Writes **only files git ships**, **in place** (a bind-mounted file keeps its
+  inode). Never `.env`, the certificates, `edge-web/`, `bin/` or the data.
+- **Stops** if a file it would overwrite was edited by hand on the server since
+  the last release, and names it. Bring the edit into git, or `--force`.
+- Removes a file it no longer ships only if it is still exactly as shipped.
+- Applies `db/*.sql` **only when its content is new to the server** — re-running
+  a tariff would undo every fare changed since.
+- **Restarts only what changed**: `auth-guard/` → that container, `maps-shim/` →
+  that container, `edge/nginx.conf` → `nginx -t` then reload (a failure rolls
+  back on the spot), `docker-compose.yml` → only the services whose resolved
+  config changed, `simulate-driver.py` / `movin-bot.py` → their systemd unit.
+  A change to `backup.sh` is reported, not installed (phase 4).
+- **Checks**: every container that ran still runs, both healthz answer 200,
+  `nginx -t`, and every shipped file matches its hash. Then writes `.shipped`.
+- Keeps what it replaced or removed in **`/opt/ny/local-stack.prev`** — one
+  named directory, instead of `.bak` files beside the live ones.
+
+`tests/release.test.sh` rehearses all of it — a release, a refused hand edit, a
+rollback, a tidy — against a copy of the server's layout with docker stubbed:
+`bash tests/release.test.sh`.
+
+**The website no longer writes our files.** Its `deploy-console.sh` and
+`deploy-site.sh` used to insert their nginx blocks and the `edge-web` mount
+into this stack's files; since 2026-10-06 they only check and stop if one is
+missing. `edge/nginx.conf` and `docker-compose.yml` are released from here.
+
 ## Layout
 
 Sorted on 2026-10-06 (phase 2 of the backend restructuring plan). **The rule:
@@ -4171,7 +4220,10 @@ local-stack/
 │   └── apply-*.sh, *-prepare.sh, enrol-driver.sh, install-moosyl-key.sh,
 │       fleet-service.sh, switch-domain.sh, deploy-*.sh, tiles-arabic.sh,
 │       maps-two-countries.sh   — run ON the server, from this folder
-├── ops/                   run from the laptop: demo.sh, demo.ps1, and
+├── ops/                   run from the laptop
+│   ├── deploy.sh            THE way to release stack/ (see *Releasing*)
+│   ├── release-remote.py    its server half, run by deploy.sh
+│   ├── demo.sh, demo.ps1
 │   └── checks/              the ride test (probe-two-country-rides.py)
 ├── investigations/        35 probes: how a booking behaves, what a route
 │                          costs, why a driver was not offered a ride. Kept —
