@@ -137,7 +137,14 @@ toMilestoneItem specialLocationNames statsRows milestone = do
         subscriptionWaiveOff =
           case milestone.rewardType of
             DIJC.SubscriptionWaiveOff ->
-              (\spec -> API.SubscriptionWaiveOffConfig spec.percentage spec.daysValidFor spec.serviceName spec.waiveOffMode)
+              ( \spec ->
+                  API.SubscriptionWaiveOffConfig
+                    { percentage = spec.percentage,
+                      daysValidFor = spec.daysValidFor,
+                      serviceName = spec.serviceName,
+                      waiveOffMode = spec.waiveOffMode
+                    }
+              )
                 <$> IJ.mkSubscriptionWaiveOffSpec
                   milestone.rewardValue
                   milestone.rewardExpirationAt

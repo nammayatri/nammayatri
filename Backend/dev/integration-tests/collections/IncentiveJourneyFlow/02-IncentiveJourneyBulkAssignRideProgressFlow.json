@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Incentive Journey Ride Progress Flow",
-    "description": "Provider E2E: Daily journey with two RideCompleted milestones (each GTE 1, progress resets) and one Earnings milestone the driver does not finish. The same cohort has a second journey (one RideCompleted GTE 2, 200 coins) via a second cohort-journey mapping and a second driver assign. A separate cohort and journey are auto-applied for AUTO_CATEGORY, the same category set when the driver vehicle is added, with no user mapping (allowIfNoMapping false, so it still applies when the driver has other mappings). Two AUTO cash rides complete journey 1's ride milestones, journey 2's 2-ride target, and the auto-apply ride milestone. Dashboard waive-off marks the earnings milestone WaivedOff for that periodKey, and the first cohort mapping streak-end reward pays cash ₹1. Milestone 1 pays a YATRI_SUBSCRIPTION waive-off instead of coins. Cleanup unassigns both user mappings, disables those cohort-journey mappings, and disables the auto-apply row.\n\nRequires kafka-consumers (DriverCoinsAndJourney / RIDE_EVENTS). Dashboard peer path: .../incentiveJourney/...\n\nSee IncentiveJourneyFlow/Rules.md.",
+    "name": "Incentive Journey Bulk Assign Ride Progress Flow",
+    "description": "Same provider E2E as 01-IncentiveJourneyRideProgressFlow, except both user_cohort_mapping rows are created by POST /incentiveJourney/assign/bulkFromS3. The CSV is written to the local mock bucket (Backend/s3/local/test-bucket) via POST /mock/s3/put-text, scheduled about 15s ahead, and processed in two allocator batches (batchSize 1). Requires driver-offer-allocator and mock-server. See IncentiveJourneyFlow/Rules.md.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -531,40 +531,6 @@
       ]
     },
     {
-      "name": "Assign Driver to CohortJourney (Dashboard)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{dashboard_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/assign"
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_id}}\",\n  \"enabled\": true,\n  \"validTill\": \"{{_test_valid_till}}\"\n}"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Assign driver 200', function () { pm.response.to.have.status(200); });"
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "Create Journey 2 Daily Ride Target 2 (Dashboard)",
       "request": {
         "method": "POST",
@@ -676,7 +642,7 @@
       ]
     },
     {
-      "name": "Assign Driver to Journey 2 CohortJourney (Dashboard)",
+      "name": "Write Bulk Assign CSV (Mock S3)",
       "request": {
         "method": "POST",
         "header": [
@@ -690,11 +656,142 @@
           }
         ],
         "url": {
-          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/assign"
+          "raw": "{{mockServerUrl}}/mock/s3/put-text"
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"cohortJourneyMappingId\": \"{{ij_cohort_journey_mapping_2_id}}\",\n  \"enabled\": true,\n  \"validTill\": \"{{_test_valid_till}}\"\n}"
+          "raw": "{\n  \"key\": \"{{ij_bulk_s3_key}}\",\n  \"content\": \"{{ij_bulk_csv}}\",\n  \"fixture\": \"bulk-assign.csv\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var driverId = pm.environment.get('driver_id');",
+              "var cjm1 = pm.environment.get('ij_cohort_journey_mapping_id');",
+              "var cjm2 = pm.environment.get('ij_cohort_journey_mapping_2_id');",
+              "var validTill = String(pm.collectionVariables.get('_test_valid_till') || '').replace(/Z$/, '');",
+              "var suffix = pm.collectionVariables.get('_test_ij_suffix');",
+              "var key = 'incentive-journey/ucm-' + suffix + '.csv';",
+              "pm.environment.set('ij_bulk_s3_key', key);",
+              "var nl = '\\\\n';",
+              "var csv = 'userId,cohortMappingId,validTill,enabled' + nl",
+              "  + driverId + ',' + cjm1 + ',' + validTill + ',true' + nl",
+              "  + driverId + ',' + cjm2 + ',' + validTill + ',true' + nl;",
+              "pm.environment.set('ij_bulk_csv', csv);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Mock S3 put 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('CSV key stored', function () { pm.expect(d.key).to.eql(pm.environment.get('ij_bulk_s3_key')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule Bulk Assign From S3 (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/assign/bulkFromS3"
+        },
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "s3FilePath",
+              "type": "text",
+              "value": "{{ij_bulk_s3_key}}"
+            },
+            {
+              "key": "scheduledAt",
+              "type": "text",
+              "value": "{{ij_bulk_scheduled_at}}"
+            },
+            {
+              "key": "batchSize",
+              "type": "text",
+              "value": "1"
+            },
+            {
+              "key": "rescheduleDelaySeconds",
+              "type": "text",
+              "value": "2"
+            },
+            {
+              "key": "file",
+              "type": "file",
+              "src": "collections/IncentiveJourneyFlow/fixtures/bulk-assign.csv",
+              "value": "{{ij_bulk_csv}}"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var driverId = pm.environment.get('driver_id');",
+              "var cjm1 = pm.environment.get('ij_cohort_journey_mapping_id');",
+              "var cjm2 = pm.environment.get('ij_cohort_journey_mapping_2_id');",
+              "var validTill = String(pm.collectionVariables.get('_test_valid_till') || '').replace(/Z$/, '');",
+              "var suffix = pm.collectionVariables.get('_test_ij_suffix');",
+              "var key = 'incentive-journey/ucm-' + suffix + '.csv';",
+              "pm.environment.set('ij_bulk_s3_key', key);",
+              "var nl = '\\\\n';",
+              "var csv = 'userId,cohortMappingId,validTill,enabled' + nl",
+              "  + driverId + ',' + cjm1 + ',' + validTill + ',true' + nl",
+              "  + driverId + ',' + cjm2 + ',' + validTill + ',true' + nl;",
+              "pm.environment.set('ij_bulk_csv', csv);",
+              "pm.environment.set('ij_bulk_scheduled_at', new Date(Date.now() + 15000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('ij_bulk_run_id', d.runId);",
+              "pm.test('Bulk schedule 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('runId returned', function () { pm.expect(d.runId).to.be.a('string').and.not.empty; });",
+              "pm.test('status Scheduled', function () { pm.expect(d.status).to.eql('Scheduled'); });",
+              "pm.test('batchSize is 1', function () { pm.expect(d.batchSize).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Poll Bulk Assign Run Until Succeeded",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{city}}/incentiveJourney/assign/bulkFromS3/list?limit=20"
         }
       },
       "event": [
@@ -703,7 +800,54 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Assign driver to journey 2 200', function () { pm.response.to.have.status(200); });"
+              "pm.test('Bulk list 200', function () { pm.response.to.have.status(200); });",
+              "var MAX_ATTEMPTS = 24;",
+              "var POLL_MS = 2000;",
+              "var attempt = 0;",
+              "var token = pm.environment.get('dashboard_token');",
+              "var base = pm.environment.get('dashboard_base_url');",
+              "var merchant = pm.environment.get('dashboard_merchant_id');",
+              "var city = pm.environment.get('city');",
+              "var runId = pm.environment.get('ij_bulk_run_id');",
+              "var url = base + '/bpp/driver-offer/' + merchant + '/' + city + '/incentiveJourney/assign/bulkFromS3/list?limit=20';",
+              "function busy(ms) { var start = Date.now(); while (Date.now() - start < ms) {} }",
+              "function finish(ok, detail) {",
+              "  pm.test('bulk run succeeded with 2 inserted rows', function () {",
+              "    pm.expect(ok, detail).to.eql(true);",
+              "  });",
+              "}",
+              "function poll() {",
+              "  pm.sendRequest({ url: url, method: 'GET', header: { token: token } }, function (err, res) {",
+              "    attempt++;",
+              "    if (err || !res || res.code !== 200) {",
+              "      if (attempt >= MAX_ATTEMPTS) {",
+              "        finish(false, 'list failed after ' + attempt + ' polls');",
+              "        return;",
+              "      }",
+              "      busy(POLL_MS);",
+              "      poll();",
+              "      return;",
+              "    }",
+              "    var runs = (res.json().runs || []);",
+              "    var run = null;",
+              "    for (var i = 0; i < runs.length; i++) { if (runs[i].runId === runId) { run = runs[i]; break; } }",
+              "    if (run && run.status === 'Succeeded' && run.rowsInserted === 2) {",
+              "      finish(true, 'runId=' + runId);",
+              "      return;",
+              "    }",
+              "    if (run && (run.status === 'Failed' || run.status === 'Cancelled')) {",
+              "      finish(false, 'run ' + run.status + ' error=' + (run.errorMessage || ''));",
+              "      return;",
+              "    }",
+              "    if (attempt >= MAX_ATTEMPTS) {",
+              "      finish(false, 'run ' + runId + ' not succeeded. last=' + JSON.stringify(run));",
+              "      return;",
+              "    }",
+              "    busy(POLL_MS);",
+              "    poll();",
+              "  });",
+              "}",
+              "poll();"
             ]
           }
         }

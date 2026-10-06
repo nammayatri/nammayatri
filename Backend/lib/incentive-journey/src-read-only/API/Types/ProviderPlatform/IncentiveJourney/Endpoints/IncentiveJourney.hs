@@ -6,6 +6,7 @@ module API.Types.ProviderPlatform.IncentiveJourney.Endpoints.IncentiveJourney wh
 import qualified Dashboard.Common
 import Data.Aeson
 import qualified Data.Aeson
+import qualified Data.ByteString.Lazy
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Time
@@ -14,12 +15,14 @@ import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Kernel.Utils.TH
+import qualified Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3
 import Servant hiding (Summary)
 import Servant.Client
 
@@ -38,6 +41,14 @@ instance Kernel.Types.HideSecrets.HideSecrets AssignUserToIncentiveJourneyReq wh
 data AutoApplyCohortMappingListItem = AutoApplyCohortMappingListItem
   { autoApplyCohortMappingId :: Kernel.Types.Id.Id Dashboard.Common.AutoApplyCohortMapping,
     cohortJourneyMappingId :: Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping,
+    cohortId :: Kernel.Types.Id.Id Dashboard.Common.CohortDetails,
+    cohortName :: Kernel.Prelude.Text,
+    cohortCategory :: Kernel.Prelude.Text,
+    cohortRule :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
+    journeyName :: Kernel.Prelude.Text,
+    journeyType :: IncentiveJourneyType,
+    cohortMappingEnabled :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
@@ -75,18 +86,6 @@ data BulkAssignUserCohortFromS3ListItem = BulkAssignUserCohortFromS3ListItem
 data BulkAssignUserCohortFromS3ListRes = BulkAssignUserCohortFromS3ListRes {runs :: [BulkAssignUserCohortFromS3ListItem]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data BulkAssignUserCohortFromS3Req = BulkAssignUserCohortFromS3Req
-  { s3FilePath :: Kernel.Prelude.Text,
-    scheduledAt :: Kernel.Prelude.UTCTime,
-    batchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    rescheduleDelaySeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets BulkAssignUserCohortFromS3Req where
-  hideSecrets = Kernel.Prelude.identity
 
 data BulkAssignUserCohortFromS3Res = BulkAssignUserCohortFromS3Res
   { runId :: Kernel.Prelude.Text,
@@ -434,7 +433,7 @@ data WaiveIncentiveJourneyMilestoneReq = WaiveIncentiveJourneyMilestoneReq
 instance Kernel.Types.HideSecrets.HideSecrets WaiveIncentiveJourneyMilestoneReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("incentiveJourney" :> (GetIncentiveJourneyList :<|> PostIncentiveJourneyCreate :<|> GetIncentiveJourneyMilestoneList :<|> PostIncentiveJourneyMilestoneCreate :<|> GetIncentiveJourneyStatsHistory :<|> PostIncentiveJourneyStatsWaiveOff :<|> GetIncentiveJourneyDriverAssignments :<|> PostIncentiveJourneyCohortCreate :<|> GetIncentiveJourneyCohortList :<|> PostIncentiveJourneyCohortJourneyCreate :<|> PutIncentiveJourneyCohortJourneyUpdate :<|> GetIncentiveJourneyCohortJourneyList :<|> PostIncentiveJourneyAssign :<|> PostIncentiveJourneyAutoApplyCohortCreate :<|> PutIncentiveJourneyAutoApplyCohortUpdate :<|> GetIncentiveJourneyAutoApplyCohortList :<|> DeleteIncentiveJourneyUnassign :<|> PostIncentiveJourneyAssignBulkFromS3 :<|> GetIncentiveJourneyAssignBulkFromS3List))
+type API = ("incentiveJourney" :> (GetIncentiveJourneyList :<|> PostIncentiveJourneyCreate :<|> GetIncentiveJourneyMilestoneList :<|> PostIncentiveJourneyMilestoneCreate :<|> GetIncentiveJourneyStatsHistory :<|> PostIncentiveJourneyStatsWaiveOff :<|> GetIncentiveJourneyDriverAssignments :<|> PostIncentiveJourneyCohortCreate :<|> GetIncentiveJourneyCohortList :<|> PostIncentiveJourneyCohortJourneyCreate :<|> PutIncentiveJourneyCohortJourneyUpdate :<|> GetIncentiveJourneyCohortJourneyList :<|> PostIncentiveJourneyAssign :<|> PostIncentiveJourneyAutoApplyCohortCreate :<|> PutIncentiveJourneyAutoApplyCohortUpdate :<|> GetIncentiveJourneyAutoApplyCohortList :<|> PostIncentiveJourneyUnassign :<|> PostIncentiveJourneyAssignBulkFromS3 :<|> GetIncentiveJourneyAssignBulkFromS3List))
 
 type GetIncentiveJourneyList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -528,12 +527,21 @@ type GetIncentiveJourneyAutoApplyCohortList =
       :> QueryParam
            "vehicleCategory"
            Domain.Types.VehicleCategory.VehicleCategory
-      :> Get '[JSON] AutoApplyCohortMappingListRes
+      :> QueryParam "enabled" Kernel.Prelude.Bool
+      :> Get
+           '[JSON]
+           AutoApplyCohortMappingListRes
   )
 
-type DeleteIncentiveJourneyUnassign = ("unassign" :> ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostIncentiveJourneyUnassign = ("unassign" :> ReqBody '[JSON] UnassignUserFromIncentiveJourneyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostIncentiveJourneyAssignBulkFromS3 = ("assign" :> "bulkFromS3" :> ReqBody '[JSON] BulkAssignUserCohortFromS3Req :> Post '[JSON] BulkAssignUserCohortFromS3Res)
+type PostIncentiveJourneyAssignBulkFromS3 =
+  ( "assign" :> "bulkFromS3"
+      :> Kernel.ServantMultipart.MultipartForm
+           Kernel.ServantMultipart.Tmp
+           Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+      :> Post '[JSON] BulkAssignUserCohortFromS3Res
+  )
 
 type GetIncentiveJourneyAssignBulkFromS3List =
   ( "assign" :> "bulkFromS3" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -559,16 +567,20 @@ data IncentiveJourneyAPIs = IncentiveJourneyAPIs
     postIncentiveJourneyAssign :: AssignUserToIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIncentiveJourneyAutoApplyCohortCreate :: CreateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient CreateAutoApplyCohortMappingRes,
     putIncentiveJourneyAutoApplyCohortUpdate :: UpdateAutoApplyCohortMappingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getIncentiveJourneyAutoApplyCohortList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> EulerHS.Types.EulerClient AutoApplyCohortMappingListRes,
-    deleteIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postIncentiveJourneyAssignBulkFromS3 :: BulkAssignUserCohortFromS3Req -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res,
+    getIncentiveJourneyAutoApplyCohortList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient AutoApplyCohortMappingListRes,
+    postIncentiveJourneyUnassign :: UnassignUserFromIncentiveJourneyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIncentiveJourneyAssignBulkFromS3 ::
+      ( Data.ByteString.Lazy.ByteString,
+        Lib.IncentiveJourney.Domain.Types.BulkAssignUserCohortFromS3.BulkAssignUserCohortFromS3Req
+      ) ->
+      EulerHS.Types.EulerClient BulkAssignUserCohortFromS3Res,
     getIncentiveJourneyAssignBulkFromS3List :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BulkUserCohortMappingRunStatus -> EulerHS.Types.EulerClient BulkAssignUserCohortFromS3ListRes
   }
 
 mkIncentiveJourneyAPIs :: (Client EulerHS.Types.EulerClient API -> IncentiveJourneyAPIs)
 mkIncentiveJourneyAPIs incentiveJourneyClient = (IncentiveJourneyAPIs {..})
   where
-    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> getIncentiveJourneyDriverAssignments :<|> postIncentiveJourneyCohortCreate :<|> getIncentiveJourneyCohortList :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyAutoApplyCohortCreate :<|> putIncentiveJourneyAutoApplyCohortUpdate :<|> getIncentiveJourneyAutoApplyCohortList :<|> deleteIncentiveJourneyUnassign :<|> postIncentiveJourneyAssignBulkFromS3 :<|> getIncentiveJourneyAssignBulkFromS3List = incentiveJourneyClient
+    getIncentiveJourneyList :<|> postIncentiveJourneyCreate :<|> getIncentiveJourneyMilestoneList :<|> postIncentiveJourneyMilestoneCreate :<|> getIncentiveJourneyStatsHistory :<|> postIncentiveJourneyStatsWaiveOff :<|> getIncentiveJourneyDriverAssignments :<|> postIncentiveJourneyCohortCreate :<|> getIncentiveJourneyCohortList :<|> postIncentiveJourneyCohortJourneyCreate :<|> putIncentiveJourneyCohortJourneyUpdate :<|> getIncentiveJourneyCohortJourneyList :<|> postIncentiveJourneyAssign :<|> postIncentiveJourneyAutoApplyCohortCreate :<|> putIncentiveJourneyAutoApplyCohortUpdate :<|> getIncentiveJourneyAutoApplyCohortList :<|> postIncentiveJourneyUnassign :<|> postIncentiveJourneyAssignBulkFromS3 :<|> getIncentiveJourneyAssignBulkFromS3List = incentiveJourneyClient
 
 data IncentiveJourneyUserActionType
   = GET_INCENTIVE_JOURNEY_LIST
@@ -587,7 +599,7 @@ data IncentiveJourneyUserActionType
   | POST_INCENTIVE_JOURNEY_AUTO_APPLY_COHORT_CREATE
   | PUT_INCENTIVE_JOURNEY_AUTO_APPLY_COHORT_UPDATE
   | GET_INCENTIVE_JOURNEY_AUTO_APPLY_COHORT_LIST
-  | DELETE_INCENTIVE_JOURNEY_UNASSIGN
+  | POST_INCENTIVE_JOURNEY_UNASSIGN
   | POST_INCENTIVE_JOURNEY_ASSIGN_BULK_FROM_S3
   | GET_INCENTIVE_JOURNEY_ASSIGN_BULK_FROM_S3_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)

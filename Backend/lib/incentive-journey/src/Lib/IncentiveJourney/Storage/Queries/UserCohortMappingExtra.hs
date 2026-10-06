@@ -108,13 +108,17 @@ insertUserCohortMappingIgnoringConflict userId cohortMappingId enabled validTill
           <> show err
       pure Nothing
 
-deleteUserCohortMapping ::
+disableUserCohortMapping ::
   (BeamFlow m r) =>
   Id Common.Person ->
   Id DCJM.CohortJourneyMapping ->
   m ()
-deleteUserCohortMapping userId cohortMappingId =
-  deleteWithKV
+disableUserCohortMapping userId cohortMappingId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.enabled False,
+      Se.Set Beam.updatedAt now
+    ]
     [ Se.And
         [ Se.Is Beam.userId $ Se.Eq (getId userId),
           Se.Is Beam.cohortMappingId $ Se.Eq (getId cohortMappingId)

@@ -11,7 +11,7 @@ module Lib.IncentiveJourney.Domain.Action.Dashboard.Rider
     putIncentiveJourneyCohortJourneyUpdate,
     getIncentiveJourneyCohortJourneyList,
     postIncentiveJourneyAssign,
-    deleteIncentiveJourneyUnassign,
+    postIncentiveJourneyUnassign,
   )
 where
 
@@ -369,14 +369,14 @@ postIncentiveJourneyAssign handle merchantShortId opCity req = do
     "Person does not belong to this merchant/city"
   pure Success
 
-deleteIncentiveJourneyUnassign ::
+postIncentiveJourneyUnassign ::
   BeamFlow m r =>
   ServiceHandle m ->
   ID.ShortId DIJC.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Common.UnassignUserFromIncentiveJourneyReq ->
   m APISuccess
-deleteIncentiveJourneyUnassign handle merchantShortId opCity req = do
+postIncentiveJourneyUnassign handle merchantShortId opCity req = do
   Core.unassignUser
     handle
     merchantShortId

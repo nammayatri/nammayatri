@@ -71,6 +71,7 @@ mkHandle =
         CQStats.findByPersonIdAndJourneyIdAndPeriodKey IJ.DriverActor personId journeyId periodKey,
       waiveDriverMilestone = Nothing,
       waiveRiderMilestone = Nothing,
+      putBulkAssignCsv = Nothing,
       scheduleBulkUpload = Nothing,
       findSpecialLocationNameById =
         Just $ \locId -> do

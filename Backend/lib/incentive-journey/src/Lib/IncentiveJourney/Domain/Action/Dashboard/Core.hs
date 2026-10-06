@@ -333,6 +333,5 @@ unassignUser handle merchantShortId opCity personId cjmId notFoundMessage cityMe
   person <- handle.findPersonById personId >>= fromMaybeM (InvalidRequest notFoundMessage)
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
     throwError (InvalidRequest cityMessage)
-  -- CJM may already be deleted; still remove the user_cohort_mapping row.
-  QUCMExtra.deleteUserCohortMapping personId cjmId
+  QUCMExtra.disableUserCohortMapping personId cjmId
   handle.clearAssignmentCacheByPersonId personId
