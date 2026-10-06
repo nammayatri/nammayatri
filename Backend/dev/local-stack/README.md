@@ -4190,10 +4190,14 @@ What it does, and what it will not do:
 rollback, a tidy — against a copy of the server's layout with docker stubbed:
 `bash tests/release.test.sh`.
 
-**The website no longer writes our files.** Its `deploy-console.sh` and
-`deploy-site.sh` used to insert their nginx blocks and the `edge-web` mount
-into this stack's files; since 2026-10-06 they only check and stop if one is
-missing. `edge/nginx.conf` and `docker-compose.yml` are released from here.
+**The website no longer writes our files.** Three of its scripts —
+`deploy-console.sh`, `deploy-site.sh` and `ops/server/edge-gzip.sh` — used to
+insert their nginx blocks, the custom 404, the gzip directives and the
+`edge-web` mount into this stack's files. Since 2026-10-06 (website `d7f4374`,
+`4fb9c7e`) they only check, and stop naming the file if something is missing.
+`edge/nginx.conf` and `docker-compose.yml` are released from here, by
+`ops/deploy.sh`. On the server those scripts change at the website's next
+release; until then they take their "already present" path.
 
 ## Layout
 
