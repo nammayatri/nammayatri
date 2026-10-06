@@ -376,11 +376,13 @@ buildTripQuoteDetail ::
   Maybe HighPrecMoney -> -- bufferedFare, from this estimate/quote's FareParameters
   m TripQuoteDetail
 buildTripQuoteDetail searchReq tripCategory vehicleServiceTier mbVehicleServiceTierName baseFare isDashboardRequest mbDriverMinFee mbDriverMaxFee mbStepFee mbDefaultStepFee mDriverPickUpCharge mbDriverParkingCharge estimateOrQuoteId conditionalCharges eligibleForUpgrade congestionCharges petCharges priorityCharges commissionCharges mbTollCharges govtCharges mbDriverCancellationNotAllowed bufferedFare = do
+  mbVehicleServiceTierItem <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
+  let vehicleCategory = mbVehicleServiceTierItem >>= (.vehicleCategory)
   vehicleServiceTierName <-
     case mbVehicleServiceTierName of
       Just name -> return name
       _ -> do
-        item <- CQDVST.findByServiceTierTypeAndCityIdInRideFlow vehicleServiceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
+        item <- mbVehicleServiceTierItem & fromMaybeM (VehicleServiceTierNotFound $ show vehicleServiceTier)
         return item.name
   (driverParkingCharge, tollCharges, driverPickUpCharge, driverMinFee, driverMaxFee, driverStepFee, driverDefaultStepFee, driverCancellationNotAllowed) <-
     case (mbDriverParkingCharge, mbTollCharges, mDriverPickUpCharge, mbDriverMinFee, mbDriverMaxFee, mbStepFee, mbDefaultStepFee) of

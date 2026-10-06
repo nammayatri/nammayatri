@@ -431,7 +431,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             batchingMode = searchTry.batchingMode,
             requestId = searchReq.id,
             searchTryId = searchTry.id,
-            vehicleCategory = searchTry.vehicleCategory,
+            vehicleCategory = tripQuoteDetail.vehicleCategory,
             estimateId = Just tripQuoteDetail.estimateOrQuoteId,
             startTime = searchTry.startTime,
             merchantId = Just searchReq.providerId,

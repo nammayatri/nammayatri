@@ -36,6 +36,7 @@ import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
@@ -456,6 +457,7 @@ data TripQuoteDetail = TripQuoteDetail
   { tripCategory :: DTC.TripCategory,
     vehicleServiceTier :: DVST.ServiceTierType,
     vehicleServiceTierName :: Text,
+    vehicleCategory :: Maybe DVC.VehicleCategory,
     baseFare :: HighPrecMoney,
     tollCharges :: Maybe HighPrecMoney,
     driverMinFee :: Maybe HighPrecMoney,
