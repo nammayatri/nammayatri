@@ -3,13 +3,16 @@
 #
 #   ./setup.sh          full setup (fetch tree, build, start, seed, verify)
 #   ./setup.sh verify   just re-run the API checks against a running stack
+#   ./setup.sh price    sign in and ask for a priced ride (the CI's question)
 #   ./setup.sh algeria  re-apply the Algeria service areas, then verify
 #   ./setup.sh down     stop everything (keeps the database volume)
 #   ./setup.sh clean    stop everything and delete the database volume
 #
-# SKIP_OSRM=1 brings the stack up without the routing graph or the tiles --
-# fixture distances from mock-google, everything else real. That is what the
-# `algeria: ride regression` workflow runs on a throwaway machine.
+# SKIP_OSRM=1 brings the stack up without the routing graph or the tiles. It
+# CANNOT price a ride: the mock-google in our image has no /directions/json, so
+# every search fails with no searchId -- the price check is skipped, loudly.
+# (Until 2026-10-06 the ride regression ran this way and was red on every run
+# for that reason; it now builds a small Algiers graph instead.)
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -334,9 +337,15 @@ start_maps() {
   # a search still goes rider -> gateway -> registry -> driver-app and comes
   # back with a price. That chain is what a regression test is for; the fixture
   # distance behind it is the one thing OSRM would make real.
+  #
+  # WRONG, measured 2026-10-06: the paragraph above is the theory the CI job
+  # ran on for 19 red runs. The mock-google in the image (upstream 03a7531)
+  # has no /directions/json -- it answers 404 and the rider fails the search
+  # with E500 GOOGLE_MAPS_API_ERROR. Without OSRM nothing can be priced, so
+  # verify_connector is skipped under SKIP_OSRM=1 rather than failing.
   if [ "${SKIP_OSRM:-0}" = "1" ]; then
     docker compose up -d mock-google maps-shim
-    ok "mock-google, maps-shim (SKIP_OSRM=1: no routing graph, no tiles)"
+    ok "mock-google, maps-shim (SKIP_OSRM=1: no routing graph, no tiles, NO PRICES)"
     return
   fi
 
@@ -480,6 +489,10 @@ place_drivers_in_algiers() {
 # this was being built, and all but the first are invisible from the passenger
 # side: you get a route and no price, whichever link is broken.
 verify_connector() {
+  if [ "${SKIP_OSRM:-0}" = "1" ]; then
+    printf '\n\033[1;33m    ride search NOT checked: SKIP_OSRM=1 means no routes, so no price\033[0m\n'
+    return
+  fi
   log "Verifying the BAP <-> BPP chain (search must come back with a price)"
   local base="http://localhost:8014" auth authid token sid res n
 
@@ -713,6 +726,7 @@ case "${1:-up}" in
   down)   docker compose down; exit 0 ;;
   clean)  docker compose down -v; rm -rf "$TREE_DIR"; exit 0 ;;
   verify) verify; exit 0 ;;
+  price)  verify_connector; exit 0 ;;
   algeria) seed_algeria; verify; exit 0 ;;
   # Refresh the test drivers' positions. Needed before any demo: their locations
   # go stale on their own and the pool then finds nobody, which shows up as a

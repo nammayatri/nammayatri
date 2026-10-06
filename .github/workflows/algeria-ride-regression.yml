@@ -18,28 +18,37 @@
 # first are invisible from the passenger side: you get a route and no price,
 # whichever one it is.
 #
+# ── Routing: real, on a small map ───────────────────────────────────────────
+# A price needs a route, and a route needs OSRM. From 2026-09-20 to 2026-10-06
+# this job ran WITHOUT it (SKIP_OSRM=1), on the theory that mock-google would
+# stand in. It cannot: the mock in the image we run (upstream 03a7531) has no
+# /directions/json at all, answers 404, and the rider turned that into
+# E500 GOOGLE_MAPS_API_ERROR -- so every run, from the first, failed with
+# "ride search returned no searchId" before any price was computed. 19 runs,
+# 19 red, and none of them about the change that triggered it.
+#
+# So the job now routes exactly like the server (rider -> maps-shim -> OSRM),
+# on Algiers only: the country extract is downloaded once a week, cut down to
+# the city with osmium, and cached. Preprocessing the city takes seconds.
+#
 # ── What it does NOT do ─────────────────────────────────────────────────────
-# No OSRM and no tiles (SKIP_OSRM=1): preparing the routing graph is a 285 MB
-# download and minutes of preprocessing for a machine that is deleted
-# afterwards, and it would make distances real without making the chain any
-# more tested. No secrets, no VPS, nothing published. A green run means the
-# stack still works when built from this repository; it says nothing about what
-# is deployed.
+# No tiles, no secrets, no VPS, nothing published. One merchant (the upstream
+# seed, given Algeria's coverage and tariff), not the server's two. A green run
+# means the stack still prices a ride when built from this repository; it says
+# nothing about what is deployed -- that is ops/deploy.sh status and
+# ops/checks/probe-two-country-rides.py.
 name: "algeria: ride regression"
 
 on:
-  # The things that can break a ride without touching a line of Haskell.
+  # Every push to our branches. It used to be a list of paths, and four days
+  # of commits went by with the job never running; a ride can break from
+  # anywhere in this tree, and a red tick that comes the same day is the point.
   push:
     branches: ['algeria/**']
-    paths:
-      - 'Backend/dev/local-stack/stack/setup.sh'
-      - 'Backend/dev/local-stack/stack/docker-compose.yml'
-      - 'Backend/dev/local-stack/stack/db/*.sql'
-      - 'Backend/dev/local-stack/stack/Dockerfile.*'
-      - 'Backend/dev/local-stack/stack/maps-shim/**'
-      - '.github/workflows/algeria-ride-regression.yml'
-  # Once a week, so a change to the published image or an upstream fetch that
-  # rots is found on a Monday rather than on a demo day.
+  # Weekly, for a change to the published image or an upstream fetch that rots.
+  # NOTE: GitHub only runs a schedule from the DEFAULT branch, which is `main`
+  # (upstream's), and this file is not there -- so until the default branch is
+  # ours, this line does nothing. Pushes and the button below are what run it.
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -76,10 +85,47 @@ jobs:
           docker tag "ghcr.io/$owner/ny-backend:latest" ny-rider:patched
           docker run --rm --entrypoint ls ny-rider:patched -1 /opt/app | head -20
 
-      - name: Bring the stack up and verify it
+      # The ISO week: the map is fetched again at most once a week.
+      - name: Which week
+        id: week
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: The Algiers map, from the cache
+        id: map
+        uses: actions/cache@v4
+        with:
+          path: ~/osm/algiers.osm.pbf
+          key: osm-algiers-v1-${{ steps.week.outputs.week }}
+
+      # Algiers and its edges: both ends of the test ride (centre -> Bab
+      # Ezzouar) and the test drivers, with room to spare.
+      - name: Cut the Algiers map out of the country (cache miss only)
+        if: steps.map.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p ~/osm && cd ~/osm
+          sudo apt-get install -y -qq osmium-tool >/dev/null
+          curl -fsSL --retry 5 --retry-delay 10 -o algeria.osm.pbf \
+            https://download.geofabrik.de/africa/algeria-latest.osm.pbf
+          osmium extract --bbox 2.85,36.60,3.35,36.85 --overwrite \
+            -o algiers.osm.pbf algeria.osm.pbf
+          rm -f algeria.osm.pbf
+          ls -lh algiers.osm.pbf
+
+      # osrm-prepare.sh skips the download when the extract is already in the
+      # volume, and the name is the one compose and setup.sh expect.
+      - name: Build the routing graph
+        working-directory: Backend/dev/local-stack/stack
+        run: |
+          set -euo pipefail
+          docker volume create ny-osrm-data >/dev/null
+          docker run --rm -v ny-osrm-data:/data -v ~/osm:/src:ro alpine:latest \
+            cp /src/algiers.osm.pbf /data/algeria-latest.osm.pbf
+          bash osrm-prepare.sh
+
+      - name: Bring the stack up, and ask for a price
         working-directory: Backend/dev/local-stack/stack
         env:
-          SKIP_OSRM: '1'
           # Published on the runner's loopback only; nothing here is reachable
           # from outside the job in any case.
           BIND_ADDR: '127.0.0.1'
@@ -90,12 +136,10 @@ jobs:
       # catch, so it must not be the job's own fault.
       - name: Freshen the driver positions and ask again
         working-directory: Backend/dev/local-stack/stack
-        env:
-          SKIP_OSRM: '1'
         run: |
           set -euo pipefail
           bash setup.sh drivers
-          bash setup.sh verify
+          bash setup.sh price
 
       - name: What was running, and what it said
         if: ${{ always() }}
@@ -103,7 +147,7 @@ jobs:
         run: |
           docker compose ps
           mkdir -p /tmp/logs
-          for c in ny-rider ny-driver ny-beckn-gateway ny-mock-registry ny-mock-google ny-maps-shim ny-postgres; do
+          for c in ny-rider ny-driver ny-beckn-gateway ny-mock-registry ny-mock-google ny-maps-shim ny-osrm ny-postgres; do
             docker logs --tail 400 "$c" > "/tmp/logs/$c.log" 2>&1 || true
           done
           tail -n 25 /tmp/logs/ny-driver.log || true
