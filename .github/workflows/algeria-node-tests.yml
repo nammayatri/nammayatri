@@ -3,34 +3,32 @@
 # ── What this covers, and why it is worth a workflow ────────────────────────
 # `auth-guard` and `maps-shim` are where this deployment's own rules live: who
 # may sign in, which country is open, who pays before working, and what a phone
-# is actually told when a ride changes. They are deployed by copying a file and
-# restarting a container — seconds, with no build — which is exactly why they
-# need a test that runs without one.
+# is actually told when a ride changes. A release restarts them in seconds,
+# with no build -- which is exactly why they need a test that runs without one.
 #
-# Both tests are self-contained: they start the real module against a fake
-# Firebase, a fake APNs and a fake backend on loopback. No key, no secret, no
-# network, and nothing on the VPS is touched.
+# Every test in tests/ runs, through tests/run-all.sh, which globs: until
+# phase 5 (2026-10-06) this file named four tests and seven others never ran
+# here. The money path -- wallet.js, restricted.js, deletion.js and the guard's
+# WALLET_EMPTY gate -- runs its SQL against a real Postgres (PGlite, in-process;
+# no service container). Fakes on loopback stand in for Firebase, APNs, the
+# gateways, Redis and the Haskell apps. No key, no secret, nothing on the VPS.
+#
+# Twice: on Node 20, what the server runs today, and on Node 22, what it moves
+# to in phase 5 -- so the move is proven before it is made.
 #
 # ── What it does NOT do ─────────────────────────────────────────────────────
 # It does not build the Haskell backend (that is `algeria: build backend`, 44
 # minutes and its own trigger), and it does not deploy anything. A green tick
-# here means the guard and the relay still behave as written, not that the
-# server is running them.
+# here means the guard and the shim still behave as written, not that the
+# server is running them -- `ops/deploy.sh verify` answers that.
 name: "algeria: node tests"
 
 on:
+  # Every push to our branches, as the ride regression does since phase 4: a
+  # path list is how tests stop running without anyone noticing.
   push:
     branches: ['algeria/**']
-    paths:
-      - 'Backend/dev/local-stack/stack/auth-guard/**'
-      - 'Backend/dev/local-stack/stack/maps-shim/**'
-      - 'Backend/dev/local-stack/tests/**'
-      - '.github/workflows/algeria-node-tests.yml'
   pull_request:
-    paths:
-      - 'Backend/dev/local-stack/stack/auth-guard/**'
-      - 'Backend/dev/local-stack/stack/maps-shim/**'
-      - 'Backend/dev/local-stack/tests/**'
   workflow_dispatch:
 
 concurrency:
@@ -39,12 +37,20 @@ concurrency:
 
 jobs:
   tests:
-    name: auth-guard and maps-shim
+    name: every test, node ${{ matrix.node }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
     steps:
       - uses: actions/checkout@v4
         with:
+          # The release rehearsal rebuilds the server's old layout from commit
+          # c6562a1926, so it needs history; blob:none keeps that cheap.
+          fetch-depth: 0
+          filter: blob:none
           sparse-checkout: |
             Backend/dev/local-stack
             .github
@@ -52,44 +58,28 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # The container runs node:20-alpine. Testing on another major would
-          # prove the tests pass somewhere the code does not run.
-          node-version: 20
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: Backend/dev/local-stack/tests/package-lock.json
 
       - name: Syntax
         working-directory: Backend/dev/local-stack
         run: |
-          node --check stack/auth-guard/server.js
-          for f in stack/maps-shim/*.js; do node --check "$f"; done
+          for f in stack/auth-guard/*.js stack/maps-shim/*.js; do node --check "$f"; done
           echo "every file parses"
 
-      # Starts the guard five times over, against a fake backend, and checks
-      # who may sign in: a new driver, an enrolled one, a closed country, a
-      # wrong code, and the same again with DRIVER_SIGNUP=closed.
-      - name: auth-guard
-        working-directory: Backend/dev/local-stack
-        run: node tests/auth-guard-signup.test.js
+      # The shims' own lockfiles must install as the image does.
+      - name: maps-shim installs from its lockfile
+        working-directory: Backend/dev/local-stack/stack/maps-shim
+        run: |
+          npm ci --omit=dev --no-fund --no-audit --loglevel=error
+          node -e "require('pg'); console.log('pg loads')"
+          rm -rf node_modules
 
-      # The money path. A fake Moorsyl counts what it is asked to send, so this
-      # proves the global budget actually stops texts going out and that one
-      # host rotating phone numbers is capped -- the two controls added on
-      # 2026-09-23 after an audit found nothing bounded the SMS bill.
-      - name: auth-guard limits
-        working-directory: Backend/dev/local-stack
-        run: node tests/auth-guard-limits.test.js
+      - name: Test dependencies (PGlite)
+        working-directory: Backend/dev/local-stack/tests
+        run: npm ci --no-fund --no-audit --loglevel=error
 
-      # The bot. psql, Telegram and the host are all stubbed, so this needs no
-      # database and no network: it proves an alert is sent once, can fire
-      # again after its cause clears, and -- the one that matters -- that a
-      # database which does not answer is never reported as an outage.
-      - name: movin bot
+      - name: Every test
         working-directory: Backend/dev/local-stack
-        run: python3 tests/movin-bot.test.py
-
-      # Fake Firebase and a fake APNs on http2 with a self-signed certificate:
-      # proves an Android token is forwarded byte for byte, an iPhone token is
-      # sent to Apple in the app's own words, and Apple's refusal is reported
-      # rather than swallowed.
-      - name: maps-shim push relay
-        working-directory: Backend/dev/local-stack
-        run: node tests/push-relay.test.js
+        run: bash tests/run-all.sh

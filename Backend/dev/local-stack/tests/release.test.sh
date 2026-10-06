@@ -63,12 +63,21 @@ echo '{"commit": "test0000000000", "branch": "test", "subject": "rehearsal", "by
 
 echo "== 1. the plan"
 PLAN="$($R plan "$T/rel" 2>&1)"
-# Only maps-shim's packaging (phase 5) may move anything: its image installs
-# the lockfile, so that is a rebuild. The guard's package.json is never read,
-# and restarting the guard for it would drop every sign-in in flight.
-echo "$PLAN" | grep -E "restart |reload |compose up|rebuild " | grep -vq "rebuild maps-shim" \
-  && fail "the plan restarts something else" || pass "nothing restarts but the maps-shim rebuild its lockfile needs"
-echo "$PLAN" | grep -q "restart ny-auth-guard" && fail "the guard restarts for a package.json" || pass "the guard is not restarted"
+# What may move depends on what differs between the old layout and this tree,
+# so it is worked out here rather than written down: nginx and compose only if
+# their files changed, and the guard only if a file it RUNS changed -- never
+# for its package.json, which it does not read (a restart drops every sign-in
+# in flight). maps-shim's package files mean a rebuild (phase 5).
+differs() { ! cmp -s "$T/old/$LS/$1" "$T/rel/stack/$1" 2>/dev/null; }
+guard_code=0
+for f in $(cd "$T/rel/stack" && ls auth-guard/*.js); do differs "$f" && guard_code=1; done
+if differs edge/nginx.conf || differs edge/proxy-common.inc; then want_edge=1; else want_edge=0; fi
+if differs docker-compose.yml; then want_compose=1; else want_compose=0; fi
+got() { echo "$PLAN" | grep -q "$1" && echo 1 || echo 0; }
+[ "$(got 'restart ny-auth-guard')" = "$guard_code" ] && pass "the guard restarts only if its code changed (code changed: $guard_code)" || fail "guard restart wrong"
+[ "$(got 'reload ny-edge')" = "$want_edge" ] && pass "nginx reloads only if its config changed ($want_edge)" || fail "edge reload wrong"
+[ "$(got 'compose up')" = "$want_compose" ] && pass "compose only if docker-compose.yml changed ($want_compose)" || fail "compose wrong"
+echo "$PLAN" | grep -q "rebuild maps-shim" && pass "maps-shim's lockfile means a rebuild" || fail "no rebuild for the lockfile"
 echo "$PLAN" | grep -q "install systemd units" && pass "the backup units are installed" || fail "units not in the plan"
 echo "$PLAN" | grep -q "no SQL to apply" && pass "no SQL applied (it only moved)" || fail "the plan applies SQL"
 echo "$PLAN" | grep -q "new      db/algeria-tariff.sql" && pass "db/ arrives" || fail "db/ not in the plan"
