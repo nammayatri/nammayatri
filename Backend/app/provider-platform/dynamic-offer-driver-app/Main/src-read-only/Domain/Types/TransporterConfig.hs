@@ -138,6 +138,7 @@ data TransporterConfig = TransporterConfig
     distanceWeightage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dontAutoEnableDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    downwardRecomputeDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     dpBlackListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     dpGeoHashPercision :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dpWhiteListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

@@ -807,10 +807,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       -- Fare can go up but never below the estimate: charge at least the estimated distance and duration
-      let (chargeableDistance, chargeableDuration) =
-            if farePolicy.disableDownwardRecompute == Just True
-              then (max recalcDistance oldDistance, (max <$> finalDuration <*> booking.estimatedDuration) <|> finalDuration)
-              else (recalcDistance, finalDuration)
+      let (chargeableDistance, chargeableDuration) = getChargeableDistanceAndDuration farePolicy.disableDownwardRecompute thresholdConfig booking.estimatedDuration oldDistance recalcDistance finalDuration
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
       mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
       -- Recompute congestion charge at end ride if config enabled. A ride whose
@@ -975,6 +972,17 @@ getDistanceDiff booking distance = do
 isDownwardRecomputeEnabledForRide :: SRB.Booking -> DTConf.TransporterConfig -> Bool
 isDownwardRecomputeEnabledForRide booking thresholdConfig =
   booking.tripCategory `notElem` tripCategoriesForNoRecalc || fromMaybe True thresholdConfig.enableDownwardRecomputeForDifferentDestination
+
+getChargeableDistanceAndDuration :: Maybe Bool -> DTConf.TransporterConfig -> Maybe Seconds -> Meters -> Meters -> Maybe Seconds -> (Meters, Maybe Seconds)
+getChargeableDistanceAndDuration disableDownwardRecompute thresholdConfig estimatedDuration estimatedDistance recalcDistance finalDuration
+  | disableDownwardRecompute == Just True = (max recalcDistance estimatedDistance, flooredDuration)
+  | downwardRecomputeTolerance = (estimatedDistance, flooredDuration)
+  | otherwise = (recalcDistance, finalDuration)
+  where
+    flooredDuration = (max <$> finalDuration <*> estimatedDuration) <|> finalDuration
+    downwardRecomputeTolerance =
+      recalcDistance < estimatedDistance
+        && metersToHighPrecMeters (estimatedDistance - recalcDistance) < fromMaybe 0 thresholdConfig.downwardRecomputeDistanceThreshold
 
 calculateFinalValuesForCorrectDistanceCalculations ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)

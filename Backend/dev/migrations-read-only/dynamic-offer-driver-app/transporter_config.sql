@@ -1230,3 +1230,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_rides_min_idle_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN downward_recompute_distance_threshold double precision ;
