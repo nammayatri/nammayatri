@@ -33,6 +33,19 @@ types:
     redemptionTargetUrl: Maybe Text
     couponValidTill: Maybe UTCTime
 
+  LiveRewardCard:
+    header: Maybe Text
+    title: Text
+    subtitle: Maybe Text
+    subtitleInfo: Maybe Text
+    image: Maybe Text
+    lottie: Maybe Text
+    textColor: Maybe Text
+    bgGradientColors: Maybe [Text]
+
+  LiveRewardCardResp:
+    card: Maybe LiveRewardCard
+
 apis:
   - GET:
       endpoint: /rewards
@@ -55,3 +68,10 @@ apis:
         unlockId: Id RewardUnlock
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /rewards/live
+      name: getLiveReward
+      auth: TokenAuth
+      response:
+        type: LiveRewardCardResp

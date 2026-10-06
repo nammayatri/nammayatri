@@ -21,6 +21,23 @@ data ClaimCouponResp = ClaimCouponResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data LiveRewardCard = LiveRewardCard
+  { bgGradientColors :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    header :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    image :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lottie :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    subtitle :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    subtitleInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    textColor :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LiveRewardCardResp = LiveRewardCardResp {card :: Kernel.Prelude.Maybe LiveRewardCard}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RewardUnlockSummary = RewardUnlockSummary
   { campaignName :: Kernel.Prelude.Text,
     claimedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
