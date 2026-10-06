@@ -1255,6 +1255,7 @@ TransporterConfig:
     actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
     enableDownwardRecomputeForDifferentDestination: Maybe Bool
+    downwardRecomputeDistanceThreshold: Maybe HighPrecMeters
     upwardsRecomputeBuffer: HighPrecMeters
     upwardsRecomputeBufferPercentage: Maybe Int
     approxRideDistanceDiffThreshold: HighPrecMeters
@@ -1906,6 +1907,7 @@ TransporterConfig:
     availabilityTimeWeightage: int
     actualRideDistanceDiffThreshold: double precision
     upwardsRecomputeBuffer: double precision
+    downwardRecomputeDistanceThreshold: double precision
     approxRideDistanceDiffThreshold: double precision
     minLocationAccuracy: double precision
     driverPaymentCycleDuration: int
