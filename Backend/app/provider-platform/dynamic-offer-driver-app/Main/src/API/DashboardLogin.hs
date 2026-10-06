@@ -28,14 +28,23 @@ module API.DashboardLogin
   )
 where
 
+import qualified "lib-dashboard" API.Dashboard.MerchantCityList as MerchantCityList
 import qualified "lib-dashboard" API.DashboardLogin as DashboardLogin
+import qualified "lib-dashboard" Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
 import Environment
 import Servant
 -- Schema resolution for the dashboard tables. Orphan instances, defined once in
 -- lib-dashboard; needed here because this is where the handlers are used.
 import "lib-dashboard" Storage.Beam.SchemaInstances ()
+import "lib-dashboard" Tools.Auth.DashboardLoginFlow (withDashboardDbFlowHandlerAPI)
 
-type API = "direct-dashboard" :> DashboardLogin.API
+type API =
+  "direct-dashboard"
+    :> ( DashboardLogin.API
+           :<|> MerchantCityList.API
+       )
 
 handler :: FlowServer API
-handler = DashboardLogin.handler
+handler =
+  DashboardLogin.handler
+    :<|> withDashboardDbFlowHandlerAPI DAccessMatrix.getMerchantWithCityList
