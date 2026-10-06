@@ -59,7 +59,14 @@ UNITS = os.environ.get('MOVIN_UNITS', '/etc/systemd/system')
 # What a change under each path means for the running stack. The first match wins.
 ACTIONS = [
     ('systemd/', 'install systemd units'),
+    # The guard has no dependency and never reads these: a restart for them
+    # would only drop every sign-in code waiting in its memory.
+    ('auth-guard/package.json', 'nothing'),
+    ('auth-guard/package-lock.json', 'nothing'),
     ('auth-guard/', 'restart ny-auth-guard'),
+    # The image installs these two; a restart alone would keep the old tree.
+    ('maps-shim/package.json', 'rebuild maps-shim'),
+    ('maps-shim/package-lock.json', 'rebuild maps-shim'),
     ('maps-shim/', 'restart ny-maps-shim'),
     ('Dockerfile.maps-shim', 'rebuild maps-shim'),
     ('edge/nginx.conf', 'reload ny-edge'),
@@ -201,7 +208,7 @@ def make_plan(rel_dir, force):
     plan['sql'] = [r for r in plan['new'] + plan['changed']
                    if r.startswith('db/') and r.endswith('.sql') and new[r][0] not in old_contents]
     plan['actions'] = sorted({a for r in plan['new'] + plan['changed'] + plan['remove']
-                              if (a := action_for(r))})
+                              if (a := action_for(r)) and a != 'nothing'})
     plan['manifest'] = new
     plan['force'] = force
     return plan
