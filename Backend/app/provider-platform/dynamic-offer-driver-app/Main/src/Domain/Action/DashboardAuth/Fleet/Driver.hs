@@ -161,9 +161,19 @@ getDriverFleetDriverListStats a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = d
   Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDriverListStats a14 a13 requestorId a11 a10 mbFleetOwnerId a8 a7 a6 a5 a4 a3 a2 a1
 
 getDriverFleetDriverAssociation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Driver.DriverMode) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.DocsVerificationStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationResT)
-getDriverFleetDriverAssociation a25 a24 a23 a22 a21 a20 a19 a18 a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
+getDriverFleetDriverAssociation a25 a24 a23 a22 a21 a20 a19 a18 a17 a16 a15 a14 a13 a12 a11 _a10 _a9 _a8 a7 a6 a5 a4 a3 a2 a1 = do
   Tools.Auth.DashboardUserAuth.checkFleetOwnerVerification a23
-  Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDriverAssociation a25 a24 a22 a21 a20 a19 a18 a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+  -- The requestor, their merchant's fleet-member hierarchy and whether their role
+  -- is a fleet owner's come from the dashboard session, never from the query
+  -- string: provider-dashboard resolved them before forwarding, and the domain
+  -- handler scopes the driver list to the requestor's own fleet only when
+  -- @isRequestorFleerOwner@ is set. Forwarding the caller's values left them
+  -- unset, which drops the fleet-owner predicate and lists every driver of the
+  -- merchant's city, and skips @checkRequestorAccessToFleet@ for an operator.
+  let requestorId = Tools.Auth.DashboardUserAuth.dashboardRequestorId a23
+      isRequestorFleetOwner = Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a23
+      hasFleetMemberHierarchy = Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a23
+  Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDriverAssociation a25 a24 a22 a21 a20 a19 a18 a17 a16 a15 a14 a13 a12 a11 (Kernel.Prelude.Just requestorId) hasFleetMemberHierarchy (Kernel.Prelude.Just isRequestorFleetOwner) a7 a6 a5 a4 a3 a2 a1
 
 getDriverFleetVehicleAssociation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Driver.FleetVehicleStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.DocsVerificationStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationResT)
 getDriverFleetVehicleAssociation a19 a18 a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
