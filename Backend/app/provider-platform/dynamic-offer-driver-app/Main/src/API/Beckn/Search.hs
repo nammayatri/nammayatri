@@ -97,7 +97,7 @@ search ::
   SignatureAuthResult ->
   Search.SearchReqV2 ->
   FlowHandler AckResponse
-search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
+search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel logLevelKey $ do
     bapUri <- Utils.getContextBapUri reqV2.searchReqContext
     redirectMap <- asks (.bapHostRedirectMap)

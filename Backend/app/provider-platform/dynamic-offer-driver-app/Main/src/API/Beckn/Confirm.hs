@@ -71,7 +71,7 @@ confirm ::
   SignatureAuthResult ->
   Confirm.ConfirmReqV2 ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.confirmReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

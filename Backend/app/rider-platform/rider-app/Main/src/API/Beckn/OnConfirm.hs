@@ -50,7 +50,7 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReqV2 ->
   FlowHandler AckResponse
-onConfirm _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+onConfirm authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onConfirmReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

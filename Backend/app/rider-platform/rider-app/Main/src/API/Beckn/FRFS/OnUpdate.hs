@@ -41,7 +41,7 @@ onUpdate ::
   SignatureAuthResult ->
   Spec.OnUpdateReq ->
   FlowHandler Spec.AckResponse
-onUpdate mbMerchantId authResult req = withFlowHandlerAPI $ do
+onUpdate mbMerchantId authResult req = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   mbForwarded <- Forwarding.maybeForwardOnUpdate mbMerchantId authResult req
   case mbForwarded of
     Just ack -> pure ack

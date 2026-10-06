@@ -47,7 +47,7 @@ update ::
   SignatureAuthResult ->
   Update.UpdateReqV2 ->
   FlowHandler AckResponse
-update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+update merchantId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId req.updateReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

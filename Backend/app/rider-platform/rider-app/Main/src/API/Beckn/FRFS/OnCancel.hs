@@ -44,7 +44,7 @@ onCancel ::
   SignatureAuthResult ->
   Spec.OnCancelReq ->
   FlowHandler Spec.AckResponse
-onCancel mbMerchantId authResult req = withFlowHandlerAPI $ do
+onCancel mbMerchantId authResult req = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   mbForwarded <- Forwarding.maybeForwardOnCancel mbMerchantId authResult req
   case mbForwarded of
     Just ack -> pure ack

@@ -45,7 +45,7 @@ onSelect ::
   SignatureAuthResult ->
   OnSelect.OnSelectReqV2 ->
   FlowHandler AckResponse
-onSelect _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+onSelect authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onSelectReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
