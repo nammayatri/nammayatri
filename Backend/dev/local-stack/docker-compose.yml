@@ -1,25 +1,26 @@
 # Self-hosted Namma Yatri rider backend (2023 baseline).
 #
-# ── NEVER scp THIS FILE OVER THE DEPLOYED ONE ───────────────────────────────
+# ── This file and the deployed one: what they share, and what they do not ──
 #
-# The copy running at /opt/ny/local-stack/docker-compose.yml is a SUPERSET of
-# this one. It also carries the website's `admin-api` service and an `edge-web`
-# mount on `edge`, neither of which is in this repository -- they belong to the
-# movin-website repo and are added to the deployed file directly, because a
-# service compose does not know about is a service it deletes.
+# Since 2026-10-06 (phase 1 of the backend restructuring) this file carries
+# everything the deployed /opt/ny/local-stack/docker-compose.yml does that
+# matters: the last missing piece, the `edge-web` mount on `edge`, came in
+# then. What the deployed copy still has in addition is comments that are out
+# of date and one redundant `movin-driver-docs:` volume line -- both go with
+# the first release made by the deploy command (phase 3).
 #
-# Copying this file wholesale therefore removes the website's API from the
-# stack's definition. Done on 2026-09-06, and the only reason nothing broke is
-# that the container was never restarted: `docker compose up -d auth-guard`
-# printed
+# The website's `admin-api` is NOT in either file any more. Since 2026-09-23
+# it is an OVERLAY, owned by the website repo: ops/deploy/compose.admin.yml,
+# which also declares the `movin-driver-docs` volume it mounts. The stack's
+# .env names both files in COMPOSE_FILE, so every `docker compose` run in that
+# directory reads both. A command that names only this file (`-f
+# docker-compose.yml`) does not know admin-api, and with `--remove-orphans` it
+# would delete it -- so never pass either.
 #
-#     Found orphan containers (movin-admin-api) for this project
-#
-# and "orphan" is compose saying it no longer knows what that container is for.
-# One `--remove-orphans` after that and the website API is gone.
-#
-# So: change the deployed file IN PLACE, or re-add the missing blocks after
-# copying. Read that warning line if it ever appears -- it is not noise.
+# Until phase 3 gives this stack a deploy command, change the deployed file
+# in place, with an asserted one-match edit, and never copy this one over it
+# by hand: it is how nginx.conf took document uploads down for 33 minutes on
+# 2026-09-23.
 #
 # Networking note: the dhall configs hardcode `localhost` for Postgres, Redis,
 # Kafka and passetto (only the *ports* are env-overridable). Rather than patch
@@ -574,6 +575,12 @@ services:
       - ./edge/proxy-common.inc:/etc/nginx/conf.d/proxy-common.inc:ro
       - ./edge-certs:/etc/letsencrypt:ro
       - ./edge-webroot:/var/www/certbot:ro
+      # The website and the console: nginx serves /var/www/edge-web/site and
+      # /var/www/edge-web/admin (edge/nginx.conf). The files are the website
+      # repo's build, put there by its `ship.sh --release`; the MOUNT is ours.
+      # It lived only in the deployed copy until 2026-10-06 -- deploying this
+      # file without it would have taken the site and the console down.
+      - ./edge-web:/var/www/edge-web:ro
     depends_on:
       - auth-guard
     restart: unless-stopped
