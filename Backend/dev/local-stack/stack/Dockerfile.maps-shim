@@ -11,7 +11,11 @@
 # the exact tree, every transitive version pinned (phase 5, 2026-10-06). The
 # lockfile was taken from the image that ran until then, so the first build
 # from it installs the same 13 packages, byte for byte the same versions.
-FROM node:20-alpine
+#
+# Node 22 since phase 5 (2026-10-06): Node 20 reached end of life in April
+# 2026. CI runs every test on both before the switch. The image that ran
+# before each rebuild is kept as ny-maps-shim:previous (ops/release-remote.py).
+FROM node:22-alpine
 
 COPY maps-shim/package.json maps-shim/package-lock.json /opt/shim/
 RUN cd /opt/shim \

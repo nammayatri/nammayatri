@@ -441,7 +441,9 @@ services:
   # this stack runs prebuilt binaries from a CI job with a 350-minute budget,
   # and rebuilding to change a counter is not a proportionate risk.
   auth-guard:
-    image: node:20-alpine
+    # Node 22 since phase 5 (2026-10-06); a release keeps the image it replaces
+    # as ny-auth-guard:previous. No dependency, so no image of its own.
+    image: node:22-alpine
     container_name: ny-auth-guard
     network_mode: host
     working_dir: /app
