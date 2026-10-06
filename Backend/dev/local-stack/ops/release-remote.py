@@ -209,6 +209,10 @@ def make_plan(rel_dir, force):
                    if r.startswith('db/') and r.endswith('.sql') and new[r][0] not in old_contents]
     plan['actions'] = sorted({a for r in plan['new'] + plan['changed'] + plan['remove']
                               if (a := action_for(r)) and a != 'nothing'})
+    # A rebuild recreates the container; restarting it as well is a second
+    # interruption for nothing.
+    if 'rebuild maps-shim' in plan['actions'] and 'restart ny-maps-shim' in plan['actions']:
+        plan['actions'].remove('restart ny-maps-shim')
     plan['manifest'] = new
     plan['force'] = force
     return plan
@@ -322,6 +326,23 @@ def restore_units(rec):
        f"; removed: {', '.join(rec.get('units_absent', [])) or 'none'}")
 
 
+def keep_previous_image(container):
+    """Tag the image `container` runs as <container>:previous, before it is replaced.
+
+    By its TAG (`.Config.Image`), never by the id the container reports: this
+    daemon's containerd store answers that id with "No such image" (the
+    website's trap, 23 Sep 2026). One tag per container, moved each release --
+    the instant way back is `docker tag <container>:previous <its image>`."""
+    r = run(f"docker inspect -f '{{{{.Config.Image}}}}' {container}", check=False, quiet=True)
+    image = (r.stdout or '').strip()
+    if not image:
+        return
+    if run(f'docker tag {image} {container}:previous', check=False, quiet=True).returncode == 0:
+        ok(f'{container}: the running image ({image}) kept as {container}:previous')
+    else:
+        warn(f'{container}: could not tag {image} as {container}:previous')
+
+
 def do_actions(actions, before_cfg):
     for a in actions:
         if a == 'reload ny-edge' or a == 'reload ny-map':
@@ -335,12 +356,18 @@ def do_actions(actions, before_cfg):
             run(f'docker restart {c}', quiet=True)
             ok(f'{c} restarted')
         elif a == 'rebuild maps-shim':
+            keep_previous_image('ny-maps-shim')
             run(f'cd {STACK} && docker compose build maps-shim && docker compose up -d --no-deps maps-shim')
             ok('maps-shim rebuilt and recreated')
         elif a == 'compose up changed services':
             after = compose_services()
             changed = sorted(s for s in after if after.get(s) != before_cfg.get(s))
             if changed:
+                for svc in changed:
+                    name = run(f"cd {STACK} && docker compose ps --format '{{{{.Name}}}}' {svc}",
+                               check=False, quiet=True).stdout.strip()
+                    if name:
+                        keep_previous_image(name)
                 run(f"cd {STACK} && docker compose up -d --no-deps {' '.join(changed)}")
                 ok(f"recreated: {', '.join(changed)}")
             else:
