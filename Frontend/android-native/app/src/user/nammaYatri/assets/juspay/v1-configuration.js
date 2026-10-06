@@ -170,23 +170,23 @@ const nammaYatriConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subtitle": "ಆಂಗ್ಲ"
+      "subTitle": "ಆಂಗ್ಲ"
     }, {
       "name": "ಕನ್ನಡ",
       "value": "KN_IN",
-      "subtitle": "Kannada"
+      "subTitle": "Kannada"
     }, {
       "name": "हिंदी",
       "value": "HI_IN",
-      "subtitle": "Hindi"
+      "subTitle": "Hindi"
     }, {
       "name": "தமிழ்",
       "value": "TA_IN",
-      "subtitle": "Tamil"
+      "subTitle": "Tamil"
     }, {
       "name": "తెలుగు",
       "value": "TE_IN",
-      "subtitle": "Telugu"
+      "subTitle": "Telugu"
     }
     ],
     "bannerConfig": {
@@ -549,23 +549,23 @@ const odishaYatriConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subtitle": "ಆಂಗ್ಲ"
+      "subTitle": "ಆಂಗ್ಲ"
     }, {
       "name": "ಕನ್ನಡ",
       "value": "KN_IN",
-      "subtitle": "Kannada"
+      "subTitle": "Kannada"
     }, {
       "name": "हिंदी",
       "value": "HI_IN",
-      "subtitle": "Hindi"
+      "subTitle": "Hindi"
     }, {
       "name": "தமிழ்",
       "value": "TA_IN",
-      "subtitle": "Tamil"
+      "subTitle": "Tamil"
     }, {
       "name": "తెలుగు",
       "value": "TE_IN",
-      "subtitle": "Telugu"
+      "subTitle": "Telugu"
     }
   ],
     "bannerConfig" : {
@@ -921,23 +921,23 @@ const manaYatriConfig = function () {
     "languageList": [{
       "name": "English",
       "value": "EN_US",
-      "subtitle": "ಆಂಗ್ಲ"
+      "subTitle": "ಆಂಗ್ಲ"
     }, {
       "name": "ಕನ್ನಡ",
       "value": "KN_IN",
-      "subtitle": "Kannada"
+      "subTitle": "Kannada"
     }, {
       "name": "हिंदी",
       "value": "HI_IN",
-      "subtitle": "Hindi"
+      "subTitle": "Hindi"
     }, {
       "name": "தமிழ்",
       "value": "TA_IN",
-      "subtitle": "Tamil"
+      "subTitle": "Tamil"
     }, {
       "name": "తెలుగు",
       "value": "TE_IN",
-      "subtitle": "Telugu"
+      "subTitle": "Telugu"
     }
     ],
     "bannerConfig": {

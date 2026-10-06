@@ -5950,6 +5950,7 @@ public class MobilityCommonBridge extends HyperBridge {
             JSONObject shakeListenerConfig = new JSONObject(config);
             sensorManager = (SensorManager) bridgeComponents.getContext().getSystemService(Context.SENSOR_SERVICE);
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
             float shakeAccelerationThreshold = (float) shakeListenerConfig.optDouble("shakeAccelerationThreshold", 5);
             int consecutiveShakeInterval = shakeListenerConfig.optInt("consecutiveShakeInterval", 500);
             int shakeCountResetTime = shakeListenerConfig.optInt("shakeCountResetTime", 3000);
@@ -5962,34 +5963,19 @@ public class MobilityCommonBridge extends HyperBridge {
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             });
-            sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
         } catch (Exception e) {
-            Log.e(LOG_TAG, "Error in initialiseShakeListener : " + e);
+            Log.e(LOG_TAG, e.getMessage());
         }
     }
 
     @JavascriptInterface
     public void unregisterShakeListener() {
-        try {
-            if (sensorManager != null && shakeDetector != null) {
-                sensorManager.unregisterListener(shakeDetector);
-            }
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Error in unregisterShakeListener : " + e);
-        }
+        sensorManager.unregisterListener(shakeDetector);
     }
 
     @JavascriptInterface
     public void registerShakeListener() {
-        try {
-            if (sensorManager != null && shakeDetector != null && accelerometer != null) {
-                sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
-            } else {
-                Log.w(LOG_TAG, "registerShakeListener called before initialiseShakeListener, ignoring");
-            }
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Error in registerShakeListener : " + e);
-        }
+        sensorManager.registerListener(shakeDetector, accelerometer, SensorManager.SENSOR_DELAY_UI);
     }
 
     @JavascriptInterface
