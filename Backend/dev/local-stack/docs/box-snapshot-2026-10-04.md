@@ -101,3 +101,14 @@ refreshed by the first release of the deploy command (phase 3), which by design
 deploys this state and then proves every hash equal — or now, by hand, on the
 owner's word.
 
+**Done by hand, on the owner's word, 2026-10-06.** The six server copies were
+first checked unchanged since they were read that morning, saved root-only to
+`/root/snapshots/2026-10-06-phase1/before.tar`, and replaced in place with
+git's (`cat >`, so permissions and inodes stay; `setup.sh` still executable).
+No container was restarted. The resolved compose configuration hashed
+`94888cfd…` before and after.
+
+**Phase 1 done when — met:** every tracked file hashed against the server:
+**94 deployed, 94 identical, 0 differ**; 44 tracked files are laptop tools and
+documents that are never deployed.
+
