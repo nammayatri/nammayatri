@@ -1215,3 +1215,39 @@ data MerchantCloudUpdateRes = MerchantCloudUpdateRes
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantOperatingCityCloudUpdateReq = MerchantOperatingCityCloudUpdateReq
+  { merchantShortId :: Maybe (Id.ShortId Merchant),
+    city :: Maybe Context.City,
+    cloudType :: Version.CloudType,
+    cloudBaseUrl :: Maybe BaseUrl,
+    password :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantOperatingCityCloudUpdateTReq = MerchantOperatingCityCloudUpdateTReq
+  { merchantShortId :: Maybe (Id.ShortId Merchant),
+    city :: Maybe Context.City,
+    cloudType :: Version.CloudType,
+    cloudBaseUrl :: Maybe BaseUrl
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MerchantOperatingCityCloudUpdateReq where
+  type ReqWithoutSecrets MerchantOperatingCityCloudUpdateReq = MerchantOperatingCityCloudUpdateTReq
+  hideSecrets MerchantOperatingCityCloudUpdateReq {..} = MerchantOperatingCityCloudUpdateTReq {..}
+
+data MerchantOperatingCityCloudUpdateRes = MerchantOperatingCityCloudUpdateRes
+  { merchantId :: Text,
+    merchantShortId :: Text,
+    merchantOperatingCityId :: Text,
+    city :: Context.City,
+    previousCloudType :: Maybe Version.CloudType,
+    previousCloudBaseUrl :: Maybe Text,
+    updatedCloudType :: Version.CloudType,
+    updatedCloudBaseUrl :: Maybe Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
