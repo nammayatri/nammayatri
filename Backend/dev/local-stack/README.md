@@ -3989,13 +3989,13 @@ Three workflows, none of which deploys anything:
 
 | Workflow | What it proves | When |
 |---|---|---|
-| `algeria: node tests` | The guard's sign-in rules and the push relay, each started for real against fakes on loopback — no key, no network, no VPS | On pushes touching `auth-guard/`, `maps-shim/` or `tests/` |
+| `algeria: node tests` | **Every** test in `tests/` (`run-all.sh` globs), on Node 20 and 22: sign-in rules, the push relay, the release rehearsal — and the money path (`wallet`, `restricted`, `deletion`, the guard's `WALLET_EMPTY`) with its SQL run in a real Postgres (PGlite, in-process) | Every push to `algeria/**`, and pull requests |
 | `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner, with real routing on an Algiers map, signs a `+213` number in and answers a ride search **with a price** | Every push to `algeria/**`, and on demand |
 | `algeria: build backend` | The Haskell binaries. 44 minutes; nothing else triggers it | Push to `algeria/build-backend` |
 
 ```bash
-node tests/auth-guard-signup.test.js   # the sign-in rules
-node tests/push-relay.test.js          # FCM forwarded, APNs in the app's words
+(cd tests && npm ci) && bash tests/run-all.sh   # every test, as CI runs them
+node tests/wallet.test.js              # the money path: canWork, top-up, credit, the day
 ./setup.sh price                       # sign in, ask for a priced ride
 ```
 
@@ -4210,6 +4210,10 @@ What it does, and what it will not do:
   git** (`ops/release-verify.py`). The release's own check proves the copy;
   this proves the claim: a `.shipped` naming the wrong commit, or a hand edit
   hidden by rewriting `.shipped.files`, both fail it.
+- Keeps the **image** it replaces (a maps-shim rebuild, a recreated service) as
+  `<container>:previous`, by its tag — `docker tag ny-maps-shim:previous
+  ny-maps-shim:local` and `docker compose up -d --no-deps maps-shim` is the
+  instant way back (since phase 5).
 - Keeps what it replaced or removed in **`/opt/ny/local-stack.prev`** — one
   named directory, instead of `.bak` files beside the live ones.
 

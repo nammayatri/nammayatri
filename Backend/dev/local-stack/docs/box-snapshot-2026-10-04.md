@@ -155,3 +155,33 @@ timer enabled, next run 02:31. Then the outside check — the server's hashes
 against the commit, recomputed from git on the laptop: **all 84 files and both
 units byte for byte the commit.** `/root/backup.sh` is no longer run by anything
 (left in place, identical to the 2026-10-04 copy).
+
+## Phase 5 — the shims become software (2026-10-06, in progress)
+
+**1. Packaging.** `package.json` + lockfile for each shim. maps-shim's lockfile
+was taken from the running image (a fresh one would have moved three patch
+versions), and the Dockerfile installs it with `npm ci`; the guard's has no
+dependency, on purpose, and a change to it never restarts the guard.
+
+**3. Tests for the money path** (done before 2, so Node 22 was proven by
+them): `wallet.test.js` (50), `restricted.test.js` (22), `deletion.test.js`
+(19), `auth-guard-wallet-gate.test.js` (12), the SQL run in PGlite against our
+own migrations. Each was shown able to fail by breaking the code on purpose —
+18 faults, all caught (two first missed, which led to the credit-race test).
+They found one real bug: `restricted.js` `publish()` never settled when Redis
+closed without answering (fixed, `40b9157fba`, in release A). CI runs every test file
+(17; it named 4) on Node 20 and 22, on every push.
+
+**Release A**, owner's OK, 13:31 UTC, `64a94a4508`: packaging + that fix.
+maps-shim rebuilt from the lockfile — same Node 20.20.2, same 13 package
+versions, read inside the new container; the guard untouched. The old image
+kept as `ny-maps-shim:previous` (a release now does this before every rebuild
+or recreate).
+
+**2. Release B**, owner's OK, 13:39 UTC, `491087ce2d`: both shims on Node 22
+(22.23.3). Guard recreated, maps-shim rebuilt; `ny-auth-guard:previous` =
+`node:20-alpine`, `ny-maps-shim:previous` = release A's build. Checks passed,
+outside check 88/88; routes, wallet and `/auth/channels` (+222 SMS, +213
+SMS-in, WhatsApp) answer as before.
+
+**4. The split** — next, one module at a time, each released on its own.
