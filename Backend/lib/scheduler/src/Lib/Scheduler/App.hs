@@ -44,6 +44,7 @@ import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types (JobProcessor)
 import Servant (Context (EmptyContext), ServerError (..), err503)
 import System.Exit
+import System.Posix.Process (exitImmediately)
 import UnliftIO
 
 runSchedulerService ::
@@ -100,26 +101,43 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvC
   let serverStartAction = handler handle_
   randSecDelayBeforeStart <- Seconds <$> getRandomInRange (0, loopIntervalSec.getSeconds)
   threadDelaySec randSecDelayBeforeStart -- to make runners start out_of_sync to reduce probability of picking same tasks.
-  withAsync (runSchedulerM s schedulerEnv serverStartAction) $ \schedulerAction ->
-    runServerGeneric
-      schedulerEnv
-      (Proxy @HealthCheckAPI)
-      (schedulerHealthCheck schedulerAction)
-      identity
-      identity
-      EmptyContext
-      (const identity)
-      ( \_ -> do
-          cancel schedulerAction
-          -- Best-effort: drain this pod's pending entries back onto the stream and remove its
-          -- consumer before exiting (bounded so it never blocks past the grace period). Ungraceful
-          -- crashes are covered by the surviving pods' reclaimer + sweeper.
-          eCleanup <- timeout (5 * 1000000) (C.try (runSchedulerM s schedulerEnv (gracefulConsumerCleanup handle_)) :: IO (Either Kernel.Prelude.SomeException ()))
-          case eCleanup of
-            Just (Left e) -> hPutStrLn stderr ("GRACEFUL_CONSUMER_CLEANUP_FAILED: " <> show e :: Text)
-            _ -> pure ()
-      )
-      (runSchedulerM s)
+  -- This thread runs the health server for the whole process. If it dies abnormally
+  -- (e.g. the RTS throws HeapOverflow to the main thread), exit at once. Letting the
+  -- exception propagate runs the caller's 'withFlowRuntime' cleanup, which empties the
+  -- euler options and closes the DB/Redis pools under the still-running job threads:
+  -- they all die with "ReplicaDb Config not found" and the pod stays up running nothing.
+  -- 'C.try' (unlike UnliftIO's) also catches asynchronous exceptions, which is the point.
+  serverResult <-
+    C.try
+      ( withAsync (runSchedulerM s schedulerEnv serverStartAction) $ \schedulerAction ->
+          runServerGeneric
+            schedulerEnv
+            (Proxy @HealthCheckAPI)
+            (schedulerHealthCheck schedulerAction)
+            identity
+            identity
+            EmptyContext
+            (const identity)
+            ( \_ -> do
+                cancel schedulerAction
+                -- Best-effort: drain this pod's pending entries back onto the stream and remove its
+                -- consumer before exiting (bounded so it never blocks past the grace period). Ungraceful
+                -- crashes are covered by the surviving pods' reclaimer + sweeper.
+                eCleanup <- timeout (5 * 1000000) (C.try (runSchedulerM s schedulerEnv (gracefulConsumerCleanup handle_)) :: IO (Either Kernel.Prelude.SomeException ()))
+                case eCleanup of
+                  Just (Left e) -> hPutStrLn stderr ("GRACEFUL_CONSUMER_CLEANUP_FAILED: " <> show e :: Text)
+                  _ -> pure ()
+            )
+            (runSchedulerM s)
+      ) ::
+      IO (Either Kernel.Prelude.SomeException ())
+  case serverResult of
+    Right () -> pure ()
+    Left e -> do
+      hPutStrLn stderr ("SCHEDULER_MAIN_THREAD_DIED, exiting process: " <> show e :: Text)
+      hFlush stdout
+      hFlush stderr
+      exitImmediately $ fromMaybe (ExitFailure 1) (fromException e)
 
 -- | Health check for the scheduler/allocator service.
 --

@@ -75,6 +75,7 @@ dependencies:
   - transformers
   - unliftio
   - unliftio-core
+  - unix
   - postgresql-simple
   - prometheus-client
   - servant-server
