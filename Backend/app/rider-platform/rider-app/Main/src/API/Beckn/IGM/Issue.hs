@@ -42,13 +42,13 @@ handler = onDemandHandler :<|> publicTransportHandler
       onIssue merchantId sigAuth :<|> onIssueStatus merchantId sigAuth
 
 issue :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueReq -> FlowHandler Spec.AckResponse
-issue merchantId _ issueReq = withFlowHandlerAPI $ BI.issue (cast merchantId) issueReq AUI.customerIssueHandle Common.CUSTOMER
+issue merchantId authResult issueReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ BI.issue (cast merchantId) issueReq AUI.customerIssueHandle Common.CUSTOMER
 
 onIssue :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueReq -> FlowHandler Spec.AckResponse
-onIssue merchantId _ onIssueReq = withFlowHandlerAPI $ BI.onIssue (cast merchantId) onIssueReq AUI.customerIssueHandle Common.CUSTOMER
+onIssue merchantId authResult onIssueReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ BI.onIssue (cast merchantId) onIssueReq AUI.customerIssueHandle Common.CUSTOMER
 
 issueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.IssueStatusReq -> FlowHandler Spec.AckResponse
-issueStatus merchantId _ issueStatusReq = withFlowHandlerAPI $ BI.issueStatus (cast merchantId) issueStatusReq AUI.customerIssueHandle Common.CUSTOMER
+issueStatus merchantId authResult issueStatusReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ BI.issueStatus (cast merchantId) issueStatusReq AUI.customerIssueHandle Common.CUSTOMER
 
 onIssueStatus :: Id Common.Merchant -> SignatureAuthResult -> Spec.OnIssueStatusReq -> FlowHandler Spec.AckResponse
-onIssueStatus merchantId _ onIssueStatusReq = withFlowHandlerAPI $ BI.onIssueStatus (cast merchantId) onIssueStatusReq AUI.customerIssueHandle Common.CUSTOMER
+onIssueStatus merchantId authResult onIssueStatusReq = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ BI.onIssueStatus (cast merchantId) onIssueStatusReq AUI.customerIssueHandle Common.CUSTOMER

@@ -40,7 +40,7 @@ handler :: SignatureAuthResult -> FlowServer API
 handler = onSelect
 
 onSelect :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
-onSelect _ reqBS = withFlowHandlerAPI $ do
+onSelect authResult reqBS = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   reqBS' <- Utils.decompressGzipBody reqBS
   req <- case decodeOnSelectReq reqBS' of
     Right r -> pure r

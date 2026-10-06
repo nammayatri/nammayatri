@@ -47,7 +47,7 @@ onStatus ::
   SignatureAuthResult ->
   OnStatus.OnStatusReqV2 ->
   FlowHandler AckResponse
-onStatus _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
+onStatus authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel "rider-onstatus-api" $ do
     transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
     L.setOptionLocal TxnIdKey transactionId

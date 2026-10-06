@@ -554,10 +554,10 @@ instance Registry Flow where
           _ -> asks (.ondcRegistryUrl)
       retryWithNextRegistry :: ExternalAPICallError -> BaseUrl -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
       retryWithNextRegistry _ registryUrl sub merchant tryNumber = do
-        logError $ "registry " <> show registryUrl <> " seems down, trying with next registryUrl"
+        logError $ "registry " <> show registryUrl <> " seems down for lookup of subscriber_id:" <> sub.subscriber_id <> ", trying with next registryUrl"
         let maxRetries = length merchant.gatewayAndRegistryPriorityList
         if tryNumber > maxRetries
-          then throwError $ InternalError "Max retries reached, perhaps all registries are down"
+          then throwError $ InternalError $ "Max retries reached for lookup of subscriber_id:" <> sub.subscriber_id <> ", perhaps all registries are down"
           else do
             let networkPriorityList = reorderList merchant.gatewayAndRegistryPriorityList
             performRegistryLookup networkPriorityList sub merchant tryNumber

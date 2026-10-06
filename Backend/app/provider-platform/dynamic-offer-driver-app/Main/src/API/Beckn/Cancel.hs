@@ -73,7 +73,7 @@ cancel ::
   SignatureAuthResult ->
   Cancel.CancelReqV2 ->
   FlowHandler AckResponse
-cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI subscriber.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   (dCancelReq, callbackUrl, bapId, msgId, city, country, txnId, bppId, bppUri) <- do
     transactionId <- Utils.getTransactionId reqV2.cancelReqContext
     L.setOptionLocal TxnIdKey transactionId

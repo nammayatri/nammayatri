@@ -56,7 +56,7 @@ select ::
   SignatureAuthResult ->
   Select.SelectReqV2 ->
   FlowHandler AckResponse
-select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+select transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.selectReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

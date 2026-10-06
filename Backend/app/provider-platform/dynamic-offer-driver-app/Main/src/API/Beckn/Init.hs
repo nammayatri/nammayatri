@@ -67,7 +67,7 @@ init ::
   SignatureAuthResult ->
   Init.InitReqV2 ->
   FlowHandler AckResponse
-init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.initReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

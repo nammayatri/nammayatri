@@ -46,7 +46,7 @@ handler :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> FlowServer API
 handler = onConfirm
 
 onConfirm :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
-onConfirm mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
+onConfirm mbMerchantId authResult reqBS = withFlowHandlerAPIForSubscriber authResult.subscriber.subscriber_id $ do
   reqBS' <- Utils.decompressGzipBody reqBS
   req <- case decodeOnConfirmReq reqBS' of
     Right r -> pure r

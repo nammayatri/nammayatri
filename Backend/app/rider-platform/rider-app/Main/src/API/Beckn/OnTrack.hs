@@ -45,7 +45,7 @@ onTrack ::
   SignatureAuthResult ->
   OnTrack.OnTrackReqV2 ->
   FlowHandler AckResponse
-onTrack _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+onTrack authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId reqV2.onTrackReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

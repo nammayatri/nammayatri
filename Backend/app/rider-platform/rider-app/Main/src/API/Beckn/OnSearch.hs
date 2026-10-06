@@ -46,7 +46,7 @@ onSearch ::
   SignatureAuthResult ->
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
-onSearch _ reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+onSearch authResult reqV2 = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   void $ processOnSearchPayload reqV2 ProcessAsync
   pure Ack
 

@@ -46,7 +46,7 @@ onCancel ::
   SignatureAuthResult ->
   OnCancel.OnCancelReqV2 ->
   FlowHandler AckResponse
-onCancel _ req = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $ do
+onCancel authResult req = withFlowHandlerBecknAPI authResult.subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $ do
   transactionId <- Utils.getTransactionId req.onCancelReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do

@@ -56,7 +56,7 @@ status ::
   SignatureAuthResult ->
   Status.StatusReqV2 ->
   FlowHandler AckResponse
-status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI . ActorInfo.withRequestIdActorInfo $
+status transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBecknAPI subscriber.subscriber_id . ActorInfo.withRequestIdActorInfo $
   withDynamicLogLevel "bpp-status-api" $ do
     txnId <- Utils.getTransactionId reqV2.statusReqContext
     L.setOptionLocal TxnIdKey txnId
