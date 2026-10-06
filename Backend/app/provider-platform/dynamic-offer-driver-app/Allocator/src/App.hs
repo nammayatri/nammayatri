@@ -24,7 +24,6 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
-import InMemManagement (withInMemManagement)
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
@@ -44,6 +43,7 @@ import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
+import Lib.Scheduler.InMemManagement (withInMemManagement)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation (runAggregatedCommissionInvoiceCreationJob)

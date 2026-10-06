@@ -12,18 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module InMemManagement
-  ( withInMemManagement,
+-- | In-memory cache management API (@/internal/inMem/*@, used by the shudhi sidecar)
+-- for services that don't run a full servant app: schedulers and kafka consumers.
+-- Requests run against the given env, so they see the same in-memory cache the
+-- service's own flows use.
+module Lib.Scheduler.InMemManagement
+  ( InMemManagementEnv,
+    inMemManagementApp,
+    withInMemManagement,
   )
 where
 
-import Environment (HandlerEnv)
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude
 import Kernel.Storage.InMem.Management.API (InMemManagementAPI)
 import qualified Kernel.Storage.InMem.Management.Handler as Handler
-import Kernel.Types.App (EnvR (..), FlowServerR)
-import Kernel.Types.Flow (FlowR)
+import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
+import Kernel.Types.Flow (FlowR, HasFlowHandlerR)
 import Kernel.Utils.Error.FlowHandling (apiHandler, withFlowHandler)
 import Kernel.Utils.Servant.Server (run)
 import Network.Wai (pathInfo)
@@ -31,24 +37,32 @@ import Servant
 
 type API = "internal" :> InMemManagementAPI
 
--- | Serves the in-memory cache management API (used by the shudhi sidecar) on the
--- scheduler's health server port. Requests run against the allocator's own
--- 'HandlerEnv', so they see the same in-memory cache the jobs use.
-withInMemManagement :: R.FlowRuntime -> HandlerEnv -> Application -> Application
-withInMemManagement flowRt env healthApp req respond =
+type InMemManagementEnv r =
+  ( HasFlowHandlerR (FlowR r) r,
+    Metrics.CoreMetrics (FlowR r),
+    HasField "url" r (Maybe Text)
+  )
+
+-- | Serves only the in-memory cache management API.
+inMemManagementApp :: forall r. InMemManagementEnv r => R.FlowRuntime -> r -> Application
+inMemManagementApp flowRt env = run (Proxy @API) handler EmptyContext (EnvR flowRt env)
+
+-- | Routes @/internal/inMem/*@ to 'inMemManagementApp' and everything else to the wrapped app.
+withInMemManagement :: InMemManagementEnv r => R.FlowRuntime -> r -> Application -> Application
+withInMemManagement flowRt env app req respond =
   case pathInfo req of
     "internal" : "inMem" : _ -> inMemApp req respond
-    _ -> healthApp req respond
+    _ -> app req respond
   where
-    inMemApp = run (Proxy @API) handler EmptyContext (EnvR flowRt env)
+    inMemApp = inMemManagementApp flowRt env
 
-handler :: FlowServerR HandlerEnv API
+handler :: InMemManagementEnv r => FlowServerR r API
 handler mbToken =
   (\mbPattern limit offset -> withHandler $ Handler.getKeys mbToken mbPattern limit offset)
     :<|> (withHandler . Handler.getValue mbToken)
     :<|> (withHandler . Handler.refreshCache mbToken)
     :<|> withHandler (Handler.getServerInfo mbToken)
 
--- HandlerEnv has no isShuttingDown, so withFlowHandlerAPI (which gates on it) doesn't fit.
-withHandler :: FlowR HandlerEnv a -> ReaderT (EnvR HandlerEnv) IO a
+-- Not withFlowHandlerAPI: scheduler envs have no isShuttingDown to gate on.
+withHandler :: InMemManagementEnv r => FlowR r a -> FlowHandlerR r a
 withHandler = withFlowHandler . apiHandler

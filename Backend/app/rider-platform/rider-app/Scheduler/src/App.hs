@@ -44,6 +44,7 @@ import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Lib.Scheduler
+import Lib.Scheduler.InMemManagement (withInMemManagement)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
 import "rider-app" SharedLogic.Scheduler.Jobs.BookingDepositExpiry
@@ -211,7 +212,7 @@ runRiderAppScheduler configModifier = do
               ]
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
+    runSchedulerServiceWith (withInMemManagement flowRt' handlerEnv) handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
 
 createCAC :: Environment.AppCfg -> IO ()
 createCAC appCfg = do
