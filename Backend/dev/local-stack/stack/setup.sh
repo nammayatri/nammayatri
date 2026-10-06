@@ -523,18 +523,21 @@ verify_connector() {
     res=$(curl -s --max-time 20 "$base/v2/rideSearch/$sid/results" -H "token: $token")
     # The estimate id is "id" inside "estimates" -- there is no "estimateId"
     # field. Grepping for one silently reports success as failure.
-    n=$(printf '%s' "$res" | grep -o '"estimatedFare"' | wc -l)
+    # `|| true`: under pipefail a grep that finds nothing YET fails the
+    # assignment, and set -e then ends the script without a word -- which is
+    # what the CI saw on 2026-10-06, the first run that got this far.
+    n=$(printf '%s' "$res" | grep -o '"estimatedFare"' | wc -l || true)
     if [ "$n" -gt 0 ]; then
       ok "GET  /v2/rideSearch/{}/results 200  $n estimate(s) after $((i * 5))s"
       printf '%s' "$res" \
         | grep -o '"vehicleVariant":"[A-Z_]*"\|"estimatedTotalFare":[0-9]*' \
-        | paste - - 2>/dev/null | sed 's/^/    /' | head -6
+        | paste - - 2>/dev/null | sed 's/^/    /' | head -6 || true
       return
     fi
   done
 
   echo "--- gateway ---";    docker logs --tail 15 ny-beckn-gateway 2>&1 | tail -5
-  echo "--- driver-app ---"; docker logs --tail 40 ny-driver 2>&1 | grep -o 'driver pool \[\]' | tail -1
+  echo "--- driver-app ---"; docker logs --tail 40 ny-driver 2>&1 | grep -o 'driver pool \[\]' | tail -1 || true
   die "search returned a route but no price after 60s.
 
 The usual causes, in the order they bit us:
