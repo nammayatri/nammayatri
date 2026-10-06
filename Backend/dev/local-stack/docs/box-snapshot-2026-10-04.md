@@ -232,3 +232,23 @@ and the router stay); maps-shim's 886 -> 439.
 work has a test that runs in CI (wallet, restricted, the guard's gate), on
 Node 20 and 22, on every push; both shims are packaged and on Node 22, with
 the replaced images kept as `:previous`.
+
+## Phase 6 — retire the old billing model (measured 2026-10-06, starts 2026-10-07)
+
+Read-only so far; nothing changed. What the plan's first step asks — who still
+calls `/subscription/*` — measured:
+
+- **The app:** no call to `/subscription/` anywhere in `src/` (`main` `c3cd5a0`).
+- **The edge's log:** 35 `/subscription/` lines retained; the last from a phone
+  (`okhttp`) on 2026-09-02, everything after it our own `curl` probes.
+- **maps-shim's log:** nothing.
+- **The website:** only a comment (`apps/api/src/modules/wallet/queries.ts`:
+  "nothing here reads them").
+- **The tables:** `movin.subscription` 33 rows, last written 2026-08-26;
+  `movin.subscription_payment` 9 rows (1 applied), last 2026-08-28; the view
+  `movin.driver_subscription_state` depends on them.
+- **Code still pointing at them:** `maps-shim/subscription.js` (the routes),
+  `restricted.ridesInPeriod()` (called by nothing), `/healthz`'s
+  `payments: subscription.configured()`, nginx's `location /subscription/`.
+
+The drop needs a dump first, kept with the backups, and the owner's OK.
