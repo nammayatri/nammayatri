@@ -10,7 +10,7 @@ const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const GUARD = path.join(__dirname, '..', 'auth-guard', 'server.js');
+const GUARD = path.join(__dirname, '..', 'stack', 'auth-guard', 'server.js');
 const UP = 18416, RIDER = 18413, SHIM = 18430, PORT = 18443;
 const TOKEN = 'test-inbox-token';
 const FILE = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'numchg-')), 'trusted-phones.json');

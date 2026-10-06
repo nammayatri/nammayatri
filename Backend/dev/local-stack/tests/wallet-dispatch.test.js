@@ -115,7 +115,7 @@ async function scenario(wallet, name, driver, currency, ref, statusPath) {
   process.env.REDIS_HOST = '127.0.0.1';
   process.env.REDIS_PORT = String(redis.address().port);
 
-  const wallet = require(path.join(__dirname, '..', 'maps-shim', 'wallet.js'));
+  const wallet = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'wallet.js'));
 
   await scenario(wallet, 'Chargily (Algeria, DA)', 'drv-dz-0001', 'DZD', 'chk_1', '/checkouts/');
   await scenario(wallet, 'Moosyl (Mauritania, MRU)', 'drv-mr-0001', 'MRU', 'sess_1', '/checkout-session/public/');

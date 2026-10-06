@@ -77,7 +77,7 @@ const listen = (server) => new Promise((r) => server.listen(0, '127.0.0.1', () =
   process.env.APNS_DIR = apnsDir;
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   // Relative to this file, so the test runs from a clone as well as from home.
-  const relay = require(path.join(__dirname, '..', 'maps-shim', 'push-relay.js'));
+  const relay = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'push-relay.js'));
 
   const server = http.createServer((req, res) => relay.handle(req, res, new URL(req.url, 'http://x')));
   const port = await listen(server);

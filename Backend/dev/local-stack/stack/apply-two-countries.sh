@@ -55,7 +55,7 @@ fi
 
 # ── 2 ───────────────────────────────────────────────────────────────────────
 say "2. merchants, coverage, registry"
-docker cp two-countries-merchants.sql ny-postgres:/tmp/two-countries.sql >/dev/null
+docker cp db/two-countries-merchants.sql ny-postgres:/tmp/two-countries.sql >/dev/null
 if docker exec ny-postgres psql -U postgres -d atlas_dev -v ON_ERROR_STOP=1 -q \
      -f /tmp/two-countries.sql; then
   ok "applied"
@@ -66,8 +66,8 @@ fi
 
 # ── 3 ───────────────────────────────────────────────────────────────────────
 say "3. tariffs (apply-tariff.sh also clears the two fare caches)"
-bash ./apply-tariff.sh ./algeria-tariff.sql    || { bad "Algerian tariff failed"; exit 1; }
-bash ./apply-tariff.sh ./mauritania-tariff.sql || { bad "Mauritanian tariff failed"; exit 1; }
+bash ./apply-tariff.sh ./db/algeria-tariff.sql    || { bad "Algerian tariff failed"; exit 1; }
+bash ./apply-tariff.sh ./db/mauritania-tariff.sql || { bad "Mauritanian tariff failed"; exit 1; }
 
 # ── 4 ───────────────────────────────────────────────────────────────────────
 say "4. caches that hold merchants, their config, or the registry"

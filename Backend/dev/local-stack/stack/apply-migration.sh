@@ -37,10 +37,10 @@ ok()  { printf '   \033[1;32mok  \033[0m%s\n' "$*"; }
 bad() { printf '   \033[1;31mBAD \033[0m%s\n' "$*"; }
 
 if [ $# -eq 0 ]; then
-  say "migrations in $HERE"
+  say "migrations in $HERE/db"
   # Everything that adds or changes schema. The probe-*.sql files are
   # read-only diagnostics and are deliberately not listed as migrations.
-  for f in "$HERE"/*.sql; do
+  for f in "$HERE"/db/*.sql; do
     base="$(basename "$f")"
     case "$base" in probe-*) continue ;; esac
     printf '   %s\n' "$base"
@@ -51,7 +51,7 @@ if [ $# -eq 0 ]; then
 fi
 
 SQL="$1"
-[ -f "$SQL" ] || SQL="$HERE/$1"
+[ -f "$SQL" ] || SQL="$HERE/db/$1"   # the SQL lives in db/ since 2026-10-06
 if [ ! -f "$SQL" ]; then
   bad "no such file: $1"
   exit 1

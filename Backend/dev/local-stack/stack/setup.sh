@@ -254,7 +254,7 @@ seed_algeria() {
   # Must run *after* rider-app has migrated: atlas_app.geometry only exists
   # once its migrations have been applied.
   log "Applying Algeria service areas (coverage: $COVERAGE)"
-  docker cp algeria-geofences.sql ny-postgres:/tmp/algeria-geofences.sql
+  docker cp db/algeria-geofences.sql ny-postgres:/tmp/algeria-geofences.sql
   $PG -q -v ON_ERROR_STOP=1 -f /tmp/algeria-geofences.sql >/dev/null \
     || die "could not apply algeria-geofences.sql"
 
@@ -380,7 +380,7 @@ seed_maps() {
   # which silently rewrites two rows instead of one while the duplicates exist.
   # It is also what makes booking possible at all -- see the file's own notes.
   log "Removing duplicate seed rows (and constraining them out)"
-  docker cp dedupe-seed.sql ny-postgres:/tmp/dedupe-seed.sql
+  docker cp db/dedupe-seed.sql ny-postgres:/tmp/dedupe-seed.sql
   $PG -q -v ON_ERROR_STOP=1 -f /tmp/dedupe-seed.sql >/dev/null \
     || die "could not apply dedupe-seed.sql"
   $PG -t -c "SELECT '  fare policies: ' || count(*) || ' (expected 8: 2 merchants x 4 variants)'
@@ -390,7 +390,7 @@ seed_maps() {
   log "Pointing the backend at OSRM"
   # Must run after both apps have migrated: merchant_service_usage_config and
   # merchant_service_config are created by their migrations.
-  docker cp osrm-config.sql ny-postgres:/tmp/osrm-config.sql
+  docker cp db/osrm-config.sql ny-postgres:/tmp/osrm-config.sql
   $PG -q -v ON_ERROR_STOP=1 -f /tmp/osrm-config.sql >/dev/null \
     || die "could not apply osrm-config.sql"
 
@@ -721,7 +721,7 @@ case "${1:-up}" in
   # Clean up duplicate seed rows and add the constraints that keep them out.
   # Safe to re-run; needed on any stack seeded before this was added, where
   # booking fails at select with "Multiple results of Entity FarePolicyT".
-  dedupe) docker cp dedupe-seed.sql ny-postgres:/tmp/dedupe-seed.sql
+  dedupe) docker cp db/dedupe-seed.sql ny-postgres:/tmp/dedupe-seed.sql
           $PG -v ON_ERROR_STOP=1 -f /tmp/dedupe-seed.sql
           docker exec ny-redis redis-cli FLUSHALL >/dev/null
           docker restart ny-driver >/dev/null

@@ -7,7 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const GUARD = process.argv[2] || path.join(__dirname, '..', 'auth-guard', 'server.js');
+const GUARD = process.argv[2] || path.join(__dirname, '..', 'stack', 'auth-guard', 'server.js');
 const UP = 18016, RIDER = 18013;
 let lastVerifyBody = null;
 let n = 0;

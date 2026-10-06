@@ -7,7 +7,7 @@ const http = require('http');
 const { spawn } = require('child_process');
 const path = require('path');
 
-const GUARD = process.argv[2] || path.join(__dirname, '..', 'auth-guard', 'server.js');
+const GUARD = process.argv[2] || path.join(__dirname, '..', 'stack', 'auth-guard', 'server.js');
 let smsAsked = 0;
 
 function serve(port, handler) {

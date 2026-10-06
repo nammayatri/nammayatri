@@ -28,7 +28,7 @@
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SQL="${1:-$HERE/algeria-tariff.sql}"
+SQL="${1:-$HERE/db/algeria-tariff.sql}"
 
 say() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()  { printf '   \033[1;32mok  \033[0m%s\n' "$*"; }

@@ -13,7 +13,7 @@ process.env.NUMBER_HASH_SALT = SALT;
 process.env.PASSETTO_URL = `http://127.0.0.1:${PASSETTO}`;
 const AVATARS = fs.mkdtempSync(path.join(os.tmpdir(), 'avatars-'));
 process.env.AVATAR_DIR = AVATARS;
-const numberChange = require(path.join(__dirname, '..', 'maps-shim', 'number-change.js'));
+const numberChange = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'number-change.js'));
 
 let failed = 0;
 const check = (name, ok, detail) => {

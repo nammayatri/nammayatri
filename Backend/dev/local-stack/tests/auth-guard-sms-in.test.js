@@ -6,7 +6,7 @@ const http = require('http');
 const path = require('path');
 const { spawn } = require('child_process');
 
-const GUARD = path.join(__dirname, '..', 'auth-guard', 'server.js');
+const GUARD = path.join(__dirname, '..', 'stack', 'auth-guard', 'server.js');
 const UP = 18216, RIDER = 18213, PORT = 18143;
 const TOKEN = 'test-inbox-token';
 let lastVerifyBody = null;

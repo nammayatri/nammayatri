@@ -23,7 +23,7 @@ import threading
 import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BOT = os.path.join(HERE, "..", "movin-bot.py")
+BOT = os.path.join(HERE, "..", "stack", "movin-bot.py")
 
 sent = []
 fails = []

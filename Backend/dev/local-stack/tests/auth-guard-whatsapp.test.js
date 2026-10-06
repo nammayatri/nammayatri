@@ -6,7 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const GUARD = path.join(__dirname, '..', 'auth-guard', 'server.js');
+const GUARD = path.join(__dirname, '..', 'stack', 'auth-guard', 'server.js');
 const UP = 18116, RIDER = 18113, PORT = 18141;
 const APP_SECRET = 'test-app-secret';
 let lastVerifyBody = null;

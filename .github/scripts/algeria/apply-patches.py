@@ -359,7 +359,7 @@ mkItem categoryId fulfillmentId q mbVehicleDesc =
     # is a trap for whoever next opens that table, and this project has been
     # bitten by hidden encodings more than once.
     #
-    # The migration is `dev/local-stack/driver-offer-vehicle.sql`, and it is
+    # The migration is `dev/local-stack/stack/db/driver-offer-vehicle.sql`, and it is
     # ordinary: add a nullable column, then swap the image. The old binary
     # ignores an extra nullable column, so rollback stays a straight image swap.
     (
@@ -740,7 +740,7 @@ prepareDriverPoolBatch ::
     # in `atlas_driver_offer_bpp`, so nothing crosses BECKN and neither the
     # gateway nor the rider binary needs to know this happened.
     #
-    # The migration is `dev/local-stack/passenger-rating.sql`, and it is the
+    # The migration is `dev/local-stack/stack/db/passenger-rating.sql`, and it is the
     # ordinary shape: nullable/defaulted columns first, then the image swap. The
     # old binary ignores columns it was never told about, so rollback stays a
     # straight image swap with nothing to undo.

@@ -22,14 +22,14 @@ on:
   push:
     branches: ['algeria/**']
     paths:
-      - 'Backend/dev/local-stack/auth-guard/**'
-      - 'Backend/dev/local-stack/maps-shim/**'
+      - 'Backend/dev/local-stack/stack/auth-guard/**'
+      - 'Backend/dev/local-stack/stack/maps-shim/**'
       - 'Backend/dev/local-stack/tests/**'
       - '.github/workflows/algeria-node-tests.yml'
   pull_request:
     paths:
-      - 'Backend/dev/local-stack/auth-guard/**'
-      - 'Backend/dev/local-stack/maps-shim/**'
+      - 'Backend/dev/local-stack/stack/auth-guard/**'
+      - 'Backend/dev/local-stack/stack/maps-shim/**'
       - 'Backend/dev/local-stack/tests/**'
   workflow_dispatch:
 
@@ -59,8 +59,8 @@ jobs:
       - name: Syntax
         working-directory: Backend/dev/local-stack
         run: |
-          node --check auth-guard/server.js
-          for f in maps-shim/*.js; do node --check "$f"; done
+          node --check stack/auth-guard/server.js
+          for f in stack/maps-shim/*.js; do node --check "$f"; done
           echo "every file parses"
 
       # Starts the guard five times over, against a fake backend, and checks

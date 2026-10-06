@@ -5,7 +5,7 @@
 const path = require('path');
 const { spawn } = require('child_process');
 
-const GUARD = path.join(__dirname, '..', 'auth-guard', 'server.js');
+const GUARD = path.join(__dirname, '..', 'stack', 'auth-guard', 'server.js');
 const PORT = 18142;
 const TOKEN = 'test-inbox-token';
 
@@ -29,7 +29,7 @@ const health = () => fetch(`http://127.0.0.1:${PORT}/healthz`).then((r) => r.jso
   const {
     codeFrom,
     international,
-  } = require('../auth-guard/sms-inbox');
+  } = require('../stack/auth-guard/sms-inbox');
   check('local Mauritanian sender', international('41234567') === '22241234567');
   check('local Algerian sender with the trunk zero', international('0555123456') === '213555123456');
   check('international with +', international('+222 41 23 45 67') === '22241234567');

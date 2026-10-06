@@ -56,7 +56,7 @@ const google = http.createServer((req, res) => {
     },
   };
 
-  const push = require(path.join(__dirname, '..', 'maps-shim', 'driver-push.js'));
+  const push = require(path.join(__dirname, '..', 'stack', 'maps-shim', 'driver-push.js'));
   const DRIVER = 'ccc203ea-1615-4d8f-960d-fcc2ca7941e6';
 
   const r1 = await push.notify(pool, DRIVER, 'REGISTRATION_APPROVED');
