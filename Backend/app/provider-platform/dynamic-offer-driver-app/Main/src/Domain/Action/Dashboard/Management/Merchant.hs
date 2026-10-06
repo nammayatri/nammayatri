@@ -5533,6 +5533,7 @@ postMerchantMerchantMessageUpsert merchantShortId opCity req = do
                 senderHeader = req.senderHeader,
                 templateName = req.templateName,
                 vehicleCategory = req.vehicleCategory,
+                mediaUrl = req.mediaUrl,
                 createdAt = now,
                 updatedAt = now
               }

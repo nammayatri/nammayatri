@@ -64,7 +64,7 @@ postMultiModalSendDirectMessage merchantShortId opCity req = do
       let variables = map (Just . snd) (fromMaybe [] req.variables)
       void $
         Whatsapp.whatsAppSendMessageWithTemplateIdAPI merchant.id merchantOpCityId $
-          Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq req.destination merchantMessage.templateId variables Nothing Nothing
+          Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq req.destination merchantMessage.templateId variables Nothing Nothing merchantMessage.mediaUrl
     API.Types.Dashboard.RideBooking.MultiModal.EMAIL -> do
       riderConfig <-
         getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
@@ -98,7 +98,7 @@ notifyCustomerFromDashboard customerId req = do
           mbPhoneNumber <- decrypt `mapM` person.mobileNumber
           whenJust mbPhoneNumber $ \phoneNumber -> do
             let variables = map (Just . snd) (fromMaybe [] req.variables)
-            void $ Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId variables Nothing Nothing)
+            void $ Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId variables Nothing Nothing merchantMessage.mediaUrl)
     API.Types.Dashboard.RideBooking.MultiModal.SMS -> do
       whenJust req.messageKey $ \messageKey -> do
         mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey person.merchantOperatingCityId messageKey Nothing

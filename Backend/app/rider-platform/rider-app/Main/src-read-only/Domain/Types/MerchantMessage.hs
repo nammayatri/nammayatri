@@ -18,6 +18,7 @@ data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { containsUrlButton :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     jsonData :: Domain.Types.Extra.MerchantMessage.MerchantMessageDefaultDataJSON,
+    mediaUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     message :: Kernel.Prelude.Text,

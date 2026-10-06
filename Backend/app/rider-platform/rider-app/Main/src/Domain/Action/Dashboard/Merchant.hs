@@ -2382,6 +2382,7 @@ postMerchantMerchantMessageUpsert merchantShortId city req = do
                 jsonData = parsedJsonData,
                 messageType = req.messageType,
                 senderHeader = req.senderHeader,
+                mediaUrl = req.mediaUrl,
                 createdAt = now,
                 updatedAt = now
               }

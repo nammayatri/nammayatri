@@ -35,7 +35,7 @@ deleteByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId messageKey 
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.MerchantMessage.MerchantMessage]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.MerchantMessage.MerchantMessage])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOperatingCityIdAndMessageKey ::
@@ -54,12 +54,13 @@ updateByPrimaryKey (Domain.Types.MerchantMessage.MerchantMessage {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.containsUrlButton containsUrlButton,
-      Se.Set Beam.jsonData ((Just $ toJSON jsonData)),
+      Se.Set Beam.jsonData (Just $ toJSON jsonData),
+      Se.Set Beam.mediaUrl mediaUrl,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.message message,
       Se.Set Beam.messageType messageType,
       Se.Set Beam.senderHeader senderHeader,
-      Se.Set Beam.templateId ((Just templateId)),
+      Se.Set Beam.templateId (Just templateId),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId), Se.Is Beam.messageKey $ Se.Eq messageKey]]
@@ -72,6 +73,7 @@ instance FromTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMe
           { containsUrlButton = containsUrlButton,
             createdAt = createdAt,
             jsonData = valueToJsonData jsonData,
+            mediaUrl = mediaUrl,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             message = message,
@@ -87,13 +89,14 @@ instance ToTType' Beam.MerchantMessage Domain.Types.MerchantMessage.MerchantMess
     Beam.MerchantMessageT
       { Beam.containsUrlButton = containsUrlButton,
         Beam.createdAt = createdAt,
-        Beam.jsonData = (Just $ toJSON jsonData),
+        Beam.jsonData = Just $ toJSON jsonData,
+        Beam.mediaUrl = mediaUrl,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.message = message,
         Beam.messageKey = messageKey,
         Beam.messageType = messageType,
         Beam.senderHeader = senderHeader,
-        Beam.templateId = (Just templateId),
+        Beam.templateId = Just templateId,
         Beam.updatedAt = updatedAt
       }

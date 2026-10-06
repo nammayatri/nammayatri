@@ -1392,6 +1392,7 @@ types:
     - messageType: Maybe Text
     - senderHeader: Maybe Text
     - templateName: Maybe Text
+    - mediaUrl: Maybe Text
     - vehicleCategory: Maybe VehicleCategory
     - derive: "'HideSecrets"
   CityListResp:

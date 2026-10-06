@@ -540,6 +540,7 @@ MerchantMessage:
     updatedAt: UTCTime
     createdAt: UTCTime
     messageType: Maybe Text
+    mediaUrl: Maybe Text
 
   beamType:
     templateId: Maybe Text
