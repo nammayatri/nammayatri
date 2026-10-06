@@ -3108,16 +3108,15 @@ Nightly, encrypted with GPG AES-256, uploaded off the server with `rclone`.
 **1.8 MB** per backup out of a 183 MB database, which is the whole point of the
 next two sections.
 
-**What runs is `/root/backup.sh`, and since 2026-10-04 this file is it, byte
-for byte.** `movin-backup.service` executes the copy in `/root` (`ExecStart`,
-set by `install`). Until 2026-10-04 that copy — 488 lines, with the driver
-papers and the `movin` schema — existed only on the server; git held an older
-422-line version and `/opt/ny/local-stack/backup.sh` a third, 407 lines, that
-nothing runs. Git now carries the running one unchanged. A change here is not
-live until it is copied to `/root/backup.sh`; check with
-`sha256sum /root/backup.sh` against git. **Phase 4 of the restructuring plan
-moves `ExecStart` to the repository's copy**; until then `/root/backup.sh` is
-the live one.
+**What runs is the file a release ships, `/opt/ny/local-stack/backup.sh`.**
+Since phase 4 (2026-10-06) the units are in git too — `stack/systemd/
+movin-backup.service` and `.timer` — and a release installs them into
+`/etc/systemd/system`, so a change to the backup is live after `ops/deploy.sh`
+and nothing else. Before that, `movin-backup.service` ran a hand copy in
+`/root/backup.sh` that no release touched: until 2026-10-04 it was the only
+copy of the 488-line script (driver papers, the `movin` schema), with git and
+`/opt` holding two older versions. The three were made identical on
+2026-10-04, and the unit switched to the shipped one in phase 4.
 
 **The off-site copy has an expiry date.** On 2026-10-04 rclone warned:
 *« This remote uses rclone's shared Google Drive client_id, which is being
@@ -3181,7 +3180,13 @@ openssl rand -base64 32 > /root/.movin-backup-pass
 chmod 600 /root/.movin-backup-pass
 
 rclone config                                        # once, interactively
-RCLONE_REMOTE=movin-drive:movin-backups ./backup.sh install
+./backup.sh install    # copies systemd/movin-backup.* in (the remote is named there)
+```
+
+On the live server the release does that `install` itself; it is only for a box
+that has never had one.
+
+```bash
 ```
 
 **The passphrase must not live only on this server.** It is the one thing
@@ -3985,22 +3990,34 @@ Three workflows, none of which deploys anything:
 | Workflow | What it proves | When |
 |---|---|---|
 | `algeria: node tests` | The guard's sign-in rules and the push relay, each started for real against fakes on loopback — no key, no network, no VPS | On pushes touching `auth-guard/`, `maps-shim/` or `tests/` |
-| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner, signs a `+213` number in and answers a ride search **with a price** | On changes to the stack's own files, weekly, and on demand |
+| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner, with real routing on an Algiers map, signs a `+213` number in and answers a ride search **with a price** | Every push to `algeria/**`, and on demand |
 | `algeria: build backend` | The Haskell binaries. 44 minutes; nothing else triggers it | Push to `algeria/build-backend` |
 
 ```bash
 node tests/auth-guard-signup.test.js   # the sign-in rules
 node tests/push-relay.test.js          # FCM forwarded, APNs in the app's words
-SKIP_OSRM=1 ./setup.sh                 # the whole stack, no routing graph
+./setup.sh price                       # sign in, ask for a priced ride
 ```
 
-**`SKIP_OSRM=1` is what makes the ride regression possible at all.** Preparing
-the routing graph is a 285 MB download and minutes of preprocessing for a
-machine that is deleted afterwards. With `seed_maps` skipped too, `Maps_Google`
-stays pointed at mock-google exactly as upstream seeds it: distances become
-fixtures, and everything else — rider → gateway → registry → driver-app →
-dispatch → tariff → back over BECKN — stays real. That chain is what has broken
-before, and all but its first link are invisible from the passenger's side.
+**The ride regression was red from its first run (2026-09-20) to phase 4
+(2026-10-06), and never about the change that triggered it.** It ran with
+`SKIP_OSRM=1`, on the theory that mock-google would stand in for routing. It
+cannot: the mock in the image we run (upstream `03a7531`) has **no
+`/directions/json`**, answers 404, and the rider turns that into
+`E500 GOOGLE_MAPS_API_ERROR` — so every search failed with *"ride search
+returned no searchId"* before a price was ever computed. Read in the rider's
+log, not the job's: the job only said FAILED.
+
+Now the job routes as the server does — rider → `maps-shim` → OSRM. It cuts
+Algiers out of the Geofabrik extract with `osmium` (cached a week; a 93 MB
+graph built in seconds), so a red tick means **a ride in Algiers could not be
+priced** by a stack built from this repository. `SKIP_OSRM=1` still brings a
+stack up without the graph, but it now skips the price check and says so.
+
+Its trigger was a list of paths; four days of commits went by without it
+running. It now runs on **every push to `algeria/**`**. The `schedule:` line in
+it does nothing: GitHub runs schedules only from the default branch, `main`,
+which is upstream's and does not have this file.
 
 `preflight` accepts a **pulled** image in place of the loose binaries in `bin/`,
 which is what the regression job and `deploy-backend.sh` both do.
@@ -4155,6 +4172,7 @@ command, run from the laptop in WSL, anywhere in the repository:
 Backend/dev/local-stack/ops/deploy.sh --dry-run   # what would change; writes nothing
 Backend/dev/local-stack/ops/deploy.sh             # release the commit you are on
 Backend/dev/local-stack/ops/deploy.sh status      # what is deployed; any hand edits since?
+Backend/dev/local-stack/ops/deploy.sh verify      # hash the server against the commit it claims
 Backend/dev/local-stack/ops/deploy.sh rollback    # put back what the last release replaced
 Backend/dev/local-stack/ops/deploy.sh tidy        # archive old .bak copies (root only)
 ```
@@ -4167,8 +4185,8 @@ What it does, and what it will not do:
 
 - **Refuses** a dirty working tree or an unpushed commit, and takes `stack/`
   from the commit (`git archive`), never from the folder.
-- **One scp and one ssh** — the firewall refuses the sixth SSH connection in
-  30 seconds.
+- **One scp and one ssh**, then one of each for `verify` — the firewall
+  refuses the sixth SSH connection in 30 seconds.
 - Writes **only files git ships**, **in place** (a bind-mounted file keeps its
   inode). Never `.env`, the certificates, `edge-web/`, `bin/` or the data.
 - **Stops** if a file it would overwrite was edited by hand on the server since
@@ -4179,16 +4197,26 @@ What it does, and what it will not do:
 - **Restarts only what changed**: `auth-guard/` → that container, `maps-shim/` →
   that container, `edge/nginx.conf` → `nginx -t` then reload (a failure rolls
   back on the spot), `docker-compose.yml` → only the services whose resolved
-  config changed, `simulate-driver.py` / `movin-bot.py` → their systemd unit.
-  A change to `backup.sh` is reported, not installed (phase 4).
+  config changed, `simulate-driver.py` / `movin-bot.py` → their systemd unit,
+  `systemd/` → installed into `/etc/systemd/system`, `daemon-reload`, timers
+  enabled (the replaced units are kept for `rollback`). `backup.sh` needs
+  nothing: the nightly unit runs the shipped file.
 - **Checks**: every container that ran still runs, both healthz answer 200,
-  `nginx -t`, and every shipped file matches its hash. Then writes `.shipped`.
+  `nginx -t`, every shipped file and installed unit matches its hash. Then
+  writes `.shipped`.
+- **Then verifies from outside** (`ops/deploy.sh verify`, also run on its own):
+  the server only *measures* — the commit in `.shipped` and the sha256 of every
+  file — and the laptop recomputes what they should be **from that commit in
+  git** (`ops/release-verify.py`). The release's own check proves the copy;
+  this proves the claim: a `.shipped` naming the wrong commit, or a hand edit
+  hidden by rewriting `.shipped.files`, both fail it.
 - Keeps what it replaced or removed in **`/opt/ny/local-stack.prev`** — one
   named directory, instead of `.bak` files beside the live ones.
 
-`tests/release.test.sh` rehearses all of it — a release, a refused hand edit, a
-rollback, a tidy — against a copy of the server's layout with docker stubbed:
-`bash tests/release.test.sh`.
+`tests/release.test.sh` rehearses all of it — a release, a refused hand edit,
+the outside check (including a forged record), the units, a rollback, a tidy —
+against a copy of the server's layout with docker and systemd stubbed:
+`bash tests/release.test.sh` (37 checks).
 
 **The website no longer writes our files.** Three of its scripts —
 `deploy-console.sh`, `deploy-site.sh` and `ops/server/edge-gzip.sh` — used to
@@ -4219,7 +4247,8 @@ local-stack/
 │   │                        seeds — applied by the apply-*.sh scripts
 │   ├── simulate-driver.py   the test fleet (systemd: movin-fleet)
 │   ├── movin-bot.py         the owner's bot (systemd: movin-bot)
-│   ├── backup.sh            the nightly backup — still run from /root until phase 4
+│   ├── backup.sh            the nightly backup (systemd: movin-backup, runs this file)
+│   ├── systemd/             units a release installs: movin-backup.service/.timer
 │   ├── setup.sh             bring a stack up from nothing (what CI runs)
 │   └── apply-*.sh, *-prepare.sh, enrol-driver.sh, install-moosyl-key.sh,
 │       fleet-service.sh, switch-domain.sh, deploy-*.sh, tiles-arabic.sh,
@@ -4227,6 +4256,7 @@ local-stack/
 ├── ops/                   run from the laptop
 │   ├── deploy.sh            THE way to release stack/ (see *Releasing*)
 │   ├── release-remote.py    its server half, run by deploy.sh
+│   ├── release-verify.py    the outside check: server's hashes vs. the commit, from git
 │   ├── demo.sh, demo.ps1
 │   └── checks/              the ride test (probe-two-country-rides.py)
 ├── investigations/        35 probes: how a booking behaves, what a route
@@ -4245,7 +4275,7 @@ local-stack/
 **The server has had this layout since the first release, 2026-10-06 09:21
 UTC** (commit `0d463c3016`): `db/` arrived, the old top-level `.sql` copies,
 probes, demos and retired scripts left the server (kept in `.prev` and in git),
-and nothing restarted. Paths that systemd and the backup use —
-`/opt/ny/local-stack/simulate-driver.py`, `movin-bot.py`, `/root/backup.sh` —
-did not change, because those files stay at the top of `stack/`.
+and nothing restarted. Paths that systemd uses —
+`/opt/ny/local-stack/simulate-driver.py`, `movin-bot.py`, and since phase 4
+`backup.sh` — stay at the top of `stack/`.
 

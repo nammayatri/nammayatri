@@ -6,6 +6,9 @@
     release-remote.py rollback                 put back what the last release replaced
     release-remote.py status                   what is deployed, and has anyone edited it since
     release-remote.py tidy                     archive the .bak / .before-* leftovers
+    release-remote.py hashes                   the claimed commit, and the sha256 of every
+                                               shipped file as it is NOW (ops/release-verify.py
+                                               compares them with git, on the laptop)
 
 Runs ON the VPS, as root, against /opt/ny/local-stack. Phase 3 of the backend
 restructuring plan (2026-10-06).
@@ -30,6 +33,9 @@ the bot's state, the drivers' codes.
     A config that fails `nginx -t` is rolled back on the spot.
   * The previous version of everything replaced or removed is kept in
     /opt/ny/local-stack.prev, one named directory, for `rollback`.
+  * systemd units shipped in stack/systemd/ are installed into
+    /etc/systemd/system (phase 4: the nightly backup), and the ones they
+    replace are kept for `rollback` like any other file.
 """
 import datetime
 import hashlib
@@ -48,9 +54,11 @@ PREV = STACK + '.prev'
 SHIPPED = os.path.join(STACK, '.shipped')
 SHIPPED_FILES = os.path.join(STACK, '.shipped.files')
 LEFTOVERS = os.environ.get('MOVIN_LEFTOVERS', '/root/snapshots')
+UNITS = os.environ.get('MOVIN_UNITS', '/etc/systemd/system')
 
 # What a change under each path means for the running stack. The first match wins.
 ACTIONS = [
+    ('systemd/', 'install systemd units'),
     ('auth-guard/', 'restart ny-auth-guard'),
     ('maps-shim/', 'restart ny-maps-shim'),
     ('Dockerfile.maps-shim', 'rebuild maps-shim'),
@@ -60,7 +68,6 @@ ACTIONS = [
     ('docker-compose.yml', 'compose up changed services'),
     ('simulate-driver.py', 'restart movin-fleet'),
     ('movin-bot.py', 'restart movin-bot'),
-    ('backup.sh', 'note backup'),
     ('Dockerfile.rider', 'note image'),
 ]
 
@@ -124,6 +131,11 @@ def read_manifest(path):
 
 def live(rel):
     p = os.path.join(STACK, rel)
+    return sha(p) if os.path.isfile(p) else None
+
+
+def unit_sha(name):
+    p = os.path.join(UNITS, name)
     return sha(p) if os.path.isfile(p) else None
 
 
@@ -248,6 +260,61 @@ def write_in_place(src, dst, mode):
         os.chown(dst, uid, gid)
 
 
+def shipped_units(manifest):
+    """{unit name: sha256} for every unit the release ships in systemd/."""
+    return {os.path.basename(r): d for r, (d, _m) in manifest.items()
+            if r.startswith('systemd/') and r.count('/') == 1}
+
+
+def install_units():
+    """Copy each shipped unit into UNITS when it differs, then reload systemd."""
+    src = os.path.join(STACK, 'systemd')
+    names = sorted(n for n in os.listdir(src) if n.endswith(('.service', '.timer'))) \
+        if os.path.isdir(src) else []
+    changed = []
+    for n in names:
+        dst = os.path.join(UNITS, n)
+        if not os.path.exists(dst) or sha(dst) != sha(os.path.join(src, n)):
+            write_in_place(os.path.join(src, n), dst, 0o644)
+            changed.append(n)
+    if changed:
+        run('systemctl daemon-reload')
+    for n in names:
+        if n.endswith('.timer'):
+            # enable --now is idempotent: a timer that was on stays on.
+            run(f'systemctl enable --now {n}', quiet=True)
+    ok(f"systemd units: {', '.join(changed) if changed else 'all already as shipped'}"
+       f"{' (daemon-reload)' if changed else ''}")
+
+
+def save_units(manifest):
+    """Before installing: keep the units about to be replaced, for rollback."""
+    saved, absent = [], []
+    for n in shipped_units(manifest):
+        cur = os.path.join(UNITS, n)
+        if os.path.exists(cur):
+            os.makedirs(os.path.join(PREV, 'units'), exist_ok=True)
+            shutil.copy2(cur, os.path.join(PREV, 'units', n))
+            saved.append(n)
+        else:
+            absent.append(n)
+    return saved, absent
+
+
+def restore_units(rec):
+    for n in rec.get('units_saved', []):
+        write_in_place(os.path.join(PREV, 'units', n), os.path.join(UNITS, n), 0o644)
+    for n in rec.get('units_absent', []):
+        p = os.path.join(UNITS, n)
+        if os.path.exists(p):
+            if n.endswith('.timer'):
+                run(f'systemctl disable --now {n}', check=False, quiet=True)
+            os.remove(p)
+    run('systemctl daemon-reload')
+    ok(f"systemd units put back: {', '.join(rec.get('units_saved', [])) or 'none'}"
+       f"; removed: {', '.join(rec.get('units_absent', [])) or 'none'}")
+
+
 def do_actions(actions, before_cfg):
     for a in actions:
         if a == 'reload ny-edge' or a == 'reload ny-map':
@@ -278,9 +345,8 @@ def do_actions(actions, before_cfg):
                 ok(f'{unit} restarted')
             else:
                 ok(f'{unit} is not running here; nothing to restart')
-        elif a == 'note backup':
-            warn('backup.sh changed -- movin-backup.service still runs /root/backup.sh '
-                 '(until phase 4): copy it there by hand if the change should be live')
+        elif a == 'install systemd units':
+            install_units()
         elif a == 'note image':
             warn('Dockerfile.rider changed -- the backend image is built by CI, not here')
     return None
@@ -306,6 +372,12 @@ def checks(before_running, manifest):
         failed.append(f'{len(differ)} files do not match the release: {", ".join(differ[:5])}')
     else:
         ok(f'every one of the {len(manifest)} files matches the release, by sha256')
+    units = shipped_units(manifest)
+    stale = [n for n, d in units.items() if unit_sha(n) != d]
+    if stale:
+        failed.append(f'installed systemd units differ from the release: {", ".join(stale)}')
+    elif units:
+        ok(f'{len(units)} systemd units installed exactly as shipped')
     for f in failed:
         bad(f)
     return not failed
@@ -333,9 +405,12 @@ def apply(rel_dir):
     for f in (SHIPPED, SHIPPED_FILES):
         if os.path.exists(f):
             shutil.copy2(f, os.path.join(PREV, os.path.basename(f)))
+    units_saved, units_absent = (save_units(plan['manifest'])
+                                 if 'install systemd units' in plan['actions'] else ([], []))
     json.dump({'commit': info.get('commit'), 'new': plan['new'],
                'changed': plan['changed'] + plan['conflict'], 'removed': plan['remove'],
                'actions': plan['actions'],
+               'units_saved': units_saved, 'units_absent': units_absent,
                'new_hashes': {r: plan['manifest'][r][0] for r in plan['new']}},
               open(os.path.join(PREV, 'RELEASE.json'), 'w'), indent=1)
     ok(f"{len(plan['changed']) + len(plan['conflict']) + len(plan['remove'])} files saved")
@@ -418,8 +493,11 @@ def rollback():
         elif os.path.exists(f):
             os.remove(f)
     ok(f"{len(rec['changed']) + len(rec['removed'])} files restored, {len(rec['new'])} new ones removed")
-    if rec['actions']:
-        problem = do_actions(rec['actions'], before_cfg)
+    if 'install systemd units' in rec['actions']:
+        restore_units(rec)
+    actions = [a for a in rec['actions'] if a != 'install systemd units']
+    if actions:
+        problem = do_actions(actions, before_cfg)
         if problem:
             bad(problem)
     os.rename(PREV, f"{PREV}-rolled-back-{datetime.datetime.now():%Y%m%d-%H%M%S}")
@@ -442,6 +520,31 @@ def status():
             warn(f'{r} differs from what was shipped')
     else:
         ok(f'no: all {len(shipped)} shipped files are exactly as released')
+    for n, d in sorted(shipped_units(shipped).items()):
+        if unit_sha(n) != d:
+            warn(f'{UNITS}/{n} differs from what was shipped')
+
+
+# ── hashes ──────────────────────────────────────────────────────────────────
+def hashes():
+    """The deployed tree as it is now, for the laptop to compare with git.
+
+    Deliberately NOT a comparison: this side only measures. The expected hashes
+    come from the claimed commit, on the laptop (ops/release-verify.py), so a
+    wrong or rewritten .shipped.files cannot vouch for itself."""
+    if not os.path.exists(SHIPPED):
+        die('no .shipped: nothing has been released by ops/deploy.sh on this server yet')
+    commit = next((l.split()[1] for l in open(SHIPPED) if l.startswith('commit ')), '')
+    print(f'commit {commit}')
+    shipped = read_manifest(SHIPPED_FILES)
+    # Only the paths the server says it was shipped: the folders also hold the
+    # box's own files (the drivers' codes beside the guard), which are none of
+    # git's business. A path in the commit that is missing from this list is
+    # itself a finding, and the laptop reports it.
+    for rel in sorted(shipped):
+        print(f"{live(rel) or 'MISSING'}  {rel}")
+    for n in sorted(shipped_units(shipped)):
+        print(f"{unit_sha(n) or 'MISSING'}  @units/{n}")
 
 
 # ── tidy ────────────────────────────────────────────────────────────────────
@@ -489,8 +592,10 @@ def main():
         status()
     elif mode == 'tidy':
         tidy()
+    elif mode == 'hashes':
+        hashes()
     else:
-        die('usage: release-remote.py plan|apply <release dir> | rollback | status | tidy')
+        die('usage: release-remote.py plan|apply <release dir> | rollback | status | tidy | hashes')
 
 
 if __name__ == '__main__':

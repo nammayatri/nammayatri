@@ -162,9 +162,10 @@ take() {
   # without this brings every driver back and leaves none of them able to sign
   # in, which would look like the backup worked.
   #
-  # Found rather than assumed, because this script is *copied* to wherever the
-  # systemd unit points -- today /root/backup.sh -- and a relative path would
-  # then resolve to /root/auth-guard/ and silently find nothing. A backup that
+  # Found rather than assumed. Until 2026-10-06 this script was *copied* to
+  # /root/backup.sh for the systemd unit, where a relative path resolved to
+  # /root/auth-guard/ and would silently have found nothing; the unit now runs
+  # /opt/ny/local-stack/backup.sh, but a copy run from anywhere stays safe. A backup that
   # quietly leaves something out is the failure this whole file is written
   # against, so the lookup is explicit and the miss is logged.
   local codes_note="absent — no driver is enrolled"
@@ -420,36 +421,18 @@ list() {
 # status` tells you why the last run failed instead of mailing root, which
 # nobody reads.
 install_timer() {
+  # The units live in git, in systemd/ beside this file, and a release
+  # (ops/deploy.sh) installs them -- this is only for a box that has never
+  # had a release. Until 2026-10-06 the unit was written from here, pointed at
+  # wherever this copy happened to be, and on the server that was a hand copy
+  # in /root that no release ever updated.
   local here
-  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/backup.sh"
-
-  cat > /etc/systemd/system/movin-backup.service <<EOF
-[Unit]
-Description=Movin DZ database backup
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=oneshot
-ExecStart=$here
-Environment=RCLONE_REMOTE=$RCLONE_REMOTE
-EOF
-
-  cat > /etc/systemd/system/movin-backup.timer <<'EOF'
-[Unit]
-Description=Movin DZ database backup, nightly
-
-[Timer]
-OnCalendar=*-*-* 02:30:00
-# If the VPS was off at 02:30, run when it comes back rather than skipping the
-# night entirely -- which is exactly the night you would want a backup from.
-Persistent=true
-RandomizedDelaySec=300
-
-[Install]
-WantedBy=timers.target
-EOF
-
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  [ -f "$here/systemd/movin-backup.service" ] || die "no $here/systemd/movin-backup.service"
+  install -m 644 "$here/systemd/movin-backup.service" "$here/systemd/movin-backup.timer" \
+    /etc/systemd/system/
+  grep -q "^ExecStart=$here/backup.sh$" /etc/systemd/system/movin-backup.service \
+    || say "!! the unit runs $(sed -n 's/^ExecStart=//p' /etc/systemd/system/movin-backup.service), not this copy"
   systemctl daemon-reload
   systemctl enable --now movin-backup.timer
   say "timer installed"

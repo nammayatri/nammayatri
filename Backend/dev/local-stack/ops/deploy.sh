@@ -5,6 +5,7 @@
 #     ops/deploy.sh                release the commit you are on
 #     ops/deploy.sh rollback       put back what the last release replaced
 #     ops/deploy.sh status         what is deployed, and has anyone edited it since
+#     ops/deploy.sh verify         hash the server's files against the commit it claims
 #     ops/deploy.sh tidy           archive the old .bak / .before-* copies (root only)
 #
 # Run from the laptop, in WSL, from anywhere in the repository. Phase 3 of the
@@ -17,9 +18,10 @@
 #   * that commit is pushed -- so `.shipped` names something anyone can check out.
 # Then `stack/` is taken from the COMMIT (git archive), not from the folder.
 #
-# ── Two connections, never more ────────────────────────────────────────────
+# ── Two connections, then two more ─────────────────────────────────────────
 # The server's firewall (`ufw limit`) refuses the sixth SSH connection in 30
-# seconds, silently. A release is one scp and one ssh.
+# seconds, silently. A release is one scp and one ssh; the check after it
+# (`verify`, phase 4) is one more of each. Four, never more.
 #
 # ── The very first release ─────────────────────────────────────────────────
 # Before 2026-10-06 the server had no record of what was deployed. Phase 1
@@ -39,7 +41,8 @@ for arg in "$@"; do
     --dry-run|plan) MODE="plan" ;;
     rollback|status|tidy) MODE="$arg" ;;
     --force) FORCE="--force" ;;
-    -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
+    verify) MODE="verify" ;;
+    -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
     *) echo "unknown argument: $arg" >&2; exit 2 ;;
   esac
 done
@@ -55,8 +58,19 @@ remote_only() {
   ssh "$HOST" "python3 /tmp/release-remote.py $1; rc=\$?; rm -f /tmp/release-remote.py; exit \$rc"
 }
 
+# The server measures, the laptop judges: release-remote.py prints the claimed
+# commit and the sha256 of every shipped file, and release-verify.py recomputes
+# what they should be from git. See its header for why it is not the server's
+# own check.
+verify_release() {
+  local out="$WORK/hashes"
+  remote_only hashes > "$out" || { cat "$out"; echo "could not read the server's hashes" >&2; return 1; }
+  python3 "$LS/ops/release-verify.py" "$out"
+}
+
 case "$MODE" in
   rollback|status|tidy) remote_only "$MODE"; exit $? ;;
+  verify) verify_release; exit $? ;;
 esac
 
 # ── the commit ─────────────────────────────────────────────────────────────
@@ -107,3 +121,9 @@ REMOTE_MODE="$MODE"
 ssh "$HOST" "R=/tmp/movin-release; rm -rf \$R; mkdir -p \$R &&
   tar -xzf /tmp/movin-release.tgz -C \$R && rm -f /tmp/movin-release.tgz || exit 1;
   rc=0; python3 \$R/release-remote.py $REMOTE_MODE \$R $FORCE || rc=\$?; rm -rf \$R; exit \$rc"
+
+# After a real release, the independent check: does the server now hold,
+# byte for byte, the commit it just recorded? (A dry run wrote nothing.)
+if [ "$MODE" = "apply" ]; then
+  verify_release
+fi
