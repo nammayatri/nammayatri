@@ -4238,11 +4238,10 @@ local-stack/
 └── README.md
 ```
 
-**The server keeps its old layout until phase 3.** On the VPS the SQL still
-sits at the top of `/opt/ny/local-stack` and the probes are not there at all;
-the first release made by the deploy command copies `stack/` as it is now, so
-`db/` appears there, and the old top-level `.sql` copies are cleared. Paths that
-systemd and the backup use — `/opt/ny/local-stack/simulate-driver.py`,
-`movin-bot.py`, `/root/backup.sh` — do not change, because those files stay at
-the top of `stack/`.
+**The server has had this layout since the first release, 2026-10-06 09:21
+UTC** (commit `0d463c3016`): `db/` arrived, the old top-level `.sql` copies,
+probes, demos and retired scripts left the server (kept in `.prev` and in git),
+and nothing restarted. Paths that systemd and the backup use —
+`/opt/ny/local-stack/simulate-driver.py`, `movin-bot.py`, `/root/backup.sh` —
+did not change, because those files stay at the top of `stack/`.
 

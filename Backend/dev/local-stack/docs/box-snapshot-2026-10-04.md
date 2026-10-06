@@ -112,3 +112,18 @@ No container was restarted. The resolved compose configuration hashed
 **94 deployed, 94 identical, 0 differ**; 44 tracked files are laptop tools and
 documents that are never deployed.
 
+## Phase 3 — the first release (2026-10-06)
+
+`ops/deploy.sh`, on the owner's word, 09:21:59 UTC, commit `0d463c3016`:
+82 files shipped — 44 already identical, 32 new (`db/` and files never deployed
+before), 6 rewritten in place (the five scripts that read `db/`, and a short
+`README.md` for whoever logs in), 44 removed (the old top-level `.sql`, old
+probes, demos and retired scripts; saved in `/opt/ny/local-stack.prev`). **No
+SQL applied, nothing restarted.** Checks: 21 containers still running, both
+healthz 200, `nginx -t`, every file's sha256 as released. `.shipped` written.
+
+Then `ops/deploy.sh tidy`: the **35** leftover copies (`*.bak*`, `*.before-*`,
+one `*.broken-*`; the plan counted 30 on 2026-09-24) moved to
+`/root/snapshots/leftovers-2026-10-06/`, root only. `ops/deploy.sh status`
+afterwards: all 82 shipped files exactly as released.
+

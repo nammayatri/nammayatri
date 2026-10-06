@@ -390,7 +390,13 @@ the header of that script.
   dropping that call silently empties the console's Notes — and it answers
   Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). local-stack README →
   *Ratings* and *WhatsApp*.
-- **The deployed `docker-compose.yml` is a superset of the one in git.** It
-  also carries the website's `admin-api`, the `edge-web` mount and the
-  documents volume. Patch it in place with an asserted one-match edit; copying
-  the repo's over it takes the console and the drivers' papers down.
+- **Release the stack with `ops/deploy.sh`, never by copying files.** Since
+  2026-10-06 git and the server are identical (phase 1: 94/94 files), the
+  website's `admin-api` is its own overlay (`ops/deploy/compose.admin.yml` in
+  the website repo, named in the stack's `.env` `COMPOSE_FILE`), and a release
+  writes only what git ships, in place, restarts only what changed, and records
+  itself in `/opt/ny/local-stack/.shipped`. Before that, the deployed
+  `docker-compose.yml` was a superset of git's, and copying the repo's over it
+  would have taken the console and the drivers' papers down. `ops/deploy.sh
+  status` says whether anyone has edited the server by hand since; a hand edit
+  makes the next release stop. local-stack README → *Releasing*.
