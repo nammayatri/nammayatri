@@ -2,10 +2,13 @@
 
 module RewardsEvaluatorTests (tests) where
 
+import qualified API.Types.UI.Rewards as API
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Text as T
+import Data.Time (addUTCTime)
 import qualified Domain.Action.Rewards.Evaluator as Eval
+import qualified Domain.Action.Rewards.LiveReward as LiveReward
 import qualified Domain.Types.RewardCampaign as DRCmp
 import qualified Domain.Types.RewardCohort as DRC
 import Domain.Types.RewardContext (RewardContext (..), defaultRewardContext, rewardContextKeys, rewardContextToLogicInput)
@@ -161,7 +164,78 @@ tests =
         let cohort = mkCohortWithCap "c1" (gteRule "ridesLast7d" 5) (Just 3)
             existing = [mkLegacyUnlock "c1" DRU.Active]
             candidate = mkCandidate "c1"
-        QRUE.nextUnlockDecision cohort existing candidate @?= Just 2
+        QRUE.nextUnlockDecision cohort existing candidate @?= Just 2,
+      -- Live reward card (GET /rewards/live)
+      testCase "live reward: campaigns then cohorts by (displayOrder, createdAt), so ties are stable" $ do
+        let campA = mkCampaign "campA" 0 (day 2)
+            campB = mkCampaign "campB" 0 (day 1)
+            candidates =
+              LiveReward.mkLiveRewardCandidates
+                [ (campA, [mkHomeCardCohort "a2" 1 (day 0) Nothing (Just (cardJson "A2")), mkHomeCardCohort "a1" 0 (day 0) Nothing (Just (cardJson "A1"))]),
+                  (campB, [mkHomeCardCohort "b1" 0 (day 0) Nothing (Just (cardJson "B1"))])
+                ]
+        map candidateCohortId candidates @?= ["b1", "a1", "a2"]
+        map candidateTitle candidates @?= ["B1", "A1", "A2"],
+      testCase "live reward: cohorts without a valid homeCard and non-Active campaigns are skipped" $ do
+        let active = mkCampaign "active" 0 (day 0)
+            paused = mkCampaignWith "paused" 0 (day 0) DRCmp.Paused Nothing
+            candidates =
+              LiveReward.mkLiveRewardCandidates
+                [ ( active,
+                    [ mkHomeCardCohort "noPresentation" 0 (day 0) Nothing Nothing,
+                      mkHomeCardCohort "noTitle" 1 (day 0) Nothing (Just (A.object ["header" A..= ("hi" :: Text)])),
+                      mkHomeCardCohort "ok" 2 (day 0) Nothing (Just (cardJson "OK"))
+                    ]
+                  ),
+                  (paused, [mkHomeCardCohort "pausedCohort" 0 (day 0) Nothing (Just (cardJson "P"))])
+                ]
+        map candidateCohortId candidates @?= ["ok"],
+      testCase "live reward: audience rule may only use home-screen context fields" $ do
+        let parsed logic = LiveReward.parseHomeCard (cardWithAudience "T" logic)
+        isRight' (parsed (eqRule "hasTakenValidRide" False)) @?= True
+        isRight' (parsed (eqRule "isValidRide" True)) @?= False
+        isRight' (parsed (gteRule "ridesLast7days" 3)) @?= False
+        isRight' (LiveReward.parseHomeCard (A.object ["header" A..= ("no title" :: Text)])) @?= False,
+      testCase "live reward: live only inside the campaign window" $ do
+        let campaign = mkCampaignWith "c" 0 (day 0) DRCmp.Active (Just (day 10))
+            candidates = LiveReward.mkLiveRewardCandidates [(campaign, [mkHomeCardCohort "c1" 0 (day 0) Nothing (Just (cardJson "C1"))])]
+            liveAt d = map (LiveReward.isLiveAt (day d)) candidates
+        liveAt 5 @?= [True]
+        liveAt (-1) @?= [False]
+        liveAt 10 @?= [False],
+      testCase "live reward: one-shot cohort hides once unlocked in any non-Reclaimed status" $ do
+        let candidates = singleCohortCandidates Nothing Nothing
+            shown unlocks = map candidateCohortId (LiveReward.eligibleLiveRewards A.Null unlocks candidates)
+        shown [] @?= ["c1"]
+        shown [mkUnlock "c1" DRU.Active 1] @?= []
+        shown [mkUnlock "c1" DRU.Redeemed 1] @?= []
+        shown [mkUnlock "c1" DRU.ExpiredUnredeemed 1] @?= []
+        shown [mkUnlock "other" DRU.Active 1] @?= ["c1"],
+      testCase "live reward: a Reclaimed unlock shows the card again" $ do
+        let candidates = singleCohortCandidates Nothing Nothing
+        map candidateCohortId (LiveReward.eligibleLiveRewards A.Null [mkUnlock "c1" DRU.Reclaimed 1] candidates) @?= ["c1"],
+      testCase "live reward: repeatable cohort keeps its card until the cap is reached" $ do
+        let candidates = singleCohortCandidates (Just 2) Nothing
+            shown unlocks = map candidateCohortId (LiveReward.eligibleLiveRewards A.Null unlocks candidates)
+        shown [mkUnlock "c1" DRU.Active 1] @?= ["c1"]
+        shown [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Redeemed 2] @?= []
+        shown [mkUnlock "c1" DRU.Active 1, mkUnlock "c1" DRU.Reclaimed 2] @?= ["c1"],
+      testCase "live reward: audience rule is checked against the rider's current context" $ do
+        let candidates = singleCohortCandidates Nothing (Just (eqRule "hasTakenValidRide" False))
+            shownFor hasRide =
+              map candidateCohortId $
+                LiveReward.eligibleLiveRewards
+                  (rewardContextToLogicInput defaultRewardContext {hasTakenValidRide = Just hasRide})
+                  []
+                  candidates
+        shownFor False @?= ["c1"]
+        shownFor True @?= [],
+      testCase "live reward: falls through to the next candidate when the first is unlocked" $ do
+        let campaign = mkCampaign "camp" 0 (day 0)
+            candidates =
+              LiveReward.mkLiveRewardCandidates
+                [(campaign, [mkHomeCardCohort "c1" 0 (day 0) Nothing (Just (cardJson "C1")), mkHomeCardCohort "c2" 1 (day 0) Nothing (Just (cardJson "C2"))])]
+        map candidateTitle (LiveReward.eligibleLiveRewards A.Null [mkUnlock "c1" DRU.Active 1] candidates) @?= ["C2"]
     ]
 
 mkCtx :: Text -> Int -> A.Value
@@ -247,3 +321,78 @@ mkUnlockWithSeq cohortId status seqNo =
 -- 'createNextUnlock'; only 'cohortId' matters for 'nextUnlockDecision'.
 mkCandidate :: Text -> DRU.RewardUnlock
 mkCandidate cohortId = mkUnlock cohortId DRU.Active 1
+
+-- Live reward card helpers
+
+day :: Integer -> UTCTime
+day n = addUTCTime (fromInteger (n * 86400)) (read "2026-01-01 00:00:00 UTC")
+
+cardJson :: Text -> A.Value
+cardJson title = A.object ["title" A..= title]
+
+cardWithAudience :: Text -> A.Value -> A.Value
+cardWithAudience title logic = A.object ["title" A..= title, "targetingJsonLogic" A..= logic]
+
+isRight' :: Either a b -> Bool
+isRight' = either (const False) (const True)
+
+candidateCohortId :: LiveReward.LiveRewardCandidate -> Text
+candidateCohortId LiveReward.LiveRewardCandidate {cohortId = cid} = getId cid
+
+candidateTitle :: LiveReward.LiveRewardCandidate -> Text
+candidateTitle LiveReward.LiveRewardCandidate {card = API.LiveRewardCard {title = cardTitle}} = cardTitle
+
+-- | One Active campaign with a single home-card cohort "c1".
+singleCohortCandidates :: Maybe Int -> Maybe A.Value -> [LiveReward.LiveRewardCandidate]
+singleCohortCandidates maxUnlocks audience =
+  LiveReward.mkLiveRewardCandidates
+    [(mkCampaign "camp" 0 (day 0), [mkHomeCardCohort "c1" 0 (day 0) maxUnlocks (Just (maybe (cardJson "C1") (cardWithAudience "C1") audience))])]
+
+mkHomeCardCohort :: Text -> Int -> UTCTime -> Maybe Int -> Maybe A.Value -> DRC.RewardCohort
+mkHomeCardCohort cohortIdText order created maxUnlocks homeCard =
+  DRC.RewardCohort
+    { id = Id cohortIdText,
+      campaignId = Id "test-campaign",
+      name = "test",
+      description = Nothing,
+      displayOrder = order,
+      eligibilityJsonLogic = A.Bool True,
+      rewardTitle = "test",
+      rewardImageUrl = Nothing,
+      couponValidityDays = Nothing,
+      maxUnlocksPerCohort = maxUnlocks,
+      presentation = (\h -> A.object ["homeCard" A..= h]) <$> homeCard,
+      createdAt = created,
+      updatedAt = created,
+      merchantId = Nothing,
+      merchantOperatingCityId = Nothing
+    }
+
+mkCampaign :: Text -> Int -> UTCTime -> DRCmp.RewardCampaign
+mkCampaign campaignIdText order created = mkCampaignWith campaignIdText order created DRCmp.Active Nothing
+
+mkCampaignWith :: Text -> Int -> UTCTime -> DRCmp.CampaignStatus -> Maybe UTCTime -> DRCmp.RewardCampaign
+mkCampaignWith campaignIdText order created campaignStatus campaignEndsAt =
+  DRCmp.RewardCampaign
+    { id = Id campaignIdText,
+      merchantId = Id "test-merchant",
+      merchantOperatingCityId = Id "test-city",
+      name = "test",
+      description = Nothing,
+      sponsorType = DRCmp.Internal,
+      sponsorName = "test",
+      sponsorLogoUrl = Nothing,
+      couponSourceType = DRCmp.Templated,
+      couponTemplate = Nothing,
+      redemptionTargetType = DRCmp.InApp,
+      redemptionTargetUrl = Nothing,
+      claimMode = DRCmp.AutoClaim,
+      reclaimPolicy = Nothing,
+      startsAt = day 0,
+      endsAt = campaignEndsAt,
+      status = campaignStatus,
+      displayOrder = order,
+      createdBy = "test",
+      createdAt = created,
+      updatedAt = created
+    }
