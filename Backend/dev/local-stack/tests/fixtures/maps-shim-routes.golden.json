@@ -1,0 +1,1424 @@
+[
+ {
+  "request": "GET /directions/json?origin=18.0858,-15.9785&destination=18.1,-15.95&key=k&mode=driving",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "routes": [
+    {
+     "bounds": {
+      "northeast": {
+       "lat": 40.7,
+       "lng": -5.503
+      },
+      "southwest": {
+       "lat": 2.552,
+       "lng": -120.95
+      }
+     },
+     "legs": [
+      {
+       "distance": {
+        "text": "4.3 km",
+        "value": 4322
+       },
+       "duration": {
+        "text": "9 mins",
+        "value": 540
+       },
+       "start_location": {
+        "lat": 38.5,
+        "lng": -120.2
+       },
+       "end_location": {
+        "lat": 18.1,
+        "lng": -15.95
+       },
+       "steps": [
+        {
+         "distance": {
+          "text": "2.6 km",
+          "value": 2593
+         },
+         "duration": {
+          "text": "6 mins",
+          "value": 360
+         },
+         "start_location": {
+          "lat": 38.5,
+          "lng": -120.2
+         },
+         "end_location": {
+          "lat": 40.7,
+          "lng": -120.95
+         },
+         "polyline": {
+          "points": "_p~iF~ps|U_ulLnnqC"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "1.7 km",
+          "value": 1729
+         },
+         "duration": {
+          "text": "3 mins",
+          "value": 180
+         },
+         "start_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "end_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "polyline": {
+          "points": "_mqNvxq`@"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "0 m",
+          "value": 0
+         },
+         "duration": {
+          "text": "0 mins",
+          "value": 0
+         },
+         "start_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "end_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "polyline": {
+          "points": ""
+         },
+         "travel_mode": "DRIVING"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "queries": [],
+  "asked": [
+   "osrm /route/v1/driving/-15.9785,18.0858;-15.95,18.1?overview=false&steps=true&geometries=polyline&alternatives=false"
+  ]
+ },
+ {
+  "request": "GET /directions/json?origin=18.0858,-15.9785&destination=18.1,-15.95&alternatives=true&waypoints=via:18.09,-15.97|18.095,-15.96",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "routes": [
+    {
+     "bounds": {
+      "northeast": {
+       "lat": 40.7,
+       "lng": -5.503
+      },
+      "southwest": {
+       "lat": 2.552,
+       "lng": -120.95
+      }
+     },
+     "legs": [
+      {
+       "distance": {
+        "text": "4.3 km",
+        "value": 4322
+       },
+       "duration": {
+        "text": "9 mins",
+        "value": 540
+       },
+       "start_location": {
+        "lat": 38.5,
+        "lng": -120.2
+       },
+       "end_location": {
+        "lat": 18.1,
+        "lng": -15.95
+       },
+       "steps": [
+        {
+         "distance": {
+          "text": "2.6 km",
+          "value": 2593
+         },
+         "duration": {
+          "text": "6 mins",
+          "value": 360
+         },
+         "start_location": {
+          "lat": 38.5,
+          "lng": -120.2
+         },
+         "end_location": {
+          "lat": 40.7,
+          "lng": -120.95
+         },
+         "polyline": {
+          "points": "_p~iF~ps|U_ulLnnqC"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "1.7 km",
+          "value": 1729
+         },
+         "duration": {
+          "text": "3 mins",
+          "value": 180
+         },
+         "start_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "end_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "polyline": {
+          "points": "_mqNvxq`@"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "0 m",
+          "value": 0
+         },
+         "duration": {
+          "text": "0 mins",
+          "value": 0
+         },
+         "start_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "end_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "polyline": {
+          "points": ""
+         },
+         "travel_mode": "DRIVING"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "bounds": {
+      "northeast": {
+       "lat": 40.7,
+       "lng": -5.503
+      },
+      "southwest": {
+       "lat": 2.552,
+       "lng": -120.95
+      }
+     },
+     "legs": [
+      {
+       "distance": {
+        "text": "5.0 km",
+        "value": 5000
+       },
+       "duration": {
+        "text": "10 mins",
+        "value": 625
+       },
+       "start_location": {
+        "lat": 38.5,
+        "lng": -120.2
+       },
+       "end_location": {
+        "lat": 18.1,
+        "lng": -15.95
+       },
+       "steps": [
+        {
+         "distance": {
+          "text": "3.0 km",
+          "value": 3000
+         },
+         "duration": {
+          "text": "7 mins",
+          "value": 417
+         },
+         "start_location": {
+          "lat": 38.5,
+          "lng": -120.2
+         },
+         "end_location": {
+          "lat": 40.7,
+          "lng": -120.95
+         },
+         "polyline": {
+          "points": "_p~iF~ps|U_ulLnnqC"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "2.0 km",
+          "value": 2000
+         },
+         "duration": {
+          "text": "3 mins",
+          "value": 208
+         },
+         "start_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "end_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "polyline": {
+          "points": "_mqNvxq`@"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "0 m",
+          "value": 0
+         },
+         "duration": {
+          "text": "0 mins",
+          "value": 0
+         },
+         "start_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "end_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "polyline": {
+          "points": ""
+         },
+         "travel_mode": "DRIVING"
+        }
+       ]
+      },
+      {
+       "distance": {
+        "text": "71.5 km",
+        "value": 71543
+       },
+       "duration": {
+        "text": "2 h 29 min",
+        "value": 8943
+       },
+       "start_location": {
+        "lat": 38.5,
+        "lng": -120.2
+       },
+       "end_location": {
+        "lat": 18.1,
+        "lng": -15.95
+       },
+       "steps": [
+        {
+         "distance": {
+          "text": "42.9 km",
+          "value": 42926
+         },
+         "duration": {
+          "text": "1 h 39 min",
+          "value": 5962
+         },
+         "start_location": {
+          "lat": 38.5,
+          "lng": -120.2
+         },
+         "end_location": {
+          "lat": 40.7,
+          "lng": -120.95
+         },
+         "polyline": {
+          "points": "_p~iF~ps|U_ulLnnqC"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "28.6 km",
+          "value": 28617
+         },
+         "duration": {
+          "text": "50 mins",
+          "value": 2981
+         },
+         "start_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "end_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "polyline": {
+          "points": "_mqNvxq`@"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "0 m",
+          "value": 0
+         },
+         "duration": {
+          "text": "0 mins",
+          "value": 0
+         },
+         "start_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "end_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "polyline": {
+          "points": ""
+         },
+         "travel_mode": "DRIVING"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "queries": [],
+  "asked": [
+   "osrm /route/v1/driving/-15.9785,18.0858;-15.97,18.09;-15.96,18.095;-15.95,18.1?overview=false&steps=true&geometries=polyline&alternatives=true"
+  ]
+ },
+ {
+  "request": "GET /directions/json?origin=18.0858,-15.9785&destination=18.1,-15.95&waypoints=18.00,-15.90|18.01,-15.91|18.02,-15.92|18.03,-15.93|18.04,-15.94|18.05,-15.95|18.06,-15.96|18.07,-15.97|18.08,-15.98|18.09,-15.99|18.010,-15.910",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "routes": [
+    {
+     "bounds": {
+      "northeast": {
+       "lat": 40.7,
+       "lng": -5.503
+      },
+      "southwest": {
+       "lat": 2.552,
+       "lng": -120.95
+      }
+     },
+     "legs": [
+      {
+       "distance": {
+        "text": "4.3 km",
+        "value": 4322
+       },
+       "duration": {
+        "text": "9 mins",
+        "value": 540
+       },
+       "start_location": {
+        "lat": 38.5,
+        "lng": -120.2
+       },
+       "end_location": {
+        "lat": 18.1,
+        "lng": -15.95
+       },
+       "steps": [
+        {
+         "distance": {
+          "text": "2.6 km",
+          "value": 2593
+         },
+         "duration": {
+          "text": "6 mins",
+          "value": 360
+         },
+         "start_location": {
+          "lat": 38.5,
+          "lng": -120.2
+         },
+         "end_location": {
+          "lat": 40.7,
+          "lng": -120.95
+         },
+         "polyline": {
+          "points": "_p~iF~ps|U_ulLnnqC"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "1.7 km",
+          "value": 1729
+         },
+         "duration": {
+          "text": "3 mins",
+          "value": 180
+         },
+         "start_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "end_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "polyline": {
+          "points": "_mqNvxq`@"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "0 m",
+          "value": 0
+         },
+         "duration": {
+          "text": "0 mins",
+          "value": 0
+         },
+         "start_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "end_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "polyline": {
+          "points": ""
+         },
+         "travel_mode": "DRIVING"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "queries": [],
+  "asked": [
+   "osrm /route/v1/driving/-15.9785,18.0858;-15.9,18;-15.91,18.01;-15.92,18.02;-15.93,18.03;-15.94,18.04;-15.95,18.05;-15.96,18.06;-15.97,18.07;-15.95,18.1?overview=false&steps=true&geometries=polyline&alternatives=false"
+  ]
+ },
+ {
+  "request": "GET /directions/json?origin=abc&destination=18.1,-15.95",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "INVALID_REQUEST",
+   "routes": []
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /directions/json?origin=999,1&destination=18.1,-15.95",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "INVALID_REQUEST",
+   "routes": []
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /directions/json?origin=18.0858,-15.9785",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "INVALID_REQUEST",
+   "routes": []
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /directions/json?origin=18.0858,-15.9785&destination=18.2,-15.9",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "ZERO_RESULTS",
+   "routes": []
+  },
+  "queries": [],
+  "asked": [
+   "osrm /route/v1/driving/-15.9785,18.0858;-15.9,18.2?overview=false&steps=true&geometries=polyline&alternatives=false"
+  ]
+ },
+ {
+  "request": "GET /directions/json?origin=18.0858,-15.9785&destination=18.3,-15.8",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "UNKNOWN_ERROR",
+   "routes": []
+  },
+  "queries": [],
+  "asked": [
+   "osrm /route/v1/driving/-15.9785,18.0858;-15.8,18.3?overview=false&steps=true&geometries=polyline&alternatives=false"
+  ]
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=ma&location=18.0858,-15.9785&radius=5000&key=k",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "predictions": [
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:n1",
+     "distance_meters": 812,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Nouakchott",
+     "place_id": "osm:n3",
+     "distance_meters": 1501,
+     "types": [
+      "locality",
+      "political",
+      "geocode"
+     ]
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "ma",
+     18.0858,
+     -15.9785,
+     8
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=marche",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "predictions": [
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:n1",
+     "distance_meters": 812,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Nouakchott",
+     "place_id": "osm:n3",
+     "distance_meters": 1501,
+     "types": [
+      "locality",
+      "political",
+      "geocode"
+     ]
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "marche",
+     36.7538,
+     3.0588,
+     8
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=x&location=18.0858,-15.9785",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "ZERO_RESULTS",
+   "predictions": []
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=zzz&location=18.0858,-15.9785",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "ZERO_RESULTS",
+   "predictions": []
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "zzz",
+     18.0858,
+     -15.9785,
+     8
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=boom&location=18.0858,-15.9785",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "UNKNOWN_ERROR",
+   "predictions": []
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "boom",
+     18.0858,
+     -15.9785,
+     8
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/autocomplete/json?input=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&location=1e308,5",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "predictions": [
+    {
+     "description": "Marché Capitale, Tevragh Zeina",
+     "place_id": "osm:n1",
+     "distance_meters": 812,
+     "types": [
+      "point_of_interest",
+      "establishment"
+     ]
+    },
+    {
+     "description": "Nouakchott",
+     "place_id": "osm:n3",
+     "distance_meters": 1501,
+     "types": [
+      "locality",
+      "political",
+      "geocode"
+     ]
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, distance_m from geo.search($1, $2, $3, $4)",
+    "params": [
+     "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+     36.7538,
+     3.0588,
+     8
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/details/json?place_id=osm:n1&fields=geometry",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "result": {
+    "place_id": "osm:n1",
+    "formatted_address": "Marché Capitale, Tevragh Zeina, Mauritanie",
+    "address_components": [
+     {
+      "long_name": "Marché Capitale",
+      "short_name": "Marché Capitale",
+      "types": [
+       "point_of_interest",
+       "establishment"
+      ]
+     },
+     {
+      "long_name": "Tevragh Zeina",
+      "short_name": "Tevragh Zeina",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Mauritanie",
+      "short_name": "MR",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 18.0866,
+      "lng": -15.975
+     }
+    }
+   }
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1",
+    "params": [
+     "osm:n1"
+    ]
+   },
+   {
+    "sql": "select region from atlas_app.geometry where region in ('Algeria', 'Mauritania') and st_contains(geom, st_point($2::float8, $1::float8)) limit 1",
+    "params": [
+     18.0866,
+     -15.975
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/details/json?place_id=osm:w2",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "result": {
+    "place_id": "osm:w2",
+    "formatted_address": "Rue Didouche Mourad, Alger Centre, Algérie",
+    "address_components": [
+     {
+      "long_name": "Rue Didouche Mourad",
+      "short_name": "Rue Didouche Mourad",
+      "types": [
+       "route",
+       "geocode"
+      ]
+     },
+     {
+      "long_name": "Alger Centre",
+      "short_name": "Alger Centre",
+      "types": [
+       "locality",
+       "political"
+      ]
+     },
+     {
+      "long_name": "Algérie",
+      "short_name": "DZ",
+      "types": [
+       "country",
+       "political"
+      ]
+     }
+    ],
+    "geometry": {
+     "location": {
+      "lat": 36.765,
+      "lng": 3.05
+     }
+    }
+   }
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1",
+    "params": [
+     "osm:w2"
+    ]
+   },
+   {
+    "sql": "select region from atlas_app.geometry where region in ('Algeria', 'Mauritania') and st_contains(geom, st_point($2::float8, $1::float8)) limit 1",
+    "params": [
+     36.765,
+     3.05
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/details/json?place_id=osm:none",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "ZERO_RESULTS"
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1",
+    "params": [
+     "osm:none"
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/details/json",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "INVALID_REQUEST"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /place/labels/json?ids=osm:n1,osm:w2,osm:n3&lang=ar",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "labels": {
+    "osm:n1": "سوق العاصمة, تفرغ زينة",
+    "osm:n3": "نواكشوط"
+   }
+  },
+  "queries": [
+   {
+    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from geo.place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.name_ar is not null",
+    "params": [
+     [
+      "osm:n1",
+      "osm:w2",
+      "osm:n3"
+     ]
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /place/labels/json?ids=osm:n1&lang=fr",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "labels": {}
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /place/labels/json?ids=",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "labels": {}
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /place/labels/json?ids=osm:x0,osm:x1,osm:x2,osm:x3,osm:x4,osm:x5,osm:x6,osm:x7,osm:x8,osm:x9,osm:x10,osm:x11,osm:x12,osm:x13,osm:x14,osm:x15,osm:x16,osm:x17,osm:x18,osm:x19,osm:x20,osm:x21,osm:x22,osm:x23,osm:x24,osm:x25,osm:x26,osm:x27,osm:x28,osm:x29",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "labels": {}
+  },
+  "queries": [
+   {
+    "sql": "select p.place_id, p.name_ar, p.locality, l.name_ar as locality_ar from geo.place p left join lateral ( select l2.name_ar from geo.place l2 where l2.display_name = p.locality and l2.name_ar is not null order by l2.importance desc limit 1 ) l on true where p.place_id = any($1) and p.name_ar is not null",
+    "params": [
+     [
+      "osm:x0",
+      "osm:x1",
+      "osm:x2",
+      "osm:x3",
+      "osm:x4",
+      "osm:x5",
+      "osm:x6",
+      "osm:x7",
+      "osm:x8",
+      "osm:x9",
+      "osm:x10",
+      "osm:x11",
+      "osm:x12",
+      "osm:x13",
+      "osm:x14",
+      "osm:x15",
+      "osm:x16",
+      "osm:x17",
+      "osm:x18",
+      "osm:x19",
+      "osm:x20",
+      "osm:x21",
+      "osm:x22",
+      "osm:x23",
+      "osm:x24"
+     ]
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?latlng=18.0866,-15.9750",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "results": [
+    {
+     "place_id": "osm:n1",
+     "formatted_address": "Marché Capitale, Tevragh Zeina, Mauritanie",
+     "address_components": [
+      {
+       "long_name": "Marché Capitale",
+       "short_name": "Marché Capitale",
+       "types": [
+        "point_of_interest",
+        "establishment"
+       ]
+      },
+      {
+       "long_name": "Tevragh Zeina",
+       "short_name": "Tevragh Zeina",
+       "types": [
+        "locality",
+        "political"
+       ]
+      },
+      {
+       "long_name": "Mauritanie",
+       "short_name": "MR",
+       "types": [
+        "country",
+        "political"
+       ]
+      }
+     ],
+     "geometry": {
+      "location": {
+       "lat": 18.0866,
+       "lng": -15.975
+      }
+     }
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select * from geo.reverse($1, $2)",
+    "params": [
+     18.0866,
+     -15.975
+    ]
+   },
+   {
+    "sql": "select region from atlas_app.geometry where region in ('Algeria', 'Mauritania') and st_contains(geom, st_point($2::float8, $1::float8)) limit 1",
+    "params": [
+     18.0866,
+     -15.975
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?latlng=36.7650,3.0500",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "results": [
+    {
+     "place_id": "osm:w2",
+     "formatted_address": "Rue Didouche Mourad, Alger Centre, Algérie",
+     "address_components": [
+      {
+       "long_name": "Rue Didouche Mourad",
+       "short_name": "Rue Didouche Mourad",
+       "types": [
+        "route",
+        "geocode"
+       ]
+      },
+      {
+       "long_name": "Alger Centre",
+       "short_name": "Alger Centre",
+       "types": [
+        "locality",
+        "political"
+       ]
+      },
+      {
+       "long_name": "Algérie",
+       "short_name": "DZ",
+       "types": [
+        "country",
+        "political"
+       ]
+      }
+     ],
+     "geometry": {
+      "location": {
+       "lat": 36.765,
+       "lng": 3.05
+      }
+     }
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select * from geo.reverse($1, $2)",
+    "params": [
+     36.765,
+     3.05
+    ]
+   },
+   {
+    "sql": "select region from atlas_app.geometry where region in ('Algeria', 'Mauritania') and st_contains(geom, st_point($2::float8, $1::float8)) limit 1",
+    "params": [
+     36.765,
+     3.05
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?latlng=18.0,-30.5",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "results": [
+    {
+     "place_id": "osm:n1",
+     "formatted_address": "Marché Capitale, Tevragh Zeina, Mauritanie",
+     "address_components": [
+      {
+       "long_name": "Marché Capitale",
+       "short_name": "Marché Capitale",
+       "types": [
+        "point_of_interest",
+        "establishment"
+       ]
+      },
+      {
+       "long_name": "Tevragh Zeina",
+       "short_name": "Tevragh Zeina",
+       "types": [
+        "locality",
+        "political"
+       ]
+      },
+      {
+       "long_name": "Mauritanie",
+       "short_name": "MR",
+       "types": [
+        "country",
+        "political"
+       ]
+      }
+     ],
+     "geometry": {
+      "location": {
+       "lat": 18,
+       "lng": -30.5
+      }
+     }
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select * from geo.reverse($1, $2)",
+    "params": [
+     18,
+     -30.5
+    ]
+   },
+   {
+    "sql": "select region from atlas_app.geometry where region in ('Algeria', 'Mauritania') and st_contains(geom, st_point($2::float8, $1::float8)) limit 1",
+    "params": [
+     18,
+     -30.5
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?place_id=osm:n3",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "results": [
+    {
+     "place_id": "osm:n3",
+     "formatted_address": "Nouakchott, Mauritanie",
+     "address_components": [
+      {
+       "long_name": "Nouakchott",
+       "short_name": "Nouakchott",
+       "types": [
+        "locality",
+        "political",
+        "geocode"
+       ]
+      },
+      {
+       "long_name": "Mauritanie",
+       "short_name": "MR",
+       "types": [
+        "country",
+        "political"
+       ]
+      }
+     ],
+     "geometry": {
+      "location": {
+       "lat": 18.079,
+       "lng": -15.965
+      }
+     }
+    }
+   ]
+  },
+  "queries": [
+   {
+    "sql": "select place_id, display_name, locality, kind, lat, lon from geo.place where place_id = $1",
+    "params": [
+     "osm:n3"
+    ]
+   },
+   {
+    "sql": "select region from atlas_app.geometry where region in ('Algeria', 'Mauritania') and st_contains(geom, st_point($2::float8, $1::float8)) limit 1",
+    "params": [
+     18.079,
+     -15.965
+    ]
+   }
+  ],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json?latlng=999,0",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "INVALID_REQUEST",
+   "results": []
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /geocode/json",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "INVALID_REQUEST",
+   "results": []
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /healthz",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "ok": true,
+   "osrm": "<osrm>",
+   "mockGoogle": "<mock-google>",
+   "search": true,
+   "payments": false,
+   "push": {
+    "apns": false,
+    "why": "ENOENT: no such file or directory, open '/data/avatars/.apns/config.json'"
+   }
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /wallet/status",
+  "status": 401,
+  "type": "application/json",
+  "body": {
+   "error": "unauthorized"
+  },
+  "queries": [],
+  "asked": []
+ },
+ {
+  "request": "GET /some/other/google/path?x=1",
+  "status": 200,
+  "type": "application/json",
+  "body": {
+   "status": "OK",
+   "from": "mock-google"
+  },
+  "queries": [],
+  "asked": [
+   "mock-google GET /some/other/google/path?x=1"
+  ]
+ },
+ {
+  "request": "POST /directions/json?origin=18.0858,-15.9785&destination=18.1,-15.95",
+  "status": 200,
+  "type": "application/json;charset=utf-8",
+  "body": {
+   "status": "OK",
+   "routes": [
+    {
+     "bounds": {
+      "northeast": {
+       "lat": 40.7,
+       "lng": -5.503
+      },
+      "southwest": {
+       "lat": 2.552,
+       "lng": -120.95
+      }
+     },
+     "legs": [
+      {
+       "distance": {
+        "text": "4.3 km",
+        "value": 4322
+       },
+       "duration": {
+        "text": "9 mins",
+        "value": 540
+       },
+       "start_location": {
+        "lat": 38.5,
+        "lng": -120.2
+       },
+       "end_location": {
+        "lat": 18.1,
+        "lng": -15.95
+       },
+       "steps": [
+        {
+         "distance": {
+          "text": "2.6 km",
+          "value": 2593
+         },
+         "duration": {
+          "text": "6 mins",
+          "value": 360
+         },
+         "start_location": {
+          "lat": 38.5,
+          "lng": -120.2
+         },
+         "end_location": {
+          "lat": 40.7,
+          "lng": -120.95
+         },
+         "polyline": {
+          "points": "_p~iF~ps|U_ulLnnqC"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "1.7 km",
+          "value": 1729
+         },
+         "duration": {
+          "text": "3 mins",
+          "value": 180
+         },
+         "start_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "end_location": {
+          "lat": 2.552,
+          "lng": -5.503
+         },
+         "polyline": {
+          "points": "_mqNvxq`@"
+         },
+         "travel_mode": "DRIVING"
+        },
+        {
+         "distance": {
+          "text": "0 m",
+          "value": 0
+         },
+         "duration": {
+          "text": "0 mins",
+          "value": 0
+         },
+         "start_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "end_location": {
+          "lat": 18.1,
+          "lng": -15.95
+         },
+         "polyline": {
+          "points": ""
+         },
+         "travel_mode": "DRIVING"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "queries": [],
+  "asked": [
+   "osrm /route/v1/driving/-15.9785,18.0858;-15.95,18.1?overview=false&steps=true&geometries=polyline&alternatives=false"
+  ]
+ }
+]
