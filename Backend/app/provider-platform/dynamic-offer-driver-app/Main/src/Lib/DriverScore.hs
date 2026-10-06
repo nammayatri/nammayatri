@@ -174,7 +174,7 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
             SFlags.spMerchantOperatingCityId = merchantOpCityId,
             SFlags.spBlockedBy = DTDBT.Application
           }
-  DP.incrementCancellationCount merchantOpCityId driverId
+  when countsTowardCancellationCount $ DP.incrementCancellationCount merchantOpCityId driverId
   where
     overallCancellationRate driverStats merchantConfig = do
       let rate = div ((fromMaybe 0 driverStats.ridesCancelled) * 100 :: Int) (nonZero driverStats.totalRidesAssigned :: Int)

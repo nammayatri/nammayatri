@@ -297,13 +297,19 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     -- column: countsTowardDriverCancellationRate — driver-initiated cancels go through the
     -- full DriverScore event (rate counter + repeat-offender blocking); customer-initiated
     -- cancels judged against the driver bump only the sliding-window counter.
+    -- The bt: RIDE_CANCELLATION ACTION_COUNT (pool cancelledRidesToday/Weekly, cancellation
+    -- ratio) counts DriverAtFault verdicts whoever cancelled; in a city with no fault rules
+    -- (no verdict) it counts driver-initiated cancels.
     applyDriverCancellationRateCount driver = do
       let countsTowardRate = maybe False (.countsTowardDriverCancellationRate) row
+          countsTowardCount = maybe (ctx.source == SBCR.ByDriver) ((== CancellationFault.DriverAtFault) . (.atFault)) ctx.decision.faultVerdict
       when (ctx.source == SBCR.ByDriver) $
-        DS.driverScoreEventHandler ctx.ride.merchantOperatingCityId DST.OnDriverCancellation {countsTowardCancellationRate = countsTowardRate, merchantId = ctx.merchant.id, driver = driver, rideFare = Just ctx.booking.estimatedFare, currency = ctx.booking.currency, distanceUnit = ctx.booking.distanceUnit, doCancellationRateBasedBlocking = doCancellationRateBasedBlocking}
+        DS.driverScoreEventHandler ctx.ride.merchantOperatingCityId DST.OnDriverCancellation {countsTowardCancellationRate = countsTowardRate, countsTowardCancellationCount = countsTowardCount, merchantId = ctx.merchant.id, driver = driver, rideFare = Just ctx.booking.estimatedFare, currency = ctx.booking.currency, distanceUnit = ctx.booking.distanceUnit, doCancellationRateBasedBlocking = doCancellationRateBasedBlocking}
       when (ctx.source == SBCR.ByUser && countsTowardRate) $ do
         let windowSize = toInteger $ fromMaybe 7 ctx.transporterConfig.cancellationRateWindow
         void $ SCR.incrementCancelledCount ctx.ride.driverId windowSize
+      when (ctx.source == SBCR.ByUser && countsTowardCount) $
+        DP.incrementCancellationCount ctx.ride.merchantOperatingCityId ctx.ride.driverId
 
     applyAutoAcceptCancellationBehaviour =
       when (ctx.booking.isAutoAccepted == Just True) $
