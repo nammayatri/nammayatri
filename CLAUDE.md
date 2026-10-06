@@ -151,7 +151,10 @@ services. This section is what is different here, and it is mostly about what
 
 The whole deployment is `Backend/dev/local-stack` — Docker Compose, one VPS,
 ~20 containers. Read that directory's README first; it is the real
-documentation for this fork. `./setup.sh` brings it up.
+documentation for this fork. `stack/setup.sh` brings it up. **Everything the
+server runs is under `local-stack/stack/`** (it mirrors `/opt/ny/local-stack`;
+the SQL is in `stack/db/`); probes are in `investigations/`, laptop tools in
+`ops/` (layout sorted 2026-10-06).
 
 Three services were replaced so the stack needs no Google account and no bill:
 
@@ -210,7 +213,7 @@ nginx for exactly this reason, not in the Haskell that already had the counter.
 outright.** It is built from upstream ref `03a7531`, an *ancestor* of this
 branch, plus our patches. **The rider and driver apps run from the image
 `ghcr.io/nammayatri-algeria/ny-backend:latest`** (CI run #10, 2026-09-14, tag
-`03a7531-10`, digest `108eca6c…`), **not from `bin/`**: `bin/MANIFEST.txt`
+`03a7531-10`, digest `108eca6c…`), **not from `bin/`**: `stack/bin/MANIFEST.txt`
 describes the 5 August binaries in that folder, and only the gateway and the
 registry there are the ones running (measured by hash, 2026-10-05). Upstream has since replaced
 whole subsystems. Measured case: the tree says driver positions come from the
@@ -300,7 +303,7 @@ the header of that script.
 
 - **Driver locations go stale silently.** The dispatch pool ignores old
   positions, so search returns zero estimates with no error anywhere. On a dev
-  stack, run `./setup.sh drivers` before any demo. On the live server there is
+  stack, run `stack/setup.sh drivers` before any demo. On the live server there is
   no fake fleet any more (2026-10-01): zero estimates there means no real
   driver is online.
 - **`docker exec -i` inside `ssh host "bash -s" <<EOF` eats the rest of the

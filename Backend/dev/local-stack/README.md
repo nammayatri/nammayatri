@@ -5,9 +5,17 @@ encryption service) in Docker, with a seeded merchant and a test rider, so the
 full login flow works end to end.
 
 ```bash
-cd Backend/dev/local-stack
+cd Backend/dev/local-stack/stack
 ./setup.sh
 ```
+
+**Where things are (since 2026-10-06).** Everything the server runs is in
+[`stack/`](stack/) — it mirrors `/opt/ny/local-stack` on the VPS, and it is the
+only folder a release copies. The SQL is in `stack/db/`. Nothing outside
+`stack/` is deployed: `ops/` is run from the laptop, `investigations/` holds the
+probes that explain how the system was understood, `retired/` the scripts that
+made test accounts, `tests/` the automated tests. See *Layout* at the end.
+Commands in this README written as `./x.sh` are run from `stack/`.
 
 First run takes ~10 minutes (it compiles librdkafka). After that, `docker compose up -d`
 starts everything in seconds.
@@ -4140,116 +4148,49 @@ rider-app has migrated.
 
 ## Layout
 
+Sorted on 2026-10-06 (phase 2 of the backend restructuring plan). **The rule:
+everything a release copies is under `stack/`, and nothing else is.**
+
 ```
-setup.sh               one-shot bring-up / verify / algeria / drivers / down / clean
-docker-compose.yml     the stack
-Dockerfile.rider       librdkafka fix
-Dockerfile.maps-shim   the Google-Maps-shaped shim
-
-  data and config
-algeria-geofences.sql  service area — the national border
-algeria-tariff.sql     the Algerian fares;  apply-tariff.sh applies them
-osrm-config.sql        points the backend's routing at our OSRM
-dedupe-seed.sql        removes the duplicated upstream seed rows
-driver-subscription.sql  the movin schema: who has paid, and every payment.
-                       Idempotent — safe to re-run
-driver-subscription-free-month.sql  one free month for the fleet already on
-                       the road.  Cannot double-give, and writes no payment —
-                       so `active` with no receipt means exactly "offered"
-account-deletion.sql   movin.deletion_request and the queue view the admin
-                       site reads.  Nothing here deletes an account: the
-                       backend has no route for it, so a person does it
-
-  prepare steps, each run once and slow
-osrm-prepare.sh        builds the routing graph from algeria-latest.osm.pbf
-tiles-prepare.sh       builds the map tiles from the same extract
-geocoder-prepare.sh    builds the 111.5k-row place index (output gitignored)
-
-  keeping it alive
-drivers-keepalive.sh   driver positions go stale silently — this is the fix
-simulate-driver.py     plays a fleet of six, so the app can be finished on one phone
-fleet-service.sh       keeps that fleet running;  without it: cars but no offers
-backup.sh              nightly encrypted backup, offsite;  also restore / list
-switch-domain.sh       move the API onto a real domain.  Keeps the old hostname
-                       answering, because Chargily bakes the callback URL into
-                       every checkout at creation
-ratings-average.sql    trigger keeping person.rating true;  apply-ratings.sh installs it
-apply-fcm.sh           installs a real Firebase key — push, rider AND driver, no rebuild
-maps-shim/push-relay.js  what fcm_url points at since 2026-09-16: FCM for Android,
-                       APNs with the app's words for iPhones.  Key in the shim's volume
-enrol-driver.sh        who may sign in on /ui/, and with which code;  the code is
-                       printed once and cannot be read back
-apply-search-window.sh how long a driver has to answer.  A Dhall value, so it is
-                       lost on any setup.sh that refetches 2023/ -- re-run it
-
-  measuring, not running — each records its results in its own header
-probe-booking-flow.py     a whole ride from both sides
-probe-account-deletion.py the deletion cycle with a real token: none →
-                          pending → 409 → withdrawn → askable again
-probe-cost-per-request.py what one request costs the machine, in CPU.  The
-                          input to every capacity claim about this box
-probe-storage-cost.py     what a completed ride costs on disk, weighed
-probe-service-time.py     how long each operation takes, one at a time
-probe-load.py             the concurrency ladder.  NEVER RUN — it
-                          deliberately saturates the machine
-probe-agency-messages.py  why /ui/message/list answers 500 as soon as it has a
-                          row.  Walks the row up one field at a time and reads
-                          the container log after each.  NOT YET RUN
-probe-multipart.py        does the server accept the exact multipart envelope
-                          the app builds by hand?  Written because the first
-                          upload attempt threw before a byte left the phone
-                          and shipping a second guess would have been worse
-probe-booking-timeouts.py how long a search really lives
-probe-unused-routes.py    what the rider API can serve that we don't use
-probe-rider-extras.py     do the useful unused routes actually work?
-probe-trip-history.py     what a past-trips list can show — and one wrong finding
-probe-subscription.sql    can we switch off a driver who hasn't paid?
-probe-subscription-flow.py  the whole payment path, signed for real.  The
-                          check it exists for: the same webhook delivered
-                          twice must buy ONE month.  Run it ON the VPS
-probe-subscription-live.py  the other half: a real driver token buying a real
-                          Chargily checkout.  Needs the secret key
-probe-restricted-drivers.py  who dispatch should skip, and whether the list
-                          reaches the exact Redis key the binary reads
-probe-push.py             one push to a real phone, no ride needed;  isolates app vs server
-probe-search-window.py    how long a driver really gets, read off a real request.
-                          Signs in as a RIDER only -- never as a fleet driver
-probe-driver-offers.sql   the bounds, the window and what drivers do with it.
-                          Read-only;  the source for every figure D10/D11 use
-probe-driver-wait.sql     what happens AFTER the driver presses -- how long an
-                          offer lives, how it ends, how often it ends in
-                          nothing.  Read-only;  the source for D12
-probe-driver-pickup.sql   reaching the passenger:  the ride OTP (four digits,
-                          and they can start with a zero), how long the leg
-                          takes, and how it is cancelled.  Read-only;  D13
-
-  services fronting the stack
-edge/                  nginx + TLS, the public face
-auth-guard/            the OTP lock, in front of both backends: brute-force limits,
-                       AND where the code comes from — it obtains one from Moorsyl,
-                       checks it, and substitutes the backend's fixed 7891
-  driver-codes.json    salted hashes, gitignored, in the backup set
-maps-shim/             Google Places/geocoding, answered from Postgres —
-                       and, because the backend can hold neither, the two
-                       things it cannot: profile photographs and a person's
-                       own rating
-  server.js            the router;  /directions, /place/*, /geocode
-  fleet.js             /fleet/nearby — cars on the passenger's map
-  avatars.js           /avatar/{driver,phone,ride,plate}
-  rating.js            /rating/{phone,driver} — see "Showing somebody their
-                       own rating"
-  subscription.js      /subscription/* — the driver’s 3 000 DA a month
-                       through Chargily Pay.  The webhook is the only thing
-                       that ever extends a subscription
-  restricted.js        publishes who dispatch should skip.  The binary reads
-                       one Redis key and never learns what a subscription is
-  deletion.js          /account/deletion-request — records a request and
-                       refuses one mid-ride.  Takes no id: the token says
-                       who is asking
-geocoder/              place-index build;  places.csv gitignored
-demo-map/              the map on :8025 (nginx conf + page)
-  site/areas.geojson   exported from the DB by setup.sh (gitignored)
-
-bin/                   backend binaries (gitignored;  MANIFEST.txt records the build)
-2023/                  pinned upstream tree (fetched by setup.sh, gitignored)
+local-stack/
+├── stack/                 WHAT THE SERVER RUNS — mirrors /opt/ny/local-stack
+│   ├── docker-compose.yml   the stack (the website's admin-api is its overlay)
+│   ├── Dockerfile.rider     the backend image: librdkafka + the binaries in bin/
+│   ├── Dockerfile.maps-shim
+│   ├── auth-guard/          sign-in, SMS/WhatsApp, attempt limits, wallet gate
+│   ├── maps-shim/           routing, places, wallet, payments, push, avatars
+│   ├── edge/                nginx: names, TLS, rate limits
+│   ├── demo-map/            the service-area map
+│   ├── geocoder/            the place index's SQL and lists
+│   ├── db/                  every .sql: tariffs, geofences, the movin schema,
+│   │                        seeds — applied by the apply-*.sh scripts
+│   ├── simulate-driver.py   the test fleet (systemd: movin-fleet)
+│   ├── movin-bot.py         the owner's bot (systemd: movin-bot)
+│   ├── backup.sh            the nightly backup — still run from /root until phase 4
+│   ├── setup.sh             bring a stack up from nothing (what CI runs)
+│   └── apply-*.sh, *-prepare.sh, enrol-driver.sh, install-moosyl-key.sh,
+│       fleet-service.sh, switch-domain.sh, deploy-*.sh, tiles-arabic.sh,
+│       maps-two-countries.sh   — run ON the server, from this folder
+├── ops/                   run from the laptop: demo.sh, demo.ps1, and
+│   └── checks/              the ride test (probe-two-country-rides.py)
+├── investigations/        35 probes: how a booking behaves, what a route
+│                          costs, why a driver was not offered a ride. Kept —
+│                          they answer questions that will be asked again — but
+│                          not part of anything that runs
+├── retired/               the four scripts that made test accounts (see *The
+│                          test fleet*). They expect to sit beside
+│                          docker-compose.yml; copy one into stack/ to use it
+│                          on a dev stack, never on the live server
+├── tests/                 the node and python tests CI runs
+├── docs/                  snapshots of the server, file by file
+└── README.md
 ```
+
+**The server keeps its old layout until phase 3.** On the VPS the SQL still
+sits at the top of `/opt/ny/local-stack` and the probes are not there at all;
+the first release made by the deploy command copies `stack/` as it is now, so
+`db/` appears there, and the old top-level `.sql` copies are cleared. Paths that
+systemd and the backup use — `/opt/ny/local-stack/simulate-driver.py`,
+`movin-bot.py`, `/root/backup.sh` — do not change, because those files stay at
+the top of `stack/`.
+
