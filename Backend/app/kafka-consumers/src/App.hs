@@ -37,6 +37,7 @@ import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
+import Lib.Scheduler.InMemManagement (inMemManagementApp)
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
@@ -94,6 +95,11 @@ startConsumer appCfg appEnv = do
             threadDelay (appCfg.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
+    -- Opt-in in-memory cache management API for the shudhi sidecar, on its own port
+    -- since most consumer types run no HTTP server.
+    mbInMemPort <- (readMaybe =<<) <$> lookupEnv "INMEM_MANAGEMENT_PORT"
+    whenJust mbInMemPort $ \port ->
+      void . forkIO . runSettings (setPort port defaultSettings) $ inMemManagementApp flowRt'' appEnv
     case appEnv.transport of
       Kafka -> startKafkaTransport flowRt'' appEnv
       RedisStream -> startRedisStreamTransport flowRt'' appEnv

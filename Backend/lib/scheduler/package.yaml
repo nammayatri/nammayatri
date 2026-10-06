@@ -79,6 +79,7 @@ dependencies:
   - postgresql-simple
   - prometheus-client
   - servant-server
+  - wai
   - singletons
   - uuid
   - cereal
