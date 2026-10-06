@@ -111,7 +111,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
+import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
@@ -1478,7 +1478,7 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
   -- Create the common document entry
   documentEntry <- buildCommonDocument driverId mbVehicleRcId
   logInfo $ "documentEntry: " <> show documentEntry
-  QCommonDriverOnboardingDocuments.create documentEntry
+  void $ QCommonDriverOnboardingDocumentsExtra.createOrReplaceUnreviewed documentEntry
   return Success
   where
     buildCommonDocument driverId mbVehicleRcId = do
