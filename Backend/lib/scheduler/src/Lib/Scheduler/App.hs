@@ -14,6 +14,7 @@
 
 module Lib.Scheduler.App
   ( runSchedulerService,
+    runSchedulerServiceWith,
   )
 where
 
@@ -42,7 +43,7 @@ import Lib.Scheduler.Environment
 import Lib.Scheduler.Handler (SchedulerHandle, gracefulConsumerCleanup, handler)
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types (JobProcessor)
-import Servant (Context (EmptyContext), ServerError (..), err503)
+import Servant (Application, Context (EmptyContext), ServerError (..), err503)
 import System.Exit
 import System.Posix.Process (exitImmediately)
 import UnliftIO
@@ -56,7 +57,21 @@ runSchedulerService ::
   Int ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvConfigUpdateFrequency maxShards handle_ = do
+runSchedulerService = runSchedulerServiceWith identity
+
+-- | Like 'runSchedulerService', but wraps the health server in a WAI middleware, so a
+-- service can serve extra routes (e.g. in-memory cache management) on the same port.
+runSchedulerServiceWith ::
+  (JobProcessor t, FromJSON t, HasSchemaName SystemConfigsT) =>
+  (Application -> Application) ->
+  SchedulerConfig ->
+  JobInfoMap ->
+  JobInfoMap ->
+  Int ->
+  Int ->
+  SchedulerHandle t ->
+  IO ()
+runSchedulerServiceWith waiMiddleware s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvConfigUpdateFrequency maxShards handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
@@ -114,7 +129,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap jobRetryOnExceptionMap kvC
             schedulerEnv
             (Proxy @HealthCheckAPI)
             (schedulerHealthCheck schedulerAction)
-            identity
+            waiMiddleware
             identity
             EmptyContext
             (const identity)
