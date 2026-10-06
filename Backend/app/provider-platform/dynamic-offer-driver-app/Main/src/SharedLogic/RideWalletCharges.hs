@@ -30,7 +30,7 @@
 --   one line to 'chargesForBooking' and 'chargesForRide'. Nothing else here changes.
 module SharedLogic.RideWalletCharges
   ( checkWalletBalanceBeforeRide,
-    debitWalletChargesAtEndRide,
+    chargeWalletAtRideStart,
   )
 where
 
@@ -101,27 +101,46 @@ checkWalletBalanceBeforeRide ::
   Id DP.Person ->
   SRB.Booking ->
   m ()
-checkWalletBalanceBeforeRide transporterConfig driverInfo driverId booking = do
-  charges <- walletCharges transporterConfig driverInfo driverId booking.fareParams booking
+checkWalletBalanceBeforeRide transporterConfig driverInfo driverId booking =
+  walletCharges transporterConfig driverInfo driverId booking.fareParams booking >>= ensureSufficientBalance driverId
+
+ensureSufficientBalance ::
+  (BeamFlow m r, MonadFlow m) =>
+  Id DP.Person ->
+  [WalletCharge m] ->
+  m ()
+ensureSufficientBalance driverId charges =
   whenJust (requiredBalance charges) $ \required -> do
     mbAccount <- Wallet.getWalletAccountByOwner DRIVER driverId.getId
     let available = maybe 0 (.balance) mbAccount
     when (available < required) $ do
       logInfo $
-        "checkWalletBalanceBeforeRide: insufficient balance for " <> show (map (.label) charges)
+        "wallet charges: insufficient balance for " <> show (map (.label) charges)
           <> ", required: "
           <> show required
           <> ", available: "
           <> show available
       throwError $ InsufficientAirportBalance required available
 
--- | Post every wallet-settled charge for the ride in ONE ledger block.
+-- | Check the wallet covers every charge, then post them all in ONE ledger block. Called at ride
+--   start.
+--
+--   Check and charge share one 'walletCharges' list on purpose: built twice they would be two sets
+--   of gate and config lookups, and could disagree if anything changed between them — leaving us
+--   charging for something we never checked, or refusing over something we never take.
+--
+--   Throws 'InsufficientAirportBalance' rather than letting the wallet go negative, so call it
+--   while refusing is still free: after the ride's own validation has passed, but before the ride
+--   is actually started.
 --
 --   Charges post in list order, which is deliberate: third-party money (the airport operator)
 --   before platform revenue, so a driver who cannot cover everything ends up short on the charge
---   we own rather than on money owed to someone else. Allows the wallet to go negative, matching
---   the airport entry fee's existing behaviour.
-debitWalletChargesAtEndRide ::
+--   we own rather than on money owed to someone else.
+--
+--   Prices from the BOOKING's fare params — correct for both charges here, since the flat
+--   'WalletCharged' platform fee and the gate-configured airport charges are neither
+--   distance- nor duration-dependent.
+chargeWalletAtRideStart ::
   ( ChargeFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
@@ -129,16 +148,16 @@ debitWalletChargesAtEndRide ::
   ) =>
   DTConf.TransporterConfig ->
   DI.DriverInformation ->
-  DFare.FareParameters -> -- ride-end (recomputed) fare params
   DRide.Ride ->
   SRB.Booking ->
   m ()
-debitWalletChargesAtEndRide transporterConfig driverInfo newFareParams ride booking = do
-  charges <- walletCharges transporterConfig driverInfo ride.driverId newFareParams booking
+chargeWalletAtRideStart transporterConfig driverInfo ride booking = do
+  charges <- walletCharges transporterConfig driverInfo ride.driverId booking.fareParams booking
+  ensureSufficientBalance ride.driverId charges
   unless (totalDebit charges <= 0) $ do
     isOnline <- Wallet.resolveIsOnlineFromBooking booking
     ctx <- Wallet.financeCtxFromRide transporterConfig booking ride Nothing isOnline
     result <- runFinance ctx $ traverse_ (.postLegs) charges
     case result of
-      Left err -> fromEitherM (\e -> InternalError ("Ride wallet charge deduction failed: " <> show e)) (Left err)
+      Left err -> fromEitherM (\e -> InternalError ("Ride wallet charge at ride start failed: " <> show e)) (Left err)
       Right _ -> pure ()

@@ -344,6 +344,7 @@ otpRideCreate driver otpCode booking clientId = do
   -- when the balance is insufficient.
   RideWalletCharges.checkWalletBalanceBeforeRide transporterConfig driverInfo driver.id booking
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
+  RideWalletCharges.chargeWalletAtRideStart transporterConfig driverInfo ride booking
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 

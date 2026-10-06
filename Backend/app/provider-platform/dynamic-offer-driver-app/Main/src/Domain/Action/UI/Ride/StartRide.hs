@@ -198,7 +198,6 @@ startRideHandler ServiceHandle {..} rideId req = do
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   L.setOptionLocal TxnIdKey booking.transactionId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-  RideWalletCharges.checkWalletBalanceBeforeRide transporterConfig driverInfo driverId booking
   (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
       (pure (False, False))
@@ -244,6 +243,7 @@ startRideHandler ServiceHandle {..} rideId req = do
                 driverLocations <- LF.driversLocation [driverId]
                 listToMaybe driverLocations & fromMaybeM LocationNotFound
               pure (getCoordinates driverLocation, dashboardReq.odometer)
+      RideWalletCharges.chargeWalletAtRideStart transporterConfig driverInfo ride booking
       now <- getCurrentTime
       -- create first entry of eta here
       let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
