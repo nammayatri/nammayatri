@@ -65,7 +65,10 @@ data DriverRideRequest
         distanceUnit :: DistanceUnit,
         doCancellationRateBasedBlocking :: Maybe Bool,
         -- from the CancellationConsequenceMatrix row (replaces the DriverCancellation#Valid tag gate)
-        countsTowardCancellationRate :: Bool
+        countsTowardCancellationRate :: Bool,
+        -- gates the bt: RIDE_CANCELLATION ACTION_COUNT: DriverAtFault verdict, or True when the
+        -- city has no fault rules (no verdict) so every driver cancel counts
+        countsTowardCancellationCount :: Bool
       }
   | OnRideCompletion
       { merchantId :: Id DM.Merchant,
