@@ -544,9 +544,13 @@ findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m
 findAllByDriverIds driverIds = findAllWithKV [Se.Is BeamDI.driverId $ Se.In driverIds]
 
 countEnabledByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m Int
-countEnabledByDriverIds driverIds =
+countEnabledByDriverIds driverIds = fromMaybe 0 <$> mbCountEnabledByDriverIds driverIds
+
+-- Nothing only when the replica read fails. An empty driver list and a real zero are Just 0.
+mbCountEnabledByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m (Maybe Int)
+mbCountEnabledByDriverIds driverIds =
   if null driverIds
-    then pure 0
+    then pure (Just 0)
     else do
       dbConf <- getReplicaBeamConfig
       res <-
@@ -560,7 +564,12 @@ countEnabledByDriverIds driverIds =
                         B.&&?. driverInfo.enabled B.==?. B.val_ True
                   )
                   $ B.all_ (SBC.driverInformation SBC.atlasDB)
-      pure $ either (const 0) (\r -> if null r then 0 else head r) res
+      case res of
+        Right (n : _) -> pure (Just n)
+        Right [] -> pure (Just 0)
+        Left err -> do
+          logTagError "countEnabledByDriverIds" $ "enabled count failed err=" <> show err
+          pure Nothing
 
 updateMerchantIdAndCityIdByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantIdAndCityIdByDriverId driverId merchantId merchantOperatingCityId = do

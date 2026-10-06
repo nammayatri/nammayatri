@@ -388,6 +388,7 @@ data AnalyticsConfig = AnalyticsConfig
     earningsWindowSize :: Kernel.Prelude.Int,
     enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     financialYearStartMonth :: Kernel.Prelude.Int,
+    fleetAnalyticsRedisViaConsumer :: Kernel.Prelude.Bool,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     useDbForEarningAndMetrics :: Kernel.Prelude.Bool,

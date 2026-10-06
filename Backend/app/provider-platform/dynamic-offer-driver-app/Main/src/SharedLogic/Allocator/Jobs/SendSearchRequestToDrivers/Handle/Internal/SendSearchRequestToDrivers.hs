@@ -146,6 +146,7 @@ sendSearchRequestToDrivers ::
     HasShortDurationRetryCfg r c,
     HasHttpClientOptions r c,
     HasKafkaProducer r,
+    Analytics.PublishesFleetAnalytics m,
     ClickhouseFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     Redis.HedisFlow m r,
@@ -291,9 +292,13 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
     Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
 
   -- Update operator/fleet analytics: batch increment total request count for all drivers at once
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-    let allDriverIds = map (.driverId) searchRequestsForDrivers
-    Analytics.updateOperatorAnalyticsTotalRequestCountBatch allDriverIds transporterConfig
+  Analytics.recordFleetOperatorAnalytics
+    transporterConfig
+    ( Analytics.SearchRequested
+        (map (.driverId) searchRequestsForDrivers)
+        searchTry.id.getId
+        (Analytics.searchBatchKey (map (\sReqFD -> sReqFD.id.getId) searchRequestsForDrivers))
+    )
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -604,6 +609,7 @@ attemptPriorityDirectAssign ::
     HasField "driverUnlockDelay" r Seconds,
     TM.HasDriverSearchRequestResponseMetrics m r,
     EncFlow m r,
+    Analytics.PublishesFleetAnalytics m,
     JobCreator r m,
     LT.HasLocationService m r,
     C.MonadCatch m
@@ -692,8 +698,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
                   QSRD.updateDriverResponse (Just Accept) Inactive Nothing (Just respondedAt) (Just respondedAt) sReqFD.id
                   -- The same post-accept bundle respondQuote runs, so silent and manual accepts
                   -- stay indistinguishable to analytics, funnel metrics and the score/pool counters.
-                  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
-                    Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False True False False
+                  Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferAccepted driverId searchTry.id.getId)
                   cityLabel <- SML.getCityLabel searchReq.merchantOperatingCityId
                   TM.incrementDriverResponseCounter merchant.shortId.getShortId cityLabel (show sReqFD.vehicleServiceTier) (show sReqFD.batchNumber) (show Accept) (SML.driverSearchReqFunnelLabels (SML.distanceBucketEdges transporterConfig) sReqFD)
                   SDP.recordQuoteResponseCounters searchReq.merchantOperatingCityId driverId Accept

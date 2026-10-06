@@ -44,6 +44,7 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
             financialYearStartMonth = 4,
             allowCacheDriverFlowStatus = False,
             enableFleetOperatorDashboardAnalytics = False,
+            fleetAnalyticsRedisViaConsumer = False,
             maxOnlineDurationDays = 10,
             onlineDurationCalculateFrom = Nothing,
             useDbForEarningAndMetrics = False

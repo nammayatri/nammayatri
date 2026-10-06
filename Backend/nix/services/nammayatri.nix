@@ -381,6 +381,7 @@ in
         cabalExecutables ++ [
           "rider-producer-exe"
           "kafka-ride-events-consumer-exe"
+          "kafka-fleet-analytics-consumer-exe"
           "ride-events-stream-groups"
           "nammayatri-init"
           "log-cleaner"
@@ -1167,6 +1168,32 @@ in
                 "nammayatri-init".condition = "process_completed_successfully";
                 "mock-registry".condition = "process_healthy";
                 "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
+            };
+
+            # Fleet analytics consumer: same binary, CONSUMER_TYPE = FLEET_ANALYTICS_REALTIME.
+            # Restarts after a handler throw. Offsets are committed only after a
+            # successful apply, so the new process reads the failed record again.
+            kafka-fleet-analytics-consumer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "kafka-consumers-exe")
+              ];
+              environment = {
+                CONSUMER_TYPE = "FLEET_ANALYTICS_REALTIME";
+                METRICS_PORT = toString ports.kafka-fleet-analytics-consumer-metrics;
+                GET_MY_SCHEMA = "atlas_driver_offer_bpp";
+              };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "mock-registry".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              };
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 5;
               };
               shutdown.signal = 9;
             };

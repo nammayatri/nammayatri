@@ -47,6 +47,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
@@ -122,7 +123,8 @@ reAllocateBookingIfPossible ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   Bool ->
   Bool ->

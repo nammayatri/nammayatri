@@ -19,7 +19,7 @@ module SharedLogic.Allocator where
 
 import Control.Applicative ((<|>))
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
-import Data.Aeson (withObject, (.:))
+import Data.Aeson (object, withObject, (.!=), (.:), (.:?), (.=))
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.Booking as DB
@@ -112,6 +112,7 @@ data AllocatorJobType
   | SAPRideRevenueDispatch
   | ConnectAccountChargeDeduction
   | BulkUserCohortMappingUpload
+  | FleetAnalyticsRedisRecon
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -177,6 +178,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSAPRideRevenueDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPRideRevenueDispatch jobData
   restoreAnyJobInfo SConnectAccountChargeDeduction jobData = AnyJobInfo <$> restoreJobInfo SConnectAccountChargeDeduction jobData
   restoreAnyJobInfo SBulkUserCohortMappingUpload jobData = AnyJobInfo <$> restoreJobInfo SBulkUserCohortMappingUpload jobData
+  restoreAnyJobInfo SFleetAnalyticsRedisRecon jobData = AnyJobInfo <$> restoreJobInfo SFleetAnalyticsRedisRecon jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -821,3 +823,36 @@ data BulkUserCohortMappingUploadJobData = BulkUserCohortMappingUploadJobData
 instance JobInfoProcessor 'BulkUserCohortMappingUpload
 
 type instance JobContent 'BulkUserCohortMappingUpload = BulkUserCohortMappingUploadJobData
+
+data FleetAnalyticsRedisReconJobData = FleetAnalyticsRedisReconJobData
+  { intervalSeconds :: Int,
+    -- | Rows read per batch. Nothing uses 50.
+    pageSize :: Maybe Int,
+    -- | Last fleet_operator_id finished in this pass. Nothing starts a pass.
+    cursor :: Maybe Text,
+    -- | Recount operator associated/active/enabled and fleet active-driver, active-vehicle, and online keys.
+    -- Absent or false skips those queries. The six running totals are always reconned.
+    reconLiveCounters :: Bool
+  }
+  deriving (Generic, Show, Eq)
+
+instance FromJSON FleetAnalyticsRedisReconJobData where
+  parseJSON = withObject "FleetAnalyticsRedisReconJobData" $ \o -> do
+    intervalSeconds <- o .: "intervalSeconds"
+    pageSize <- o .:? "pageSize"
+    cursor <- o .:? "cursor"
+    reconLiveCounters <- o .:? "reconLiveCounters" .!= False
+    pure FleetAnalyticsRedisReconJobData {..}
+
+instance ToJSON FleetAnalyticsRedisReconJobData where
+  toJSON FleetAnalyticsRedisReconJobData {..} =
+    object
+      [ "intervalSeconds" .= intervalSeconds,
+        "pageSize" .= pageSize,
+        "cursor" .= cursor,
+        "reconLiveCounters" .= reconLiveCounters
+      ]
+
+instance JobInfoProcessor 'FleetAnalyticsRedisRecon
+
+type instance JobContent 'FleetAnalyticsRedisRecon = FleetAnalyticsRedisReconJobData

@@ -39,6 +39,7 @@ import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
+import qualified Processor.FleetAnalytics.Realtime as FleetAnalyticsProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
@@ -104,17 +105,23 @@ startConsumer appCfg appEnv = do
 
 startKafkaTransport :: L.FlowRuntime -> AppEnv -> IO ()
 startKafkaTransport flowRt appEnv = do
-  kc <- KafkaFlow.newKafkaConsumer appEnv
   case appEnv.consumerType of
-    RIDE_EVENTS_CONSUMER ->
+    FLEET_ANALYTICS_REALTIME -> do
+      kc <- KafkaFlow.newFleetAnalyticsKafkaConsumer appEnv
+      KafkaFlow.runPerEventCommit flowRt appEnv kc FleetAnalyticsProcessor.processFleetAnalytics
+    consumerType -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaFlow.runPerEvent flowRt appEnv kc $ \event _key ->
         RideEventsProcessor.processRideEnded event
-    BROADCAST_MESSAGE ->
+    BROADCAST_MESSAGE -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaFlow.runPerEvent flowRt appEnv kc BMProcessor.broadcastMessage
-    FLEET_COMMUNICATION_DISPATCH ->
+    FLEET_COMMUNICATION_DISPATCH -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
       KafkaFlow.runPerEvent flowRt appEnv kc $ \payload _key ->
         FCProcessor.processFleetCommunicationDelivery payload
     LOCATION_UPDATE -> do
+      kc <- KafkaFlow.newKafkaConsumer appEnv
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
           batchSize = maybe 100 (fromIntegral . (.batchSize)) appEnv.healthCheckAppCfg
       KafkaFlow.runBatch flowRt appEnv kc batchSize $ \batch ->
@@ -142,6 +149,8 @@ startRedisStreamTransport flowRt appEnv = do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
       RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->
         LCProcessor.processLocationData enabledCityIds (map (\e -> (e.locationUpdate, e.driverId)) entries)
+    FLEET_ANALYTICS_REALTIME ->
+      error "FLEET_ANALYTICS_REALTIME is a Kafka consumer. Set transport = Kafka."
 
 -- | Wire format for BROADCAST_MESSAGE on the Redis-Stream transport.
 -- Kafka carries the driver id in the message key; for RedisStream we bundle

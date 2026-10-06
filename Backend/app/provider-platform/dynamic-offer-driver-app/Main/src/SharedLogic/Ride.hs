@@ -688,6 +688,7 @@ pullExistingRideRequests ::
     Redis.HedisFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Analytics.PublishesFleetAnalytics m,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
@@ -716,7 +717,7 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
       let driverId = driverReq.driverId
       DP.removeSearchReqIdFromMap merchantId driverId driverReq.requestId
       DP.decrementSrdSentCount driverReq.createdAt driverId
-      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporterConfig False False False True
+      Analytics.recordFleetOperatorAnalytics transporterConfig (Analytics.OfferPulled driverId driverReq.searchTryId.getId)
       void $ QSRD.updateDriverResponse (Just SReqD.Pulled) SReqD.Inactive Nothing driverReq.renderedAt driverReq.respondedAt driverReq.id
       driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       Notify.notifyDriverClearedFare merchantOpCityId driver_ driverReq.searchTryId estimatedFare

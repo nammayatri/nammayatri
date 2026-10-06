@@ -146,12 +146,42 @@ incrementOverallCount fleetOperatorId transporterConfig getField updateCounter s
       initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
       QFleetOps.create (setInitField initStats)
 
-computeOperatorIncrements :: DR.Ride -> (Meters, HighPrecMoney, Int)
-computeOperatorIncrements r =
-  ( fromMaybe 0 r.chargeableDistance,
-    fromMaybe 0.0 r.fare,
-    1
-  )
+-- | What the completed-ride increments read from the ride and booking. Small and
+-- free of customer data, so it can travel on the fleet analytics topic.
+data CompletedRideStats = CompletedRideStats
+  { rideId :: Text,
+    driverId :: Text,
+    distance :: Meters,
+    fare :: HighPrecMoney,
+    platformFee :: HighPrecMoney,
+    isOnlinePayment :: Bool,
+    rideDuration :: Maybe Seconds
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+mkCompletedRideStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DR.Ride -> DBooking.Booking -> m CompletedRideStats
+mkCompletedRideStats ride booking = do
+  fee <- case ride.fareParametersId of
+    Just fareParamsId -> maybe 0 (\fareParams -> fromMaybe 0 fareParams.platformFee) <$> QFareParameters.findById fareParamsId
+    Nothing -> pure 0
+  -- Cash and booth payments are offline; with no instrument, fall back to the ride's flag.
+  let online = case booking.paymentInstrument of
+        Just DMPM.Cash -> False
+        Just DMPM.BoothOnline -> False
+        Nothing -> ride.onlinePayment
+        _ -> True
+  pure
+    CompletedRideStats
+      { rideId = ride.id.getId,
+        driverId = ride.driverId.getId,
+        distance = fromMaybe 0 ride.chargeableDistance,
+        fare = fromMaybe 0.0 ride.fare,
+        platformFee = fee,
+        isOnlinePayment = online,
+        rideDuration = case (ride.tripStartTime, ride.tripEndTime) of
+          (Just startTime, Just endTime) -> Just (Seconds (round $ diffUTCTime endTime startTime))
+          _ -> Nothing
+      }
 
 -- Helper: build initial FleetOperatorStats row for an operator from a ride
 buildInitialFleetOperatorStats :: (MonadFlow m) => Text -> DTTC.TransporterConfig -> m DFS.FleetOperatorStats
@@ -183,21 +213,18 @@ buildInitialFleetOperatorStats fleetOperatorId transporterConfig = do
 makeFleetOperatorMetricLockKey :: Text -> Text
 makeFleetOperatorMetricLockKey fleetOperatorId = "FleetOperatorStats:Lock:" <> fleetOperatorId
 
-incrementTotalRidesTotalDistAndTotalEarning :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DTTC.TransporterConfig -> m ()
-incrementTotalRidesTotalDistAndTotalEarning fleetOperatorId ride transporterConfig = do
+incrementTotalRidesTotalDistAndTotalEarning :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> CompletedRideStats -> DTTC.TransporterConfig -> m ()
+incrementTotalRidesTotalDistAndTotalEarning fleetOperatorId rideStats transporterConfig = do
   mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
   case mbCurrent of
     Just s -> do
-      let (incDist, incEarn, incCount) = computeOperatorIncrements ride
-          newTotalCompletedRides = Just (fromMaybe 0 s.totalCompletedRides + incCount)
-          newTotalDistance = Just (fromMaybe 0 s.totalDistance + incDist)
-          newTotalEarning = Just (fromMaybe 0 s.totalEarning + incEarn)
+      let newTotalCompletedRides = Just (fromMaybe 0 s.totalCompletedRides + 1)
+          newTotalDistance = Just (fromMaybe 0 s.totalDistance + rideStats.distance)
+          newTotalEarning = Just (fromMaybe 0 s.totalEarning + rideStats.fare)
       QFleetOps.updateDistanceEarningAndCompletedRidesByFleetOperatorId newTotalDistance newTotalEarning newTotalCompletedRides fleetOperatorId
     Nothing -> do
-      let dist = Just (fromMaybe 0 ride.chargeableDistance)
-          earn = Just (fromMaybe 0.0 ride.fare)
       initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
-      QFleetOps.create initStats {DFS.totalDistance = dist, DFS.totalCompletedRides = Just 1, DFS.totalEarning = earn}
+      QFleetOps.create initStats {DFS.totalDistance = Just rideStats.distance, DFS.totalCompletedRides = Just 1, DFS.totalEarning = Just rideStats.fare}
 
 incrementDriverCancellationCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
 incrementDriverCancellationCount fleetOperatorId transporterConfig =
@@ -376,49 +403,25 @@ incrementCustomerCancellationCountDaily fleetOperatorId driverId transporterConf
     (\s -> s {DFODS.customerCancellationCount = Just 1})
 
 -- Daily: increment totals for earning, distance, and completed rides (aka ride completed)
-incrementTotalEarningDistanceAndCompletedRidesDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DBooking.Booking -> DTTC.TransporterConfig -> m ()
-incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking transporterConfig = do
+incrementTotalEarningDistanceAndCompletedRidesDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> CompletedRideStats -> DTTC.TransporterConfig -> m ()
+incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId rideStats transporterConfig = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
   let merchantLocalDate = utctDay now
-  let driverId = ride.driverId.getId
-
-  -- Get platform fees from FareParameters if available
-  platformFeeTotal <- case ride.fareParametersId of
-    Just fareParamsId -> do
-      mbFareParams <- QFareParameters.findById fareParamsId
-      pure $ case mbFareParams of
-        Just fareParams -> fromMaybe 0 fareParams.platformFee
-        Nothing -> 0
-    Nothing -> pure 0
-
-  -- Determine if payment is online or cash based on booking.paymentInstrument
-  -- If booking.paymentInstrument is Cash, it's cash payment
-  -- If booking.paymentInstrument is Nothing, check merchant.onlinePayment
-  -- Otherwise, it's online payment
-  let isOnlinePayment = case booking.paymentInstrument of
-        Just DMPM.Cash -> False
-        Just DMPM.BoothOnline -> False
-        Nothing -> ride.onlinePayment
-        _ -> True
+  let driverId = rideStats.driverId
+      rideDuration = rideStats.rideDuration
 
   -- Determine cash vs online platform fees based on payment type
   let (cashPlatformFeeIncrement, onlinePlatformFeeIncrement) =
-        if isOnlinePayment
-          then (0, platformFeeTotal)
-          else (platformFeeTotal, 0)
-
-  -- Calculate ride duration from tripStartTime and tripEndTime
-  let rideDuration = case (ride.tripStartTime, ride.tripEndTime) of
-        (Just startTime, Just endTime) -> Just (Seconds (round $ diffUTCTime endTime startTime))
-        _ -> Nothing
+        if rideStats.isOnlinePayment
+          then (0, rideStats.platformFee)
+          else (rideStats.platformFee, 0)
 
   -- Split earnings into online and cash based on payment type
-  let rideFare = fromMaybe 0.0 ride.fare
-      (onlineEarningIncrement, cashEarningIncrement) =
-        if isOnlinePayment
-          then (rideFare, 0.0)
-          else (0.0, rideFare)
+  let (onlineEarningIncrement, cashEarningIncrement) =
+        if rideStats.isOnlinePayment
+          then (rideStats.fare, 0.0)
+          else (0.0, rideStats.fare)
 
   -- Fetch records where fleetDriverId IN [fleetOperatorId, driverId]
   statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds fleetOperatorId driverId merchantLocalDate
@@ -427,7 +430,7 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking
   -- Helper function to compute new earning/distance/rides
   let computeNewEarningDistanceRides stats =
         let newTotalCompletedRides = Just (fromMaybe 0 stats.totalCompletedRides + 1)
-            newTotalDistance = Just (fromMaybe 0 stats.totalDistance + fromMaybe 0 ride.chargeableDistance)
+            newTotalDistance = Just (fromMaybe 0 stats.totalDistance + rideStats.distance)
             newOnlineTotalEarning = Just (fromMaybe 0 stats.onlineTotalEarning + onlineEarningIncrement)
             newCashTotalEarning = Just (fromMaybe 0 stats.cashTotalEarning + cashEarningIncrement)
             newCashPlatformFees = Just (fromMaybe 0 stats.cashPlatformFees + cashPlatformFeeIncrement)
@@ -443,7 +446,7 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking
   let setInitEarningDistanceRides stats =
         stats
           { DFODS.totalCompletedRides = Just 1,
-            DFODS.totalDistance = Just (fromMaybe 0 ride.chargeableDistance),
+            DFODS.totalDistance = Just rideStats.distance,
             DFODS.onlineTotalEarning = if onlineEarningIncrement > 0 then Just onlineEarningIncrement else Nothing,
             DFODS.cashTotalEarning = if cashEarningIncrement > 0 then Just cashEarningIncrement else Nothing,
             DFODS.cashPlatformFees = if cashPlatformFeeIncrement > 0 then Just cashPlatformFeeIncrement else Nothing,
@@ -559,8 +562,12 @@ incrementTotalRequestCountBatch ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   [(Text, Text)] -> -- List of (fleetOwnerId, driverId) pairs
   DTTC.TransporterConfig ->
+  -- | Runs the Postgres writes, then the Redis counters, inside the entity lock.
+  (Text -> m () -> m () -> m ()) ->
+  -- | Redis counters. Runs after the overall and daily Postgres rows, with the driver count added.
+  (Text -> Int -> m ()) ->
   m ()
-incrementTotalRequestCountBatch fleetDriverPairs transporterConfig = do
+incrementTotalRequestCountBatch fleetDriverPairs transporterConfig claimEntity afterOverallWrite = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
   let merchantLocalDate = utctDay now
@@ -572,7 +579,9 @@ incrementTotalRequestCountBatch fleetDriverPairs transporterConfig = do
   forM_ groupedByFleet $ \(fleetOwnerId, driverIds) ->
     Redis.withWaitAndLockRedis (makeFleetOperatorMetricLockKey fleetOwnerId) 10 5000 $ do
       let driverCount = length driverIds
-
+      claimEntity fleetOwnerId (writeRequestCounts fleetOwnerId driverIds driverCount nowUTCTime merchantLocalDate) (afterOverallWrite fleetOwnerId driverCount)
+  where
+    writeRequestCounts fleetOwnerId driverIds driverCount nowUTCTime merchantLocalDate = do
       -- Update or create overall stats (increment by number of drivers)
       mbFleetStats <- QFleetOps.findByPrimaryKey fleetOwnerId
       case mbFleetStats of
@@ -608,7 +617,6 @@ incrementTotalRequestCountBatch fleetDriverPairs transporterConfig = do
           Nothing -> do
             initStats <- buildInitialFleetOperatorDailyStats fleetOwnerId driverId merchantLocalDate transporterConfig nowUTCTime
             QFleetOpsDaily.create initStats {DFODS.totalRequestCount = Just 1}
-  where
     groupByFleetOwner :: [(Text, Text)] -> [(Text, [Text])]
     groupByFleetOwner pairs =
       let grouped = Map.fromListWith (++) [(foid, [did]) | (foid, did) <- pairs]

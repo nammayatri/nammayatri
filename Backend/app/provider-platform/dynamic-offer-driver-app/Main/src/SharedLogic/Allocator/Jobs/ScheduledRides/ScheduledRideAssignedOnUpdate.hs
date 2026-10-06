@@ -42,6 +42,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.CallBAP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -108,7 +109,8 @@ sendScheduledRideAssignedOnUpdate ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -329,7 +331,8 @@ cancelOrReallocate ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   DRide.Ride ->
   Text ->

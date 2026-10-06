@@ -52,6 +52,7 @@ import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (cancelOrReallocate, errorCatchAndHandle, resultFailed, sumDuration)
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.CallBAPInternal
 import SharedLogic.CancellationConsequence (cityHasDriverCancelMoneyPenalty)
@@ -118,7 +119,8 @@ checkDriverPickupProgress ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   Job 'CheckDriverPickupProgress ->
   m ExecutionResult

@@ -55,6 +55,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), SendSearchRequestToDriverJo
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..), MetricsHandle (..), handler)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
@@ -219,7 +220,8 @@ type SendSearchRequestJobFlow m r c =
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   )
 
 -- Immediate dispatch (Redis-backed). Scheduled dispatch uses the sibling handler below.
@@ -375,7 +377,8 @@ sendSearchRequestToDrivers' ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    Analytics.PublishesFleetAnalytics m
   ) =>
   DriverPoolConfig ->
   SearchTry ->
