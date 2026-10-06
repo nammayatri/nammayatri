@@ -44,6 +44,14 @@ module Lib.Yudhishthira.Types
     UpdateNammaTagRequest (..),
     GetLogicsResp (..),
     LogicRolloutObject (..),
+    EnableBehaviourReq (..),
+    MarkCanonicalReq (..),
+    BehaviourPrereqKind (..),
+    BehaviourVersionState (..),
+    BehaviourPrereqStatus (..),
+    BehaviourDomainStatus (..),
+    BehaviourStatusRes (..),
+    isBehaviourDomain,
     ConfigPilotVerifyReq (..),
     ConfigPilotRolloutObject (..),
     ConfigPilotRolloutReq,
@@ -338,6 +346,7 @@ data LogicDomain
   | PICKUP_STALL_BEHAVIOR
   | QUOTE_RESPONSE_BEHAVIOR
   | AUTO_ACCEPT_CANCELLATION_BEHAVIOR
+  | RATING_BEHAVIOR
   | BEHAVIOR_THRESHOLD_CHECK
   | BEHAVIOR_CONSEQUENCE_CALC
   | BEHAVIOR_COMMUNICATION
@@ -380,6 +389,7 @@ instance Enumerable LogicDomain where
       PICKUP_STALL_BEHAVIOR,
       QUOTE_RESPONSE_BEHAVIOR,
       AUTO_ACCEPT_CANCELLATION_BEHAVIOR,
+      RATING_BEHAVIOR,
       BEHAVIOR_THRESHOLD_CHECK,
       BEHAVIOR_CONSEQUENCE_CALC,
       BEHAVIOR_COMMUNICATION,
@@ -399,6 +409,25 @@ instance Enumerable LogicDomain where
 
 instance Enumerable ConfigType where
   allValues = [minBound .. maxBound]
+
+-- | Enforcement behaviour domains (behaviour engine). These must stay opt-in per
+-- city: version selection never falls back to the reserved "default" city for them,
+-- so a canonical marker rollout can never mass-enable an enforcement behaviour.
+isBehaviourDomain :: LogicDomain -> Bool
+isBehaviourDomain = \case
+  GPS_TOLL_BEHAVIOR -> True
+  CANCELLATION_RATE_BEHAVIOR -> True
+  ISSUE_BREACH_BEHAVIOR -> True
+  DRUNK_DRIVE_BEHAVIOR -> True
+  TOLL_ISSUE_BEHAVIOR -> True
+  AC_RESTRICTION_BEHAVIOR -> True
+  UNHYGIENIC_VEHICLE_BEHAVIOR -> True
+  VEHICLE_UNSAFE_BEHAVIOR -> True
+  PICKUP_STALL_BEHAVIOR -> True
+  QUOTE_RESPONSE_BEHAVIOR -> True
+  AUTO_ACCEPT_CANCELLATION_BEHAVIOR -> True
+  RATING_BEHAVIOR -> True
+  _ -> False
 
 isRiderOnlyConfigType :: ConfigType -> Bool
 isRiderOnlyConfigType = \case
@@ -475,6 +504,7 @@ generateLogicDomainShowInstances =
     ++ [show PICKUP_STALL_BEHAVIOR]
     ++ [show QUOTE_RESPONSE_BEHAVIOR]
     ++ [show AUTO_ACCEPT_CANCELLATION_BEHAVIOR]
+    ++ [show RATING_BEHAVIOR]
     ++ [show BEHAVIOR_THRESHOLD_CHECK]
     ++ [show BEHAVIOR_CONSEQUENCE_CALC]
     ++ [show BEHAVIOR_COMMUNICATION]
@@ -528,6 +558,7 @@ instance Show LogicDomain where
   show PICKUP_STALL_BEHAVIOR = "PICKUP-STALL-BEHAVIOR"
   show QUOTE_RESPONSE_BEHAVIOR = "QUOTE-RESPONSE-BEHAVIOR"
   show AUTO_ACCEPT_CANCELLATION_BEHAVIOR = "AUTO-ACCEPT-CANCELLATION-BEHAVIOR"
+  show RATING_BEHAVIOR = "RATING-BEHAVIOR"
   show BEHAVIOR_THRESHOLD_CHECK = "BEHAVIOR-THRESHOLD-CHECK"
   show BEHAVIOR_CONSEQUENCE_CALC = "BEHAVIOR-CONSEQUENCE-CALC"
   show BEHAVIOR_COMMUNICATION = "BEHAVIOR-COMMUNICATION"
@@ -588,6 +619,8 @@ instance Read LogicDomain where
             [(QUOTE_RESPONSE_BEHAVIOR, drop 1 rest)]
           "AUTO-ACCEPT-CANCELLATION-BEHAVIOR" ->
             [(AUTO_ACCEPT_CANCELLATION_BEHAVIOR, drop 1 rest)]
+          "RATING-BEHAVIOR" ->
+            [(RATING_BEHAVIOR, drop 1 rest)]
           "BEHAVIOR-THRESHOLD-CHECK" ->
             [(BEHAVIOR_THRESHOLD_CHECK, drop 1 rest)]
           "BEHAVIOR-CONSEQUENCE-CALC" ->
@@ -863,6 +896,59 @@ data LogicRolloutObject = LogicRolloutObject
 
 instance HideSecrets LogicRolloutObject where
   hideSecrets = identity
+
+-- Behaviour enablement (behaviour engine switchboard) ---------------------
+
+data EnableBehaviourReq = EnableBehaviourReq
+  { percentageRollout :: Maybe Int, -- defaults to 100
+    overrideVersion :: Maybe Int -- city-specific rulebook instead of the canonical one
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets EnableBehaviourReq where
+  hideSecrets = identity
+
+newtype MarkCanonicalReq = MarkCanonicalReq
+  { version :: Int
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets MarkCanonicalReq where
+  hideSecrets = identity
+
+data BehaviourPrereqKind = OVERLAY_KEY | CONFIG_TOGGLE | BLOCK_REASON
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data BehaviourVersionState = BehaviourCanonical | BehaviourCustom | BehaviourStaleCanonical | BehaviourNotEnabled
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+
+data BehaviourPrereqStatus = BehaviourPrereqStatus
+  { name :: Text,
+    kind :: BehaviourPrereqKind,
+    satisfied :: Bool,
+    detail :: Maybe Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+data BehaviourDomainStatus = BehaviourDomainStatus
+  { domain :: LogicDomain,
+    enabled :: Bool,
+    percentageRollout :: Maybe Int,
+    activeVersion :: Maybe Int,
+    canonicalVersion :: Maybe Int,
+    versionState :: BehaviourVersionState,
+    prerequisites :: [BehaviourPrereqStatus]
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+newtype BehaviourStatusRes = BehaviourStatusRes
+  { behaviours :: [BehaviourDomainStatus]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-----------------------------------------------------------------------------
 
 data MerchantCitiesEntry = MerchantCitiesEntry
   { merchantShortId :: Text,

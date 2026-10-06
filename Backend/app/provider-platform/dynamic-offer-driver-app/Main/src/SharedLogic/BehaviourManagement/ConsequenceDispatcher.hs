@@ -264,6 +264,7 @@ parseBlockReasonFlag = \case
   Just "DrunkAndDriveViolation" -> DrunkAndDriveViolation
   Just "DocumentExpiry" -> DocumentExpiry
   Just "PickupStall" -> PickupStall
+  Just "LOW_RATING_BLOCK" -> LowRating
   Just "ByDashboard" -> ByDashboard
   Just other -> fromMaybe ByDashboard (readMaybe $ toString other)
   Nothing -> ByDashboard

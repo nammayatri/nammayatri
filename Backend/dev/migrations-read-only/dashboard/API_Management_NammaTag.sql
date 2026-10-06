@@ -70,3 +70,18 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostNammaTagConfigPilotRolloutAction","migration":"capability","param":"system-config.config_pilot.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ROLLOUT_ACTION' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetNammaTagBehaviorStatus","migration":"capability","param":"city-operations.behaviour.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.behaviour.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_BEHAVIOR_STATUS' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagBehaviorEnable","migration":"capability","param":"city-operations.behaviour.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.behaviour.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_ENABLE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagBehaviorDisable","migration":"capability","param":"city-operations.behaviour.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.behaviour.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_DISABLE' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagBehaviorMarkCanonical","migration":"capability","param":"system-config.dynamic_logic.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_MARK_CANONICAL' ) ON CONFLICT DO NOTHING;

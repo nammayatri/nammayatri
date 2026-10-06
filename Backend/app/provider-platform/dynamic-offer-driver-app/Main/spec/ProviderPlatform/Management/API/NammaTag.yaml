@@ -51,6 +51,9 @@ imports:
   Value: Data.Aeson
   NammaTagEventsOrNammaTagNamesResp: Lib.Yudhishthira.Types
   EntityBehaviorVisibility: Lib.BehaviorTracker.Types
+  EnableBehaviourReq: Lib.Yudhishthira.Types
+  MarkCanonicalReq: Lib.Yudhishthira.Types
+  BehaviourStatusRes: Lib.Yudhishthira.Types
 
 module: NammaTag
 
@@ -200,6 +203,59 @@ apis:
         type: BulkLogicRolloutResult
       migrate:
         capability: system-config.dynamic_logic.write
+  - GET: # BehaviourStatusAPI — per-city switchboard state for every behaviour pack
+      endpoint: /behavior/status
+      auth: ApiAuthV2
+      response:
+        type: BehaviourStatusRes
+      migrate:
+        capability: city-operations.behaviour.read
+  - POST: # EnableBehaviourAPI — apply the full behaviour pack to this city in one call
+      endpoint: /behavior/enable
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      request:
+        type: EnableBehaviourReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.behaviour.write
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
+  - POST: # DisableBehaviourAPI — set city rollout to 0%, keep history
+      endpoint: /behavior/disable
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.behaviour.write
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
+  - POST: # MarkCanonicalAPI — point the "default"-city 0% marker rollout at a version
+      endpoint: /behavior/markCanonical
+      auth: ApiAuthV2
+      mandatoryQuery:
+        domain: LogicDomain
+      request:
+        type: MarkCanonicalReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.dynamic_logic.write
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
   - POST:
       endpoint: /appDynamicLogic/updateExperimentGroup
       auth: ApiAuthV2

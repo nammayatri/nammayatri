@@ -50,6 +50,10 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagConfigPilotUpsertLogicRollout,
     postNammaTagConfigPilotRolloutAction,
     getNammaTagBehaviorVisibility,
+    getNammaTagBehaviorStatus,
+    postNammaTagBehaviorEnable,
+    postNammaTagBehaviorDisable,
+    postNammaTagBehaviorMarkCanonical,
   )
 where
 
@@ -69,6 +73,7 @@ import qualified Domain.Types.Coins.CoinsConfig as DCC
 import qualified Domain.Types.DocumentFieldConstraints as DDFC
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationStagesConfig as DDVSC
+import qualified Domain.Types.DriverBlockReason as DDBR
 import qualified Domain.Types.DriverPoolConfig as DTD
 import qualified Domain.Types.Exophone as DTEXO
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as DFODVC
@@ -103,7 +108,7 @@ import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Types as BET
 import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
-import Lib.ConfigPilot.Interface.Types (getConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
@@ -111,16 +116,19 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.SchemaInstances ()
 import Lib.Yudhishthira.SchemaTH
 import Lib.Yudhishthira.SchemaUtils
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNammaTagTriggerV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as SQTANC
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DTANC
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.BehaviourManagement.Packs as BPacks
 import qualified SharedLogic.BehaviourManagement.Visibility as BehaviorVisibility
 import SharedLogic.CancellationFault (FaultVerdict, FaultVerdictData)
 import SharedLogic.DriverPool.Config (Config (..))
@@ -129,7 +137,10 @@ import SharedLogic.DynamicPricing
 import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.DriverBlockReason as CQDBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CQMPN
+import qualified Storage.CachedQueries.Merchant.Overlay as CQOverlay
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -154,6 +165,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import Storage.ConfigPilot.Config.UiDriverConfig (UiDriverConfigDimensions (..))
 import qualified Storage.Queries.Coins.CoinsConfig as SQCCfg
 import qualified Storage.Queries.DocumentVerificationConfig as SQDVC
+import qualified Storage.Queries.DriverBlockReason as QDBR
 import qualified Storage.Queries.DriverPoolConfig as SQDPC
 import qualified Storage.Queries.Exophone as SQEXO
 import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as SQFODVC
@@ -437,6 +449,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) req logicData
     LYT.AUTO_ACCEPT_CANCELLATION_BEHAVIOR -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) req logicData
+    LYT.RATING_BEHAVIOR -> do
       logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) req logicData
     LYT.CANCELLATION_FAULT_VERDICT -> do
@@ -740,6 +755,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
             LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
           }
     LYT.AUTO_ACCEPT_CANCELLATION_BEHAVIOR ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYT.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
+          }
+    LYT.RATING_BEHAVIOR ->
       return $
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
@@ -1125,7 +1146,16 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity configType req = do
       invalidateConfigInMem LYT.MerchantMessage
     LYT.MerchantPushNotification -> do
       cfg :: DTPN.MerchantPushNotification <- parseConfigData req.configData
-      SQMPN.create cfg
+      -- Upsert on the runtime lookup slot (city + key + language + tripCategory +
+      -- subCategory): a second create for the same slot would insert a duplicate row
+      -- that findMatchingMerchantPN resolves arbitrarily. Updating in place (id
+      -- preserved) is also the dashboard's only edit path for PN content.
+      existingRows <- SQMPN.findAllByMerchantOpCityIdAndMessageKey cfg.merchantOperatingCityId cfg.key
+      let sameSlot r = r.language == cfg.language && r.tripCategory == cfg.tripCategory && r.fcmSubCategory == cfg.fcmSubCategory
+      case find sameSlot existingRows of
+        Just existing -> SQMPN.updateByPrimaryKey $ cfg {DTPN.id = existing.id, DTPN.createdAt = existing.createdAt}
+        Nothing -> SQMPN.create cfg
+      CQMPN.clearCache cfg.merchantOperatingCityId cfg.key cfg.tripCategory
       invalidateConfigInMem LYT.MerchantPushNotification
     LYT.MerchantServiceUsageConfigDriver -> do
       cfg :: DMSUC.MerchantServiceUsageConfig <- parseConfigData req.configData
@@ -1297,3 +1327,162 @@ postNammaTagConfigPilotRolloutAction merchantShortId opCity configType req =
       LYT.ConfigPilotConclude c -> LYT.Conclude LYT.ConcludeReq {version = c.version, domain = logicDomain}
       LYT.ConfigPilotAbort a -> LYT.Abort LYT.AbortReq {version = a.version, domain = logicDomain}
       LYT.ConfigPilotRevert -> LYT.Revert LYT.RevertReq {domain = logicDomain}
+
+--------------------------------------------------------------------------------------
+-- Behaviour switchboard: one-call enablement of behaviour packs per city.
+-- Canonical rulebooks are marked by a 0% base rollout under the reserved "default"
+-- city (never selected at runtime; behaviour domains also skip the default-city
+-- fallback entirely — see Tools.DynamicLogic).
+
+getNammaTagBehaviorStatus :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.Flow LYT.BehaviourStatusRes
+getNammaTagBehaviorStatus merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "TransporterConfig not found for city: " <> merchantOpCityId.getId)
+  cityOverlays <- SQOVL.findAllByMerchantOpCityId merchantOpCityId
+  blockReasons <- CQDBR.findAll
+  behaviours <- Prelude.forM BPacks.behaviourPacks $ \bPack -> do
+    cityRollouts <- CADLR.findByMerchantOpCityAndDomain (cast merchantOpCityId) bPack.packDomain
+    mbCanonical <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (Id "default") bPack.packDomain
+    let activeRollouts = filter (\r -> r.isBaseVersion /= Just True && r.timeBounds == "Unbounded") (TDL.filterActiveRollouts cityRollouts)
+        mbActive = Prelude.find (\r -> r.percentageRollout > 0) activeRollouts <|> Prelude.listToMaybe activeRollouts
+        isEnabled = maybe False ((> 0) . (.percentageRollout)) mbActive
+        mbActiveVersion = mbActive <&> (.version)
+        mbCanonicalVersion = mbCanonical <&> (.version)
+        versionState
+          | not isEnabled = LYT.BehaviourNotEnabled
+          | mbActiveVersion == mbCanonicalVersion && Prelude.isJust mbCanonicalVersion = LYT.BehaviourCanonical
+          | Just av <- mbActiveVersion, Just cv <- mbCanonicalVersion, av < cv = LYT.BehaviourStaleCanonical
+          | otherwise = LYT.BehaviourCustom
+        overlayPrereqs =
+          bPack.requiredOverlayKeys <&> \key ->
+            let rows = filter (\o -> o.overlayKey == key) cityOverlays
+             in LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = not (null rows), detail = Just ("rows: " <> show (length rows))}
+        togglePrereqs =
+          bPack.configPrereqs <&> \prereq ->
+            LYT.BehaviourPrereqStatus {name = prereq.prereqName, kind = LYT.CONFIG_TOGGLE, satisfied = prereq.isSatisfied transporterConfig, detail = Nothing}
+        blockReasonPrereqs =
+          bPack.blockReasonSeeds <&> \seed ->
+            LYT.BehaviourPrereqStatus {name = seed.seedReasonCode, kind = LYT.BLOCK_REASON, satisfied = any (\br -> br.reasonCode.getId == seed.seedReasonCode) blockReasons, detail = Nothing}
+    pure $
+      LYT.BehaviourDomainStatus
+        { domain = bPack.packDomain,
+          enabled = isEnabled,
+          percentageRollout = mbActive <&> (.percentageRollout),
+          activeVersion = mbActiveVersion,
+          canonicalVersion = mbCanonicalVersion,
+          versionState = versionState,
+          prerequisites = overlayPrereqs <> togglePrereqs <> blockReasonPrereqs
+        }
+  pure $ LYT.BehaviourStatusRes behaviours
+
+postNammaTagBehaviorEnable :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Text -> Text -> LYT.EnableBehaviourReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagBehaviorEnable merchantShortId opCity domain requestorId requestorName req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  bPack <- BPacks.findPack domain & fromMaybeM (InvalidRequest $ "No behaviour pack registered for domain: " <> show domain)
+  version <- case req.overrideVersion of
+    Just v -> pure v
+    Nothing -> do
+      mbCanonical <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (Id "default") domain
+      canonical <- mbCanonical & fromMaybeM (InvalidRequest $ "No canonical rulebook marked for domain: " <> show domain <> ". Author one via the verify flow and markCanonical.")
+      pure canonical.version
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "TransporterConfig not found for city: " <> merchantOpCityId.getId)
+  let unsatisfied = filter (\prereq -> not (prereq.isSatisfied transporterConfig)) bPack.configPrereqs
+  unless (null unsatisfied) $
+    throwError $ InvalidRequest $ "Unsatisfied transporter_config prerequisites (set them first): " <> Text.intercalate ", " (map (.prereqName) unsatisfied)
+  let percentage = fromMaybe 100 req.percentageRollout
+  when (percentage < 0 || percentage > 100) $ throwError $ InvalidRequest "percentageRollout must be within [0, 100]"
+  let rolloutObj =
+        LYT.LogicRolloutObject
+          { domain = domain,
+            timeBounds = "Unbounded",
+            rollout = [LYT.RolloutVersion {version = version, rolloutPercentage = percentage, versionDescription = Just ("Enabled via behaviour switchboard by " <> requestorName), experimentGroup = Nothing}],
+            modifiedBy = Just (Id requestorId)
+          }
+  void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
+  seedBehaviourOverlays merchant merchantOpCityId bPack
+  seedBehaviourBlockReasons bPack
+  logInfo $ "Behaviour " <> show domain <> " enabled at " <> show percentage <> "% (version " <> show version <> ") in city " <> merchantOpCityId.getId <> " by " <> requestorId
+  pure Kernel.Types.APISuccess.Success
+  where
+    seedBehaviourOverlays merchant merchantOpCityId bPack =
+      unless (null bPack.requiredOverlayKeys) $ do
+        templates <- SQOVL.findAllByMerchantOpCityId (Id "default")
+        cityOverlays <- SQOVL.findAllByMerchantOpCityId merchantOpCityId
+        let wanted = filter (\o -> o.overlayKey `elem` bPack.requiredOverlayKeys) templates
+            missingTemplateKeys = filter (\k -> not (any (\o -> o.overlayKey == k) templates)) bPack.requiredOverlayKeys
+            alreadyPresent tmpl = any (\c -> c.overlayKey == tmpl.overlayKey && c.language == tmpl.language && c.udf1 == tmpl.udf1 && c.vehicleCategory == tmpl.vehicleCategory) cityOverlays
+            toCopy = filter (not . alreadyPresent) wanted
+        unless (null missingTemplateKeys) $
+          logWarning $ "Behaviour enable: no default-city overlay templates found for keys: " <> show missingTemplateKeys <> " — seed them under the \"default\" city; nudges/warns will no-op until then."
+        Prelude.forM_ toCopy $ \tmpl -> do
+          newId <- Id <$> generateGUID
+          SQOVL.create tmpl {DTOVL.id = newId, DTOVL.merchantId = merchant.id, DTOVL.merchantOperatingCityId = merchantOpCityId}
+        unless (null toCopy) $ CQOverlay.clearCache merchantOpCityId
+    seedBehaviourBlockReasons bPack =
+      Prelude.forM_ bPack.blockReasonSeeds $ \seed -> do
+        mbExisting <- QDBR.findByPrimaryKey (Id seed.seedReasonCode)
+        when (Prelude.isNothing mbExisting) $ do
+          now <- getCurrentTime
+          QDBR.create $
+            DDBR.DriverBlockReason
+              { reasonCode = Id seed.seedReasonCode,
+                blockReason = seed.seedReasonDescription,
+                blockTimeInHours = seed.seedBlockTimeInHours,
+                merchantId = Nothing,
+                merchantOperatingCityId = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+
+postNammaTagBehaviorDisable :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Text -> Text -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagBehaviorDisable merchantShortId opCity domain requestorId requestorName = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  void $ BPacks.findPack domain & fromMaybeM (InvalidRequest $ "No behaviour pack registered for domain: " <> show domain)
+  cityRollouts <- CADLR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  let activeRollouts = filter (\r -> r.isBaseVersion /= Just True && r.timeBounds == "Unbounded" && r.percentageRollout > 0) (TDL.filterActiveRollouts cityRollouts)
+  case Prelude.listToMaybe activeRollouts of
+    Nothing -> pure Kernel.Types.APISuccess.Success -- already disabled
+    Just active -> do
+      let rolloutObj =
+            LYT.LogicRolloutObject
+              { domain = domain,
+                timeBounds = "Unbounded",
+                rollout = [LYT.RolloutVersion {version = active.version, rolloutPercentage = 0, versionDescription = Just ("Disabled via behaviour switchboard by " <> requestorName), experimentGroup = Nothing}],
+                modifiedBy = Just (Id requestorId)
+              }
+      void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
+      logInfo $ "Behaviour " <> show domain <> " disabled in city " <> merchantOpCityId.getId <> " by " <> requestorId
+      pure Kernel.Types.APISuccess.Success
+
+postNammaTagBehaviorMarkCanonical :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Text -> Text -> LYT.MarkCanonicalReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagBehaviorMarkCanonical merchantShortId _opCity domain requestorId _requestorName req = do
+  void $ findMerchantByShortId merchantShortId
+  unless (LYT.isBehaviourDomain domain) $
+    throwError $ InvalidRequest "markCanonical is only supported for behaviour domains"
+  elements <- CADLE.findByDomainAndVersion domain req.version
+  when (null elements) $
+    throwError $ InvalidRequest $ "No dynamic logic elements found for domain " <> show domain <> " version " <> show req.version
+  now <- getCurrentTime
+  CADLR.delete (Id "default") domain
+  CADLR.create $
+    LYTADLR.AppDynamicLogicRollout
+      { domain = domain,
+        experimentGroup = Nothing,
+        experimentStatus = Just LYT.CONCLUDED,
+        isBaseVersion = Just True,
+        merchantId = Nothing,
+        merchantOperatingCityId = Id "default",
+        modifiedBy = Just (Id requestorId),
+        percentageRollout = 0, -- canonical marker only: never selected, never inherited (behaviour domains skip the default-city fallback)
+        timeBounds = "Unbounded",
+        version = req.version,
+        versionDescription = Just "Canonical behaviour rulebook marker",
+        createdAt = now,
+        updatedAt = now
+      }
+  CADLR.clearDomainCache (Id "default") domain
+  logInfo $ "Behaviour " <> show domain <> " canonical version set to " <> show req.version <> " by " <> requestorId
+  pure Kernel.Types.APISuccess.Success

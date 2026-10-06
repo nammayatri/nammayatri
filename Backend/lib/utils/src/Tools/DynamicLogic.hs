@@ -169,7 +169,9 @@ selectVersionForConfigs ::
 selectVersionForConfigs merchantOpCityId domain mbToss =
   selectWithTxnStickiness domain $ do
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-    configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+    -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
+    -- (its 0% row is only a canonical-version marker for the enablement APIs).
+    configs <- if null mbConfigs && not (isBehaviourDomain domain) then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
     applicapleConfigs <- LYTB.filterByActiveTimeBound (cast merchantOpCityId) domain (filterActiveRollouts configs) -- Windows are looked up for mocid, so rollout falling back to "default" city can only match "Unbounded".
     mbSelectedConfig <- chooseLogicWithGroups (ungroupBaseRollouts applicapleConfigs) mbToss
     return $ mbSelectedConfig <&> (.version)
@@ -218,7 +220,9 @@ selectAppDynamicLogicVersion ::
 selectAppDynamicLogicVersion merchantOpCityId domain localTime mbToss =
   selectWithTxnStickiness domain $ do
     mbConfigs <- DALR.findByMerchantOpCityAndDomain (cast merchantOpCityId) domain
-    configs <- if null mbConfigs then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
+    -- Behaviour domains are opt-in per city: never inherit the "default"-city rollout
+    -- (its 0% row is only a canonical-version marker for the enablement APIs).
+    configs <- if null mbConfigs && not (isBehaviourDomain domain) then DALR.findByMerchantOpCityAndDomain (Id "default") domain else return mbConfigs
     let activeConfigs = filterActiveRollouts configs
     mbWindowName <- LYTB.activeTimeBoundName (cast merchantOpCityId) domain localTime
     let applicapleConfigs = LYTB.applicableForTimeBound mbWindowName activeConfigs

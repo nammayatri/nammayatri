@@ -44,6 +44,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
+import qualified SharedLogic.BehaviourManagement.LowRating as LowRating
 import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -161,6 +162,9 @@ handler merchantId req ride = do
       pure (newRatingValue - oldRatingValue, False)
   newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
   syncServiceTiersOnRatingChange driverStats newRating driverId ride.merchantOperatingCityId
+  fork "driver rating behaviour" $ do
+    let newRatingCount = fromMaybe 0 ratingCount + (if shouldIncrementCount then 1 else 0)
+    LowRating.recordDriverRating transporterConfig driverId ride.merchantOperatingCityId ride.id ratingValue shouldIncrementCount newRating newRatingCount
 
 syncServiceTiersOnRatingChange ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>

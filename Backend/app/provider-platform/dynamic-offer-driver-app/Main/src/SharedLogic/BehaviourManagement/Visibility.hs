@@ -26,6 +26,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.BehaviorTracker.Visibility as BTV
+import qualified SharedLogic.BehaviourManagement.LowRating as LowRating
 import qualified SharedLogic.DriverPool as DP
 
 -- | Default domain config for driver-app visibility.
@@ -93,7 +94,8 @@ defaultDriverDomainConfig =
           ),
           (DP.quoteResponseAcceptActionType, DP.quoteResponseCounterConfig),
           (DP.quoteResponseRejectActionType, DP.quoteResponseCounterConfig),
-          (DP.quoteResponseEligibleActionType, DP.quoteResponseCounterConfig)
+          (DP.quoteResponseEligibleActionType, DP.quoteResponseCounterConfig),
+          (LowRating.lowRatingActionType, LowRating.lowRatingCounterConfig)
         ],
       blockReasonTags =
         [ "TOLL_ROUTES",
@@ -108,7 +110,11 @@ defaultDriverDomainConfig =
           "PERMANENT_BLOCK",
           "PickupStall",
           "PICKUP_STALL_FEE",
-          "PICKUP_STALL_BLOCK"
+          "PICKUP_STALL_BLOCK",
+          "LowRating",
+          "LOW_RATING_WARN",
+          "LOW_RATING_SOFT_BLOCK",
+          "LOW_RATING_BLOCK"
         ]
           <> DP.quoteResponseCooldownTags,
       blockTypes = [BTT.HARD_BLOCK, BTT.SOFT_BLOCK, BTT.FEATURE_BLOCK, BTT.PERMANENT_BLOCK]

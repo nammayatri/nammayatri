@@ -179,6 +179,21 @@ apis:
         type: APISuccess
       migrate:
         capability: city-operations.driver_block.write
+  - POST: # BulkBlockDriverAPI
+      endpoint: /bulkBlock
+      auditRequestBody: false
+      auth: ApiAuthV2
+      request:
+        type: BulkBlockReq
+      response:
+        type: BulkBlockRes
+      migrate:
+        capability: city-operations.driver_block.write
+      helperApiExtra:
+        mandatoryQuery:
+          - requestorId: Text
+          - requestorName: Text
+        actorInfo: requestorId
   - GET: # BlockReasonListAPI
       endpoint: /blockReasonList
       auth: ApiAuthV2
@@ -737,6 +752,19 @@ types:
     - reasonCode: Id BlockReason
     - blockReason: Maybe Text
     - blockTimeInHours: Maybe Int
+  BulkBlockReq:
+    - driverIds: [Id Driver]
+    - reasonCode: Text
+    - blockReason: Maybe Text
+    - blockTimeInHours: Maybe Int
+    - derive: "'HideSecrets"
+  BulkBlockRes:
+    - success: Int
+    - failed: Int
+    - failedItems: [BulkBlockFailedItem]
+  BulkBlockFailedItem:
+    - driverId: Id Driver
+    - errorMessage: Text
   DriverLocationRes:
     - driverLocationsNotFound: Maybe (NonEmpty (Id Driver))
     - driverLocations: [DriverLocationItem]

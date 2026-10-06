@@ -614,6 +614,8 @@ library
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
       SharedLogic.BehaviourManagement.IssueBreachMitigation
+      SharedLogic.BehaviourManagement.LowRating
+      SharedLogic.BehaviourManagement.Packs
       SharedLogic.BehaviourManagement.PickupStall
       SharedLogic.BehaviourManagement.PickupStallState
       SharedLogic.BehaviourManagement.Visibility

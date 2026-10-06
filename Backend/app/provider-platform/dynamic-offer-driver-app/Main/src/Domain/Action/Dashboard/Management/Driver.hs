@@ -74,6 +74,7 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverIdentityInfo,
     postDriverIdentityInfoUpdate,
     postDriverAssociationChange,
+    postDriverBulkBlock,
     castToCommon,
     castFromCommon,
   )
@@ -553,7 +554,41 @@ postDriverBlockWithReason :: ShortId DM.Merchant -> Context.City -> Id Common.Dr
 postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName req
+  pure Success
 
+maxBulkBlockDriverIds :: Int
+maxBulkBlockDriverIds = 500
+
+postDriverBulkBlock :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.BulkBlockReq -> Flow Common.BulkBlockRes
+postDriverBulkBlock merchantShortId opCity _requestorId dashboardUserName req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  when (null req.driverIds) $ throwError (InvalidRequest "driverIds cannot be empty")
+  when (length req.driverIds > maxBulkBlockDriverIds) $ throwError (InvalidRequest $ "driver ids limit exceeded, max allowed: " <> show maxBulkBlockDriverIds)
+  let blockReq =
+        Common.BlockDriverWithReasonReq
+          { reasonCode = req.reasonCode,
+            blockReason = req.blockReason,
+            blockTimeInHours = req.blockTimeInHours
+          }
+  results <- forM req.driverIds $ \reqDriverId -> do
+    res <- withTryCatch "bulkBlockDriver" (blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName blockReq)
+    case res of
+      Left err -> do
+        logInfo $ "bulkBlock: failed for driver " <> reqDriverId.getId <> ": " <> T.pack (show err)
+        pure $ Left Common.BulkBlockFailedItem {driverId = reqDriverId, errorMessage = T.pack (show err)}
+      Right _ -> pure $ Right ()
+  let failedItems = [failedItem | Left failedItem <- results]
+  pure $
+    Common.BulkBlockRes
+      { success = length results - length failedItems,
+        failed = length failedItems,
+        failedItems = failedItems
+      }
+
+blockDriverWithReason :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Common.Driver -> Text -> Common.BlockDriverWithReasonReq -> Flow ()
+blockDriverWithReason merchant merchantOpCityId reqDriverId dashboardUserName req = do
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -596,7 +631,6 @@ postDriverBlockWithReason merchantShortId opCity reqDriverId dashboardUserName r
             }
       Nothing -> return ()
   logTagInfo "dashboard -> blockDriver : " (show personId)
-  pure Success
 
 ---------------------------------------------------------------------
 --TODO : To Be Deprecated

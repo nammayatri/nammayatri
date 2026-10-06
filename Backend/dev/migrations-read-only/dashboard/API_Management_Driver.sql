@@ -254,3 +254,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostDriverAirportPreference","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_AIRPORT_PREFERENCE' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostDriverBulkBlock","migration":"capability","param":"city-operations.driver_block.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'city-operations.driver_block.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/DRIVER/POST_DRIVER_BULK_BLOCK' ) ON CONFLICT DO NOTHING;
