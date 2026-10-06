@@ -706,6 +706,7 @@ library
       SharedLogic.Finance.TdsReimbursement
       SharedLogic.Finance.Wallet
       SharedLogic.Finance.WalletAccount
+      SharedLogic.Finance.WalletCharge
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
       SharedLogic.FleetEngine
@@ -738,6 +739,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonBankAccount
       SharedLogic.PersonDefaultEmergencyNumber
+      SharedLogic.PlatformFeeCharge
       SharedLogic.Pricing
       SharedLogic.QuickRetry
       SharedLogic.Reminder.Helper
@@ -747,6 +749,7 @@ library
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
+      SharedLogic.RideWalletCharges
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation

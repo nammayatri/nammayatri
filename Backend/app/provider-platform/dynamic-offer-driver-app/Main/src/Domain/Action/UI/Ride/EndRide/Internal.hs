@@ -103,7 +103,6 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.ActiveDriversList as ADL
-import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -124,6 +123,7 @@ import SharedLogic.Finance.Wallet
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.RideEvents.Publisher as RideEventsPublisher
+import qualified SharedLogic.RideWalletCharges as RideWalletCharges
 import Storage.Beam.Toll ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -350,8 +350,9 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   when walletFinanceEnabled $ do
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
-  -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
-  AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
+  -- 3. Wallet-settled driver charges, posted in one ledger block: airport entry fee, gate fee
+  --    items, then the wallet-settled platform fee (platformFeeChargesBy = WalletCharged).
+  RideWalletCharges.debitWalletChargesAtEndRide thresholdConfig driverInfo newFareParams ride booking
   where
     settlementOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
 
@@ -1129,7 +1130,7 @@ createDriverFee ::
   ServiceNames ->
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare currency newFareParams driverInfo booking serviceName = do
-  unless (newFareParams.platformFeeChargesBy == DFP.None) $ do
+  unless (newFareParams.platformFeeChargesBy `elem` [DFP.None, DFP.WalletCharged]) $ do
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     fleetDriverAssoc <- QFDAE.findByDriverId driverId True
     fleetOwnerInfo <- maybe (pure Nothing) (\fda -> QFOI.findByPrimaryKey (Id fda.fleetOwnerId)) fleetDriverAssoc
@@ -1138,8 +1139,12 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
     let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
     let chargeBy = if not fleetIsSubscriptionEligble then DFP.NoCharge else newFareParams.platformFeeChargesBy
     case chargeBy of
+      DFP.None -> pure ()
       DFP.NoCharge -> pure ()
-      _ -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
+      DFP.WalletCharged -> pure () -- debited from the driver's wallet at EndRide, never a due
+      DFP.Subscription -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
+      DFP.FixedAmount -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
+      DFP.SlabBased -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
   where
     createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges = do
       (platformFee, cgst, sgst, isSpecialZoneCharge) <- case newFareParams.platformFeeChargesBy of
@@ -1148,7 +1153,9 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           _ -> return (0, 0, 0, False)
         DFP.Subscription -> return (0, 0, 0, False)
         DFP.FixedAmount -> return (fromMaybe 0.0 newFareParams.platformFee, fromMaybe 0.0 newFareParams.cgst, fromMaybe 0.0 newFareParams.sgst, True)
-        _ -> return (0, 0, 0, False)
+        DFP.WalletCharged -> return (0, 0, 0, False)
+        DFP.None -> return (0, 0, 0, False)
+        DFP.NoCharge -> return (0, 0, 0, False)
       let totalDriverFee = govtCharges + platformFee + cgst + sgst
       now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
       let currentVehicleCategory = Just $ Variant.castVehicleVariantToVehicleCategory $ Variant.castServiceTierToVariant booking.vehicleServiceTier
