@@ -969,6 +969,14 @@ data SubscriptionError
   | NoDriverPlanForMandate Text
   | NoSubscriptionConfigForService Text Text
   | InvalidAutoPayStatus
+  | PlanMigrationNotAllowed Text
+  | PlanCityMismatch Text
+  | DeprecatedPlanMigration Text
+  | SamePlanMigration
+  | PlanServiceMismatch
+  | PlanVehicleCategoryMismatch
+  | EmptyDriverIdList
+  | DriverIdListExceeded
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SubscriptionError
@@ -986,6 +994,14 @@ instance IsBaseError SubscriptionError where
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
     OngoingManualPayment -> Just "There is ongoing manual payment pls wait"
     NoSubscriptionConfigForService merchantOperatingCityId serviceName -> Just $ "No subscription config exists for merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and serviceName \"" <> show serviceName <> "\""
+    PlanMigrationNotAllowed reason -> Just $ "Plan migration not allowed: " <> show reason
+    PlanCityMismatch planId -> Just $ "Plan does not belong to the authorized city: " <> show planId
+    DeprecatedPlanMigration planId -> Just $ "Cannot migrate drivers to a deprecated plan: " <> show planId
+    SamePlanMigration -> Just "Current and new plan cannot be the same"
+    PlanServiceMismatch -> Just "Plans must have the same service name"
+    PlanVehicleCategoryMismatch -> Just "Plans must have the same vehicle category"
+    EmptyDriverIdList -> Just "Driver IDs list cannot be empty"
+    DriverIdListExceeded -> Just "Driver IDs list cannot exceed 500"
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -1000,6 +1016,14 @@ instance IsHTTPError SubscriptionError where
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
     OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
     NoSubscriptionConfigForService _ _ -> "NO_SUBSCRIPTION_CONFIG_FOR_SERVICE"
+    PlanMigrationNotAllowed _ -> "PLAN_MIGRATION_NOT_ALLOWED"
+    PlanCityMismatch _ -> "PLAN_CITY_MISMATCH"
+    DeprecatedPlanMigration _ -> "DEPRECATED_PLAN_MIGRATION"
+    SamePlanMigration -> "SAME_PLAN_MIGRATION"
+    PlanServiceMismatch -> "PLAN_SERVICE_MISMATCH"
+    PlanVehicleCategoryMismatch -> "PLAN_VEHICLE_CATEGORY_MISMATCH"
+    EmptyDriverIdList -> "EMPTY_DRIVER_ID_LIST"
+    DriverIdListExceeded -> "DRIVER_ID_LIST_EXCEEDED"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -1012,6 +1036,14 @@ instance IsHTTPError SubscriptionError where
     NoDriverPlanForMandate _ -> E500
     OngoingManualPayment -> E400
     NoSubscriptionConfigForService _ _ -> E500
+    PlanMigrationNotAllowed _ -> E400
+    PlanCityMismatch _ -> E400
+    DeprecatedPlanMigration _ -> E400
+    SamePlanMigration -> E400
+    PlanServiceMismatch -> E400
+    PlanVehicleCategoryMismatch -> E400
+    EmptyDriverIdList -> E400
+    DriverIdListExceeded -> E400
 
 instance IsAPIError SubscriptionError
 
