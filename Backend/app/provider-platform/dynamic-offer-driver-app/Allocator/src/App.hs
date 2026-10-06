@@ -24,6 +24,7 @@ import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
+import InMemManagement (withInMemManagement)
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
@@ -248,4 +249,4 @@ runDriverOfferAllocator configModifier = do
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv
+    runSchedulerServiceWith (withInMemManagement flowRt' handlerEnv) handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.jobRetryOnExceptionMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv
