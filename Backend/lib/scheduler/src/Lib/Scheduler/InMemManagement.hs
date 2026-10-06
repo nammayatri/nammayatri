@@ -49,10 +49,10 @@ inMemManagementApp flowRt env = run (Proxy @API) handler EmptyContext (EnvR flow
 
 -- | Routes @/internal/inMem/*@ to 'inMemManagementApp' and everything else to the wrapped app.
 withInMemManagement :: InMemManagementEnv r => R.FlowRuntime -> r -> Application -> Application
-withInMemManagement flowRt env app req respond =
+withInMemManagement flowRt env app req sendResponse =
   case pathInfo req of
-    "internal" : "inMem" : _ -> inMemApp req respond
-    _ -> app req respond
+    "internal" : "inMem" : _ -> inMemApp req sendResponse
+    _ -> app req sendResponse
   where
     inMemApp = inMemManagementApp flowRt env
 

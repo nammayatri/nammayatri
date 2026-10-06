@@ -98,8 +98,8 @@ startConsumer appCfg appEnv = do
     -- Opt-in in-memory cache management API for the shudhi sidecar, on its own port
     -- since most consumer types run no HTTP server.
     mbInMemPort <- (readMaybe =<<) <$> lookupEnv "INMEM_MANAGEMENT_PORT"
-    whenJust mbInMemPort $ \port ->
-      void . forkIO . runSettings (setPort port defaultSettings) $ inMemManagementApp flowRt'' appEnv
+    whenJust mbInMemPort $ \inMemPort ->
+      void . forkIO . runSettings (setPort inMemPort defaultSettings) $ inMemManagementApp flowRt'' appEnv
     case appEnv.transport of
       Kafka -> startKafkaTransport flowRt'' appEnv
       RedisStream -> startRedisStreamTransport flowRt'' appEnv
