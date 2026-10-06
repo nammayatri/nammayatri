@@ -3107,7 +3107,9 @@ papers and the `movin` schema — existed only on the server; git held an older
 422-line version and `/opt/ny/local-stack/backup.sh` a third, 407 lines, that
 nothing runs. Git now carries the running one unchanged. A change here is not
 live until it is copied to `/root/backup.sh`; check with
-`sha256sum /root/backup.sh` against git.
+`sha256sum /root/backup.sh` against git. **Phase 4 of the restructuring plan
+moves `ExecStart` to the repository's copy**; until then `/root/backup.sh` is
+the live one.
 
 **The off-site copy has an expiry date.** On 2026-10-04 rclone warned:
 *« This remote uses rclone's shared Google Drive client_id, which is being

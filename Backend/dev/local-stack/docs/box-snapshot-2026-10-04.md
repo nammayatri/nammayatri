@@ -70,3 +70,34 @@ runs). Git and the unused copy now hold the running one, byte for byte
   `bin/`; 25 not named (certificates, keys, secrets); 43 tracked files are
   laptop tools never deployed. Correction to the plan: `bin/MANIFEST.txt` is
   gitignored with the rest of `bin/` — it was on the laptop, never in git.
+
+## Phase 1 — which copy is right, file by file (2026-10-06)
+
+The rule: git changes, the server does not. Each of the six files was diffed
+against the server's copy, line by line.
+
+| File | Right copy | Why |
+|---|---|---|
+| `docker-compose.yml` | **both, merged into git** | The server's `edge-web` mount was missing from git (nginx serves the site and the console from it) — taken. The server's `movin-driver-docs:` volume is now declared by the website's overlay — not taken, a leftover. Every other difference is comments, git's being the true ones. Proven: `docker compose config` resolves byte-identical from either file (29 services). Commit `a232f1fc51`. |
+| `setup.sh` | **git** | Git adds `SKIP_OSRM=1` (the CI ride regression) and skips the binaries check when the image is present. The server's "own" three lines are the same three calls git wraps in a condition. |
+| `geocoder/index.sql` | **git** | A comment only. The server's still claims Arabic search works through this column; it did not, and git corrected the claim on 2026-09-10 (`arabic-search.sql`). |
+| `.gitignore` | **git** | Git's is a strict superset: it adds the driver codes, the trusted phones and `.env` (the payment key). On the server it ignores nothing — there is no git checkout there. |
+| `README.md` | **git** | The server's copy is from 2026-08-23. Its "own" lines are text rewritten in git since (the old tariff table, the old MANIFEST claim, the pre-iOS push note). |
+| `probe-two-country-rides.py` | **git** | A laptop tool; the server holds the 2026-09-13 copy. Git's is the one that ran the six-of-six ride test on 2026-10-04 (both fleets, every row). |
+
+`backup.sh` (item 3) was settled on 2026-10-04: git holds the 488-line script
+`movin-backup.service` runs, byte for byte. systemd's `ExecStart` still points
+at `/root/backup.sh` — **phase 4 moves it** to the repository's copy, and until
+then a change here is not live until it is copied there.
+
+### What still differs on the server, and when it goes
+
+After phase 1, git is right for all six. The server still holds older copies of
+five of them, and the compose file's stale comments and redundant volume line.
+**None is read by anything running** — `.gitignore`, the README and the probe
+are never read at all, `setup.sh` and `index.sql` only when the stack or the
+place index is rebuilt, and the compose file resolves identically. They are
+refreshed by the first release of the deploy command (phase 3), which by design
+deploys this state and then proves every hash equal — or now, by hand, on the
+owner's word.
+
