@@ -56,6 +56,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFarePolicyPerExtraKmRateUpdate,
     postMerchantConfigFarePolicyUpdate,
     postMerchantSchedulerTrigger,
+    postMerchantSchedulerRevive,
     postMerchantConfigClearCacheSubscription,
     postMerchantConfigFailover,
     postMerchantPayoutConfigUpdate,
@@ -189,7 +190,9 @@ import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
@@ -581,6 +584,15 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
+
+postMerchantSchedulerRevive :: ShortId DM.Merchant -> Context.City -> Common.ReviveSchedulerJobsReq -> Flow Common.ReviveSchedulerJobsRes
+postMerchantSchedulerRevive merchantShortId _opCity req = do
+  void $ findMerchantByShortId merchantShortId
+  let jobIds = Id <$> req.jobIds
+  existingJobs :: [AnyJob AllocatorJobType] <- QDBJ.getTasksById jobIds
+  let existingIds = map (\(AnyJob j) -> j.id.getId) existingJobs
+  unless (null existingIds) $ QDBJ.reviveJobs (Id <$> existingIds)
+  pure $ Common.ReviveSchedulerJobsRes {list = map (\jid -> if jid.getId `elem` existingIds then Right jid.getId else Left jid.getId) jobIds}
 
 ---------------------------------------------------------------------
 getMerchantConfigDriverPool :: ShortId DM.Merchant -> Context.City -> Maybe Meters -> Maybe HighPrecDistance -> Maybe DistanceUnit -> Flow Common.DriverPoolConfigRes
