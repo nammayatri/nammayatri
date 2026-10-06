@@ -28,7 +28,6 @@ library
   exposed-modules:
       App
       Environment
-      InMemManagement
       Tools.Metrics
   other-modules:
       Paths_driver_offer_allocator
