@@ -592,6 +592,7 @@ in  { esqDBCfg
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
     , isMetroTestTransaction = False
     , urlShortnerConfig = common.urlShortnerConfig
+    , maxNotificationShards = +128
     , sosAlertsTopicARN
     , slackNotificationConfig
     , ondcRegistryUrl = common.ondcRegistryUrl

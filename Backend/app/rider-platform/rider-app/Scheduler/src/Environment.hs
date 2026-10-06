@@ -141,6 +141,7 @@ data HandlerEnv = HandlerEnv
     url :: Maybe Text,
     googleSAPrivateKey :: String,
     urlShortnerConfig :: UrlShortner.UrlShortnerConfig,
+    maxNotificationShards :: Int,
     noSignatureSubscribers :: [Text],
     isMetroTestTransaction :: Bool,
     blackListedJobs :: [Text],

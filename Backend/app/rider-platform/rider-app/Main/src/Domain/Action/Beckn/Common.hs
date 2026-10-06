@@ -475,6 +475,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
 
 rideAssignedReqHandler ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasField "storeRidesTimeLimit" r Int,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -540,6 +541,7 @@ rideAssignedReqHandler req = do
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now)
     assignRideUpdate ::
       ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+        HasFlowEnv m r '["maxNotificationShards" ::: Int],
         HasField "storeRidesTimeLimit" r Int,
         CacheFlow m r,
         EsqDBFlow m r,
@@ -822,6 +824,7 @@ rideAssignedReqHandler req = do
 
 rideStartedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -965,6 +968,7 @@ data RideEndOffersKafkaData = RideEndOffersKafkaData
 
 rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
@@ -1335,6 +1339,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
 addOffersNammaTags ::
   ( MonadFlow m,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
@@ -1419,6 +1424,7 @@ farePaidReqHandler req = void $ QRB.updatePaymentStatus req.booking.id req.payme
 
 driverArrivedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -1465,6 +1471,7 @@ bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) = do
 
 cancellationTransaction ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     ClickhouseFlow m r,
@@ -1921,6 +1928,7 @@ sendRideEndMessage bk = case bk.tripCategory of
 
 customerReferralPayout ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,
@@ -2116,7 +2124,7 @@ sendBookingCancelledMessageViaWhatsapp personId riderConfig = do
   result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI person.merchantId person.merchantOperatingCityId (Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq phoneNumber merchantMessage.templateId [Just riderConfig.appUrl] Nothing Nothing) -- Accepts at most 7 variables using GupShup
   when (result._response.status /= "success") $ throwError (InternalError "Unable to send Dashboard Cancelled Booking Whatsapp message")
 
-updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
+updateAndNotifyDriverArrivalStatus :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => DRB.Booking -> DRide.Ride -> DRide.DriverArrivalStatus -> m ()
 updateAndNotifyDriverArrivalStatus booking ride newStatus =
   Redis.withWaitOnLockRedisWithExpiry (driverArrivalStatusLockKey ride.id.getId) 5 30 $ do
     freshRide <- QRideLite.findByIdLite ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)

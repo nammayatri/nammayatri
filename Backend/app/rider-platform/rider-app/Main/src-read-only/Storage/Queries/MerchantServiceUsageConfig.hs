@@ -90,6 +90,8 @@ updateByPrimaryKey (Domain.Types.MerchantServiceUsageConfig.MerchantServiceUsage
       Se.Set Beam.issueTicketService issueTicketService,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.notifyPerson notifyPerson,
+      Se.Set Beam.notifyPersonProviders notifyPersonProviders,
+      Se.Set Beam.notifyPersonProvidersCategories notifyPersonProvidersCategories,
       Se.Set Beam.payoutOrderStatus (Kernel.Prelude.Just payoutOrderStatus),
       Se.Set Beam.smsProvidersPriorityList smsProvidersPriorityList,
       Se.Set Beam.snapToRoad snapToRoad,

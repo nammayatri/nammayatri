@@ -64,6 +64,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     notifyPerson :: B.C f Kernel.External.Notification.Types.NotificationService,
+    notifyPersonProviders :: B.C f (Kernel.Prelude.Maybe [Kernel.External.Notification.Types.NotificationService]),
+    notifyPersonProvidersCategories :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,

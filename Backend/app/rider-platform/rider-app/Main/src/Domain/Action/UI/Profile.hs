@@ -298,6 +298,7 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
 
 getPersonDetails ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,

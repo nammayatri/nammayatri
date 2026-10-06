@@ -125,3 +125,13 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN event_tracking_ov
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_better_point_walk_distance text  default 'OSRM';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN notify_person_providers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN notify_person_providers_categories text[] ;

@@ -367,6 +367,8 @@ MerchantServiceUsageConfig:
     insuranceService: InsuranceService
     eventTrackingProviders: "[EventTrackingService]"
     eventTrackingOverrides: "Maybe (Map Text [EventTrackingService])"
+    notifyPersonProvidersCategories: Maybe [Text]
+    notifyPersonProviders: Maybe [NotificationService]
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
@@ -452,6 +454,8 @@ MerchantServiceUsageConfig:
     issueTicketService: character varying(30)
     sosTicketService: character varying(30)
     additionalIssueTicketServices: "text[]"
+    notifyPersonProvidersCategories: "text[]"
+    notifyPersonProviders: "text[]"
     getExophone: character varying (255)
     aadhaarVerificationService: character varying(30)
     insuranceService: character varying(30)

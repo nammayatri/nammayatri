@@ -296,7 +296,7 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
   deriving (Show, Eq, Generic)
 
 nudgeOrBlockCustomer ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreator r m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, JobCreator r m, HasShortDurationRetryCfg r c, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   RC.RiderConfig ->
   DP.Person ->
   m ()

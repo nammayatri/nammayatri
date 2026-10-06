@@ -35,6 +35,7 @@ import qualified UrlShortner.Common as UrlShortner
 
 confirm ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,
@@ -116,6 +117,7 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
 
     processOnConfirm ::
       ( CacheFlow m r,
+        HasFlowEnv m r '["maxNotificationShards" ::: Int],
         EsqDBFlow m r,
         Finance.HasActorInfo m r,
         EncFlow m r,

@@ -141,6 +141,7 @@ data ValidatedBookingConfirmedReq = ValidatedBookingConfirmedReq
 
 onConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig, "cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     Finance.HasActorInfo m r,

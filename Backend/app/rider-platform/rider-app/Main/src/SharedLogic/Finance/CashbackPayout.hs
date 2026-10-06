@@ -41,6 +41,7 @@ type CashbackPayoutFlow m r c =
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     FinanceBeamFlow.BeamFlow m r,
     Finance.HasActorInfo m r,
     HasField "blackListedJobs" r [Text]

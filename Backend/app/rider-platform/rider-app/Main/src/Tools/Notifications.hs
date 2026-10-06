@@ -34,7 +34,6 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantServiceConfig as DMSC
-import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
@@ -151,6 +150,7 @@ buildTrackingUrl rideId extraQueryParams trackingUrlPattern = (buildTemplate ext
 -- must go through the gated notifyPerson below.
 notifyPersonUnchecked ::
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     ToJSON a,
     ToJSON b
   ) =>
@@ -160,7 +160,28 @@ notifyPersonUnchecked ::
   Notification.NotificationReq a b ->
   Maybe FCMType.LiveActivityReq ->
   m ()
-notifyPersonUnchecked = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
+notifyPersonUnchecked merchantId merchantOperatingCityId personId req liveActivityReq = do
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  let providers = fromMaybe [] merchantConfig.notifyPersonProviders
+      isProviderCategory = show req.category `elem` fromMaybe [] merchantConfig.notifyPersonProvidersCategories
+  if not (null providers) && isProviderCategory
+    then Notification.notifyPersonWithAllProviders (handler merchantConfig providers) req liveActivityReq (clearDeviceToken personId)
+    else do
+      serviceConfig <- findServiceConfig merchantConfig.notifyPerson
+      Notification.notifyPerson serviceConfig req liveActivityReq (clearDeviceToken personId)
+  where
+    findServiceConfig service = do
+      merchantNotificationServiceConfig <-
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.NotificationService service)}) Nothing
+          >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show service))
+      case merchantNotificationServiceConfig.serviceConfig of
+        DMSC.NotificationServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown ServiceConfig"
+    handler merchantConfig providers = Notification.NotficationServiceHandler {..}
+      where
+        getNotificationServiceList = pure $ L.nub (merchantConfig.notifyPerson : providers)
+        getServiceConfig = findServiceConfig
+        iosModifier fcmData = fcmData
 {-# WARNING notifyPersonUnchecked "Sends a push with no rider-preference check. Use Tools.Notifications.notifyPerson instead." #-}
 
 -- THE sanctioned entry point for sending a push -- always enforces
@@ -169,6 +190,7 @@ notifyPersonUnchecked = runWithServiceConfig Notification.notifyPerson (.notifyP
 -- in scope); pass `Nothing` to fall back to deriveNotificationCategory req.category.
 notifyPerson ::
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     ToJSON a,
     ToJSON b
   ) =>
@@ -192,28 +214,9 @@ notifyPerson merchantId merchantOperatingCityId personId mbCategory req liveActi
 clearDeviceToken :: (MonadFlow m, EsqDBFlow m r) => Id Person -> m ()
 clearDeviceToken = Person.clearDeviceTokenByPersonId
 
-runWithServiceConfig ::
-  ServiceFlow m r =>
-  (Notification.NotificationServiceConfig -> req -> liveActivityReq -> m () -> m resp) ->
-  (MerchantServiceUsageConfig -> Notification.NotificationService) ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  Id Person ->
-  req ->
-  liveActivityReq ->
-  m resp
-runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req liveActivityReq = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-  merchantNotificationServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.NotificationService $ getCfg merchantConfig)}) Nothing
-      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
-  case merchantNotificationServiceConfig.serviceConfig of
-    DMSC.NotificationServiceConfig msc -> func msc req liveActivityReq (clearDeviceToken personId)
-    _ -> throwError $ InternalError "Unknown ServiceConfig"
-
 -- dynamicNotifyPerson person notificationRequest notifyType dynamicParam entity tripCategory [varparams]
 dynamicNotifyPerson ::
-  (ServiceFlow m r, ToJSON a, ToJSON b) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], ToJSON a, ToJSON b) =>
   Person.Person ->
   NotificationRequest ->
   a ->
@@ -290,7 +293,7 @@ deriveNotificationCategory merchantOperatingCityId category = do
 --------------------------------------------------------------------------------------------------
 
 notifyOnDriverOfferIncoming ::
-  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Estimate ->
   Maybe TripCategory ->
   [DQuote.Quote] ->
@@ -307,7 +310,7 @@ notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList 
 -- body = "There are new driver offers! Check the app for details"
 
 notifyOnRideSearchExpired ::
-  (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   SearchRequest ->
   m ()
 notifyOnRideSearchExpired searchReq = do
@@ -380,7 +383,7 @@ data RideAssignedParam = RideAssignedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideAssigned ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   SRide.Ride ->
   m ()
@@ -473,7 +476,7 @@ notifyOnRideAssigned booking ride = do
       )
 
 notifyOtpRideConfirmed ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   Text ->
   m ()
@@ -542,7 +545,7 @@ notifyOtpRideConfirmed booking otp = do
     )
 
 notifyOnScheduledRideAccepted ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   SRide.Ride ->
   m ()
@@ -590,7 +593,7 @@ newtype ServiceTierChangedParam = ServiceTierChangedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnServiceTierChange ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   Text ->
   m ()
@@ -615,7 +618,7 @@ newtype TripAssignedData = TripAssignedData
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideStarted ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   SRide.Ride ->
   m ()
@@ -685,7 +688,7 @@ data RideCompleteParam = RideCompleteParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnRideCompleted ::
-  (ServiceFlow m r, SchedulerFlow r, HasField "blackListedJobs" r [Text]) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], SchedulerFlow r, HasField "blackListedJobs" r [Text]) =>
   SRB.Booking ->
   SRide.Ride ->
   [Person.Person] ->
@@ -767,7 +770,7 @@ notifyOnRideCompleted booking ride otherParties rideDiscountAmount = do
 -- body = "Hope you enjoyed your trip with {#driverName#}. Total Fare {#totalFare#}"
 
 disableFollowRide ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   m ()
 disableFollowRide personId = do
@@ -787,7 +790,7 @@ disableFollowRide personId = do
         Person.updateFollowsRide False emPersonId
 
 notifyOnExpiration ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SearchRequest ->
   m ()
 notifyOnExpiration searchReq = do
@@ -820,7 +823,7 @@ notifyOnExpiration searchReq = do
 --     ]
 
 notifyOnRegistration ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   RegistrationToken ->
   Person ->
   Maybe Text ->
@@ -853,7 +856,7 @@ data RideCancelParam = RideCancelParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnBookingCancelled ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   SBCR.CancellationSource ->
   DBppDetails.BppDetails ->
@@ -1022,7 +1025,7 @@ data BookingReallocatedParam = BookingReallocatedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyOnBookingReallocated ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   m ()
 notifyOnBookingReallocated booking = do
@@ -1051,7 +1054,7 @@ notifyOnBookingReallocated booking = do
 --     ]
 
 notifyOnEstOrQuoteReallocated ::
-  (ServiceFlow m r, CacheFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], CacheFlow m r) =>
   SBCR.CancellationSource ->
   SRB.Booking ->
   Text ->
@@ -1149,7 +1152,7 @@ notifyOnEstOrQuoteReallocated cancellationSource booking estOrQuoteId = do
 --       ]
 
 notifyOnQuoteReceived ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   DQuote.Quote ->
   m ()
 notifyOnQuoteReceived quote = do
@@ -1178,7 +1181,7 @@ notifyOnQuoteReceived quote = do
 --     ]
 
 notifyDriverOnTheWay ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Maybe TripCategory ->
   SRide.Ride ->
@@ -1246,7 +1249,7 @@ data DriverReachedParam = DriverReachedParam
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 notifyDriverHasReached ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Maybe TripCategory ->
   Text ->
@@ -1315,7 +1318,7 @@ notifyDriverHasReached personId tripCategory otp vehicleNumber mbVehicleColor ve
 --     ]
 
 notifyDriverReaching ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Maybe TripCategory ->
   Text ->
@@ -1388,6 +1391,7 @@ notifyDriverReaching personId tripCategory otp vehicleNumber ride = do
 -- from the rider-device's perspective).
 notifyOnIssueChatMessage ::
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBReplicaFlow m r
   ) =>
   Id Person ->
@@ -1422,6 +1426,7 @@ notifyOnIssueChatMessage personId payload = do
 
 notifyOnNewMessage ::
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBReplicaFlow m r
   ) =>
   SRB.Booking ->
@@ -1455,7 +1460,7 @@ notifyOnNewMessage booking message = do
   notifyPerson person.merchantId merchantOperatingCityId person.id Nothing notificationData Nothing
 
 notifySafetyAlert ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   T.Text ->
   m ()
@@ -1478,7 +1483,7 @@ notifySafetyAlert booking code = do
 -- body = "We noticed your ride is on a different route. Are you feeling safe on your trip?"
 
 notifyDriverBirthDay ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Maybe TripCategory ->
   Text ->
@@ -1508,6 +1513,7 @@ notifyRideStartToEmergencyContacts ::
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig]
   ) =>
   SRB.Booking ->
@@ -1578,7 +1584,7 @@ checkTimeConstraintForFollowRide config now = do
   isTimeWithinBounds (secondsToTimeOfDay config.safetyCheckStartTime) (secondsToTimeOfDay config.safetyCheckEndTime) time
 
 notifyOnStopReached ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   SRide.Ride ->
   m ()
@@ -1624,7 +1630,7 @@ data NotifReq = NotifReq
   deriving (Generic, ToJSON, FromJSON, Show)
 
 notifyPersonOnEvents ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Person ->
   NotifReq ->
   Notification.Category ->
@@ -1657,7 +1663,7 @@ notifyPersonOnEvents person entityData notifType mbCategory = do
   notifyPerson person.merchantId merchantOperatingCityId person.id mbCategory notificationData Nothing
 
 notifyRiderPayoutStatus ::
-  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, CacheFlow m r) =>
   Person ->
   Text ->
   HighPrecMoney ->
@@ -1670,7 +1676,7 @@ notifyRiderPayoutStatus person pnKey amount = do
           entityData = NotifReq {title = buildTemplate params merchantPN.title, message = buildTemplate params merchantPN.body}
       notifyPersonOnEvents person entityData merchantPN.fcmNotificationType (Just merchantPN.notificationCategory)
 
-notifyTicketCancelled :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
+notifyTicketCancelled :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> Person.Person -> m ()
 notifyTicketCancelled ticketBookingId ticketBookingCategoryName person = do
   let entity = Notification.Entity Notification.Product person.id.getId ()
   dynamicNotifyPerson
@@ -1698,7 +1704,7 @@ data FirstRideEvent = FirstRideEvent
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-notifyFirstRideEvent :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknEnums.VehicleCategory -> Maybe TripCategory -> m ()
+notifyFirstRideEvent :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> BecknEnums.VehicleCategory -> Maybe TripCategory -> m ()
 notifyFirstRideEvent personId vehicleCategory tripCategory = do
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product person.id.getId (FirstRideEvent vehicleCategory True)
@@ -1715,7 +1721,7 @@ notifyFirstRideEvent personId vehicleCategory tripCategory = do
 -- title = fromMaybe (T.pack "First Ride Event") mbTitle
 -- body = fromMaybe (unwords ["Congratulations! You have taken your first ride with us."]) mbBody
 
-notifyToAllBookingParties :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => [Person] -> Maybe TripCategory -> Text -> m ()
+notifyToAllBookingParties :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => [Person] -> Maybe TripCategory -> Text -> m ()
 notifyToAllBookingParties persons tripCategory notikey =
   forM_ persons \person -> do
     when (isJust person.deviceToken) $ do
@@ -1731,7 +1737,7 @@ notifyToAllBookingParties persons tripCategory notikey =
         Nothing
 
 notifyOnTripUpdate ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   Maybe SRide.Ride ->
   Maybe (Text, Text) ->
@@ -1801,7 +1807,7 @@ notifyOnTripUpdate booking mbRide err = do
 
 --"Destination and Fare Updated" "Your edit request was accepted by your driver!"
 
-notifyAboutScheduledRide :: (ServiceFlow m r) => SRB.Booking -> Text -> Text -> m ()
+notifyAboutScheduledRide :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => SRB.Booking -> Text -> Text -> m ()
 notifyAboutScheduledRide booking title body = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SCHEDULED_RIDE_REMINDER person.merchantOperatingCityId
@@ -1823,7 +1829,7 @@ notifyAboutScheduledRide booking title body = do
           }
   notifyPerson person.merchantId person.merchantOperatingCityId person.id Nothing notificationData Nothing
 
-notifyPaymentFulfillment :: (ServiceFlow m r) => Notification.Category -> Id DOrder.PaymentOrder -> Id Person -> DOrder.PaymentServiceType -> m ()
+notifyPaymentFulfillment :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Notification.Category -> Id DOrder.PaymentOrder -> Id Person -> DOrder.PaymentServiceType -> m ()
 notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceType = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType notifCategory person.merchantOperatingCityId
@@ -1858,7 +1864,7 @@ notifyPaymentFulfillment notifCategory paymentOrderId personId paymentServiceTyp
 -- | Rider push for a cancellation consequence, keyed by the BPP consequence-matrix
 -- row's customerNotificationKey (carried on the on_cancel order tags). No matching
 -- merchant_push_notification row for the key => silently no push (config-driven).
-notifyCancellationConsequence :: ServiceFlow m r => Id Person -> Text -> Text -> m ()
+notifyCancellationConsequence :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Id Person -> Text -> Text -> m ()
 notifyCancellationConsequence personId bookingId pnKey = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.CANCELLED_PRODUCT person.merchantOperatingCityId
@@ -1903,7 +1909,7 @@ mkSafetyNotificationKey code =
     Just BecknEnums.RIDE_STOPPAGE -> "SAFETY_ALERT_RIDE_STOPPAGE"
     Nothing -> code
 
-notifyAboutDeletedPerson :: (ServiceFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> m ()
+notifyAboutDeletedPerson :: (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person -> m ()
 notifyAboutDeletedPerson personId = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let entity = Notification.Entity Notification.Product person.id.getId ()
@@ -1918,7 +1924,7 @@ notifyAboutDeletedPerson personId = do
     Nothing
 
 notifyOnRideEndOffer ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Person ->
   m ()
 notifyOnRideEndOffer person = do
@@ -1947,7 +1953,7 @@ customerCancellationRateNudgeTtlSeconds :: Int
 customerCancellationRateNudgeTtlSeconds = 24 * 3600
 
 sendCustomerCancellationRateNudge ::
-  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, CacheFlow m r) =>
   Person ->
   Text ->
   Int ->
@@ -1970,7 +1976,7 @@ sendCustomerCancellationRateNudge person notificationKey cancellationRate = do
     Redis.setExp key True customerCancellationRateNudgeTtlSeconds
 
 notifyRefunds ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   DRefundRequest.RefundRequest ->
   m ()
 notifyRefunds refundRequest = case refundRequest.status of
@@ -1981,7 +1987,7 @@ notifyRefunds refundRequest = case refundRequest.status of
   DRefundRequest.OPEN -> pure ()
 
 notifyRefunds' ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   FCMType.FCMNotificationType ->
   DRefundRequest.RefundRequest ->
   m ()
@@ -2006,7 +2012,7 @@ notifyRefunds' notificationType DRefundRequest.RefundRequest {..} = do
     Nothing
 
 notifyRewardUnlock ::
-  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   Person.Person ->
   Text ->
   Text ->
@@ -2105,7 +2111,7 @@ rewardUnlockNotificationConfig rewardTitle sponsorName couponCode =
   )
 
 notifyRiderOnEKDLiveCallFeedback ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SRB.Booking ->
   m ()
 notifyRiderOnEKDLiveCallFeedback booking = do
@@ -2152,7 +2158,7 @@ data BusNotificationEntityData = BusNotificationEntityData
 
 -- | Notify passenger that the bus trip has started
 notifyBusTripStarted ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Person.Person ->
   Text ->
   Text ->
@@ -2198,7 +2204,7 @@ data BusApproachingParam = BusApproachingParam
 
 -- | Push body shows `routeNumber` + `vehicleTagNumber` (if available); `vehicleNumber`/`routeName` are kept only for entity deep-linking.
 notifyBusApproachingStop ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Person.Person ->
   Text ->
   Text ->
@@ -2251,7 +2257,7 @@ data BusPrevStopCrossedParam = BusPrevStopCrossedParam
 
 -- | Notify a rider that the bus just left the stop right before their source.
 notifyBusPrevStopCrossed ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Person.Person ->
   Text ->
   Text ->
@@ -2295,7 +2301,7 @@ notifyBusPrevStopCrossed person vehicleNumber routeName routeNumber vehicleTagNu
 -- fires (frontend refetches on it); visible only within frfsDriverDetailsLeadTimeSeconds of departure, else
 -- DO_NOT_SHOW (silent refetch).
 notifyFrfsTripDetailsUpdated ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Person.Person ->
   Text ->
   Text ->
@@ -2401,7 +2407,7 @@ sendWhatsAppTemplateIfOptedIn person messageKey variables = do
 -- FULFILLMENT_SUCCESS push; returns False for non-shuttle bookings (caller sends the generic push).
 -- Best-effort; never throws.
 notifyShuttleBookingConfirmed ::
-  ServiceFlow m r =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id Person ->
   Id DFRFSTicketBooking.FRFSTicketBooking ->
   m Bool

@@ -25,6 +25,7 @@ import qualified UrlShortner.Common as UrlShortner
 
 onCancelCore ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,

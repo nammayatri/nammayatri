@@ -27,6 +27,7 @@ import Tools.Notifications (notifyAboutScheduledRide)
 
 sendScheduledRidePopupToRider ::
   ( EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     HasKafkaProducer r

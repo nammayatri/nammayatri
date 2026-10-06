@@ -64,6 +64,8 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     notifyPerson :: Kernel.External.Notification.Types.NotificationService,
+    notifyPersonProviders :: Kernel.Prelude.Maybe [Kernel.External.Notification.Types.NotificationService],
+    notifyPersonProvidersCategories :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     payoutOrderStatus :: Kernel.External.Payout.Types.PayoutService,
     smsProvidersPriorityList :: [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: Kernel.External.Maps.Types.MapsService,

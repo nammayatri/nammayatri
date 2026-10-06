@@ -18,6 +18,7 @@ import qualified Tools.Notifications as Notify
 -- same search, the key is gone or a newer active booking exists and nothing is sent.
 silentReallocationExpiry ::
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     EsqDBFlow m r,
     SchedulerFlow r,

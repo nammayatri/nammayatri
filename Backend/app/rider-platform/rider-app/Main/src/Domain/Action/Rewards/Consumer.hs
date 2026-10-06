@@ -51,6 +51,7 @@ maxPushesPerMessage = 5
 -- the ride-completion and triggerEval call sites. Callers should run it in a fork.
 evaluateRewardsIfEnabled ::
   ( MonadFlow m,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     CacheFlow m r,
     Hedis.HedisFlow m r,
@@ -67,7 +68,7 @@ evaluateRewardsIfEnabled riderId moCityId completedAt mbIsValidRide = do
   when enabled $ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide
 
 evaluateRewardsForRider ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, ServiceFlow m r, EncFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, ServiceFlow m r, EncFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id DP.Person ->
   Id DMOC.MerchantOperatingCity ->
   UTCTime ->
@@ -197,7 +198,7 @@ evaluateRewardsForRider riderId moCityId completedAt mbIsValidRide = do
     activeCampaigns
 
 sendUnlockPush ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, EncFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, EncFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   Id DP.Person ->
   DRCmp.RewardCampaign ->
   DRC.RewardCohort ->

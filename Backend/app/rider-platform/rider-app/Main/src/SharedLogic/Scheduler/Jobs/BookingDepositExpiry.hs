@@ -48,6 +48,7 @@ import qualified UrlShortner.Common as UrlShortner
 
 bookingDepositExpiryJob ::
   ( EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     Finance.HasActorInfo m r,
     EsqDBReplicaFlow m r,
