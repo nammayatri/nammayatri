@@ -698,6 +698,16 @@ resolveSubCategoryOptionId chats mbFallbackOptionId categoryName identifier
 
     normalize = T.strip . T.toLower
 
+maxIssueDescriptionLength :: Int
+maxIssueDescriptionLength = 5000
+
+validateIssueDescription :: (MonadThrow m, Log m) => Text -> m ()
+validateIssueDescription desc = do
+  when (T.any (== '\NUL') desc) $
+    throwError $ InvalidRequest "Description contains invalid characters."
+  when (T.length desc > maxIssueDescriptionLength) $
+    throwError $ InvalidRequest $ "Description must not exceed " <> show maxIssueDescriptionLength <> " characters."
+
 createIssueReport ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
@@ -728,6 +738,7 @@ createIssueReportWithContext ::
   Maybe Text ->
   m Common.IssueReportRes
 createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+  validateIssueDescription description
   -- Guard against a client retrying the same submission (e.g. after a
   -- timeout on a request carrying an attachment) and ending up with two
   -- tickets for what the customer experienced as one submit. Keyed on the
