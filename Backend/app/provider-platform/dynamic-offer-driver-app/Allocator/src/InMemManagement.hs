@@ -35,10 +35,10 @@ type API = "internal" :> InMemManagementAPI
 -- scheduler's health server port. Requests run against the allocator's own
 -- 'HandlerEnv', so they see the same in-memory cache the jobs use.
 withInMemManagement :: R.FlowRuntime -> HandlerEnv -> Application -> Application
-withInMemManagement flowRt env healthApp req respond =
+withInMemManagement flowRt env healthApp req sendResponse =
   case pathInfo req of
-    "internal" : "inMem" : _ -> inMemApp req respond
-    _ -> healthApp req respond
+    "internal" : "inMem" : _ -> inMemApp req sendResponse
+    _ -> healthApp req sendResponse
   where
     inMemApp = run (Proxy @API) handler EmptyContext (EnvR flowRt env)
 
