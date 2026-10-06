@@ -1508,11 +1508,12 @@ mkFulfillmentStateCode code =
             }
     }
 
-mkDestinationReachedTimeTagGroupV2 :: Maybe UTCTime -> Maybe [Spec.TagGroup]
-mkDestinationReachedTimeTagGroupV2 = Tags.mkSingleTagGroup Tags.DRIVER_REACHED_DESTINATION
-
-mkReturnTripOtpTagGroup :: Maybe Text -> Maybe [Spec.TagGroup]
-mkReturnTripOtpTagGroup = Tags.mkSingleTagGroup Tags.RETURN_TRIP_OTP
+mkDriverReachedDestinationTagGroup :: Bool -> Maybe UTCTime -> Maybe Text -> Maybe [Spec.TagGroup]
+mkDriverReachedDestinationTagGroup isValueAddNP destinationArrivalTime returnOtp =
+  Tags.buildTagGroups
+    [ Tags.DRIVER_REACHED_DESTINATION ~=? (if isValueAddNP then T.pack . show <$> destinationArrivalTime else Nothing),
+      Tags.RETURN_TRIP_OTP ~=? returnOtp
+    ]
 
 mkReturnTripStartedTimeTagGroup :: Maybe UTCTime -> Maybe [Spec.TagGroup]
 mkReturnTripStartedTimeTagGroup = Tags.mkSingleTagGroup Tags.RETURN_TRIP_STARTED_TIME

@@ -421,9 +421,7 @@ tfArrivedReqToOrder Common.DDriverArrivedReq {..} mbFarePolicy becknConfig = do
 tfReachedDestinationReqToOrder :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => OU.DDriverReachedDestinationReq -> m Spec.Order
 tfReachedDestinationReqToOrder OU.DDriverReachedDestinationReq {..} = do
   let BookingDetails {..} = bookingDetails
-      destinationReachedTimeTags = if isValueAddNP then Utils.mkDestinationReachedTimeTagGroupV2 destinationArrivalTime else Nothing
-      returnTripOtpTags = Utils.mkReturnTripOtpTagGroup ride.returnOtp
-      driverReachedDestinationTags = destinationReachedTimeTags <> returnTripOtpTags
+      driverReachedDestinationTags = Utils.mkDriverReachedDestinationTagGroup isValueAddNP destinationArrivalTime ride.returnOtp
   fulfillment <- Utils.mkFulfillmentV2 Nothing Nothing ride booking Nothing Nothing driverReachedDestinationTags Nothing False False Nothing (Just $ show EventEnum.DRIVER_REACHED_DESTINATION) isValueAddNP Nothing False 0
   pure $
     Spec.Order
