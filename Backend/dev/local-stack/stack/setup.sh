@@ -253,6 +253,25 @@ seed_driver_db() {
     2>/dev/null | tr -s ' ' | grep -v '^ *$' | sed 's/^ */  /' || true
 }
 
+# The two columns OUR binary needs and upstream's migrations do not create.
+# The image is built from 03a7531 plus our patches, and two of those patches
+# read a column of ours: the offer's car (atlas_app.driver_offer.vehicle_desc)
+# and the passenger's shortlist (atlas_driver_offer_bpp.search_request.
+# chosen_drivers). The live server got them by hand, with apply-migration.sh;
+# a stack built from this repository never did -- and without the first,
+# GET /v2/rideSearch/{id}/results fails with "column driver_offer.vehicle_desc
+# does not exist" although the offers arrived. Found by the CI on 2026-10-06,
+# the first run that got that far. Both files only ADD COLUMN IF NOT EXISTS.
+seed_movin_columns() {
+  log "Adding the columns our patched binary reads"
+  local f
+  for f in driver-offer-vehicle.sql search-request-chosen-drivers.sql; do
+    docker cp "db/$f" "ny-postgres:/tmp/$f"
+    $PG -q -v ON_ERROR_STOP=1 -f "/tmp/$f" >/dev/null || die "could not apply $f"
+    ok "$f"
+  done
+}
+
 seed_algeria() {
   # Must run *after* rider-app has migrated: atlas_app.geometry only exists
   # once its migrations have been applied.
@@ -775,6 +794,8 @@ log "Starting the BAP <-> BPP connector"
 docker compose up -d mock-registry beckn-gateway
 wait_for_api
 wait_for_driver_api
+# After both apps' migrations (the tables must exist), before anything searches.
+seed_movin_columns
 # Repoints both apps at OSRM and restarts them, so wait for them again.
 if [ "${SKIP_OSRM:-0}" != "1" ]; then
   # Pointing the backend at a routing service that is not running turns every
