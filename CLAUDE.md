@@ -403,7 +403,15 @@ the header of that script.
   release) hashes the server against the commit it claims, expected side from
   git. Since phase 4 the nightly backup's units are in `stack/systemd/` and the
   unit runs the shipped `/opt/ny/local-stack/backup.sh`, not `/root`'s copy.
+  A release keeps each image it replaces as `<container>:previous`.
   local-stack README → *Releasing*.
+- **The shims are split by subject and guarded by golden files (phase 5).**
+  `tests/maps-shim-routes.test.js` and `tests/auth-guard-routes.test.js` replay
+  recorded requests and compare every answer, query and outgoing call. A change
+  that is MEANT to alter behaviour must re-record (`--record`) in the same
+  commit, and say so; a refactor must pass them untouched. The money path's
+  SQL is tested for real in PGlite (`tests/wallet.test.js` etc.); run
+  everything with `(cd tests && npm ci) && bash tests/run-all.sh`.
 - **The CI ride regression was red for its first 19 runs for reasons unrelated
   to any commit** (no routing: the image's mock-google has no
   `/directions/json`; a pipefail-killed poll; two columns of ours the live DB

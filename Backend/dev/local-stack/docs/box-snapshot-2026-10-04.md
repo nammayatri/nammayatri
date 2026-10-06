@@ -205,3 +205,30 @@ each moved verbatim (checked byte for byte):
   waiting healthz; 91/91 from outside. Live afterwards: search in Nouakchott
   and Algiers, reverse geocoding naming each country, an Algiers route 13.7 km.
   maps-shim's `server.js` is now the router and start-up — 439 lines, from 886.
+
+**4. The split, the auth guard.** Under it first, `tests/auth-guard-routes.test.js`:
+a scripted day of 50 requests through the real guard (sign-ins in both
+countries, the lock, resend, SMS-in, trusted phones, number change, a driver,
+the wallet gate, a rating, bounds, the start limit, /healthz before and after),
+each one's answer and everything said to the backend, Moorsyl, maps-shim and
+admin-api recorded; deterministic; four deliberate faults caught. It records
+one oddity as it is, not changed in a no-change refactor: an oversized body
+gets a dropped connection, not its 413 (nginx answers first in production).
+Then one module per release, each moved verbatim, each on the owner's OK:
+
+| Release | UTC | Commit | Module |
+|---|---|---|---|
+| E | 16:44 | `714bb68c7e` | `driver-rules.js` — wallet gate, rating note, reply bound |
+| F | 16:50 | `76f130be7b` | `limits.js` — starts per number / address, SMS budget |
+| G | 16:55 | `855ccdb9e2` | `gateway.js` — the code, Moorsyl, the /healthz counters (`smsStats()`) |
+| H | 16:59 | `b3a4a930da` | `personal-codes.js` — enrolled drivers' codes |
+| I | 17:04 | `9f8ff3b09c` | `number-change.js` — the route's body one indent less |
+
+Each: checks passed, outside check all files, sign-in channels and the guard's
+own startup lines unchanged. `server.js` 1782 -> 1119 lines (the sign-in flow
+and the router stay); maps-shim's 886 -> 439.
+
+**Phase 5 done when — met.** Every line that decides whether a driver may
+work has a test that runs in CI (wallet, restricted, the guard's gate), on
+Node 20 and 22, on every push; both shims are packaged and on Node 22, with
+the replaced images kept as `:previous`.

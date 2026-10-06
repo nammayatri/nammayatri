@@ -2243,7 +2243,7 @@ has rated you" and "the network failed" answer identically, and both apps draw
 `atlas_driver_offer_bpp.rider_details` and **writes no row**: which driver,
 which ride and how many stars are gone once it returns. The console's Notes
 needed them, so the auth guard catches them on the way through —
-`noteDriverRating` in `auth-guard/server.js`: after the driver backend answers
+`noteDriverRating` in `auth-guard/driver-rules.js`: after the driver backend answers
 2xx, it tells admin-api `POST /internal/driver-rating {rideId, stars}` on
 loopback, fire and forget. admin-api reads who drove and who rode from the ride
 and keeps the first rating per ride (`movin.driver_rider_rating`).
@@ -4242,8 +4242,14 @@ local-stack/
 │   ├── docker-compose.yml   the stack (the website's admin-api is its overlay)
 │   ├── Dockerfile.rider     the backend image: librdkafka + the binaries in bin/
 │   ├── Dockerfile.maps-shim
-│   ├── auth-guard/          sign-in, SMS/WhatsApp, attempt limits, wallet gate
-│   ├── maps-shim/           routing, places, wallet, payments, push, avatars
+│   ├── auth-guard/          sign-in, SMS/WhatsApp, attempt limits, wallet gate --
+│   │                        server.js is the sign-in flow and the router; one
+│   │                        module per subject beside it: limits, gateway,
+│   │                        personal-codes, number-change, driver-rules,
+│   │                        whatsapp, sms-inbox, trusted-phones (phase 5)
+│   ├── maps-shim/           routing, places, wallet, payments, push, avatars --
+│   │                        server.js is the router and start-up; directions,
+│   │                        places, wallet, restricted, ... one module each
 │   ├── edge/                nginx: names, TLS, rate limits
 │   ├── demo-map/            the service-area map
 │   ├── geocoder/            the place index's SQL and lists
