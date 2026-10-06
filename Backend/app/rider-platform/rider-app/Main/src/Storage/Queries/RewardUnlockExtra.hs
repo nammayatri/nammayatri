@@ -5,6 +5,7 @@ module Storage.Queries.RewardUnlockExtra
   ( findByCampaignCohortAndCode,
     createNextUnlock,
     nextUnlockDecision,
+    hasUnlockCapacity,
     updateViewAndClaimTimestamps,
     markRedeemed,
     markActiveAsExpiredIfValidityPassed,
@@ -53,19 +54,31 @@ nextUnlockDecision ::
   [DRU.RewardUnlock] ->
   DRU.RewardUnlock ->
   Maybe Int
-nextUnlockDecision cohort existing unlock =
-  case cohort.maxUnlocksPerCohort of
-    Nothing ->
-      if not (null liveForCohort)
-        then Nothing
-        else Just 1
-    Just n ->
-      if length liveForCohort >= n
-        then Nothing
-        else Just (maximum (0 : map (fromMaybe 1 . (.unlockSeq)) forCohort) + 1)
+nextUnlockDecision cohort existing unlock
+  | not (hasUnlockCapacity cohort.maxUnlocksPerCohort unlock.cohortId existing) = Nothing
+  | otherwise =
+    case cohort.maxUnlocksPerCohort of
+      Nothing -> Just 1
+      Just _ -> Just (maximum (0 : map (fromMaybe 1 . (.unlockSeq)) forCohort) + 1)
   where
     forCohort = filter (\u -> u.cohortId == unlock.cohortId) existing
-    liveForCohort = filter (\u -> u.status /= DRU.Reclaimed) forCohort
+
+-- | Whether the rider can still unlock this cohort: below its repeat cap
+-- ('Just n' live unlocks), or with no live unlock at all for a one-shot cohort
+-- ('Nothing'). Live = any status but 'Reclaimed'. The single source of the cap
+-- rule, shared by 'nextUnlockDecision' and the home-screen live reward card so the
+-- card can't outlive (or die before) the reward it advertises.
+hasUnlockCapacity ::
+  Maybe Int ->
+  Id DRC.RewardCohort ->
+  [DRU.RewardUnlock] ->
+  Bool
+hasUnlockCapacity maxUnlocks cohortId existing =
+  case maxUnlocks of
+    Nothing -> null liveForCohort
+    Just n -> length liveForCohort < n
+  where
+    liveForCohort = filter (\u -> u.cohortId == cohortId && u.status /= DRU.Reclaimed) existing
 
 -- | Create the next unlock row for a rider+cohort, honoring the cohort's
 -- repeat cap ('maxUnlocksPerCohort'). Non-repeatable cohorts ('Nothing') keep

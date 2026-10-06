@@ -34,6 +34,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import qualified Domain.Action.Rewards.Consumer as RewardsConsumer
 import qualified Domain.Action.Rewards.Evaluator as Evaluator
+import qualified Domain.Action.Rewards.LiveReward as LiveReward
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RewardCampaign as DRCmp
@@ -49,6 +50,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.LiveReward as CQLR
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
@@ -124,6 +126,7 @@ putRewardsCampaign merchantShortId opCity campaignId req = do
     req.startsAt
     req.endsAt
     req.displayOrder
+  CQLR.clearCache c.merchantOperatingCityId
   pure Success
 
 postRewardsCampaignCohort ::
@@ -160,6 +163,7 @@ postRewardsCampaignCohort merchantShortId opCity campaignId req = do
             updatedAt = now
           }
   QRC.create cohort
+  CQLR.clearCache c.merchantOperatingCityId
   pure $ API.CreateCohortResp (castId cohortId)
 
 putRewardsCampaignCohort ::
@@ -192,6 +196,7 @@ putRewardsCampaignCohort merchantShortId opCity campaignId cohortId req = do
     req.couponValidityDays
     req.presentation
     (Just <$> req.maxUnlocksPerCohort)
+  CQLR.clearCache campaign.merchantOperatingCityId
   pure Success
 
 postRewardsCampaignCohortCodes ::
@@ -259,6 +264,7 @@ postRewardsCampaignStatus merchantShortId opCity campaignId req = do
         when (size == 0) $
           throwError (InvalidRequest $ "Cohort " <> co.name <> " has empty pool")
   QRCmpE.updateStatus c.id newStatus
+  CQLR.clearCache c.merchantOperatingCityId
   pure Success
 
 getRewardsCampaign ::
@@ -474,6 +480,7 @@ validatePresentation v = case v of
       Just (A.Number n) | n == 1 -> pure ()
       Just _ -> throwError (InvalidRequest "presentation.schemaVersion must be 1")
       Nothing -> pure ()
+    whenJust (KM.lookup "homeCard" o) validateHomeCard
     case KM.lookup "detail" o of
       Just (A.Object d) -> case KM.lookup "body" d of
         Just (A.Object b) -> case (KM.lookup "type" b, KM.lookup "content" b) of
@@ -488,6 +495,13 @@ validatePresentation v = case v of
         _ -> pure ()
       _ -> pure ()
   _ -> throwError (InvalidRequest "presentation must be a JSON object")
+
+-- | @presentation.homeCard@ is the rider home-screen promo card served by GET /rewards/live:
+-- the card fields plus an optional @targetingJsonLogic@ over the rider context.
+validateHomeCard :: (MonadFlow m) => A.Value -> m ()
+validateHomeCard v = case LiveReward.parseHomeCard v of
+  Right _ -> pure ()
+  Left e -> throwError (InvalidRequest $ "presentation.homeCard is invalid: " <> e)
 
 toDomainSponsorType :: SponsorType.SponsorType -> DRCmp.SponsorType
 toDomainSponsorType SponsorType.Internal = DRCmp.Internal

@@ -42,10 +42,16 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "rewards"
+      :> "live"
+      :> Get
+           '[JSON]
+           API.Types.UI.Rewards.LiveRewardCardResp
   )
 
 handler :: Environment.FlowServer API
-handler = getRewards :<|> postRewardsClaim :<|> postRewardsRedeemed
+handler = getRewards :<|> postRewardsClaim :<|> postRewardsRedeemed :<|> getLiveReward
 
 getRewards :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.Rewards.RewardUnlockSummary])
 getRewards a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Rewards.getRewards (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -67,3 +73,6 @@ postRewardsRedeemed ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postRewardsRedeemed a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.Rewards.postRewardsRedeemed (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getLiveReward :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.Rewards.LiveRewardCardResp)
+getLiveReward a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a1) $ Domain.Action.UI.Rewards.getLiveReward (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
