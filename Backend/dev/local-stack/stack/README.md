@@ -8,6 +8,8 @@ found by the next release, which stops and names it.
     cat .shipped                      which commit is deployed, when, by whom
     .shipped.files                    the sha256 of every file it shipped
     /opt/ny/local-stack.prev          what the last release replaced (rollback)
+    systemd/                          units the release installs in /etc/systemd/system
+                                      (movin-backup: the nightly backup runs ./backup.sh)
 
 Everything else in this folder is the server's own and no release touches it:
 `.env` and the secrets, the certificates, `edge-web/` (the website's build),

@@ -127,3 +127,31 @@ one `*.broken-*`; the plan counted 30 on 2026-09-24) moved to
 `/root/snapshots/leftovers-2026-10-06/`, root only. `ops/deploy.sh status`
 afterwards: all 82 shipped files exactly as released.
 
+## Phase 4 — the checks that guard a ride (2026-10-06)
+
+**1. The ride regression, red since its first run (2026-09-20), green since
+run 22.** Three causes, each hiding the next, every one read in the rider's or
+the driver's log rather than the job's "FAILED":
+
+| Run | What stopped it | Fix |
+|---|---|---|
+| 1–19 | `SKIP_OSRM=1` left `Maps_Google` on mock-google, which in our image (upstream `03a7531`) has **no `/directions/json`**: 404 → `E500 GOOGLE_MAPS_API_ERROR` → no `searchId` | CI cuts Algiers out of the Geofabrik extract (osmium, cached a week) and builds a real OSRM graph (93 MB, seconds); routing as on the server |
+| 20 | `searchId` at last, then the price poll's `grep` found nothing on its first look and, under `pipefail`, `set -e` ended the script silently | `\|\| true` on the three pipelines in `verify_connector` |
+| 21 | The BPP found all 5 cars and priced them; the rider received `on_search`; every results read failed: `column driver_offer.vehicle_desc does not exist` | `setup.sh` now applies the two columns our binary reads (`driver-offer-vehicle.sql`, `search-request-chosen-drivers.sql`) — the server got them by hand |
+| 22, 23 | **green**: 4 estimates in 5 s, twice (before and after freshening the drivers); 3 min, then 2 min with the map cached | |
+
+Still not covered: CI runs the upstream seed (one merchant, its fare: 258 for
+every variant), not the server's two merchants and tariffs.
+
+**2. Trigger:** every push to `algeria/**` (was a path list). The `schedule:`
+cannot fire while the default branch is upstream's `main` — owner's decision.
+
+**3 and 4, released on the owner's OK, 12:39 UTC, commit `37c3d6f04e`:** 2 new
+files (`systemd/movin-backup.service`, `.timer`), 2 rewritten in place
+(`backup.sh`, `setup.sh`), no SQL, **nothing restarted**; the units installed
+into `/etc/systemd/system`, `daemon-reload`, the old ones kept in `.prev/units`.
+`systemctl show movin-backup.service` → `ExecStart=/opt/ny/local-stack/backup.sh`;
+timer enabled, next run 02:31. Then the outside check — the server's hashes
+against the commit, recomputed from git on the laptop: **all 84 files and both
+units byte for byte the commit.** `/root/backup.sh` is no longer run by anything
+(left in place, identical to the 2026-10-04 copy).

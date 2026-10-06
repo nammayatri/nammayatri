@@ -399,4 +399,13 @@ the header of that script.
   `docker-compose.yml` was a superset of git's, and copying the repo's over it
   would have taken the console and the drivers' papers down. `ops/deploy.sh
   status` says whether anyone has edited the server by hand since; a hand edit
-  makes the next release stop. local-stack README → *Releasing*.
+  makes the next release stop. `ops/deploy.sh verify` (also run after every
+  release) hashes the server against the commit it claims, expected side from
+  git. Since phase 4 the nightly backup's units are in `stack/systemd/` and the
+  unit runs the shipped `/opt/ny/local-stack/backup.sh`, not `/root`'s copy.
+  local-stack README → *Releasing*.
+- **The CI ride regression was red for its first 19 runs for reasons unrelated
+  to any commit** (no routing: the image's mock-google has no
+  `/directions/json`; a pipefail-killed poll; two columns of ours the live DB
+  got by hand). Green since 2026-10-06. When it goes red, read the rider's and
+  driver's logs in the uploaded artifact, never just the job's FAILED line.
