@@ -200,3 +200,8 @@ each moved verbatim (checked byte for byte):
   route served at 16:26:29). `ops/deploy.sh verify`: 90/90 files the commit.
   Not re-released to clear the stamp — that would replace `.prev` and lose the
   rollback. The checker now waits up to 30 s for a restarted service.
+- **Release D**, owner's OK, 16:33 UTC, `c08aa72e8a`: `places.js`
+  (autocomplete, details, labels, reverse geocoding). Checks passed with the
+  waiting healthz; 91/91 from outside. Live afterwards: search in Nouakchott
+  and Algiers, reverse geocoding naming each country, an Algiers route 13.7 km.
+  maps-shim's `server.js` is now the router and start-up — 439 lines, from 886.
