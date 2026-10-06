@@ -140,7 +140,7 @@ echo "   public api     -> $(curl -s -o /dev/null -w '%{http_code}' https://api.
 
 echo
 if [ $cfg_rc -eq 0 ]; then
-  echo "DONE -- live key installed. Run ./probe-wallet-screens.py on the VPS next,"
+  echo "DONE -- live key installed. Run investigations/probe-wallet-screens.py (copy it to /tmp on the VPS) next,"
   echo "and remember the first real top-up is real money."
 else
   echo "STOPPED -- the key is written but did NOT prove itself live. Read the lines"
