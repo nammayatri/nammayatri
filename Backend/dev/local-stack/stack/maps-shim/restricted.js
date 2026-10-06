@@ -161,6 +161,11 @@ function publish(key, ids) {
     });
     sock.on('connect', () => sock.write(wire));
     sock.on('data', (buf) => finish(buf.toString('utf8').startsWith('+OK')));
+    // Closed without an answer (Redis restarting): not published. Without
+    // this the promise never settled -- the timeout above only runs while the
+    // socket is open -- and that refresh hung for good. Found by
+    // tests/restricted.test.js, 2026-10-06.
+    sock.on('close', () => finish(false));
   });
 }
 
