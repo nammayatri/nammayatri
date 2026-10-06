@@ -164,14 +164,26 @@ def running():
     return set(r.stdout.split())
 
 
-def http_ok(url):
+def http_ok(url, wait_s=30):
+    """200 within `wait_s`. A service the release has just restarted takes a
+    second or two to listen: the first release of a module split (2026-10-06,
+    release C) was stamped FAILED because maps-shim was probed once, ~1 s
+    after `docker restart`, while it was still loading -- it answered 200 a
+    second later and served a ride six seconds after that."""
     if TEST:
         return True
-    try:
-        with urllib.request.urlopen(url, timeout=5) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
+    import time
+    deadline = time.monotonic() + wait_s
+    while True:
+        try:
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                if resp.status == 200:
+                    return True
+        except Exception:
+            pass
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(1)
 
 
 # ── the plan ────────────────────────────────────────────────────────────────

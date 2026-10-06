@@ -185,3 +185,18 @@ outside check 88/88; routes, wallet and `/auth/channels` (+222 SMS, +213
 SMS-in, WhatsApp) answer as before.
 
 **4. The split** — next, one module at a time, each released on its own.
+
+**4. The split, maps-shim.** Under it first, `tests/maps-shim-routes.test.js`:
+32 requests through the real `server.js` process, each one's answer, SQL and
+OSRM / mock-google URLs recorded as a golden file from the code that ran;
+shown able to fail by two deliberate faults. Then one module per release,
+each moved verbatim (checked byte for byte):
+
+- **Release C**, owner's OK, 16:26 UTC, `b5999a1c06`: `directions.js` (+
+  `reply.js`, the shared `send`). maps-shim restarted. `.shipped` says
+  **checks FAILED, and it was a false alarm**: the release probed maps-shim's
+  healthz once, ~1 s after `docker restart`, while the process was still
+  loading (started 16:26:21.6, listening 16:26:22.9; healthz 200 and a real
+  route served at 16:26:29). `ops/deploy.sh verify`: 90/90 files the commit.
+  Not re-released to clear the stamp — that would replace `.prev` and lose the
+  rollback. The checker now waits up to 30 s for a restarted service.
