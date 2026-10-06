@@ -50,6 +50,7 @@ import qualified UrlShortner.Common as UrlShortner
 
 paymentOrderStatusCheckJob ::
   ( EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     Finance.HasActorInfo m r,
     EsqDBFlow m r,
@@ -111,6 +112,7 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
 processPaymentOrder ::
   forall m r c.
   ( EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     Finance.HasActorInfo m r,
     EsqDBFlow m r,

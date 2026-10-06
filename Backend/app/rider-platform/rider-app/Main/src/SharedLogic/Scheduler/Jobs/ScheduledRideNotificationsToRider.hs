@@ -59,6 +59,7 @@ type ScheduleNotificationFlow m r =
     MonadFlow m,
     EsqDBFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     SchedulerFlow r,
     HasKafkaProducer r
   )

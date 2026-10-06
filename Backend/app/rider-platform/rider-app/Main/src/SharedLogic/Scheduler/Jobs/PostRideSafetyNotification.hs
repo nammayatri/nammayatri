@@ -33,6 +33,7 @@ import Tools.Notifications
 
 postRideSafetyNotification ::
   ( EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     MonadFlow m,
     EsqDBFlow m r,

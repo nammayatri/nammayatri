@@ -49,6 +49,7 @@ import qualified Utils.Common.JWT.TransitClaim as TC
 
 handleCancelledStatus ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     EncFlow m r,

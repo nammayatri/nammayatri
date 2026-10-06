@@ -102,6 +102,7 @@ import Web.JWT hiding (claims)
 
 validateRequest ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,
@@ -158,6 +159,7 @@ validateRequest DOrder {..} = do
 
 onConfirmFailure ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,
@@ -206,6 +208,7 @@ onConfirmFailure bapConfig ticketBooking = do
 
 onConfirm ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     MonadFlow m,
     EncFlow m r,

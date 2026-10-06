@@ -60,6 +60,7 @@ payoutSettlementLockKey payoutRequestId = "Payout:Settlement:payoutRequestId:" <
 
 type PayoutSettlementFlow m r =
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,

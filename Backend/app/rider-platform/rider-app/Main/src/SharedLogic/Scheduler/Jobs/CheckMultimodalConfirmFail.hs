@@ -45,6 +45,7 @@ import qualified UrlShortner.Common as UrlShortner
 
 checkMultimodalConfirmFailJob ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,

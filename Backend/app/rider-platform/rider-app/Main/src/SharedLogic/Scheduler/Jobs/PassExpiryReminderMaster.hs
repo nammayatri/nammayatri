@@ -23,6 +23,7 @@ batchRescheduleDelaySeconds = 2
 
 runPassExpiryReminderMaster ::
   ( ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,

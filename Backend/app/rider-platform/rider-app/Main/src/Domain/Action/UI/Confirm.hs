@@ -98,6 +98,7 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,

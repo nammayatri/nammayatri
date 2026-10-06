@@ -27,7 +27,8 @@ rideSearchExpired ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["internalAPIKey" ::: Text]
+    HasFlowEnv m r '["internalAPIKey" ::: Text],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Maybe Text ->
   RideSearchExpiredReq ->

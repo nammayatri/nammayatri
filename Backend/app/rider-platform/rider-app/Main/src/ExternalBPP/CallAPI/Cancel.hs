@@ -38,6 +38,7 @@ data CancellationInitiator = UserInitiated | Technical
 -- Caller should handle sideEffectData and call cancelJourney based on the cancellationType
 cancel ::
   ( CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
     EncFlow m r,

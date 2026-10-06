@@ -309,6 +309,7 @@ findReusableToken personId = do
 
 auth ::
   ( HasFlowEnv m r ["apiRateLimitOptions" ::: APIRateLimitOptions, "smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasField "emailServiceConfig" r EmailServiceConfig,
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
@@ -480,6 +481,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
 
 signatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -505,6 +507,7 @@ signatureAuth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVer
 -- | Handle conductor tablet authentication via GIMS badge-token verification.
 conductorTokenAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -569,6 +572,7 @@ conductorTokenAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbR
 -- | Original mobile-number based signature auth flow.
 mobileSignatureAuth ::
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     CacheFlow m r,
     DB.EsqDBReplicaFlow m r,
     EsqDBFlow m r,
@@ -923,7 +927,7 @@ buildPersonAPIEntity person = do
   isSafetyCenterDisabled <- SLP.checkSafetyCenterDisabled person safetySettings
   return $ SP.makePersonAPIEntity decPerson tag isSafetyCenterDisabled safetySettings
 
-verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
+verifyFlow :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasKafkaProducer r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => SP.Person -> SR.RegistrationToken -> Maybe Whatsapp.OptApiMethods -> Maybe Text -> m PersonAPIEntity
 verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   let isNewPerson = person.isNew
   RegistrationToken.deleteByPersonIdExceptNew person.id regToken.id
@@ -943,6 +947,7 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
 verify ::
   ( CacheFlow m r,
     HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EsqDBFlow m r,
     DB.EsqDBReplicaFlow m r,
     Redis.HedisFlow m r,

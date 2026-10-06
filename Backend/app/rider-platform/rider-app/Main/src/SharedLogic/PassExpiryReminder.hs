@@ -32,7 +32,7 @@ newtype PassExpiryReminderEntityData = PassExpiryReminderEntityData
 
 -- Returns Just (offset + processed) if the batch was full (more rows likely), or Nothing when drained.
 sendPassExpiryReminderBatch ::
-  (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], EsqDBFlow m r, CacheFlow m r) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe Int ->
