@@ -64,3 +64,9 @@ runs). Git and the unused copy now hold the running one, byte for byte
   (`/root/snapshots/2026-10-04/compose-config.yml`) — it holds secrets, so it is
   not in this public repository.
 - The server notes the same beside the manifest: `bin/WHAT-RUNS.txt`.
+- **Every file, one by one** (2026-10-06): `box-inventory-2026-10-06.md` — 188
+  files with hash, date and size, against git: 87 identical, 6 differ, 7 on the
+  server only, 34 leftover copies from past edits, 23 the website's build, 6 in
+  `bin/`; 25 not named (certificates, keys, secrets); 43 tracked files are
+  laptop tools never deployed. Correction to the plan: `bin/MANIFEST.txt` is
+  gitignored with the rest of `bin/` — it was on the laptop, never in git.
