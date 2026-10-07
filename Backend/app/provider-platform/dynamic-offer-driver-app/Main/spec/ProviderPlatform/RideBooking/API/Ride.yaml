@@ -19,6 +19,21 @@ apis:
         query:
           - requestorId: Text
         actorInfo: requestorId
+  - POST: # ActivateScheduledRideAPI
+      endpoint: /{rideId}/scheduled/activate
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      request:
+        type: ActivateScheduledRideReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: PUBLIC
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
   - POST: # RideEndAPI
       endpoint: /{rideId}/end
       auth: ApiAuthV2
@@ -68,6 +83,9 @@ types:
   StartRideReq:
     - point: Maybe LatLong
     - odometerReadingValue: Maybe Centesimal
+    - derive: "'HideSecrets"
+  ActivateScheduledRideReq:
+    - point: LatLong
     - derive: "'HideSecrets"
   EndRideReq:
     - point: Maybe LatLong

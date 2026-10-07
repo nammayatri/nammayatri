@@ -18,14 +18,16 @@ module Domain.Action.Dashboard.RideBooking.Ride
     getRideCurrentActiveRide,
     postRideCancel,
     postRideBookingWithVehicleNumberAndPhone,
+    postRideScheduledActivate,
   )
 where
 
-import qualified API.Types.Dashboard.RideBooking.Ride
+import qualified API.Types.Dashboard.RideBooking.Ride as RideBookingRide
 import qualified "this" API.Types.Dashboard.RideBooking.Ride as Common
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
+import qualified Domain.Action.UI.Ride as UIRide
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Action.UI.Ride.StartRide as SHandler
@@ -84,3 +86,9 @@ postRideBookingWithVehicleNumberAndPhone merchantShortId opCity _mbRequestorId r
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   DRide.bookingWithVehicleNumberAndPhone merchant merchantOpCityId req
+
+postRideScheduledActivate :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Maybe Text -> RideBookingRide.ActivateScheduledRideReq -> Flow APISuccess
+postRideScheduledActivate merchantShortId opCity reqRideId _mbRequestorId RideBookingRide.ActivateScheduledRideReq {point} = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  UIRide.activateScheduledRideAtPickup (UIRide.DashboardActivator merchant.id merchantOpCityId) (cast @Common.Ride @DRide.Ride reqRideId) point

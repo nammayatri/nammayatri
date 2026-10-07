@@ -23,25 +23,27 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("ride" :> (PostRideStart :<|> PostRideEnd :<|> GetRideCurrentActiveRide :<|> PostRideCancel :<|> PostRideBookingWithVehicleNumberAndPhone))
+type API = ("ride" :> (PostRideStart :<|> PostRideScheduledActivate :<|> PostRideEnd :<|> GetRideCurrentActiveRide :<|> PostRideCancel :<|> PostRideBookingWithVehicleNumberAndPhone))
 
-type PostRideStart = (DashboardUserAuth 'DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_START" :> API.Types.Dashboard.RideBooking.Ride.PostRideStart)
+type PostRideStart = (DashboardUserAuth ('DRIVER_OFFER_BPP) "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_START" :> API.Types.Dashboard.RideBooking.Ride.PostRideStart)
 
-type PostRideEnd = (DashboardUserAuth 'DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_END" :> API.Types.Dashboard.RideBooking.Ride.PostRideEnd)
+type PostRideScheduledActivate = (DashboardUserAuth ('DRIVER_OFFER_BPP) "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_SCHEDULED_ACTIVATE" :> API.Types.Dashboard.RideBooking.Ride.PostRideScheduledActivate)
 
-type GetRideCurrentActiveRide = (DashboardUserAuth 'DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/RIDE/GET_RIDE_CURRENT_ACTIVE_RIDE" :> API.Types.Dashboard.RideBooking.Ride.GetRideCurrentActiveRide)
+type PostRideEnd = (DashboardUserAuth ('DRIVER_OFFER_BPP) "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_END" :> API.Types.Dashboard.RideBooking.Ride.PostRideEnd)
 
-type PostRideCancel = (DashboardUserAuth 'DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_CANCEL" :> API.Types.Dashboard.RideBooking.Ride.PostRideCancel)
+type GetRideCurrentActiveRide = (DashboardUserAuth ('DRIVER_OFFER_BPP) "PROVIDER_RIDE_BOOKING/RIDE/GET_RIDE_CURRENT_ACTIVE_RIDE" :> API.Types.Dashboard.RideBooking.Ride.GetRideCurrentActiveRide)
+
+type PostRideCancel = (DashboardUserAuth ('DRIVER_OFFER_BPP) "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_CANCEL" :> API.Types.Dashboard.RideBooking.Ride.PostRideCancel)
 
 type PostRideBookingWithVehicleNumberAndPhone =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP
+      ('DRIVER_OFFER_BPP)
       "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE"
       :> API.Types.Dashboard.RideBooking.Ride.PostRideBookingWithVehicleNumberAndPhone
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postRideStart merchantId city :<|> postRideEnd merchantId city :<|> getRideCurrentActiveRide merchantId city :<|> postRideCancel merchantId city :<|> postRideBookingWithVehicleNumberAndPhone merchantId city
+handler merchantId city = postRideStart merchantId city :<|> postRideScheduledActivate merchantId city :<|> postRideEnd merchantId city :<|> getRideCurrentActiveRide merchantId city :<|> postRideCancel merchantId city :<|> postRideBookingWithVehicleNumberAndPhone merchantId city
 
 postRideStart :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.Dashboard.RideBooking.Ride.StartRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRideStart a5 a4 a3 a2 a1 =
@@ -51,7 +53,15 @@ postRideStart a5 a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Ride.postRideStart a5 a4 a2 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)) a1
     )
 
-postRideEnd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.Dashboard.RideBooking.Ride.EndRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRideScheduledActivate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Ride -> API.Types.Dashboard.RideBooking.Ride.ActivateScheduledRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRideScheduledActivate a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP "PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_SCHEDULED_ACTIVATE" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Ride.postRideScheduledActivate a5 a4 a2 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)) a1
+    )
+
+postRideEnd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> (Kernel.Types.Id.Id Dashboard.Common.Ride) -> API.Types.Dashboard.RideBooking.Ride.EndRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postRideEnd a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do

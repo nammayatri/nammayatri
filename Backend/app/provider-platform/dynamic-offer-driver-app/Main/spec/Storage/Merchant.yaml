@@ -1058,6 +1058,7 @@ TransporterConfig:
       avgSpeedKmph: Maybe Double
       maxHoldsPerDriver: Int
       enableScheduledRideActivationChecks: Maybe Bool
+      driverActivationWindow: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     PayoutFeeType:
       enum: "PERCENTAGE, FIXED"
