@@ -2235,16 +2235,7 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   when booking.isScheduled $ do
     nowT <- getCurrentTime
     unless (DP.isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes booking.startTime nowT) $ do
-      -- The snapshot taken when the quote was built, so a fare policy replaced since booking
-      -- does not change the floor this ride was booked under.
-      mbQuoteFarePolicy <- getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
-      let floorOf :: [DCC.ConditionalCharges] -> Maybe HighPrecMoney
-          floorOf = fmap (.charge) . find (\cc -> cc.chargeCategory == DCC.SCHEDULED_RIDE_MIN_WALLET_BALANCE)
-          -- The live policy only stands in when the snapshot has expired or was never written.
-          mbFarePolicyFloor = case mbQuoteFarePolicy of
-            Just quoteFarePolicy -> floorOf quoteFarePolicy.conditionalCharges
-            Nothing -> floorOf . (.conditionalCharges) =<< quote.farePolicy
-          minScheduledRideBalance = mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
+      minScheduledRideBalance <- getScheduledRideMinWalletBalance quote transporterConfig
       walletOk <- FWallet.hasMinWalletBalance counterpartyDriver minScheduledRideBalance driver.id.getId
       unless walletOk $
         throwError (InvalidRequest $ "Insufficient wallet balance to accept a scheduled ride. You need a minimum balance of " <> maybe "" show minScheduledRideBalance <> ".")
