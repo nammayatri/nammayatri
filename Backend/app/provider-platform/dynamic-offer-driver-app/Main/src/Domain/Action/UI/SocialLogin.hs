@@ -97,7 +97,8 @@ postSocialLogin req = do
           registrationLon = req.registrationLon,
           otpChannel = Nothing,
           password = Nothing,
-          employeeId = Nothing
+          employeeId = Nothing,
+          isOperatorReq = Nothing
         }
 
 makeSession ::

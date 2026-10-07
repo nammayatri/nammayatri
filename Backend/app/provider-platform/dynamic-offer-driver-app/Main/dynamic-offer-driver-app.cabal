@@ -103,6 +103,7 @@ library
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.OnixBppWebhook
+      API.Types.Dashboard.AppManagement.OrphanInstances.DepotManager
       API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra
       API.Types.UI.TicketKapture
       API.UI
@@ -212,6 +213,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Common.PayoutRequest
       Domain.Action.Common.VehicleDetails
+      Domain.Action.Dashboard.AppManagement.DepotManager
       Domain.Action.Dashboard.AppManagement.Driver
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.DriverWallet
@@ -358,6 +360,7 @@ library
       Domain.Action.UI.CancellationReasonLookup
       Domain.Action.UI.City
       Domain.Action.UI.DemandHotspots
+      Domain.Action.UI.Dispatcher
       Domain.Action.UI.Driver
       Domain.Action.UI.DriverAcceptOffer
       Domain.Action.UI.DriverAreaPreference
@@ -432,6 +435,7 @@ library
       Domain.Action.UI.Plan
       Domain.Action.UI.PolicyDocument
       Domain.Action.UI.PriceBreakup
+      Domain.Action.UI.PublicTransport
       Domain.Action.UI.QueueRank
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
@@ -461,6 +465,7 @@ library
       Domain.Action.UI.StripeAccountWebhook
       Domain.Action.UI.SubscriptionTransaction
       Domain.Action.UI.TicketKapture
+      Domain.Action.UI.TicketVerify
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
@@ -948,6 +953,7 @@ library
       Storage.Queries.CommunicationDeliveryExtra
       Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
+      Storage.Queries.DepotManagerExtra
       Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
@@ -1240,6 +1246,7 @@ library
       API.Action.UI.CallFeedback
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
+      API.Action.UI.Dispatcher
       API.Action.UI.DriverAreaPreference
       API.Action.UI.DriverDocument
       API.Action.UI.DriverFyEarnings
@@ -1271,6 +1278,7 @@ library
       API.Action.UI.PickupInstructions
       API.Action.UI.PolicyDocument
       API.Action.UI.PriceBreakup
+      API.Action.UI.PublicTransport
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
@@ -1280,6 +1288,7 @@ library
       API.Action.UI.SpecialZoneQueue
       API.Action.UI.StclMembership
       API.Action.UI.SubscriptionTransaction
+      API.Action.UI.TicketVerify
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
@@ -1294,9 +1303,11 @@ library
       API.Action.UnifiedDashboard.RideBooking
       API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
+      API.Types.Dashboard.AppManagement.DepotManager
       API.Types.Dashboard.AppManagement.Driver
       API.Types.Dashboard.AppManagement.DriverSubscription
       API.Types.Dashboard.AppManagement.DriverWallet
+      API.Types.Dashboard.AppManagement.Endpoints.DepotManager
       API.Types.Dashboard.AppManagement.Endpoints.Driver
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.DriverWallet
@@ -1430,6 +1441,7 @@ library
       API.Types.UI.CallFeedback
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
+      API.Types.UI.Dispatcher
       API.Types.UI.DriverAreaPreference
       API.Types.UI.DriverFyEarnings
       API.Types.UI.DriverIncentiveCoins
@@ -1457,6 +1469,7 @@ library
       API.Types.UI.PickupInstructions
       API.Types.UI.PolicyDocument
       API.Types.UI.PriceBreakup
+      API.Types.UI.PublicTransport
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
@@ -1512,6 +1525,8 @@ library
       Domain.Types.CommunicationDelivery
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
+      Domain.Types.Depot
+      Domain.Types.DepotManager
       Domain.Types.DigilockerVerification
       Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
@@ -1664,6 +1679,7 @@ library
       Domain.Types.UiDriverConfig
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
+      Domain.Types.VehicleActionHistory
       Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
       Domain.Types.VehicleInfo
@@ -1708,6 +1724,8 @@ library
       Storage.Beam.CommunicationDelivery
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
+      Storage.Beam.Depot
+      Storage.Beam.DepotManager
       Storage.Beam.DigilockerVerification
       Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
@@ -1860,6 +1878,7 @@ library
       Storage.Beam.UiDriverConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
+      Storage.Beam.VehicleActionHistory
       Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
       Storage.Beam.VehicleInfo
@@ -1909,6 +1928,8 @@ library
       Storage.Queries.CommunicationDelivery
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
+      Storage.Queries.Depot
+      Storage.Queries.DepotManager
       Storage.Queries.DigilockerVerification
       Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
@@ -2023,6 +2044,7 @@ library
       Storage.Queries.OrphanInstances.Communication
       Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
+      Storage.Queries.OrphanInstances.DepotManager
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount
@@ -2164,6 +2186,7 @@ library
       Storage.Queries.UiDriverConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
+      Storage.Queries.VehicleActionHistory
       Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
       Storage.Queries.VehicleInfo

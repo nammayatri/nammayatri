@@ -1,0 +1,18 @@
+imports:
+  Text: Data.Text
+  Value: Data.Aeson
+
+module: TicketVerify
+
+types: {}
+
+apis:
+  - POST:
+      endpoint: /multimodal/ticket/verify
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        city: Text
+      request:
+        type: "Data.Aeson.Value"
+      response:
+        type: "Data.Aeson.Value"
