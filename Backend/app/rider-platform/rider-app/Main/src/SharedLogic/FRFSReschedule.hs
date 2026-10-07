@@ -260,6 +260,7 @@ refreshJourneyLegDataOnReschedule oldLeg newSearchId stagingBooking tripId newRo
             DJourneyLeg.busConductorId = routeLiveInfo >>= (.busConductorId),
             DJourneyLeg.busDriverId = routeLiveInfo >>= (.busDriverId),
             DJourneyLeg.busTagNumber = routeLiveInfo >>= (.busTagNumber),
+            DJourneyLeg.busVehicleVariant = routeLiveInfo >>= (.busVehicleVariant),
             DJourneyLeg.busLocationData = stagingBooking.busLocationData,
             DJourneyLeg.changedBusesInSequence = Nothing,
             DJourneyLeg.updatedAt = now

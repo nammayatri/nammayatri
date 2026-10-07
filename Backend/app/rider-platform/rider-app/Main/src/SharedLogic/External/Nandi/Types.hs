@@ -710,6 +710,20 @@ normalizeServiceSubTypes Nothing = Nothing
 normalizeServiceSubTypes (Just (FilteredServiceSubTypes [])) = Nothing
 normalizeServiceSubTypes (Just (FilteredServiceSubTypes subtypes)) = Just subtypes
 
+newtype FilteredBusVehicleVariant = FilteredBusVehicleVariant (Maybe BecknV2.FRFS.Enums.BusVehicleVariant)
+  deriving (Show)
+
+instance FromJSON FilteredBusVehicleVariant where
+  parseJSON value = do
+    let parsed = case fromJSON value of
+          Success val -> Just val
+          Error _ -> Nothing
+    return $ FilteredBusVehicleVariant parsed
+
+normalizeBusVehicleVariant :: Maybe FilteredBusVehicleVariant -> Maybe BecknV2.FRFS.Enums.BusVehicleVariant
+normalizeBusVehicleVariant Nothing = Nothing
+normalizeBusVehicleVariant (Just (FilteredBusVehicleVariant variant)) = variant
+
 newtype NandiPatternsRes = NandiPatternsRes
   { patterns :: [NandiPattern]
   }
@@ -835,6 +849,7 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     driver_id :: Maybe Text,
     conductor_id :: Maybe Text,
     busTagNumber :: Maybe Text,
+    vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant,
     eligible_pass_ids :: Maybe [Text],
     seatLayoutId :: Maybe Text,
     is_historic :: Maybe Bool,
@@ -864,6 +879,8 @@ instance FromJSON VehicleServiceTypeResponse where
     driver_id <- v .:? "driver_id"
     conductor_id <- v .:? "conductor_id"
     busTagNumber <- v .:? "busTagNumber"
+    rawVehicleVariant <- v .:? "vehicleVariant" :: Parser (Maybe FilteredBusVehicleVariant)
+    let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
     eligible_pass_ids <- v .:? "eligible_pass_ids"
     seatLayoutId <- v .:? "seatLayoutId"
     is_historic <- v .:? "is_historic"
@@ -875,6 +892,7 @@ data VehicleMetadataResponse = VehicleMetadataResponse
   { serviceType :: BecknV2.FRFS.Enums.ServiceTierType,
     serviceSubTypes :: Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     busTagNumber :: Maybe Text,
+    vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant,
     isActuallyValid :: Maybe Bool
   }
   deriving (Generic, ToJSON, ToSchema, Show)
@@ -885,6 +903,8 @@ instance FromJSON VehicleMetadataResponse where
     rawServiceSubTypes <- v .:? "serviceSubTypes" :: Parser (Maybe FilteredServiceSubTypes)
     let serviceSubTypes = normalizeServiceSubTypes rawServiceSubTypes
     busTagNumber <- v .:? "busTagNumber"
+    rawVehicleVariant <- v .:? "vehicleVariant" :: Parser (Maybe FilteredBusVehicleVariant)
+    let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
     isActuallyValid <- v .:? "is_actually_valid"
     pure VehicleMetadataResponse {..}
 
@@ -1226,6 +1246,7 @@ data Fleet = Fleet
     vehicle_no :: Maybe Text,
     fleet_no :: Maybe Text,
     tag_number :: Maybe Text,
+    vehicle_variant :: Maybe Text,
     created_at :: Maybe UTCTime,
     status :: Maybe Text,
     updated_at :: Maybe UTCTime
@@ -1238,7 +1259,8 @@ data VehicleUpsertRequest = VehicleUpsertRequest
   { vehicle_no :: Text,
     fleet_no :: Maybe Text,
     tag_number :: Maybe Text,
-    status :: Maybe Text
+    status :: Maybe Text,
+    vehicle_variant :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -1436,9 +1458,23 @@ data WaybillMetadataResponse = WaybillMetadataResponse
     driver_id :: Maybe Text,
     driverName :: Maybe Text,
     driverMobileNumber :: Maybe Text,
-    busTagNumber :: Maybe Text
+    busTagNumber :: Maybe Text,
+    vehicleVariant :: Maybe BecknV2.FRFS.Enums.BusVehicleVariant
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, ToJSON, ToSchema, Show)
+
+instance FromJSON WaybillMetadataResponse where
+  parseJSON = withObject "WaybillMetadataResponse" $ \v -> do
+    waybill_no <- v .: "waybill_no"
+    vehicle_no <- v .: "vehicle_no"
+    serviceType <- v .: "serviceType"
+    driver_id <- v .:? "driver_id"
+    driverName <- v .:? "driverName"
+    driverMobileNumber <- v .:? "driverMobileNumber"
+    busTagNumber <- v .:? "busTagNumber"
+    rawVehicleVariant <- v .:? "vehicleVariant" :: Parser (Maybe FilteredBusVehicleVariant)
+    let vehicleVariant = normalizeBusVehicleVariant rawVehicleVariant
+    return WaybillMetadataResponse {..}
 
 -- | Request body for the fleet-operator verify endpoint.
 -- Used to validate conductor badge token and device serial number.

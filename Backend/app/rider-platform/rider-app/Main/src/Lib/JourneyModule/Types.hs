@@ -494,6 +494,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
     busTagNumber :: Maybe Text,
+    busVehicleVariant :: Maybe Spec.BusVehicleVariant,
     tripId :: Maybe Text,
     tripStartTime :: Maybe [UTCTime],
     bookedStopETA :: Maybe [UTCTime],
@@ -1094,6 +1095,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   busConductorId = journeyLeg.busConductorId,
                   busDriverId = busDriverId,
                   busTagNumber = journeyLeg.busTagNumber,
+                  busVehicleVariant = journeyLeg.busVehicleVariant,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
                   discounts =
@@ -1362,6 +1364,7 @@ mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare mbSelectedServiceTier = do
                 busConductorId = Nothing,
                 busDriverId = Nothing,
                 busTagNumber = Nothing,
+                busVehicleVariant = Nothing,
                 tripId = Nothing,
                 tripStartTime = Nothing,
                 bookedStopETA = Nothing,
@@ -1657,6 +1660,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   busConductorId = journeyLeg.busConductorId,
                   busDriverId = journeyLeg.busDriverId,
                   busTagNumber = journeyLeg.busTagNumber,
+                  busVehicleVariant = journeyLeg.busVehicleVariant,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
                   discounts =
@@ -1779,7 +1783,8 @@ data FinalBoardedBusData = FinalBoardedBusData
     serviceTierType :: Maybe Spec.ServiceTierType,
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
-    busTagNumber :: Maybe Text
+    busTagNumber :: Maybe Text,
+    busVehicleVariant :: Maybe Spec.BusVehicleVariant
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1853,6 +1858,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         busConductorId = mbFinalBoardedBusData >>= (.busConductorId),
         busDriverId = mbFinalBoardedBusData >>= (.busDriverId),
         busTagNumber = mbFinalBoardedBusData >>= (.busTagNumber),
+        busVehicleVariant = mbFinalBoardedBusData >>= (.busVehicleVariant),
         finalBoardedBusServiceTierType = mbFinalBoardedBusData >>= (.serviceTierType),
         userBookedBusServiceTierType = mbUserBookedServiceTierType,
         userPreferredServiceTier = mbUserPreferredServiceTier,

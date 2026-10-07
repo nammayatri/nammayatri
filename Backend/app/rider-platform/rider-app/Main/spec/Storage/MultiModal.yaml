@@ -18,6 +18,7 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   SourceType: Domain.Types.RouteStopTimeTable
   ServiceTierType: BecknV2.FRFS.Enums
+  BusVehicleVariant: BecknV2.FRFS.Enums
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
   Value: Data.Aeson
@@ -264,6 +265,7 @@ JourneyLeg:
     busConductorId: Maybe Text
     busDriverId: Maybe Text
     busTagNumber: Maybe Text
+    busVehicleVariant: Maybe BusVehicleVariant
     busLocationData: "[BusLocation]"
     providerRouteId: Maybe Text
 
