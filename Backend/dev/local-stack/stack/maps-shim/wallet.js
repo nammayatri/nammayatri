@@ -10,9 +10,9 @@
  *
  * That removes more than it adds. Nobody is ever charged without driving, so
  * the whole "pay-then-extend, never auto-debit" apparatus that Algerian cards
- * forced on `subscription.js` has nothing left to guard. Moosyl does have a
- * full subscriptions API with automatic billing, and needing none of it is the
- * safer half.
+ * forced on the old monthly subscription has nothing left to guard. Moosyl
+ * does have a full subscriptions API with automatic billing, and needing none
+ * of it is the safer half.
  *
  * Two rules the client confirmed, because both are about someone's money:
  *
@@ -762,7 +762,10 @@ background:#fff;color:#111;text-align:center;padding:24px}p{color:#666}</style>
 
 const configured = () => Boolean(SECRET && PUBLIC_URL);
 
+/** Whether each country's gateway can be used, for /healthz. */
+const gateways = () => ({ MR: configuredFor(COUNTRIES.MR), DZ: configuredFor(COUNTRIES.DZ) });
+
 module.exports = {
   status, topup, topupState, webhook, history, done,
-  chargeStartedRides, configured, PRICE, MIN_TOPUP, CURRENCY, DAY_HOURS, COUNTRIES,
+  chargeStartedRides, configured, gateways, PRICE, MIN_TOPUP, CURRENCY, DAY_HOURS, COUNTRIES,
 };

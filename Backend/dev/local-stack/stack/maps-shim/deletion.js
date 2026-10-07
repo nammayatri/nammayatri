@@ -11,7 +11,7 @@
  * Nothing in this file deletes anything. Screens 21–23 say so in those words.
  *
  * ── The route takes no id ───────────────────────────────────────────────────
- * Same rule as subscription.js and the avatar fix: the caller sends a token and
+ * Same rule as wallet.js and the avatar fix: the caller sends a token and
  * nothing else, and the id comes from asking the backend whose token it is.
  * There is no request shape here that could delete somebody else's account,
  * because there is nowhere to put their id.

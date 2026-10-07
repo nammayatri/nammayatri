@@ -356,7 +356,7 @@ services:
       # these are the only user-created files this stack keeps outside Postgres,
       # and a bind mount under the repo would put faces in git.
       AVATAR_DIR: "/data/avatars"
-      # Where to prove a caller is a signed-in driver, for /subscription/*.
+      # Where to prove a caller is a signed-in driver, for /wallet/* and the rest.
       # Host networking again, so this is the published driver-app port.
       DRIVER_URL: "http://localhost:8016"
       # ── Chargily Pay ────────────────────────────────────────────────────
@@ -364,8 +364,11 @@ services:
       # It comes from `.env` beside this file on the server, which is
       # gitignored, and it reaches nobody by chat or WhatsApp either.
       #
+      # Algeria's top-ups since the wallet (2026-09-13); the monthly
+      # subscription that first used this key was retired 2026-10-07.
+      #
       # Empty is a supported state, not a broken one: /healthz then reports
-      # `payments: false` and the checkout route answers "payments not
+      # `payments.DZ: false` and the top-up route answers "payments not
       # configured" instead of forwarding a 401 from Chargily that would look
       # like the driver's problem.
       #
@@ -377,8 +380,7 @@ services:
       # done and posts the webhook here; a private address would mean the
       # payment happens and we never hear about it.
       PUBLIC_URL: "${PUBLIC_URL:-}"
-      SUBSCRIPTION_PRICE: "${SUBSCRIPTION_PRICE:-3000}"
-      # ── The wallet, which replaces all of the above ────────────────────
+      # ── The wallet ─────────────────────────────────────────────────────
       #
       # 30 MRU a day, taken at the driver's first ride rather than bought in
       # advance. The price is here and not in the code because the two places

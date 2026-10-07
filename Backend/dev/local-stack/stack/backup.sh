@@ -70,9 +70,9 @@ RCLONE_REMOTE="${RCLONE_REMOTE:-}"
 
 # The schemas this script was written for. Anything else is a stop, not a guess.
 #
-# `movin` is ours: driver subscriptions, the Chargily receipts, and the account
-# deletion requests. None of it is rebuildable and none of it exists anywhere
-# else, so it is data.
+# `movin` is ours: the drivers' wallets and top-up receipts, their papers, the
+# console's accounts and the account deletion requests. None of it is
+# rebuildable and none of it exists anywhere else, so it is data.
 #
 # It was added on 2026-08-30, four days late, and the delay is the whole reason
 # this guard exists. `movin` was created on 26 August; from the 27th the backup

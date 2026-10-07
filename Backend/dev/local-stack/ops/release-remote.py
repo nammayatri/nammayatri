@@ -356,6 +356,11 @@ def keep_previous_image(container):
 
 
 def do_actions(actions, before_cfg):
+    # Containers compose has just recreated. They already run the new tree (the
+    # code is bind-mounted), so a restart queued for the same release would be a
+    # second interruption for nothing. `actions` is sorted, and 'compose up'
+    # sorts before every 'restart ny-'.
+    recreated = set()
     for a in actions:
         if a == 'reload ny-edge' or a == 'reload ny-map':
             c = a.split()[1]
@@ -365,6 +370,9 @@ def do_actions(actions, before_cfg):
             ok(f'{c}: config tested, reloaded')
         elif a.startswith('restart ny-'):
             c = a.split()[1]
+            if c in recreated:
+                ok(f'{c} already recreated above: not restarted again')
+                continue
             run(f'docker restart {c}', quiet=True)
             ok(f'{c} restarted')
         elif a == 'rebuild maps-shim':
@@ -380,6 +388,7 @@ def do_actions(actions, before_cfg):
                                check=False, quiet=True).stdout.strip()
                     if name:
                         keep_previous_image(name)
+                        recreated.add(name)
                 run(f"cd {STACK} && docker compose up -d --no-deps {' '.join(changed)}")
                 ok(f"recreated: {', '.join(changed)}")
             else:

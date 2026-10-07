@@ -1275,7 +1275,10 @@
    "osrm": "<osrm>",
    "mockGoogle": "<mock-google>",
    "search": true,
-   "payments": false,
+   "payments": {
+    "MR": false,
+    "DZ": false
+   },
    "push": {
     "apns": false,
     "why": "ENOENT: no such file or directory, open '/data/avatars/.apns/config.json'"

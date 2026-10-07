@@ -17,6 +17,7 @@
 #      own record is still caught
 #   6. `rollback` puts the previous version back exactly
 #   7. `tidy` archives the .bak copies and nothing else
+#   8. a container compose recreates is not also restarted (one interruption)
 # and, through 2 and 6, the systemd units in stack/systemd/: installed by the
 # release, put back by rollback (phase 4: the nightly backup runs the shipped copy)
 set -uo pipefail
@@ -157,6 +158,30 @@ $R tidy > "$T/tidy.log" 2>&1
 [ ! -f "$T/box/docker-compose.yml.bak-20260831-123757" ] && ls "$T/root-snapshots"/leftovers-*/docker-compose.yml.bak-20260831-123757 >/dev/null 2>&1 \
   && pass ".bak archived" || fail ".bak not archived"
 [ -f "$T/box/docker-compose.yml" ] && [ "$(h "$T/box/.env")" = "$ENV_H" ] && pass "nothing else moved" || fail "tidy moved too much"
+
+echo "== 8. one interruption per container"
+# A release that changes both a service's compose config and its code (phase 6:
+# maps-shim's environment and its files) recreates it once, not recreate then
+# restart.
+python3 - "$HERE/ops/release-remote.py" > "$T/once.log" 2>&1 <<'PY'
+import importlib.util, json, subprocess, sys
+spec = importlib.util.spec_from_file_location('rr', sys.argv[1])
+rr = importlib.util.module_from_spec(spec); spec.loader.exec_module(rr)
+cmds = []
+def run(cmd, check=True, quiet=False):
+    cmds.append(cmd)
+    out = 'ny-maps-shim' if 'compose ps' in cmd else ('ny-maps-shim:local' if 'Config.Image' in cmd else '')
+    return subprocess.CompletedProcess(cmd, 0, out, '')
+rr.run = run
+rr.compose_services = lambda: {'maps-shim': 'new', 'edge': 'same'}
+rr.do_actions(['compose up changed services', 'restart ny-auth-guard', 'restart ny-maps-shim'],
+              {'maps-shim': 'old', 'edge': 'same'})
+print('\n'.join(cmds))
+assert any('up -d --no-deps maps-shim' in c for c in cmds), 'not recreated'
+assert not any(c.startswith('docker restart ny-maps-shim') for c in cmds), 'restarted after recreate'
+assert any(c.startswith('docker restart ny-auth-guard') for c in cmds), 'other restarts lost'
+PY
+[ $? -eq 0 ] && pass "a recreated container is not restarted again; others still are" || { fail "double interruption"; tail -8 "$T/once.log"; }
 
 echo
 [ $fails -eq 0 ] && echo "release rehearsal: all checks passed" || { echo "release rehearsal: $fails FAILED"; exit 1; }

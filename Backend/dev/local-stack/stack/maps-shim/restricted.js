@@ -14,7 +14,7 @@
  * ── Why the policy lives here and not in the binary ────────────────────────
  * The Haskell patch reads one Redis key holding a JSON array of driver ids and
  * prefers everybody else. That is the whole of its knowledge -- it never learns
- * what a subscription is, what 3 000 DA is, or what 300 rides is. All of that
+ * what a wallet is, what a day costs, or what 300 rides is. All of that
  * is decided in this file, which can change in the time it takes to restart a
  * container. Putting the numbers in the binary would mean a 45-minute build
  * and a new set of binaries every time the client changed his mind about one.
@@ -37,7 +37,8 @@
 
 const net = require('net');
 
-/** 0 disables the cap entirely. */
+/** 0 disables the cap entirely. The variable keeps its subscription-era name
+    so a server's existing setting goes on meaning the same thing. */
 const RIDE_CAP = Number(process.env.SUBSCRIPTION_RIDE_CAP || 300);
 /** What one day costs, and therefore the credit needed to start one. Read from
     the same environment variable `wallet.js` uses, so the gate and the charge
@@ -61,22 +62,6 @@ const KEY = 'dynamic-offer-driver-app:movin:restricted';
  */
 const KEY_UNPAID = 'dynamic-offer-driver-app:movin:unpaid';
 
-/**
- * Who owes us something.
- *
- * ── The two halves ─────────────────────────────────────────────────────────
- * `paid_until IS NULL` is a driver who has never paid, and `<= now()` is one
- * whose month ran out. Both are restricted, even though the app words them
- * very differently -- to dispatch they are the same driver.
- *
- * ── What "the period" means for the ride cap ───────────────────────────────
- * The month he is currently inside, which is the payment whose window contains
- * today. Not the last 30 days: paying early stacks, so a driver can be 45 days
- * paid up, and counting a rolling window would charge him rides against a month
- * he has not started. Falls back to when the subscription row was created,
- * which is the free month given to the fleet already on the road -- it has no
- * payment behind it by design, and would otherwise get an unlimited cap.
- */
 /**
  * ── The wallet rule, since 2026-09-06 ──────────────────────────────────────
  * The monthly subscription is gone. A driver owes us nothing until he drives:
@@ -208,59 +193,4 @@ function start(pool) {
   if (typeof timer.unref === 'function') timer.unref();
 }
 
-/**
- * One driver's rides inside the month he is currently paying for.
- *
- * ── Why the app needs this and not just the restriction ────────────────────
- * A driver over his cap is restricted exactly like a lapsed one, and to
- * dispatch they are the same driver. **To him they are opposites.** The lapsed
- * driver owes money and paying fixes it; the capped driver has paid, is fully
- * up to date, and paying again fixes nothing -- his next payment buys the
- * *next* month, and the cap counts against the one he is in.
- *
- * Without this, his rides thin out while the screen says "actif, 12 jours
- * restants" and offers him a Payer button that would take 3 000 DA and change
- * nothing. That is the exact failure the whole subscription was designed
- * around: rides that quietly stop, and a driver who rings the office.
- *
- * The same period definition as the restriction list, deliberately in one
- * place: if the number he reads and the number that restricts him were
- * computed differently, the screen would eventually contradict the dispatch.
- */
-async function ridesInPeriod(pool, driverId) {
-  const q = await pool.query(
-    `WITH p AS (
-       SELECT coalesce(
-                (SELECT max(sp.covers_from)
-                   FROM movin.subscription_payment sp
-                  WHERE sp.driver_id = s.driver_id
-                    AND sp.applied_at IS NOT NULL
-                    AND sp.covers_until > now()),
-                s.created_at) AS started,
-              s.paid_until
-         FROM movin.subscription s
-        WHERE s.driver_id = $1)
-     SELECT p.started,
-            p.paid_until,
-            (SELECT count(*) FROM atlas_driver_offer_bpp.ride r
-              WHERE r.driver_id = $1 AND r.status = 'COMPLETED'
-                AND r.created_at >= p.started) AS used
-       FROM p`,
-    [String(driverId)],
-  );
-  const row = q.rows[0];
-  if (!row) return { used: 0, cap: RIDE_CAP, since: null, resetsAt: null, capped: false };
-  const used = Number(row.used || 0);
-  return {
-    used,
-    cap: RIDE_CAP,
-    since: row.started,
-    /* When the count goes back to zero: the end of the month he is inside.
-       Named rather than derived in the app, because "when does this lift" is
-       the only question a capped driver has. */
-    resetsAt: row.paid_until,
-    capped: RIDE_CAP > 0 && used >= RIDE_CAP,
-  };
-}
-
-module.exports = { start, refresh, ridesInPeriod, RIDE_CAP, KEY, KEY_UNPAID };
+module.exports = { start, refresh, RIDE_CAP, KEY, KEY_UNPAID };

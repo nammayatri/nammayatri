@@ -4,8 +4,8 @@
  *
  * ── Why this exists as its own file ────────────────────────────────────────
  * Three routes needed it and two had grown their own copy: `fleet.js` asks the
- * rider app whether a token is real, `subscription.js` asks the driver app the
- * same question and keeps the id it gets back. The third, `/avatar/`, had none
+ * rider app whether a token is real, and the old `subscription.js` (retired
+ * 2026-10-07) asked the driver app the same question and kept the id. The third, `/avatar/`, had none
  * at all — and that was the hole: **PUT and DELETE were open to the internet**,
  * so anyone who knew a driver's id could replace the face a passenger sees when
  * choosing him, or delete it, with no credential of any kind. Measured against

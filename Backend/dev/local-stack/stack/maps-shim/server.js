@@ -6,7 +6,7 @@
 //
 //   directions.js   /directions/json -> OSRM          (Google Directions)
 //   wallet.js, restricted.js, deletion.js, avatars.js, rating.js, fleet.js,
-//   push-relay.js, driver-push.js, number-change.js, subscription.js
+//   push-relay.js, driver-push.js, number-change.js
 //
 //   places.js       search, details, labels, reverse geocoding (geo.place)
 //
@@ -16,7 +16,6 @@ const http = require('http');
 const fleet = require('./fleet');
 const avatars = require('./avatars');
 const rating = require('./rating');
-const subscription = require('./subscription');
 const wallet = require('./wallet');
 const identity = require('./identity');
 const restricted = require('./restricted');
@@ -89,9 +88,10 @@ http.createServer((req, res) => {
   if (url.pathname === '/healthz') {
     return send(res, 200, {
       ok: true, osrm: OSRM_URL, mockGoogle: MOCK_GOOGLE_URL, search: Boolean(pool),
-      // False means a driver pressing "payer" gets "payments not configured".
-      // Cheaper to notice here than in his hands. Never the key itself.
-      payments: subscription.configured(),
+      // Per country, false means a driver pressing "recharger" there gets
+      // "payments not configured". Cheaper to notice here than in his hands.
+      // Never the key itself.
+      payments: wallet.gateways(),
       // False means iPhones get no push; Android is unaffected either way.
       push: pushRelay.status(),
     });
@@ -201,29 +201,10 @@ http.createServer((req, res) => {
     return send(res, 404, { error: 'no such rating' });
   }
 
-  // The driver's 3 000 DA a month, through Chargily Pay. Here rather than on
-  // the driver backend because the backend has nowhere to put it: no plan, fee,
-  // subscription, invoice or order table in either schema, and none of those
-  // words in the binary -- upstream's driver-subscription subsystem is not in
-  // this build. See subscription.js, and probe-subscription.sql for the
-  // measurement.
-  //
-  //   GET  /subscription/status              his screen, from his token
-  //   POST /subscription/checkout?method=    opens a payment page
-  //   GET  /subscription/history             what he has paid
-  //   GET  /subscription/receipt/{checkout}  one of them, in full
-  //   POST /subscription/webhook             Chargily. The only thing that
-  //                                          ever extends a subscription.
-  //   GET  /subscription/done?state=         where his browser lands after
-  //
-  // No route here takes a driver id: `status`, `checkout`, `history` and
-  // `receipt` all derive it from the token by asking the driver backend who it
-  // belongs to, so one driver cannot read or buy against another's account.
   /* ── The wallet ────────────────────────────────────────────────────────
-     30 MRU a day, taken at the driver's first ride. Replaces /subscription/,
-     which is left mounted below until the app stops calling it -- a driver on
-     an older build must not meet a 404 on the screen that takes his money.
-     See wallet.js. */
+     A day's price, taken at the driver's first ride. It replaced the monthly
+     /subscription/, retired 2026-10-07 (phase 6): no phone had called it
+     since 2026-09-02, and the edge now answers it 410. See wallet.js. */
   if (url.pathname.startsWith('/wallet/')) {
     const [, , what, ...rest] = url.pathname.split('/');
     const token = req.headers.token || '';
@@ -250,35 +231,6 @@ http.createServer((req, res) => {
       return wallet.topupState(pool, token, decodeURIComponent(rest.join('/')), res);
     }
     return send(res, 404, { error: 'no such wallet route' });
-  }
-
-  if (url.pathname.startsWith('/subscription/')) {
-    const [, , what, ...rest] = url.pathname.split('/');
-    const token = req.headers.token || '';
-
-    // Chargily first: it is the only caller here that is not the app, the only
-    // one that POSTs a body, and the only one whose body must reach the handler
-    // unparsed -- the signature is an HMAC over the exact bytes.
-    if (what === 'webhook') {
-      if (req.method !== 'POST') return send(res, 405, { error: 'method not allowed' });
-      return subscription.webhook(pool, req, res);
-    }
-    if (what === 'done') return subscription.done(url.searchParams, res);
-
-    if (what === 'status' && req.method === 'GET') return subscription.status(pool, token, res);
-    if (what === 'history' && req.method === 'GET') return subscription.history(pool, token, res);
-    if (what === 'receipt' && req.method === 'GET') {
-      return subscription.receipt(pool, token, decodeURIComponent(rest.join('/')), res);
-    }
-    if (what === 'checkout' && req.method === 'POST') {
-      return subscription.checkout(pool, token, url.searchParams.get('method'), res);
-    }
-    // ...and the state of one, which our own tables cannot answer: an
-    // abandoned checkout and a late webhook are the same `pending` row here.
-    if (what === 'checkout' && req.method === 'GET') {
-      return subscription.checkoutState(pool, token, decodeURIComponent(rest.join('/')), res);
-    }
-    return send(res, 404, { error: 'no such subscription route' });
   }
 
   // Account deletion requests. Google Play requires the path to exist INSIDE
@@ -378,7 +330,7 @@ http.createServer((req, res) => {
     //
     // The id in the path is now ignored entirely. The key is built from
     // whoever the backend says the token belongs to, so naming somebody else
-    // correctly achieves nothing — the same rule /subscription/ follows.
+    // correctly achieves nothing — the same rule /wallet/ follows.
     if (req.method === 'PUT' || req.method === 'DELETE') {
       const token = req.headers.token || '';
       const owner =
