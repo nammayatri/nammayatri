@@ -4,11 +4,13 @@ module Storage.Queries.CommonDriverOnboardingDocumentsExtra
     mkCommonDocumentOwner,
     findAllForCommonDocuments,
     countForCommonDocuments,
-    findLatestByDriverIdAndRcIdAndDocumentType,
+    findCurrentVersionByOwnerAndDocumentType,
     createOrReplaceUnreviewed,
   )
 where
 
+import Data.List (sortOn)
+import Data.Ord (Down (..))
 import qualified Database.Beam as B
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -112,17 +114,22 @@ mkCommonDocumentOwner mbDriverId mbRcId = case (mbDriverId, mbRcId) of
   (Nothing, Just rcId) -> Just $ OwnedByRc rcId
   (Nothing, Nothing) -> Nothing
 
-findLatestByDriverIdAndRcIdAndDocumentType ::
+-- | The version of a common document that drives its status (see 'pickCurrentVersion').
+findCurrentVersionByOwnerAndDocumentType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  CommonDocumentOwner ->
+  DVC.DocumentType ->
+  m (Maybe DCommonDoc.CommonDriverOnboardingDocuments)
+findCurrentVersionByOwnerAndDocumentType owner documentType =
+  pickCurrentVersion <$> findAllVersionsByOwnerAndDocumentType owner documentType
+
+findAllVersionsByOwnerAndDocumentType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   CommonDocumentOwner ->
   DVC.DocumentType ->
   m [DCommonDoc.CommonDriverOnboardingDocuments]
-findLatestByDriverIdAndRcIdAndDocumentType owner documentType =
-  findAllWithOptionsKV
-    [Se.And $ Se.Is Beam.documentType (Se.Eq documentType) : ownerClauses]
-    (Se.Desc Beam.updatedAt)
-    (Just 1)
-    (Just 0)
+findAllVersionsByOwnerAndDocumentType owner documentType =
+  findAllWithKV [Se.And $ Se.Is Beam.documentType (Se.Eq documentType) : ownerClauses]
   where
     ownerClauses = case owner of
       OwnedByDriver driverId -> [driverClause driverId]
@@ -133,6 +140,7 @@ findLatestByDriverIdAndRcIdAndDocumentType owner documentType =
 
 -- | A text-only submission overwrites the owner's latest unreviewed row; anything else creates one.
 --   TDS certificates always create: each row is a separate batch.
+--   Latest = newest upload: approving or rejecting an older version rewrites its updatedAt.
 createOrReplaceUnreviewed ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   DCommonDoc.CommonDriverOnboardingDocuments ->
@@ -140,10 +148,10 @@ createOrReplaceUnreviewed ::
 createOrReplaceUnreviewed newDoc = do
   latest <-
     if isTextField newDoc
-      then maybe (pure []) (\owner -> findLatestByDriverIdAndRcIdAndDocumentType owner newDoc.documentType) (mkCommonDocumentOwner newDoc.driverId newDoc.rcId)
-      else pure []
+      then maybe (pure Nothing) (\owner -> newestUpload <$> findAllVersionsByOwnerAndDocumentType owner newDoc.documentType) (mkCommonDocumentOwner newDoc.driverId newDoc.rcId)
+      else pure Nothing
   case latest of
-    doc : _ | isTextField doc && doc.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED && doc.rcId == newDoc.rcId -> do
+    Just doc | isTextField doc && doc.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED && doc.rcId == newDoc.rcId -> do
       updateByPrimaryKey doc {DCommonDoc.documentData = newDoc.documentData}
       pure doc.id
     _ -> do
@@ -152,3 +160,14 @@ createOrReplaceUnreviewed newDoc = do
   where
     isTextField :: DCommonDoc.CommonDriverOnboardingDocuments -> Bool
     isTextField doc = isNothing doc.documentImageId && doc.documentType /= DVC.TDSCertificate
+    newestUpload :: [DCommonDoc.CommonDriverOnboardingDocuments] -> Maybe DCommonDoc.CommonDriverOnboardingDocuments
+    newestUpload = listToMaybe . sortOn (Down . (.createdAt))
+
+-- | The version that decides a common document's status: an approved one if any exists
+--   (the most recently approved when there are several), otherwise the newest upload.
+pickCurrentVersion :: [DCommonDoc.CommonDriverOnboardingDocuments] -> Maybe DCommonDoc.CommonDriverOnboardingDocuments
+pickCurrentVersion = listToMaybe . sortOn (Down . rank)
+  where
+    rank doc =
+      let approved = doc.verificationStatus == Documents.VALID
+       in (approved, if approved then doc.updatedAt else doc.createdAt)

@@ -12,6 +12,7 @@ module Storage.Queries.ImageExtra
     findByPersonIdAndImageTypes,
     findRecentLatestByPersonIdAndImagesType,
     findImagesByRCAndType,
+    findImageGroup,
     updateVerificationStatusOnlyById,
     updateVerificationStatusByIdAndType,
     updateVerificationStatusAndFailureReason,
@@ -251,6 +252,16 @@ findRecentLatestByPersonIdAndImagesType driverId imgType = do
       images -> do
         let latestImg = DL.maximumBy (compare `on` (.createdAt)) images
         return $ filter ((== latestImg.workflowTransactionId) . (.workflowTransactionId)) images
+
+-- | The images registered together as one version of a document, in upload order (front is uploaded
+--   before back, so this is the row's imageId1/imageId2 order). An image without a version id
+--   predates versioning and stands alone.
+findImageGroup :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DImage.Image -> m [DImage.Image]
+findImageGroup image = case image.documentVersionId of
+  Nothing -> pure [image]
+  Just versionId -> do
+    siblings <- findAllWithKV [Se.Is BeamI.documentVersionId $ Se.Eq (Just versionId)]
+    pure $ DL.sortOn (.createdAt) (if any ((== image.id) . (.id)) siblings then siblings else image : siblings)
 
 data ImagesEntity = PersonEntity Person | VehicleRCEntity DReg.VehicleRegistrationCertificate
 

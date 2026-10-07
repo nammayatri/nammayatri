@@ -396,6 +396,7 @@ types:
     - udyamCertificate: [Text]
     - medicalCertificate: [Text]
     - commonDocuments: [CommonDocumentItem]
+    - imageDetails: [ImageDetails]
   TempAppCodeRes:
     - code: Text
     - expiresAt: UTCTime
@@ -575,6 +576,13 @@ types:
     - verificationStatus: VerificationStatus
     - rejectReason: Maybe Text
     - documentImageId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  ImageDetails:
+    - imageId: Text
+    - documentVersionId: Maybe Text
+    - verificationStatus: Maybe VerificationStatus
+    - failureReason: Maybe Text
     - createdAt: UTCTime
     - updatedAt: UTCTime
   CommonDocumentListItem:
