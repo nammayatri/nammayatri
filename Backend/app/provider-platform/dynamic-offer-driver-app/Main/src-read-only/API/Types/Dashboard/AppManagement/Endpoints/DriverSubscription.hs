@@ -42,7 +42,8 @@ data SendSmsReq = SendSmsReq
   { channel :: Domain.Types.MerchantMessage.MediaChannel,
     messageKey :: Kernel.Prelude.Maybe Domain.Types.MerchantMessage.MessageKey,
     overlayKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    minWalletAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

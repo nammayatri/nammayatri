@@ -154,6 +154,7 @@ types:
     - vehicleServiceTierName: Text
     - reallocationHistory: [ReallocationEventItem]
     - opsNotes: [OpsNote]
+    - minWalletBalance: Maybe HighPrecMoney
 
   OpsNote:
     - id: Text
