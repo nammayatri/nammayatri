@@ -98,6 +98,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Domain.Types.PersonDefaultEmergencyNumber as SafetyPDEN
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
+import qualified Safety.Storage.Queries.SafetySettings as QSafetySettings
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Cac
@@ -368,6 +369,9 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
   safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   logInfo "[Profile.getPersonDetails] findSafetySettings done"
+  -- Temporary consent catch-up; see RCP.syncConsentIfNeeded for the removal plan.
+  when (fromMaybe False riderConfig.pushConsentToBpp && isJust safetySettings.consentToShareMobileNumber && isNothing safetySettings.consentSyncedAt) $
+    fork "sync rider consent to BPP" $ RCP.syncConsentIfNeeded person
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person safetySettings
   hasTakenValidRide <- QCP.findAllByPersonId personId
   logInfo "[Profile.getPersonDetails] findAllByPersonId (ClientPersonInfo) done"
@@ -728,10 +732,14 @@ updateEmergencySettings personId req = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   oldConsent <- (.consentToShareMobileNumber) <$> Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  whenJust req.consentToShareMobileNumber $ \newConsent ->
-    when (fromMaybe False riderConfig.pushConsentToBpp && oldConsent /= Just newConsent) $
-      RCP.pushConsent person newConsent
+  let consentChanged = maybe False (\newConsent -> oldConsent /= Just newConsent) req.consentToShareMobileNumber
+      pushEnabled = fromMaybe False riderConfig.pushConsentToBpp
+  when (consentChanged && pushEnabled) $
+    whenJust req.consentToShareMobileNumber (RCP.pushConsent person)
   void $ updateSafetySettings req
+  when consentChanged $ do
+    now <- getCurrentTime
+    QSafetySettings.updateConsentSyncedAt (if pushEnabled then Just now else Nothing) (cast personId)
   when updateShareOptionForEmergencyContacts $ QPersonDEN.updateShareTripWithEmergencyContactOptions (cast personId) (convertToSafetyRideShareOptions <$> shareTripOptions)
   pure APISuccess.Success
   where
