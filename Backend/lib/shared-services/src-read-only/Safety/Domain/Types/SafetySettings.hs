@@ -13,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 data SafetySettings = SafetySettings
   { aggregatedRideShareSetting :: Kernel.Prelude.Maybe Safety.Domain.Types.Common.RideShareOptions,
     autoCallDefaultContact :: Kernel.Prelude.Bool,
+    consentSyncedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     consentToShareMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enablePostRideSafetyCheck :: Safety.Domain.Types.Common.RideShareOptions,
