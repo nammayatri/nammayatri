@@ -15,6 +15,7 @@
 
 module Beckn.OnDemand.Utils.Common where
 
+import qualified AWS.S3 as S3
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -38,12 +39,14 @@ import qualified Domain.Types as DT
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
+import qualified Domain.Types.DocumentVerificationConfig as DIT
 import qualified Domain.Types.DriverStats as DDriverStats
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.FareParameters as Params
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy as Policy
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -58,6 +61,8 @@ import qualified Domain.Types.VehicleVariant as Variant
 import EulerHS.Prelude hiding (id, state, view, whenM, (%~), (^?))
 import qualified EulerHS.Prelude as Prelude
 import GHC.Float (double2Int)
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
+import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude hiding (find, length, map, null, readMaybe)
@@ -72,12 +77,15 @@ import qualified Kernel.Types.Price
 import Kernel.Utils.Common hiding (mkPrice)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
+import Network.URI (parseURI, uriQuery)
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Image as QImage
 import Tools.Error
 
 data Pricing = Pricing
@@ -1552,3 +1560,55 @@ checkWhitelisted subscriberId merchantId merchantOperatingCityId = do
 
 isNotWhiteListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain.Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
 isNotWhiteListed subscriberId domain merchantId merchantOperatingCityId = isNothing <$> QWhiteList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId
+
+defaultDriverImagePresignedUrlExpiry :: Seconds
+defaultDriverImagePresignedUrlExpiry = 3600
+
+-- | Driver photo url for fulfillments.agent.person.image.
+-- A value-add BAP resolves the S3 path of the driver's profile photo through its own media endpoint. Every other BAP gets a
+-- pre-signed S3 url of the latest VALID selfie from the image table, expiring after transporterConfig.driverImagePresignedUrlExpiry.
+resolveDriverImageUrl ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "s3Env" r (S3.S3Env m)) =>
+  IsValueAddNP ->
+  Maybe Seconds ->
+  SP.Person ->
+  m (Maybe Text)
+resolveDriverImageUrl isValueAddNP mbPresignedUrlExpiry driver =
+  if isValueAddNP
+    then fmap join . forM driver.faceImageId $ \mediaId -> do
+      mbMediaEntry <- runInReplica $ MFQuery.findById mediaId
+      case mbMediaEntry >>= \mediaEntry -> getQueryParam "filePath" (T.unpack mediaEntry.url) of
+        Just imagePath -> pure $ Just (T.pack imagePath)
+        Nothing -> do
+          logError $ "Driver image does not exist for driverId: " <> driver.id.getId <> ", mediaFileId: " <> mediaId.getId
+          pure Nothing
+    else do
+      mbSelfie <- runInReplica $ QImage.findByPersonIdImageTypeAndValidationStatus driver.id DIT.ProfilePhoto DImage.APPROVED
+      fmap join . forM mbSelfie $ \selfie -> do
+        let urlExpiry = fromMaybe defaultDriverImagePresignedUrlExpiry mbPresignedUrlExpiry
+        presignedUrlResult <- withTryCatch "S3:generateDownloadUrl:driverImage" $ S3.generateDownloadUrl (T.unpack selfie.s3Path) urlExpiry
+        case presignedUrlResult of
+          Right presignedUrl -> pure $ Just presignedUrl
+          Left err -> do
+            logError $ "Unable to generate pre-signed driver image url for driverId: " <> driver.id.getId <> ", error: " <> show err
+            pure Nothing
+
+getQueryParam :: String -> String -> Maybe String
+getQueryParam paramName url = do
+  uri <- parseURI url
+  let query = uriQuery uri
+  let params = parseQueryParams query
+  List.lookup paramName params
+
+parseQueryParams :: String -> [(String, String)]
+parseQueryParams qs = List.map parseParam (List.filter (/= "") (splitOnChar '&' (List.drop 1 qs)))
+  where
+    parseParam p = let (k, v) = List.break (== '=') p in (k, List.drop 1 v)
+
+splitOnChar :: Char -> String -> [String]
+splitOnChar _ "" = [""]
+splitOnChar delim str =
+  let (firstV, remainder) = List.break (== delim) str
+   in firstV : case remainder of
+        [] -> []
+        _ -> splitOnChar delim (List.drop 1 remainder)

@@ -14,6 +14,7 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
+import qualified AWS.S3 as S3
 import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -179,6 +180,7 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
 
 type SendSearchRequestJobFlow m r c =
   ( EncFlow m r,
+    HasField "s3Env" r (S3.S3Env m),
     TranslateFlow m r,
     EsqDBReplicaFlow m r,
     Metrics.HasSendSearchRequestToDriverMetrics m r,
@@ -389,7 +391,8 @@ sendSearchRequestToDrivers' ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   DriverPoolConfig ->
   SearchTry ->
@@ -399,7 +402,8 @@ sendSearchRequestToDrivers' ::
 sendSearchRequestToDrivers' = sendSearchRequestToDriversWithTopUp Nothing
 
 sendSearchRequestToDriversWithTopUp ::
-  ( SendSearchRequestJobFlow m r c
+  ( SendSearchRequestJobFlow m r c,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   Maybe Int ->
   DriverPoolConfig ->

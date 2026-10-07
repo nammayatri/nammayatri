@@ -45,6 +45,25 @@ data VehicleCategory
 
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
+-- | v2.1.0 /rating: message.ratings[].ref_type and message.feedbacks[].ref_type -- what the rating or feedback is about.
+-- Constructors are prefixed because PROVIDER already belongs to CancellationSource; the JSON form is the bare spec value.
+data RatingRefType
+  = REF_ITEM
+  | REF_ORDER
+  | REF_FULFILLMENT
+  | REF_PROVIDER
+  | REF_AGENT
+  deriving (Show, Eq, Generic, Read)
+
+instance FromJSON RatingRefType where
+  parseJSON = genericParseJSON ratingRefTypeOptions
+
+instance ToJSON RatingRefType where
+  toJSON = genericToJSON ratingRefTypeOptions
+
+ratingRefTypeOptions :: Options
+ratingRefTypeOptions = defaultOptions {constructorTagModifier = drop (T.length "REF_")}
+
 data FulfillmentType
   = -- ..fulfillment.type
     DELIVERY

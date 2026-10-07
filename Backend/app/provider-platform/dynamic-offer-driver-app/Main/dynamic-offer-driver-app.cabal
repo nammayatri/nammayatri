@@ -172,6 +172,7 @@ library
       Beckn.OnDemand.Transformer.OndcScheduledRide.OnSearch
       Beckn.OnDemand.Transformer.OndcScheduledRide.OnSelect
       Beckn.OnDemand.Transformer.OndcScheduledRide.OnStatus
+      Beckn.OnDemand.Transformer.OndcScheduledRide.Rating
       Beckn.OnDemand.Transformer.OndcScheduledRide.Search
       Beckn.OnDemand.Transformer.OndcScheduledRide.Select
       Beckn.OnDemand.Transformer.OnSearch

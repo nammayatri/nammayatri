@@ -24,6 +24,7 @@ module Domain.Action.UI.Ride.CancelRide
   )
 where
 
+import qualified AWS.S3 as S3
 import qualified Control.Monad.Catch as C
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -134,7 +135,8 @@ cancelRideHandle ::
     ServiceFlow m r,
     HasField "quoteRespondCoolDown" r Int,
     HasField "driverUnlockDelay" r Seconds,
-    C.MonadCatch m
+    C.MonadCatch m,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   ServiceHandle m
 cancelRideHandle =
