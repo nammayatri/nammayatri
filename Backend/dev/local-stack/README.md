@@ -2127,9 +2127,10 @@ through the push relay — see *iPhones — the push relay* above.
 
 ### Switching off a driver who has not paid
 
-Drivers pay us a monthly subscription; passengers pay drivers cash. So the
-system has to be able to stop an unpaid driver receiving work, and the client
-asked for it to be automatic. `./probe-subscription.sql` asked the database, and
+Drivers pay us from a wallet they top up (since 2026-09-07; a monthly
+subscription before that); passengers pay drivers cash. So the system has to be
+able to stop an unpaid driver receiving work, and the client asked for it to be
+automatic. `./probe-subscription.sql` asked the database, and
 the two halves have opposite answers:
 
 - **The switch exists.** `driver_information.enabled` / `blocked` — one boolean,
@@ -2138,10 +2139,8 @@ the two halves have opposite answers:
   subscriptions, fees or invoices. Upstream's driver-subscription subsystem is
   not in this binary; every `%subscri%` hit is the BECKN registry or pg_catalog.
 
-So the automatic half is a nightly job, and the expensive half is the one nobody
-asks about: a `paid_until` per driver, and somewhere to set it. Marking a payment
-stays manual as long as drivers pay in cash or by CIB, outside the app. That
-belongs to the admin website, not to either mobile app.
+So the record had to be ours: the driver wallet, below, and the dispatch list
+built from it (*Dispatch*, at the end of that section).
 
 ## Ratings — `./apply-ratings.sh`
 
@@ -2530,264 +2529,6 @@ python3 probe-shortlist.py   # two searches, one shortlisted; reads who was
 Measured 2026-08-23 against the live stack: control asked 4 drivers, a
 shortlist of one asked exactly that one.
 
-## Driver subscriptions — SUPERSEDED 2026-09-07
-
-> **This model is gone.** It was replaced by the wallet in the next section: a
-> driver loads credit and 30 MRU comes off at his first ride of a day. Nothing
-> here runs any more — `movin.subscription`, `movin.subscription_payment` and
-> `movin.driver_subscription_state` receive no writes, and the app has no screen
-> that reads them.
->
-> Kept rather than deleted for two reasons. The tables still hold real Algerian
-> payments, which are accounting records. And the *reasoning* below is the only
-> written record of why an Algerian gateway forced pay-then-extend on us — worth
-> having the day somebody proposes automatic billing again.
-
-Passengers pay drivers in **cash** and the app never touches that money. Drivers
-paid **us** 3 000 DA a month, by CIB or Edahabia, through **Chargily Pay v2**. No
-CCP (*"cannot be automated, no API"*), no cash.
-
-Three defaults the client approved on 2026-08-26, each of them a line of config
-rather than a decision buried in the code:
-
-| | | where |
-|---|---|---|
-| **We** pay Chargily's fee, not the driver | 0 % under 100 drivers anyway, and a driver asked for 3 037,50 DA instead of 3 000 reads as a bug | `chargily_pay_fees_allocation: 'merchant'` |
-| **No grace period** | he is warned three days out and that is all | `SUBSCRIPTION_WARN_DAYS`, and `warn` on the status route |
-| **One month at a time** | one price, one button | `MONTHS = 1`; the column exists so changing our mind is config, not a migration |
-
-Their free *Startup* plan is **0 % commission** up to 300 000 DZD and 300
-transactions a month. At 3 000 DA that is **exactly 100 drivers with no fees at
-all**; *Comfort* is 1.25 % unlimited, *Supreme* 2.5 %. No plan has a monthly
-cost.
-
-### There is no recurring billing, and there never will be
-
-Their API has customers, products, prices, checkouts, payment links, webhooks
-and balance — and no subscriptions. Nor could it: CIB and Edahabia have no
-card-on-file debit, so **no** Algerian gateway can charge a driver
-automatically.
-
-"Monthly subscription" therefore means **pay-then-extend**: he presses pay, the
-webhook writes `paid_until = +30 days`, and nobody is ever charged without
-acting. Anyone reading this expecting to find the renewal job should stop
-looking — there is nothing to find.
-
-### Where it lives, and why it is not in the backend
-
-`probe-subscription.sql` measured it on 2026-08-16: there is nowhere in either
-upstream schema to record a payment — no plan, fee, subscription, invoice,
-mandate or order table, and none of those words in the binary. Upstream's
-driver-subscription subsystem is simply not in this build. So the choice was a
-rebuild or our own tables, and the shim was already Node with a Postgres pool.
-**No rebuild.**
-
-Our tables live in schema `movin`, for the same reason the place index lives in
-`geo`: the upstream binary owns its own schemas and runs migrations over them.
-
-    movin.subscription          one row per driver: driver_id, paid_until
-    movin.subscription_payment  every checkout ever created; PK is Chargily's id
-    movin.invoice_seq           receipt numbers, drawn only when a payment applies
-    movin.driver_subscription_state   the view the office reads
-
-No foreign key to `person(id)`, deliberately: an FK from our schema into theirs
-takes a lock on their table and can block one of their migrations, and that
-failure would land on a backend deploy with nothing to say it came from here.
-
-### The routes
-
-All on the public edge, all in `maps-shim/subscription.js`.
-
-| | |
-|---|---|
-| `GET /subscription/status` | what *Mon abonnement* draws, including the price |
-| `POST /subscription/checkout?method=cib\|edahabia` | opens a payment page, returns its URL |
-| `GET /subscription/history` | his last 24 payments |
-| `GET /subscription/receipt/{checkoutId}` | one of them in full, with its invoice number |
-| `POST /subscription/webhook` | **Chargily.** The only thing that ever extends a subscription |
-| `GET /subscription/done?state=` | where his browser lands afterwards |
-
-**No route here takes a driver id.** `status`, `checkout`, `history` and
-`receipt` all derive it from the token by asking the driver backend who it
-belongs to — the same trick `fleet.js` uses for passengers, with the one
-difference that matters: the id comes out of *that* response rather than being
-checked against one the caller supplied. So a driver cannot open a checkout
-against somebody else's account, read whether a rival has paid, or enumerate the
-fleet by trying ids. The id is not an input.
-
-`/subscription/` is not behind the auth-guard, and that is deliberate on both
-counts: the app routes prove themselves against the driver backend, so the guard
-would add nothing, and Chargily has no token and no business being asked for
-one.
-
-### Three things that would each quietly cost money
-
-**A retry is a free month.** Chargily retries webhooks. The guard is
-`applied_at IS NULL` in an `UPDATE … RETURNING`: the first delivery claims the
-row and gets a driver back, every later delivery matches nothing and the
-extension never runs. One statement, so two simultaneous deliveries cannot both
-win — the second blocks on the row lock and then matches nothing.
-
-**A re-serialised body never verifies.** The signature is an HMAC-SHA256 of the
-**raw bytes**, in a header called `signature`, keyed with the API secret. Hash a
-`JSON.parse` round-trip instead and it never matches, because key order and
-whitespace are not preserved — and the failure looks like a Chargily bug rather
-than ours. Hence `rawBody()`, and hence the nginx block being forbidden from
-buffering or rewriting.
-
-**Half of an extension is worse than none.** Marking the payment applied and
-extending the subscription are the same fact, so they are one transaction. A
-crash between them either takes his money without giving him the month, or
-leaves a payment a retry would apply twice.
-
-One more, less obvious: `greatest(paid_until, now())` is the whole of
-pay-then-extend. Paying early stacks onto what is left; paying late starts from
-today. Without the `greatest`, a driver who lapses for three months and then
-pays buys a month that ended two months ago.
-
-### `never` is not `lapsed`, and on day one everybody is `never`
-
-`paid_until` NULL means he has never paid. **Every driver in the pilot is in that
-state right now**, and treating it as "unpaid, restrict him" would restrict the
-whole fleet the moment the dispatch rule exists. What happens to the 33 drivers
-already on the road — a free month, a start date, or a bill — is the office's
-decision and has not been made. Until it is, nothing restricts anybody.
-
-### Proving it — `probe-subscription-flow.py`
-
-Run it **on the VPS**. Everything goes through the public edge, so the nginx
-block is under test too; a location that buffered the body would make every
-webhook look forged, and that failure is invisible from inside the container.
-
-It signs real events with the secret the container is actually running, so every
-path from the signature check to the row lock is exercised for real. The check
-it exists for is test 6: **the same signed bytes delivered twice must extend the
-subscription once.** It also proves stacking, restarting after a lapse, that a
-`checkout.failed` buys nothing, that an unrecorded checkout is rebuilt from
-Chargily's metadata rather than lost, and that an unattributable one is accepted
-rather than retried for days. Everything it writes is namespaced `probe_` and
-removed afterwards, including the subject's subscription row.
-
-The one thing it cannot fake is Chargily accepting our key, so it asks them
-directly instead of guessing.
-
-**Two traps in the probe itself**, both of which reported a failure that was not
-there on the first run:
-
-- **`/healthz` on the public host is nginx's, not the shim's.** The edge has
-  `location = /healthz { return 200 '{"ok":true}'; }` and never proxies it, so
-  asking the public URL proves nginx is alive and says nothing about payments.
-  The shim's own is on `127.0.0.1:8030`, which is why the probe runs on the VPS.
-- **Chargily is behind Cloudflare, which bans `Python-urllib`** — HTTP 403,
-  error code **1010**, *"banned based on your browser's signature"*. That is
-  Cloudflare declining to ask, not Chargily declining the key, and it looks
-  exactly like a rejected key. The probe uses `curl` for that one call and says
-  so explicitly if it ever sees 1010 again.
-
-### What is deployed and what is waiting
-
-Waiting on **the real test secret key**. The key received on 2026-08-26 was
-`test_pk_…`, a **public** key, and it cannot create a checkout: measured against
-their API the same day, it returns `401 Unauthenticated`, while a nonsense path
-on the same host returns a 404 page — so the route exists and the key is what
-was refused. Their own reference authenticates with `Bearer test_sk_…`.
-
-Until it arrives, `CHARGILY_SECRET_KEY` in `.env` holds a clearly-labelled
-placeholder. That is not idleness: the webhook is the only thing that extends a
-subscription, and a webhook is just signed bytes, so the placeholder proves the
-entire dangerous half today. Swapping in the real key is one line and a
-`docker compose up -d maps-shim`.
-
-**`.env` was not gitignored until 2026-08-26.** It is now. A secret key in a
-public history has to be revoked, and revoking this one stops every driver's
-payment page until a new key is deployed.
-
-### Dispatch — `maps-shim/restricted.js` and two lines of Haskell
-
-The client's rule, approved 2026-08-26: a driver who has not paid **stays
-online**, but a request only reaches him when no paying driver is in the pool.
-Plus a cap of 300 rides per paid period, which lands in the same place.
-
-This is the one part of the subscription that is genuinely a Haskell change, and
-it is deliberately the smallest one available.
-
-**The binary is never told what a subscription is.** It reads one Redis key
-holding a JSON array of driver ids and prefers everybody else. That is the whole
-of its knowledge — not 3 000 DA, not 300 rides. Who is on the list is computed
-in `restricted.js` and can change in the time it takes to restart a container.
-A number compiled into the binary would mean a 45-minute build every time the
-client revised it.
-
-    movin.wallet + ride counts                <- policy, in the shim
-      -> dynamic-offer-driver-app:movin:unpaid       (JSON array of ids;
-         also written as :movin:restricted, the key the pre-2026-09-14 binary reads)
-        -> calculateDriverPool skips them entirely  <- one filter, in Haskell
-
-> **Superseded 2026-09-14 — the filter is HARD now.** Everything below about
-> an unpaid driver still being offered a job "as the only one in the area" was
-> the 2026-08-26 rule. The client's rule since 2026-09-14 is *no top-up, no
-> work*: `movinOnlyPaying` never offers an unpaid driver a job. See **No top-up,
-> no work** under the driver wallet.
-
-**The key name is the whole integration, and it was measured.** Hedis prefixes
-keys with the app name: plain calls land under `dynamic-offer-driver-app:`,
-`withCrossAppRedis` under `driver-offer:` — read off the live Redis, not
-guessed. Get it wrong and *nothing fails*: the binary reads a missing key,
-restricts nobody, and the feature is silently off for ever.
-
-**The patch needs no signature changes.** `Redis` is already imported in
-`SharedLogic/DriverPool.hs`, and `CacheFlow m r` already implies `HedisFlow m r`
-— so `calculateDriverPool` can read Redis without touching its constraints.
-Both sites were checked against the **real 2023 baseline fetched from GitHub**,
-not against this branch, which has diverged in exactly that file.
-`try-dispatch-patch.py` in the scratch dir applies them and prints the result.
-
-**Applied at `DriverSelection`, deliberately not at `Estimate`.** Estimate is
-what a passenger is quoted before booking. Filtering there would delete a
-vehicle tier from her price list whenever the only driver of that variant owed
-us money — so she would never see it, never book it, and he would never receive
-the request he was still entitled to as the only one in the area. A passenger
-should not be shown fewer options because a driver has not paid us.
-
-**"The only one in the area" means the current radius**, which widens step by
-step. A lapsed driver can therefore be offered a job at the first narrow step
-while a paying driver sits just outside it. That is the honest reading; holding
-the request back to see whether a wider ring finds somebody paid would delay a
-real passenger to enforce a billing rule.
-
-**Every failure means nobody is restricted.** Missing key, unparseable value,
-query that throws, shim that has never run — all leave dispatch behaving exactly
-as it does today. A stale list is preferred to no list: wrong for minutes rather
-than wrong until somebody notices. The failure worth designing against is the
-other direction, and no path produces it.
-
-**Paying restores him at once**, not on the next five-minute tick — the webhook
-republishes the list the moment it applies a payment. A driver who has just paid
-3 000 DA and then watches five more minutes of requests go past him has, from
-where he is sitting, paid for nothing.
-
-`probe-restricted-drivers.py` proves the shim half on the live stack — 7 of 7:
-the published list matches the policy, lapsing a driver puts him on it,
-restoring takes him off, and the cap arm catches at 1 and ignores at 0 and 300.
-
-Its first run failed the cap test and **the probe was wrong**: rides are counted
-from the start of the period a driver is currently inside, and for the free
-month that is the day the row was created. No existing ride falls inside any
-current period, so a cap of 1 correctly caught nobody.
-
-It must also be **visible in the app**, and that half already ships: D24's
-lapsed state and D9's banner. A driver whose rides quietly stop concludes the
-app is broken and rings the office, not that he owes 3 000 DA.
-
-### Live mode
-
-Test Mode needs no domain, no documents and no verification, so all of the above
-is provable on the current host — `api.169-58-139-65.sslip.io` is public HTTPS
-with a real certificate, which is all a webhook needs. **Live Mode** needs
-account verification, whose document list Chargily does not publish, and
-realistically a domain we own: the current hostname contains the VPS's own IP
-address, so it dies the day the box moves.
-
 ## The driver wallet — `driver-wallet.sql`, `maps-shim/wallet.js`
 
 **30 MRU a day, taken at his first ride.** The client's model, 2026-09-06, and
@@ -2808,6 +2549,24 @@ Two rules the client confirmed, both about someone's money:
 |---|---|
 | The 30 comes off when a ride **starts**, not when it is accepted | a driver who accepted a ride the passenger then cancelled drove nothing |
 | A driver who starts a ride under 30 **goes negative** rather than being cut off | reachable only under the old soft restriction. Since 2026-09-14 accepting needs `canWork`, so a charge at ride start always finds the credit — two simulated drivers went to −60 / −90 MRU before that |
+
+### What it replaced — the monthly subscription, retired 2026-10-07
+
+From 2026-08-26 to 2026-09-07 a driver paid **3 000 DA a month** through
+Chargily (`maps-shim/subscription.js`, `/subscription/*`, the tables
+`movin.subscription` and `movin.subscription_payment`). The wallet replaced it
+because nobody should be charged for a month he does not drive, and because
+Algerian cards cannot be debited automatically — the subscription had to be
+pay-then-extend, with every renewal a driver's own action.
+
+Retired in phase 6, once measured unused: no phone had called `/subscription/`
+since 2026-09-02 and its tables had no write after 2026-08-28 (33 drivers, 9
+checkouts, 1 paid). The edge now answers `/subscription/` **410**; the code is
+gone; the three objects were dumped, encrypted, to the backups
+(`subscription-final-*.sql.gpg`, locally and offsite) and then dropped by
+`db/retire-subscription.sql`. `movin.invoice_seq` stays: the wallet's receipts
+number from it. The full design and its reasoning are in git: this README as of
+commit `fe4a44c3a8`, section *Driver subscriptions*.
 
 ### The obvious condition was wrong, and the data said so
 
@@ -2989,6 +2748,82 @@ session against the real gateway. It pays nothing and deletes its own row, and
 an unfinished session expires on Moosyl's side — but it is no longer a rehearsal,
 so read what it opened before running it on a driver who is not yours.
 
+### Dispatch — `maps-shim/restricted.js` and two lines of Haskell
+
+How dispatch skips a driver who may not work. Built on 2026-08-26 for the
+monthly subscription, when the rule was soft — an unpaid driver **stayed
+online** and a request reached him only when no paying driver was in the pool —
+and kept by the wallet, which changed only who is on the list. Plus a cap of
+300 rides per paid day, which lands in the same place.
+
+This is the one part of billing that is genuinely a Haskell change, and it is
+deliberately the smallest one available.
+
+**The binary is never told what a wallet is.** It reads one Redis key
+holding a JSON array of driver ids and prefers everybody else. That is the whole
+of its knowledge — not a day's price, not 300 rides. Who is on the list is computed
+in `restricted.js` and can change in the time it takes to restart a container.
+A number compiled into the binary would mean a 45-minute build every time the
+client revised it.
+
+    movin.wallet + ride counts                <- policy, in the shim
+      -> dynamic-offer-driver-app:movin:unpaid       (JSON array of ids;
+         also written as :movin:restricted, the key the pre-2026-09-14 binary reads)
+        -> calculateDriverPool skips them entirely  <- one filter, in Haskell
+
+> **Superseded 2026-09-14 — the filter is HARD now.** Everything below about
+> an unpaid driver still being offered a job "as the only one in the area" was
+> the 2026-08-26 rule. The client's rule since 2026-09-14 is *no top-up, no
+> work*: `movinOnlyPaying` never offers an unpaid driver a job. See **No top-up,
+> no work** under the driver wallet.
+
+**The key name is the whole integration, and it was measured.** Hedis prefixes
+keys with the app name: plain calls land under `dynamic-offer-driver-app:`,
+`withCrossAppRedis` under `driver-offer:` — read off the live Redis, not
+guessed. Get it wrong and *nothing fails*: the binary reads a missing key,
+restricts nobody, and the feature is silently off for ever.
+
+**The patch needs no signature changes.** `Redis` is already imported in
+`SharedLogic/DriverPool.hs`, and `CacheFlow m r` already implies `HedisFlow m r`
+— so `calculateDriverPool` can read Redis without touching its constraints.
+Both sites were checked against the **real 2023 baseline fetched from GitHub**,
+not against this branch, which has diverged in exactly that file.
+`try-dispatch-patch.py` in the scratch dir applies them and prints the result.
+
+**Applied at `DriverSelection`, deliberately not at `Estimate`.** Estimate is
+what a passenger is quoted before booking. Filtering there would delete a
+vehicle tier from her price list whenever the only driver of that variant owed
+us money — so she would never see it, never book it, and he would never receive
+the request he was still entitled to as the only one in the area. A passenger
+should not be shown fewer options because a driver has not paid us.
+
+**"The only one in the area" means the current radius**, which widens step by
+step. A lapsed driver can therefore be offered a job at the first narrow step
+while a paying driver sits just outside it. That is the honest reading; holding
+the request back to see whether a wider ring finds somebody paid would delay a
+real passenger to enforce a billing rule.
+
+**Every failure means nobody is restricted.** Missing key, unparseable value,
+query that throws, shim that has never run — all leave dispatch behaving exactly
+as it does today. A stale list is preferred to no list: wrong for minutes rather
+than wrong until somebody notices. The failure worth designing against is the
+other direction, and no path produces it.
+
+**Topping up restores him at once**, not on the next five-minute tick —
+`wallet.js` republishes the list the moment it credits a top-up. A driver who
+has just paid and then watches five more minutes of requests go past him has,
+from where he is sitting, paid for nothing.
+
+The shim half is tested in CI (`tests/restricted.test.js`,
+`tests/wallet-dispatch.test.js`, against a real Postgres).
+`investigations/probe-restricted-drivers.py` proved it on the live stack in
+August against the subscription-era policy and no longer matches the wallet's.
+
+It must also be **visible in the app**, and it is: the wallet screen and the
+duty toggle say why (*It became a HARD block*, above). A driver whose rides
+quietly stop concludes the app is broken and rings the office, not that his
+wallet is empty.
+
 ---
 
 ## Account deletion — `account-deletion.sql`, `maps-shim/deletion.js`
@@ -3020,7 +2855,7 @@ One route, three methods, and it takes **no id at all**:
 
 The caller sends a token and nothing else; the shim asks the backend whose it
 is. There is no request shape here that could delete somebody else's account,
-because there is nowhere to put their id. Same rule as `subscription.js` and the
+because there is nowhere to put their id. Same rule as the wallet and the
 avatar fix.
 
 **Three decisions worth keeping.**
@@ -3066,8 +2901,9 @@ created*, so a payment started before the switch still calls back to the sslip.i
 name. If that stops answering, the driver pays and the webhook lands nowhere —
 money in, no month out, and nothing on any screen to say so. The certificate is
 therefore *expanded* to cover both names rather than replaced. Retire the old one
-only after a fortnight with no checkouts referencing it;
-`movin.subscription_payment.event` records the URL each was created with.
+only after a fortnight with no checkouts referencing it (the subscription's
+checkouts recorded it in `movin.subscription_payment.event`; that table was
+dropped on 2026-10-07, long after the fortnight).
 
 **The script refuses to run against Cloudflare's proxy**, and the reason is
 specific rather than tidy-mindedness. Measured 2026-08-26: `api.movinapp.net`
@@ -3144,7 +2980,7 @@ archive, and a restore is only meaningful with both.
 | `atlas_app` | 3.9 MB | **yes** — riders, bookings, rides |
 | `atlas_driver_offer_bpp` | 3.6 MB | **yes** — drivers, fares, the BPP side |
 | `atlas_registry` | 40 kB | **yes** |
-| `movin` | small | **yes** — subscriptions, receipts, deletion requests |
+| `movin` | small | **yes** — wallets, top-up receipts, drivers' papers, deletion requests |
 
 An include list has one failure mode: a schema added later is left out silently.
 So the script **refuses to run if the schema set has changed**, and says which

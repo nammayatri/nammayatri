@@ -17,8 +17,8 @@
 # the webhook lands nowhere: money in, no month out, and nothing on any screen
 # to say so. So the certificate is *expanded* to cover both names rather than
 # replaced, and both stay in `server_name`. Retire the old one only after a
-# fortnight with no checkouts referencing it -- movin.subscription_payment.event
-# carries the URL each one was created with.
+# fortnight with no checkouts referencing it (the subscription's checkouts
+# recorded it in movin.subscription_payment.event, dropped 2026-10-07).
 #
 # ── Why it refuses to run against Cloudflare's proxy ────────────────────────
 # Measured 2026-08-26: movinapp.net resolved to 104.21.75.212 / 172.67.182.57

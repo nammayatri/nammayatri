@@ -5,8 +5,8 @@
 #     bash tests/release.test.sh
 #
 # What it proves, because each one is a way a release can hurt the live box:
-#   1. the plan of the first release is the one expected (SQL moves into db/,
-#      nothing that runs changes, nothing restarts)
+#   1. the plan of the first release is the one expected (SQL moves into db/
+#      and only SQL new to the server is applied; restarts follow the diff)
 #   2. apply writes every shipped file, IN PLACE (the inode of a bind-mounted
 #      file survives), and touches nothing it does not ship (.env, edge-web/,
 #      bin/ stay byte for byte)
@@ -80,7 +80,13 @@ got() { echo "$PLAN" | grep -q "$1" && echo 1 || echo 0; }
 [ "$(got 'compose up')" = "$want_compose" ] && pass "compose only if docker-compose.yml changed ($want_compose)" || fail "compose wrong"
 echo "$PLAN" | grep -q "rebuild maps-shim" && pass "maps-shim's lockfile means a rebuild" || fail "no rebuild for the lockfile"
 echo "$PLAN" | grep -q "install systemd units" && pass "the backup units are installed" || fail "units not in the plan"
-echo "$PLAN" | grep -q "no SQL to apply" && pass "no SQL applied (it only moved)" || fail "the plan applies SQL"
+# SQL: applied only when its content is new to the server -- a file that only
+# moved into db/ is not. Worked out from the trees, like the restarts above
+# (phase 6 shipped the first genuinely new one, db/retire-subscription.sql).
+old_sql=$(cd "$T/old/$LS" && find . -name '*.sql' -type f -exec sha256sum {} + | cut -d' ' -f1 | sort -u)
+want_sql=$(cd "$T/rel/stack" && for f in db/*.sql; do echo "$old_sql" | grep -qx "$(h "$f")" || echo "$f"; done | sort)
+got_sql=$(echo "$PLAN" | sed -n 's/^ *apply SQL  //p' | sort)
+[ "$got_sql" = "$want_sql" ] && pass "SQL applied only where new to the server (${want_sql:-none})" || fail "SQL plan: got [$got_sql], want [$want_sql]"
 echo "$PLAN" | grep -q "new      db/algeria-tariff.sql" && pass "db/ arrives" || fail "db/ not in the plan"
 echo "$PLAN" | grep -q "remove   algeria-tariff.sql" && pass "the old top-level copy goes" || fail "old SQL copy not removed"
 echo "$PLAN" | grep -q "BAD" && fail "the plan reports a conflict" || pass "no conflict"

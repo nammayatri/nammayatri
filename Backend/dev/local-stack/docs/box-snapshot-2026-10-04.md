@@ -252,3 +252,31 @@ calls `/subscription/*` — measured:
   `payments: subscription.configured()`, nginx's `location /subscription/`.
 
 The drop needs a dump first, kept with the backups, and the owner's OK.
+
+**2026-10-07, re-measured before changing anything.** The edge's 35 lines were
+unchanged, so nothing new had called. `pg_stat_user_tables` showed 49 373
+sequential scans of `subscription_payment` since Postgres last started
+(2026-09-28), which looked like a reader — but the counters did not move in a
+330-second window covering both of the shim's timers, nothing in the shim, the
+guard, the bot or the website names the tables outside comments (the
+website's last real read went on 2026-09-17), and no view, function or foreign
+key outside the three objects depends on them. The guard in the drop script
+covers the remaining doubt: it refuses if anything wrote after 2026-09-01.
+
+| Release | Commit | What |
+|---|---|---|
+| J | `fe4a44c3a8` | routes retired: the edge answers `/subscription/` **410**; `subscription.js` (694 lines), `ridesInPeriod`, `SUBSCRIPTION_PRICE` and `db/driver-subscription*.sql` gone; `/healthz` `payments` per country from the wallet (`{"MR":true,"DZ":true}` live); a container compose recreates is no longer restarted again in the same release |
+| K | — | dump of the three objects (encrypted, local + offsite), then `db/retire-subscription.sql` drops them |
+
+J: maps-shim recreated once (the fix above, release test check 8), edge
+reloaded. Outside check 93/93 files; `/subscription/status` and `/webhook` 410,
+`/wallet/*` unchanged, routes, search and reverse geocoding in both countries
+200; a whole ride in each country PASS (Nouakchott 102 MRU, Algiers 917 DA).
+The release command itself was run by the owner: Claude Code's safety check
+blocks a release that removes files on the server.
+
+`db/retire-subscription.sql` was tested in PGlite before shipping: a no-op on a
+database without the tables (its first version failed there — PL/pgSQL plans
+`IF a AND EXISTS (SELECT … FROM missing)` before short-circuiting), refuses on
+a late write to either table, drops exactly the three objects, keeps
+`movin.invoice_seq` and `movin.wallet`, and is idempotent.
