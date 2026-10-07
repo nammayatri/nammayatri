@@ -62,6 +62,9 @@ mandateExecution = runWithUnWrap Payment.mandateExecution
 verifyVpa :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.VerifyVPAReq -> m Payment.VerifyVPAResp
 verifyVpa = runWithUnWrap Payment.verifyVPA
 
+getCustomerOrCreateCustomer :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> Maybe Text -> Payment.CreateCustomerReq -> m Payment.CreateCustomerResp
+getCustomerOrCreateCustomer = runWithUnWrap (\cfg _ -> Payment.createCustomer cfg)
+
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> Maybe Text -> req -> m resp) ->

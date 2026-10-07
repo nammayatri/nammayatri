@@ -1,0 +1,24 @@
+imports:
+  UTCTime: Data.Time
+  ServiceNames: Domain.Types.Plan
+
+module: PaymentCustomer
+
+types:
+  # same shape as Kernel.External.Payment.Interface.Types.CreateCustomerResp, which is what
+  # rider-app's GET /payment/customer returns — kept identical so the SDK payload matches
+  PaymentCustomerResp:
+    customerId: Text
+    clientAuthToken: Maybe Text
+    clientAuthTokenExpiry: Maybe UTCTime
+
+apis:
+  # in-app UPI needs the gateway customerId + a client auth token before it can
+  # show the driver's UPI apps; create-order does not hand those back
+  - GET:
+      endpoint: /payment/customer
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - serviceName: ServiceNames
+      response:
+        type: PaymentCustomerResp
