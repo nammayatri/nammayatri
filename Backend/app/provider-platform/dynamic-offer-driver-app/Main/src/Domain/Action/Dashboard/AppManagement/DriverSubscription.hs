@@ -109,8 +109,10 @@ postDriverSubscriptionSendSms merchantShortId opCity driverId volunteerId _req@D
         oKey <- fromMaybeM (InvalidRequest "Overlay Key field is required for channel : OVERLAY") overlayKey --whenJust overlayKey $ \oKey -> do
         manualDues <- getManualDues personId
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing mbVehicleCategory Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
-        let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
-        let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
+        -- minWalletAmount is the booking's wallet floor, sent by the scheduled-booking top-up nudge.
+        let fillTemplates = T.replace (templateText "minWalletAmount") (maybe "" highPrecMoneyToText minWalletAmount) . T.replace (templateText "dueAmount") (show manualDues)
+        let okButtonText = fillTemplates <$> overlay.okButtonText
+        let description = fillTemplates <$> overlay.description
         let overlay' = overlay{okButtonText, description}
         TN.sendOverlay merchantOpCityId driver $ TN.mkOverlayReq overlay'
       ALERT -> do

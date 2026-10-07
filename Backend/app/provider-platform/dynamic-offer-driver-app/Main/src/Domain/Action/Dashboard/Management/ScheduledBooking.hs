@@ -67,6 +67,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
+import SharedLogic.FarePolicy (getScheduledRideMinWalletBalance)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -80,6 +81,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.GetNearestDrivers as GND
 import qualified Storage.Queries.QueriesExtra.BookingLite as QBookingLite
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -276,6 +278,11 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
   (mbDistanceToPickup, mbEtaDuration, mbDriverLocation) <- maybe (pure (Nothing, Nothing, Nothing)) (getDriverProximityToPickup booking) mbRide
   reallocationHistory <- buildReallocationHistory booking.transactionId
   opsNotes <- getScheduledBookingOpsNotes booking.merchantOperatingCityId booking.transactionId
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  mbQuote <- QQuote.findById (Id booking.quoteId)
+  minWalletBalance <- maybe (pure Nothing) (`getScheduledRideMinWalletBalance` transporterConfig) mbQuote
   pure
     Common.ScheduledBookingInfoRes
       { transactionId = booking.transactionId,
@@ -304,7 +311,8 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
         vehicleServiceTier = booking.vehicleServiceTier,
         vehicleServiceTierName = booking.vehicleServiceTierName,
         reallocationHistory,
-        opsNotes
+        opsNotes,
+        minWalletBalance
       }
 
 -- | Reconstruct the reallocation timeline: every booking that has ever shared this

@@ -146,7 +146,8 @@ data ScheduledBookingInfoRes = ScheduledBookingInfoRes
     vehicleServiceTier :: Dashboard.Common.ServiceTierType,
     vehicleServiceTierName :: Kernel.Prelude.Text,
     reallocationHistory :: [ReallocationEventItem],
-    opsNotes :: [OpsNote]
+    opsNotes :: [OpsNote],
+    minWalletBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
