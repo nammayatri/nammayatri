@@ -127,7 +127,6 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
     Ticket.ZendeskConfig _ -> IssueTicketService Ticket.Zendesk
     Ticket.XyneSpacesConfig _ -> IssueTicketService Ticket.XyneSpaces
-    Ticket.RadarXyneSpacesConfig _ -> IssueTicketService Ticket.RadarXyneSpaces
   IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
   TokenizationServiceConfig tokenizeCfg -> case tokenizeCfg of
