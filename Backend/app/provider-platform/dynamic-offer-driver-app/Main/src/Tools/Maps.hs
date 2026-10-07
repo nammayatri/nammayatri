@@ -179,7 +179,7 @@ snapToRoadOSRMOnly merchantOpCityId entityId req = do
       getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService Maps.OSRM)}) Nothing
         >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show Maps.OSRM))
     case osrmServiceConfig.serviceConfig of
-      DOSC.MapsServiceConfig msc -> Maps.snapToRoad entityId msc req
+      DOSC.MapsServiceConfig msc -> Maps.snapToRoad entityId (Just merchantOpCityId.getId) msc req
       _ -> throwError $ InternalError "Unknown Service Config"
   case result of
     Right resp -> pure ([Maps.OSRM], Right resp)
@@ -208,7 +208,7 @@ snapToRoadWithFallback ::
   Maybe Text ->
   SnapToRoadReq ->
   m ([Maps.MapsService], Either String SnapToRoadResp)
-snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId includeRectifiedDistance entityId = Maps.snapToRoadWithFallback entityId rectifyDistantPointsFailureUsing includeRectifiedDistance handler
+snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOperatingCityId includeRectifiedDistance entityId = Maps.snapToRoadWithFallback entityId (Just merchantOperatingCityId.getId) rectifyDistantPointsFailureUsing includeRectifiedDistance handler
   where
     handler = Maps.SnapToRoadHandler {..}
 
@@ -230,8 +230,8 @@ snapToRoadWithFallback rectifyDistantPointsFailureUsing _merchantId merchantOper
         DOSC.MapsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
 
-callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
-callGetRoutesWrapper isAvoidToll entityId = Maps.getRoutes entityId isAvoidToll
+callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
+callGetRoutesWrapper isAvoidToll entityId merchantCityId = Maps.getRoutes entityId merchantCityId isAvoidToll
 
 getServiceConfigForRectifyingSnapToRoadDistantPointsFailure ::
   ServiceFlow m r =>
@@ -249,7 +249,7 @@ getServiceConfigForRectifyingSnapToRoadDistantPointsFailure _merchantId merchant
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (Maybe Text -> MapsServiceConfig -> req -> m resp) ->
+  (Maybe Text -> Maybe Text -> MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
@@ -262,5 +262,5 @@ runWithServiceConfig func getCfg _merchantId merchantOpCityId entityId req = do
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService $ getCfg orgMapsConfig)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
-    DOSC.MapsServiceConfig msc -> func entityId msc req
+    DOSC.MapsServiceConfig msc -> func entityId (Just merchantOpCityId.getId) msc req
     _ -> throwError $ InternalError "Unknown Service Config"

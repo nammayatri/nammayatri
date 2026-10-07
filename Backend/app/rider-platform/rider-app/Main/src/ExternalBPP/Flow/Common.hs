@@ -169,7 +169,7 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                 sortingType = MultiModalTypes.Fastest,
                 walkSpeed = Nothing
               }
-      otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError $ "No transit routes found between stations: " <> fromStation.code <> " and " <> toStation.code)
+      otpResponse <- KMultiModal.getTransitRoutes Nothing (Just merchantOperatingCity.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError $ "No transit routes found between stations: " <> fromStation.code <> " and " <> toStation.code)
       transitRoute <-
         find (\route -> any (\leg -> leg.mode == expectedMode) route.legs && all (\leg -> leg.mode == expectedMode || leg.mode == MultiModalTypes.Walk) route.legs) otpResponse.routes
           & fromMaybeM (InternalError $ "No suitable transit route found between stations: " <> fromStation.code <> " and " <> toStation.code)

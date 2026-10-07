@@ -472,7 +472,7 @@ getMultiModalTransitOptions userPreferences merchantId merchantOperatingCityId r
             walkSpeed = Nothing
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId merchantOperatingCityId
-  otpResponse <- KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
+  otpResponse <- KMultiModal.getTransitRoutes Nothing (Just merchantOperatingCityId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")
   logDebug $ "[getMultiModalTransitOptions - OTP Response]" <> show otpResponse
 
   let processedRoutes = map (processRoute riderConfig.maximumWalkDistance) otpResponse.routes

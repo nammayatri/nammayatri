@@ -179,7 +179,7 @@ getPickupRoutes merchantId merchantOperatingCityId service entityId req = do
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService service)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
   case merchantMapsServiceConfig.serviceConfig of
-    DMSC.MapsServiceConfig msc -> Maps.getRoutes entityId merchant.isAvoidToll msc req
+    DMSC.MapsServiceConfig msc -> Maps.getRoutes entityId (Just merchantOperatingCityId.getId) merchant.isAvoidToll msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getRoutesForService :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> MapsService -> Maybe Text -> GetRoutesReq -> m GetRoutesResp
@@ -189,7 +189,7 @@ getRoutesForService merchantId merchantOperatingCityId service entityId req = do
 
 runWithExplicitServiceConfig ::
   ServiceFlow m r =>
-  (Maybe Text -> MapsServiceConfig -> req -> m resp) ->
+  (Maybe Text -> Maybe Text -> MapsServiceConfig -> req -> m resp) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   MapsService ->
@@ -201,7 +201,7 @@ runWithExplicitServiceConfig mapsAction merchantId merchantOperatingCityId servi
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService service)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show service))
   case merchantMapsServiceConfig.serviceConfig of
-    DMSC.MapsServiceConfig msc -> mapsAction entityId msc req
+    DMSC.MapsServiceConfig msc -> mapsAction entityId (Just merchantOperatingCityId.getId) msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getMapsServiceOverrideFromTags :: Text -> Maybe [YTypes.TagNameValueExpiry] -> Maybe MapsService
@@ -261,12 +261,12 @@ getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 searchDestinations :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> SearchDestinationsReq -> m SearchDestinationsResp
 searchDestinations = runWithServiceConfig Maps.searchDestinations (.getPlaceName)
 
-callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
-callGetRoutesWrapper isAvoidToll entityId = Maps.getRoutes entityId isAvoidToll
+callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
+callGetRoutesWrapper isAvoidToll entityId merchantCityId = Maps.getRoutes entityId merchantCityId isAvoidToll
 
 runWithServiceConfig ::
   ServiceFlow m r =>
-  (Maybe Text -> MapsServiceConfig -> req -> m resp) ->
+  (Maybe Text -> Maybe Text -> MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->
   Id MerchantOperatingCity ->
@@ -279,7 +279,7 @@ runWithServiceConfig func getCfg merchantId merchantOperatingCityId entityId req
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MapsService $ getCfg merchantConfig)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show $ getCfg merchantConfig))
   case merchantMapsServiceConfig.serviceConfig of
-    DMSC.MapsServiceConfig msc -> func entityId msc req
+    DMSC.MapsServiceConfig msc -> func entityId (Just merchantOperatingCityId.getId) msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
 getMerchantOperatingCityId :: ServiceFlow m r => Id Person -> Maybe (Id MerchantOperatingCity) -> m (Id MerchantOperatingCity)
