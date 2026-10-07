@@ -105,12 +105,12 @@ verifyDL ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   VerifyDLReq ->
-  m VerifyDLResp
+  m DLRespWithRemPriorityList
 verifyDL _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyDL req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
+  Verification.verifyDL (getServiceConfig merchantOpCityId) merchantServiceUsageConfig.verificationProvidersPriorityList req
 
 verifyBankAccountAsync ::
   ServiceFlow m r =>

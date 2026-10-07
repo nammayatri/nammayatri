@@ -105,10 +105,10 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
     callVerifyDL :: VerificationFlow m r => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyDL documentNum person verificationReq = do
       whenJust verificationReq.driverDateOfBirth $ \dob -> do
-        verifyRes <-
+        verifyDLResult <-
           Verification.verifyDL person.merchantId person.merchantOperatingCityId $
             Verification.VerifyDLReq {dlNumber = documentNum, dateOfBirth = dob, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
-        case verifyRes of
+        case verifyDLResult.verifyDLResp of
           VerificationIntTypes.AsyncDLResp res -> case res.requestor of
             VT.Idfy -> IVQuery.create =<< mkIdfyNewVerificationEntity verificationReq res.requestId
             VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperNewVergeVerificationEntity res.requestId verificationReq res.transactionId DTO.DriverLicense

@@ -309,11 +309,11 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
             if isNothing dateOfIssue && documentVerificationConfig.checkExtraction
               then Domain.Success
               else Domain.Skipped
-      verifyRes <-
+      verifyDLResult <-
         Verification.verifyDL person.merchantId merchantOpCityId $
           Verification.VerifyDLReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
 
-      case verifyRes of
+      case verifyDLResult.verifyDLResp of
         VerificationIntTypes.AsyncDLResp res -> case res.requestor of
           VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL
           VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL res.transactionId
