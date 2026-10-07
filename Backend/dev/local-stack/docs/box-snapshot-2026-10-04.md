@@ -266,7 +266,7 @@ covers the remaining doubt: it refuses if anything wrote after 2026-09-01.
 | Release | Commit | What |
 |---|---|---|
 | J | `fe4a44c3a8` | routes retired: the edge answers `/subscription/` **410**; `subscription.js` (694 lines), `ridesInPeriod`, `SUBSCRIPTION_PRICE` and `db/driver-subscription*.sql` gone; `/healthz` `payments` per country from the wallet (`{"MR":true,"DZ":true}` live); a container compose recreates is no longer restarted again in the same release |
-| K | — | dump of the three objects (encrypted, local + offsite), then `db/retire-subscription.sql` drops them |
+| K | `a1582735cd` | dump of the three objects (encrypted, local + offsite), then `db/retire-subscription.sql` drops them |
 
 J: maps-shim recreated once (the fix above, release test check 8), edge
 reloaded. Outside check 93/93 files; `/subscription/status` and `/webhook` 410,
@@ -280,3 +280,26 @@ database without the tables (its first version failed there — PL/pgSQL plans
 `IF a AND EXISTS (SELECT … FROM missing)` before short-circuiting), refuses on
 a late write to either table, drops exactly the three objects, keeps
 `movin.invoice_seq` and `movin.wallet`, and is idempotent.
+
+K, 2026-10-07 18:41 UTC. First the dump: `pg_dump -t` of the three objects,
+33 + 9 rows and the view, the counts checked against the live tables,
+encrypted with the nightly backup's passphrase, decrypted back to the same
+sha256, kept as `subscription-final-20261007T184106Z.sql.gpg` (3 445 bytes) in
+the backup directory — a name the nightly pruning never matches — and copied
+to the offsite remote, where `rclone lsl` lists it. Then the release: 1 new
+file, 1 rewritten, the SQL applied, nothing restarted; outside check 94/94.
+Afterwards: no `movin` object named `%subscription%`, `movin.invoice_seq` at
+37 (untouched), the wallet's tables intact, no error in the shim or the
+console since. The website's comments and docs that said the tables "still
+exist" were updated the same evening (website `main`, docs only).
+
+**Phase 6 done when — met.** One billing model, the wallet: in the code (no
+`/subscription/` route, no module, no setting), in the database (three
+objects dropped, their rows in an encrypted dump), and in the documentation
+(the 258-line section gone; a short note in the wallet section says what it
+replaced and where the old design still lives in git).
+
+Seen on the way, not part of phase 6: rclone warns that the offsite remote
+uses rclone's shared Google Drive client id, **which Google is retiring during
+2026**. When it stops, the nightly backup's offsite copy fails (the local copy
+does not). Fix: create our own client id and reconnect the remote.
