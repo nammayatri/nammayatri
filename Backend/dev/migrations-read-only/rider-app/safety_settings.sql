@@ -55,3 +55,8 @@ ALTER TABLE atlas_app.safety_settings ALTER COLUMN updated_at SET NOT NULL;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.safety_settings ADD COLUMN consent_to_share_mobile_number boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.safety_settings ADD COLUMN consent_synced_at timestamp with time zone ;

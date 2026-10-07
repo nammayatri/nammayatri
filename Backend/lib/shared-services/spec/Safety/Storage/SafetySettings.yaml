@@ -24,6 +24,7 @@ SafetySettings:
     enableOtpLessRide : Maybe Bool
     aggregatedRideShareSetting : Maybe RideShareOptions
     consentToShareMobileNumber : Maybe Bool
+    consentSyncedAt : Maybe UTCTime
 
   beamType:
     falseSafetyAlarmCount: Maybe Int
@@ -61,6 +62,11 @@ SafetySettings:
     updateMockSafetyDrillStatus:
       kvFunction: updateWithKV
       params: [hasCompletedMockSafetyDrill]
+      where: personId
+
+    updateConsentSyncedAt:
+      kvFunction: updateWithKV
+      params: [consentSyncedAt]
       where: personId
 
   extraOperations:
