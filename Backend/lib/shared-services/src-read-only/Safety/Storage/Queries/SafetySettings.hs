@@ -27,6 +27,11 @@ createMany = traverse_ create
 findByPersonId :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> m (Maybe Safety.Domain.Types.SafetySettings.SafetySettings))
 findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
+updateConsentSyncedAt :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> m ())
+updateConsentSyncedAt consentSyncedAt personId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.consentSyncedAt consentSyncedAt, Se.Set Beam.updatedAt _now] [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+
 updateEmergencyContactStatus :: (Safety.Storage.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Id.Id Safety.Domain.Types.Common.Person -> m ())
 updateEmergencyContactStatus autoCallDefaultContact notifySosWithEmergencyContacts personId = do
   _now <- getCurrentTime
@@ -51,6 +56,7 @@ updateByPrimaryKey (Safety.Domain.Types.SafetySettings.SafetySettings {..}) = do
   updateWithKV
     [ Se.Set Beam.aggregatedRideShareSetting aggregatedRideShareSetting,
       Se.Set Beam.autoCallDefaultContact autoCallDefaultContact,
+      Se.Set Beam.consentSyncedAt consentSyncedAt,
       Se.Set Beam.consentToShareMobileNumber consentToShareMobileNumber,
       Se.Set Beam.enableOtpLessRide enableOtpLessRide,
       Se.Set Beam.enablePostRideSafetyCheck enablePostRideSafetyCheck,

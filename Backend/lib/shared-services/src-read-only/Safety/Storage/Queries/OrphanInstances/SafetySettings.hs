@@ -20,6 +20,7 @@ instance FromTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.Safet
         Safety.Domain.Types.SafetySettings.SafetySettings
           { aggregatedRideShareSetting = aggregatedRideShareSetting,
             autoCallDefaultContact = autoCallDefaultContact,
+            consentSyncedAt = consentSyncedAt,
             consentToShareMobileNumber = consentToShareMobileNumber,
             enableOtpLessRide = enableOtpLessRide,
             enablePostRideSafetyCheck = enablePostRideSafetyCheck,
@@ -42,6 +43,7 @@ instance ToTType' Beam.SafetySettings Safety.Domain.Types.SafetySettings.SafetyS
     Beam.SafetySettingsT
       { Beam.aggregatedRideShareSetting = aggregatedRideShareSetting,
         Beam.autoCallDefaultContact = autoCallDefaultContact,
+        Beam.consentSyncedAt = consentSyncedAt,
         Beam.consentToShareMobileNumber = consentToShareMobileNumber,
         Beam.enableOtpLessRide = enableOtpLessRide,
         Beam.enablePostRideSafetyCheck = enablePostRideSafetyCheck,

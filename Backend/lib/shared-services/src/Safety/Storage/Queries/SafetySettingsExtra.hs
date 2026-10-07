@@ -116,6 +116,7 @@ getDefaultSafetySettings personId mbPersonDefaults = do
             safetyCenterDisabledOnDate = Nothing,
             shakeToActivate = False,
             consentToShareMobileNumber = Nothing,
+            consentSyncedAt = Nothing,
             updatedAt = now
           }
     Just p ->
@@ -137,6 +138,7 @@ getDefaultSafetySettings personId mbPersonDefaults = do
             safetyCenterDisabledOnDate = p.safetyCenterDisabledOnDate,
             shakeToActivate = p.shakeToActivate,
             consentToShareMobileNumber = Nothing,
+            consentSyncedAt = Nothing,
             updatedAt = now
           }
 
@@ -209,6 +211,7 @@ upsert personId UpdateEmergencyInfo {..} getDefaultSettings =
                   DSafety.safetyCenterDisabledOnDate = safetySettings.safetyCenterDisabledOnDate,
                   DSafety.shakeToActivate = fromMaybe safetySettings.shakeToActivate shakeToActivate,
                   DSafety.consentToShareMobileNumber = consentToShareMobileNumber <|> safetySettings.consentToShareMobileNumber,
+                  DSafety.consentSyncedAt = safetySettings.consentSyncedAt,
                   DSafety.updatedAt = now
                 }
         createWithKV merged
