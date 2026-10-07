@@ -74,5 +74,6 @@ types:
     - messageKey: Maybe MessageKey
     - overlayKey: Maybe Text
     - messageId: Maybe Text
+    - minWalletAmount: Maybe HighPrecMoney
     - derive: "'HideSecrets"
 

@@ -33,6 +33,7 @@ import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFee
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Quote as DQuote
 import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -101,6 +102,19 @@ getFarePolicyByEstOrQuoteIdWithoutFallback estOrQuoteId = do
         logWarning $ "Fare Policy Not Found for quote id: " <> estOrQuoteId
         return Nothing
       Just a -> return $ Just $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+
+-- | Wallet floor a scheduled ride was booked under: SCHEDULED_RIDE_MIN_WALLET_BALANCE charge, else city config.
+getScheduledRideMinWalletBalance :: (CacheFlow m r) => DQuote.Quote -> TransporterConfig -> m (Maybe HighPrecMoney)
+getScheduledRideMinWalletBalance quote transporterConfig = do
+  -- Snapshot from quote time, so a policy replaced since booking doesn't move this ride's floor.
+  mbQuoteFarePolicy <- getFarePolicyByEstOrQuoteIdWithoutFallback quote.id.getId
+  let floorOf :: [DAC.ConditionalCharges] -> Maybe HighPrecMoney
+      floorOf = fmap (.charge) . find (\cc -> cc.chargeCategory == DAC.SCHEDULED_RIDE_MIN_WALLET_BALANCE)
+      -- Live policy only when the snapshot expired or was never written.
+      mbFarePolicyFloor = case mbQuoteFarePolicy of
+        Just quoteFarePolicy -> floorOf quoteFarePolicy.conditionalCharges
+        Nothing -> floorOf . (.conditionalCharges) =<< quote.farePolicy
+  pure $ mbFarePolicyFloor <|> transporterConfig.driverWalletConfig.minWalletAmountForScheduledRides
 
 getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVST.ServiceTierType -> Maybe SL.Area -> Text -> Maybe UTCTime -> Maybe Bool -> Maybe Int -> Maybe CacKey -> [LYT.ConfigVersionMap] -> Maybe Text -> m FarePolicyD.FullFarePolicy
 getFarePolicyByEstOrQuoteId mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration merchantOpCityId tripCategory vehicleServiceTier area estOrQuoteId mbBookingStartTime isDashboardRequest mbAppDynamicLogicVersion txnId configInExperimentVersions mbSpecialLocName =
