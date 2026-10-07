@@ -43,6 +43,7 @@ data JobName
   | PartnerInvoiceDataExportTrigger
   | DailyPassStatusUpdateTrigger
   | PassExpiryReminderMasterTrigger
+  | CashRideCashbackPayoutTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

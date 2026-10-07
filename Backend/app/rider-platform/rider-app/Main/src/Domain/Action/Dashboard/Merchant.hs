@@ -137,7 +137,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster))
+import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), ExecuteCashRideCashbackPayoutJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, ExecuteCashRideCashbackPayout, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster))
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.TollDashboard
 import qualified SharedLogic.TollUpsert as TU
@@ -172,6 +172,7 @@ import qualified Storage.Queries.MerchantPushNotification as SQMPN
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.MerchantState as QMerchantState
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.ServiceCategory as SQSC
 import qualified Storage.Queries.ServiceCategoryExtra as SQSCE
@@ -2136,7 +2137,7 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
     _ -> throwError $ InternalError "invalid scheduled at time"
   where
     triggerScheduler :: Maybe Common.JobName -> Text -> NominalDiffTime -> DM.Merchant -> DMOC.MerchantOperatingCity -> Flow APISuccess
-    triggerScheduler jobName _ diffTimeS merchant merchantOpCity = do
+    triggerScheduler jobName jobDataText diffTimeS merchant merchantOpCity = do
       case jobName of
         Just Common.NyRegularMasterTrigger -> do
           let jobData' = Just ()
@@ -2168,6 +2169,13 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
         Just Common.PassExpiryReminderMasterTrigger -> do
           let jobData = PassExpiryReminderMasterJobData {cursor = Just 0}
           createJobIn @_ @'PassExpiryReminderMaster (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
+          pure Success
+        Just Common.CashRideCashbackPayoutTrigger -> do
+          jobData :: ExecuteCashRideCashbackPayoutJobData <-
+            JSON.decodeStrict (TE.encodeUtf8 jobDataText) & fromMaybeM (InvalidRequest "jobData must be {\"personId\": \"<personId>\"}")
+          person <- QPerson.findById jobData.personId >>= fromMaybeM (PersonDoesNotExist jobData.personId.getId)
+          unless (person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist jobData.personId.getId)
+          createJobIn @_ @'ExecuteCashRideCashbackPayout (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Nothing -> throwError $ InternalError "invalid job name"
 
