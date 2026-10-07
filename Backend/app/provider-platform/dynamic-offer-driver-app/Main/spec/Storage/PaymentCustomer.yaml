@@ -1,0 +1,42 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  ServiceNames: Domain.Types.Extra.Plan
+  ServiceName: Domain.Types.MerchantServiceConfig
+
+# Gateway customer + client auth token for the driver app's in-app UPI flow.
+# Driver-app analogue of rider-app's payment_customer (spec/Storage/PaymentManagement.yaml),
+# minus the Stripe/saved-card columns, which have no driver-side flow.
+PaymentCustomer:
+  tableName: payment_customer
+
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
+
+  fields:
+    driverId: Id Person
+    serviceName: ServiceNames
+    paymentServiceName: ServiceName
+    customerId: Text
+    clientAuthToken: Maybe Text
+    clientAuthTokenExpiry: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    driverId: PrimaryKey
+    serviceName: PrimaryKey
+
+  queries:
+    findByDriverIdAndServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, serviceName]
+
+    updateClientAuthToken:
+      kvFunction: updateWithKV
+      params: [clientAuthToken, clientAuthTokenExpiry, customerId, paymentServiceName]
+      where:
+        and: [driverId, serviceName]

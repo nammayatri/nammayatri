@@ -49,6 +49,7 @@ import qualified API.Action.UI.MerchantDocument as MerchantDocument
 import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
+import qualified API.Action.UI.PaymentCustomer as PaymentCustomer
 import qualified API.Action.UI.PayoutDriverStatus as PayoutDriverStatus
 import qualified API.Action.UI.Penalty as Penalty
 import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEmergencyContact
@@ -206,6 +207,7 @@ type API =
            :<|> DriverTag.API
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
+           :<|> PaymentCustomer.API
        )
 
 handler :: FlowServer API
@@ -294,3 +296,4 @@ handler =
     :<|> DriverTag.handler
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler
+    :<|> PaymentCustomer.handler
