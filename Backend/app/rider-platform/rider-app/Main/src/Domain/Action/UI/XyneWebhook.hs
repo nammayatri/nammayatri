@@ -38,7 +38,7 @@ postXyneBearerWebhook mbAuth rawBody = do
 getXyneIssues :: Maybe UTCTime -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe Text -> Flow [XyneTypes.XyneInboundReq]
 getXyneIssues mbStartDate mbEndDate mbLimit mbOffset mbAuth = do
   bearerToken <- asks (.xyneWebhookBearerToken)
-  XyneShared.fetchXyneIssues bearerToken DDIM.dashboardIssueHandle Common.CUSTOMER mbStartDate mbEndDate mbLimit mbOffset mbAuth
+  XyneShared.fetchXyneIssues bearerToken lookupXyneCfg DDIM.dashboardIssueHandle Common.CUSTOMER mbStartDate mbEndDate mbLimit mbOffset mbAuth
 
 lookupXyneCfg ::
   KId.Id Common.Merchant ->
