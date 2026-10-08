@@ -244,6 +244,7 @@ data CreateIncentiveJourneyRes = CreateIncentiveJourneyRes {journeyId :: Kernel.
 data IncentiveJourneyDriverAssignmentItem = IncentiveJourneyDriverAssignmentItem
   { cohortId :: Kernel.Types.Id.Id Dashboard.Common.CohortDetails,
     cohortName :: Kernel.Prelude.Text,
+    cohortCategory :: Kernel.Prelude.Text,
     cohortJourneyMappingId :: Kernel.Types.Id.Id Dashboard.Common.CohortJourneyMapping,
     journeyId :: Kernel.Types.Id.Id Dashboard.Common.IncentiveJourney,
     journeyName :: Kernel.Prelude.Text,

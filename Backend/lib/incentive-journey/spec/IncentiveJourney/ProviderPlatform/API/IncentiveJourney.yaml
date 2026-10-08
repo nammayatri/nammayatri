@@ -345,6 +345,7 @@ types:
   IncentiveJourneyDriverAssignmentItem:
     - cohortId: Id CohortDetails
     - cohortName: Text
+    - cohortCategory: Text
     - cohortJourneyMappingId: Id CohortJourneyMapping
     - journeyId: Id IncentiveJourney
     - journeyName: Text
