@@ -928,6 +928,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 vehicleType = quote.vehicleType,
                 discountedTickets = quote.discountedTickets,
                 eventDiscountAmount = quote.eventDiscountAmount,
+                distance = if quote.vehicleType == Spec.SUBWAY then quote.fareDetails <&> (.distance) else Nothing,
                 integratedBppConfigId = quote.integratedBppConfigId,
                 stations = fromMaybe [] stations,
                 observingFailures = Just observingFailures,
