@@ -610,6 +610,7 @@ mkQuoteRes (quote, quoteCategories) = do
         vehicleType = quote.vehicleType,
         discountedTickets = quote.discountedTickets,
         eventDiscountAmount = quote.eventDiscountAmount,
+        distance = if quote.vehicleType == Spec.SUBWAY then quote.fareDetails <&> (.distance) else Nothing,
         integratedBppConfigId = quote.integratedBppConfigId,
         observingFailures = Nothing,
         offer = Nothing,
