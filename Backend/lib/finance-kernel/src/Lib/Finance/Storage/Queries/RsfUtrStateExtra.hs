@@ -2,10 +2,15 @@
 
 module Lib.Finance.Storage.Queries.RsfUtrStateExtra
   ( findAllByMerchantAndUtrs,
+    createMissing,
+    findPageByMerchantAndLastClaimedAtRange,
+    findAllByMerchantAndLastClaimedAtRange,
     upsertReported,
   )
 where
 
+import qualified Data.HashSet as HS
+import Data.List (nub, partition)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
@@ -27,6 +32,62 @@ findAllByMerchantAndUtrs merchantId utrs =
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq merchantId,
           Se.Is Beam.utr $ Se.In utrs
+        ]
+    ]
+
+-- Phase 2: one row per UTR the first time a receiver_recon names it (reportedStatus NULL), and
+-- lastClaimedAt bumped on every later receiver_recon that names it again, so the dashboard lists the
+-- UTR under the day of its latest claim. One batched read, inserts for the missing ids, one update
+-- for the rest.
+createMissing :: (BeamFlow m r) => Text -> Maybe Text -> UTCTime -> [Text] -> m ()
+createMissing merchantId bapId now ids = do
+  existing <- findAllByMerchantAndUtrs merchantId ids
+  let seen = HS.fromList (map (.utr) existing)
+      (known, fresh) = partition (`HS.member` seen) (nub ids)
+  unless (null known) $
+    updateWithKV
+      [Se.Set Beam.lastClaimedAt (Just now), Se.Set Beam.updatedAt now]
+      [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId, Se.Is Beam.utr $ Se.In known]]
+  traverse_
+    createWithKV
+    [ Domain.RsfUtrState
+        { merchantId = merchantId,
+          utr = utr,
+          bapId = bapId,
+          reportedStatus = Nothing,
+          reportedDiff = Nothing,
+          lastReportedMessageId = Nothing,
+          lastReportedAt = Nothing,
+          lastClaimedAt = Just now,
+          createdAt = now,
+          updatedAt = now
+        }
+      | utr <- fresh
+    ]
+
+-- Dashboard paging: UTRs whose latest claim falls in the range, oldest first, one DB page.
+findPageByMerchantAndLastClaimedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> Maybe Text -> Int -> Int -> m [Domain.RsfUtrState]
+findPageByMerchantAndLastClaimedAtRange merchantId from to mbBapId limit offset =
+  findAllWithOptionsKV
+    [ Se.And $
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
+        ]
+          <> [Se.Is Beam.bapId $ Se.Eq (Just b) | Just b <- [mbBapId]]
+    ]
+    (Se.Asc Beam.lastClaimedAt)
+    (Just limit)
+    (Just offset)
+
+-- Every UTR whose latest claim falls in the range (the day summary folds the whole day).
+findAllByMerchantAndLastClaimedAtRange :: (BeamFlow m r) => Text -> UTCTime -> UTCTime -> m [Domain.RsfUtrState]
+findAllByMerchantAndLastClaimedAtRange merchantId from to =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.lastClaimedAt $ Se.GreaterThanOrEq (Just from),
+          Se.Is Beam.lastClaimedAt $ Se.LessThan (Just to)
         ]
     ]
 
@@ -63,10 +124,12 @@ upsertReported merchantId utr reportedStatus reportedDiff messageId reportedAt =
         Domain.RsfUtrState
           { merchantId = merchantId,
             utr = utr,
+            bapId = Nothing,
             reportedStatus = Just reportedStatus,
             reportedDiff = Just reportedDiff,
             lastReportedMessageId = Just messageId,
             lastReportedAt = Just reportedAt,
+            lastClaimedAt = Just reportedAt,
             createdAt = reportedAt,
             updatedAt = reportedAt
           }

@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy, sap
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, signzy, sandbox_proxy, sap, workbench_bap
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -119,6 +119,7 @@ ROUTES = [
     ("/ebix",        ebix,        "ebix"),
     ("/mlpricing",   mlpricing,   "mlpricing"),
     ("/sap",         sap,         "sap"),
+    ("/workbench-bap", workbench_bap, "workbench_bap"),  # ONDC workbench BAP callbacks (OndcRideFlow)
     ("/ondc",        ondc,        "ondc"),
     ("/cac",         cac,         "cac"),
     ("/fcm",         fcm,         "fcm"),

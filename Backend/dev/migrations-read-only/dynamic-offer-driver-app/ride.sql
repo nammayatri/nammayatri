@@ -357,3 +357,9 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN route_deviated_at_ride_end bo
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN bap_settled boolean ;

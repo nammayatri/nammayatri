@@ -97,6 +97,7 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             emitLedgerEntries = True,
             fromLocationAddress = Nothing,
             issuedToName = Nothing,
+            initialSettlementStatus = Nothing,
             enableWalletGatedTierCheck = False, -- shared lib, no app-specific wallet-tier context here
             buyerCounterpartyId = Nothing
           }

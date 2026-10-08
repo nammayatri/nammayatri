@@ -3,18 +3,24 @@ imports:
   HighPrecMoney: Kernel.Types.Common
 
 # RSF receiver side: what we last told the collector about an order.
-# Written only in Phase 4, after the collector ACKs on_receiver_recon.
+# A row (reportedStatus NULL) is created the first time a receiver_recon claims the order (Phase 2);
+# Phase 4 stamps reportedStatus after the collector ACKs. The dashboard pages over this table.
+# lastClaimedAt is bumped every time a receiver_recon names the order, so the dashboard lists it
+# under the IST day of its latest claim; createdAt stays the day it was first seen. Nullable only because
+# NammaDSL refuses new NOT NULL columns: the ddl migration backfills it and every writer sets it.
 RsfOrderState:
   tableName: rsf_order_state
 
   fields:
     merchantId: Text
     orderId: Text
+    bapId: Maybe Text
     reportedStatus: Maybe Text
     reportedDiff: Maybe HighPrecMoney
     reportedCode: Maybe Text
     lastReportedMessageId: Maybe Text
     lastReportedAt: Maybe UTCTime
+    lastClaimedAt: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -25,8 +31,12 @@ RsfOrderState:
   sqlType:
     reportedDiff: numeric(30,2)
 
+  extraIndexes:
+    - columns: [merchantId, lastClaimedAt]
+
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

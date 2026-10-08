@@ -21,7 +21,7 @@ data ReconReport = ReconReport
   }
 
 -- Phase 4 (step 11): the inbound context echoed back with the new action and a fresh timestamp.
--- Every order answers with order_recon_status 02 (Finale); diff amount and message only when not 01.
+-- Every order answers with order_recon_status 02 (Finale) and a diff amount (0 when 01); message only when not 01.
 buildOnReceiverReconReq :: Spec.RSFContext -> UTCTime -> Text -> [ReconReport] -> Spec.OnReceiverReconReq
 buildOnReceiverReconReq inboundCtx now receiverAppId reports =
   Spec.OnReceiverReconReq
@@ -50,16 +50,13 @@ buildOnReceiverReconReq inboundCtx now receiverAppId reports =
           rsfOnOrderSettlementId = report.echo >>= (.settlementId),
           rsfOnOrderCounterpartyReconStatus = Just report.verdict.status,
           rsfOnOrderCounterpartyDiffAmount =
-            if report.verdict.diff == 0
-              then Nothing
-              else
-                Just
-                  Spec.RSFCounterpartyDiffAmount
-                    { rsfDiffAmountCurrency = Just "INR",
-                      rsfDiffAmountValue = Just (showAmount report.verdict.diff)
-                    },
+            Just
+              Spec.RSFCounterpartyDiffAmount
+                { rsfDiffAmountCurrency = Just "INR",
+                  rsfDiffAmountValue = Just (showAmount report.verdict.diff)
+                },
           rsfOnOrderMessage = report.verdict.code $> Spec.RSFDiffMessage report.verdict.name report.verdict.code,
-          rsfOnOrderSettlementReferenceNo = Just report.utr
+          rsfOnOrderSettlementReferenceNo = if T.null report.utr then Nothing else Just report.utr
         }
 
 -- "100" rather than "100.0" for whole amounts, as the collector sends them.

@@ -47,7 +47,7 @@ import Data.Aeson.Types (Options (..), defaultOptions, typeMismatch)
 import Data.Data (Data)
 import Data.List (lookup)
 import Data.Maybe (fromMaybe)
-import Data.Scientific (Scientific)
+import Data.Scientific (FPFormat (Fixed), Scientific, formatScientific, isInteger)
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -379,12 +379,15 @@ optionsRSFSettlementDetail =
       ]
 
 -- Collectors send payer_account_no as a bare JSON number (the ONDC samples do) or as a string.
+-- A number is kept as its full digits (no exponent); leading zeros are already lost on the wire.
 newtype RSFTextOrNumber = RSFTextOrNumber {getRSFTextOrNumber :: Text}
   deriving (Show, Eq, Generic, Data)
 
 instance FromJSON RSFTextOrNumber where
   parseJSON (String t) = pure (RSFTextOrNumber t)
-  parseJSON (Number n) = pure (RSFTextOrNumber (T.pack (show n)))
+  parseJSON (Number n)
+    | isInteger n = pure (RSFTextOrNumber (T.pack (formatScientific Fixed (Just 0) n)))
+    | otherwise = typeMismatch "integer account number" (Number n)
   parseJSON v = typeMismatch "String or Number" v
 
 instance ToJSON RSFTextOrNumber where
