@@ -564,11 +564,13 @@ data InvoiceConfig = InvoiceConfig
 
 data LimitsConfig = LimitsConfig
   { cashRideSyncBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    legalPolicyNotificationBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAddDriversCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxBulkSubscriptionDriverIds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxCashRideTargetIds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxDriverBusRouteMappingRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    maxVehiclesCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    maxVehiclesCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sendLegalPolicyUpdateEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

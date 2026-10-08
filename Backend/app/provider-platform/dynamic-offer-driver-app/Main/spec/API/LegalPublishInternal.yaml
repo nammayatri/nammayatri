@@ -1,0 +1,34 @@
+imports:
+  PolicyAndComplianceDocument: Domain.Types.PolicyAndComplianceDocument
+  PolicyType: Dashboard.Common
+  LegalEntityType: Dashboard.Common
+
+module: LegalPublishInternal
+
+types:
+  LegalPublishReq:
+    merchantShortId: Text
+    operatingCity: Text
+    policyType: PolicyType
+    entityType: LegalEntityType
+    version: Text
+    url: Text
+    effectiveDate: UTCTime
+    isMandatory: Bool
+    enabled: Bool
+    metadata: Maybe Text
+
+  LegalPublishResp:
+    id: Id PolicyAndComplianceDocument
+    created: Bool
+
+apis:
+  - POST:
+      endpoint: /internal/legal/publish
+      auth: NoAuth
+      headers:
+        x-internal-api-key: Text
+      request:
+        type: LegalPublishReq
+      response:
+        type: LegalPublishResp

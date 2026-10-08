@@ -27,6 +27,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MerchantServiceConfig (ServiceName)
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import Domain.Types.Person
+import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
@@ -79,6 +80,7 @@ data RiderJobType
   | ReconcileRewardInflight
   | BookingDepositExpiry
   | SilentReallocationExpiry
+  | SendLegalPolicyNotification
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -128,6 +130,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SReconcileRewardInflight jobData = AnyJobInfo <$> restoreJobInfo SReconcileRewardInflight jobData
   restoreAnyJobInfo SSilentReallocationExpiry jobData = AnyJobInfo <$> restoreJobInfo SSilentReallocationExpiry jobData
+  restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -500,3 +503,16 @@ data SilentReallocationExpiryJobData = SilentReallocationExpiryJobData
 instance JobInfoProcessor 'SilentReallocationExpiry
 
 type instance JobContent 'SilentReallocationExpiry = SilentReallocationExpiryJobData
+
+data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    policyDocId :: Id DPCD.PolicyAndComplianceDocument,
+    batchId :: Text,
+    pageOffset :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendLegalPolicyNotification
+
+type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData

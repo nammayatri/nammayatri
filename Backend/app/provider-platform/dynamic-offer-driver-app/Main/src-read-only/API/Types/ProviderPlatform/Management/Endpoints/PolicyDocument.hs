@@ -18,8 +18,10 @@ import Servant.Client
 
 data PolicyCreateReq = PolicyCreateReq
   { policyType :: Dashboard.Common.PolicyType,
+    entityType :: Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType,
     version :: Kernel.Prelude.Text,
     url :: Kernel.Prelude.Text,
+    effectiveDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isMandatory :: Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     metadata :: Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -30,15 +32,17 @@ data PolicyCreateReq = PolicyCreateReq
 instance Kernel.Types.HideSecrets.HideSecrets PolicyCreateReq where
   hideSecrets = Kernel.Prelude.identity
 
-data PolicyCreateResp = PolicyCreateResp {id :: Kernel.Prelude.Text, policyType :: Dashboard.Common.PolicyType, version :: Kernel.Prelude.Text}
+data PolicyCreateResp = PolicyCreateResp {id :: Kernel.Prelude.Text, policyType :: Dashboard.Common.PolicyType, entityType :: Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType, version :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PolicyDocumentMgmtResp = PolicyDocumentMgmtResp
   { id :: Kernel.Prelude.Text,
     policyType :: Dashboard.Common.PolicyType,
+    entityType :: Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType,
     version :: Kernel.Prelude.Text,
     url :: Kernel.Prelude.Text,
+    effectiveDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isMandatory :: Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Bool,
     metadata :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -54,6 +58,7 @@ data PolicyListMgmtResp = PolicyListMgmtResp {documents :: [PolicyDocumentMgmtRe
 
 data PolicyUpdateReq = PolicyUpdateReq
   { url :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    effectiveDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     isMandatory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     metadata :: Kernel.Prelude.Maybe Kernel.Prelude.Text
@@ -66,21 +71,21 @@ instance Kernel.Types.HideSecrets.HideSecrets PolicyUpdateReq where
 
 type API = ("policyDocument" :> (PostPolicyDocumentCreate :<|> PostPolicyDocumentUpdate :<|> GetPolicyDocumentList))
 
-type PostPolicyDocumentCreate = ("create" :> ReqBody ('[JSON]) PolicyCreateReq :> Post ('[JSON]) PolicyCreateResp)
+type PostPolicyDocumentCreate = ("create" :> ReqBody '[JSON] PolicyCreateReq :> Post '[JSON] PolicyCreateResp)
 
 type PostPolicyDocumentUpdate =
-  ( Capture "policyDocId" (Kernel.Types.Id.Id Dashboard.Common.PolicyAndComplianceDocument) :> "update" :> ReqBody ('[JSON]) PolicyUpdateReq
+  ( Capture "policyDocId" (Kernel.Types.Id.Id Dashboard.Common.PolicyAndComplianceDocument) :> "update" :> ReqBody '[JSON] PolicyUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetPolicyDocumentList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) PolicyListMgmtResp)
+type GetPolicyDocumentList = ("list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] PolicyListMgmtResp)
 
 data PolicyDocumentAPIs = PolicyDocumentAPIs
-  { postPolicyDocumentCreate :: (PolicyCreateReq -> EulerHS.Types.EulerClient PolicyCreateResp),
-    postPolicyDocumentUpdate :: (Kernel.Types.Id.Id Dashboard.Common.PolicyAndComplianceDocument -> PolicyUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getPolicyDocumentList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient PolicyListMgmtResp)
+  { postPolicyDocumentCreate :: PolicyCreateReq -> EulerHS.Types.EulerClient PolicyCreateResp,
+    postPolicyDocumentUpdate :: Kernel.Types.Id.Id Dashboard.Common.PolicyAndComplianceDocument -> PolicyUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getPolicyDocumentList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient PolicyListMgmtResp
   }
 
 mkPolicyDocumentAPIs :: (Client EulerHS.Types.EulerClient API -> PolicyDocumentAPIs)
@@ -95,4 +100,4 @@ data PolicyDocumentUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PolicyDocumentUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PolicyDocumentUserActionType])

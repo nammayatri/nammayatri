@@ -354,6 +354,7 @@ data LogicDomain
   | CANCELLATION_REASONS
   | RIDE_FOOTNOTES_DISPLAY
   | PASS_PURCHASE_ELIGIBILITY
+  | LEGAL_POLICY_UPDATE_EMAIL
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
@@ -396,7 +397,8 @@ instance Enumerable LogicDomain where
       BEHAVIOR_RESOLUTION,
       CANCELLATION_REASONS,
       RIDE_FOOTNOTES_DISPLAY,
-      PASS_PURCHASE_ELIGIBILITY
+      PASS_PURCHASE_ELIGIBILITY,
+      LEGAL_POLICY_UPDATE_EMAIL
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG (filter (not . isDriverOnlyConfigType) [minBound .. maxBound])
@@ -514,6 +516,7 @@ generateLogicDomainShowInstances =
     ++ [show (INVOICE_TEMPLATE InvoiceTypeGeneric)]
     ++ [show (INVOICE_TEMPLATE (InvoiceTypeSpecific it)) | it <- invoiceTypes]
     ++ [show PASS_PURCHASE_ELIGIBILITY]
+    ++ [show LEGAL_POLICY_UPDATE_EMAIL]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
@@ -567,6 +570,7 @@ instance Show LogicDomain where
   show RIDE_FOOTNOTES_DISPLAY = "RIDE-FOOTNOTES-DISPLAY"
   show (INVOICE_TEMPLATE scope) = "INVOICE-TEMPLATE_" ++ show scope
   show PASS_PURCHASE_ELIGIBILITY = "PASS-PURCHASE-ELIGIBILITY"
+  show LEGAL_POLICY_UPDATE_EMAIL = "LEGAL-POLICY-UPDATE-EMAIL"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -635,6 +639,8 @@ instance Read LogicDomain where
             [(RIDE_FOOTNOTES_DISPLAY, drop 1 rest)]
           "PASS-PURCHASE-ELIGIBILITY" ->
             [(PASS_PURCHASE_ELIGIBILITY, drop 1 rest)]
+          "LEGAL-POLICY-UPDATE-EMAIL" ->
+            [(LEGAL_POLICY_UPDATE_EMAIL, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of

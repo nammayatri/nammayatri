@@ -332,6 +332,7 @@ let RiderJobType =
       | ReconcileRewardInflight
       | BookingDepositExpiry
       | SilentReallocationExpiry
+      | SendLegalPolicyNotification
       >
 
 let jobRetryOnExceptionMapx =
@@ -384,6 +385,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.ReconcileRewardInflight, mapValue = False }
       , { mapKey = RiderJobType.BookingDepositExpiry, mapValue = True }
       , { mapKey = RiderJobType.SilentReallocationExpiry, mapValue = True }
+      , { mapKey = RiderJobType.SendLegalPolicyNotification, mapValue = True }
       ]
 
 let cacConfig =
