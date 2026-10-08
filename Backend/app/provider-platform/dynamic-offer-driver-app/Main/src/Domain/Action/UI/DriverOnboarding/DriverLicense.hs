@@ -319,7 +319,7 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
           VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL res.transactionId
           _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show res.requestor))
         VerificationIntTypes.SyncDLResp resp -> do
-          when (resp.requestor == VT.Morth) $ do
+          when (resp.requestor == VT.Morth || resp.requestor == VT.MorthV2) $ do
             let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
             morthEntity <- VC.mkMorthVerificationEntity person Nothing DTO.DriverLicense encryptedDL mbStatus dateOfIssue (Just driverDateOfBirth) mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
             MorthQuery.create morthEntity
