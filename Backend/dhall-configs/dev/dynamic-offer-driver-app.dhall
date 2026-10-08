@@ -350,6 +350,7 @@ let AllocatorJobType =
       | BulkUserCohortMappingUpload
       | FleetEngineRetry
       | DeleteUnreferencedFarePolicies
+      | SendLegalPolicyNotification
       >
 
 let jobRetryOnExceptionMapx =
@@ -446,6 +447,9 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.FleetEngineRetry, mapValue = True }
+      , { mapKey = AllocatorJobType.SendLegalPolicyNotification
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig =

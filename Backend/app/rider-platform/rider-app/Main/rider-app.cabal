@@ -574,6 +574,7 @@ library
       SharedLogic.IntegratedBPPConfig
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
+      SharedLogic.LegalPolicyEmail
       SharedLogic.LocationAddressEnrichment
       SharedLogic.LocationMapping
       SharedLogic.Merchant
@@ -631,6 +632,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer

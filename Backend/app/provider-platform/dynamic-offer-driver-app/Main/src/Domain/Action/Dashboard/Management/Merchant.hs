@@ -202,7 +202,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DashboardAlert as SDA
@@ -581,6 +581,13 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
               merchantOpCityId <- CQMOC.getMerchantOpCityId jobData.merchantOperatingCityId merchant Nothing
               createJobIn @_ @'RetryAutopayCollection (Just merchant.id) (Just merchantOpCityId) diffTimeS (jobData :: RetryAutopayCollectionJobData)
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.SendLegalPolicyNotificationTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe SendLegalPolicyNotificationJobData
+          case jobData' of
+            Just jobData -> do
+              createJobIn @_ @'SendLegalPolicyNotification (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: SendLegalPolicyNotificationJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"

@@ -974,6 +974,8 @@ TransporterConfig:
       maxAddDriversCsvRows: Maybe Int
       maxBulkSubscriptionDriverIds: Maybe Int
       cashRideSyncBatchSize: Maybe Int
+      legalPolicyNotificationBatchSize: Maybe Int
+      sendLegalPolicyUpdateEmail: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
