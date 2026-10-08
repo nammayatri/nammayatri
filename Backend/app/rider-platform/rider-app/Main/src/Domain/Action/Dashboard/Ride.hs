@@ -106,6 +106,7 @@ import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 
 mkCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
 mkCommonRideStatus rs = case rs of
@@ -376,15 +377,15 @@ rideInfo merchantId reqRideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let estimatedDuration :: Maybe Seconds = booking.estimatedDuration
-  estBreakup <- case booking.quoteId of
-    Just quoteId -> do
-      quote <- B.runInReplica $ QQuote.findById quoteId
-      case quote of
-        Just q -> do
-          estimateBreakup <- EstimateBP.getEstimateBreakupFromQuote q
-          return $ Just estimateBreakup
-        Nothing -> return Nothing
-    Nothing -> return Nothing
+  mbQuote <- case booking.quoteId of
+    Just quoteId -> B.runInReplica $ QQuote.findById quoteId
+    Nothing -> pure Nothing
+  estBreakup <- case mbQuote of
+    Just q -> Just <$> EstimateBP.getEstimateBreakupFromQuote q
+    Nothing -> pure Nothing
+  mbSearchRequest <- case mbQuote of
+    Just q -> B.runInReplica $ QSearchRequest.findById q.requestId
+    Nothing -> pure Nothing
   fareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
   unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
@@ -465,7 +466,11 @@ rideInfo merchantId reqRideId = do
         isSafetyPlus = ride.isSafetyPlus,
         isAirConditioned = fromMaybe False booking.isAirConditioned,
         rideSosId = mbSosId,
-        offerInfo = mbOfferInfo
+        offerInfo = mbOfferInfo,
+        originalTripLocation = booking.parentSearchRequestLocationInfo,
+        walkToPickupDistance = mbSearchRequest >>= (.betterPointWalkToPickup),
+        walkFromDropDistance = mbSearchRequest >>= (.betterPointWalkFromDrop),
+        rideDistanceSaved = mbSearchRequest >>= (.betterPointRideDistanceSaved)
       }
 
 getRideOfferInfo :: DB.Booking -> DRide.Ride -> DP.Person -> Flow (Maybe Common.RideOfferInfo)
