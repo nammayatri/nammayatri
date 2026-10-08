@@ -108,5 +108,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           ticketContext = Just Ticket.IssueTicket,
           xyneChannelId = Nothing,
           xyneTicketBody = Nothing,
-          xyneSenderName = Nothing
+          xyneSenderName = Nothing,
+          xyneExternalId = Nothing
         }
