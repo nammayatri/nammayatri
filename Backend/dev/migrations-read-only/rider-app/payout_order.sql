@@ -106,3 +106,9 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN transfer_amount double precision ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_order ADD COLUMN merchant_top_up_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order DROP CONSTRAINT payout_order_pkey;
+ALTER TABLE atlas_app.payout_order ADD PRIMARY KEY ( id);
