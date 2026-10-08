@@ -4,14 +4,17 @@
     python3 docs/check-split.py
 
 Every non-blank line of the README as it was (git, commit a1582735cd) must
-appear in the new README or a docs/ page, at least as often as before. Link
+appear in the README or a docs/ page AS THE SPLIT LEFT THEM (commit
+9610cab8a2), at least as often as before. Both sides come from git, so the
+proof stays reproducible however the pages are edited afterwards. Link
 targets are ignored -- moving a section changes where its links point, not what
 it says. Prints every line that is missing, and exits 1 if any is.
 """
-import collections, glob, os, re, subprocess, sys
+import collections, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OLD_COMMIT = 'a1582735cd'
+SPLIT_COMMIT = '9610cab8a2'
 # Lines deliberately reworded in the README's opening -- each named here, so
 # nothing else can hide behind them.
 REWORDED = {
@@ -29,8 +32,13 @@ old = subprocess.run(['git', 'show', f'{OLD_COMMIT}:Backend/dev/local-stack/READ
 keep = lambda ls: [norm(l) for l in ls if l.strip() and l.strip() != '---']
 want = collections.Counter(keep(old.split('\n')))
 have = collections.Counter()
-for f in [os.path.join(HERE, 'README.md')] + glob.glob(os.path.join(HERE, 'docs', '*.md')):
-    have.update(keep(open(f).read().split('\n')))
+listing = subprocess.run(['git', 'ls-tree', '--full-tree', '-r', '--name-only', SPLIT_COMMIT,
+                          'Backend/dev/local-stack/docs/', 'Backend/dev/local-stack/README.md'],
+                         cwd=HERE, capture_output=True, text=True, check=True).stdout.split()
+for f in [x for x in listing if x.endswith('.md')]:
+    text = subprocess.run(['git', 'show', f'{SPLIT_COMMIT}:{f}'], cwd=HERE,
+                          capture_output=True, text=True, check=True).stdout
+    have.update(keep(text.split('\n')))
 
 missing = [(l, n - have[l]) for l, n in want.items() if have[l] < n and l not in REWORDED]
 for l, n in missing:

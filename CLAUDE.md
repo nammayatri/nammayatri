@@ -299,8 +299,17 @@ the registry or the map.
 
 `./backup.sh` — nightly, encrypted, off to cloud storage. It deliberately skips
 the 155 MB place index (rebuildable) and deliberately includes the **passetto**
-database, without which restored phone numbers are unreadable ciphertext. See
-the header of that script.
+database, without which restored phone numbers are unreadable ciphertext, and
+(since 2026-10-08) the index's Arabic names by `place_id`. See the header of
+that script.
+
+**Putting one back is `./restore.sh`** (2026-10-08): `rehearse offsite:latest`
+proves a backup in a throwaway copy (rehearsed on the server: 71 s, 106 tables
+exact); `live F` restores the live stack, one transaction per part, after a
+safety backup. The Drive remote uses our own OAuth client (`drive.file`), so
+rclone sees only what it uploaded since then; older backups are in Drive's
+`movin-backups-old`, browser download only. `docs/backups.md`,
+`docs/runbooks/rollback.md`.
 
 ## Traps that have each cost an afternoon
 
@@ -421,3 +430,10 @@ the header of that script.
   `/directions/json`; a pipefail-killed poll; two columns of ours the live DB
   got by hand). Green since 2026-10-06. When it goes red, read the rider's and
   driver's logs in the uploaded artifact, never just the job's FAILED line.
+  Since 2026-10-08 it runs the live two-merchant layout (`setup.sh
+  two-countries` / `price-both`: a ride priced in each country, each by its own
+  merchant), weekly as well, because `algeria/osrm-routing` is now the DEFAULT
+  branch of both repositories. **It tests `ghcr.io/nammayatri-algeria/
+  ny-backend` — the image the server runs.** Until then it pulled
+  `ghcr.io/<repo owner>/...`, which on MohaGNPro is a six-week-old build; for
+  the same reason, run the backend BUILD workflow in the company repository.
