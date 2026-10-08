@@ -5,6 +5,7 @@ module Storage.Queries.CommonDriverOnboardingDocumentsExtra
     findAllForCommonDocuments,
     countForCommonDocuments,
     findLatestByDriverIdAndRcIdAndDocumentType,
+    createOrReplaceUnreviewed,
   )
 where
 
@@ -24,7 +25,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.CommonDriverOnboardingDocuments as Beam
-import Storage.Queries.CommonDriverOnboardingDocuments ()
+import Storage.Queries.CommonDriverOnboardingDocuments (create, updateByPrimaryKey)
 
 data CommonDocumentsFilter = CommonDocumentsFilter
   { merchantId :: Id.Id DM.Merchant,
@@ -129,3 +130,25 @@ findLatestByDriverIdAndRcIdAndDocumentType owner documentType =
       OwnedByDriverAndRc driverId rcId -> [driverClause driverId, rcClause rcId]
     driverClause driverId = Se.Is Beam.driverId $ Se.Eq (Just $ Id.getId driverId)
     rcClause rcId = Se.Is Beam.rcId $ Se.Eq (Just $ Id.getId rcId)
+
+-- | A text-only submission overwrites the owner's latest unreviewed row; anything else creates one.
+--   TDS certificates always create: each row is a separate batch.
+createOrReplaceUnreviewed ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DCommonDoc.CommonDriverOnboardingDocuments ->
+  m (Id.Id DCommonDoc.CommonDriverOnboardingDocuments)
+createOrReplaceUnreviewed newDoc = do
+  latest <-
+    if isTextField newDoc
+      then maybe (pure []) (\owner -> findLatestByDriverIdAndRcIdAndDocumentType owner newDoc.documentType) (mkCommonDocumentOwner newDoc.driverId newDoc.rcId)
+      else pure []
+  case latest of
+    doc : _ | isTextField doc && doc.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED && doc.rcId == newDoc.rcId -> do
+      updateByPrimaryKey doc {DCommonDoc.documentData = newDoc.documentData}
+      pure doc.id
+    _ -> do
+      create newDoc
+      pure newDoc.id
+  where
+    isTextField :: DCommonDoc.CommonDriverOnboardingDocuments -> Bool
+    isTextField doc = isNothing doc.documentImageId && doc.documentType /= DVC.TDSCertificate

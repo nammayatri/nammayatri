@@ -811,8 +811,8 @@ createCommonDocument merchantShortId opCity driverId Common.CommonDocumentCreate
                   createdAt = now,
                   updatedAt = now
                 }
-        QCommonDriverOnboardingDocuments.create documentEntry
-        pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast documentId}
+        savedId <- QCommonDriverOnboardingDocumentsExtra.createOrReplaceUnreviewed documentEntry
+        pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast savedId}
 
   res <-
     if documentType == Common.TDSCertificate
