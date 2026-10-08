@@ -151,7 +151,10 @@ services. This section is what is different here, and it is mostly about what
 
 The whole deployment is `Backend/dev/local-stack` — Docker Compose, one VPS,
 ~20 containers. Read that directory's README first; it is the real
-documentation for this fork. `stack/setup.sh` brings it up. **Everything the
+documentation for this fork, and since phase 7 (2026-10-08) a map: one page per
+subject in `local-stack/docs/`, the decisions in `docs/adr/`, the release and
+rollback runbooks in `docs/runbooks/`, and what is ours vs upstream's in
+`docs/ours-and-upstream.md`. `stack/setup.sh` brings it up. **Everything the
 server runs is under `local-stack/stack/`** (it mirrors `/opt/ny/local-stack`;
 the SQL is in `stack/db/`); probes are in `investigations/`, laptop tools in
 `ops/` (layout sorted 2026-10-06).
@@ -225,7 +228,7 @@ So when the question is "what does the server do", **ask the server**, not the
 source. It publishes its own route list at `/openapi`, and `strings` on the
 binaries in `bin/` settles anything else. Reading the tree instead has already
 produced one confident, wrong conclusion — that a driver app required deploying
-another service first. See the driver API section of the local-stack README.
+another service first. See `local-stack/docs/driver-api.md`.
 
 ## Country-specific data
 
@@ -238,8 +241,8 @@ also by an SMS the person **sends** to the office SIM (+213 783 07 91 61,
 provider — so the guard refuses a `+213` SMS start (`OPEN_COUNTRIES` /
 `SMS_COUNTRIES` in `docker-compose.yml`). The bot alerts when the office phone
 goes silent for 15 min. The whole design — one rider merchant, one driver merchant per
-country, and the search-lock race that design exposed — is in the local-stack
-README, section *Two countries*. Read it before touching merchants, tariffs,
+country, and the search-lock race that design exposed — is in
+`local-stack/docs/countries.md`, section *Two countries*. Read it before touching merchants, tariffs,
 the registry or the map.
 
 - **One driver merchant per country:** `favorit0-…` is Mauritania,
@@ -276,7 +279,7 @@ the registry or the map.
   `anonymise.sql`, and `movin-fleet` / `movin-drivers` are uninstalled. The
   scripts that made them (`seed-mauritanian-fleet.sh`, `fleet-service.sh`,
   `drivers-keepalive.sh`, `algerian-test-accounts.sh`) are marked RETIRED:
-  dev stacks only. local-stack README → *The test fleet*. **Exception since
+  dev stacks only. `local-stack/docs/countries.md` → *The test fleet*. **Exception since
   2026-10-03, while the launch is delayed:** a simulated fleet is back —
   twelve cars, six in Nouakchott and six in Algiers (`simulate-driver.py`,
   service `movin-fleet`), plus the ride test's two passengers (`+222 22778899`,
@@ -287,7 +290,7 @@ the registry or the map.
   rides. Without credit for a day and no day paid for, he may not work, and
   that is enforced at three layers: dispatch (`movinOnlyPaying`, key
   `movin:unpaid`), the auth guard (403 `WALLET_EMPTY`), and the app. Never
-  soften any of them into a preference. README → *No top-up, no work*.
+  soften any of them into a preference. `docs/wallet.md` → *No top-up, no work*.
 - **With more than one merchant in one process, audit every per-message
   lock.** The search handler's `whenWithLockRedis` on the message id silently
   dropped whichever merchant arrived second; patched to merchant + message.
@@ -382,14 +385,14 @@ the header of that script.
 - **iPhone push does not go through Firebase.** `fcm_url` points at
   `maps-shim/push-relay.js`, which forwards FCM tokens to Google and sends iOS
   tokens to APNs with the app's own words. The notification text for iOS is a
-  copy of the app's `notifications.ts` — change both. local-stack README →
-  *iPhones — the push relay*.
+  copy of the app's `notifications.ts` — change both. `local-stack/docs/push.md`
+  → *iPhones — the push relay*.
 - **The auth guard does more than sign-in now, and two of its jobs are
   invisible.** Since 2026-09-27 it reports every accepted driver → passenger
   rating to admin-api (`noteDriverRating`) — the backend keeps no row, so
   dropping that call silently empties the console's Notes — and it answers
-  Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). local-stack README →
-  *Ratings* and *WhatsApp*.
+  Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). `local-stack/docs/`
+  `riders.md` → *Ratings*, and `sign-in.md` → *WhatsApp*.
 - **Release the stack with `ops/deploy.sh`, never by copying files.** Since
   2026-10-06 git and the server are identical (phase 1: 94/94 files), the
   website's `admin-api` is its own overlay (`ops/deploy/compose.admin.yml` in
@@ -404,7 +407,8 @@ the header of that script.
   git. Since phase 4 the nightly backup's units are in `stack/systemd/` and the
   unit runs the shipped `/opt/ny/local-stack/backup.sh`, not `/root`'s copy.
   A release keeps each image it replaces as `<container>:previous`.
-  local-stack README → *Releasing*.
+  `local-stack/docs/releasing.md`, and step by step `docs/runbooks/release.md`
+  and `rollback.md` (rollback does NOT undo SQL).
 - **The shims are split by subject and guarded by golden files (phase 5).**
   `tests/maps-shim-routes.test.js` and `tests/auth-guard-routes.test.js` replay
   recorded requests and compare every answer, query and outgoing call. A change

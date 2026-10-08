@@ -79,6 +79,13 @@ and the driver never sees it. Compiling it is the same job as compiling the
 
 ## The five patches
 
+> **The first five, from August 2026.** `apply-patches.py` holds **54** on
+> 2026-10-08, across 26 files: both countries' dial codes and lengths, the gps
+> parser, the per-merchant search lock, the dispatch filter's Redis key, the car
+> on each offer and the passenger's choice of driver. The script's own comments
+> are the list; the table below is the original `+91` set, since widened to
+> `+222` and `+213` (see `Backend/dev/local-stack/docs/adr/0003-patches-at-build-time.md`).
+
 All hardcode `+91`. Applied by `apply-patches.py`, which fails loudly rather
 than skipping a site — a missed patch produces a binary that looks fine and
 still rejects `+213` at runtime.
@@ -249,7 +256,8 @@ build is the fallback — expect it to be slow.
 Free. Public fork, GitHub-hosted runner, no card. 4 vCPU / 16 GB, x86-64
 Linux — native, no emulation, unlike a local Apple Silicon build.
 
-Expect **2–5 hours** for a cold build of ~600 packages. GitHub caps a job at
+Measured: **44 minutes cold**, 33 on the company org, 8 warm (the estimate
+here used to be 2–5 hours, and was read as the cost of every backend change). GitHub caps a job at
 6 h; the workflow stops at 350 minutes so the cache save and artifact upload
 still run.
 

@@ -303,3 +303,33 @@ Seen on the way, not part of phase 6: rclone warns that the offsite remote
 uses rclone's shared Google Drive client id, **which Google is retiring during
 2026**. When it stops, the nightly backup's offsite copy fails (the local copy
 does not). Fix: create our own client id and reconnect the remote.
+
+## Phase 7 — documentation that stays true (2026-10-08)
+
+No behaviour, nothing released: `stack/` is untouched, so the server stays at
+`a1582735cd` and `ops/deploy.sh verify` is unchanged.
+
+- **The README, 4 127 lines → 236**: the opening, *Why this exists*, *Layout*,
+  a map of the docs, an index of every section that moved (code comments cite
+  them by name, so none had to change), and *Your first change*.
+- **15 pages in `docs/`, one per subject**, each section moved word for word
+  with its dates and measurements. `docs/check-split.py` proves it: all 3 263
+  non-blank lines of the old README are present (mutation-tested by deleting
+  one), two reworded on purpose and named in the script.
+- **Five decisions** in `docs/adr/`: shims not Haskell, config not code,
+  patches at build time, one merchant per country, the wallet.
+- **Two runbooks** in `docs/runbooks/`, from what `deploy.sh` and
+  `release-remote.py` do: release, and rollback — which says plainly that a
+  rollback does not undo SQL, that `.prev` is one level deep, and that putting
+  a backup **live** is neither scripted nor rehearsed (`./backup.sh restore`
+  only proves one into a scratch database). That is the open item it found.
+- **`docs/ours-and-upstream.md`**: ~200 of ~15 400 files are ours; the Haskell
+  here is not what runs (54 patches on `03a7531`, applied in CI).
+- **`tests/docs-links.test.py`** (in CI via `run-all.sh`): every link in the
+  README and `docs/` reaches a file and a heading; 126 links, mutation-tested.
+- `CLAUDE.md` points at the pages instead of README sections; the build
+  README's "five patches" and "2–5 hours" corrected (54; 44 minutes cold).
+
+**Phase 7 done when — met, as far as reading can show:** bring the stack up,
+change a shim, release it — README *Your first change* links each step to the
+page that carries it. Not yet proven by a newcomer actually doing it.
