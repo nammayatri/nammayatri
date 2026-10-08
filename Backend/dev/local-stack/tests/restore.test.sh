@@ -92,7 +92,7 @@ INSERT INTO atlas_app.geometry (region, geom) VALUES ('Mauritania', ST_Multi(ST_
 INSERT INTO atlas_driver_offer_bpp.person VALUES ('d1', '$E3', 'favorit0'), ('d2', NULL, 'algeria0');
 INSERT INTO atlas_registry.subscriber VALUES ('YATRI');
 INSERT INTO movin.wallet VALUES ('d1', 120);
-SELECT setval('movin.invoice_seq', 37);
+SELECT setval('movin.invoice_seq', 37) \\g /dev/null
 INSERT INTO geo.place (place_id, display_name, name_ar) VALUES
   ('n1', 'Nouakchott', 'نواكشوط'), ('n2', 'Rosso', 'روصو'), ('w3', 'Rue X', NULL);
 EOF
@@ -123,12 +123,17 @@ grep -q "a document opens" "$T/r.log" && pass "documents back and opening" || fa
 
 # A broken archive: the same backup with one bad statement in the data.
 mkdir "$T/bad"; gpg --batch --quiet --decrypt --passphrase-file "$T/pass" "$A" | tar -xz -C "$T/bad"
-printf 'INSERT INTO atlas_app.ride VALUES (%s);\n' "'broken'" >> "$T/bad/atlas.sql"   # wrong column count
+# Three values into a two-column table: an error, at the very end of the load.
+# (One value would NOT be an error -- the missing column is just NULL -- which
+# is how this test's first version "broke" an archive that loaded fine.)
+printf "INSERT INTO atlas_app.ride VALUES ('a', 'b', 'c');\n" >> "$T/bad/atlas.sql"
 tar -czf "$T/bad.tar.gz" -C "$T/bad" . && gpg --batch --yes --quiet --symmetric --passphrase-file "$T/pass" -o "$T/bad.gpg" "$T/bad.tar.gz"
 
 echo "== 3. a broken archive does not rehearse"
 "$STACK/restore.sh" rehearse "$T/bad.gpg" > "$T/r2.log" 2>&1 \
-  && fail "a broken archive rehearsed" || pass "refused: $(grep -o 'the data did not load[^;]*' "$T/r2.log" | head -1)"
+  && fail "a broken archive rehearsed" \
+  || { grep -q "the data did not load; the transaction was rolled back" "$T/r2.log" \
+         && pass "refused: the data did not load, rolled back" || { fail "refused for another reason"; tail -8 "$T/r2.log"; }; }
 [ -z "$(docker ps -aq -f name=movin-rehearsal)" ] && pass "and left nothing behind" || fail "containers left"
 
 export LIVE_PG="$P-pg" LIVE_PASSETTO_DB="$P-passetto-db" LIVE_PASSETTO="$P-passetto" \
@@ -148,7 +153,8 @@ sql -q -c "CREATE VIEW geo.riders AS SELECT id FROM atlas_app.person"
 sql -q -c "DROP VIEW geo.riders"
 
 echo "== 5. a live restore of a broken archive changes nothing"
-SKIP_SAFETY_BACKUP=1 "$STACK/restore.sh" live "$T/bad.gpg" > "$T/l1.log" 2>&1 && fail "it went ahead" || pass "refused"
+SKIP_SAFETY_BACKUP=1 "$STACK/restore.sh" live "$T/bad.gpg" > "$T/l1.log" 2>&1 && fail "it went ahead" \
+  || { grep -q "the data did not load" "$T/l1.log" && pass "refused: the data did not load" || { fail "refused for another reason"; tail -8 "$T/l1.log"; }; }
 [ "$(sql -c "SELECT count(*) FROM atlas_app.person")" = "$before" ] \
   && [ "$(sql -c "SELECT count(*) FROM atlas_app.ride")" = 0 ] && pass "the live data is exactly as it was" || fail "the failed restore changed the data"
 
