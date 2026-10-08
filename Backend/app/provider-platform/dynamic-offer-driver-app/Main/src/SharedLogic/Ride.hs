@@ -120,7 +120,7 @@ initializeRide ::
   -- ops or fleet-owner dashboard assignment). Nothing at every ordinary self-accept call site.
   Maybe DRide.ScheduledAcceptanceMode ->
   Flow (DRide.Ride, SRD.RideDetails, DVeh.Vehicle)
-initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned mbForcedScheduledAcceptanceMode = do
+initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId monitorPickupProgress bookingPreAssigned mbForcedScheduledAcceptanceMode = releaseHoldsOnInitializeRideFailure booking driver.id mFleetOwnerId $ do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
@@ -322,11 +322,41 @@ releaseLien ::
   DBooking.Booking ->
   DRide.Ride ->
   m ()
-releaseLien booking ride = do
+releaseLien booking ride =
+  releaseBookingHolds booking ride.driverId ride.fleetOwnerId "Ride cancelled" ("releaseLien failed for rideId " <> getId ride.id)
+
+releaseHoldsOnInitializeRideFailure :: DBooking.Booking -> Id Person -> Maybe (Id Person) -> Flow a -> Flow a
+releaseHoldsOnInitializeRideFailure booking driverId mbFleetOwnerId action = do
+  result <- try action
+  case result of
+    Right res -> pure res
+    Left (e :: SomeException) -> do
+      let failureLogTag = "Failed to release holds for bookingId " <> booking.id.getId
+      cleanup <- try $ do
+        mbRide <- QRide.findActiveByRBId booking.id
+        when (isNothing mbRide) $
+          releaseBookingHolds booking driverId mbFleetOwnerId "Ride initialization failed" failureLogTag
+      case cleanup of
+        Left (cleanupErr :: SomeException) -> logTagError failureLogTag (show cleanupErr)
+        Right () -> pure ()
+      throwM e
+
+releaseBookingHolds ::
+  ( Finance.HasActorInfo m r,
+    BeamFlow m r,
+    MonadCatch m
+  ) =>
+  DBooking.Booking ->
+  Id Person ->
+  Maybe (Id Person) ->
+  Text ->
+  Text ->
+  m ()
+releaseBookingHolds booking driverId mbFleetOwnerId reason failureLogTag = do
   result <- try $ do
-    let (counterpartyType, ownerId) = case ride.fleetOwnerId of
+    let (counterpartyType, ownerId) = case mbFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
-          Nothing -> (counterpartyDriver, ride.driverId.getId)
+          Nothing -> (counterpartyDriver, driverId.getId)
     mbMerchant <- CQM.findById booking.providerId
     mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
     -- Holds are created for prepaid rides AND for wallet cash-ride deductions
@@ -344,13 +374,13 @@ releaseLien booking ride = do
           counterpartyType
           ownerId
           booking.id.getId
-          "Ride cancelled"
+          reason
           mbVehicleCategory
       Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ownerId) 10 10 $
-        voidWalletHoldByReference counterpartyType ownerId booking.id.getId "Ride cancelled"
+        voidWalletHoldByReference counterpartyType ownerId booking.id.getId reason
   case result of
     Left (e :: SomeException) ->
-      logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)
+      logTagError failureLogTag (show e)
     Right () -> pure ()
 
 makeSubscriptionRunningBalanceLockKey :: Text -> Text
