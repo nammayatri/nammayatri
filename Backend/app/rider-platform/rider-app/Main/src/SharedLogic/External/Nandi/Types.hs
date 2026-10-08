@@ -987,7 +987,6 @@ data RouteInfoNandi = RouteInfoNandi
     endPoint :: Kernel.External.Maps.Types.LatLong,
     stopCount :: Maybe Int,
     serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType,
-    color :: Maybe Text,
     encodedPolyline :: Maybe Text,
     routeTag :: Maybe Text
   }
