@@ -104,12 +104,17 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideFareAmount :: C f HighPrecMoney,
     rideFleetOwnerId :: C f (Maybe Text),
     rideDriverId :: C f Text,
+    rideBookingId :: C f (Maybe Text),
+    rideSosId :: C f (Maybe Text),
+    rideDriverDeviatedFromRoute :: C f (Maybe Bool),
+    rideSafetyAlertTriggered :: C f (Maybe Bool),
     rideStatus :: C f RideStatus,
     rideTripStartTime :: C f (Maybe UTCTime),
     rideTripEndTime :: C f (Maybe UTCTime),
     rideDriverArrivalTime :: C f (Maybe UTCTime),
     ridePayoutRequestId :: C f (Maybe Text),
     bookingPaymentInstrument :: C f (Maybe DMPM.PaymentInstrument),
+    bookingPaymentMethodId :: C f (Maybe Text),
     fleetName :: C f (Maybe Text),
     fleetMobileNumberEncrypted :: C f (Maybe Text),
     fleetMobileNumberHash :: C f (Maybe Text),
@@ -185,12 +190,17 @@ bppTransactionJoinTTable =
       rideFareAmount = "ride_fare_amount",
       rideFleetOwnerId = "ride_fleet_owner_id",
       rideDriverId = "ride_driver_id",
+      rideBookingId = "ride_booking_id",
+      rideSosId = "ride_sos_id",
+      rideDriverDeviatedFromRoute = "ride_driver_deviated_from_route",
+      rideSafetyAlertTriggered = "ride_safety_alert_triggered",
       rideTripStartTime = "ride_trip_start_time",
       rideTripEndTime = "ride_trip_end_time",
       rideDriverArrivalTime = "ride_driver_arrival_time",
       rideStatus = "ride_status",
       ridePayoutRequestId = "ride_payout_request_id",
       bookingPaymentInstrument = "booking_payment_instrument",
+      bookingPaymentMethodId = "booking_payment_method_id",
       fleetName = "fleet_name",
       fleetMobileNumberEncrypted = "fleet_mobile_number",
       fleetMobileNumberHash = "fleet_mobile_number_hash",
@@ -247,8 +257,10 @@ findAllRideItems ::
   Maybe Text ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe [Text] ->
+  Maybe Bool ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount mbPaymentMethodIds mbHasSos = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -274,6 +286,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
                     CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
                     CH.&&. CH.whenJust_ mbPaymentMode (`mkPaymentModeCond` bppTransaction)
+                    CH.&&. CH.whenJust_ mbPaymentMethodIds (\ids -> bppTransaction.bookingPaymentMethodId `CH.in_` map Just ids)
+                    CH.&&. CH.whenJust_ mbHasSos (\hasSos -> if hasSos then CH.isNotNull bppTransaction.rideSosId else CH.isNull bppTransaction.rideSosId)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
   return $ fmap mkRideItem bppTransaction
@@ -386,7 +400,12 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           vehicleManufacturer = bppTxn.vehicleManufacturer,
           vehicleModel = bppTxn.vehicleModel,
           rideTags = Yudhishthira.tagsNameValueFromTType bppTxn.rideTags,
-          financeInvoiceId = Nothing -- clickhouse transaction join has no booking invoice linkage
+          financeInvoiceId = Nothing, -- clickhouse transaction join has no booking invoice linkage
+          rideBookingId = Id <$> bppTxn.rideBookingId,
+          rideDriverId = Just $ Id bppTxn.rideDriverId,
+          rideSosId = Id <$> bppTxn.rideSosId,
+          rideDriverDeviatedFromRoute = bppTxn.rideDriverDeviatedFromRoute,
+          rideSafetyAlertTriggered = bppTxn.rideSafetyAlertTriggered
         }
 
 findAllRideItemsV2 ::
