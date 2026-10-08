@@ -9,7 +9,9 @@ import qualified Kernel.Types.Common
 import qualified Tools.Beam.UtilsTH
 
 data RsfOrderState = RsfOrderState
-  { createdAt :: Kernel.Prelude.UTCTime,
+  { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    lastClaimedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastReportedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastReportedMessageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,

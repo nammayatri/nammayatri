@@ -1056,6 +1056,7 @@ buildRideAdjustmentCtx transporterConfig booking ride = do
     Nothing
     transporterConfig
     True
+    Nothing
 
 postRideRelatedAdjustment :: PostLedgerAdjustment
 postRideRelatedAdjustment transporterConfig _checkerId _adminCheckerName adjustmentRequest = do
@@ -1255,6 +1256,7 @@ mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person =
           fromLocationAddress = Nothing,
           issuedToName = Nothing,
           enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+          initialSettlementStatus = Nothing,
           buyerCounterpartyId = Nothing
         }
 

@@ -351,6 +351,7 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       emitLedgerEntries = True,
       fromLocationAddress = fromLocationAddress,
       issuedToName = Nothing,
+      initialSettlementStatus = Nothing,
       enableWalletGatedTierCheck = False, -- driver-app-only concept; rider-app never reads this field
       buyerCounterpartyId = Nothing
     }

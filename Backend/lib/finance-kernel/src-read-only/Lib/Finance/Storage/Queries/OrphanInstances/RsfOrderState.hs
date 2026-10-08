@@ -16,7 +16,9 @@ instance FromTType' Beam.RsfOrderState Lib.Finance.Domain.Types.RsfOrderState.Rs
     pure $
       Just
         Lib.Finance.Domain.Types.RsfOrderState.RsfOrderState
-          { createdAt = createdAt,
+          { bapId = bapId,
+            createdAt = createdAt,
+            lastClaimedAt = lastClaimedAt,
             lastReportedAt = lastReportedAt,
             lastReportedMessageId = lastReportedMessageId,
             merchantId = merchantId,
@@ -30,7 +32,9 @@ instance FromTType' Beam.RsfOrderState Lib.Finance.Domain.Types.RsfOrderState.Rs
 instance ToTType' Beam.RsfOrderState Lib.Finance.Domain.Types.RsfOrderState.RsfOrderState where
   toTType' (Lib.Finance.Domain.Types.RsfOrderState.RsfOrderState {..}) = do
     Beam.RsfOrderStateT
-      { Beam.createdAt = createdAt,
+      { Beam.bapId = bapId,
+        Beam.createdAt = createdAt,
+        Beam.lastClaimedAt = lastClaimedAt,
         Beam.lastReportedAt = lastReportedAt,
         Beam.lastReportedMessageId = lastReportedMessageId,
         Beam.merchantId = merchantId,
