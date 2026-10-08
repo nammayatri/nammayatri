@@ -86,6 +86,7 @@ module Domain.Action.Dashboard.Management.Merchant
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     getMerchantCityList,
+    getMerchantCityListByMerchant,
   )
 where
 
@@ -5588,7 +5589,14 @@ getMerchantCityList ::
   ShortId DM.Merchant ->
   Context.City ->
   Flow Common.CityListResp
-getMerchantCityList merchantShortId _opCity = do
+getMerchantCityList merchantShortId _opCity = getMerchantCityListByMerchant merchantShortId
+
+-- | Every operating city of the merchant. Served without a city segment too:
+-- the dashboard's city picker calls it before any city is chosen.
+getMerchantCityListByMerchant ::
+  ShortId DM.Merchant ->
+  Flow Common.CityListResp
+getMerchantCityListByMerchant merchantShortId = do
   merchant <- findMerchantByShortId merchantShortId
   operatingCities <- CQMOC.findAllByMerchantId merchant.id
   pure $ Common.CityListResp {Common.supportedCities = map (.city) operatingCities}
