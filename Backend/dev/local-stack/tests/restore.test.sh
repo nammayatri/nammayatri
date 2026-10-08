@@ -59,10 +59,13 @@ for i in $(seq 1 120); do
     && docker exec "$P-passetto-db" psql -U passetto -d passetto -Atc 'SELECT count(*) FROM "Passetto"."Keys"' 2>/dev/null | grep -q 3 && break
   sleep 2
 done
-docker run -d --name "$P-passetto" --network "$P" -p 127.0.0.1::8012 \
+# A fixed port, as on the server (8021): a random one changes when restore.sh
+# restarts passetto, and the check would talk to nobody.
+PPORT=18712
+docker run -d --name "$P-passetto" --network "$P" -p 127.0.0.1:$PPORT:8012 \
   -e PASSETTO_PG_BACKEND_CONN_STRING="postgresql://passetto:passetto@$P-passetto-db:5432/passetto" \
   juspayin/passetto-hs:0b18530 demo >/dev/null
-PURL="http://$(docker port "$P-passetto" 8012 | head -1)"
+PURL="http://127.0.0.1:$PPORT"
 for i in $(seq 1 60); do pt encrypt '{"value":"S\"0\""}' | grep -q value && break; sleep 2; done
 enc() { pt encrypt "{\"value\":\"S\\\"$1\\\"\"}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["value"])'; }
 E1=$(enc 22778899); E2=$(enc 0555000199); E3=$(enc 22100001)

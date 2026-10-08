@@ -380,7 +380,14 @@ live() {
     docker exec "$LIVE_REDIS" redis-cli FLUSHALL >/dev/null && ok "$LIVE_REDIS flushed"
   fi
   start_again
-  sleep 5
+  # passetto reads its keys at start; checking before it answers would report
+  # every number unreadable. Any HTTP answer means it is up.
+  local i
+  for i in $(seq 1 60); do
+    [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H 'Content-Type: application/json' \
+         -d '{}' "$LIVE_PASSETTO_URL/decrypt")" != 000 ] && break
+    sleep 2
+  done
   verify "$LIVE_PG" "$LIVE_DB" live_decrypt "$LIVE_DOCS_VOLUME" "$LIVE_CODES"
   [ "$FAIL" = 0 ] || die "restored, but a check failed -- see BAD above"
   ok "restored and checked in $((SECONDS - started)) s"

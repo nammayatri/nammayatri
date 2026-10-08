@@ -25,7 +25,7 @@ run() {
   else
     failed+=("$name")
     printf '  FAIL  %-40s %3ss\n' "$name" "$((SECONDS - started))"
-    printf '%s\n' "$out" | tail -30 | sed 's/^/        /'
+    printf "%s\n" "$out" | tail -60 | sed 's/^/        /'
   fi
 }
 
