@@ -80,7 +80,7 @@ and the driver never sees it. Compiling it is the same job as compiling the
 ## The five patches
 
 > **The first five, from August 2026.** `apply-patches.py` holds **54** on
-> 2026-10-08, across 26 files: both countries' dial codes and lengths, the gps
+> 2026-10-08, across 29 files: both countries' dial codes and lengths, the gps
 > parser, the per-merchant search lock, the dispatch filter's Redis key, the car
 > on each offer and the passenger's choice of driver. The script's own comments
 > are the list; the table below is the original `+91` set, since widened to

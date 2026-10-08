@@ -19,7 +19,7 @@ negative longitude — Nouakchott is at −15.9).
 
 Do not edit the Haskell in this tree. The CI workflow checks out upstream at
 `03a7531`, applies our patches with `apply-patches.py`, builds, and publishes
-an image. On 2026-10-08 the script holds **54 patches across 26 files**: both
+an image. On 2026-10-08 the script holds **54 patches across 29 files**: both
 countries' dial codes and lengths, the gps parser, the per-merchant search
 lock, the dispatch filter's Redis key, the car on each offer, and the
 passenger's choice of driver. The script is idempotent and **fails loudly** if
