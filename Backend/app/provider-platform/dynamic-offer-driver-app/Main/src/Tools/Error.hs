@@ -2381,3 +2381,29 @@ instance IsHTTPError LedgerAdjustmentError where
     LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
 
 instance IsAPIError LedgerAdjustmentError
+
+data RideFeedbackError
+  = RideFeedbackConfigNotFound Text
+  | RideFeedbackConfigAlreadyExists Text
+  | RideFeedbackInvalidConfig [Text]
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideFeedbackError
+
+instance IsBaseError RideFeedbackError where
+  toMessage = \case
+    RideFeedbackConfigNotFound configId -> Just $ "Ride feedback question " <> configId <> " not found in this city."
+    RideFeedbackConfigAlreadyExists questionKey -> Just $ "A ride feedback question with key " <> questionKey <> " already exists in this city."
+    RideFeedbackInvalidConfig errors -> Just $ "Invalid ride feedback question: " <> T.intercalate "; " errors
+
+instance IsHTTPError RideFeedbackError where
+  toErrorCode = \case
+    RideFeedbackConfigNotFound _ -> "RIDE_FEEDBACK_CONFIG_NOT_FOUND"
+    RideFeedbackConfigAlreadyExists _ -> "RIDE_FEEDBACK_CONFIG_ALREADY_EXISTS"
+    RideFeedbackInvalidConfig _ -> "RIDE_FEEDBACK_INVALID_CONFIG"
+  toHttpCode = \case
+    RideFeedbackConfigNotFound _ -> E404
+    RideFeedbackConfigAlreadyExists _ -> E400
+    RideFeedbackInvalidConfig _ -> E400
+
+instance IsAPIError RideFeedbackError

@@ -120,6 +120,7 @@ data SConfigType (cfg :: ConfigType) where
   SIssueConfigDriver :: SConfigType 'IssueConfigDriver
   SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
   SDocumentVerificationStagesConfig :: SConfigType 'DocumentVerificationStagesConfig
+  SRideFeedbackConfig :: SConfigType 'RideFeedbackConfig
 
 deriving instance Show (SConfigType cfg)
 

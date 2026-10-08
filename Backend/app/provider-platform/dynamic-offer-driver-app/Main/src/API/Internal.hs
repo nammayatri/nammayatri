@@ -38,6 +38,7 @@ import qualified API.Internal.RefundLedger as RefundLedger
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.RideFeedback as RideFeedback
 import qualified API.Internal.RiderConsent as RiderConsent
 import qualified API.Internal.SearchTryPoolStats as SearchTryPoolStats
 import qualified API.Internal.SendEmailOTP as SendEmailOTP
@@ -84,6 +85,7 @@ type API =
            :<|> ProdLoopStatus.API
            :<|> DriverSourceDeparted.API
            :<|> ViolationDetection.API
+           :<|> RideFeedback.API
            :<|> Estimate.API
            :<|> FleetBookingInformation.API
            :<|> FleetVehiclesAssociation.API
@@ -137,6 +139,7 @@ handler env =
     :<|> ProdLoopStatus.handler
     :<|> DriverSourceDeparted.handler
     :<|> ViolationDetection.handler
+    :<|> RideFeedback.handler
     :<|> Estimate.handler
     :<|> FleetBookingInformation.handler
     :<|> FleetVehiclesAssociation.handler

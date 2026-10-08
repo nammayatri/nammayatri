@@ -18,6 +18,7 @@ import qualified API.Types.RiderPlatform.Management.Payout
 import qualified API.Types.RiderPlatform.Management.PolicyDocument
 import qualified API.Types.RiderPlatform.Management.Rewards
 import qualified API.Types.RiderPlatform.Management.Ride
+import qualified API.Types.RiderPlatform.Management.RideFeedback
 import qualified API.Types.RiderPlatform.Management.SearchTry
 import qualified API.Types.RiderPlatform.Management.Sos
 import qualified API.Types.RiderPlatform.Management.SosMedia
@@ -45,6 +46,7 @@ data ManagementUserActionType
   | POLICY_DOCUMENT API.Types.RiderPlatform.Management.PolicyDocument.PolicyDocumentUserActionType
   | REWARDS API.Types.RiderPlatform.Management.Rewards.RewardsUserActionType
   | RIDE API.Types.RiderPlatform.Management.Ride.RideUserActionType
+  | RIDE_FEEDBACK API.Types.RiderPlatform.Management.RideFeedback.RideFeedbackUserActionType
   | SEARCH_TRY API.Types.RiderPlatform.Management.SearchTry.SearchTryUserActionType
   | SOS API.Types.RiderPlatform.Management.Sos.SosUserActionType
   | SOS_MEDIA API.Types.RiderPlatform.Management.SosMedia.SosMediaUserActionType
@@ -69,6 +71,7 @@ instance Text.Show.Show ManagementUserActionType where
     POLICY_DOCUMENT e -> "POLICY_DOCUMENT/" <> show e
     REWARDS e -> "REWARDS/" <> show e
     RIDE e -> "RIDE/" <> show e
+    RIDE_FEEDBACK e -> "RIDE_FEEDBACK/" <> show e
     SEARCH_TRY e -> "SEARCH_TRY/" <> show e
     SOS e -> "SOS/" <> show e
     SOS_MEDIA e -> "SOS_MEDIA/" <> show e
@@ -203,6 +206,15 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( RIDE_FEEDBACK v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "RIDE_FEEDBACK/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( SEARCH_TRY v1,
                    r2
                  )
@@ -244,4 +256,4 @@ instance Text.Read.Read ManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
+$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])

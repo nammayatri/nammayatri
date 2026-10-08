@@ -15,6 +15,7 @@
 module SharedLogic.CallBPPInternal where
 
 import API.Types.UI.FavouriteDriver
+import qualified API.Types.UI.RideFeedback as RideFeedbackAPI
 import qualified Dashboard.Common.Merchant as DM
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -33,6 +34,7 @@ import Kernel.External.Encryption (DbHash)
 import Kernel.External.Maps.Types
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.ServantMultipart
 import Kernel.Types.APISuccess
@@ -43,6 +45,7 @@ import qualified Kernel.Utils.Servant.Client as EC
 import Lib.Queries.SpecialLocation (SpecialLocationFull)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
+import qualified SharedLogic.RideFeedback.Types as RideFeedback
 import Tools.Metrics (CoreMetrics)
 
 -- import Kernel.Types.Common
@@ -1544,3 +1547,85 @@ getVehicleServiceTiers merchant city = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getVehicleServiceTiersClient merchantId city (Just apiKey)) "GetVehicleServiceTiers" getVehicleServiceTiersApi
+
+-- During-ride feedback (driver platform's /internal/ride/{rideId}/feedback). Questions, answers and targeting
+-- live in driver-app; rider-app forwards the rider app's calls and runs the actions an answer triggers,
+-- reporting each result back. Arguments are the merchant's driver-offer API key and URL, then the
+-- driver platform's ride id.
+
+type RideFeedbackAPI =
+  "internal"
+    :> "ride"
+    :> Capture "rideId" Text
+    :> "feedback"
+    :> ( "questions"
+           :> Header "token" Text
+           :> QueryParam "language" Language
+           :> Get '[JSON] RideFeedback.QuestionsRes
+           :<|> Header "token" Text
+             :> QueryParam "language" Language
+             :> ReqBody '[JSON] RideFeedbackAPI.SubmitRideFeedbackReq
+             :> Post '[JSON] RideFeedback.SubmitFeedbackRes
+           :<|> Header "token" Text
+             :> Get '[JSON] RideFeedbackAPI.RideFeedbackSubmittedRes
+           :<|> "response"
+             :> Capture "responseId" Text
+             :> ( "actionResults"
+                    :> Header "token" Text
+                    :> ReqBody '[JSON] RideFeedback.ReportActionResultsReq
+                    :> Post '[JSON] APISuccess
+                    :<|> "retryableActions"
+                      :> Header "token" Text
+                      :> Get '[JSON] RideFeedback.RetryableActionsRes
+                )
+       )
+
+rideFeedbackApi :: Proxy RideFeedbackAPI
+rideFeedbackApi = Proxy
+
+rideFeedbackQuestionsClient :: Text -> Maybe Text -> Maybe Language -> EulerClient RideFeedback.QuestionsRes
+rideFeedbackSubmitClient :: Text -> Maybe Text -> Maybe Language -> RideFeedbackAPI.SubmitRideFeedbackReq -> EulerClient RideFeedback.SubmitFeedbackRes
+rideFeedbackSubmittedClient :: Text -> Maybe Text -> EulerClient RideFeedbackAPI.RideFeedbackSubmittedRes
+rideFeedbackActionResultsClient :: Text -> Text -> Maybe Text -> RideFeedback.ReportActionResultsReq -> EulerClient APISuccess
+rideFeedbackRetryableActionsClient :: Text -> Text -> Maybe Text -> EulerClient RideFeedback.RetryableActionsRes
+rideFeedbackQuestionsClient rideId = let (q :<|> _ :<|> _ :<|> _) = client rideFeedbackApi rideId in q
+
+rideFeedbackSubmitClient rideId = let (_ :<|> s :<|> _ :<|> _) = client rideFeedbackApi rideId in s
+
+rideFeedbackSubmittedClient rideId = let (_ :<|> _ :<|> g :<|> _) = client rideFeedbackApi rideId in g
+
+rideFeedbackActionResultsClient rideId responseId = let (_ :<|> _ :<|> _ :<|> r) = client rideFeedbackApi rideId in let (a :<|> _) = r responseId in a
+
+rideFeedbackRetryableActionsClient rideId responseId = let (_ :<|> _ :<|> _ :<|> r) = client rideFeedbackApi rideId in let (_ :<|> b) = r responseId in b
+
+type RideFeedbackCallFlow m r =
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  )
+
+callRideFeedbackApi :: (RideFeedbackCallFlow m r, FromJSON res, ToJSON res) => BaseUrl -> Text -> EulerClient res -> m res
+callRideFeedbackApi internalUrl name call = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl call name rideFeedbackApi
+
+rideFeedbackQuestions :: RideFeedbackCallFlow m r => Text -> BaseUrl -> Text -> Maybe Language -> m RideFeedback.QuestionsRes
+rideFeedbackQuestions apiKey internalUrl bppRideId language =
+  callRideFeedbackApi internalUrl "RideFeedbackQuestions" (rideFeedbackQuestionsClient bppRideId (Just apiKey) language)
+
+rideFeedbackSubmit :: RideFeedbackCallFlow m r => Text -> BaseUrl -> Text -> Maybe Language -> RideFeedbackAPI.SubmitRideFeedbackReq -> m RideFeedback.SubmitFeedbackRes
+rideFeedbackSubmit apiKey internalUrl bppRideId language req =
+  callRideFeedbackApi internalUrl "RideFeedbackSubmit" (rideFeedbackSubmitClient bppRideId (Just apiKey) language req)
+
+rideFeedbackSubmitted :: RideFeedbackCallFlow m r => Text -> BaseUrl -> Text -> m RideFeedbackAPI.RideFeedbackSubmittedRes
+rideFeedbackSubmitted apiKey internalUrl bppRideId =
+  callRideFeedbackApi internalUrl "RideFeedbackSubmitted" (rideFeedbackSubmittedClient bppRideId (Just apiKey))
+
+rideFeedbackActionResults :: RideFeedbackCallFlow m r => Text -> BaseUrl -> Text -> Text -> [RideFeedback.RideFeedbackActionResult] -> m APISuccess
+rideFeedbackActionResults apiKey internalUrl bppRideId responseId results =
+  callRideFeedbackApi internalUrl "RideFeedbackActionResults" (rideFeedbackActionResultsClient bppRideId responseId (Just apiKey) RideFeedback.ReportActionResultsReq {RideFeedback.results})
+
+rideFeedbackRetryableActions :: RideFeedbackCallFlow m r => Text -> BaseUrl -> Text -> Text -> m RideFeedback.RetryableActionsRes
+rideFeedbackRetryableActions apiKey internalUrl bppRideId responseId =
+  callRideFeedbackApi internalUrl "RideFeedbackRetryableActions" (rideFeedbackRetryableActionsClient bppRideId responseId (Just apiKey))

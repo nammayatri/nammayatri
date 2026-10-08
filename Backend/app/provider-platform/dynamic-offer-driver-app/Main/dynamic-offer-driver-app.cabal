@@ -88,6 +88,7 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.RideFeedback
       API.Internal.RiderConsent
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
@@ -266,6 +267,7 @@ library
       Domain.Action.Dashboard.Management.RadarTickets
       Domain.Action.Dashboard.Management.Revenue
       Domain.Action.Dashboard.Management.Ride
+      Domain.Action.Dashboard.Management.RideFeedback
       Domain.Action.Dashboard.Management.ScheduledBooking
       Domain.Action.Dashboard.Management.SearchTry
       Domain.Action.Dashboard.Management.SosMedia
@@ -336,6 +338,7 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.RideFeedback
       Domain.Action.Internal.RiderConsent
       Domain.Action.Internal.SearchTryPoolStats
       Domain.Action.Internal.SendEmailOTP
@@ -752,6 +755,11 @@ library
       SharedLogic.Ride
       SharedLogic.RideEvents.DriverCoinsAndJourney
       SharedLogic.RideEvents.Publisher
+      SharedLogic.RideFeedback.Context
+      SharedLogic.RideFeedback.Eligibility
+      SharedLogic.RideFeedback.Rule
+      SharedLogic.RideFeedback.Selection
+      SharedLogic.RideFeedback.Validation
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
@@ -932,6 +940,7 @@ library
       Storage.ConfigPilot.Config.Overlay
       Storage.ConfigPilot.Config.PayoutConfig
       Storage.ConfigPilot.Config.ReminderConfig
+      Storage.ConfigPilot.Config.RideFeedbackConfig
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
       Storage.ConfigPilot.Config.ScheduledPayoutConfig
       Storage.ConfigPilot.Config.TagActionNotificationConfig
@@ -1221,6 +1230,7 @@ library
       API.Action.DashboardAuth.Management.RadarTickets
       API.Action.DashboardAuth.Management.Revenue
       API.Action.DashboardAuth.Management.Ride
+      API.Action.DashboardAuth.Management.RideFeedback
       API.Action.DashboardAuth.Management.ScheduledBooking
       API.Action.DashboardAuth.Management.SearchTry
       API.Action.DashboardAuth.Management.SosMedia
@@ -1389,6 +1399,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.RadarTickets
       API.Types.ProviderPlatform.Management.Endpoints.Revenue
       API.Types.ProviderPlatform.Management.Endpoints.Ride
+      API.Types.ProviderPlatform.Management.Endpoints.RideFeedback
       API.Types.ProviderPlatform.Management.Endpoints.ScheduledBooking
       API.Types.ProviderPlatform.Management.Endpoints.SearchTry
       API.Types.ProviderPlatform.Management.Endpoints.SosMedia
@@ -1418,6 +1429,7 @@ library
       API.Types.ProviderPlatform.Management.RadarTickets
       API.Types.ProviderPlatform.Management.Revenue
       API.Types.ProviderPlatform.Management.Ride
+      API.Types.ProviderPlatform.Management.RideFeedback
       API.Types.ProviderPlatform.Management.ScheduledBooking
       API.Types.ProviderPlatform.Management.SearchTry
       API.Types.ProviderPlatform.Management.SosMedia
@@ -1646,6 +1658,8 @@ library
       Domain.Types.ReviewRequest
       Domain.Types.Ride
       Domain.Types.RideDetails
+      Domain.Types.RideFeedbackConfig
+      Domain.Types.RideFeedbackResponse
       Domain.Types.RiderDetails
       Domain.Types.RiderDriverCorrelation
       Domain.Types.RideRelatedNotificationConfig
@@ -1843,6 +1857,8 @@ library
       Storage.Beam.ReviewRequest
       Storage.Beam.Ride
       Storage.Beam.RideDetails
+      Storage.Beam.RideFeedbackConfig
+      Storage.Beam.RideFeedbackResponse
       Storage.Beam.RiderDetails
       Storage.Beam.RiderDriverCorrelation
       Storage.Beam.RideRelatedNotificationConfig
@@ -2148,6 +2164,8 @@ library
       Storage.Queries.ReviewRequest
       Storage.Queries.Ride
       Storage.Queries.RideDetails
+      Storage.Queries.RideFeedbackConfig
+      Storage.Queries.RideFeedbackResponse
       Storage.Queries.RiderDetails
       Storage.Queries.RiderDriverCorrelation
       Storage.Queries.RideRelatedNotificationConfig

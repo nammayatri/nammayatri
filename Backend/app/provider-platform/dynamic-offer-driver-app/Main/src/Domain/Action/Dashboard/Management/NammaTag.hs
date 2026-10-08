@@ -82,11 +82,13 @@ import qualified "beckn-spec" Domain.Types.Invoice as DTI
 import qualified Domain.Types.LeaderBoardConfigs as DLBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DTM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DTOVL
 import qualified Domain.Types.PayoutConfig as DTP
 import qualified Domain.Types.ReminderConfig as DRMC
+import qualified Domain.Types.RideFeedbackConfig as DRFCfg
 import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.Translations as DTTR
@@ -121,6 +123,7 @@ import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout a
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNammaTagTriggerV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
 import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as SQTANC
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.Types.Common as C
@@ -136,6 +139,9 @@ import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
 import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
+import qualified SharedLogic.RideFeedback.Context as SRFC
+import qualified SharedLogic.RideFeedback.Selection as SRFS
+import qualified SharedLogic.RideFeedback.Validation as SRFV
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.DriverBlockReason as CQDBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -157,6 +163,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.Overlay (OverlayDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
+import Storage.ConfigPilot.Config.RideFeedbackConfig (RideFeedbackConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TagActionNotificationConfig (TagActionNotificationConfigDimensions (..))
@@ -178,6 +185,7 @@ import qualified Storage.Queries.MerchantServiceUsageConfig as SQMSUC
 import qualified Storage.Queries.Overlay as SQOVL
 import qualified Storage.Queries.PayoutConfig as SQPC
 import qualified Storage.Queries.ReminderConfig as SQRMC
+import qualified Storage.Queries.RideFeedbackConfig as SQRFCfg
 import qualified Storage.Queries.RideRelatedNotificationConfig as SQRRNC
 import qualified Storage.Queries.ScheduledPayoutConfig as SQSPC
 import qualified Storage.Queries.Translations as SQTR
@@ -233,6 +241,7 @@ $(YTH.generateGenericDefault ''DSPC.ScheduledPayoutConfig)
 $(YTH.generateGenericDefault ''DTANC.TagActionNotificationConfig)
 $(YTH.generateGenericDefault ''DFODVC.FleetOwnerDocumentVerificationConfig)
 $(YTH.generateGenericDefault ''DCC.CoinsConfig)
+$(YTH.generateGenericDefault ''DRFCfg.RideFeedbackConfig)
 
 $(genToSchema ''DTP.PayoutConfig)
 $(genToSchema ''DTRN.RideRelatedNotificationConfig)
@@ -518,6 +527,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
+    LYT.RIDE_FEEDBACK -> do
+      logicData :: SRFC.RideFeedbackContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy SRFS.RideFeedbackSelection) req logicData
     LYT.RIDE_FOOTNOTES_DISPLAY -> do
       logicData :: A.Value <- YudhishthiraFlow.createLogicData (A.object []) (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) req logicData
@@ -566,6 +578,18 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYT.Config defaultConfig Nothing 1
       logicData :: (LYT.Config DCC.CoinsConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DCC.CoinsConfig)) req logicData
+    LYT.DRIVER_CONFIG LYT.RideFeedbackConfig -> do
+      -- The generic check only parses the patch output on a default row. Every question of the city must
+      -- also stay valid as staged rides get it (stored rows, base patch, then this patch), before it is saved.
+      (rows, patched) <- patchRideFeedbackCity merchantOpCityId req.rules
+      let cityErrors = either (\errs -> errs) (SRFV.validatePatchedCity rows) patched :: [Text]
+      when (fromMaybe False req.shouldUpdateRule && not (null cityErrors)) $
+        throwError $ InvalidRequest $ "Invalid ride feedback questions after this patch: " <> Text.intercalate "; " cityErrors
+      defaultConfig <- fromMaybeM (InvalidRequest "RideFeedbackConfig config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DRFCfg.RideFeedbackConfig))
+      let configWrap = LYT.Config defaultConfig Nothing 1
+      logicData :: (LYT.Config DRFCfg.RideFeedbackConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      verified <- YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy (LYT.Config DRFCfg.RideFeedbackConfig)) req logicData
+      pure (verified :: LYT.AppDynamicLogicResp) {LYT.errors = verified.errors <> map Text.unpack cityErrors}
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
   when resp.isRuleUpdated $ case req.domain of
@@ -712,6 +736,12 @@ getNammaTagAppDynamicLogicDomainsAndEvents merchantShortId opCity mbFetchNammaTa
 getNammaTagAppDynamicLogicGetDomainSchema :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Environment.Flow LYT.DomainSchemaResp
 getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
   case domain of
+    LYT.RIDE_FEEDBACK ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: SRFC.RideFeedbackContext),
+            LYT.schema = toInlinedSchemaValue (Proxy @SRFC.RideFeedbackContext)
+          }
     LYT.POOLING ->
       return $
         LYT.DomainSchemaResp
@@ -886,6 +916,13 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DCC.CoinsConfig))
+          }
+    LYT.DRIVER_CONFIG LYT.RideFeedbackConfig -> do
+      defaultConfig <- fromMaybeM (InvalidRequest "RideFeedbackConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DRFCfg.RideFeedbackConfig))
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
+            LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DRFCfg.RideFeedbackConfig))
           }
     LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
       defaultConfig <- fromMaybeM (InvalidRequest "TransporterConfig default config not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTT.TransporterConfig))
@@ -1073,6 +1110,9 @@ postNammaTagConfigPilotGetConfigWithDimensions _merchantShortId _opCity configTy
     LYT.FleetOwnerDocumentVerificationConfig -> do
       cfgs <- getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = mocId, documentType = dimLookup "documentType" dims, role = dimLookup "role" dims}) Nothing
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
+    LYT.RideFeedbackConfig -> do
+      cfgs <- getConfig (RideFeedbackConfigDimensions {merchantOperatingCityId = mocId, enabled = dimLookup "enabled" dims, questionKey = dimLookup "questionKey" dims}) Nothing
+      pure LYT.TableDataResp {configs = map A.toJSON cfgs}
     LYT.CoinsConfig -> do
       cfgs <- getConfig (CoinsConfigDimensions {merchantOptCityId = mocId, eventFunction = dimLookup "eventFunction" dims, merchantId = dimLookup "merchantId" dims, active = dimLookup "active" dims, vehicleCategory = dimLookup "vehicleCategory" dims, serviceTierType = dimLookup "serviceTierType" dims, eventName = dimLookup "eventName" dims, tripCategoryType = dimLookup "tripCategoryType" dims, configId = dimLookup "configId" dims}) (Just (SQCCfg.findAllByMerchantOptCityId merchantOpCityId))
       pure LYT.TableDataResp {configs = map A.toJSON cfgs}
@@ -1118,6 +1158,7 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType =
     LYT.TagActionNotificationConfig -> pure $ mkDimSchema (Proxy @TagActionNotificationConfigDimensions)
     LYT.FleetOwnerDocumentVerificationConfig -> pure $ mkDimSchema (Proxy @FleetOwnerDocumentVerificationConfigDimensions)
     LYT.CoinsConfig -> pure $ mkDimSchema (Proxy @CoinsConfigDimensions)
+    LYT.RideFeedbackConfig -> pure $ mkDimSchema (Proxy @RideFeedbackConfigDimensions)
     LYT.MerchantServiceConfigDriver -> pure $ mkDimSchema (Proxy @MerchantServiceConfigDimensions)
     LYT.Exophone -> pure $ mkDimSchema (Proxy @ExophoneDimensions)
     LYT.Overlay -> pure $ mkDimSchema (Proxy @OverlayDimensions)
@@ -1196,6 +1237,16 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity configType req = do
       cfg :: DLBC.LeaderBoardConfigs <- parseConfigData req.configData
       SQLBC.create cfg
       invalidateConfigInMem LYT.LeaderBoardConfig
+    LYT.RideFeedbackConfig -> do
+      cfg :: DRFCfg.RideFeedbackConfig <- parseConfigData req.configData
+      unless (cfg.merchantOperatingCityId == merchantOpCityId) $ throwError $ InvalidRequest "RideFeedbackConfig must belong to this merchantOperatingCityId"
+      -- Checked against the questions as everyone gets them (stored rows with the base patch).
+      cityConfigs <- patchRideFeedbackCity merchantOpCityId [] >>= either (throwError . InvalidRequest . Text.intercalate "; ") pure . snd
+      when (any ((== cfg.questionKey) . (.questionKey)) cityConfigs) $ throwError $ InvalidRequest "A question with this questionKey already exists in this city"
+      let errors = SRFV.validateConfig cityConfigs cfg
+      unless (null errors) $ throwError $ InvalidRequest $ "Invalid ride feedback question: " <> Text.intercalate "; " errors
+      SQRFCfg.create cfg
+      invalidateConfigInMem LYT.RideFeedbackConfig
     LYT.ReminderConfig -> do
       cfg :: DRMC.ReminderConfig <- parseConfigData req.configData
       SQRMC.create cfg
@@ -1239,6 +1290,22 @@ postNammaTagConfigPilotCreateRow _merchantShortId _opCity configType req = do
     parseConfigData val = case A.fromJSON val of
       A.Success cfg -> pure cfg
       A.Error err -> throwError $ InvalidRequest $ "Invalid config data: " <> show err
+
+-- | A city's ride feedback questions: the stored rows, and the rows with the base patch and then
+-- @rules@ applied (Left: the questions the patches broke). With no rules, the questions as everyone
+-- is served them outside any staged change.
+patchRideFeedbackCity :: Id DMOC.MerchantOperatingCity -> [A.Value] -> Environment.Flow ([DRFCfg.RideFeedbackConfig], Either [Text] [DRFCfg.RideFeedbackConfig])
+patchRideFeedbackCity merchantOpCityId rules = do
+  rows <- SQRFCfg.findAllByMerchantOperatingCityId merchantOpCityId
+  let domain = LYT.DRIVER_CONFIG LYT.RideFeedbackConfig
+  mbBase <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  baseLogics <- maybe (pure []) (\base -> map (.logic) <$> CADLE.findByDomainAndVersion domain base.version) mbBase
+  patched <- forM (zip [0 ..] rows) $ \(identifier, row) -> do
+    resp <- LYTU.runLogics (baseLogics <> rules) (LYT.Config row Nothing identifier)
+    pure $ case A.fromJSON resp.result of
+      A.Success (cfg :: LYT.Config DRFCfg.RideFeedbackConfig) -> Right cfg.config
+      A.Error err -> Left (row.questionKey <> ": " <> Text.pack err)
+  pure (rows, case partitionEithers patched of ([], ok) -> Right ok; (errs, _) -> Left errs)
 
 -- { os :: DeviceType,
 --     language :: Language,
