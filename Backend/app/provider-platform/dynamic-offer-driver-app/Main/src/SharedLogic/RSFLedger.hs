@@ -20,18 +20,21 @@ module SharedLogic.RSFLedger
     rejectionVerdict,
     orderWireVerdict,
     utrWireVerdict,
-    allocateUtr,
+    AutoAllocationOutcome (..),
+    istDayRange,
     verifyUtr,
+    autoAllocate,
     reallocateOrder,
   )
 where
 
 import qualified BecknV2.RSF.Types as Spec
 import qualified Data.Aeson as A
-import Data.List (nub, partition, sortOn)
+import qualified Data.HashSet as HS
+import Data.List (nub, sortOn)
 import qualified Data.Map.Strict as Map
-import Data.Ord (Down (..))
 import qualified Data.Text.Encoding as TE
+import Data.Time (Day, UTCTime (..))
 import qualified Domain.Types.Ride as DRide
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -41,6 +44,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry as L
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.RsfOrderState as QOrderState
 import qualified Lib.Finance.Storage.Queries.RsfReconLedgerEntry as QLedger
 import qualified Storage.Queries.Ride as QRide
 
@@ -138,7 +142,7 @@ allocatedToOrder orderId entries = sum [e.amount | e <- ofType L.BANK_ALLOCATION
 allocatedOnPair :: Text -> Text -> [Entry] -> HighPrecMoney
 allocatedOnPair orderId utr entries = sum [e.amount | e <- ofType L.BANK_ALLOCATION entries, e.orderId == Just orderId, e.utr == Just utr]
 
--- received − Σ allocated to real orders; the suspense rows (orderId NULL) are the record of this figure.
+-- received − Σ allocated to orders.
 unallocatedOnUtr :: Text -> [Entry] -> HighPrecMoney
 unallocatedOnUtr utr entries =
   receivedOnUtr utr entries - sum [e.amount | e <- ofType L.BANK_ALLOCATION entries, e.utr == Just utr, isJust e.orderId]
@@ -204,49 +208,12 @@ utrWireVerdict utr entries = amountVerdict (claimedOnUtr utr entries - receivedO
 withUtrLock :: (BeamFlow m r, Hedis.HedisFlow m r) => Text -> Text -> m () -> m ()
 withUtrLock merchantId utr = Hedis.withLockRedis ("RsfUtrLock:" <> merchantId <> ":" <> utr) 60
 
--- Phase 3 (step 11) and Phase 2 (stage C top-up): funds the UTR's ACCEPTED claims from whatever
--- is unallocated, min(outstanding claim, available). Largest order shortfall goes first, ties in
--- claim order. Rejected claims get nothing; a UTR with no BANK_RECEIPT is left alone.
-allocateUtr ::
-  (BeamFlow m r, Hedis.HedisFlow m r) =>
-  Text ->
-  Text ->
-  m ()
-allocateUtr merchantId utr = withUtrLock merchantId utr $ allocateUtrUnlocked False merchantId utr
-
-allocateUtrUnlocked :: (BeamFlow m r) => Bool -> Text -> Text -> m ()
-allocateUtrUnlocked isFirstRun merchantId utr = do
-  utrEntries <- QLedger.findAllByMerchantAndUtrs merchantId [utr]
-  when (isUtrVerified utr utrEntries) $ do
-    let manuallySplit claim = any (\e -> e.orderId == claim.orderId && e.actorType == L.ADMIN) (ofType L.BANK_ALLOCATION utrEntries)
-        outstanding claim = claim.amount - allocatedOnPair (fromMaybe "" claim.orderId) utr utrEntries
-        unfunded = [c | ((_, u), c) <- Map.toList (acceptedClaims utrEntries), u == utr, outstanding c /= 0, not (manuallySplit c)]
-        orderIds = mapMaybe (.orderId) unfunded
-    orderEntries <- QLedger.findAllByMerchantAndOrderIds merchantId orderIds
-    rideByOrderId <- latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId (map Id orderIds))
-    let shortfall claim =
-          let orderId = fromMaybe "" claim.orderId
-           in fromMaybe 0 (rideFare =<< Map.lookup orderId rideByOrderId) - allocatedToOrder orderId orderEntries
-        (clawbacks, payments) = partition ((< 0) . outstanding) unfunded
-        ordered = clawbacks <> sortOn (\c -> (Down (shortfall c), c.createdAt)) payments
-        merchantOpCityId = listToMaybe (mapMaybe (.merchantOperatingCityId) utrEntries)
-        fund (available, acc) claim =
-          let funded = if outstanding claim < 0 then outstanding claim else min (outstanding claim) (max 0 available)
-           in (available - funded, if funded == 0 then acc else acc <> [(claim, funded)])
-        (leftover, fundings) = foldl' fund (unallocatedOnUtr utr utrEntries, []) ordered
-    now <- getCurrentTime
-    let mkAllocation mbOrderId amount = do
-          row <- baseEntry merchantId merchantOpCityId L.BANK_ALLOCATION L.SYSTEM_JOB amount now
-          pure row {L.orderId = mbOrderId, L.utr = Just utr}
-    allocationRows <- forM fundings $ \(claim, funded) -> mkAllocation claim.orderId funded
-    -- suspense (orderId NULL): the whole remainder on the first run, a delta per funding afterwards
-    suspenseRows <-
-      if isFirstRun
-        then sequence [mkAllocation Nothing leftover | leftover /= 0]
-        else forM fundings $ \(_, funded) -> mkAllocation Nothing (negate funded)
-    QLedger.createMany (allocationRows <> suspenseRows)
+-- Dates on the dashboard are IST calendar days; the ledger stores UTC.
+istDayRange :: Day -> (UTCTime, UTCTime)
+istDayRange day = let start = addUTCTime (-19800) (UTCTime day 0) in (start, addUTCTime 86400 start)
 
 -- Phase 3 (step 10): finance enters what the bank credited for a UTR -- written once, then frozen.
+-- Verifies and locks only; the money is handed out by autoAllocate.
 verifyUtr ::
   (BeamFlow m r, Hedis.HedisFlow m r) =>
   Text ->
@@ -262,10 +229,87 @@ verifyUtr merchantId utr bankVerifiedAmount actorId reason = withUtrLock merchan
   now <- getCurrentTime
   receipt <- baseEntry merchantId (listToMaybe (mapMaybe (.merchantOperatingCityId) utrEntries)) L.BANK_RECEIPT L.BANK_CONFIRMED bankVerifiedAmount now
   QLedger.create receipt {L.utr = Just utr, L.actorType = L.FINANCE, L.actorId = actorId, L.reason = reason}
-  allocateUtrUnlocked True merchantId utr
 
--- Phase 3 (step 11a): ops re-splits an order's allocation on a UTR by hand. Appends a delta
--- allocation and the inverse suspense delta; never rewrites earlier rows.
+data AutoAllocationOutcome = AutoAllocationOutcome
+  { ordersConsidered :: Int,
+    ordersSettled :: Int,
+    ordersPartiallyFunded :: Int,
+    allocations :: [(Text, Text, HighPrecMoney)]
+  }
+
+-- Phase 3 (step 11): pooled allocation over one IST day's claims. A UTR's money is fungible
+-- across the orders it is linked to, so orders are filled whole rather than leg by leg:
+--   orders sorted by fare asc (then fewest linked UTRs, then claim order);
+--   each order drains its linked UTRs sorted by degree asc (then lowest available);
+--   degree(U) = number of the day's orders linked to U.
+-- Every UTR the day's claims mention must be bank-verified. Orders already reported to the
+-- collector are frozen; everything else is only ever topped up, never taken back. An order
+-- considered but given nothing gets a 0-amount row so Phase 4 can tell "allocated nothing"
+-- from "never allocated".
+autoAllocate ::
+  (BeamFlow m r, Hedis.HedisFlow m r) =>
+  Text ->
+  Day ->
+  m AutoAllocationOutcome
+autoAllocate merchantId day = do
+  let (from, to) = istDayRange day
+  dayClaims <- ofType L.BAP_CLAIM <$> QLedger.findAllByMerchantEntryTypeAndCreatedAtRange merchantId L.BAP_CLAIM from to
+  let dayUtrs = nub (mapMaybe (.utr) dayClaims)
+      orderIds = nub (mapMaybe (.orderId) dayClaims)
+  when (null dayClaims) $ throwError $ InvalidRequest "No receiver_recon claims on this date"
+  orderEntries <- QLedger.findAllByMerchantAndOrderIds merchantId orderIds
+  let accepted = acceptedClaims orderEntries
+      linkedUtrs orderId = nub [u | ((o, u), _) <- Map.toList accepted, o == orderId]
+      allUtrs = nub (dayUtrs <> concatMap linkedUtrs orderIds)
+  utrEntries <- QLedger.findAllByMerchantAndUtrs merchantId allUtrs
+  let unverified = filter (\u -> not (isUtrVerified u utrEntries)) dayUtrs
+  unless (null unverified) $ throwError $ InvalidRequest ("UTRs not bank-verified yet: " <> show unverified)
+  reportedOrders <- QOrderState.findAllByMerchantAndOrderIds merchantId orderIds
+  rideByOrderId <- latestRideByBooking <$> B.runInReplica (QRide.findRidesByBookingId (map Id orderIds))
+  let frozen = HS.fromList [s.orderId | s <- reportedOrders, isJust s.reportedStatus]
+      fareOf orderId = fromMaybe 0 (Map.lookup orderId rideByOrderId >>= rideFare)
+      firstClaimAt orderId = minimum [c.createdAt | ((o, _), c) <- Map.toList accepted, o == orderId]
+      eligible =
+        [ (orderId, utrs)
+          | orderId <- orderIds,
+            let utrs = linkedUtrs orderId,
+            not (null utrs),
+            not (HS.member orderId frozen),
+            fareOf orderId - allocatedToOrder orderId orderEntries > 0
+        ]
+      degree u = length [() | (_, utrs) <- eligible, u `elem` utrs]
+      ordered = sortOn (\(o, utrs) -> (fareOf o, length utrs, firstClaimAt o)) eligible
+      pool0 = Map.fromList [(u, unallocatedOnUtr u utrEntries) | u <- allUtrs]
+      fillOrder (pool, acc) (orderId, utrs) =
+        let outstanding0 = fareOf orderId - allocatedToOrder orderId orderEntries
+            byPreference = sortOn (\u -> (degree u, Map.findWithDefault 0 u pool, u)) utrs
+            step (pool', outstanding, taken) u =
+              let available = max 0 (Map.findWithDefault 0 u pool')
+                  take' = min outstanding available
+               in if outstanding <= 0 || take' <= 0
+                    then (pool', outstanding, taken)
+                    else (Map.insert u (available - take') pool', outstanding - take', taken <> [(orderId, u, take')])
+            (pool1, shortBy, taken') = foldl' step (pool, outstanding0, []) byPreference
+            taken'' = if null taken' then [(orderId, fromMaybe "" (listToMaybe byPreference), 0)] else taken'
+         in (pool1, acc <> [(outstanding0, shortBy, taken'')])
+      (_, results) = foldl' fillOrder (pool0, []) ordered
+      allLines = concatMap (\(_, _, ls) -> ls) results
+  now <- getCurrentTime
+  let merchantOpCityId = listToMaybe (mapMaybe (.merchantOperatingCityId) dayClaims)
+  rows <- forM allLines $ \(orderId, utr, amount) -> do
+    row <- baseEntry merchantId merchantOpCityId L.BANK_ALLOCATION L.SYSTEM_JOB amount now
+    pure row {L.orderId = Just orderId, L.utr = Just utr}
+  QLedger.createMany rows
+  pure
+    AutoAllocationOutcome
+      { ordersConsidered = length results,
+        ordersSettled = length [() | (_, shortBy, _) <- results, shortBy <= 0],
+        ordersPartiallyFunded = length [() | (outstanding, shortBy, _) <- results, shortBy > 0, shortBy < outstanding],
+        allocations = allLines
+      }
+
+-- Phase 3 (step 11a): ops sets an order's allocation on a UTR by hand. Appends a delta
+-- allocation; never rewrites earlier rows.
 reallocateOrder ::
   (BeamFlow m r, Hedis.HedisFlow m r) =>
   Text ->
@@ -283,10 +327,5 @@ reallocateOrder merchantId orderId utr newAmount actorId reason = withUtrLock me
   when (delta > unallocatedOnUtr utr utrEntries) $ throwError $ InvalidRequest "Allocation exceeds the bank-verified amount left on this UTR"
   when (delta /= 0) $ do
     now <- getCurrentTime
-    let merchantOpCityId = listToMaybe (mapMaybe (.merchantOperatingCityId) utrEntries)
-    allocation <- baseEntry merchantId merchantOpCityId L.BANK_ALLOCATION L.FINANCE_MANUAL delta now
-    suspense <- baseEntry merchantId merchantOpCityId L.BANK_ALLOCATION L.FINANCE_MANUAL (negate delta) now
-    QLedger.createMany
-      [ allocation {L.orderId = Just orderId, L.utr = Just utr, L.actorType = L.ADMIN, L.actorId = Just actorId, L.reason = Just reason},
-        suspense {L.utr = Just utr, L.actorType = L.ADMIN, L.actorId = Just actorId, L.reason = Just reason}
-      ]
+    allocation <- baseEntry merchantId (listToMaybe (mapMaybe (.merchantOperatingCityId) utrEntries)) L.BANK_ALLOCATION L.FINANCE_MANUAL delta now
+    QLedger.create allocation {L.orderId = Just orderId, L.utr = Just utr, L.actorType = L.ADMIN, L.actorId = Just actorId, L.reason = Just reason}

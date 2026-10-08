@@ -90,7 +90,6 @@ library
       API.Internal.ReportIssue
       API.Internal.Ride
       API.Internal.RiderConsent
-      API.Internal.RSFRecon
       API.Internal.SearchTryPoolStats
       API.Internal.SendEmailOTP
       API.Internal.SendSMS

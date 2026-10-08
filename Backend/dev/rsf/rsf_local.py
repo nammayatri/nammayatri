@@ -2,9 +2,10 @@
 """Local RSF tester: plays the collector (BAP) against a locally running BPP.
 
   collector   start a mock collector that ACKs /on_receiver_recon and prints it
-  recon       POST /receiver_recon to the BPP                      (Phase 1 + 2)
-  verify      finance enters the bank amount for a UTR             (Phase 3)
-  send        trigger on_receiver_recon for an inbound message     (Phase 4)
+  recon       POST /receiver_recon straight to the BPP               (Phase 1 + 2)
+  verify      finance enters the bank amount for a UTR  [dashboard]  (Phase 3)
+  allocate    run auto-allocation for a date            [dashboard]  (Phase 3)
+  send        send on_receiver_recon for a date         [dashboard]  (Phase 4)
 
 Each --order is  <bookingId>:<amount>:<utr>=<legAmount>[,<utr>=<legAmount>...]
 e.g.  --order 3f2a...:1200:SREF1=700,SREF2=500
@@ -12,6 +13,7 @@ Only the standard library is used.
 """
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -23,14 +25,18 @@ DEFAULT_BPP_URL = "http://localhost:8016"
 DEFAULT_MERCHANT_ID = "840327a8-f17c-4d7c-8199-a583cfaadc5f"
 DEFAULT_BPP_ID = "localhost:8016/beckn/" + DEFAULT_MERCHANT_ID
 DEFAULT_COLLECTOR_PORT = 8099
+DEFAULT_DASHBOARD_URL = "http://localhost:5173/api/bpp/driver-offer/MSIL_PARTNER/std:011/rSFReconciliation"
 
 
 def now_iso():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.") + "%03dZ" % (datetime.now(timezone.utc).microsecond // 1000)
 
 
-def post(url, body):
-    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"}, method="POST")
+def post(url, body, token=None):
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["token"] = token
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req) as res:
             status, text = res.status, res.read().decode()
@@ -127,16 +133,29 @@ def cmd_recon(args):
     if args.print:
         print(json.dumps(payload, indent=2))
     post(args.bpp_url.rstrip("/") + "/receiver_recon", payload)
-    print("\nmessage_id: %s   (use it with: send --message-id %s)" % (message_id, message_id))
+    print("\nmessage_id: %s" % message_id)
+
+
+# verify / allocate / send go through the dashboard API (ApiAuthV2): pass a dashboard
+# session token with --token or RSF_DASHBOARD_TOKEN.
+def dashboard_token(args):
+    token = args.token or os.environ.get("RSF_DASHBOARD_TOKEN")
+    if not token:
+        sys.exit("Need a dashboard token: --token <token> or RSF_DASHBOARD_TOKEN=<token>")
+    return token
 
 
 def cmd_verify(args):
     body = {"bankVerifiedAmount": args.amount, "verifiedBy": args.by, "reason": args.reason}
-    post("%s/internal/rsf/%s/utrs/%s/bank-verify" % (args.bpp_url.rstrip("/"), args.merchant_id, args.utr), body)
+    post("%s/rsf/utrs/%s/verify" % (args.dashboard_url.rstrip("/"), args.utr), body, dashboard_token(args))
+
+
+def cmd_allocate(args):
+    post("%s/rsf/autoAllocation?date=%s" % (args.dashboard_url.rstrip("/"), args.date), {}, dashboard_token(args))
 
 
 def cmd_send(args):
-    post("%s/internal/rsf/%s/messages/%s/send" % (args.bpp_url.rstrip("/"), args.merchant_id, args.message_id), {})
+    post("%s/rsf/send?date=%s" % (args.dashboard_url.rstrip("/"), args.date), {}, dashboard_token(args))
 
 
 def cmd_collector(args):
@@ -154,6 +173,14 @@ def cmd_collector(args):
             self.send_header("Content-Length", str(len(ack)))
             self.end_headers()
             self.wfile.write(ack)
+
+        def do_GET(self):
+            body = b"mock collector up; POST /on_receiver_recon here\n"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
 
         def log_message(self, *_):
             pass
@@ -187,14 +214,20 @@ def main():
     verify.add_argument("--amount", required=True, type=float)
     verify.add_argument("--by", default="local-finance")
     verify.add_argument("--reason", default="local test")
-    verify.add_argument("--bpp-url", default=DEFAULT_BPP_URL)
-    verify.add_argument("--merchant-id", default=DEFAULT_MERCHANT_ID)
+    verify.add_argument("--dashboard-url", default=DEFAULT_DASHBOARD_URL)
+    verify.add_argument("--token", help="dashboard session token (or RSF_DASHBOARD_TOKEN)")
     verify.set_defaults(func=cmd_verify)
 
-    send = sub.add_parser("send", help="send on_receiver_recon for a message")
-    send.add_argument("--message-id", required=True)
-    send.add_argument("--bpp-url", default=DEFAULT_BPP_URL)
-    send.add_argument("--merchant-id", default=DEFAULT_MERCHANT_ID)
+    allocate = sub.add_parser("allocate", help="run auto-allocation for a date (YYYY-MM-DD, IST)")
+    allocate.add_argument("--date", required=True)
+    allocate.add_argument("--dashboard-url", default=DEFAULT_DASHBOARD_URL)
+    allocate.add_argument("--token", help="dashboard session token (or RSF_DASHBOARD_TOKEN)")
+    allocate.set_defaults(func=cmd_allocate)
+
+    send = sub.add_parser("send", help="send on_receiver_recon for every message of a date")
+    send.add_argument("--date", required=True, help="YYYY-MM-DD (IST); checks all messages of the day, then sends them")
+    send.add_argument("--dashboard-url", default=DEFAULT_DASHBOARD_URL)
+    send.add_argument("--token", help="dashboard session token (or RSF_DASHBOARD_TOKEN)")
     send.set_defaults(func=cmd_send)
 
     collector = sub.add_parser("collector", help="mock collector that ACKs on_receiver_recon")
