@@ -155,23 +155,18 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- Encrypt sensitive fields for storage (aadharNumber from frontend is ignored - not stored)
   encryptedPAN <- encrypt req.panNumber
   encryptedMobile <- encrypt req.mobileNumber
-  encryptedAccountNumber <- encrypt req.bankDetails.accountNumber
-  encryptedIFSC <- encrypt req.bankDetails.ifscCode
+  encryptedAccountNumber <- forM req.bankDetails (encrypt . (.accountNumber))
+  encryptedIFSC <- forM req.bankDetails (encrypt . (.ifscCode))
 
   -- Generate application ID and record ID for membership record
   applicationId <- generateGUIDText
   now <- getCurrentTime
 
   -- Convert VehicleType enum to Text format for storage
-  let vehicleTypeText = case req.vehicleInfo.vehicleType of
-        APITypes.TwoWheeler -> "2Wheeler"
-        APITypes.ThreeWheeler -> "3Wheeler"
-        APITypes.FourWheeler -> "4Wheeler"
+  let vehicleTypeText = vehicleTypeToText . (.vehicleType) <$> req.vehicleInfo
 
   -- Convert FuelType list to Text list
-  let stripParentheses :: String -> String
-      stripParentheses = filter (\c -> c `notElem` ['(', ')'])
-  let fuelTypesText = map (T.pack . stripParentheses . show) req.vehicleInfo.fuelTypes
+  let fuelTypesText = maybe [] (map fuelTypeToText . (.fuelTypes)) req.vehicleInfo
 
   -- Create domain type
   let membership =
@@ -196,13 +191,13 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.addressPostalCode = req.address.postalCode,
             Domain.addressProofType = req.addressProofType,
             Domain.addressProofImageId = req.addressProofImageId,
-            Domain.bankName = req.bankDetails.bankName,
-            Domain.bankBranch = req.bankDetails.branch,
+            Domain.bankName = (.bankName) <$> req.bankDetails,
+            Domain.bankBranch = (.branch) <$> req.bankDetails,
             Domain.accountNumber = encryptedAccountNumber,
             Domain.ifscCode = encryptedIFSC,
             Domain.vehicleType = vehicleTypeText,
             Domain.fuelTypes = fuelTypesText,
-            Domain.nomineeName = req.nomineeInfo.nomineeName,
+            Domain.nomineeName = (.nomineeName) <$> req.nomineeInfo,
             Domain.declarationPlace = req.declaration.place,
             Domain.declarationDate = req.declaration.date,
             Domain.declarationSignature = req.declaration.signature,
@@ -440,14 +435,15 @@ putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = d
     (m : _) -> pure m
 
   -- Bank details: validate confirmAccountNumber matches and re-encrypt account number/IFSC.
-  (newBankBranch, newAccountNumber, newIfscCode) <- case req.bankDetails of
-    Nothing -> pure (latest.bankBranch, latest.accountNumber, latest.ifscCode)
+  -- bankName is optional so older clients keep working; if omitted, the stored value is kept.
+  (newBankName, newBankBranch, newAccountNumber, newIfscCode) <- case req.bankDetails of
+    Nothing -> pure (latest.bankName, latest.bankBranch, latest.accountNumber, latest.ifscCode)
     Just bd -> do
       unless (bd.accountNumber == bd.confirmAccountNumber) $
         throwError $ InvalidRequest "Account number and confirm account number do not match"
       encAcc <- encrypt bd.accountNumber
       encIfsc <- encrypt bd.ifscCode
-      pure (bd.branch, encAcc, encIfsc)
+      pure (bd.bankName <|> latest.bankName, Just bd.branch, Just encAcc, Just encIfsc)
 
   let (newStreet1, newStreet2, newCity, newState, newPostal) = case req.address of
         Nothing ->
@@ -465,13 +461,11 @@ putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = d
             a.postalCode
           )
 
-  let newVehicleType = case req.vehicleType of
-        Nothing -> latest.vehicleType
-        Just APITypes.TwoWheeler -> "2Wheeler"
-        Just APITypes.ThreeWheeler -> "3Wheeler"
-        Just APITypes.FourWheeler -> "4Wheeler"
-
-  let newNomineeName = fromMaybe latest.nomineeName req.nomineeName
+  let newVehicleType = (vehicleTypeToText <$> req.vehicleType) <|> latest.vehicleType
+  let newFuelTypes = maybe latest.fuelTypes (map fuelTypeToText) req.fuelTypes
+  let newNomineeName = req.nomineeName <|> latest.nomineeName
+  let newFatherMotherName = req.fatherMotherName <|> latest.fatherMotherName
+  let newDeclarationPlace = req.declarationPlace <|> latest.declarationPlace
   let newAddressProofType = req.addressProofType <|> latest.addressProofType
   let newAddressProofImageId = req.addressProofImageId <|> latest.addressProofImageId
 
@@ -479,7 +473,8 @@ putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = d
   forM_ editableRows $ \m ->
     QStclMembership.updateByPrimaryKey
       m
-        { Domain.bankBranch = newBankBranch,
+        { Domain.bankName = newBankName,
+          Domain.bankBranch = newBankBranch,
           Domain.accountNumber = newAccountNumber,
           Domain.ifscCode = newIfscCode,
           Domain.addressStreetAddress1 = newStreet1,
@@ -490,7 +485,10 @@ putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = d
           Domain.addressProofType = newAddressProofType,
           Domain.addressProofImageId = newAddressProofImageId,
           Domain.vehicleType = newVehicleType,
+          Domain.fuelTypes = newFuelTypes,
           Domain.nomineeName = newNomineeName,
+          Domain.fatherMotherName = newFatherMotherName,
+          Domain.declarationPlace = newDeclarationPlace,
           Domain.updatedAt = now
         }
   pure Kernel.Types.APISuccess.Success
@@ -540,20 +538,20 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
   -- Decrypt and mask sensitive fields
   decryptedPAN <- decrypt membership.panNumber
   decryptedMobile <- decrypt membership.mobileNumber
-  decryptedAccountNumber <- decrypt membership.accountNumber
-  decryptedIFSC <- decrypt membership.ifscCode
+  decryptedAccountNumber <- forM membership.accountNumber decrypt
+  decryptedIFSC <- forM membership.ifscCode decrypt
 
   let maskedPAN = maskSensitiveData decryptedPAN
       maskedMobile = maskSensitiveData decryptedMobile
-      maskedAccountNumber = maskSensitiveData decryptedAccountNumber
-      maskedIFSC = maskSensitiveData decryptedIFSC
+      maskedAccountNumber = maskSensitiveData <$> decryptedAccountNumber
+      maskedIFSC = maskSensitiveData <$> decryptedIFSC
 
   -- Convert VehicleType Text back to enum
-  vehicleTypeEnum <- case membership.vehicleType of
+  mbVehicleTypeEnum <- forM membership.vehicleType $ \vt -> case vt of
     "2Wheeler" -> pure APITypes.TwoWheeler
     "3Wheeler" -> pure APITypes.ThreeWheeler
     "4Wheeler" -> pure APITypes.FourWheeler
-    _ -> throwError $ InvalidRequest $ "Invalid vehicle type: " <> membership.vehicleType
+    _ -> throwError $ InvalidRequest $ "Invalid vehicle type: " <> vt
 
   -- Convert FuelType Text list back to enum list
   let parseFuelType :: Kernel.Prelude.Text -> Environment.Flow APITypes.FuelType
@@ -588,22 +586,32 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
         APITypes.shareStartCount = membership.shareStartCount,
         APITypes.shareEndCount = membership.shareEndCount,
         APITypes.bankDetails =
-          APITypes.BankDetails
-            { APITypes.bankName = membership.bankName,
-              APITypes.branch = membership.bankBranch,
-              APITypes.accountNumber = maskedAccountNumber,
-              APITypes.ifscCode = maskedIFSC
-            },
+          ( \accountNumber' ifscCode' ->
+              APITypes.BankDetails
+                { APITypes.bankName = fromMaybe "" membership.bankName,
+                  APITypes.branch = fromMaybe "" membership.bankBranch,
+                  APITypes.accountNumber = accountNumber',
+                  APITypes.ifscCode = ifscCode'
+                }
+          )
+            <$> maskedAccountNumber
+            <*> maskedIFSC,
         APITypes.vehicleInfo =
-          APITypes.VehicleInfo
-            { APITypes.vehicleType = vehicleTypeEnum,
-              APITypes.fuelTypes = fuelTypesEnum
-            },
+          ( \vehicleType' ->
+              APITypes.VehicleInfo
+                { APITypes.vehicleType = vehicleType',
+                  APITypes.fuelTypes = fuelTypesEnum
+                }
+          )
+            <$> mbVehicleTypeEnum,
         APITypes.nomineeInfo =
-          APITypes.NomineeInfo
-            { APITypes.nomineeName = membership.nomineeName,
-              APITypes.nomineeAadhar = Nothing
-            },
+          ( \nomineeName' ->
+              APITypes.NomineeInfo
+                { APITypes.nomineeName = nomineeName',
+                  APITypes.nomineeAadhar = Nothing
+                }
+          )
+            <$> membership.nomineeName,
         APITypes.declaration =
           APITypes.Declaration
             { APITypes.place = membership.declarationPlace,
@@ -613,6 +621,16 @@ getMembership (mbDriverId, _merchantId, _merchantOperatingCityId) = do
             },
         ..
       }
+
+-- Stored without constructor parentheses, matching the parser in getMembership.
+fuelTypeToText :: APITypes.FuelType -> Kernel.Prelude.Text
+fuelTypeToText = T.pack . filter (`notElem` ['(', ')']) . show
+
+vehicleTypeToText :: APITypes.VehicleType -> Kernel.Prelude.Text
+vehicleTypeToText = \case
+  APITypes.TwoWheeler -> "2Wheeler"
+  APITypes.ThreeWheeler -> "3Wheeler"
+  APITypes.FourWheeler -> "4Wheeler"
 
 -- Handle STCL membership order status updates
 stclMemberShipOrderStatusHandler ::
