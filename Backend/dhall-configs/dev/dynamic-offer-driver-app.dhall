@@ -351,6 +351,7 @@ let AllocatorJobType =
       | FleetEngineRetry
       | DeleteUnreferencedFarePolicies
       | GenerateInvoicePdf
+      | RegistrySync
       >
 
 let jobRetryOnExceptionMapx =

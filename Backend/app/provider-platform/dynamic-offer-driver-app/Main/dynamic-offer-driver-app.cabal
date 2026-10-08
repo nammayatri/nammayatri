@@ -582,6 +582,7 @@ library
       SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation
       SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler
       SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep
+      SharedLogic.Allocator.Jobs.RegistrySync.RegistrySync
       SharedLogic.Allocator.Jobs.Reminder.ProcessReminder
       SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate

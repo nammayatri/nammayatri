@@ -98,6 +98,8 @@ data HandlerEnv = HandlerEnv
     cacheTranslationConfig :: CacheTranslationConfig,
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
+    ondcRegistryUrl :: BaseUrl,
+    nyRegistryUrl :: BaseUrl,
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
@@ -236,7 +238,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let url = Nothing
   let actorInfo = Finance.ActorInfo {actorType = Finance.UNKNOWN, actorId = requestId} -- to be modified in job handler
   let driverQuoteExpirationSeconds' = fromIntegral appCfg.driverQuoteExpirationSeconds
-  return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, driverQuoteExpirationSeconds = driverQuoteExpirationSeconds', quoteRespondCoolDown = appCfg.quoteRespondCoolDown, driverUnlockDelay = appCfg.driverUnlockDelay, ..}
+  return HandlerEnv {ondcRegistryUrl = appCfg.ondcRegistryUrl, nyRegistryUrl = appCfg.nyRegistryUrl, modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ttenTokenCacheExpiry = appCfg.ttenTokenCacheExpiry, driverQuoteExpirationSeconds = driverQuoteExpirationSeconds', quoteRespondCoolDown = appCfg.quoteRespondCoolDown, driverUnlockDelay = appCfg.driverUnlockDelay, ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()
 releaseHandlerEnv HandlerEnv {..} = do

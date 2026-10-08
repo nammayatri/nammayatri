@@ -33,6 +33,7 @@ import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
 import qualified Kernel.Storage.Beam.MerchantOperatingCity as Beam
 import Kernel.Storage.Esqueleto.Migration
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Types.Beckn.City (initCityMaps)
 import Kernel.Types.Error
@@ -74,6 +75,7 @@ import SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress (chec
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (runReconciliationJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler (runReconciliationSchedulerJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep (runReconciliationSweepJob)
+import SharedLogic.Allocator.Jobs.RegistrySync.RegistrySync (registrySyncSeedKey, runRegistrySyncJob)
 import SharedLogic.Allocator.Jobs.Reminder.ProcessReminder (processReminder)
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
@@ -203,6 +205,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runBulkUserCohortMappingUploadJob
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
           & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
+          & putJobHandlerInListWrapper flowRt env runRegistrySyncJob
     }
 
 runDriverOfferAllocator ::
@@ -239,6 +242,8 @@ runDriverOfferAllocator configModifier = do
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
         initCityMaps
+        registrySyncSeeded <- Hedis.setNx registrySyncSeedKey ()
+        when registrySyncSeeded $ QAllJ.createJobIn @_ @'RegistrySync Nothing Nothing 0 RegistrySyncJobData
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
