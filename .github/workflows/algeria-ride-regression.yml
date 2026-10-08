@@ -46,9 +46,9 @@ on:
   push:
     branches: ['algeria/**']
   # Weekly, for a change to the published image or an upstream fetch that rots.
-  # NOTE: GitHub only runs a schedule from the DEFAULT branch, which is `main`
-  # (upstream's), and this file is not there -- so until the default branch is
-  # ours, this line does nothing. Pushes and the button below are what run it.
+  # GitHub runs a schedule only from the DEFAULT branch. Since 2026-10-08 that
+  # is `algeria/osrm-routing` on both repositories (it was upstream's `main`,
+  # which does not have this file, so until then this line did nothing).
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:

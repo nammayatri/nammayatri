@@ -14,18 +14,17 @@
 #
 # HOW TO START A BUILD
 #
-#   Push anything to the branch `algeria/build-backend`. That is the trigger,
-#   and it exists for no other reason:
+#   Since 2026-10-08 `algeria/osrm-routing` is the default branch, so the
+#   "Run workflow" button works (Actions -> "algeria: build backend") and the
+#   inputs below are editable. The older way still works too: push anything to
+#   the branch `algeria/build-backend`, which exists for no other reason:
 #
 #     git push origin algeria/osrm-routing:algeria/build-backend --force
 #
-#   Why not the "Run workflow" button? GitHub only registers a
-#   workflow_dispatch trigger when the file is on the repo's DEFAULT branch.
-#   Ours is not, and putting it on `main` would fire upstream's
-#   cabal-main-push.yaml, which is unguarded and would start a full failing
-#   cabal build on every push. If you ever set this fork's default branch to a
-#   branch that carries this file, the button appears and the inputs below
-#   become editable; until then every run uses the defaults.
+#   GitHub registers a workflow_dispatch trigger only from the DEFAULT branch,
+#   which is why the button was missing until 2026-10-08: the default was
+#   upstream's `main`, and putting this file there would have fired upstream's
+#   unguarded cabal-main-push.yaml on every push to it.
 #
 # EVERYTHING IN HERE THAT LOOKS ARBITRARY IS NOT. Read
 # .github/scripts/algeria/README.md before changing the base image, the stack
@@ -43,7 +42,7 @@ on:
   # The trigger that actually gets used. See above.
   push:
     branches: ["algeria/build-backend"]
-  # Available only once this file is on the default branch. Harmless meanwhile.
+  # The "Run workflow" button (this file is on the default branch since 2026-10-08).
   workflow_dispatch:
     inputs:
       source_repo:

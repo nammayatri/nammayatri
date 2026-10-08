@@ -36,9 +36,13 @@ priced** by a stack built from this repository. `SKIP_OSRM=1` still brings a
 stack up without the graph, but it now skips the price check and says so.
 
 Its trigger was a list of paths; four days of commits went by without it
-running. It now runs on **every push to `algeria/**`**. The `schedule:` line in
-it does nothing: GitHub runs schedules only from the default branch, `main`,
-which is upstream's and does not have this file.
+running. It now runs on **every push to `algeria/**`**, and every Monday at
+06:00 UTC since 2026-10-08, when `algeria/osrm-routing` became the default
+branch of both repositories (GitHub runs schedules only from the default
+branch; until then it was upstream's `main`, which lacks this file). The same
+day the "Run workflow" button appeared for all three workflows, and upstream's
+`stale.yaml` — which would otherwise have started labelling pull requests every
+night — was disabled on both.
 
 `preflight` accepts a **pulled** image in place of the loose binaries in `bin/`,
 which is what the regression job and `deploy-backend.sh` both do.

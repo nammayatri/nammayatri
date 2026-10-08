@@ -16,13 +16,13 @@ git push --force origin algeria/osrm-routing:algeria/build-backend
 There is a concurrency group, so pushing again supersedes the run in flight
 rather than racing it for a runner.
 
-**Why not the "Run workflow" button?** GitHub only registers a
-`workflow_dispatch` trigger when the workflow file is on the repo's *default*
-branch. Ours is not, and putting it on `main` would fire upstream's
-`cabal-main-push.yaml` — which, unlike most of the upstream workflows, has no
-`github.repository` guard, so every push to `main` on this fork would start a
-full failing cabal build. If you ever point this fork's default branch at a
-branch carrying this file, the button appears and the inputs become editable.
+**Or the "Run workflow" button**, since 2026-10-08, when `algeria/osrm-routing`
+became the default branch of both repositories: GitHub registers a
+`workflow_dispatch` trigger only from the default branch, and that used to be
+upstream's `main` (where this file could not go: upstream's
+`cabal-main-push.yaml` has no `github.repository` guard and would have run a
+full failing cabal build on every push to it). The button makes the inputs
+editable.
 
 Nothing runs on a schedule and nothing runs on a normal push to a work branch.
 
