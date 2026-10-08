@@ -106,8 +106,8 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
         mapConcurrently
           ( \vehicleNumber -> do
               mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-                maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber Nothing
-              pure $ Kernel.Prelude.listToMaybe mbResult
+                maybeToList <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
+              pure $ (vehicleNumber,) <$> Kernel.Prelude.listToMaybe mbResult
           )
           vehicleNumbers
 
@@ -116,10 +116,10 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text, Maybe [Spe.ServiceSubType]) <-
         HashMap.fromList
           <$> mapM
-            ( \m -> do
+            ( \(vehicleNumber, m) -> do
                 frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
-                  CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
-                return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName), m.service_sub_types))
+                  CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.serviceType riderConfig.merchantOperatingCityId config.id
+                return (vehicleNumber, (m.serviceType, frfsServiceTier <&> (.shortName), m.serviceSubTypes))
             )
             successfulMappings
 
