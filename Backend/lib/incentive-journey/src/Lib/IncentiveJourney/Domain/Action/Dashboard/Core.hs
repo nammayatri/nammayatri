@@ -233,6 +233,7 @@ resolveJourneyIdFilter handle mbJourneyType =
 data AssignmentView = AssignmentView
   { cohortId :: ID.Id DCD.CohortDetails,
     cohortName :: Text,
+    cohortCategory :: Text,
     cohortJourneyMappingId :: ID.Id DCJM.CohortJourneyMapping,
     journeyId :: ID.Id DIJ.IncentiveJourney,
     journeyName :: Text,
@@ -281,6 +282,7 @@ toAssignmentView merchantId merchantOpCityId assignment = do
             AssignmentView
               { cohortId = cohort.id,
                 cohortName = cohort.name,
+                cohortCategory = cohort.category,
                 cohortJourneyMappingId = cjm.id,
                 journeyId = journey.id,
                 journeyName = journey.name,

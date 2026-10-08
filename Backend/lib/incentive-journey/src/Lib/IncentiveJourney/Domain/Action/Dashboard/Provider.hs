@@ -712,6 +712,7 @@ toDriverAssignmentItem assignmentView =
   Common.IncentiveJourneyDriverAssignmentItem
     { cohortId = ID.cast assignmentView.cohortId,
       cohortName = assignmentView.cohortName,
+      cohortCategory = assignmentView.cohortCategory,
       cohortJourneyMappingId = ID.cast assignmentView.cohortJourneyMappingId,
       journeyId = ID.cast assignmentView.journeyId,
       journeyName = assignmentView.journeyName,
