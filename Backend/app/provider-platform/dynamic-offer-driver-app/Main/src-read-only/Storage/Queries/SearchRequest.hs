@@ -4,6 +4,7 @@
 
 module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, module ReExport) where
 
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
@@ -38,6 +39,9 @@ updateIsAdvancedBookingEnabled isAdvanceBookingEnabled id = do updateWithKV [Se.
 updateIsReallocationEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateIsReallocationEnabled isReallocationEnabled id = do updateWithKV [Se.Set Beam.isReallocationEnabled isReallocationEnabled] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateOfferedAddOns :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.AddOnConfig.AddOnData] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateOfferedAddOns offeredAddOns id = do updateWithKV [Se.Set Beam.offeredAddOns (if null offeredAddOns then Nothing else Just (toJSON offeredAddOns))] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updatePoolingConfigVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updatePoolingConfigVersion poolingConfigVersion id = do updateWithKV [Se.Set Beam.poolingConfigVersion poolingConfigVersion] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -69,7 +73,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.disabilityTag disabilityTag,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverDefaultExtraFee (roundToIntegral <$> driverDefaultExtraFee),
-      Se.Set Beam.driverDefaultExtraFeeAmount driverDefaultExtraFee,
+      Se.Set Beam.driverDefaultExtraFeeAmount (driverDefaultExtraFee),
       Se.Set Beam.driverIdForSearch (Kernel.Types.Id.getId <$> driverIdForSearch),
       Se.Set Beam.dynamicPricingLogicVersion dynamicPricingLogicVersion,
       Se.Set Beam.estimatedDistance estimatedDistance,
@@ -89,6 +93,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.merchantOperatingCityId (Just $ Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.messageId messageId,
       Se.Set Beam.numberOfLuggages numberOfLuggages,
+      Se.Set Beam.offeredAddOns (if null offeredAddOns then Nothing else Just (toJSON offeredAddOns)),
       Se.Set Beam.parcelQuantity parcelQuantity,
       Se.Set Beam.parcelType parcelType,
       Se.Set Beam.paymentMode paymentMode,
@@ -108,7 +113,7 @@ updateByPrimaryKey (Domain.Types.SearchRequest.SearchRequest {..}) = do
       Se.Set Beam.specialLocationTag specialLocationTag,
       Se.Set Beam.startTime (Just startTime),
       Se.Set Beam.toLocGeohash toLocGeohash,
-      Se.Set Beam.toLocationId (Kernel.Types.Id.getId . (.id) <$> toLocation),
+      Se.Set Beam.toLocationId (((Kernel.Types.Id.getId . (.id)) <$> toLocation)),
       Se.Set Beam.tollCharges tollCharges,
       Se.Set Beam.tollIds tollIds,
       Se.Set Beam.tollNames tollNames,

@@ -4,6 +4,7 @@
 module Domain.Types.SearchRequest where
 
 import Data.Aeson
+import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
@@ -61,6 +62,7 @@ data SearchRequest = SearchRequest
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     numberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    offeredAddOns :: [Domain.Types.AddOnConfig.AddOnData],
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     paymentMode :: Kernel.Prelude.Maybe Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,

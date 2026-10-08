@@ -169,7 +169,7 @@ acceptDynamicOfferDriverRequest clientId merchantId merchantOpCityId merchant se
     if fromMaybe False farePolicy'.parkingFeeExemptionEnabled
       then SPFE.isParkingFeeExemptForDriver driver.id
       else pure False
-  addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
+  let addOnCharges = SAddOn.addOnChargesTotal searchTry.addOnData
   fareParams <- do
     FC.calculateFareParameters
       CalculateFareParametersParams

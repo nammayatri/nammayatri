@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.OnSearch as OSROnS
 import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.Search as OSRSearch
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.OndcScheduledRide.Common as OSRCommon
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
@@ -46,15 +47,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.GatewayDispatch as GatewayDispatch
 import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 
 type API =
@@ -120,14 +120,16 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
           msgId <- Utils.getMessageId context
           country <- Utils.getContextCountry context
 
-          -- Pilot merchants get isSchedule derived from the category code and the BAP's STATIC_TERMS verified/stored, in one pass.
-          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
-          let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-          dSearchReq <-
-            if isOndcScheduledRideSupportEnabled
-              then OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq'
-              else pure dSearchReq'
-          DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
+        mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id dSearchReq'.bapId) Domain.MOBILITY merchant.id moc.id
+        let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata' >>= (.enableOndcScheduledRideSupport))
+        (dSearchReq, mbBapMetadata) <-
+          if isOndcScheduledRideSupportEnabled
+            then do
+              -- Pilot BAPs get isSchedule derived from the category code and their STATIC_TERMS verified/stored, in one pass.
+              updatedBapMetadata <- OSRCommon.verifyIncomingStaticTerms (Id dSearchReq'.bapId) Domain.MOBILITY merchant.id moc.id mbBapMetadata' (reqV2.searchReqMessage.searchReqMessageIntent >>= (.intentTags))
+              pure (OSRSearch.ondcScheduledRideParser reqV2.searchReqMessage dSearchReq', updatedBapMetadata)
+            else pure (dSearchReq', mbBapMetadata')
+        DSearch.validateScheduledBookingWindowForSearch moc.id dSearchReq
 
           isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
           when isFirst $
@@ -138,7 +140,7 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
                   -- Same pilot check, patches the already-built on_search reply's catalog.tags with BPP_TERMS.
                   onSearchReq <-
                     if isOndcScheduledRideSupportEnabled
-                      then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id moc.id dSearchReq.bapId dSearchRes onSearchReq'
+                      then OSROnSearch.ondcScheduledRideOnSearchMessageBuild merchant.id moc.id mbBapMetadata dSearchRes onSearchReq'
                       else pure onSearchReq'
                   internalEndPointHashMap <- asks (.internalEndPointHashMap)
                   let context' = onSearchReq.onSearchReqContext

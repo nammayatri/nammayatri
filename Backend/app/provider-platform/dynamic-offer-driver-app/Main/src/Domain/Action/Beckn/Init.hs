@@ -501,7 +501,7 @@ validateRequest _merchantId req isOndcScheduledRideSupportEnabled = do
         -- Estimate-based/dynamic-offer path. Pilot-gated, like every
         -- other add-on touchpoint.
         when isOndcScheduledRideSupportEnabled $
-          SAddOn.verifyAddOnEcho searchTry.addOnData searchRequest.merchantOperatingCityId (Just updatedDriverQuote.vehicleServiceTier) req.addOns
+          SAddOn.verifyAddOnEcho searchTry.addOnData req.addOns
         return $ ValidatedInitReq {searchRequest, quote = ValidatedEstimate updatedDriverQuote searchTry}
     QuoteId quoteId -> do
       quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
@@ -512,7 +512,7 @@ validateRequest _merchantId req isOndcScheduledRideSupportEnabled = do
       -- Synchronous NACK, before any fork -- same shape as /select.
       -- Pilot-gated, like every other add-on touchpoint.
       when isOndcScheduledRideSupportEnabled $
-        SAddOn.verifyAddOnEcho quote.addOnData searchRequest.merchantOperatingCityId (Just quote.vehicleServiceTier) req.addOns
+        SAddOn.verifyAddOnEcho quote.addOnData req.addOns
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
   where
     callWithErrorHandling transactionId action = do

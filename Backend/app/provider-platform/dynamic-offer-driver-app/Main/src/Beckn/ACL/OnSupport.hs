@@ -52,7 +52,7 @@ buildOnSupportMessageV2 merchant booking mbMessageId mbDescriptor = do
   bapUri <- parseBaseUrl booking.bapUri
   context <- CU.buildContextV2 Context.ON_SUPPORT Context.MOBILITY (fromMaybe msgId mbMessageId) (Just booking.transactionId) booking.bapId bapUri (Just bppId) (Just bppUri) city country (Just ttl)
   -- Support contact details are the BAP's own, read off its BapMetadata row (absent if it hasn't declared one).
-  mbBapMetadata <- CQBapMetadata.findBySubscriberIdAndDomain (Id booking.bapId) Context.MOBILITY
+  mbBapMetadata <- CQBapMetadata.findBySubscriberIdDomainMerchantAndCity (Id booking.bapId) Context.MOBILITY booking.providerId booking.merchantOperatingCityId
   pure $
     Spec.OnSupportReq
       { onSupportReqContext = context,

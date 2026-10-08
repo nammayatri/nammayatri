@@ -28,6 +28,7 @@ imports:
   DeviceType: Kernel.Types.Version
   RiderPreferredOption: Domain.Types.RiderPreferredOption
   BecknProtocol: Domain.Types
+  AddOnData: Domain.Types.AddOnConfig
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -101,6 +102,7 @@ SearchRequest:
     userSdkVersion: Maybe Version
     userBackendAppVersion: Maybe Text
     riderPreferredOption: RiderPreferredOption|NoRelation
+    offeredAddOns: "[AddOnData]"
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -108,6 +110,7 @@ SearchRequest:
     bapUri: Text
     merchantOperatingCityId: Maybe Text
     currency: Maybe Currency
+    offeredAddOns: Maybe Value
     isAdvanceBookingEnabled: Maybe Bool
     distanceUnit: Maybe DistanceUnit
     isDashboardRequest: Maybe Bool
@@ -140,6 +143,7 @@ SearchRequest:
     startTime: Just startTime|E
     validTill: Just validTill|E
     isScheduled: Just isScheduled|E
+    offeredAddOns: if null offeredAddOns then Nothing else Just (toJSON offeredAddOns)|E
     bapUri: Kernel.Prelude.showBaseUrl|I
     merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
     currency: Just currency|E
@@ -174,6 +178,7 @@ SearchRequest:
     fromLocation: Storage.Queries.Location.findById ( (.locationId) fromLocationMapping) >>= fromMaybeM (Tools.Error.FromLocationNotFound ( (.getId) $ (.locationId) fromLocationMapping))|EM
     toLocation: maybe (pure Nothing) (Storage.Queries.Location.findById . (.locationId)) mbToLocationMapping|EM
     stops: Storage.Queries.Transformers.SearchRequest.getStops id hasStops|EM
+    offeredAddOns: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< offeredAddOns)|E
     startTime: startTime_|E
     validTill: fromMaybe (Kernel.Utils.Common.addUTCTime 600 startTime_) validTill|E
     isScheduled: fromMaybe False isScheduled|E
@@ -233,6 +238,7 @@ SearchRequest:
     userSdkVersion: character varying(255)
     userBackendAppVersion: character varying(255)
     riderPreferredOption: character varying(255)
+    offeredAddOns: "json"
 
   default:
     autoAssignEnabled: "false"
@@ -260,6 +266,10 @@ SearchRequest:
     updateSearchTags:
       kvFunction: updateWithKV
       params: [ searchTags ]
+      where: id
+    updateOfferedAddOns:
+      kvFunction: updateWithKV
+      params: [ offeredAddOns ]
       where: id
     updateTripCategory:
       kvFunction: updateWithKV

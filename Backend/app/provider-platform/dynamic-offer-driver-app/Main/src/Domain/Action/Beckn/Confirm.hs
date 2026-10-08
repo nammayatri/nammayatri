@@ -19,6 +19,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import Domain.Types
+import qualified Domain.Types.BapMetadata as DBapMetadata
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FarePolicy as DFP
@@ -29,7 +30,6 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
-import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -321,9 +321,9 @@ validateRequest ::
   Id DM.Merchant ->
   DConfirmReq ->
   UTCTime ->
-  DTMT.TransporterConfig ->
+  Maybe DBapMetadata.BapMetadata ->
   m (DM.Merchant, ValidatedQuote)
-validateRequest subscriber transporterId req now transporterConfig = do
+validateRequest subscriber transporterId req now mbBapMetadata = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <- QM.findById transporterId' >>= fromMaybeM (MerchantNotFound transporterId'.getId)
@@ -331,16 +331,16 @@ validateRequest subscriber transporterId req now transporterConfig = do
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-  -- OneWay OneWayOnDemandStaticOffer is the only category the pilot newly allows for non-value-add (external) BAPs -- everything else they were never validated for must stay blocked, even in a pilot-enabled city.
-  -- This allows the two pre-existing dynamic-offer categories always, and OneWay OneWayOnDemandStaticOffer only when the city has the pilot enabled.
+  let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
+  -- OneWay OneWayOnDemandStaticOffer is the only category the pilot newly allows for non-value-add (external) BAPs -- everything else they were never validated for must stay blocked, even for a pilot-enabled BAP.
+  -- This allows the two pre-existing dynamic-offer categories always, and OneWay OneWayOnDemandStaticOffer only when this BAP has the pilot enabled in this city.
   let isAllowedForNonValueAddNP = case booking.tripCategory of
         OneWay OneWayOnDemandDynamicOffer -> True
         CrossCity OneWayOnDemandDynamicOffer _ -> True
         OneWay OneWayOnDemandStaticOffer -> isOndcScheduledRideSupportEnabled
         _ -> False
   when isOndcScheduledRideSupportEnabled $
-    SAddOn.verifyAddOnEcho booking.addOnData booking.merchantOperatingCityId (Just booking.vehicleServiceTier) req.addOns
+    SAddOn.verifyAddOnEcho booking.addOnData req.addOns
   when (not isValueAddNP && not isAllowedForNonValueAddNP) $
     throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of

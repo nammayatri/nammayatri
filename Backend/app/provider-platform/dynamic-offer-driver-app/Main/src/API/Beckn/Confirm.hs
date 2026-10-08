@@ -41,7 +41,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
@@ -49,11 +48,11 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.Ride as SRide
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Tools.ActorInfo as ActorInfo
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -87,24 +86,26 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
     country <- Utils.getContextCountry context
     isValueAddNP <- CQVAN.isValueAddNP bapId
     dConfirmReq' <- ACL.buildConfirmReqV2 reqV2 isValueAddNP
-    -- transporterConfig is fetched once here (keyed on the wire request's city) and threaded through the rest of this flow -- the add-ons patch below, DConfirm.validateRequest, callOnConfirm and BP.sendOnConfirmToBAP.
     moc <- CQMOC.findByMerchantIdAndCity transporterId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
-    -- Pilot merchants: patches in the wire item's add-ons before DConfirm.validateRequest verifies them against what was selected earlier.
+    mbBapMetadata' <- CQBapMetaData.findBySubscriberIdDomainMerchantAndCity (Id bapId) Domain.MOBILITY transporterId moc.id
+    let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata' >>= (.enableOndcScheduledRideSupport))
+    -- Pilot BAPs: patches in the wire item's add-ons before DConfirm.validateRequest verifies them against what was selected earlier.
     let dConfirmReq =
-          if fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+          if isOndcScheduledRideSupportEnabled
             then OSRConfirm.buildOndcScheduledRideConfirmReq reqV2 dConfirmReq'
             else dConfirmReq'
     Redis.whenWithLockRedis (SRide.confirmLockKey dConfirmReq.bookingId) 60 $ do
       now <- getCurrentTime
-      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now transporterConfig
+      (transporter, eitherQuote) <- DConfirm.validateRequest subscriber transporterId dConfirmReq now mbBapMetadata'
       -- Verifying: store the BAP's declared BAP_TERMS.STATIC_TERMS (if any)
       -- against its BapMetadata row, so it's available to echo back on this
       -- same on_confirm response.
-      let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-      when isOndcScheduledRideSupportEnabled $ do
-        let incomingOrderTags = reqV2.confirmReqMessage.confirmReqMessageOrder.orderTags
-        OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY incomingOrderTags
+      mbBapMetadata <-
+        if isOndcScheduledRideSupportEnabled
+          then do
+            let incomingOrderTags = reqV2.confirmReqMessage.confirmReqMessageOrder.orderTags
+            OSRCommon.verifyIncomingStaticTerms (Id bapId) Domain.MOBILITY transporterId moc.id mbBapMetadata' incomingOrderTags
+          else pure mbBapMetadata'
       fork "confirm" $ do
         Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
@@ -114,7 +115,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
             Just rideInfo' -> do
               fork "on_confirm with rideInfo" $ do
                 handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
-                  void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context transporterConfig
+                  void $ BP.sendOnConfirmToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle transporter context mbBapMetadata
                   when (isMeterRide dConfirmRes.booking.tripCategory) $ do
                     let startRideReq =
                           RAPI.StartRideReq
@@ -126,7 +127,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
             Nothing -> do
               fork "on_confirm on-us" $ do
                 handle (errHandler dConfirmRes transporter Nothing) $ do
-                  callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP transporterConfig
+                  callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP mbBapMetadata
     pure Ack
   where
     isMeterRide = \case
@@ -138,7 +139,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking dConfirmRes.booking mbDriver transporter
       | otherwise = throwM exc
 
-    callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP transporterConfig = do
+    callOnConfirm dConfirmRes msgId txnId bapId callbackUrl bppId bppUri city country isValueAddNP mbBapMetadata = do
       context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country (Just "PT2M")
       let vehicleCategory = Utils.mapServiceTierToCategory dConfirmRes.booking.vehicleServiceTier
       becknConfig <- QBC.findByMerchantIdDomainAndVehicle dConfirmRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -147,11 +148,11 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
       bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
       let onConfirmMessage' = ACL.buildOnConfirmMessageV2 isValueAddNP dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
-      -- Pilot merchants get fulfillment-state and BAP/BPP-terms overrides on the on_confirm order; everyone else's message is unchanged.
-      let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
+      -- Pilot BAPs get fulfillment-state and BAP/BPP-terms overrides on the on_confirm order; everyone else's message is unchanged.
+      let isOndcScheduledRideSupportEnabled = fromMaybe False (mbBapMetadata >>= (.enableOndcScheduledRideSupport))
       onConfirmMessage <-
         if isOndcScheduledRideSupportEnabled
-          then OSROnConfirm.ondcScheduledRideOnConfirmMessageBuild dConfirmRes.booking bapId becknConfig onConfirmMessage'
+          then OSROnConfirm.ondcScheduledRideOnConfirmMessageBuild dConfirmRes.booking mbBapMetadata becknConfig onConfirmMessage'
           else pure onConfirmMessage'
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
