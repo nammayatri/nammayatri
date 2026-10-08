@@ -272,13 +272,18 @@ rehearse() {
   docker run -d --name "$R-passetto-db" --network "$R" --memory 256m --restart no \
     -e POSTGRES_DB=passetto -e POSTGRES_USER=passetto -e POSTGRES_PASSWORD=passetto \
     "$PASSETTO_DB_IMAGE" >/dev/null || die "passetto-db did not start"
-  local i
-  for i in $(seq 1 90); do
-    docker exec "$R-pg" pg_isready -U postgres -d atlas_dev -q 2>/dev/null \
-      && docker exec "$R-passetto-db" pg_isready -U passetto -q 2>/dev/null \
-      && docker exec "$R-pg" psql -U postgres -d atlas_dev -Atc "SELECT 1 FROM pg_extension WHERE extname='postgis'" 2>/dev/null | grep -q 1 \
-      && break
-    sleep 2
+  # Ready means the image's first-run setup is OVER: the postgres images start
+  # a temporary server for their init scripts, then shut it down and start the
+  # real one. pg_isready answers yes during the first, and a load begun then
+  # dies with "the database system is shutting down" (CI, 2026-10-08).
+  local i c
+  for c in "$R-pg" "$R-passetto-db"; do
+    for i in $(seq 1 90); do
+      docker logs "$c" 2>&1 | grep -q 'PostgreSQL init process complete' \
+        && docker exec "$c" pg_isready -q 2>/dev/null && break
+      sleep 2
+    done
+    docker exec "$c" pg_isready -q 2>/dev/null || die "$c did not become ready"
   done
   ok "postgres and passetto-db ready (empty: no seed, no keys)"
   # The extensions the live database has beside PostGIS, which the dump does

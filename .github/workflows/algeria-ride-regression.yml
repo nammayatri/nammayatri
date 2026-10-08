@@ -72,17 +72,21 @@ jobs:
             .github
           sparse-checkout-cone-mode: false
 
-      # The image every deployment runs, built by `algeria: build backend`.
-      # GITHUB_TOKEN is enough inside this org, so there is no secret here.
+      # THE image the server runs: the one stack/deploy-backend.sh pulls, from
+      # the company org, whichever repository this job runs in. Public, so no
+      # login. Until 2026-10-08 this pulled ghcr.io/<repo owner>/..., which on
+      # MohaGNPro is a 2026-08-26 build (41cbe406) -- six weeks older than the
+      # server's (108eca6c), and blind to +222: found the day CI first tried a
+      # Mauritanian sign-in. The digest is printed so a run says what it tested.
       - name: Pull the backend image
         run: |
           set -euo pipefail
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          docker pull "ghcr.io/$owner/ny-backend:latest"
+          img=ghcr.io/nammayatri-algeria/ny-backend:latest
+          docker pull "$img"
+          docker image inspect "$img" --format 'tested image: {{index .RepoDigests 0}}'
           # The compose file names this tag on all five services. Tagging is the
           # whole "deploy" here, exactly as deploy-backend.sh does on the VPS.
-          docker tag "ghcr.io/$owner/ny-backend:latest" ny-rider:patched
+          docker tag "$img" ny-rider:patched
           docker run --rm --entrypoint ls ny-rider:patched -1 /opt/app | head -20
 
       # The ISO week: the map is fetched again at most once a week.

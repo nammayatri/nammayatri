@@ -26,6 +26,11 @@
 #   upstream's `main`, and putting this file there would have fired upstream's
 #   unguarded cabal-main-push.yaml on every push to it.
 #
+# RUN IT IN THE COMPANY REPOSITORY. The image goes to ghcr.io/<repo owner>/, and
+# the server (stack/deploy-backend.sh) and the ride regression pull only
+# ghcr.io/nammayatri-algeria/ny-backend. A build run in MohaGNPro lands in
+# ghcr.io/mohagnpro/, which nothing deploys (its latest is the 2026-08-26 one).
+#
 # EVERYTHING IN HERE THAT LOOKS ARBITRARY IS NOT. Read
 # .github/scripts/algeria/README.md before changing the base image, the stack
 # root, the DNS pinning, or how beckn-gateway is declared.

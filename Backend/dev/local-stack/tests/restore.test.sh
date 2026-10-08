@@ -54,10 +54,12 @@ docker run -d --name "$P-passetto-db" --network "$P" \
   -e POSTGRES_DB=passetto -e POSTGRES_USER=passetto -e POSTGRES_PASSWORD=passetto \
   -v "$ROOT/Backend/dev/sql-seed/passetto-seed.sql:/docker-entrypoint-initdb.d/create_schema.sql:ro" \
   postgres:12.3 >/dev/null
-for i in $(seq 1 120); do
-  docker exec "$P-pg" psql -U postgres -d atlas_dev -Atc "SELECT 1 FROM pg_extension WHERE extname='postgis_tiger_geocoder'" 2>/dev/null | grep -q 1 \
-    && docker exec "$P-passetto-db" psql -U passetto -d passetto -Atc 'SELECT count(*) FROM "Passetto"."Keys"' 2>/dev/null | grep -q 3 && break
-  sleep 2
+# Past the images' first-run restart (see restore.sh), not just answering.
+for c in "$P-pg" "$P-passetto-db"; do
+  for i in $(seq 1 120); do
+    docker logs "$c" 2>&1 | grep -q 'PostgreSQL init process complete' && docker exec "$c" pg_isready -q 2>/dev/null && break
+    sleep 2
+  done
 done
 # A fixed port, as on the server (8021): a random one changes when restore.sh
 # restarts passetto, and the check would talk to nobody.
