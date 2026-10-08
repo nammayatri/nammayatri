@@ -1,0 +1,129 @@
+imports:
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  RideFeedbackStage: Domain.Types.RideFeedbackConfig
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackQuestionType: Domain.Types.RideFeedbackConfig
+  RideFeedbackActionType: Domain.Types.RideFeedbackConfig
+  Value: Data.Aeson
+
+RideFeedbackResponse:
+  tableName: ride_feedback_response
+
+  # One row per (question, subject): the rider's answer to a question. The subject is the ride for
+  # ride-stage questions (linked to its driver) and the journey (transactionId) for booking-stage
+  # ones, which are asked before any driver. Created as SHOWN on first impression, then moved to a
+  # final status. Actions matched by the answer are recorded here as PENDING; rider-app runs them
+  # and reports each result back.
+  # The answer is stored in typed answer_* columns (one per kind of answer) for analytics, not JSON:
+  # each question type fills only its own (options / rating / number / text / media).
+  fields:
+    id: Id RideFeedbackResponse
+    transactionId: Text # the journey: stays the same when a booking is reallocated
+    bookingId: Id Booking # the driver-side booking at the time of the answer
+    rideId: Maybe (Id Ride)
+    driverId: Maybe (Id Person)
+    subjectId: Text # rideId for ride-stage questions, transactionId for booking-stage ones
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    questionType: RideFeedbackQuestionType # copied from the question, so analytics need no join to the (changing) config
+    logicVersion: Maybe Int # RIDE-FEEDBACK dynamic logic version that selected the question
+    configPilotVersions: Maybe [Int] # Config Pilot versions of ride_feedback_config the question was served from
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    answerScore: Maybe Double # 0 (bad) to 1 (good), comparable across questions; Nothing when the answer is not scored
+    stage: RideFeedbackStage # where the journey was when the question was first shown
+    secondsSinceBooking: Int
+    secondsIntoRide: Maybe Int
+    actionResults: Maybe [RideFeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    RideFeedbackResponseStatus:
+      enum: "SHOWN,ANSWERED,SKIPPED,EXPIRED"
+      derive: "Bounded, Enum"
+
+    # Mirrored in rider-app's SharedLogic.RideFeedback.Types (with RideFeedbackActionResult).
+    RideFeedbackActionStatus:
+      enum: "PENDING,SUCCESS,FAILED"
+      derive: "Bounded, Enum"
+
+    RideFeedbackActionResult:
+      ruleId: Text
+      actionType: RideFeedbackActionType
+      status: RideFeedbackActionStatus
+      attempts: Int
+      externalRef: Maybe Text
+      errorMessage: Maybe Text
+      updatedAt: UTCTime
+
+    RideFeedbackAnswer:
+      selectedOptionKeys: Maybe [Text]
+      text: Maybe Text
+      number: Maybe Double
+      rating: Maybe Int
+      mediaFileIds: Maybe [Text]
+
+  beamFields:
+    answer:
+      answerOptionKeys: Maybe [Text]
+      answerText: Maybe Text
+      answerNumber: Maybe Double
+      answerRating: Maybe Int
+      answerMediaFileIds: Maybe [Text]
+
+  beamType:
+    actionResults: Maybe Value
+
+  sqlType:
+    questionKey: text
+    questionType: text
+    status: text
+    stage: text
+    answerOptionKeys: "text[]"
+    answerText: text
+    answerMediaFileIds: "text[]"
+    actionResults: json
+    configPilotVersions: "integer[]"
+
+  toTType:
+    answerOptionKeys: answer >>= (.selectedOptionKeys)|E
+    answerText: answer >>= (.text)|E
+    answerNumber: answer >>= (.number)|E
+    answerRating: answer >>= (.rating)|E
+    answerMediaFileIds: answer >>= (.mediaFileIds)|E
+    actionResults: Data.Aeson.toJSON <$> actionResults|E
+
+  fromTType:
+    answer: Storage.Queries.Transformers.RideFeedbackResponse.mkAnswer answerOptionKeys answerText answerNumber answerRating answerMediaFileIds|E
+    actionResults: Kernel.Utils.JSON.valueToMaybe =<< actionResults|E
+
+  constraints:
+    id: PrimaryKey
+    transactionId: SecondaryKey
+
+  extraIndexes:
+    - columns: [configId, subjectId]
+      unique: true
+    # For analytics by driver and by question (the generator orders columns alphabetically, so these stay single-column).
+    - columns: [driverId]
+    - columns: [questionKey]
+
+  queries:
+    findAllByTransactionId:
+      kvFunction: findAllWithKV
+      where: transactionId
+
+    updateActionResults:
+      kvFunction: updateWithKV
+      params: [actionResults]
+      where: id
+
+  extraOperations:
+    - GENERATE_INDEXES

@@ -144,6 +144,30 @@ let sqlMapper =
 
 let defaultImports =
       [ { _simpleImports =
+          [ "EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common" ]
+        , _qualifiedImports =
+          [ "Domain.Types.Person"
+          , "Kernel.Prelude"
+          , "Control.Lens"
+          , "Domain.Types.Merchant"
+          , "Environment"
+          , "Kernel.Types.Id"
+          , "Kernel.Types.Beckn.Context"
+          ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.SERVANT_API
+        }
+      , { _simpleImports = [ "Servant" ]
+        , _qualifiedImports =
+          [ "Domain.Types.Merchant"
+          , "Environment"
+          , "Kernel.Types.Beckn.Context"
+          , "Kernel.Types.Id"
+          ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.API_TREE
+        }
+      , { _simpleImports =
           [ "EulerHS.Prelude hiding (id, state)"
           , "Servant"
           , "Data.OpenApi (ToSchema)"

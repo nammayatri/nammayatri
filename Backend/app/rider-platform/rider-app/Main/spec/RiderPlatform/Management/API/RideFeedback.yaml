@@ -1,0 +1,22 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+# During-ride feedback is managed in the driver platform (questions, targeting, answers). rider-app runs
+# the actions an answer triggers, so retrying failed ones is the only rider-side management API.
+module: RideFeedback
+
+types: {}
+
+apis:
+  # POST /rideFeedback/booking/{bookingId}/response/{responseId}/retryActions
+  # bookingId and responseId are the driver platform's ids, as shown in the dashboard's inspector.
+  - POST:
+      endpoint: /booking/{bookingId}/response/{responseId}/retryActions
+      auth: ApiAuthV2
+      params:
+        bookingId: Text
+        responseId: Text
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.ride_feedback.write

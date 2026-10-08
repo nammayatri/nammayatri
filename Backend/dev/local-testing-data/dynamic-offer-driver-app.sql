@@ -445,3 +445,58 @@ WHERE NOT EXISTS (
   WHERE fda.id = md5(m.id || ':seed-fleet-driver-assoc')::uuid::text
 );
 
+
+-- During-ride feedback (driver platform): example questions (AC check + follow-up, overcharging). Which rides get them is decided
+-- by the RIDE-FEEDBACK logic below (app_dynamic_logic_element), whose version app_dynamic_logic_rollout picks.
+INSERT INTO atlas_driver_offer_bpp.ride_feedback_config
+  (id, merchant_id, merchant_operating_city_id, question_key, question_type, title, options, acknowledgement, ui_config,
+   is_follow_up_only, stages, display_trigger, action_rules, priority, enabled)
+SELECT md5(moc.id || ':rf-ac-on-check')::uuid::text, moc.merchant_id, moc.id, 'AC_ON_CHECK', 'YES_NO',
+  '[{"language":"ENGLISH","translation":"Is the AC switched on?"}]',
+  '[{"key":"YES","label":[{"language":"ENGLISH","translation":"Yes"}]},{"key":"NO","label":[{"language":"ENGLISH","translation":"No"}],"nextQuestionKey":"AC_OFF_REASON"}]',
+  '[{"language":"ENGLISH","translation":"Thanks! We''ll look into it."}]',
+  '{"layout":"bottom_sheet"}',
+  false, '{RIDE_IN_PROGRESS}',
+  '{"showAfterSecondsFromRideStart":180,"autoDismissAfterSeconds":60}',
+  '[]', 10, true
+FROM atlas_driver_offer_bpp.merchant_operating_city moc WHERE moc.city = 'Bangalore'
+ON CONFLICT (merchant_operating_city_id, question_key) DO NOTHING;
+
+INSERT INTO atlas_driver_offer_bpp.ride_feedback_config
+  (id, merchant_id, merchant_operating_city_id, question_key, question_type, title, options, acknowledgement,
+   is_follow_up_only, stages, display_trigger, action_rules, priority, enabled)
+SELECT md5(moc.id || ':rf-ac-off-reason')::uuid::text, moc.merchant_id, moc.id, 'AC_OFF_REASON', 'SINGLE_SELECT',
+  '[{"language":"ENGLISH","translation":"What happened?"}]',
+  '[{"key":"DRIVER_REFUSED","label":[{"language":"ENGLISH","translation":"Driver refused to switch on"}]},{"key":"NOT_WORKING","label":[{"language":"ENGLISH","translation":"AC not working"}]},{"key":"OTHER","label":[{"language":"ENGLISH","translation":"Other"}],"requiresText":true}]',
+  '[{"language":"ENGLISH","translation":"Thanks! We''ll look into it."}]',
+  true, '{RIDE_IN_PROGRESS}', NULL,
+  '[{"ruleId":"ac_report","condition":{"in":[{"var":"answer.primaryOptionKey"},["DRIVER_REFUSED","NOT_WORKING"]]},"actions":[{"actionType":"REPORT_ISSUE_TO_BPP","params":{"issueType":"AC_RELATED_ISSUE"}}]},{"ruleId":"ac_other_text","condition":{"!=":[{"var":"answer.text"},null]},"actions":[{"actionType":"L0_SENSITIVE_WORD_CHECK"}]}]',
+  11, true
+FROM atlas_driver_offer_bpp.merchant_operating_city moc WHERE moc.city = 'Bangalore'
+ON CONFLICT (merchant_operating_city_id, question_key) DO NOTHING;
+
+INSERT INTO atlas_driver_offer_bpp.ride_feedback_config
+  (id, merchant_id, merchant_operating_city_id, question_key, question_type, title, options, ui_config,
+   is_follow_up_only, stages, display_trigger, action_rules, priority, enabled)
+SELECT md5(moc.id || ':rf-extra-fare-asked')::uuid::text, moc.merchant_id, moc.id, 'EXTRA_FARE_ASKED', 'SINGLE_SELECT',
+  '[{"language":"ENGLISH","translation":"Did the driver ask for more than the app fare?"}]',
+  '[{"key":"NO","label":[{"language":"ENGLISH","translation":"No"}]},{"key":"ASKED_EXTRA","label":[{"language":"ENGLISH","translation":"Yes, asked extra"}]},{"key":"ASKED_TOLL","label":[{"language":"ENGLISH","translation":"Yes, for toll"}]}]',
+  '{"layout":"poll"}',
+  false, '{RIDE_ASSIGNED,RIDE_IN_PROGRESS}',
+  '{"showAfterSecondsFromAssign":60,"showAfterSecondsFromRideStart":120}',
+  '[{"ruleId":"extra_fare","condition":{"==":[{"var":"answer.primaryOptionKey"},"ASKED_EXTRA"]},"actions":[{"actionType":"REPORT_ISSUE_TO_BPP","params":{"issueType":"EXTRA_FARE_MITIGATION"}}]},{"ruleId":"toll","condition":{"==":[{"var":"answer.primaryOptionKey"},"ASKED_TOLL"]},"actions":[{"actionType":"REPORT_ISSUE_TO_BPP","params":{"issueType":"DRIVER_TOLL_RELATED_ISSUE"}}]}]',
+  20, true
+FROM atlas_driver_offer_bpp.merchant_operating_city moc WHERE moc.city = 'Chennai'
+ON CONFLICT (merchant_operating_city_id, question_key) DO NOTHING;
+
+-- RIDE-FEEDBACK logic v1: returns the question keys for the ride ({"questions": [...]}).
+INSERT INTO atlas_driver_offer_bpp.app_dynamic_logic_element (domain, version, "order", description, logic)
+VALUES ('RIDE-FEEDBACK', 1, 0, 'AC check on AC rides; overcharging question in Chennai',
+  '{"questions":{"merge":[{"if":[{"==":[{"var":"booking.isAirConditioned"},true]},["AC_ON_CHECK"],[]]},{"if":[{"==":[{"var":"city.cityName"},"Chennai"]},["EXTRA_FARE_ASKED"],[]]}]}}')
+ON CONFLICT DO NOTHING;
+
+-- v1 for every city without its own rollout row.
+INSERT INTO atlas_driver_offer_bpp.app_dynamic_logic_rollout (domain, merchant_operating_city_id, version, percentage_rollout, time_bounds, version_description)
+VALUES ('RIDE-FEEDBACK', 'default', 1, 100, 'Unbounded', 'During-ride feedback v1')
+ON CONFLICT DO NOTHING;
+
