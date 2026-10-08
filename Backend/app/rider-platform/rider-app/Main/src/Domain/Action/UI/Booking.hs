@@ -632,6 +632,7 @@ editLocationForBooking (personId, merchantId) bookingId req = do
           distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
       when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) $
         throwError EditPickupLocationNotServiceable
+      DRide.validateWalkAndSavePickupEdit booking initialLatLong currentLatLong
       whenJust mbRide $ \ride -> do
         res <- withTryCatch "callGetDriverLocation:editLocation" (CallBPP.callGetDriverLocation ride.trackingUrl)
         case res of
