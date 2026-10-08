@@ -11,7 +11,7 @@ Three workflows, none of which deploys anything:
 | Workflow | What it proves | When |
 |---|---|---|
 | `algeria: node tests` | **Every** test in `tests/` (`run-all.sh` globs), on Node 20 and 22: sign-in rules, the push relay, the release rehearsal — and the money path (`wallet`, `restricted`, `deletion`, the guard's `WALLET_EMPTY`) with its SQL run in a real Postgres (PGlite, in-process) | Every push to `algeria/**`, and pull requests |
-| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner, with real routing on an Algiers map, signs a `+213` number in and answers a ride search **with a price** | Every push to `algeria/**`, and on demand |
+| `algeria: ride regression` | A whole backend, brought up from nothing on a throwaway runner from **the image the server runs**, with real routing on an Algiers + Nouakchott map. Then the **live two-country layout** from the server's own SQL files, and a priced ride in each country — `+213` in Algiers, `+222` in Nouakchott — each priced **only by its own country's merchant** | Every push to `algeria/**`, Mondays 06:00 UTC, and on demand |
 | `algeria: build backend` | The Haskell binaries. 44 minutes; nothing else triggers it | Push to `algeria/build-backend` |
 
 ```bash
@@ -43,6 +43,19 @@ branch; until then it was upstream's `main`, which lacks this file). The same
 day the "Run workflow" button appeared for all three workflows, and upstream's
 `stale.yaml` — which would otherwise have started labelling pull requests every
 night — was disabled on both.
+
+**Since 2026-10-08 it runs the live layout and tests the live image.**
+`setup.sh two-countries` applies `db/mauritania-geofences.sql`,
+`db/two-countries-merchants.sql` and both tariffs (through `apply-tariff.sh`)
+exactly as the server got them; `setup.sh price-both` then asks for a ride in
+each country and checks `atlas_app.estimate.provider_url` — every estimate in
+Algiers from `algeria0…`, every one in Nouakchott from `favorit0…`. The first
+green run: Algiers 629 / 899 DA, Nouakchott 74 / 74 / 148 MRU. Before that day it
+priced one Algiers ride with upstream's seed merchant (fare 258) — and **pulled
+the wrong image**: `ghcr.io/<repo owner>/ny-backend`, which on MohaGNPro is the
+2026-08-26 build, six weeks older than the server's and unable to sign in a
+`+222` number. It now pulls `ghcr.io/nammayatri-algeria/ny-backend:latest`, as
+`stack/deploy-backend.sh` does, and prints the digest it tested.
 
 `preflight` accepts a **pulled** image in place of the loose binaries in `bin/`,
 which is what the regression job and `deploy-backend.sh` both do.

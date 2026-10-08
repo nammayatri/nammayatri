@@ -350,4 +350,13 @@ page that carries it. Not yet proven by a newcomer actually doing it.
    numbers' encryption keys are upstream's public demo keys (4 of 4 identical
    to `Backend/dev/sql-seed/passetto-seed.sql`) — the second is the owner's
    decision, not fixed here.
-3. Two decisions: the default branch, and CI on the two-merchant layout.
+3. **Both decisions, taken.** `algeria/osrm-routing` is the default branch of
+   both repositories (upstream's `stale.yaml` disabled on both first); the
+   weekly ride regression runs and the Run-workflow button works (proven by a
+   dispatched run). The ride regression now runs the live two-merchant layout
+   and prices a ride in each country, each by its own merchant — and it found
+   it had been testing the wrong image: `ghcr.io/mohagnpro/ny-backend`
+   (2026-08-26, `41cbe406`) instead of the server's
+   `ghcr.io/nammayatri-algeria/ny-backend` (`108eca6c`). Fixed; green on
+   `108eca6c`. The restore test's first CI runs also found a real timing bug in
+   `restore.sh` (a load begun during postgres's first-run restart), fixed.
