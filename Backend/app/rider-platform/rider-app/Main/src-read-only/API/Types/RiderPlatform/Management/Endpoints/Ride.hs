@@ -10,6 +10,7 @@ import qualified Dashboard.Common.RideDebug
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types
+import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
@@ -225,7 +226,11 @@ data RideInfoRes = RideInfoRes
     isSafetyPlus :: Kernel.Prelude.Bool,
     isAirConditioned :: Kernel.Prelude.Bool,
     rideSosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Sos),
-    offerInfo :: Kernel.Prelude.Maybe RideOfferInfo
+    offerInfo :: Kernel.Prelude.Maybe RideOfferInfo,
+    originalTripLocation :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.ParentSearchRequestLocationInfo,
+    walkToPickupDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    walkFromDropDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    rideDistanceSaved :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
