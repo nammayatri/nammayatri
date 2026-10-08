@@ -126,6 +126,9 @@ types:
     - currency: Currency
     - vehicleServiceTier: ServiceTierType
     - vehicleServiceTierName: Text
+    - cancellationSource: Maybe CancellationSource
+    - cancellationReasonCode: Maybe Text
+    - cancellationAdditionalInfo: Maybe Text
 
   ScheduledBookingInfoRes:
     - transactionId: Text
@@ -197,6 +200,8 @@ types:
     - becameCurrentAt: UTCTime
     - cancelledAt: Maybe UTCTime
     - cancellationSource: Maybe CancellationSource
+    - cancellationReasonCode: Maybe Text
+    - cancellationAdditionalInfo: Maybe Text
     - driverDistToPickupAtCancel: Maybe Meters
 
   AssignDriverReq:
