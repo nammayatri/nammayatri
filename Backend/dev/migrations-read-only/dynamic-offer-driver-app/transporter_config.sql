@@ -1235,3 +1235,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN available_for_r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN downward_recompute_distance_threshold double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN scheduled_ride_config SET DEFAULT '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1, "enableScheduledRideActivationChecks": true}' :: json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN no_recompute_trip_categories text ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gate_extra_time_charge_by_recompute boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN actual_ride_duration_diff_threshold integer ;
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN approx_ride_distance_diff_threshold DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_distance_diff_threshold_if_within_pickup_drop DROP NOT NULL;
+--- Drop section ends. Please check before running ---

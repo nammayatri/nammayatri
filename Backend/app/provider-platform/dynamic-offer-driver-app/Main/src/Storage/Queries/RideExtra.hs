@@ -448,7 +448,8 @@ updateAll rideId ride = do
       Se.Set BeamR.tollConfidence ride.tollConfidence,
       Se.Set BeamR.rideTags (Yudhishthira.tagsNameValueToTType ride.rideTags),
       Se.Set BeamR.updatedAt now,
-      Se.Set BeamR.rideEndedBy ride.rideEndedBy
+      Se.Set BeamR.rideEndedBy ride.rideEndedBy,
+      Se.Set BeamR.recomputeReason ride.recomputeReason
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 

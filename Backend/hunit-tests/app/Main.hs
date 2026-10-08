@@ -16,11 +16,13 @@ module Main where
 
 import qualified CsvSanitizationTests
 import qualified Dashboard (dashboardUnitTests)
+import qualified FareRecomputeDecisionTests
 import qualified FileManagementUnitTests
 import qualified RewardsCouponPoolTests
 import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
 import Test.Tasty (defaultMain, testGroup)
+import qualified TollDecisionTests
 import Prelude
 
 main :: IO ()
@@ -47,5 +49,10 @@ main = do
           [ RewardsEvaluatorTests.tests,
             RewardsCouponTemplatedTests.tests,
             RewardsCouponPoolTests.tests
+          ],
+        testGroup
+          "End Ride Fare Recompute"
+          [ FareRecomputeDecisionTests.tests,
+            TollDecisionTests.tests
           ]
       ]

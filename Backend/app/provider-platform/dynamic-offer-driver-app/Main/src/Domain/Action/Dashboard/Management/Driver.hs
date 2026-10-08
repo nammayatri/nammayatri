@@ -1148,7 +1148,12 @@ updateVehicleVariantAndServiceTier transporterConfig variant vehicle vehicleCate
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
   vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
   serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction AutoSelectedVariants Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> serviceTiers
+  -- Rating-gated tiers are eligibility-driven: a variant review rebuilds the selection
+  -- from auto-selected tiers, which must not drop a rating-gated tier the vehicle (under
+  -- its new variant) still qualifies for.
+  allowedTierResults <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants Nothing (Just updatedVehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
+  let ratingGatedTiers = [vst.serviceTierType | (vst, restricted) <- allowedTierResults, not restricted, isJust vst.vehicleRating]
+      availableServiceTiersForDriver = nub $ ((.serviceTierType) . fst <$> serviceTiers) <> ratingGatedTiers
   when (vehicle.category /= Just vehicleCategory) $ do
     driverInfo <- QDriverInfo.findById (cast vehicle.driverId) >>= fromMaybeM DriverInfoNotFound
     DDriverMode.forceDriverOfflineOnVehicleChange vehicle.driverId transporterConfig driverInfo
@@ -1421,6 +1426,8 @@ postDriverUpdateVehicleManufacturing merchantShortId opCity reqDriverId Common.U
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   QVehicle.updateManufacturing (Just manufacturing) driverId
   RCQuery.updateManufacturing (Just manufacturing) (Id rcId)
+  -- Manufacturing date feeds the vehicle-age restriction; refresh tier membership.
+  recomputeSelectedServiceTiers Nothing Nothing Nothing Nothing personId merchantOpCityId
   pure Success
 
 ---------------------------------------------------------------------

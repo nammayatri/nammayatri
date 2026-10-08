@@ -140,6 +140,7 @@ Ride:
     scheduledAcceptanceMode: Maybe ScheduledAcceptanceMode # how this scheduled ride's driver assignment came to be; authoritative, stamped once at accept time
     tipAmount: Maybe HighPrecMoney
     passedThroughDestination: Maybe Bool
+    recomputeReason: Maybe Text # end-ride recompute ShadowRecord JSON (reason, modifiers, sources, predicted vs billed distance, mismatch) from RecomputeDecision
     deliveryFileIds: Maybe [Id MediaFile]
     estimatedEndTimeRange: Maybe EstimatedEndTimeRange
     rideTags: Maybe [TagNameValue]

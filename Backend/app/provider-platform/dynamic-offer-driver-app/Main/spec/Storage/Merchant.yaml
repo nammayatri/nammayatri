@@ -14,6 +14,7 @@ imports:
   PaymentMode: Domain.Types.Plan
   Value: Data.Aeson
   Seconds: Kernel.Types.Common
+  TripCategory: Domain.Types.Common
   EntityName: Lib.Payment.Domain.Types.Common
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
@@ -1036,6 +1037,8 @@ TransporterConfig:
       estimatedDistanceUpper: Meters
       minThresholdPercentage: Int
       minThresholdDistance: Meters
+      minThresholdDurationSeconds: Maybe Seconds # opt-in: duration overage alone can qualify the band
+      minThresholdDurationPercentage: Maybe Int # optional % of estimated duration the overage must also exceed
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
@@ -1265,13 +1268,14 @@ TransporterConfig:
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
     actualRideDistanceDiffThreshold: HighPrecMeters
-    actualRideDistanceDiffThresholdIfWithinPickupDrop: HighPrecMeters
     recomputeIfPickupDropNotOutsideOfThreshold: Bool
     enableDownwardRecomputeForDifferentDestination: Maybe Bool
     downwardRecomputeDistanceThreshold: Maybe HighPrecMeters
     upwardsRecomputeBuffer: HighPrecMeters
     upwardsRecomputeBufferPercentage: Maybe Int
-    approxRideDistanceDiffThreshold: HighPrecMeters
+    noRecomputeTripCategories: Maybe [TripCategory]
+    actualRideDurationDiffThreshold: Maybe Seconds
+    gateExtraTimeChargeByRecompute: Maybe Bool
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime
     driverPaymentCycleDuration: NominalDiffTime
@@ -1612,6 +1616,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
     recomputeDistanceThresholds: Maybe Value
+    noRecomputeTripCategories: Maybe Value
     minThresholdForPassThroughDestination: Maybe Meters
     allowedReferralEntities: "Maybe [Text]"
     enableOverchargingBlocker: Maybe Bool
@@ -1726,6 +1731,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
     recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
+    noRecomputeTripCategories: Kernel.Prelude.toJSON <$> noRecomputeTripCategories|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
@@ -1849,6 +1855,8 @@ TransporterConfig:
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
     recomputeDistanceThresholds: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
+    noRecomputeTripCategories: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< noRecomputeTripCategories|E
     minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
@@ -1921,7 +1929,6 @@ TransporterConfig:
     actualRideDistanceDiffThreshold: double precision
     upwardsRecomputeBuffer: double precision
     downwardRecomputeDistanceThreshold: double precision
-    approxRideDistanceDiffThreshold: double precision
     minLocationAccuracy: double precision
     driverPaymentCycleDuration: int
     driverPaymentCycleStartTime: int
@@ -1951,7 +1958,6 @@ TransporterConfig:
     dummyFromLocation: json
     dummyToLocation: json
     arrivedStopThreshold: double precision
-    actualRideDistanceDiffThresholdIfWithinPickupDrop: double precision
     arrivedPickupThreshold: double precision
     arrivingPickupThreshold: double precision
     variantsToEnableForSubscription: "text[]"
@@ -1996,7 +2002,6 @@ TransporterConfig:
     mediaFileSizeUpperLimit: "10000000"
     actualRideDistanceDiffThreshold: "1200"
     upwardsRecomputeBuffer: "2000"
-    approxRideDistanceDiffThreshold: "1200"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
     areaPreferenceMinCells: "4"
@@ -2088,7 +2093,6 @@ TransporterConfig:
     arrivedStopThreshold: "900"
     canSuvDowngradeToHatchback: "false"
     recomputeIfPickupDropNotOutsideOfThreshold: "true"
-    actualRideDistanceDiffThresholdIfWithinPickupDrop: "2500"
     arrivedPickupThreshold: "50"
     arrivingPickupThreshold: "100"
     pastDaysRideCounter: "3"

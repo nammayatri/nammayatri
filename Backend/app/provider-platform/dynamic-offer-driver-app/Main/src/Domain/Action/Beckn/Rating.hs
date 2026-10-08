@@ -45,7 +45,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.LowRating as LowRating
-import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction)
+import SharedLogic.VehicleServiceTier (recomputeSelectedServiceTiers)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -57,7 +57,6 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
-import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import Tools.Notifications
 
@@ -175,14 +174,11 @@ syncServiceTiersOnRatingChange ::
   m ()
 syncServiceTiersOnRatingChange driverStats newRating personId merchantOpCityId = do
   let updatedDriverStats = driverStats {DDriverStats.rating = newRating}
-  try (fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId) >>= \case
-    Left (VehicleNotFound _) -> do
+  try (recomputeSelectedServiceTiers Nothing Nothing (Just updatedDriverStats) Nothing personId merchantOpCityId) >>= \case
+    Left (VehicleNotFound _) ->
       logWarning $ "Vehicle not found for driver " <> personId.getId <> ". Skipping service tier sync on rating change."
-      pure ()
     Left err -> throwError err
-    Right tierResults -> do
-      let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
-      QVehicle.updateSelectedServiceTiers newTiers personId
+    Right () -> pure ()
 
 calculateAverageRating ::
   (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>

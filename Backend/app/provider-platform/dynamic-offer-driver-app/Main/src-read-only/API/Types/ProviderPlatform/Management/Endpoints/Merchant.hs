@@ -535,10 +535,8 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdWithUnit :: Kernel.Types.Common.Distance,
     upwardsRecomputeBufferWithUnit :: Kernel.Types.Common.Distance,
-    approxRideDistanceDiffThresholdWithUnit :: Kernel.Types.Common.Distance,
     minLocationAccuracy :: Kernel.Prelude.Double,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
@@ -1342,7 +1340,7 @@ type PostMerchantConfigOperatingCityCreateHelper =
 
 type PostMerchantSchedulerTrigger = ("scheduler" :> "trigger" :> ReqBody '[JSON] SchedulerTriggerReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostMerchantSchedulerRevive = ("scheduler" :> "revive" :> ReqBody ('[JSON]) ReviveSchedulerJobsReq :> Post ('[JSON]) ReviveSchedulerJobsRes)
+type PostMerchantSchedulerRevive = ("scheduler" :> "revive" :> ReqBody '[JSON] ReviveSchedulerJobsReq :> Post '[JSON] ReviveSchedulerJobsRes)
 
 type PostMerchantUpdateOnboardingVehicleVariantMapping =
   ( "updateOnboardingVehicleVariantMapping"

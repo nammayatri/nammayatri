@@ -259,9 +259,7 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCit
     let acRestricted = isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))
         driverInfo' = if acRestricted then driverInfo {DI.airConditionScore = Just 0.0} else driverInfo
         vehicle' = vehicle {DV.airConditioned = Just isAirConditioned}
-    serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers (Just driverInfo') (Just vehicle') Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
-    let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
-    QVehicle.updateSelectedServiceTiers newTiers personId
+    recomputeSelectedServiceTiers (Just driverInfo') (Just vehicle') Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
 
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
 checkIfACAllowedForDriver driverInfo serviceTierACThresholds = null serviceTierACThresholds || any ((fromMaybe 0 driverInfo.airConditionScore) <=) serviceTierACThresholds
@@ -288,9 +286,7 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers merchantOpCityId 
         when (scoreInt == thresholdInt - 1 || scoreInt == thresholdInt) $
           fork "Send AC Warning Overlay" $ ACOverlay.sendACUsageWarningOverlay driver
   let updatedDriverInfo = driverInfo {DI.airConditionScore = Just airConditionScore}
-  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers (Just updatedDriverInfo) Nothing Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
-  let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
-  QVehicle.updateSelectedServiceTiers newTiers personId
+  recomputeSelectedServiceTiers (Just updatedDriverInfo) Nothing Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
   where
     safeMaximum :: Ord a => [a] -> Maybe a
     safeMaximum [] = Nothing
@@ -408,7 +404,11 @@ makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Pe
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
   let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction AutoSelectedVariants driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
-  addSelectedServiceTiers availableServiceTiersForDriver vehicle
+      -- Rating-gated tiers are eligibility-driven, not auto-selected: a vehicle whose RC
+      -- already carries a qualifying rating must get/keep them on (re)activation, or an RC
+      -- refresh would strip tiers the vehicle still qualifies for.
+      ratingGatedTiers = eligibleRatingGatedTiers driverInfo vehicle vehicleServiceTiers Nothing driver.driverTag now
+  addSelectedServiceTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
     addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}

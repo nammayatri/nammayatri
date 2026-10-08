@@ -108,6 +108,7 @@ data Ride = Ride
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    recomputeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referralFlagReason :: Kernel.Prelude.Maybe Domain.Types.RiderDetails.PayoutFlagReason,
     returnOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     returnStartedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

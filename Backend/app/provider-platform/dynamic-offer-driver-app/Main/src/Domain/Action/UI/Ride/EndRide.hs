@@ -34,7 +34,6 @@ where
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe (listToMaybe)
 import Data.OpenApi.Internal.Schema (ToSchema)
 import qualified Data.Text as Text
 import Data.Time (utctDay)
@@ -43,6 +42,8 @@ import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
 import qualified Domain.Action.UI.Ride.Common as DUIRideCommon
 import qualified Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
+import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
+import qualified Domain.Action.UI.Ride.EndRide.TollDecision as TD
 import Domain.Action.UI.Route as DMaps
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
@@ -78,7 +79,6 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common hiding (Days)
-import Kernel.Types.Confidence
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowCounters
@@ -504,67 +504,29 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 when (isJust mbValidatedPendingToll && pickupDropOutsideOfThreshold) $ do
                   logWarning $ "Validated pending toll found but NOT applying due to pickup/drop outside threshold. RideId: " <> rideId.getId
 
-                let (tollCharges, tollNames, tollIds, tollConfidence) = do
-                      let distanceCalculationFailure = distanceCalculationFailed || (maybe False (> 0) updRide.numberOfSelfTuned)
-                          -- Only apply validated pending toll if pickup/drop is within threshold (route was as expected)
-                          canApplyValidatedPendingToll = not pickupDropOutsideOfThreshold
-                      if distanceCalculationFailure
-                        then
-                          if isJust updRide.estimatedTollCharges
-                            then
-                              if updRide.estimatedTollCharges == Just 0
-                                then (Nothing, Nothing, Nothing, Nothing)
-                                else
-                                  if isJust updRide.tollCharges
-                                    then case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                      (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                        -- Some detected + some pending (same as distance calc success case)
-                                        let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
-                                            combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                            combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                                         in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                      _ ->
-                                        -- No pending tolls or route deviated
-                                        (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Neutral)
-                                    else
-                                      if updRide.driverDeviatedToTollRoute == Just True
-                                        then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Neutral)
-                                        else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                                          (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                            -- Combine detected + pending tolls
-                                            let combinedCharges = fromMaybe 0 updRide.tollCharges + pendingCharges
-                                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                                          _ ->
-                                            -- Nothing detected and nothing pending: GPS was dark around the gates, so
-                                            -- neither the billing walk nor the deviation walk has any signal
-                                            if thresholdConfig.enableEstimatedTollFallback && canApplyValidatedPendingToll
-                                              then (updRide.estimatedTollCharges, updRide.estimatedTollNames, updRide.estimatedTollIds, Just Unsure)
-                                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Unsure)
-                            else case (canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                              (True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                                (Just pendingCharges, Just pendingNames, Just pendingIds, Just Unsure)
-                              _ -> (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
-                        else case (updRide.tollCharges, canApplyValidatedPendingToll, mbValidatedPendingToll) of
-                          (Just charges, _, Nothing) ->
-                            (Just charges, updRide.tollNames, updRide.tollIds, Just Sure)
-                          (Just charges, True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                            -- Some detected + some pending
-                            let combinedCharges = charges + pendingCharges
-                                combinedNames = fromMaybe [] updRide.tollNames <> pendingNames
-                                combinedIds = fromMaybe [] updRide.tollIds <> pendingIds
-                             in (Just combinedCharges, Just combinedNames, Just combinedIds, Just Neutral)
-                          (Nothing, True, Just (pendingCharges, pendingNames, pendingIds)) ->
-                            (Just pendingCharges, Just pendingNames, Just pendingIds, Just Neutral)
-                          _ ->
-                            if maybe False (> 0) updRide.estimatedTollCharges
-                              then (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Just Sure)
-                              else (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
+                -- Toll reconciliation matrix lives in the pure, unit-tested
+                -- Domain.Action.UI.Ride.EndRide.TollDecision (behavior-identical
+                -- extraction of the if-tree that used to be inline here).
+                let tollBilling =
+                      TD.decideTollBilling
+                        TD.TollInput
+                          { distanceCalculationFailed = distanceCalculationFailed,
+                            numberOfSelfTuned = updRide.numberOfSelfTuned,
+                            pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+                            estimatedTollCharges = updRide.estimatedTollCharges,
+                            estimatedTollNames = updRide.estimatedTollNames,
+                            estimatedTollIds = updRide.estimatedTollIds,
+                            detectedTollCharges = updRide.tollCharges,
+                            detectedTollNames = updRide.tollNames,
+                            detectedTollIds = updRide.tollIds,
+                            driverDeviatedToTollRoute = updRide.driverDeviatedToTollRoute,
+                            validatedPendingToll = mbValidatedPendingToll,
+                            enableEstimatedTollFallback = thresholdConfig.enableEstimatedTollFallback
+                          }
 
                 -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
-                let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
+                let ride = updRide{tollCharges = tollBilling.tollCharges, tollNames = tollBilling.tollNames, tollIds = tollBilling.tollIds, tollConfidence = tollBilling.tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
                 (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                   if shouldRectifyDistantPointsSnapToRoadFailure
@@ -598,6 +560,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     mbFarePolicy <- FarePolicy.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
     finalCommission <- Fare.calculateCommission baseFareParams mbFarePolicy
     finalCancellationCommission <- Fare.calculateCancellationCommission baseFareParams mbFarePolicy
+    -- SHADOW MODE: the legacy ladder above did the billing; this evaluates the
+    -- unified decision core on the same inputs, persists its reason on the
+    -- ride, and logs/counts divergence. See RecomputeDecision module header.
+    mbRecomputeDecision <- shadowRecomputeDecision req booking ride mbOdometer pickupDropOutsideOfThreshold distanceCalculationFailed chargeableDistance tripEndPoint thresholdConfig mbFarePolicy now
     let appliedCharge = case mbUpdatedFareParams of
           Just recalculatedParams -> fromMaybe 0 recalculatedParams.paymentProcessingFee + fromMaybe 0 recalculatedParams.paymentProcessingFeeVat
           Nothing -> fromMaybe 0 baseFareParams.paymentProcessingFee + fromMaybe 0 baseFareParams.paymentProcessingFeeVat
@@ -627,7 +593,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                cancellationCommission = finalCancellationCommission,
                paymentCharge = mbPaymentCharge,
                paymentChargeBearer = mbPaymentChargeBearer,
-               discountAmount = discountAmount
+               discountAmount = discountAmount,
+               recomputeReason = (\d -> RD.mkShadowRecordText d chargeableDistance) <$> mbRecomputeDecision
               }
     let mbDriverFromReq = case req of
           DriverReq driverReq -> Just driverReq.requestor
@@ -777,8 +744,93 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             _ -> throwError $ InternalError (Text.pack $ displayException someException)
         Right resp -> return resp
 
-tripCategoriesForNoRecalc :: [DTC.TripCategory]
-tripCategoriesForNoRecalc = [DTC.OneWay DTC.OneWayRideOtp, DTC.OneWay DTC.OneWayOnDemandDynamicOffer]
+-- | Trip categories whose fare is pinned to the estimate in the
+-- pass-through-drop and downward-recompute rules. Hardcoded default,
+-- overridable per city via TransporterConfig.noRecomputeTripCategories.
+tripCategoriesForNoRecalc :: DTConf.TransporterConfig -> [DTC.TripCategory]
+tripCategoriesForNoRecalc thresholdConfig = fromMaybe RD.defaultNoRecomputeTripCategories thresholdConfig.noRecomputeTripCategories
+
+-- | Shadow-mode evaluation of the pure recompute decision core. Read-only:
+-- never affects billing; any failure is swallowed after logging. Returns
+-- Nothing on the NoFareProduct fallback path (the ladder never ran there).
+shadowRecomputeDecision ::
+  (MonadFlow m, EndRideFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  EndRideReq ->
+  SRB.Booking ->
+  DRide.Ride ->
+  Maybe DRide.OdometerReading ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Meters ->
+  LatLong ->
+  DTConf.TransporterConfig ->
+  Maybe DFP.FullFarePolicy ->
+  UTCTime ->
+  m (Maybe RD.RecomputeDecision)
+shadowRecomputeDecision req booking ride mbOdometer mbPickupDropOutside mbDistanceCalcFailed billedDistance tripEndPoint thresholdConfig mbFarePolicy now = do
+  res <- withTryCatch "recomputeDecisionShadow" $ do
+    let requestSource = case req of
+          DriverReq _ -> RD.DriverSource
+          DashboardReq _ -> RD.DashboardSource
+          CallBasedReq _ -> RD.CallBasedSource
+          CronJobReq _ -> RD.CronJobSource
+        isOdometerBilled = DTC.isOdometerReadingsRequired booking.tripCategory
+    if requestSource /= RD.CronJobSource && not isOdometerBilled && isNothing mbPickupDropOutside
+      then pure Nothing
+      else do
+        passedThroughDrop <- LocUpd.isPassedThroughDrop ride.driverId
+        dropOutside <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
+        -- Post-increment budget values, matching what the legacy
+        -- checkExtraKmsThreshold compared against; absent daily key means the
+        -- budget never applied this ride (decision treats unknown as ok).
+        mbDaily :: Maybe HighPrecMeters <- Redis.get ("DailyExtraKms:PersonId-" <> ride.driverId.getId)
+        weekly :: HighPrecMeters <- fromIntegral <$> SWC.getCurrentWindowCount ("WeeklyExtraKms:PersonId-" <> ride.driverId.getId) SlidingWindowOptions {period = 7, periodType = Days}
+        let decision =
+              RD.decideRecompute
+                RD.RecomputeInput
+                  { requestSource = requestSource,
+                    tripCategory = booking.tripCategory,
+                    isOdometerBilled = isOdometerBilled,
+                    isRectificationCategory = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory,
+                    estimatedDistance = booking.estimatedDistance,
+                    maxEstimatedDistance = booking.maxEstimatedDistance,
+                    estimatedDuration = booking.estimatedDuration,
+                    traveledDistance = ride.traveledDistance,
+                    odometerDistance = mbOdometer <&> \odo -> Meters $ round (odo.value - maybe 0 (.value) ride.startOdometerReading) * 1000,
+                    approxTraveledDistance = Nothing,
+                    actualDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime now startTime,
+                    distanceCalculationFailed = fromMaybe False mbDistanceCalcFailed,
+                    rideFlagDistanceCalculationFailed = ride.distanceCalculationFailed,
+                    pickupDropOutsideOfThreshold = fromMaybe False mbPickupDropOutside,
+                    dropOutsideOfThreshold = dropOutside,
+                    passedThroughDrop = passedThroughDrop,
+                    budgetState = RD.ExtraKmBudgetState <$> mbDaily <*> pure weekly,
+                    productFlags =
+                      RD.ProductFlags
+                        { disableRecompute = (mbFarePolicy >>= (.disableRecompute)) == Just True,
+                          disableDownwardRecompute = (mbFarePolicy >>= (.disableDownwardRecompute)) == Just True
+                        },
+                    cfg = RD.mkRecomputeConfig thresholdConfig
+                  }
+            mismatch = maybe False (/= billedDistance) decision.predictedChargeableDistance
+        logTagInfo "RecomputeDecisionShadow" $
+          "reason: " <> RD.reasonText decision
+            <> ", predicted: "
+            <> show decision.predictedChargeableDistance
+            <> ", billed: "
+            <> show billedDistance
+            <> ", mismatch: "
+            <> show mismatch
+        when mismatch $ do
+          logTagError "RecomputeDecisionShadowMismatch" $
+            "predicted " <> show decision.predictedChargeableDistance <> " /= billed " <> show billedDistance <> " (reason " <> RD.reasonText decision <> ") for ride " <> ride.id.getId
+          fork "recompute shadow mismatch metric" $ incrementRideEndCounter "recomputeDecisionShadowMismatch"
+        pure (Just decision)
+  case res of
+    Left err -> do
+      logTagError "recomputeDecisionShadow" $ "shadow evaluation failed: " <> show err
+      pure Nothing
+    Right d -> pure d
 
 recalculateFareForDistance :: (MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Meters -> DTConf.TransporterConfig -> Bool -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thresholdConfig recomputeWithLatestPricing tripEndPoint = do
@@ -789,7 +841,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
   let actualDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime tripEndTime startTime
   pickupDropOutsideOfThreshold <- isDropOutsideOfThreshold booking tripEndPoint thresholdConfig
   QRide.updatePassedThroughDestination ride.id passedThroughDrop
-  let (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoriesForNoRecalc && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
+  let (recalcDistance, finalDuration) = bool (recalcDistance', actualDuration) (oldDistance, booking.estimatedDuration) (passedThroughDrop && pickupDropOutsideOfThreshold && booking.tripCategory `elem` tripCategoriesForNoRecalc thresholdConfig && ride.distanceCalculationFailed == Just False && maybe True (oldDistance >) thresholdConfig.minThresholdForPassThroughDestination)
   let estimatedFare = Fare.fareSum booking.fareParams Nothing
       destinationWaitingTime = fromMaybe 0 $ if isNothing ride.destinationReachedAt || (not $ isUnloadingTimeRequired booking.vehicleServiceTier) then Nothing else fmap (max 0) (secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> pure tripEndTime <*> ride.destinationReachedAt))
   vehicleAge <-
@@ -971,25 +1023,42 @@ getDistanceDiff booking distance = do
 
 isDownwardRecomputeEnabledForRide :: SRB.Booking -> DTConf.TransporterConfig -> Bool
 isDownwardRecomputeEnabledForRide booking thresholdConfig =
-  booking.tripCategory `notElem` tripCategoriesForNoRecalc || fromMaybe True thresholdConfig.enableDownwardRecomputeForDifferentDestination
+  booking.tripCategory `notElem` tripCategoriesForNoRecalc thresholdConfig || fromMaybe True thresholdConfig.enableDownwardRecomputeForDifferentDestination
 
 getChargeableDistanceAndDuration :: Maybe Bool -> DTConf.TransporterConfig -> Maybe Seconds -> Meters -> Meters -> Maybe Seconds -> (Meters, Maybe Seconds)
-getChargeableDistanceAndDuration disableDownwardRecompute thresholdConfig estimatedDuration estimatedDistance recalcDistance finalDuration
-  | disableDownwardRecompute == Just True = (max recalcDistance estimatedDistance, flooredDuration)
-  | downwardRecomputeTolerance = (estimatedDistance, flooredDuration)
-  | otherwise = (recalcDistance, finalDuration)
+getChargeableDistanceAndDuration disableDownwardRecompute thresholdConfig estimatedDuration estimatedDistance recalcDistance finalDuration =
+  (chargeableDistance, adjustedDuration)
   where
+    (chargeableDistance, baseDuration)
+      | disableDownwardRecompute == Just True = (max recalcDistance estimatedDistance, flooredDuration)
+      | downwardRecomputeTolerance = (estimatedDistance, flooredDuration)
+      | otherwise = (recalcDistance, finalDuration)
     flooredDuration = (max <$> finalDuration <*> estimatedDuration) <|> finalDuration
     downwardRecomputeTolerance =
       recalcDistance < estimatedDistance
         && metersToHighPrecMeters (estimatedDistance - recalcDistance) < fromMaybe 0 thresholdConfig.downwardRecomputeDistanceThreshold
+    -- Duration levers, both default-off. Billing the estimated duration keeps
+    -- calculateExtraTimeFare at zero: it only charges actual > estimated + grace.
+    isFloored = disableDownwardRecompute == Just True || downwardRecomputeTolerance
+    overran = fromMaybe False ((>) <$> finalDuration <*> estimatedDuration)
+    -- Estimate-billed rides must not bill the per-minute extra-time charge
+    -- when the gating lever is on: the distance ladder already decided to
+    -- forgive this ride.
+    gated = thresholdConfig.gateExtraTimeChargeByRecompute == Just True && chargeableDistance == estimatedDistance && overran
+    -- Duration overage strictly below the configured threshold is forgiven.
+    forgiven = not isFloored && RD.forgivenDurationOverage thresholdConfig.actualRideDurationDiffThreshold estimatedDuration finalDuration
+    adjustedDuration
+      | gated || forgiven = estimatedDuration
+      | otherwise = baseDuration
 
 calculateFinalValuesForCorrectDistanceCalculations ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
+  now <- getCurrentTime
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
-  shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff)
+      mbActualDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime now startTime
+  shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff) booking.estimatedDuration mbActualDuration
   let thresholdChecks = thresholdConfig.recomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   fork "Send Extra Kms Limit Exceeded Overlay" $
@@ -1050,7 +1119,9 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
       (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
-      shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff)
+      now <- getCurrentTime
+      let mbActualDuration = ride.tripStartTime <&> \startTime -> roundToIntegral $ diffUTCTime now startTime
+      shouldRecompute <- shouldUpwardRecompute thresholdConfig estimatedDistance (highPrecMetersToMeters distanceDiff) booking.estimatedDuration mbActualDuration
       if distanceDiff < 0
         then do
           if isDownwardRecomputeEnabledForRide booking thresholdConfig
@@ -1071,15 +1142,13 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
       (Just estDistance, Just percentage) -> Meters $ max (round $ (toRational estDistance.getMeters) * (toRational percentage / 100)) (round thresholdConfig.upwardsRecomputeBuffer.getHighPrecMeters)
       _ -> highPrecMetersToMeters thresholdConfig.upwardsRecomputeBuffer
 
-shouldUpwardRecompute :: (MonadFlow m, MonadThrow m, Log m) => DTConf.TransporterConfig -> Meters -> Meters -> m Bool
-shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff = do
-  let filteredThresholds = maybe [] (filter (\distanceThreshold -> distanceThreshold.estimatedDistanceUpper > estimatedDistance)) thresholdConfig.recomputeDistanceThresholds
-      recomputeDistanceThreshold = listToMaybe $ sortBy (comparing \distanceThreshold -> distanceThreshold.estimatedDistanceUpper - estimatedDistance) filteredThresholds
-  case recomputeDistanceThreshold of
-    Just distanceThreshold -> do
-      let shouldRecompute = distanceDiff > distanceThreshold.minThresholdDistance && distanceDiff.getMeters > (estimatedDistance.getMeters * distanceThreshold.minThresholdPercentage) `div` 100
-      pure shouldRecompute
-    Nothing -> pure False
+-- | Band predicate for upward recompute; delegates to the shared pure
+-- implementation so the live path and the shadow decision can never drift.
+-- Duration criteria on a band (opt-in, absent by default) let time overage
+-- alone qualify a ride for upward recompute.
+shouldUpwardRecompute :: (MonadFlow m, MonadThrow m, Log m) => DTConf.TransporterConfig -> Meters -> Meters -> Maybe Seconds -> Maybe Seconds -> m Bool
+shouldUpwardRecompute thresholdConfig estimatedDistance distanceDiff mbEstimatedDuration mbActualDuration =
+  pure $ RD.upwardBandQualifies thresholdConfig.recomputeDistanceThresholds estimatedDistance distanceDiff mbEstimatedDuration mbActualDuration
 
 isUnloadingTimeRequired :: DVST.ServiceTierType -> Bool
 isUnloadingTimeRequired str =

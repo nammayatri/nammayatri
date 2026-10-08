@@ -387,7 +387,6 @@ mkMerchantCommonConfigRes DTC.TransporterConfig {..} =
       dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
       actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit actualRideDistanceDiffThreshold,
       upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit upwardsRecomputeBuffer,
-      approxRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit approxRideDistanceDiffThreshold,
       ..
     }
 

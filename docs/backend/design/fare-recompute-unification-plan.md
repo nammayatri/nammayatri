@@ -1,8 +1,61 @@
 # Fare Recompute Unification — Plan
 
-Status: PROPOSED (2026-10-05)
+Status: IMPLEMENTED IN SHADOW MODE (2026-10-07) — see §6
 Owner: hemant
 Scope: `app/provider-platform/dynamic-offer-driver-app` end-ride fare recomputation
+
+## 0. Implementation status (2026-10-07)
+
+All phases landed in shadow mode; the legacy ladder still bills.
+
+| Piece | State | Where |
+|---|---|---|
+| Pure decision core `decideRecompute` | DONE (shadow) | `src/Domain/Action/UI/Ride/EndRide/RecomputeDecision.hs` |
+| Shadow wiring + mismatch log/metric | DONE | `EndRide.hs` `shadowRecomputeDecision`; log tags `RecomputeDecisionShadow` / `RecomputeDecisionShadowMismatch`; counter label `recomputeDecisionShadowMismatch` |
+| `ride.recompute_reason` persistence | DONE | Ride spec + `RideExtra.updateAll`; stores the full ShadowRecord JSON: reason, modifiers, distance/duration/pricing sources, predicted vs billed distance, mismatch flag. The recomputed FARE is not duplicated here — it is already on `ride.fare` / `fare_parameters` (vs `booking.estimated_fare`), and equals the shadow fare whenever mismatch=false; a true shadow fare on mismatch rides needs the side-effect-free recompute variant that is cutover-PR work |
+| Toll matrix extraction (behavior-identical) | DONE (live) | `src/Domain/Action/UI/Ride/EndRide/TollDecision.hs`, replaces the inline if-tree |
+| Config consolidation `mkRecomputeConfig` | DONE | decision core reads only `RecomputeConfig` |
+| Dead configs removed from spec | DONE | `actualRideDistanceDiffThresholdIfWithinPickupDrop`, `approxRideDistanceDiffThreshold` dropped from Merchant.yaml + dashboard API spec (DB columns intentionally left in place) |
+| `tripCategoriesForNoRecalc` configurable | DONE (live) | new `noRecomputeTripCategories` (defaults to old hardcoded list) |
+| Duration gating levers | DONE (live, default-off) | band duration criteria, `actualRideDurationDiffThreshold`, `gateExtraTimeChargeByRecompute` |
+| Golden table + toll truth-table tests | DONE | `hunit-tests/src/FareRecomputeDecisionTests.hs`, `TollDecisionTests.hs` |
+| Cutover (bill from the decision core) | TODO | separate PR after shadow mismatches are zero in prod |
+| Toll re-derivation on approx routes | TODO | deliberate follow-up (kept behavior-identical this round) |
+
+Shadow blind spots (accepted): approx-route distance is IO-dependent so those
+rides log `FailedOutsideUnknownApprox` and skip the numeric comparison; product
+flags are read from the quoted policy, which can differ from the latest policy
+on repriced branches; duration is not compared (levers are off by default).
+
+### Config lever reference (complete)
+
+Decision ladder (TransporterConfig unless noted):
+
+| Lever | Default | Effect |
+|---|---|---|
+| `pickupLocThreshold` / `dropLocThreshold` | per city | define `pickupDropOutsideOfThreshold`, the master branch switch |
+| `recomputeIfPickupDropNotOutsideOfThreshold` | true | allow upward recompute within threshold; also gates mid-ride snap-on-deviation |
+| `recomputeDistanceThresholds` bands | 40/30/20/10% by est. distance | when an upward diff qualifies; NEW per-band `minThresholdDurationSeconds` / `minThresholdDurationPercentage` (null = off) let time overage qualify |
+| `actualRideDistanceDiffThreshold` | 1200 m | overage tolerance on changed-destination rides |
+| `upwardsRecomputeBuffer` / `upwardsRecomputeBufferPercentage` | 2000 m / null | upward distance growth ceiling |
+| `fareRecomputeDailyExtraKmsThreshold` / `fareRecomputeWeeklyExtraKmsThreshold` | 5 km / 20 km | per-driver anti-fraud extra-km budget |
+| `enableDownwardRecomputeForDifferentDestination` | null (=true) | downward recompute for `noRecomputeTripCategories` rides |
+| `downwardRecomputeDistanceThreshold` | null (=0, off) | shortfall below this is forgiven back to the estimate |
+| `minThresholdForPassThroughDestination` | null (=always) | min estimate for the pass-through-drop override |
+| NEW `noRecomputeTripCategories` | null (= OneWayRideOtp + OneWayOnDemandDynamicOffer) | categories pinned to estimate in pass-through/downward rules |
+| NEW `actualRideDurationDiffThreshold` | null (off) | duration overage strictly below this bills the estimated duration (no extra-time charge) |
+| NEW `gateExtraTimeChargeByRecompute` | null (off) | estimate-billed rides bill estimated duration, so extra-time charge never fires on forgiven rides |
+
+Fare step (FareProduct / FarePolicy):
+
+| Lever | Effect |
+|---|---|
+| `disableRecompute` | total bypass: estimate distance + estimated fare, no new FareParameters |
+| `disableDownwardRecompute` | ratchet: distance and duration floored at the estimate |
+| `fareRecomputeCapConfig` | per-component caps on `FCRecompute`; uncapped components can never grow |
+| `perMinuteRideExtraTimeCharge` + `rideExtraTimeChargeGracePeriod` | the extra-time charge itself |
+| `recomputeCongestionChargeOnEndRide` (TransporterConfig) | re-run congestion model at end ride |
+| `enableEstimatedTollFallback` (TransporterConfig) | estimated toll when GPS dark at gates |
 
 ## 1. Problem
 

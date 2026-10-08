@@ -687,7 +687,11 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
                 if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing
               )
           else pure (Nothing, Nothing)
-    let selectedServiceTierTypes = DL.nub $ mapMaybe fst tierResults
+    -- Rating-gated tiers (vehicleRating threshold set) are eligibility-driven, not
+    -- opt-in: the driver's toggle cannot remove one the vehicle qualifies for — an
+    -- automated recompute would re-add it on the next rating/AC event anyway.
+    let ratingGatedTiers = [t.serviceTierType | (t, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted, isJust t.vehicleRating]
+        selectedServiceTierTypes = DL.nub $ mapMaybe fst tierResults <> ratingGatedTiers
         selectedAutoAcceptTierTypes = mapMaybe snd tierResults
     QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
     QVehicle.updateSelectedAutoAcceptTiers selectedAutoAcceptTierTypes personId

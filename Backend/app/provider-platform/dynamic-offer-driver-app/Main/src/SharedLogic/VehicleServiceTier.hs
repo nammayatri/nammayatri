@@ -133,6 +133,66 @@ fetchVehicleTierForDriverWithUsageRestriction mode mbDriverInfo mbVehicle mbDriv
   now <- getCurrentTime
   pure $ selectVehicleTierForDriverWithUsageRestriction mode driverInfo vehicle cityServiceTiers driverStats driverTag now
 
+-- | Automated service-tier recompute. Two rules, no memory of past choices:
+--
+--   * currently selected tiers stay only while they pass the usage restrictions
+--     (same remove-only behavior as before);
+--   * tiers that define a vehicleRating threshold are eligibility-driven, not
+--     opt-in: any such tier the driver's vehicle currently qualifies for is
+--     (re-)added to selectedServiceTiers, even if the driver or a past
+--     restriction had removed it. The rating is the control for these tiers.
+--
+-- Every automated strip site (ride-rating change, dashboard vehicle-rating
+-- update, AC score, feature block) must go through this so a restriction that
+-- later clears re-adds the rating-gated tiers by itself. The Maybe overrides
+-- carry not-yet-persisted state, exactly like
+-- fetchVehicleTierForDriverWithUsageRestriction. Unlike the bare
+-- SelectedServiceTiers fetch this always resolves the Person row: the
+-- candidate (non-selected) rating-gated tiers need the driver's tags for the
+-- cohort-eligibility check.
+recomputeSelectedServiceTiers ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Maybe DI.DriverInformation ->
+  Maybe DV.Vehicle ->
+  Maybe DDriverStats.DriverStats ->
+  Maybe [DVST.VehicleServiceTier] ->
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+recomputeSelectedServiceTiers mbDriverInfo mbVehicle mbDriverStats mbCityServiceTiers personId merchantOpCityId = do
+  driverInfo <- maybe (QDI.findById personId >>= fromMaybeM DriverInfoNotFound) pure mbDriverInfo
+  vehicle <- maybe (QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)) pure mbVehicle
+  driverStats <- maybe (QDriverStats.findById personId) (pure . Just) mbDriverStats
+  cityServiceTiers <- maybe (CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing) pure mbCityServiceTiers
+  driverTag <- (.driverTag) <$> (QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId))
+  now <- getCurrentTime
+  let keptSelected =
+        [ vst.serviceTierType
+          | (vst, restricted) <- selectVehicleTierForDriverWithUsageRestriction SelectedServiceTiers driverInfo vehicle cityServiceTiers driverStats driverTag now,
+            not restricted
+        ]
+      eligibleRatingGated = eligibleRatingGatedTiers driverInfo vehicle cityServiceTiers driverStats driverTag now
+  QVehicle.updateSelectedServiceTiers (nub (keptSelected <> eligibleRatingGated)) personId
+
+-- | Tiers that define a vehicleRating threshold are eligibility-driven, not
+-- opt-in: membership is decided purely by the current checks (allowed variant,
+-- cohort, ratings, age, AC, cancellation rate), with no memory of driver or
+-- ops choices. Shared by the automated recompute, RC (re)activation, and the
+-- RC variant review so none of those flows can drop a tier the vehicle still
+-- qualifies for while rebuilding the selection.
+eligibleRatingGatedTiers :: DI.DriverInformation -> DV.Vehicle -> [DVST.VehicleServiceTier] -> Maybe DDriverStats.DriverStats -> Maybe [LYT.TagNameValueExpiry] -> UTCTime -> [DTC.ServiceTierType]
+eligibleRatingGatedTiers driverInfo vehicle cityServiceTiers mbDriverStats driverTag now =
+  [ vst.serviceTierType
+    | (vst, restricted) <- selectVehicleTierForDriverWithUsageRestriction AllowedVariants driverInfo vehicle cityServiceTiers mbDriverStats driverTag now,
+      not restricted,
+      isJust vst.vehicleRating
+  ]
+
 -- | Mirrors Driver.hs's default-tier derivation. Picks the highest-AC tier
 -- whose `defaultForVehicleVariant` contains the driver's variant *and* whose
 -- serviceTierType is in the city's supportedServiceTiers list. Falls back to

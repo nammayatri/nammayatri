@@ -58,7 +58,7 @@ import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
-import SharedLogic.VehicleServiceTier (ServiceTierFilterMode (..), fetchVehicleTierForDriverWithUsageRestriction, selectedServiceTiersLockKey)
+import SharedLogic.VehicleServiceTier (recomputeSelectedServiceTiers, selectedServiceTiersLockKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -129,9 +129,7 @@ dispatchConsequence ctx driverId = \case
       "AC_USAGE" -> do
         QDriverInformation.updateAcUsageRestrictionAndScore DI.ToggleNotAllowed (Just 0.0) (cast driverId)
         logInfo $ "AC usage restricted for driver " <> driverId.getId
-        serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction SelectedServiceTiers Nothing Nothing Nothing Nothing (cast driverId) ctx.merchantOperatingCityId
-        let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
-        QVehicle.updateSelectedServiceTiers newTiers (cast driverId)
+        recomputeSelectedServiceTiers Nothing Nothing Nothing Nothing (cast driverId) ctx.merchantOperatingCityId
       other -> logWarning $ "Unknown feature for FeatureBlock: " <> other
     let tag = fromMaybe params.featureName params.blockReasonTag
     BT.writeBlockAndCooldownKeys BTT.DRIVER driverId.getId BTT.FEATURE_BLOCK tag params.blockDurationHours params.blockReason (A.toJSON params.featureName) params.cooldownHours

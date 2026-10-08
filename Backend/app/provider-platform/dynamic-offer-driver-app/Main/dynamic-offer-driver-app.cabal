@@ -444,6 +444,8 @@ library
       Domain.Action.UI.Ride.Common
       Domain.Action.UI.Ride.EndRide
       Domain.Action.UI.Ride.EndRide.Internal
+      Domain.Action.UI.Ride.EndRide.RecomputeDecision
+      Domain.Action.UI.Ride.EndRide.TollDecision
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideDetails

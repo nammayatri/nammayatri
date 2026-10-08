@@ -135,7 +135,7 @@ data NearestDriversReq = NearestDriversReq
 
 -- | A driver location candidate sorted by straight-line distance, with the
 -- previously-attempted flag preserved so that downstream chunking can keep
--- prev-attempted drivers at the tail (process them only when fresh drivers run out).
+-- prev-attempted drivers at the tails (process them only when fresh drivers run out).
 data SortedLTSCandidate = SortedLTSCandidate
   { driverLoc :: DriverLocation,
     straightLineDistanceMeters :: Double,
