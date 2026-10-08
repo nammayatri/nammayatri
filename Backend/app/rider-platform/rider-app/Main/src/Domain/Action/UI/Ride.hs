@@ -24,7 +24,6 @@ module Domain.Action.UI.Ride
     getDeliveryImage,
     buildLocation,
     buildbookingUpdateRequest,
-    validateWalkAndSavePickupEdit,
   )
 where
 
@@ -198,7 +197,6 @@ editLocation rideId (personId, merchantId) req = do
       let distance = CD.distanceBetweenInMeters initialLatLong currentLatLong
       when (distance > distanceToHighPrecMeters merchant.editPickupDistanceThreshold) do
         throwError EditPickupLocationNotServiceable
-      validateWalkAndSavePickupEdit booking initialLatLong currentLatLong
 
       res <- withTryCatch "callGetDriverLocation:editLocation" (CallBPP.callGetDriverLocation ride.trackingUrl)
       case res of
@@ -312,25 +310,6 @@ buildLocation merchantId merchantOperatingCityId location = do
         merchantId = Just merchantId,
         merchantOperatingCityId = Just merchantOperatingCityId
       }
-
--- | A walk-and-save booking is priced for a pickup moved past a detour, and editing the
--- pickup is not re-priced. Walking it back towards the rider's own pickup would put the
--- detour back into the ride at the discounted fare, so that direction is refused. Nudging
--- it around or beyond the suggested point is still allowed.
-validateWalkAndSavePickupEdit :: (MonadThrow m, Log m) => DB.Booking -> Maps.LatLong -> Maps.LatLong -> m ()
-validateWalkAndSavePickupEdit booking suggestedPickup newPickup =
-  whenJust booking.parentSearchRequestLocationInfo $ \parentInfo -> do
-    let originalPickup = Maps.LatLong {lat = parentInfo.sourceLat, lon = parentInfo.sourceLon}
-        suggestedWalk = CD.distanceBetweenInMeters originalPickup suggestedPickup
-        newWalk = CD.distanceBetweenInMeters originalPickup newPickup
-        -- A drop-only suggestion leaves the pickup where the rider put it.
-        pickupWasMoved = suggestedWalk > movedPickupTolerance
-    when (pickupWasMoved && newWalk < suggestedWalk - backTrackTolerance) $
-      throwError $ InvalidRequest "Pickup cannot be moved back towards the original pickup on a walk-and-save booking"
-  where
-    movedPickupTolerance = 10
-    -- Absorbs GPS jitter and small sideways nudges around the suggested point.
-    backTrackTolerance = 20
 
 buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest
 buildbookingUpdateRequest booking = do
