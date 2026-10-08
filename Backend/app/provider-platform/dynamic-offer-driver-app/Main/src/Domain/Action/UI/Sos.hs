@@ -188,7 +188,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue =
       ticketContext = Just Ticket.SOSAlert,
       xyneChannelId = Nothing,
       xyneTicketBody = Nothing,
-      xyneSenderName = Nothing
+      xyneSenderName = Nothing,
+      xyneExternalId = Nothing
     }
   where
     sosIssueDescription = \case
@@ -248,7 +249,7 @@ callUpdateTicket person sosDetails mbComment = do
           TicketTools.updateTicket
             person.merchantId
             person.merchantOperatingCityId
-            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
+            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing, requesterId = Nothing, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
       pure Kernel.Types.APISuccess.Success
     Nothing -> pure Kernel.Types.APISuccess.Success
 
@@ -389,7 +390,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "updateTicket:sendSosTracking" $
                   withShortRetry $
-                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = Nothing, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing}
+                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = Nothing, ticketContext = Just Ticket.SOSAlert, name = Nothing, phoneNo = Nothing, xyneChannelId = Nothing, xyneExternalId = Nothing}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $
