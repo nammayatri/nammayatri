@@ -1066,7 +1066,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           now <- getCurrentTime
           let revealDriverDetails = case mTripStartTime of
                 Nothing -> False
-                Just tripStartTime -> let untilDeparture = diffUTCTime tripStartTime now in untilDeparture >= 0 && untilDeparture <= leadWindow
+                Just tripStartTime -> diffUTCTime tripStartTime now <= leadWindow
 
           return $
             Bus $
