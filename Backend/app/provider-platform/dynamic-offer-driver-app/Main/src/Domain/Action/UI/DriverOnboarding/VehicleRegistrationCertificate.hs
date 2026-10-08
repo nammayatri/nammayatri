@@ -374,10 +374,10 @@ verifyRCFlow person merchantOpCityId useCategoryBasedPriority rcNumber imageId m
         _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
       CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
     Verification.SyncResp resp -> do
-      when (resp.requestor == VT.Morth && isNothing mbVehicleCategory) $
+      when ((resp.requestor == VT.Morth || resp.requestor == VT.MorthV2) && isNothing mbVehicleCategory) $
         throwError (InvalidRequest "vehicleCategory is required when using Morth for RC verification")
       case resp.requestor of
-        VT.Morth -> do
+        req | req == VT.Morth || req == VT.MorthV2 -> do
           let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
           morthEntity <- mkMorthVerificationEntity person Nothing ODC.VehicleRegistrationCertificate encryptedRC mbStatus dateOfRegistration Nothing mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
           MorthQuery.create morthEntity

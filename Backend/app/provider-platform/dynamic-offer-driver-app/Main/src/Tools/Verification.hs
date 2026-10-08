@@ -101,7 +101,9 @@ import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
 verifyDL ::
-  ServiceFlow m r =>
+  ( ServiceFlow m r,
+    TryException m
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   VerifyDLReq ->
@@ -175,7 +177,8 @@ verifyUdyamAadhaarAsync _ merchantOpCityId req = do
 verifyRC ::
   ( ServiceFlow m r,
     CoreMetrics m,
-    HasField "ttenTokenCacheExpiry" r Seconds
+    HasField "ttenTokenCacheExpiry" r Seconds,
+    TryException m
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

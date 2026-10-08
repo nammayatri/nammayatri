@@ -70,6 +70,7 @@ getConfigJSON = \case
     Verification.DigiLockerConfig cfg -> toJSON cfg
     Verification.TtenVerificationConfig cfg -> toJSON cfg
     Verification.MorthConfig cfg -> toJSON cfg
+    Verification.MorthV2Config cfg -> toJSON cfg
     Verification.EkatraConfig cfg -> toJSON cfg
     Verification.InternalOCRConfig cfg -> toJSON cfg
     Verification.InternalImageDetectionConfig cfg -> toJSON cfg
@@ -186,6 +187,7 @@ getServiceName = \case
     Verification.DigiLockerConfig _ -> Domain.VerificationService Verification.DigiLocker
     Verification.TtenVerificationConfig _ -> Domain.VerificationService Verification.Tten
     Verification.MorthConfig _ -> Domain.VerificationService Verification.Morth
+    Verification.MorthV2Config _ -> Domain.VerificationService Verification.MorthV2
     Verification.EkatraConfig _ -> Domain.VerificationService Verification.Ekatra
     Verification.InternalOCRConfig _ -> Domain.VerificationService Verification.InternalOCR
     Verification.InternalImageDetectionConfig _ -> Domain.VerificationService Verification.InternalImageDetection
@@ -297,6 +299,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.VerificationService Verification.DigiLocker -> Domain.VerificationServiceConfig . Verification.DigiLockerConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Tten -> Domain.VerificationServiceConfig . Verification.TtenVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Morth -> Domain.VerificationServiceConfig . Verification.MorthConfig <$> eitherValue configJSON
+  Domain.VerificationService Verification.MorthV2 -> Domain.VerificationServiceConfig . Verification.MorthV2Config <$> eitherValue configJSON
   Domain.VerificationService Verification.Ekatra -> Domain.VerificationServiceConfig . Verification.EkatraConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.InternalOCR -> Domain.VerificationServiceConfig . Verification.InternalOCRConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.InternalImageDetection -> Domain.VerificationServiceConfig . Verification.InternalImageDetectionConfig <$> eitherValue configJSON
