@@ -19,6 +19,7 @@ module SharedLogic.Scheduler.Jobs.ReconcileRewardInflight
 where
 
 import qualified Domain.Action.Rewards.Coupon as Coupon
+import Domain.Types.Extra.LeanFlow (LeanFlowFeature (REWARD_INFLIGHT_RECONCILE))
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common
@@ -26,6 +27,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
 import qualified Storage.Queries.RewardCampaignExtra as QRCmpE
 import qualified Storage.Queries.RewardCohort as QRC
 
@@ -46,7 +48,8 @@ reconcileRewardInflight Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
   let jobData = jobInfo.jobData
       merchantId' = jobData.merchantId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
-  void reconcileRewardInflightImpl
+  excluded <- CQLF.isFeatureExcluded REWARD_INFLIGHT_RECONCILE
+  unless excluded $ void reconcileRewardInflightImpl
   createJobIn @_ @'ReconcileRewardInflight (Just merchantId') (Just merchantOperatingCityId') reconcileIntervalSeconds jobData
   logInfo "Scheduled next ReconcileRewardInflight job to run in 300 seconds"
   pure Complete
