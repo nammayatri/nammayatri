@@ -203,6 +203,7 @@ mkLoyaltyFinanceCtx wallet refId =
       panType = Nothing,
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
+      initialSettlementStatus = Nothing,
       enableWalletGatedTierCheck = False -- shared lib, goes through the kernel's own runFinance, never dispatches
     }
 

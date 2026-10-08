@@ -9,10 +9,11 @@ Routes (mounted under any path containing "/maps"):
 
 Returns minimal Google-shaped responses. The Haskell mock had a hand-curated
 Place table to make distances deterministic per origin/destination; the Python
-port returns a constant distance/duration. If a test needs specific values for
-a city pair, install an explicit `POST /mock/override` rule on service "google".
+port derives directions distance/duration from the straight-line distance between
+origin and destination (x1.3 road factor, ~30 km/h), so fares follow the destination.
 """
 
+import math
 import os
 import urllib.request
 import json as _json
@@ -92,6 +93,23 @@ def _distance_matrix(handler):
     }
 
 
+_ROAD_FACTOR = 1.3  # straight line -> rough road distance
+_SPEED_MPS = 30 * 1000 / 3600
+
+
+def _road_estimate(origin, destination):
+    """(meters, seconds) from the straight-line distance between two "lat,lon" strings,
+    so fares follow the destination; (5000, 600) when either point doesn't parse."""
+    try:
+        (lat1, lon1), (lat2, lon2) = ((float(x) for x in s.split(",")) for s in (origin, destination))
+    except (ValueError, AttributeError):
+        return 5000, 600
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    a = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(math.radians(lon2 - lon1) / 2) ** 2
+    meters = round(2 * 6371000 * math.asin(math.sqrt(a)) * _ROAD_FACTOR)
+    return meters, round(meters / _SPEED_MPS)
+
+
 def _directions(handler):
     qp = _qp(handler)
     origin = qp.get("origin", [""])[0]
@@ -106,17 +124,20 @@ def _directions(handler):
 
     start_loc = _ll(origin)
     end_loc = _ll(destination)
+    meters, seconds = _road_estimate(origin, destination)
+    distance = {"text": f"{meters / 1000:.1f} km", "value": meters}
+    duration = {"text": f"{seconds // 60} mins", "value": seconds}
     leg = {
-        "distance": {"text": "5 km", "value": 5000},
-        "duration": {"text": "10 mins", "value": 600},
+        "distance": distance,
+        "duration": duration,
         "end_address": destination,
         "end_location": end_loc,
         "start_address": origin,
         "start_location": start_loc,
         "steps": [
             {
-                "distance": {"text": "5 km", "value": 5000},
-                "duration": {"text": "10 mins", "value": 600},
+                "distance": distance,
+                "duration": duration,
                 "end_location": end_loc,
                 "html_instructions": "Head to destination",
                 "polyline": {"points": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"},
@@ -197,12 +218,13 @@ def _snap_to_road(handler):
             continue
     if not pts:
         pts = [{"latitude": 12.97, "longitude": 77.59}]
+    # No warningMessage key: the kernel's snapToRoad treats any warningMessage (even "")
+    # as a failure, which fails every ride's distance calculation once OSRM match falls back here.
     return {
         "snappedPoints": [
             {"location": p, "originalIndex": i, "placeId": "mock_place_id"}
             for i, p in enumerate(pts)
         ],
-        "warningMessage": "",
     }
 
 

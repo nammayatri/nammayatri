@@ -122,6 +122,9 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   // driver-app dashboard APIs (http://localhost:8016/dashboard) — operator/fleet/hub
   // endpoints. Same driver service; basePath '/dashboard' is preserved from the env value.
   'baseURL_BPP_Driver_Direct': { service: 'driver' },
+  // driver-app Beckn endpoints (http://localhost:8016/beckn) — a collection playing the BAP
+  // (OndcRideFlow) posts search/select/init/confirm here.
+  'baseURL_BPP_Beckn': { service: 'driver' },
   'baseUrl_lts': { service: 'lts' },
   'baseURL_BPP_Dashboard': { service: 'provider-dashboard' },
   'baseURL_BPP_Dashboard_Internal': { service: 'provider-dashboard' },

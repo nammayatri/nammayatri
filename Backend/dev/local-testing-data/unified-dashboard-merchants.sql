@@ -15,6 +15,9 @@
 --   NAMMA_YATRI          BAP / rider-app     short id
 --   NAMMA_YATRI_PARTNER  BPP / driver-app    short id
 -- and merchant_pair links them, which cross-tree auth depends on.
+--
+-- MSIL_PARTNER is BPP-only: local atlas_app has no MSIL merchant, so it gets no
+-- BAP row, no pair, and no APP_BACKEND server names.
 
 -- ---------------------------------------------------------------------------
 -- 1. Merchants. Fixed UUIDs so re-runs are stable and tokens keep working.
@@ -33,6 +36,10 @@ VALUES
   ('7f1c9b40-0000-4000-8000-00000000bb92', 'NAMMA_YATRI_PARTNER', 'DRIVER_OFFER_BPP', now(),
    'Bangalore', ARRAY['Bangalore','Kolkata'],
    ARRAY['DRIVER_OFFER_BPP','DRIVER_OFFER_BPP_MANAGEMENT','APP_BACKEND','APP_BACKEND_MANAGEMENT'],
+   'localhost', 'http://localhost', true),
+  ('7f1c9b40-0000-4000-8000-00000000bb93', 'MSIL_PARTNER', 'DRIVER_OFFER_BPP', now(),
+   'Delhi', ARRAY['Delhi','Hyderabad'],
+   ARRAY['DRIVER_OFFER_BPP','DRIVER_OFFER_BPP_MANAGEMENT'],
    'localhost', 'http://localhost', true)
 ON CONFLICT (short_id) DO NOTHING;
 
@@ -43,7 +50,9 @@ INSERT INTO atlas_dashboard.merchant_operating_city (id, city, std_code)
 SELECT v.id, v.city, v.std_code
 FROM (VALUES
     ('7f1c9b40-0000-4000-8000-0000000c1701', 'Bangalore', 'std:080'),
-    ('7f1c9b40-0000-4000-8000-0000000c1702', 'Kolkata',   'std:033')
+    ('7f1c9b40-0000-4000-8000-0000000c1702', 'Kolkata',   'std:033'),
+    ('7f1c9b40-0000-4000-8000-0000000c1703', 'Delhi',     'std:011'),
+    ('7f1c9b40-0000-4000-8000-0000000c1704', 'Hyderabad', 'std:040')
 ) AS v(id, city, std_code)
 WHERE NOT EXISTS (
   SELECT 1 FROM atlas_dashboard.merchant_operating_city e WHERE e.city = v.city);
@@ -77,8 +86,8 @@ WHERE NOT EXISTS (
     AND ma.operating_city::text = c.city);
 
 -- ---------------------------------------------------------------------------
--- 5. Check. Expect 2 merchants, 2 cities, 1 pair with both sides, and one
--- access row per admin x merchant x city (4 per admin).
+-- 5. Check. Expect 3 merchants, 4 cities, 1 pair with both sides, and one
+-- access row per admin x merchant x city (6 per admin).
 SELECT 'merchants' AS what, count(*)::text AS n FROM atlas_dashboard.merchant
 UNION ALL SELECT 'operating cities', count(*)::text FROM atlas_dashboard.merchant_operating_city
 UNION ALL SELECT 'pairs (both sides set)', count(*)::text FROM atlas_dashboard.merchant_pair

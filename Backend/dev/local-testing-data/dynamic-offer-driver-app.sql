@@ -359,6 +359,10 @@ INSERT INTO atlas_driver_offer_bpp.person
   , role
   , total_earned_coins
   , used_coins
+  , mobile_country_code
+  , mobile_number_encrypted
+  , mobile_number_hash
+  , unencrypted_mobile_number
   , created_at
   , updated_at
   )
@@ -373,6 +377,11 @@ SELECT
   , 'FLEET_OWNER'
   , 0
   , 0
+  , '+91'
+    -- unencrypted: 9999900003 (a prepaid plan purchase needs the owner's mobile number for the payment order)
+  , '0.1.0|2|A7xQpNvLoATG4J1srSLKZ7TVNAGxrIM0tnKXz/xXgW2kPvMuegzHI68WIB6kETRVe1XVXQPWSAe47L4/tg=='
+  , decode('9ac801ab2200634f7745f780cc67340804e55cad95e2d54c1f252e5c2e144685', 'hex')
+  , '9999900003'
   , now()
   , now()
 FROM atlas_driver_offer_bpp.merchant m
@@ -380,6 +389,17 @@ WHERE NOT EXISTS (
   SELECT 1 FROM atlas_driver_offer_bpp.person p
   WHERE p.id = md5(m.id || ':seed-fleet-owner')::uuid::text
 );
+
+-- Fleet owners seeded before the mobile number was added: backfill it once.
+UPDATE atlas_driver_offer_bpp.person p
+SET mobile_country_code = '+91'
+  , mobile_number_encrypted = '0.1.0|2|A7xQpNvLoATG4J1srSLKZ7TVNAGxrIM0tnKXz/xXgW2kPvMuegzHI68WIB6kETRVe1XVXQPWSAe47L4/tg=='
+  , mobile_number_hash = decode('9ac801ab2200634f7745f780cc67340804e55cad95e2d54c1f252e5c2e144685', 'hex')
+  , unencrypted_mobile_number = '9999900003'
+  , updated_at = now()
+FROM atlas_driver_offer_bpp.merchant m
+WHERE p.id = md5(m.id || ':seed-fleet-owner')::uuid::text
+  AND p.mobile_number_hash IS NULL;
 
 -- 8b. Fleet-owner RegistrationToken (one per merchant)
 INSERT INTO atlas_driver_offer_bpp.registration_token
@@ -417,6 +437,39 @@ FROM atlas_driver_offer_bpp.merchant m
 WHERE NOT EXISTS (
   SELECT 1 FROM atlas_driver_offer_bpp.registration_token rt
   WHERE rt.id = md5(m.id || ':seed-fleet-owner-token')::uuid::text
+);
+
+-- 8b2. FleetOwnerInformation (one per merchant): setActivity refuses a fleet driver
+-- whose fleet has no enabled fleet_owner_information row.
+INSERT INTO atlas_driver_offer_bpp.fleet_owner_information
+  ( fleet_owner_person_id
+  , merchant_id
+  , merchant_operating_city_id
+  , fleet_type
+  , enabled
+  , verified
+  , blocked
+  , is_eligible_for_subscription
+  , fleet_name
+  , created_at
+  , updated_at
+  )
+SELECT
+    md5(m.id || ':seed-fleet-owner')::uuid::text
+  , m.id
+  , (SELECT c.id FROM atlas_driver_offer_bpp.merchant_operating_city c WHERE c.merchant_id = m.id ORDER BY c.id LIMIT 1)
+  , 'NORMAL_FLEET'
+  , true
+  , true
+  , false
+  , true
+  , 'seed_fleet'
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.merchant m
+WHERE NOT EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.fleet_owner_information f
+  WHERE f.fleet_owner_person_id = md5(m.id || ':seed-fleet-owner')::uuid::text
 );
 
 -- 8c. FleetDriverAssociation (seed driver ↔ seed fleet owner, per merchant)
@@ -500,3 +553,93 @@ INSERT INTO atlas_driver_offer_bpp.app_dynamic_logic_rollout (domain, merchant_o
 VALUES ('RIDE-FEEDBACK', 'default', 1, 100, 'Unbounded', 'During-ride feedback v1')
 ON CONFLICT DO NOTHING;
 
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 10. Whitelist the ONDC workbench BAP (dev/integration-tests/collections/OndcRideFlow).
+-- validateSubscriber switches a city to whitelist-only mode as soon as it has one
+-- white_list_org row, so only cities that already keep a whitelist get the entry;
+-- cities with no rows stay in blacklist mode and already accept the workbench.
+-- ────────────────────────────────────────────────────────────────────────
+INSERT INTO atlas_driver_offer_bpp.white_list_org
+  ( id
+  , subscriber_id
+  , domain
+  , merchant_id
+  , merchant_operating_city_id
+  , created_at
+  , updated_at
+  )
+SELECT
+    md5(c.id || ':seed-workbench-whitelist')::uuid::text
+  , 'workbench.ondc.tech'
+  , 'MOBILITY'
+  , c.merchant_id
+  , c.id
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.merchant_operating_city c
+WHERE EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.white_list_org w
+  WHERE w.merchant_operating_city_id = c.id AND w.domain = 'MOBILITY'
+)
+AND NOT EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.white_list_org w
+  WHERE w.merchant_operating_city_id = c.id AND w.subscriber_id = 'workbench.ondc.tech' AND w.domain = 'MOBILITY'
+);
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 11. ONDC scheduled-ride support for the seed merchant cities (OndcRideFlow collection).
+-- A scheduled search answers with Quotes, and select/init only resolve a Quote item when
+-- transporter_config.enable_ondc_scheduled_ride_support is on for the city.
+-- ────────────────────────────────────────────────────────────────────────
+UPDATE atlas_driver_offer_bpp.transporter_config tc
+SET enable_ondc_scheduled_ride_support = true
+  , updated_at = now()
+FROM atlas_driver_offer_bpp.merchant_operating_city c
+WHERE tc.merchant_operating_city_id = c.id
+  AND c.merchant_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER')
+  AND coalesce(tc.enable_ondc_scheduled_ride_support, false) = false;
+
+-- 10b. Whitelist the local collector BAP too (OndcRideFlow "BAP" dropdown, RSF receiver_recon by hand),
+-- in the same cities as the workbench.
+INSERT INTO atlas_driver_offer_bpp.white_list_org
+  ( id, subscriber_id, domain, merchant_id, merchant_operating_city_id, created_at, updated_at )
+SELECT
+    md5(w.merchant_operating_city_id || ':seed-local-collector-whitelist')::uuid::text
+  , 'local.collector'
+  , 'MOBILITY'
+  , w.merchant_id
+  , w.merchant_operating_city_id
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.white_list_org w
+WHERE w.subscriber_id = 'workbench.ondc.tech' AND w.domain = 'MOBILITY'
+  AND NOT EXISTS (
+    SELECT 1 FROM atlas_driver_offer_bpp.white_list_org x
+    WHERE x.merchant_operating_city_id = w.merchant_operating_city_id
+      AND x.subscriber_id = 'local.collector' AND x.domain = 'MOBILITY'
+  );
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 12. BAP-collected fares wait for BAP settlement confirmation (RSF): end ride posts the buyer
+-- asset as EXTERNAL_PENDING only when driver_wallet_config.requireBapSettlementConfirmation is on.
+-- ────────────────────────────────────────────────────────────────────────
+UPDATE atlas_driver_offer_bpp.transporter_config tc
+SET driver_wallet_config = jsonb_set(tc.driver_wallet_config::jsonb, '{requireBapSettlementConfirmation}', 'true'::jsonb)::json
+  , updated_at = now()
+FROM atlas_driver_offer_bpp.merchant_operating_city c
+WHERE tc.merchant_operating_city_id = c.id
+  AND c.merchant_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER')
+  AND coalesce((tc.driver_wallet_config::jsonb ->> 'requireBapSettlementConfirmation')::boolean, false) = false;
+
+-- ────────────────────────────────────────────────────────────────────────
+-- 13. No payout cut-off window for local testing: earnings become redeemable as soon as they are
+-- UNSETTLED (e.g. right after an RSF 01 Paid releases the EXTERNAL_PENDING hold), not after 7 days.
+-- ────────────────────────────────────────────────────────────────────────
+UPDATE atlas_driver_offer_bpp.transporter_config tc
+SET driver_wallet_config = jsonb_set(tc.driver_wallet_config::jsonb, '{payoutCutOffDays}', '-1'::jsonb)::json
+  , updated_at = now()
+FROM atlas_driver_offer_bpp.merchant_operating_city c
+WHERE tc.merchant_operating_city_id = c.id
+  AND c.merchant_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'MSIL_PARTNER')
+  AND coalesce((tc.driver_wallet_config::jsonb ->> 'payoutCutOffDays')::int, 7) <> -1;

@@ -14,15 +14,6 @@ DO $$ BEGIN END $$;
 
 ------- SQL updates -------
 
--- {"api":"GetRSFReconciliationRsfMessages","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfSettlements.list' ) ON CONFLICT DO NOTHING;
-
--- {"api":"GetRSFReconciliationRsfMessagesUtrs","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfSettlements.utrs' ) ON CONFLICT DO NOTHING;
-
--- {"api":"GetRSFReconciliationRsfMessagesOrders","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfSettlements.orders' ) ON CONFLICT DO NOTHING;
-
 -- {"api":"PostRSFReconciliationRsfMessagesSend","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfSettlements.send' ) ON CONFLICT DO NOTHING;
 
@@ -38,8 +29,36 @@ INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '3
 -- {"api":"PostRSFReconciliationRsfOrdersConfirm","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfOrders.confirm' ) ON CONFLICT DO NOTHING;
 
--- {"api":"GetRSFReconciliationRsfReconGrid","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
-INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfRecon.grid' ) ON CONFLICT DO NOTHING;
-
 -- {"api":"GetRSFReconciliationRsfReconUnmatched","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfRecon.unmatched' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetRSFReconciliationRsfOrders","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfOrders.list' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostRSFReconciliationRsfAutoAllocation","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfAllocation.auto' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostRSFReconciliationRsfSend","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfSettlements.send' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+
+
+------- SQL updates -------
+
+-- {"api":"GetRSFReconciliationRsfSummary","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfSummary.read' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostRSFReconciliationRsfAllocationsManual","migration":"localAccessForRoleId","param":"37947162-3b5d-4ed6-bcac-08841be1534d","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.role_capability (role_id, capability_id) VALUES ( '37947162-3b5d-4ed6-bcac-08841be1534d', 'financeManagement.rsfOrders.confirm' ) ON CONFLICT DO NOTHING;

@@ -115,6 +115,7 @@ data RSFErrorCode
   | RSFInvalidSignature
   | RSFDuplicateMessage
   | RSFNoRecordFound
+  | RSFAllocatedUtrMissing
   deriving (Show, Eq)
 
 rsfErrorCodeToText :: RSFErrorCode -> Text
@@ -126,6 +127,7 @@ rsfErrorCodeToText = \case
   RSFInvalidSignature -> "70004"
   RSFDuplicateMessage -> "70003"
   RSFNoRecordFound -> "70010"
+  RSFAllocatedUtrMissing -> "70011"
 
 rsfErrorDefaultMessage :: RSFErrorCode -> Text
 rsfErrorDefaultMessage = \case
@@ -136,6 +138,7 @@ rsfErrorDefaultMessage = \case
   RSFInvalidSignature -> "Invalid signature"
   RSFDuplicateMessage -> "Duplicate message_id"
   RSFNoRecordFound -> "No record found for one or more order ids"
+  RSFAllocatedUtrMissing -> "settlement_details omit a UTR already allocated to the order"
 
 buildNackForCode :: RSFErrorCode -> Spec.RSFAckResponse
 buildNackForCode code =

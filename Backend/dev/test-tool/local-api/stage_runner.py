@@ -720,15 +720,21 @@ def set_local_path(_slug: str, spec: dict, local_path: Optional[str]) -> dict:
         return {"error": "spec has no source.destDir"}
     dest = PROJECT_ROOT / dest_rel
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if dest.is_symlink() or dest.exists():
-        if dest.is_symlink():
-            dest.unlink()
-        elif dest.is_dir() and not local_path:
-            return {"error": f"refusing to remove existing dir {dest}; move it aside manually"}
+    target = None
     if local_path:
         target = Path(local_path).expanduser().resolve()
         if not target.exists():
             return {"error": f"local path does not exist: {target}"}
-        os.symlink(str(target), str(dest))
+    if dest.is_symlink():
+        dest.unlink()
+    elif dest.exists():
+        # A real clone (or file) sits at destDir. Never delete it here, and never
+        # fall through to os.symlink, which would raise FileExistsError.
+        return {"error": f"refusing to replace existing path {dest}; move it aside manually"}
+    if target:
+        try:
+            os.symlink(str(target), str(dest))
+        except OSError as e:
+            return {"error": f"failed to symlink {dest} -> {target}: {e}"}
         return {"linked": str(target)}
     return {"reset": True}
