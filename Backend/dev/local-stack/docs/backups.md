@@ -35,6 +35,23 @@ reads. The fix is a Google Cloud client id of the company's own, set once in
 `rclone config` (https://rclone.org/drive/#making-your-own-client-id); it needs
 the Google account that owns the Drive.
 
+**Done 2026-10-08: the remote uses our own client id.** Google Cloud project
+*Movin backup*, OAuth app *Movin backup* — External, **In production** (in
+*Testing* the refresh token expires after 7 days and the upload quietly stops),
+one scope, `drive.file`, a *Desktop app* client. The owner set it on the server
+with `rclone config` (edit `movin-drive`, new client id and secret, refresh the
+token through `rclone authorize` on the laptop); the previous settings are kept
+beside the config as `rclone.conf.before-own-client`. A manual run of the unit
+then uploaded `movin-20261008T101330Z.tar.gz.gpg` (47 MB) with no warning.
+
+`drive.file` means rclone sees **only the files its own client created**. So
+the old folder, renamed **`movin-backups-old`** in Drive, is invisible to
+rclone: the backups up to 2026-10-08 — and phase 6's
+`subscription-final-20261007T184106Z.sql.gpg` — are downloaded from it in the
+browser, not with `rclone`. New backups go to a fresh `movin-backups`. The
+narrow scope is kept on purpose: this server's key cannot read anything else
+in that Drive.
+
 ### It is not `pg_dump atlas_dev`, for two reasons
 
 **The encryption keys are in a different container.** `atlas_app` stores rider

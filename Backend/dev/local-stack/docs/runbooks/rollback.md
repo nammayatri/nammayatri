@@ -52,7 +52,9 @@ Each file says its own way back in its header. Two kinds:
           /var/backups/movin/subscription-final-20261007T184106Z.sql.gpg \
         | docker exec -i ny-postgres psql -U postgres -d atlas_dev
 
-  (Run on the server, as root. The file is also offsite.)
+  (Run on the server, as root. The offsite copy is in Drive's
+  `movin-backups-old` folder, reachable from the browser only — see
+  [backups.md](../backups.md).)
 
 Anything larger — a lost table, a broken database — is the nightly backup
 ([backups.md](../backups.md)). Know its limit: `./backup.sh restore F` decrypts
