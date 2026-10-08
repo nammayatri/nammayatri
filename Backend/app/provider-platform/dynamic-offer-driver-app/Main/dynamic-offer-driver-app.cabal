@@ -591,6 +591,7 @@ library
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate
       SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver
       SharedLogic.Allocator.Jobs.SendFeedbackPN
+      SharedLogic.Allocator.Jobs.SendLegalPolicyNotification
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
@@ -733,6 +734,7 @@ library
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
       SharedLogic.KnowledgeCenter
+      SharedLogic.LegalPolicyEmail
       SharedLogic.LocationMapping
       SharedLogic.ManualTollCharge
       SharedLogic.MediaFileDocument

@@ -79,6 +79,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyB
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideNotificationsToDriver (sendScheduledRideNotificationsToDriver, sendTagActionNotification)
 import SharedLogic.Allocator.Jobs.SendFeedbackPN (sendFeedbackPN)
+import SharedLogic.Allocator.Jobs.SendLegalPolicyNotification (handleSendLegalPolicyNotification)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendScheduledSearchRequestToDrivers, sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.Settlement.SAPReportDispatch (runSAPPGSettlementDispatchJob, runSAPSubscriptionPurchaseDispatchJob)
 import SharedLogic.Allocator.Jobs.Settlement.SAPRideRevenueDispatch (runSAPRideRevenueDispatchJob)
@@ -203,6 +204,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runBulkUserCohortMappingUploadJob
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
           & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
+          & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
     }
 
 runDriverOfferAllocator ::

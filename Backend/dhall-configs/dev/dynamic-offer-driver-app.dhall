@@ -351,6 +351,7 @@ let AllocatorJobType =
       | FleetEngineRetry
       | DeleteUnreferencedFarePolicies
       | GenerateInvoicePdf
+      | SendLegalPolicyNotification
       >
 
 let jobRetryOnExceptionMapx =
@@ -447,6 +448,9 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.FleetEngineRetry, mapValue = True }
+      , { mapKey = AllocatorJobType.SendLegalPolicyNotification
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig =
