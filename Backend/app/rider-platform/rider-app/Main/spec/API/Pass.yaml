@@ -167,6 +167,23 @@ types:
     refunds: "[RefundAPIEntity]"
     derive: "Show"
 
+  FRFSPassDailyTicketStatAPIEntity:
+    date: Day
+    ticketCount: Int
+    fareAmount: HighPrecMoney
+    savedAmount: HighPrecMoney
+    derive: "Show"
+
+  FRFSPassTicketStatisticsResp:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    startDate: Day
+    endDate: Day
+    totalTicketCount: Int
+    totalFareAmount: HighPrecMoney
+    totalSavedAmount: HighPrecMoney
+    daily: "[FRFSPassDailyTicketStatAPIEntity]"
+    derive: "Show"
+
   SetPassPrefSrcAndDestReq:
     prefSrc: Text
     prefDest: Text
@@ -255,6 +272,14 @@ apis:
         status: Text
       response:
         type: "[PurchasedPassTransactionAPIEntity]"
+
+  - GET:
+      endpoint: /multimodal/pass/frfsStatistics
+      auth: TokenAuth
+      mandatoryQuery:
+        purchasedPassPaymentId: Id PurchasedPassPayment
+      response:
+        type: FRFSPassTicketStatisticsResp
 
   - POST:
       endpoint: /multimodal/pass/activateToday/{passNumber}

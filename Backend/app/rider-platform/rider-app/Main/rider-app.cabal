@@ -561,6 +561,7 @@ library
       SharedLogic.FRFSLiveTrip
       SharedLogic.FRFSPassConfirm
       SharedLogic.FRFSPassOverride
+      SharedLogic.FRFSPassTicketStatistics
       SharedLogic.FRFSReschedule
       SharedLogic.FRFSSeatBooking
       SharedLogic.FRFSSeatBooking.Lua
@@ -1244,6 +1245,7 @@ library
       Domain.Types.FRFSConfig
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
+      Domain.Types.FRFSPassTicketStatistics
       Domain.Types.FRFSQuote
       Domain.Types.FRFSQuoteBreakup
       Domain.Types.FRFSQuoteCategory
@@ -1420,6 +1422,7 @@ library
       Storage.Beam.FRFSConfig
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
+      Storage.Beam.FRFSPassTicketStatistics
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSQuoteBreakup
       Storage.Beam.FRFSQuoteCategory
@@ -1601,6 +1604,7 @@ library
       Storage.Queries.FRFSConfig
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare
+      Storage.Queries.FRFSPassTicketStatistics
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSQuoteBreakup
       Storage.Queries.FRFSQuoteCategory
