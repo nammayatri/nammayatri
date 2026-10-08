@@ -1,0 +1,47 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PurchasedPassPayment: Domain.Types.PurchasedPassPayment
+  UTCTime: Data.Time
+  HighPrecMoney: Kernel.Types.Common
+
+FRFSPassTicketStatistics:
+  tableName: frfs_pass_ticket_statistics
+
+  fields:
+    purchasedPassPaymentId: Id PurchasedPassPayment
+    date: Day
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    ticketCount: Int
+    fareAmount: Maybe HighPrecMoney
+    savedAmount: Maybe HighPrecMoney
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    purchasedPassPaymentId: PrimaryKey
+    date: PrimaryKey
+
+  extraIndexes:
+    - columns: [purchasedPassPaymentId]
+
+  queries:
+    findAllByPurchasedPassPaymentIdAndDates:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - purchasedPassPaymentId
+          - in:
+              - date
+
+    updateUsageByPurchasedPassPaymentIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [ticketCount, fareAmount, savedAmount]
+      where:
+        and: [purchasedPassPaymentId, date]
+
+  extraOperations:
+    - GENERATE_INDEXES
