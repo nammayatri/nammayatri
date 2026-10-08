@@ -26,6 +26,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.FRFSPassTicketStatistics as FRFSPassTicketStatistics
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
@@ -576,6 +577,15 @@ completeReschedule oldBookingId stagingBookingId = do
     -- status, so a retry after any partial failure re-runs every idempotent step above and lands here once.
     void $ QTicket.updateAllStatusByBookingId DFRFSTicketStatus.RESCHEDULED oldBookingId
     void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBookingStatus.RESCHEDULED "reschedule_completed" oldBooking
+    whenJust oldBooking.overrideAppliedEntityId $ \entityId ->
+      void . withTryCatch "completeReschedule:moveTickets" $
+        QPurchasedPassPayment.findByPrimaryKey (Id entityId) >>= \case
+          Nothing -> logWarning $ "FRFSReschedule:completeReschedule pass payment not found, ticket statistics not moved paymentId=" <> entityId
+          Just passPayment -> do
+            oldDay <- FRFSPassOverride.bookingTripDay oldBooking
+            newDay <- FRFSPassOverride.bookingTripDay stagingBooking
+            quantity <- FRFSPassOverride.ticketQuantityForBooking oldBooking
+            FRFSPassTicketStatistics.moveTickets passPayment oldDay newDay (FRFSPassTicketStatistics.bookingUsage oldBooking quantity)
     logInfo $ "FRFSReschedule:completeReschedule committed oldBookingId=" <> oldBookingId.getId <> " stagingBookingId=" <> stagingBookingId.getId
   whenJust oldBooking.overrideAppliedEntityId $ \entityId -> do
     void . withTryCatch "completeReschedule:releaseWindow" $ do
