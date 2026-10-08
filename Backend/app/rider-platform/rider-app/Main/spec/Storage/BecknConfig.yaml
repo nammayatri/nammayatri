@@ -116,6 +116,7 @@ IntegratedBPPConfig:
     providerName: Maybe Text
     isTicketValidOnMultipleRoutes: Maybe Bool
     passOverrideApplicable: Maybe Bool
+    autoOverridePassForFRFS: Maybe Bool
     sortQuotesByRouteServiceTiers: Maybe Bool
 
   beamFields:
@@ -125,6 +126,7 @@ IntegratedBPPConfig:
   default:
     isTicketValidOnMultipleRoutes: "true"
     passOverrideApplicable: "false"
+    autoOverridePassForFRFS: "true"
     sortQuotesByRouteServiceTiers: "false"
 
   types:

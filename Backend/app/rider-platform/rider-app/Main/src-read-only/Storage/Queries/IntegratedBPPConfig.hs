@@ -39,6 +39,7 @@ updateByPrimaryKey (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) =
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.agencyKey agencyKey,
+      Se.Set Beam.autoOverridePassForFRFS autoOverridePassForFRFS,
       Se.Set Beam.domain domain,
       Se.Set Beam.feedKey feedKey,
       Se.Set Beam.isTicketValidOnMultipleRoutes isTicketValidOnMultipleRoutes,
