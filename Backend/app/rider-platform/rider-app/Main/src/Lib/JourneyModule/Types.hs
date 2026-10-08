@@ -1484,10 +1484,10 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
           Nothing
           Nothing
       else pure []
-  overridePasses <-
+  (mbLegStationsForSearch, overridePasses) <-
     if integratedBPPConfig.passOverrideApplicable /= Just True
       || not (integratedBPPConfig.autoOverridePassForFRFS /= Just False || frfsSearch.enforcePassOverride == Just True)
-      then pure []
+      then pure (Nothing, [])
       else do
         now' <- getCurrentTime
         -- Same guard as booking time (SharedLogic/FRFSConfirm.hs): fromDepartureTime is a
@@ -1495,12 +1495,13 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
         -- legs. An epoch tripTime yields a 1970 tripDay, and filterCandidatesForLeg then rejects
         -- every pass on the startDate/endDate window -- the leg silently offers no passes at all.
         let tripTime = maybe now' (\departure -> if departure > now' then departure else now') journeyLeg.fromDepartureTime
+        -- Kept an action on both arms, so no stop lookup happens unless a pass enforces stops.
         let resolveStations = Just <$> FRFSPassOverride.resolveLegStations integratedBPPConfig frfsSearch.fromStationCode frfsSearch.toStationCode
         case mbPassCandidates of
           Just candidates -> do
             tripDay <- FRFSPassOverride.localTripDay person tripTime
             mbLegStations <- FRFSPassOverride.legStationsFor candidates resolveStations
-            pure $ FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay mbLegStations
+            pure (mbLegStations, FRFSPassOverride.filterCandidatesForLeg candidates vehicleType tripDay mbLegStations)
           Nothing -> FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime hasApplicablePass resolveStations
   -- The UNFILTERED candidates, deliberately -- not overridePasses. toCandidate keeps every
   -- override-applicable term whatever state it is in; filterCandidatesForLeg is what narrows to
@@ -1512,7 +1513,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
       applicablePasses =
         maybe
           []
-          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig overridePasses serviceTierType unitPrice overridePriceItems)
+          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig overridePasses mbLegStationsForSearch serviceTierType unitPrice overridePriceItems)
           adultUnitPrice
   let hasTicketFreePass =
         shouldCheckPass

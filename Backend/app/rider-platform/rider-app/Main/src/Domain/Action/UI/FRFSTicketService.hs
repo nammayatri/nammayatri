@@ -817,18 +817,19 @@ enrichQuotesWithPassOverride ::
   Domain.Types.FRFSSearch.FRFSSearch ->
   Maybe Bool ->
   Maybe UTCTime ->
-  m [FRFSPassOverride.ApplicablePass]
+  m (Maybe (Text, Text), [FRFSPassOverride.ApplicablePass])
 enrichQuotesWithPassOverride integratedBppConfig personId search mbClientHasPasses mbTripTime
-  | integratedBppConfig.passOverrideApplicable /= Just True = pure []
-  | not (passOverrideOffered integratedBppConfig search.enforcePassOverride) = pure []
-  | search.hasApplicablePass == Just False && mbClientHasPasses /= Just True = pure []
+  | integratedBppConfig.passOverrideApplicable /= Just True = pure (Nothing, [])
+  | not (passOverrideOffered integratedBppConfig search.enforcePassOverride) = pure (Nothing, [])
+  | search.hasApplicablePass == Just False && mbClientHasPasses /= Just True = pure (Nothing, [])
   | otherwise = do
     now <- getCurrentTime
     let tripTime = fromMaybe now mbTripTime
         mbKnownHasPass = if mbClientHasPasses == Just True then Just True else search.hasApplicablePass
     QP.findById personId >>= \case
-      Nothing -> pure []
+      Nothing -> pure (Nothing, [])
       Just person ->
+        -- An action, not a resolved value, so no stop lookup happens unless a pass enforces stops.
         FRFSPassOverride.getFRFSOverrideApplicablePassesByPersonId
           integratedBppConfig
           person
@@ -899,7 +900,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
             >>= \case
               Left _ -> pure Nothing
               Right mbResp -> pure mbResp
-  applicablePassesForSearch <- enrichQuotesWithPassOverride integratedBppConfig personId search mbHasPasses mbTripTime
+  (mbLegStationsForSearch, applicablePassesForSearch) <- enrichQuotesWithPassOverride integratedBppConfig personId search mbHasPasses mbTripTime
   quotesRes <-
     mapM
       ( \(quote, quoteCategories) -> do
@@ -934,7 +935,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 _type = quote._type,
                 applicablePasses =
                   map FRFSPassOverride.mkPassOptionAPIEntity $
-                    FRFSPassOverride.passOptionsForQuote integratedBppConfig applicablePassesForSearch serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
+                    FRFSPassOverride.passOptionsForQuote integratedBppConfig applicablePassesForSearch mbLegStationsForSearch serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
                 price = singleAdultTicketPrice.amount,
                 priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
                 quantity = adultQuantity,

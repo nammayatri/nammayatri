@@ -208,46 +208,112 @@ postMultimodalPassCalculatePrice ::
   )
 postMultimodalPassCalculatePrice (mbPersonId, merchantId) passId req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   pass <- CQPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
   unless (pass.merchantId == merchantId) $ throwError (PassNotFound passId.getId)
   unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
-  calculateDynamicPassPrice personId pass req
+  calculateDynamicPassPrice person pass req
 
-calculateDynamicPassPrice :: Id.Id DP.Person -> DPass.Pass -> PassAPI.PassCalculatePriceReq -> Environment.Flow PassAPI.PassCalculatePriceResp
-calculateDynamicPassPrice riderId pass req =
+calculateDynamicPassPrice :: DP.Person -> DPass.Pass -> PassAPI.PassCalculatePriceReq -> Environment.Flow PassAPI.PassCalculatePriceResp
+calculateDynamicPassPrice person pass req =
   FRFSPassOverride.dynamicPricingFromPass pass >>= \case
-    FRFSPassOverride.DynamicallyPriced pricing -> dynamicPassPrice riderId pass pricing req
+    FRFSPassOverride.DynamicallyPriced pricing -> do
+      selection <- fromEitherM InvalidRequest (validatePassSelection pass pricing req)
+      dynamicPassPrice person pass pricing selection Nothing
     FRFSPassOverride.DynamicPricingBroken reason -> throwError (InvalidRequest $ "Pass pricing config is invalid, passId=" <> pass.id.getId <> ": " <> reason)
     FRFSPassOverride.NotDynamicallyPriced -> throwError (InvalidRequest $ "Pass is not dynamically priced, passId=" <> pass.id.getId)
 
-dynamicPassPrice :: Id.Id DP.Person -> DPass.Pass -> FRFSPassOverride.DynamicPricingConfig -> PassAPI.PassCalculatePriceReq -> Environment.Flow PassAPI.PassCalculatePriceResp
-dynamicPassPrice riderId pass pricing req = do
-  unless (req.numberOfTrips > 0 && req.numberOfTrips <= pricing.maximumPurchaseableTripCount) $
-    throwError (InvalidRequest $ "numberOfTrips must be between 1 and " <> show pricing.maximumPurchaseableTripCount)
-  (fare, routes) <- passReferenceFare riderId pass pricing req
+data DynamicPassSelection = DynamicPassSelection
+  { sourceStopCode :: Text,
+    destinationStopCode :: Text,
+    numberOfTrips :: Int,
+    roundTripAllowed :: Bool,
+    validityDays :: Maybe Int
+  }
+  deriving (Show)
+
+-- Pure, so the price and purchase paths share one definition of a legal selection.
+validatePassSelection ::
+  DPass.Pass ->
+  FRFSPassOverride.DynamicPricingConfig ->
+  PassAPI.PassCalculatePriceReq ->
+  Either Text DynamicPassSelection
+validatePassSelection pass pricing req = do
+  -- A configured list of options is exhaustive; without one only the ceiling applies.
+  case pricing.selectableTripCounts of
+    Just options ->
+      unless (req.numberOfTrips `elem` options) $
+        Left ("numberOfTrips must be one of " <> show options <> ", got " <> show req.numberOfTrips)
+    Nothing ->
+      unless (req.numberOfTrips > 0 && req.numberOfTrips <= pricing.maximumPurchaseableTripCount) $
+        Left ("numberOfTrips must be between 1 and " <> show pricing.maximumPurchaseableTripCount <> ", got " <> show req.numberOfTrips)
+  validityDays <- case req.validityDays of
+    Nothing -> inheritedValidityDays
+    Just days -> do
+      case pricing.selectableValidityDays of
+        -- A configured list is the pass's own definition of its windows, so it overrides maxValidDays.
+        Just options ->
+          unless (days `elem` options) $
+            Left ("validityDays must be one of " <> show options <> ", got " <> show days)
+        Nothing -> do
+          unless (days > 0) $
+            Left ("validityDays must be positive, got " <> show days)
+          whenJust pass.maxValidDays $ \maxValidDays ->
+            unless (days <= maxValidDays) $
+              Left ("validityDays must not exceed " <> show maxValidDays <> ", got " <> show days)
+      pure days
+  when (isRoundTripAllowed && pricing.roundTripSupported /= Just True) $
+    Left "roundTripAllowed is not offered on this pass"
+  pure
+    DynamicPassSelection
+      { sourceStopCode = req.sourceStopCode,
+        destinationStopCode = req.destinationStopCode,
+        numberOfTrips = req.numberOfTrips,
+        roundTripAllowed = isRoundTripAllowed,
+        validityDays = Just validityDays
+      }
+  where
+    isRoundTripAllowed = fromMaybe False req.roundTripAllowed
+    -- Capped to the longest window sold, as the price has no time term; dynamicPricingFromPass
+    -- already refuses a pass with neither source.
+    inheritedValidityDays :: Either Text Int
+    inheritedValidityDays = case (mfilter (> 0) pass.maxValidDays, pricing.selectableValidityDays) of
+      (Just maxDays, Just options) -> Right (min maxDays (maximum options))
+      (Just maxDays, Nothing) -> Right maxDays
+      (Nothing, Just options) -> Right (maximum options)
+      (Nothing, Nothing) -> Left ("pass sells no validity window, passId=" <> pass.id.getId)
+
+dynamicPassPrice :: DP.Person -> DPass.Pass -> FRFSPassOverride.DynamicPricingConfig -> DynamicPassSelection -> Maybe DT.Day -> Environment.Flow PassAPI.PassCalculatePriceResp
+dynamicPassPrice person pass pricing selection mbStartDay = do
+  (fare, routes) <- passReferenceFare person.id pass pricing selection
   let perTrip = FRFSPassOverride.applyPricingSaving pricing fare
-      total = perTrip * fromIntegral req.numberOfTrips
+      total = perTrip * fromIntegral selection.numberOfTrips
   when (total <= 0) $
-    throwError (InvalidRequest $ "Pass price works out as zero for " <> req.sourceStopCode <> " to " <> req.destinationStopCode)
+    throwError (InvalidRequest $ "Pass price works out as zero for " <> selection.sourceStopCode <> " to " <> selection.destinationStopCode)
+  -- Resolved exactly as purchasePassWithPayment does, so the quoted window is the one the rider gets.
+  localToday <- cityLocalDay person.merchantOperatingCityId
+  let startDate = fromMaybe localToday mbStartDay
   return $
     PassAPI.PassCalculatePriceResp
       { amount = total,
         perTripPrice = perTrip,
         referenceFare = fare,
         serviceTier = pricing.primaryServiceTier,
-        numberOfTrips = req.numberOfTrips,
-        routesConsidered = routes
+        numberOfTrips = selection.numberOfTrips,
+        validTill = dynamicPassEndDate startDate selection.validityDays,
+        routesConsidered = length routes,
+        routes = routes
       }
 
 passReferenceFare ::
   Id.Id DP.Person ->
   DPass.Pass ->
   FRFSPassOverride.DynamicPricingConfig ->
-  PassAPI.PassCalculatePriceReq ->
-  Environment.Flow (HighPrecMoney, Int)
-passReferenceFare riderId pass pricing req = do
+  DynamicPassSelection ->
+  Environment.Flow (HighPrecMoney, [PassAPI.PassRouteAPIEntity])
+passReferenceFare riderId pass pricing selection = do
   integratedBPPConfig <- passIntegratedBPPConfig pass
-  (fares, routesConsidered) <- case pass.vehicleType of
+  (fares, routes) <- case pass.vehicleType of
     FRFSSpec.BUS -> do
       stageFaresFromTo <-
         FRFSUtils.getAllStageFaresFromTo
@@ -255,9 +321,9 @@ passReferenceFare riderId pass pricing req = do
           pass.vehicleType
           (Just pricing.primaryServiceTier)
           pass.merchantOperatingCityId
-          req.sourceStopCode
-          req.destinationStopCode
-      return (stageFaresFromTo.fares, length stageFaresFromTo.spans)
+          selection.sourceStopCode
+          selection.destinationStopCode
+      return (stageFaresFromTo.fares, [PassAPI.PassRouteAPIEntity {routeCode = s.routeCode, routeShortName = Nothing} | s <- stageFaresFromTo.spans])
     _ -> do
       (_, fares) <-
         FareFlow.getFares
@@ -266,7 +332,7 @@ passReferenceFare riderId pass pricing req = do
           pass.merchantOperatingCityId
           integratedBPPConfig
           CallAPI.FareRoute
-            { segments = CallAPI.BasicRouteDetail {routeCode = "", startStopCode = req.sourceStopCode, endStopCode = req.destinationStopCode, color = Nothing} :| [],
+            { segments = CallAPI.BasicRouteDetail {routeCode = "", startStopCode = selection.sourceStopCode, endStopCode = selection.destinationStopCode, color = Nothing} :| [],
               mbProviderRouteId = Nothing
             }
           pass.vehicleType
@@ -276,11 +342,11 @@ passReferenceFare riderId pass pricing req = do
           []
           True
           False
-      return (fares, length fares)
+      return (fares, [])
   fare <-
     listToMaybe [ticketCategory.price.amount | frfsFare <- fares, ticketCategory <- frfsFare.categories, ticketCategory.category == ADULT]
-      & fromMaybeM (InvalidRequest $ "No " <> show pricing.primaryServiceTier <> " fare between " <> req.sourceStopCode <> " and " <> req.destinationStopCode)
-  return (fare, routesConsidered)
+      & fromMaybeM (InvalidRequest $ "No " <> show pricing.primaryServiceTier <> " fare between " <> selection.sourceStopCode <> " and " <> selection.destinationStopCode)
+  return (fare, routes)
 
 passIntegratedBPPConfig :: DPass.Pass -> Environment.Flow DIBC.IntegratedBPPConfig
 passIntegratedBPPConfig pass = do
@@ -316,11 +382,12 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
       FRFSPassOverride.DynamicPricingBroken reason -> throwError (InvalidRequest $ "Pass pricing config is invalid, passId=" <> passId.getId <> ": " <> reason)
       FRFSPassOverride.DynamicallyPriced pricing -> do
         routeSelection <- mbRouteSelection & fromMaybeM (InvalidRequest "sourceStopCode, destinationStopCode and numberOfTrips are required for this pass")
-        priced <- dynamicPassPrice personId pass pricing routeSelection
+        selection <- fromEitherM InvalidRequest (validatePassSelection pass pricing routeSelection)
+        priced <- dynamicPassPrice person pass pricing selection mbStartDay
         void $
           FRFSPassOverride.overrideConfigForPurchase pass (Just priced.numberOfTrips)
             >>= fromMaybeM (InvalidRequest $ "Pass benefit config is invalid, passId=" <> passId.getId)
-        pure $ Just (routeSelection, priced)
+        pure $ Just (selection, priced)
 
   -- Purchase eligibility is enforced here, not only surfaced as a flag on the
   -- listing: a pass restricted to a customer tag (say, a discounted test price)
@@ -367,7 +434,7 @@ purchasePassWithPayment ::
   Maybe Text ->
   Maybe Text ->
   Maybe (Id.Id DMF.MediaFile) ->
-  Maybe (PassAPI.PassCalculatePriceReq, PassAPI.PassCalculatePriceResp) ->
+  Maybe (DynamicPassSelection, PassAPI.PassCalculatePriceResp) ->
   Bool ->
   m PassAPI.PassSelectionAPIEntity
 purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId mbDynamicPurchase isMockPayment = do
@@ -379,12 +446,12 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   paymentOrderShortId <- generateShortId
   let deviceId = fromMaybe defaultDashboardDeviceId mbDeviceId
 
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
-  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
-  istTime <- getLocalCurrentTime timeDiffFromUtc
+  localToday <- cityLocalDay person.merchantOperatingCityId
   passNumber <- getNextPassNumber
-  let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
-      endDate = calculatePassEndDate startDate pass.maxValidDays
+  let startDate = fromMaybe localToday mbStartDay
+      endDate = case mbDynamicPurchase of
+        Just (selection, _) -> dynamicPassEndDate startDate selection.validityDays
+        Nothing -> calculatePassEndDate startDate pass.maxValidDays
 
   let (benefitType, benefitValue) = case pass.benefit of
         Nothing -> (Nothing, Nothing)
@@ -429,7 +496,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         blockingPayments <- filterM (fmap not . allowsOverlappingPurchase) overlappingPayments
         whenJust (listToMaybe blockingPayments) $ \blockingPayment ->
           throwError . InvalidRequest $
-            if blockingPayment.startDate > DT.utctDay istTime
+            if blockingPayment.startDate > localToday
               then "You already have a future renewal of this pass in the selected dates"
               else "You already have an active pass of this type in the selected dates"
         return samePass.id
@@ -504,7 +571,10 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             overrideBenefitConfigJson = mbOverrideBenefitConfig,
             sourceStopCode = (\(selection, _) -> selection.sourceStopCode) <$> mbDynamicPurchase,
             destinationStopCode = (\(selection, _) -> selection.destinationStopCode) <$> mbDynamicPurchase,
-            maxOverrideableFare = (\(_, priced) -> priced.perTripPrice) <$> mbDynamicPurchase,
+            roundTripAllowed = (\(selection, _) -> selection.roundTripAllowed) <$> mbDynamicPurchase,
+            -- Undiscounted: withinMaxFare compares a leg's own fare to this, so perTripPrice would
+            -- exclude this pass's own stop pair.
+            maxOverrideableFare = (\(_, priced) -> priced.referenceFare) <$> mbDynamicPurchase,
             clientSdkVersion = person.clientSdkVersion,
             createdAt = now,
             updatedAt = now
@@ -627,12 +697,20 @@ postMultimodalPassV2Select ::
 postMultimodalPassV2Select (mbPersonId, merchantId) passId mbIsMockPayment req =
   postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate) (mkRouteSelection req) (fromMaybe False mbIsMockPayment)
 
+-- Selectable options pass through as sent, so a client predating them still buys a pass.
 mkRouteSelection :: PassAPI.PassSelectReq -> Maybe PassAPI.PassCalculatePriceReq
 mkRouteSelection req = do
   sourceStopCode <- req.sourceStopCode
   destinationStopCode <- req.destinationStopCode
   numberOfTrips <- req.numberOfTrips
-  pure PassAPI.PassCalculatePriceReq {sourceStopCode = sourceStopCode, destinationStopCode = destinationStopCode, numberOfTrips = numberOfTrips}
+  pure
+    PassAPI.PassCalculatePriceReq
+      { sourceStopCode = sourceStopCode,
+        destinationStopCode = destinationStopCode,
+        numberOfTrips = numberOfTrips,
+        roundTripAllowed = req.roundTripAllowed,
+        validityDays = req.validityDays
+      }
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
@@ -691,6 +769,17 @@ calculatePassEndDate startDate mbMaxValidDays =
        in DT.fromGregorian nextY nextM endDay
     Just days -> DT.addDays (fromIntegral days) startDate
     Nothing -> startDate
+
+-- Pass dates are reckoned in the city's local day, never UTC, or an evening purchase starts yesterday.
+cityLocalDay :: (CacheFlow m r, EsqDBFlow m r) => Id.Id DMOC.MerchantOperatingCity -> m DT.Day
+cityLocalDay merchantOperatingCityId = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  DT.utctDay <$> getLocalCurrentTime timeDiffFromUtc
+
+-- Inclusive count with startDate as day one, unlike calculatePassEndDate's offset convention.
+dynamicPassEndDate :: DT.Day -> Maybe Int -> DT.Day
+dynamicPassEndDate startDate = maybe startDate (\validityDays -> DT.addDays (fromIntegral validityDays - 1) startDate)
 
 -- Construct message keys for Pass fields
 mkPassMessageKey :: Id.Id DPass.Pass -> Text -> Text
@@ -991,6 +1080,9 @@ buildDynamicPricedPassAPIEntity mbLanguage person eligibilityLogics pass =
             maxDays = pass.maxValidDays,
             frfsOverrideConfig = mkFrfsOverrideConfig <$> mbBenefit,
             maximumPurchaseableTripCount = pricing.maximumPurchaseableTripCount,
+            selectableTripCounts = pricing.selectableTripCounts,
+            selectableValidityDays = pricing.selectableValidityDays,
+            roundTripSupported = pricing.roundTripSupported,
             referenceServiceTier = pricing.primaryServiceTier,
             frfsCancelLimit = pass.frfsCancelLimit,
             documentsRequired = pass.documentsRequired,
@@ -1164,7 +1256,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
       then listToMaybe <$> QPurchasedPassPayment.findAllByPurchasedPassIdAndStatus (Just 1) (Just 0) purchasedPass.id [DPurchasedPass.Active] today
       else pure Nothing
   let mbReUploadWindow = if purchasedPass.status == DPurchasedPass.Active then passType.photoReUploadTimeLimit else Nothing
-  let tripsLeft = case purchasedPass.maxValidTrips of
+  let catalogTripsLeft = case purchasedPass.maxValidTrips of
         Just maxTrips -> Just $ max 0 (maxTrips - fromMaybe 0 purchasedPass.usedTripCount)
         Nothing -> Nothing
 
@@ -1192,6 +1284,12 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
     (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
   let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
+      -- Scoped to priced terms: gold/diamond must keep reading their window off the purchased pass.
+      mbDynamicPayment = mfilter FRFSPassOverride.isDynamicallyPricedPayment mbPayment
+      isDynamicallyPriced = isJust mbDynamicPayment
+      effectiveTripsLeft = if isDynamicallyPriced then availableTripCount <|> catalogTripsLeft else catalogTripsLeft
+      effectiveStartDate = maybe purchasedPass.startDate (.startDate) mbDynamicPayment
+      effectiveEndDate = maybe purchasedPass.endDate (.endDate) mbDynamicPayment
 
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
@@ -1201,7 +1299,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
             passDetails = passAPIEntity
           }
 
-  let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
+  let daysToExpire = fromIntegral $ DT.diffDays effectiveEndDate today
 
   let reUploadValidTill = do
         reUploadWindow <- mbReUploadWindow
@@ -1226,27 +1324,32 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
       { id = purchasedPass.id,
         passNumber = let s = show purchasedPass.passNumber in T.pack $ replicate (8 - length s) '0' ++ s,
         passEntity = passDetailsEntity,
-        tripsLeft = tripsLeft,
+        tripsLeft = effectiveTripsLeft,
         availableTripCount = availableTripCount,
         unlimitedTripCount = unlimitedTripCount,
         purchasedPassPaymentId = (.id) <$> mbPayment,
         lastVerifiedVehicleNumber,
         isAutoVerified,
         status = purchasedPass.status,
-        startDate = purchasedPass.startDate,
+        startDate = effectiveStartDate,
         deviceMismatch,
         deviceSwitchAllowed = purchasedPass.deviceSwitchCount < maxSwitchCount,
         profilePicture = purchasedPass.profilePicture <|> person.profilePicture,
         passPhotoMediaId = purchasedPass.passPhotoMediaId,
         daysToExpire = daysToExpire,
         purchaseDate = DT.utctDay purchasedPass.createdAt,
-        expiryDate = purchasedPass.endDate,
+        expiryDate = effectiveEndDate,
         isPreferredSourceAndDestinationSet = isJust purchasedPass.preferredDestination && isJust purchasedPass.preferredSource,
         futureRenewals = futureRenewalEntities,
         overlappingPasses = overlappingPassEntities,
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
-        maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
+        maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit,
+        sourceStopCode = mbPayment >>= (.sourceStopCode),
+        destinationStopCode = mbPayment >>= (.destinationStopCode),
+        roundTripAllowed = fromMaybe False (mbPayment >>= (.roundTripAllowed)),
+        maxOverrideableFare = mbPayment >>= (.maxOverrideableFare),
+        isDynamicallyPriced
       }
 
 passTypeLabel :: Maybe DPassType.PassEnum -> Text
@@ -2030,7 +2133,12 @@ mkPurchasedPassPaymentAPIEntity refundMap availableTripCount purchasedPassPaymen
           passCode = purchasedPassPayment.passCode,
           passType = purchasedPassPayment.passEnum,
           createdAt = purchasedPassPayment.createdAt,
-          refunds = refunds
+          refunds = refunds,
+          sourceStopCode = purchasedPassPayment.sourceStopCode,
+          destinationStopCode = purchasedPassPayment.destinationStopCode,
+          roundTripAllowed = fromMaybe False purchasedPassPayment.roundTripAllowed,
+          maxOverrideableFare = purchasedPassPayment.maxOverrideableFare,
+          isDynamicallyPriced = FRFSPassOverride.isDynamicallyPricedPayment purchasedPassPayment
         }
 
 -- Derives status from the most-recently-updated refund row. Retries land as
