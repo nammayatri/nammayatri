@@ -56,14 +56,28 @@ Each file says its own way back in its header. Two kinds:
   `movin-backups-old` folder, reachable from the browser only — see
   [backups.md](../backups.md).)
 
-Anything larger — a lost table, a broken database — is the nightly backup
-([backups.md](../backups.md)). Know its limit: `./backup.sh restore F` decrypts
-a backup into a **scratch database** and checks its row counts; it never
-touches the live one. **Putting a backup live is not scripted and has never
-been rehearsed** — it means loading both dumps in the archive (the databases
-*and* passetto's keys, without which phone numbers are unreadable) into the
-live containers, by hand, with the owner. Rehearsing it on a dev stack is the
-open item.
+Anything larger — a lost table, a broken database, a lost server — is the
+nightly backup, put back with **`./restore.sh`** (since 2026-10-08), on the
+server, from `stack/`:
+
+    ./restore.sh rehearse offsite:latest   # prove it first: a throwaway copy, nothing live touched
+    ./restore.sh live offsite:latest       # then for real (or a local file instead of offsite:…)
+
+`live` refuses if anything outside the data schemas is built on them, asks you
+to type `restore live`, takes a backup of what it replaces, stops the backends,
+the shims, the console, the fleet and the bot, loads the data and passetto's
+keys **each in one transaction** (a broken archive changes nothing), puts back
+the Arabic place names, documents and drivers' codes, flushes Redis, starts it
+all, and checks: every table against the dump, a sample of phone numbers
+actually decrypted, the documents opened. Expect the service down for a few
+minutes. Everything written since the backup is lost — that is what a restore
+is; the safety backup it takes first is the way back from it.
+
+**Rehearsed 2026-10-08 on the server, from the offsite copy: 71 seconds**, 106
+tables exact, 20/20 numbers decrypted, 58 329 Arabic names, 25 documents. On a
+**new server**, bring the stack up first (`./setup.sh`), rebuild the place
+index (`./geocoder-prepare.sh`, then `geocoder/append-country.sql`), then
+`./restore.sh live`. That path — a whole new box — has not been rehearsed.
 
 ## When to roll back, and when not
 

@@ -333,3 +333,21 @@ No behaviour, nothing released: `stack/` is untouched, so the server stays at
 **Phase 7 done when — met, as far as reading can show:** bring the stack up,
 change a shim, release it — README *Your first change* links each step to the
 page that carries it. Not yet proven by a newcomer actually doing it.
+
+## After the plan — the three open items (2026-10-08)
+
+1. **The backup's Drive remote has its own client id** (see
+   [backups.md](backups.md)). Old backups: Drive folder `movin-backups-old`.
+2. **A restore, scripted and rehearsed.** `stack/restore.sh` (`rehearse`,
+   `live`) and `tests/restore.test.sh` (CI, invented data; mutation-tested by
+   removing the single transaction on a throwaway branch — check 5 failed, as it
+   must). Release **L** `1548e998e7`: 1 new, 1 changed, nothing restarted. A
+   backup by hand in the new format (Arabic names included), then
+   `./restore.sh rehearse offsite:latest` on the server: **passed in 71 s** —
+   106 tables exact, 20/20 numbers decrypted, 58 329 names, 25 documents —
+   with 21 containers running before and after and nothing left behind.
+   Found on the way: the Arabic place names were in no backup, and the phone
+   numbers' encryption keys are upstream's public demo keys (4 of 4 identical
+   to `Backend/dev/sql-seed/passetto-seed.sql`) — the second is the owner's
+   decision, not fixed here.
+3. Two decisions: the default branch, and CI on the two-merchant layout.

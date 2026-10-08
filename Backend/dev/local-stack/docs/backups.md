@@ -126,6 +126,25 @@ on this server. That is deliberate — a local-only backup is worth something, a
 a script that implied it went offsite when it did not would be worth less than
 nothing.
 
+### Putting one back — `./restore.sh` (2026-10-08)
+
+    ./restore.sh rehearse offsite:latest   # into a throwaway copy, checked, removed
+    ./restore.sh live <file | offsite:…>   # into the live stack
+
+The step-by-step, and what `live` stops, is the
+[rollback runbook](runbooks/rollback.md). The first rehearsal, on the server
+from the offsite copy, took 71 s: 106 tables each with exactly the rows of the
+dump, 20 of 20 sampled phone numbers decrypted by passetto on the restored
+keys, 58 329 Arabic names, 25 documents. `tests/restore.test.sh` runs the
+whole thing in CI on invented data, including a broken archive (refused, data
+unchanged) and a live restore that brings back changed rows.
+
+**The Arabic place names are in the backup since 2026-10-08** (`geo-arabic.csv`,
+by OSM `place_id`). The index itself is still rebuilt rather than backed up, but
+a rebuild drops `name_ar`, and the hand-reviewed names in git are keyed on
+`geo.place.id`, which a rebuild renumbers — so until then 58 329 names were in
+no backup at all.
+
 ### Verifying, rather than assuming
 
 `./backup.sh restore` decrypts into a **scratch database**, never the live one,
