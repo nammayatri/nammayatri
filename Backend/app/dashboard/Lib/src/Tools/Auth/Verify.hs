@@ -61,7 +61,8 @@ verifyDashboardUser ::
   RegToken ->
   m VerifiedUser
 verifyDashboardUser requiredServerAccess endpointId pathSegments token = do
-  verified <- verifySession requiredServerAccess token
+  session <- verifySession requiredServerAccess token
+  verified <- resolveScopeFromUrl requiredServerAccess session pathSegments
   verifyUrlScope endpointId verified pathSegments -- Layer B -- is the merchant/city in the URL the one this session holds.
   access <- Capability.resolveAccess verified.person.id verified.person.roleId
   endpoints <- Capability.endpointCapabilities endpointId
@@ -98,6 +99,56 @@ verifySession requiredServerAccess token = do
   verifiedMerchant <- verifyServerWithPair requiredServerAccess personId merchantId city
   verifyCity verifiedMerchant city
   pure VerifiedUser {personId = verifiedPerson.id, merchant = verifiedMerchant, city = city, person = verifiedPerson}
+
+-- | One session, many scopes. A token is issued for a single merchant and city
+-- ('login' / 'switchMerchantAndCity'), but the permission itself lives in
+-- @merchant_access@, one row per person, merchant and city. When the URL names
+-- a merchant and city the caller holds such a row for, serve the request under
+-- that scope instead of demanding a token re-issued for it. This is what lets
+-- an operator, or an integrator with one token, address every merchant and
+-- city they are provisioned for.
+--
+-- Every route reaching here is mounted as
+-- @direct-dashboard\/{merchantShortId}\/{city}\/…@ (API.DirectDashboard in
+-- rider-app and driver-app), so the scope is read from fixed positions, the
+-- same ones 'verifyUrlScope' matches on.
+--
+-- The guards are the ones 'switchMerchantAndCity' applies: the merchant serves
+-- this platform and the person holds access for that exact merchant and city.
+-- When either fails the session is returned untouched and 'verifyUrlScope'
+-- denies the call exactly as before. So this is strictly additive: nothing
+-- that was allowed changes, and nothing becomes allowed that a switch would
+-- not already have granted.
+--
+-- Costs nothing when the URL already matches the token; one merchant read and
+-- one @merchant_access@ read otherwise.
+resolveScopeFromUrl ::
+  BeamFlow m r =>
+  DSN.ServerName ->
+  VerifiedUser ->
+  [Text] ->
+  m VerifiedUser
+resolveScopeFromUrl requiredServerAccess verified pathSegments =
+  case pathSegments of
+    ("direct-dashboard" : merchantSeg : citySeg : _)
+      -- Parsed the way the Capture parses it, so this is exactly what the
+      -- handler will compare against.
+      | Right urlCity <- parseUrlPiece citySeg,
+        merchantSeg /= tokenMerchantShortId || urlCity /= verified.city -> do
+        mbMerchant <-
+          if merchantSeg == tokenMerchantShortId
+            then pure (Just verified.merchant)
+            else QM.findByShortId (ShortId merchantSeg)
+        case mbMerchant of
+          Just merchant | requiredServerAccess `elem` merchant.serverNames -> do
+            mbAccess <- QAccess.findByPersonIdAndMerchantIdAndCity verified.personId merchant.id urlCity
+            pure $ case mbAccess of
+              Just _ -> VerifiedUser {personId = verified.personId, merchant = merchant, city = urlCity, person = verified.person}
+              Nothing -> verified
+          _ -> pure verified
+    _ -> pure verified
+  where
+    tokenMerchantShortId = verified.merchant.shortId.getShortId
 
 -- | Single-login across platforms (dashboard unification): a token is bound
 -- to ONE merchant row, but BAP and BPP merchants are separate rows (e.g.
