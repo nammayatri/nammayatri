@@ -566,6 +566,135 @@ The usual causes, in the order they bit us:
   * gateway cannot reach the BPP         -> atlas_registry.subscriber URL"
 }
 
+# ── The live layout, on a stack built from this repository (2026-10-08) ─────
+# Until today CI priced one ride in Algiers with upstream's single seed
+# merchant -- not how the server is laid out since 2026-09-13. This applies the
+# SAME files the server was given (db/mauritania-geofences.sql,
+# db/two-countries-merchants.sql, both tariffs through apply-tariff.sh), so a
+# mistake in any of them goes red here before a release, not in a passenger's
+# hand. Only two things are CI's own, both because a dev stack lacks what the
+# live one had: the driver side's copy of the Mauritanian service area (the
+# live box got it during the 3 September switch), and drivers for the Algerian
+# merchant (the file moves the live pilot's +213 drivers; CI's are upstream's
+# seed drivers, so every other one is moved instead).
+DZ_MERCHANT=algeria0-0000-0000-0000-00000algeria
+MR_MERCHANT=favorit0-0000-0000-0000-00000favorit
+two_countries() {
+  log "The live layout: two driver merchants, two tariffs, two service areas"
+  docker cp db/mauritania-geofences.sql ny-postgres:/tmp/mauritania-geofences.sql
+  $PG -q -v ON_ERROR_STOP=1 -f /tmp/mauritania-geofences.sql >/dev/null \
+    || die "could not apply mauritania-geofences.sql"
+  $PG -q -v ON_ERROR_STOP=1 -c "
+    INSERT INTO atlas_driver_offer_bpp.geometry (id, region, geom)
+    SELECT id, region, geom FROM atlas_app.geometry WHERE region IN ('Mauritania', 'Algeria')
+    ON CONFLICT (id) DO NOTHING;" >/dev/null || die "could not copy the service areas to the driver side"
+  ok "service areas: Mauritania and Algeria, on both sides"
+
+  docker cp db/two-countries-merchants.sql ny-postgres:/tmp/two-countries.sql
+  $PG -q -v ON_ERROR_STOP=1 -f /tmp/two-countries.sql >/dev/null \
+    || die "two-countries-merchants.sql failed"
+  ok "two-countries-merchants.sql"
+
+  # CI's stand-in for the live pilot's +213 drivers: every other seed driver
+  # with a car, moved the way the file moves them (person and vehicle).
+  $PG -q -v ON_ERROR_STOP=1 -c "
+    WITH half AS (
+      SELECT p.id FROM (SELECT p.id, row_number() OVER (ORDER BY p.id) AS n
+                          FROM atlas_driver_offer_bpp.person p
+                          JOIN atlas_driver_offer_bpp.vehicle v ON v.driver_id = p.id
+                         WHERE p.role = 'DRIVER' AND p.merchant_id = '$MR_MERCHANT') p
+       WHERE n % 2 = 0)
+    , v AS (UPDATE atlas_driver_offer_bpp.vehicle SET merchant_id = '$DZ_MERCHANT'
+             WHERE driver_id IN (SELECT id FROM half) RETURNING 1)
+    UPDATE atlas_driver_offer_bpp.person SET merchant_id = '$DZ_MERCHANT'
+     WHERE id IN (SELECT id FROM half);" >/dev/null || die "could not give the Algerian merchant drivers"
+
+  bash ./apply-tariff.sh ./db/algeria-tariff.sql    >/dev/null || die "algeria-tariff.sql failed"
+  bash ./apply-tariff.sh ./db/mauritania-tariff.sql >/dev/null || die "mauritania-tariff.sql failed"
+  ok "both tariffs"
+
+  $PG -t -c "SELECT '  ' || m.short_id || ': ' || array_to_string(m.origin_restriction, ',')
+                 || ', drivers ' || (SELECT count(*) FROM atlas_driver_offer_bpp.person p
+                                      WHERE p.merchant_id = m.id AND p.role = 'DRIVER')
+                 || ', fare rows ' || (SELECT count(*) FROM atlas_driver_offer_bpp.fare_policy f
+                                        WHERE f.merchant_id = m.id)
+               FROM atlas_driver_offer_bpp.merchant m
+              WHERE m.id IN ('$DZ_MERCHANT', '$MR_MERCHANT') ORDER BY 1;" | grep -v '^ *$' || true
+
+  # The merchant rows, their config and the registry are all cached.
+  docker exec ny-redis redis-cli FLUSHALL >/dev/null
+  docker restart ny-rider ny-driver ny-beckn-gateway >/dev/null
+  wait_for_api
+  wait_for_driver_api
+  place_drivers_two_countries
+}
+
+# Each merchant's drivers beside its own test pickup (+/-550 m: the seed's
+# max_radius is 1500 m), fresh, active, free.
+place_drivers_two_countries() {
+  log "Placing each country's drivers at its own pickup"
+  local m lat lon
+  for m in "$DZ_MERCHANT 36.7538 3.0588" "$MR_MERCHANT 18.0858 -15.9582"; do
+    set -- $m
+    $PG -q -v ON_ERROR_STOP=1 -c "
+      UPDATE atlas_driver_offer_bpp.driver_location dl
+         SET lat = $2 + (random() - 0.5) * 0.01, lon = $3 + (random() - 0.5) * 0.01,
+             coordinates_calculated_at = now(), updated_at = now()
+        FROM atlas_driver_offer_bpp.person p
+       WHERE p.id = dl.driver_id AND p.merchant_id = '$1';
+      UPDATE atlas_driver_offer_bpp.driver_location dl
+         SET point = ST_SetSRID(ST_Point(dl.lon, dl.lat), 4326)
+        FROM atlas_driver_offer_bpp.person p
+       WHERE p.id = dl.driver_id AND p.merchant_id = '$1';
+      UPDATE atlas_driver_offer_bpp.driver_information di
+         SET active = true, on_ride = false
+        FROM atlas_driver_offer_bpp.person p
+       WHERE p.id = di.driver_id AND p.merchant_id = '$1';" >/dev/null \
+      || die "could not place the drivers of $1"
+    ok "$1 drivers at $2, $3"
+  done
+}
+
+# A priced ride in one country, answered by THAT country's merchant. The
+# estimate row records the BPP it came from (provider_url ends in the merchant
+# id), so "a price came back" cannot be satisfied by the wrong country.
+#   price_in <+213|+222> <number> <lat lon from> <lat lon to> <merchant> <label>
+price_in() {
+  local cc="$1" num="$2" flat="$3" flon="$4" tlat="$5" tlon="$6" merchant="$7" label="$8"
+  local base="http://localhost:8014" authid token sid i n row
+  log "A ride in $label must be priced by $merchant"
+  authid=$(curl -s --max-time 20 -X POST "$base/v2/auth" -H 'content-type: application/json' \
+    -d "{\"mobileCountryCode\":\"$cc\",\"mobileNumber\":\"$num\",\"merchantId\":\"YATRI\"}" \
+    | sed -nE 's/.*"authId":"([^"]+)".*/\1/p')
+  [ -n "$authid" ] || die "$label: $cc $num was not accepted for sign-in"
+  token=$(curl -s --max-time 20 -X POST "$base/v2/auth/$authid/verify" -H 'content-type: application/json' \
+    -d '{"otp":"7891","deviceToken":"setup-check"}' | sed -nE 's/.*"token":"([^"]+)".*/\1/p')
+  [ -n "$token" ] || die "$label: OTP verification failed"
+  ok "$cc signed in"
+  local addr="\"area\":\"x\",\"city\":\"x\",\"country\":\"x\",\"state\":\"x\",\"building\":\"1\",\"areaCode\":\"0\",\"street\":\"-\",\"door\":\"1\""
+  sid=$(curl -s --max-time 40 -X POST "$base/v2/rideSearch" -H 'content-type: application/json' -H "token: $token" \
+    -d "{\"fareProductType\":\"ONE_WAY\",\"contents\":{\"origin\":{\"address\":{$addr},\"gps\":{\"lat\":$flat,\"lon\":$flon}},\"destination\":{\"address\":{$addr},\"gps\":{\"lat\":$tlat,\"lon\":$tlon}}}}" \
+    | sed -nE 's/.*"searchId":"([^"]+)".*/\1/p')
+  [ -n "$sid" ] || die "$label: ride search returned no searchId"
+  for i in $(seq 1 12); do
+    sleep 5
+    n=$($PG -At -c "SELECT count(*) FROM atlas_app.estimate WHERE request_id = '$sid'" 2>/dev/null || echo 0)
+    [ "${n:-0}" -gt 0 ] && break
+  done
+  [ "${n:-0}" -gt 0 ] || die "$label: a route but no price after 60 s"
+  row=$($PG -At -F ' ' -c "
+    SELECT count(*) FILTER (WHERE provider_url LIKE '%$merchant'),
+           count(*) FILTER (WHERE provider_url NOT LIKE '%$merchant'),
+           string_agg(DISTINCT provider_name, ', '),
+           string_agg(vehicle_variant || ' ' || round(estimated_total_fare), ', ' ORDER BY vehicle_variant)
+      FROM atlas_app.estimate WHERE request_id = '$sid'")
+  set -- $row
+  [ "$1" -gt 0 ] && [ "$2" = 0 ] \
+    || die "$label: estimates from the wrong merchant ($row) -- expected only $merchant"
+  shift 2
+  ok "$label: $n estimate(s), every one from $merchant: $*"
+}
+
 # Export the service areas the *database* actually holds, so the map can never
 # drift from what the API enforces. Regenerated on every run; not committed.
 export_geojson() {
@@ -754,6 +883,13 @@ case "${1:-up}" in
   # go stale on their own and the pool then finds nobody, which shows up as a
   # ride search with no estimates and no error. See place_drivers_in_algiers.
   drivers) place_drivers_in_algiers; exit 0 ;;
+  # The live layout and a priced ride in each country, each from its own
+  # merchant (2026-10-08). What the CI ride regression runs after `setup.sh`.
+  two-countries) two_countries; exit 0 ;;
+  price-both)
+    price_in +213 0550123456 36.7538 3.0588 36.7169 3.1836 "$DZ_MERCHANT" Algiers
+    price_in +222 22000001 18.0858 -15.9582 18.1030 -15.9500 "$MR_MERCHANT" Nouakchott
+    exit 0 ;;
   # Clean up duplicate seed rows and add the constraints that keep them out.
   # Safe to re-run; needed on any stack seeded before this was added, where
   # booking fails at select with "Multiple results of Entity FarePolicyT".
