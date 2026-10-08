@@ -2182,6 +2182,7 @@ TransporterConfig:
     useCategoryBasedVerificationPriorityList: "true"
     forceDirectCalling: "false"
     enableOndcScheduledRideSupport: "false"
+    airportEntryFeeCheckAtStartRide: "true"
   excludedDefaultQueries:
     - findByPrimaryKey
   queries:

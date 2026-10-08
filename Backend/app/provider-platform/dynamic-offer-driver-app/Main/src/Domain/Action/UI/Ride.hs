@@ -91,6 +91,7 @@ import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
+import qualified SharedLogic.RideWalletCharges as RideWalletCharges
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -337,11 +338,13 @@ otpRideCreate driver otpCode booking clientId = do
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
   now <- getCurrentTime
   AirportEntryFee.ensureDriverEnabledForAirportPickup booking.area now driverInfo
-  -- Verify the driver has enough liability balance to cover the airport entry
-  -- fee BEFORE creating the ride entity. Doing it here (instead of at StartRide)
-  -- ensures we don't leave an orphan ride row when the balance is insufficient.
-  AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driver.id booking
+  -- Verify the driver has enough liability balance to cover every wallet-settled charge -- the
+  -- airport entry fee, gate fee items and the wallet-settled platform fee -- BEFORE creating the
+  -- ride entity. Doing it here (instead of at StartRide) ensures we don't leave an orphan ride row
+  -- when the balance is insufficient.
+  RideWalletCharges.checkWalletBalanceBeforeRide transporterConfig driverInfo driver.id booking
   (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) False False Nothing
+  RideWalletCharges.chargeWalletAtRideStart transporterConfig driverInfo ride booking
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 

@@ -412,6 +412,8 @@ referenceTypeToItemName isVat ref
   | ref == walletReferenceTDSDeductionCancellation = "TDS (Cancellation)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceGateDriverFee = "Gate Fee"
+  | ref == walletReferencePlatformFee = "Platform Fee"
+  | ref == walletReferencePlatformFeeGST = "Platform Fee " <> taxLabel
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
   | ref == walletReferenceAirportCashWithdrawal = "Airport cash withdrawal (booth)"
   | ref == walletReferenceDiscountsOnline = "Discounts Incl. " <> taxLabel <> " (Online)"

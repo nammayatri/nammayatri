@@ -69,7 +69,6 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.ActiveDriversList as ADL
-import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
 import qualified SharedLogic.DriverSupplyCounter as DSC
@@ -80,6 +79,7 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide, isKaaliPeeliBooking)
+import qualified SharedLogic.RideWalletCharges as RideWalletCharges
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SearchTryLocker as CS
@@ -198,8 +198,6 @@ startRideHandler ServiceHandle {..} rideId req = do
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   L.setOptionLocal TxnIdKey booking.transactionId
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound (getId ride.merchantOperatingCityId))
-  when (fromMaybe False transporterConfig.airportEntryFeeCheckAtStartRide) $
-    AirportEntryFee.checkAirportEntryFeeBalanceBeforeStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) driverId booking
   (openMarketAllow, includeDriverCurrentlyOnRide) <-
     maybe
       (pure (False, False))
@@ -245,6 +243,7 @@ startRideHandler ServiceHandle {..} rideId req = do
                 driverLocations <- LF.driversLocation [driverId]
                 listToMaybe driverLocations & fromMaybeM LocationNotFound
               pure (getCoordinates driverLocation, dashboardReq.odometer)
+      RideWalletCharges.chargeWalletAtRideStart transporterConfig driverInfo ride booking
       now <- getCurrentTime
       -- create first entry of eta here
       let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier

@@ -306,6 +306,7 @@ data FPV2PlatformFeeMethod
   | None
   | SlabBased
   | NoCharge
+  | WalletCharged
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
