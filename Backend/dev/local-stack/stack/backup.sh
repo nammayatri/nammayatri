@@ -3,6 +3,7 @@
 #
 #   ./backup.sh            take a backup now
 #   ./backup.sh restore F  restore backup F into a scratch database and check it
+#                          (to put one BACK, or rehearse doing so: ./restore.sh)
 #   ./backup.sh list       what we have, and how old the newest one is
 #   ./backup.sh install    install the nightly systemd timer
 #
@@ -157,6 +158,22 @@ take() {
     || die "pg_dump of $PASSETTO_DB failed"
   ok "passetto: $(du -h "$work/passetto.sql" | cut -f1)"
 
+  # The Arabic place names. The index they live in (`geo`) is rebuilt rather
+  # than backed up, and a rebuild drops `name_ar` (docs/maps.md): refilling it
+  # takes arabic-names.sql plus the hand-reviewed and composed Mauritanian
+  # names, and those (arabic-reviewed*.sql) are keyed on geo.place.id, which a
+  # rebuild renumbers. So the names travel here -- 58 329 on 2026-10-08 --
+  # keyed by the OSM place_id, which a rebuild keeps. Found while writing the
+  # restore, 2026-10-08.
+  local ar_note="none -- no geo.place in this database"
+  if [ "$(psql_q "SELECT to_regclass('geo.place') IS NOT NULL")" = t ]; then
+    docker exec "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -At -c \
+        "COPY (SELECT place_id, name_ar FROM geo.place WHERE name_ar IS NOT NULL ORDER BY place_id) TO STDOUT WITH (FORMAT csv)" \
+        > "$work/geo-arabic.csv" || die "could not export the Arabic place names"
+    ar_note="$(wc -l < "$work/geo-arabic.csv" | tr -d ' ') name(s), by place_id"
+    ok "Arabic place names: $ar_note"
+  fi
+
   # The only piece of live state on this box that is not in a database: the
   # per-driver sign-in codes the auth guard checks. Restoring the databases
   # without this brings every driver back and leaves none of them able to sign
@@ -216,6 +233,7 @@ host             $(hostname)
 atlas database   $DB_NAME, schemas: $DATA_SCHEMAS
 passetto         $PASSETTO_DB
 driver codes     $codes_note
+arabic names     $ar_note
 documents        $docs_note
                  driver papers from the $DOCS_VOLUME volume; restore with
                  docker run --rm -v $DOCS_VOLUME:/v -v \$PWD:/in alpine \\
@@ -225,7 +243,8 @@ documents        $docs_note
 postgres         $(docker exec "$DB_CONTAINER" psql -U "$DB_USER" -At -c 'SHOW server_version;' 2>/dev/null)
 
 NOT included, because it is rebuilt rather than restored:
-  geo      the place-search index — run ./geocoder-prepare.sh (~5 min)
+  geo      the place-search index — run ./geocoder-prepare.sh (~5 min); its
+           Arabic names ARE included (geo-arabic.csv) and ./restore.sh puts them back
   public   PostGIS spatial_ref_sys, ships with the extension
   tiger    PostGIS reference data
 
@@ -235,8 +254,9 @@ rows at the time of the backup
   rides     $(psql_q 'SELECT count(*) FROM atlas_app.ride;')
   drivers   $(psql_q 'SELECT count(*) FROM atlas_driver_offer_bpp.person;')
 
-to restore
-  ./backup.sh restore <this file>
+to check it     ./backup.sh restore <this file>     (scratch database)
+to rehearse it  ./restore.sh rehearse <this file>   (throwaway copy, every part)
+to put it back  ./restore.sh live <this file>
 EOF
 
   say "packing and encrypting"
@@ -244,6 +264,7 @@ EOF
   # `set -e` on the day nobody is enrolled: the test is the last command of the
   # list, so its failure is the line's exit status.
   local members=(atlas.sql passetto.sql MANIFEST.txt)
+  if [ -f "$work/geo-arabic.csv" ]; then members+=(geo-arabic.csv); fi
   if [ -f "$work/driver-codes.json" ]; then members+=(driver-codes.json); fi
   if [ -f "$work/documents.tar.gz" ]; then members+=(documents.tar.gz); fi
   tar -czf "$work/bundle.tar.gz" -C "$work" "${members[@]}" \

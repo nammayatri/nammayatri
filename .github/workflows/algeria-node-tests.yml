@@ -12,6 +12,8 @@
 # WALLET_EMPTY gate -- runs its SQL against a real Postgres (PGlite, in-process;
 # no service container). Fakes on loopback stand in for Firebase, APNs, the
 # gateways, Redis and the Haskell apps. No key, no secret, nothing on the VPS.
+# tests/restore.test.sh uses the runner's docker: an invented stack (PostGIS,
+# passetto) backed up by the real backup.sh and put back by restore.sh.
 #
 # Twice: on Node 20, what the server runs today, and on Node 22, what it moves
 # to in phase 5 -- so the move is proven before it is made.
@@ -51,8 +53,11 @@ jobs:
           # c6562a1926, so it needs history; blob:none keeps that cheap.
           fetch-depth: 0
           filter: blob:none
+          # sql-seed: the passetto seed, for tests/restore.test.sh (the same
+          # keys the server's passetto holds).
           sparse-checkout: |
             Backend/dev/local-stack
+            Backend/dev/sql-seed
             .github
           sparse-checkout-cone-mode: false
 
