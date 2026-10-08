@@ -33,16 +33,21 @@ import Tools.Error
 acceptedPoliciesMap :: Maybe Common.AcceptedPolicies -> HM.HashMap Common.PolicyType Text
 acceptedPoliciesMap = maybe HM.empty (\(Common.AcceptedPolicies m) -> m)
 
+customerEntity :: Common.LegalEntityType
+customerEntity = Common.CustomerLegal
+
 toRespDoc :: DPCD.PolicyAndComplianceDocument -> APIT.PolicyDocumentResp
 toRespDoc d =
   APIT.PolicyDocumentResp
     { id = d.id,
       policyType = d.policyType,
+      entityType = d.entityType,
       version = d.version,
       url = d.url,
       isMandatory = d.isMandatory,
       enabled = d.enabled,
       metadata = d.metadata,
+      effectiveDate = d.effectiveDate,
       createdAt = d.createdAt
     }
 
@@ -51,11 +56,13 @@ toRespWithAcceptance accepted d =
   APIT.PolicyDocumentWithAcceptance
     { id = d.id,
       policyType = d.policyType,
+      entityType = d.entityType,
       version = d.version,
       url = d.url,
       isMandatory = d.isMandatory,
       enabled = d.enabled,
       metadata = d.metadata,
+      effectiveDate = d.effectiveDate,
       createdAt = d.createdAt,
       accepted = HM.lookup d.policyType accepted == Just d.id.getId
     }
@@ -80,7 +87,7 @@ getPolicyLatest (mbPersonId, merchantId) = do
   if not (featureEnabled riderCfg)
     then pure $ APIT.PolicyLatestResp {documents = []}
     else do
-      docs <- CPCD.findAllLatestEnabledByMerchant merchantId
+      docs <- CPCD.findAllLatestEnabledByMerchantAndEntity merchantId customerEntity
       pure $ APIT.PolicyLatestResp {documents = map toRespDoc docs}
 
 getPolicyList ::
@@ -93,10 +100,10 @@ getPolicyList (mbPersonId, merchantId) = do
     then pure $ APIT.PolicyListResp {groups = []}
     else do
       let accepted = acceptedPoliciesMap person.acceptedPolicies
-      latestPerType <- CPCD.findAllLatestEnabledByMerchant merchantId
+      latestPerType <- CPCD.findAllLatestEnabledByMerchantAndEntity merchantId customerEntity
       let types = L.nub (map (.policyType) latestPerType)
       groups <- forM types $ \pt -> do
-        topN <- QPCDX.findTopNEnabledByTypeAndMerchant merchantId pt 2
+        topN <- QPCDX.findTopNEnabledByTypeAndMerchantAndEntity merchantId customerEntity pt 2
         acceptedDoc <- case HM.lookup pt accepted of
           Nothing -> pure Nothing
           Just docIdText -> do
@@ -136,7 +143,7 @@ computePendingLegalPolicies :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DP
 computePendingLegalPolicies person riderCfg
   | not (featureEnabled riderCfg) = pure Nothing
   | otherwise = do
-    latest <- CPCD.findAllLatestEnabledByMerchant person.merchantId
+    latest <- CPCD.findAllLatestEnabledByMerchantAndEntity person.merchantId customerEntity
     if null latest
       then pure Nothing
       else do

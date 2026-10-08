@@ -18,7 +18,9 @@ instance FromTType' Beam.PolicyAndComplianceDocument Domain.Types.PolicyAndCompl
       Just
         Domain.Types.PolicyAndComplianceDocument.PolicyAndComplianceDocument
           { createdAt = createdAt,
+            effectiveDate = effectiveDate,
             enabled = enabled,
+            entityType = entityType,
             id = Kernel.Types.Id.Id id,
             isMandatory = isMandatory,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -34,7 +36,9 @@ instance ToTType' Beam.PolicyAndComplianceDocument Domain.Types.PolicyAndComplia
   toTType' (Domain.Types.PolicyAndComplianceDocument.PolicyAndComplianceDocument {..}) = do
     Beam.PolicyAndComplianceDocumentT
       { Beam.createdAt = createdAt,
+        Beam.effectiveDate = effectiveDate,
         Beam.enabled = enabled,
+        Beam.entityType = entityType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isMandatory = isMandatory,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

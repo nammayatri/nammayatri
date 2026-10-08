@@ -13,7 +13,9 @@ import qualified Tools.Beam.UtilsTH
 
 data PolicyAndComplianceDocument = PolicyAndComplianceDocument
   { createdAt :: Kernel.Prelude.UTCTime,
+    effectiveDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Bool,
+    entityType :: Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType,
     id :: Kernel.Types.Id.Id Domain.Types.PolicyAndComplianceDocument.PolicyAndComplianceDocument,
     isMandatory :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

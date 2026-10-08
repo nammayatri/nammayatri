@@ -411,6 +411,7 @@ library
       Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
+      Domain.Action.UI.LegalPublishInternal
       Domain.Action.UI.LmsModule
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
@@ -1270,6 +1271,7 @@ library
       API.Action.UI.FRFSFleetOperator
       API.Action.UI.Insurance
       API.Action.UI.Invoice
+      API.Action.UI.LegalPublishInternal
       API.Action.UI.LmsModule
       API.Action.UI.Merchant
       API.Action.UI.MerchantDocument
@@ -1459,6 +1461,7 @@ library
       API.Types.UI.FRFSFleetOperator
       API.Types.UI.Insurance
       API.Types.UI.Invoice
+      API.Types.UI.LegalPublishInternal
       API.Types.UI.LmsModule
       API.Types.UI.Merchant
       API.Types.UI.MerchantDocument

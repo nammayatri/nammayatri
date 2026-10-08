@@ -27,21 +27,21 @@ type API = ("policyDocument" :> (PostPolicyDocumentCreate :<|> PostPolicyDocumen
 
 type PostPolicyDocumentCreate =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/POLICY_DOCUMENT/POST_POLICY_DOCUMENT_CREATE"
       :> API.Types.RiderPlatform.Management.PolicyDocument.PostPolicyDocumentCreate
   )
 
 type PostPolicyDocumentUpdate =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/POLICY_DOCUMENT/POST_POLICY_DOCUMENT_UPDATE"
       :> API.Types.RiderPlatform.Management.PolicyDocument.PostPolicyDocumentUpdate
   )
 
 type GetPolicyDocumentList =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/POLICY_DOCUMENT/GET_POLICY_DOCUMENT_LIST"
       :> API.Types.RiderPlatform.Management.PolicyDocument.GetPolicyDocumentList
   )
@@ -65,5 +65,5 @@ postPolicyDocumentUpdate a5 a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.PolicyDocument.postPolicyDocumentUpdate a5 a4 a2 a1
     )
 
-getPolicyDocumentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.RiderPlatform.Management.PolicyDocument.PolicyListMgmtResp)
+getPolicyDocumentList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.RiderPlatform.Management.PolicyDocument.PolicyListMgmtResp)
 getPolicyDocumentList a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.PolicyDocument.getPolicyDocumentList a5 a4 a2 a1

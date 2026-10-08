@@ -38,6 +38,7 @@ postPolicyDocumentCreate merchantShortId opCity req = do
         DPCD.PolicyAndComplianceDocument
           { id = docId,
             policyType = req.policyType,
+            entityType = req.entityType,
             merchantId = merchant.id,
             merchantOperatingCityId = merchantOpCity.id,
             version = req.version,
@@ -45,15 +46,19 @@ postPolicyDocumentCreate merchantShortId opCity req = do
             isMandatory = req.isMandatory,
             enabled = fromMaybe True req.enabled,
             metadata = req.metadata,
+            effectiveDate = req.effectiveDate,
             createdAt = now,
             updatedAt = now
           }
   QPCD.create doc
   CPCD.clearMerchantCache merchant.id
+  -- TODO (compliance email): send publish notification here. Reuse HtmlType +
+  -- existing email infra; recipient list hardcoded for yearly cadence.
   pure $
     Common.PolicyCreateResp
       { id = docId.getId,
         policyType = doc.policyType,
+        entityType = doc.entityType,
         version = doc.version
       }
 
@@ -74,6 +79,7 @@ postPolicyDocumentUpdate merchantShortId _ policyDocIdCommon req = do
     (fromMaybe doc.isMandatory req.isMandatory)
     (fromMaybe doc.enabled req.enabled)
     (req.metadata <|> doc.metadata)
+    (req.effectiveDate <|> doc.effectiveDate)
     policyDocId
   CPCD.clearMerchantCache merchant.id
   pure Success
@@ -94,8 +100,10 @@ toMgmtResp d =
   Common.PolicyDocumentMgmtResp
     { id = d.id.getId,
       policyType = d.policyType,
+      entityType = d.entityType,
       version = d.version,
       url = d.url,
+      effectiveDate = d.effectiveDate,
       isMandatory = d.isMandatory,
       enabled = d.enabled,
       metadata = d.metadata,

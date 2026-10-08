@@ -1,6 +1,7 @@
 imports:
   PolicyAndComplianceDocument: Dashboard.Common
   PolicyType: Dashboard.Common
+  LegalEntityType: Dashboard.Common
 
 module: PolicyDocument
 
@@ -41,8 +42,10 @@ apis:
 types:
   PolicyCreateReq:
     - policyType: PolicyType
+    - entityType: Maybe LegalEntityType
     - version: Text
     - url: Text
+    - effectiveDate: Maybe UTCTime
     - isMandatory: Bool
     - enabled: Maybe Bool
     - metadata: Maybe Text
@@ -51,10 +54,12 @@ types:
   PolicyCreateResp:
     - id: Text
     - policyType: PolicyType
+    - entityType: Maybe LegalEntityType
     - version: Text
 
   PolicyUpdateReq:
     - url: Maybe Text
+    - effectiveDate: Maybe UTCTime
     - isMandatory: Maybe Bool
     - enabled: Maybe Bool
     - metadata: Maybe Text
@@ -63,8 +68,10 @@ types:
   PolicyDocumentMgmtResp:
     - id: Text
     - policyType: PolicyType
+    - entityType: Maybe LegalEntityType
     - version: Text
     - url: Text
+    - effectiveDate: Maybe UTCTime
     - isMandatory: Bool
     - enabled: Bool
     - metadata: Maybe Text

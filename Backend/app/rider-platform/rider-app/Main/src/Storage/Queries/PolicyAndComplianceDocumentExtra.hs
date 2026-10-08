@@ -11,33 +11,41 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.PolicyAndComplianceDocument as Beam
 import Storage.Queries.OrphanInstances.PolicyAndComplianceDocument ()
 
-findTopNEnabledByTypeAndMerchant ::
+findTopNEnabledByTypeAndMerchantAndEntity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DM.Merchant ->
+  Common.LegalEntityType ->
   Common.PolicyType ->
   Int ->
   m [DPCD.PolicyAndComplianceDocument]
-findTopNEnabledByTypeAndMerchant (Id merchantId) policyType n =
+findTopNEnabledByTypeAndMerchantAndEntity (Id merchantId) entityType policyType n =
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.policyType $ Se.Eq policyType,
+          Se.Is Beam.entityType $ Se.Eq (Just entityType),
           Se.Is Beam.merchantId $ Se.Eq merchantId,
           Se.Is Beam.enabled $ Se.Eq True
         ]
     ]
-    (Se.Desc Beam.createdAt)
+    (Se.Desc Beam.effectiveDate)
     (Just n)
     Nothing
 
-findAllLatestEnabledByMerchant ::
+findAllLatestEnabledByMerchantAndEntity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DM.Merchant ->
+  Common.LegalEntityType ->
   m [DPCD.PolicyAndComplianceDocument]
-findAllLatestEnabledByMerchant merchantId = do
+findAllLatestEnabledByMerchantAndEntity merchantId entityType = do
   allEnabled <-
     findAllWithOptionsKV
-      [Se.And [Se.Is Beam.merchantId $ Se.Eq merchantId.getId, Se.Is Beam.enabled $ Se.Eq True]]
-      (Se.Desc Beam.createdAt)
+      [ Se.And
+          [ Se.Is Beam.merchantId $ Se.Eq merchantId.getId,
+            Se.Is Beam.entityType $ Se.Eq (Just entityType),
+            Se.Is Beam.enabled $ Se.Eq True
+          ]
+      ]
+      (Se.Desc Beam.effectiveDate)
       Nothing
       Nothing
   pure $ dedupByType allEnabled
