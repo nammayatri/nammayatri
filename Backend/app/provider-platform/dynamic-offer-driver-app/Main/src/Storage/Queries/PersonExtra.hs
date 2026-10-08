@@ -569,8 +569,11 @@ findAllMerchantIdByPhoneNo countryCode mobileNumberHash =
         ]
     ]
 
-updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
-updateMerchantOperatingCityId (Id driverId) (Id opCityId) = updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId)] [Se.Is BeamP.id $ Se.Eq driverId]
+updateMerchantOperatingCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityId personId opCityId = do
+  updateWithKV [Se.Set BeamP.merchantOperatingCityId (Just opCityId.getId)] [Se.Is BeamP.id $ Se.Eq personId.getId]
+  LTSSync.syncDriverPoolDataToLTS (cast personId) $
+    LTSSync.emptyUpdate {LTSSync.merchantOperatingCityId = LTSSync.Set (Just opCityId)}
 
 updateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Person -> m ()
 updateMobileNumberAndCode person = do
@@ -666,7 +669,7 @@ updatePersonRole personId role = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
-updateMerchantIdAndCityId :: (MonadFlow m, EsqDBFlow m r) => Id Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantIdAndCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Id Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 updateMerchantIdAndCityId personId merchantId merchantOperatingCityId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -676,6 +679,8 @@ updateMerchantIdAndCityId personId merchantId merchantOperatingCityId = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+  LTSSync.syncDriverPoolDataToLTS (cast personId) $
+    LTSSync.emptyUpdate {LTSSync.merchantOperatingCityId = LTSSync.Set (Just merchantOperatingCityId)}
 
 findByMobileNumberAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe Person)
 findByMobileNumberAndMerchant mobileNumberHash (Id merchantId) =

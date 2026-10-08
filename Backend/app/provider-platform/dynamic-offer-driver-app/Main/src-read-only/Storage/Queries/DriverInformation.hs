@@ -51,11 +51,6 @@ updateAadhaarVerifiedState aadhaarVerified driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.aadhaarVerified aadhaarVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateAirConditionScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateAirConditionScore airConditionScore driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.airConditionScore airConditionScore, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updateCompAadhaarImagePath :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateCompAadhaarImagePath compAadhaarImagePath driverId = do
   _now <- getCurrentTime
@@ -210,16 +205,6 @@ updateTollRelatedIssueCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (K
 updateTollRelatedIssueCount tollRelatedIssueCount driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
-updateTripEndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.External.Maps.LatLong -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateTripEndLocation driverTripEndLocation driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
-      Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateUnhygienicVehicleViolationCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateUnhygienicVehicleViolationCount unhygienicVehicleViolationCount driverId = do

@@ -26,6 +26,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -124,6 +125,7 @@ deleteDriver merchantShortId reqDriverId = do
           QR.deleteByPersonId person.id.getId
           QVehicle.deleteById person.id
           QDriverInfo.deleteById (cast person.id)
+          LTSSync.deleteDriverPoolDataFromLTS (cast person.id)
           QMessage.deleteByPersonId person.id
           QIssueReport.deleteByPersonId (cast person.id)
           AadhaarReq.deleteByPersonId person.id

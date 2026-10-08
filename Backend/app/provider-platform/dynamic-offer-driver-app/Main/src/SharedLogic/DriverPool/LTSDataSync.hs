@@ -1,5 +1,6 @@
 module SharedLogic.DriverPool.LTSDataSync
   ( syncDriverPoolDataToLTS,
+    deleteDriverPoolDataFromLTS,
     DriverPoolDataUpdate (..),
     SetField (..),
     set,
@@ -13,6 +14,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Extra.Plan (ServiceNames)
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Driver, Gender)
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -41,7 +43,9 @@ set = Set
 -- Only fields marked 'Set' will be written; 'Unchanged' means "skip this field".
 -- This is a MERGE operation — Unchanged fields keep their existing LTS values.
 data DriverPoolDataUpdate = DriverPoolDataUpdate
-  { -- Class 2 fields (sync, LTS authoritative for dispatch)
+  { -- The bucket SharedLogic.DriverSupplyCounter counts this driver in; changes on an operating-city move.
+    merchantOperatingCityId :: SetField (Maybe (Id DMOC.MerchantOperatingCity)),
+    -- Class 2 fields (sync, LTS authoritative for dispatch)
     active :: SetField Bool,
     mode :: SetField (Maybe DriverMode),
     onRide :: SetField Bool,
@@ -103,7 +107,8 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
 emptyUpdate :: DriverPoolDataUpdate
 emptyUpdate =
   DriverPoolDataUpdate
-    { active = Unchanged,
+    { merchantOperatingCityId = Unchanged,
+      active = Unchanged,
       mode = Unchanged,
       onRide = Unchanged,
       onRideTripCategory = Unchanged,
@@ -199,6 +204,28 @@ syncDriverPoolDataToLTS driverId update = do
           Nothing ->
             logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
 
+-- | Drop the driver's entry from LTS (both clouds) when the driver is deleted, so a stale
+-- pool record can't outlive the DB rows. An entry still counted as online is taken out
+-- of the supply counter first.
+deleteDriverPoolDataFromLTS ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    Log m,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Id Driver ->
+  m ()
+deleteDriverPoolDataFromLTS driverId = do
+  let key = DPD.driverPoolDataKey driverId
+  Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 3 10 $ do
+    mbPrimary :: Maybe DPD.DriverPoolData <- Redis.withLTSRedis $ Redis.safeGet key
+    mbSecondary :: Maybe DPD.DriverPoolData <- Redis.withSecondaryLTSRedis $ Redis.safeGet key
+    -- The key can live in both clouds (e.g. right after a cloud switch); count from the freshest copy.
+    whenJust (listToMaybe . DPD.pickLatestPerDriver $ catMaybes [mbPrimary, mbSecondary]) $ \existing ->
+      DSC.recordDriverModeChange existing.merchantOperatingCityId existing.mode Nothing
+    Redis.withLTSRedis $ Redis.del key
+    Redis.withSecondaryLTSRedis $ Redis.del key
+
 -- | Every writer of driver_information.mode passes through here, and the pre-update
 -- entry is already in hand, so the online counter is maintained from the merge rather
 -- than from each caller. A mode-less update (a ride starting, a preference change)
@@ -211,7 +238,11 @@ recordSupplyChange ::
   DPD.DriverPoolData ->
   m ()
 recordSupplyChange old new =
-  DSC.recordDriverModeChange new.merchantOperatingCityId old.mode new.mode
+  if old.merchantOperatingCityId /= new.merchantOperatingCityId
+    then do
+      DSC.recordDriverModeChange old.merchantOperatingCityId old.mode Nothing
+      DSC.recordDriverModeChange new.merchantOperatingCityId Nothing new.mode
+    else DSC.recordDriverModeChange new.merchantOperatingCityId old.mode new.mode
 
 -- | When a driver's cloudType changes, the key in the old cloud becomes orphaned.
 -- Delete it so reads don't return stale data.
@@ -242,6 +273,7 @@ applyUpdate :: Milliseconds -> DriverPoolDataUpdate -> DPD.DriverPoolData -> DPD
 applyUpdate now u d =
   d
     { DPD.lastUpdatedAt = Just now,
+      DPD.merchantOperatingCityId = applyField u.merchantOperatingCityId d.merchantOperatingCityId,
       DPD.active = applyField u.active d.active,
       DPD.mode = applyField u.mode d.mode,
       DPD.onRide = applyField u.onRide d.onRide,
