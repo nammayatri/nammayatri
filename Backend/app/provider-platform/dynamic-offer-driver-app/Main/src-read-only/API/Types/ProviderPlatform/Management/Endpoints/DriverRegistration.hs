@@ -323,7 +323,8 @@ data DocumentsListResponse = DocumentsListResponse
     drivingSchoolCertificate :: [Kernel.Prelude.Text],
     udyamCertificate :: [Kernel.Prelude.Text],
     medicalCertificate :: [Kernel.Prelude.Text],
-    commonDocuments :: [CommonDocumentItem]
+    commonDocuments :: [CommonDocumentItem],
+    imageDetails :: [ImageDetails]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -387,6 +388,17 @@ data GetDocumentResponse = GetDocumentResponse
     commonDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     metadata :: Kernel.Prelude.Maybe Data.Aeson.Value
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ImageDetails = ImageDetails
+  { imageId :: Kernel.Prelude.Text,
+    documentVersionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    verificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.VerificationStatus,
+    failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -17,6 +17,7 @@ import qualified Tools.Error
 
 data Image = Image
   { documentExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    documentVersionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     failureReason :: Kernel.Prelude.Maybe Tools.Error.DriverOnboardingError,
     id :: Kernel.Types.Id.Id Domain.Types.Image.Image,
     imageType :: Domain.Types.DocumentVerificationConfig.DocumentType,
@@ -32,7 +33,7 @@ data Image = Image
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show), (ToJSON), (FromJSON))
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data ImageMetadata = ImageMetadata
   { chassisNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -52,6 +53,6 @@ data ImageMetadata = ImageMetadata
 
 data SelfieFetchStatus = APPROVED | NEEDS_REVIEW deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SelfieFetchStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SelfieFetchStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''SelfieFetchStatus))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''SelfieFetchStatus)

@@ -20,6 +20,7 @@ instance FromTType' Beam.Image Domain.Types.Image.Image where
       Just
         Domain.Types.Image.Image
           { documentExpiry = documentExpiry,
+            documentVersionId = documentVersionId,
             failureReason = failureReason,
             id = Kernel.Types.Id.Id id,
             imageType = imageType,
@@ -40,6 +41,7 @@ instance ToTType' Beam.Image Domain.Types.Image.Image where
   toTType' (Domain.Types.Image.Image {..}) = do
     Beam.ImageT
       { Beam.documentExpiry = documentExpiry,
+        Beam.documentVersionId = documentVersionId,
         Beam.failureReason = failureReason,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.imageType = imageType,

@@ -1479,6 +1479,12 @@ withDocumentOperationLock docType personId action =
 documentOperationLockTTLSeconds :: Int
 documentOperationLockTTLSeconds = 60
 
+-- | The images named in one register call are one version of the document; they get a shared, fresh version id.
+groupRegisteredImages :: OnboardingFlow m r => [Id Image.Image] -> m ()
+groupRegisteredImages imageIds = do
+  versionId <- generateGUID
+  ImageQuery.updateDocumentVersionIdByIds (Just versionId) imageIds
+
 unlinkDriverDocument :: OnboardingFlow m r => Id DMOC.MerchantOperatingCity -> ODC.DocumentType -> Person.Person -> m Bool
 unlinkDriverDocument merchantOpCityId documentType person = do
   case person.role of

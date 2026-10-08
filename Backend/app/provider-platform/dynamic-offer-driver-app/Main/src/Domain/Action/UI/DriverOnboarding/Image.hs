@@ -641,6 +641,7 @@ mkImage personId_ merchantId mbMerchantOpCityId s3Path documentType_ mbRcId veri
         failureReason = ImageNotValid <$> sdkFailureReason,
         rcId = getId <$> mbRcId,
         workflowTransactionId,
+        documentVersionId = Nothing,
         reviewerEmail = Nothing,
         metadata = Nothing,
         documentExpiry = Nothing,

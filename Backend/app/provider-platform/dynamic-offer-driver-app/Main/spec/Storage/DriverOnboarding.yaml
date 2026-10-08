@@ -502,6 +502,7 @@ Image:
     rcId: Maybe Text
     verificationStatus: Maybe VerificationStatus
     workflowTransactionId: Maybe Text
+    documentVersionId: Maybe Text
     reviewerEmail: Maybe Text
     documentExpiry: Maybe UTCTime
     metadata: Maybe ImageMetadata
@@ -518,6 +519,7 @@ Image:
     personId: SecondaryKey
     rcId: SecondaryKey
     workflowTransactionId: SecondaryKey
+    documentVersionId: "!SecondaryKey" # forcing to be a secondary key
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -590,6 +592,16 @@ Image:
         in: [id]
     findImagesByIds:
       kvFunction: findAllWithKV
+      where:
+        in: [id]
+    updateRcIdByIds:
+      kvFunction: updateWithKV
+      params: [rcId, updatedAt]
+      where:
+        in: [id]
+    updateDocumentVersionIdByIds:
+      kvFunction: updateWithKV
+      params: [documentVersionId, updatedAt]
       where:
         in: [id]
   extraOperations:

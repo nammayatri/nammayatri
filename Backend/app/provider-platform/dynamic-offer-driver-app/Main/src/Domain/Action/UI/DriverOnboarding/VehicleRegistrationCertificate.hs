@@ -296,6 +296,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         deleteVehicleWithAllAssociations personId mbFleetOwnerId prevRcNo
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction && not isTtenCertificate)
+  groupRegisteredImages (req.imageId : maybeToList req.imageId2)
   withDocumentOperationLock "RC" personId.getId $ do
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
@@ -634,6 +635,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           when (isDriverProvidedVehicleDetails && not (isFleetRole person.role) && isNothing mbFleetOwnerId) $ guardApprovedRCDataUnchanged vehicleRC
           void $ RCQuery.upsert vehicleRC
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
+          -- RC images are uploaded before the RC exists; the vehicle link is written once the row is known.
+          ImageQuery.updateRcIdByIds (Just rc.id.getId) (vehicleRC.documentImageId : maybeToList vehicleRC.documentImageId2)
           -- Create reminders only for non-INVALID RCs
           unless isInvalid $ do
             createReminder

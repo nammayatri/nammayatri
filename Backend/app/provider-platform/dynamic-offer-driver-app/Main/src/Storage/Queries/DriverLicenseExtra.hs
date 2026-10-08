@@ -152,3 +152,21 @@ updateDocImageAndStatusById (Id dlId) (Id newImageId) status rejectReason = do
       Se.Set BeamDL.updatedAt _now
     ]
     [Se.Is BeamDL.id $ Se.Eq dlId]
+
+-- | Point the licence at it's other approved versionImages(these images are already VALID) when current is rejected and sets the row VALID.
+updateDocImagesAndMarkValidById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DriverLicense ->
+  Id Image ->
+  Maybe (Id Image) ->
+  m ()
+updateDocImagesAndMarkValidById (Id dlId) (Id imageId) mbImageId2 = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDL.documentImageId1 imageId,
+      Se.Set BeamDL.documentImageId2 (getId <$> mbImageId2),
+      Se.Set BeamDL.verificationStatus VALID,
+      Se.Set BeamDL.rejectReason Nothing,
+      Se.Set BeamDL.updatedAt _now
+    ]
+    [Se.Is BeamDL.id $ Se.Eq dlId]

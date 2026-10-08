@@ -189,6 +189,10 @@ findAllById rcIds = findAllWithKV [Se.Is BeamVRC.id $ Se.In $ map (.getId) rcIds
 findAllByImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Image] -> m [VehicleRegistrationCertificate]
 findAllByImageId imageIds = findAllWithKV [Se.Is BeamVRC.documentImageId $ Se.In $ map (.getId) imageIds]
 
+-- | The RC holding this image as either its front or its back.
+findByAnyImageId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Image -> m (Maybe VehicleRegistrationCertificate)
+findByAnyImageId (Id imageId) = findOneWithKV [Se.Or [Se.Is BeamVRC.documentImageId $ Se.Eq imageId, Se.Is BeamVRC.documentImageId2 $ Se.Eq (Just imageId)]]
+
 findLastVehicleRCWrapper :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe VehicleRegistrationCertificate)
 findLastVehicleRCWrapper certNumber = do
   certNumberHash <- getDbHash certNumber
@@ -931,6 +935,24 @@ updateDocImageAndStatusById (Id rcId) (Id newImageId) status rejectReason = do
     [ Se.Set BeamVRC.documentImageId newImageId,
       Se.Set BeamVRC.verificationStatus status,
       Se.Set BeamVRC.rejectReason (Just rejectReason),
+      Se.Set BeamVRC.updatedAt _now
+    ]
+    [Se.Is BeamVRC.id $ Se.Eq rcId]
+
+-- | Point the RC at it's other approved versionImages(these images are already VALID) when current is rejected and sets the row VALID.
+updateDocImagesAndMarkValidById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id VehicleRegistrationCertificate ->
+  Id Image ->
+  Maybe (Id Image) ->
+  m ()
+updateDocImagesAndMarkValidById (Id rcId) (Id imageId) mbImageId2 = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamVRC.documentImageId imageId,
+      Se.Set BeamVRC.documentImageId2 (getId <$> mbImageId2),
+      Se.Set BeamVRC.verificationStatus Documents.VALID,
+      Se.Set BeamVRC.rejectReason Nothing,
       Se.Set BeamVRC.updatedAt _now
     ]
     [Se.Is BeamVRC.id $ Se.Eq rcId]
