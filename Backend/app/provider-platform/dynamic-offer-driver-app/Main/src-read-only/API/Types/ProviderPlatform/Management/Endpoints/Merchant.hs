@@ -512,6 +512,7 @@ data JobName
   | IffcoTokioInsuranceTrigger
   | AggregatedCommissionInvoiceCreationTrigger
   | RetryAutopayCollectionTrigger
+  | SendLegalPolicyNotificationTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

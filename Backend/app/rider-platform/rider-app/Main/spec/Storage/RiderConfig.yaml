@@ -136,6 +136,8 @@ RiderConfig:
     passExpiryReminderDays: Maybe Int
     remindEverydayUntilPassExpiry: Maybe Bool
     passExpiryReminderBatchSize: Maybe Int
+    legalPolicyNotificationBatchSize: Maybe Int
+    sendLegalPolicyUpdateEmail: Maybe Bool
     passExpiryReminderNextRunLocalTime: Maybe TimeOfDay
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
     kaptureQueue: Text # deprecated

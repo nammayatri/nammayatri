@@ -26,6 +26,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import Data.String.Conversions (cs)
+import Email.Types (EmailServiceConfig)
 import "rider-app" Environment (AppCfg (..), SFTPConfig (..))
 import Kernel.External.Encryption (EncTools)
 import qualified Kernel.External.MasterCloudForward as MCF
@@ -107,6 +108,7 @@ data HandlerEnv = HandlerEnv
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
     smsCfg :: SmsConfig,
+    emailServiceConfig :: EmailServiceConfig,
     schedulerType :: SchedulerType,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,

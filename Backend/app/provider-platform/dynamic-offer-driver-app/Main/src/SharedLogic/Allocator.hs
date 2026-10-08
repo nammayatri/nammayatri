@@ -18,6 +18,7 @@
 module SharedLogic.Allocator where
 
 import Control.Applicative ((<|>))
+import qualified Dashboard.Common as Common
 import qualified DashboardAlert.Domain.Types.DashboardAlert as DAR
 import Data.Aeson (withObject, (.:))
 import qualified Data.Map as M
@@ -35,6 +36,7 @@ import qualified Domain.Types.Message as DMessage
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.PolicyAndComplianceDocument as DPCD
 import qualified Domain.Types.Reminder as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
@@ -118,6 +120,7 @@ data AllocatorJobType
   | FleetEngineRetry
   | DeleteUnreferencedFarePolicies
   | GenerateInvoicePdf
+  | SendLegalPolicyNotification
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -198,6 +201,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SFleetEngineRetry jobData = AnyJobInfo <$> restoreJobInfo SFleetEngineRetry jobData
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
   restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
+  restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -891,3 +895,17 @@ newtype GenerateInvoicePdfJobData = GenerateInvoicePdfJobData
 instance JobInfoProcessor 'GenerateInvoicePdf
 
 type instance JobContent 'GenerateInvoicePdf = GenerateInvoicePdfJobData
+
+data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    policyDocId :: Id DPCD.PolicyAndComplianceDocument,
+    entityType :: Common.LegalEntityType,
+    batchId :: Text,
+    pageOffset :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendLegalPolicyNotification
+
+type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData

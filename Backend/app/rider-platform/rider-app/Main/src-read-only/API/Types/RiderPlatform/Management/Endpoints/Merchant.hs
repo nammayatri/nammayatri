@@ -44,6 +44,7 @@ data JobName
   | DailyPassStatusUpdateTrigger
   | PassExpiryReminderMasterTrigger
   | CashRideCashbackPayoutTrigger
+  | SendLegalPolicyNotificationTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
