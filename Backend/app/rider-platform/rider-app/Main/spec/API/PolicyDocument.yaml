@@ -1,6 +1,7 @@
 imports:
   PolicyAndComplianceDocument: Domain.Types.PolicyAndComplianceDocument
   PolicyType: Dashboard.Common
+  LegalEntityType: Dashboard.Common
 
 module: PolicyDocument
 
@@ -8,21 +9,25 @@ types:
   PolicyDocumentResp:
     id: Id PolicyAndComplianceDocument
     policyType: PolicyType
+    entityType: Maybe LegalEntityType
     version: Text
     url: Text
     isMandatory: Bool
     enabled: Bool
     metadata: Maybe Text
+    effectiveDate: Maybe UTCTime
     createdAt: UTCTime
 
   PolicyDocumentWithAcceptance:
     id: Id PolicyAndComplianceDocument
     policyType: PolicyType
+    entityType: Maybe LegalEntityType
     version: Text
     url: Text
     isMandatory: Bool
     enabled: Bool
     metadata: Maybe Text
+    effectiveDate: Maybe UTCTime
     createdAt: UTCTime
     accepted: Bool
 

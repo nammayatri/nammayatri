@@ -32,16 +32,21 @@ import qualified Storage.Queries.PolicyAndComplianceDocumentExtra as QPCDX
 acceptedPoliciesMap :: Maybe Common.AcceptedPolicies -> HM.HashMap Common.PolicyType Text
 acceptedPoliciesMap = maybe HM.empty (\(Common.AcceptedPolicies m) -> m)
 
+driverEntity :: Common.LegalEntityType
+driverEntity = Common.DriverLegal
+
 toRespDoc :: DPCD.PolicyAndComplianceDocument -> APIT.PolicyDocumentResp
 toRespDoc d =
   APIT.PolicyDocumentResp
     { id = d.id,
       policyType = d.policyType,
+      entityType = d.entityType,
       version = d.version,
       url = d.url,
       isMandatory = d.isMandatory,
       enabled = d.enabled,
       metadata = d.metadata,
+      effectiveDate = d.effectiveDate,
       createdAt = d.createdAt
     }
 
@@ -50,11 +55,13 @@ toRespWithAcceptance accepted d =
   APIT.PolicyDocumentWithAcceptance
     { id = d.id,
       policyType = d.policyType,
+      entityType = d.entityType,
       version = d.version,
       url = d.url,
       isMandatory = d.isMandatory,
       enabled = d.enabled,
       metadata = d.metadata,
+      effectiveDate = d.effectiveDate,
       createdAt = d.createdAt,
       accepted = HM.lookup d.policyType accepted == Just d.id.getId
     }
@@ -75,7 +82,7 @@ getPolicyLatest (_, merchantId, opCityId) = do
   if not (featureEnabled tc)
     then pure $ APIT.PolicyLatestResp {documents = []}
     else do
-      docs <- CPCD.findAllLatestEnabledByMerchant merchantId
+      docs <- CPCD.findAllLatestEnabledByMerchantAndEntity merchantId driverEntity
       pure $ APIT.PolicyLatestResp {documents = map toRespDoc docs}
 
 getPolicyList ::
@@ -89,10 +96,10 @@ getPolicyList (mbPersonId, merchantId, opCityId) = do
     else do
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let accepted = acceptedPoliciesMap person.acceptedPolicies
-      latestPerType <- CPCD.findAllLatestEnabledByMerchant merchantId
+      latestPerType <- CPCD.findAllLatestEnabledByMerchantAndEntity merchantId driverEntity
       let types = L.nub (map (.policyType) latestPerType)
       groups <- forM types $ \pt -> do
-        topN <- QPCDX.findTopNEnabledByTypeAndMerchant merchantId pt 2
+        topN <- QPCDX.findTopNEnabledByTypeAndMerchantAndEntity merchantId driverEntity pt 2
         acceptedDoc <- case HM.lookup pt accepted of
           Nothing -> pure Nothing
           Just docIdText -> do
@@ -128,7 +135,7 @@ isGoOnlineBlockerActive tc =
 
 findBlockingUnacceptedPolicies :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DP.Person -> m [DPCD.PolicyAndComplianceDocument]
 findBlockingUnacceptedPolicies person = do
-  latest <- CPCD.findAllLatestEnabledByMerchant person.merchantId
+  latest <- CPCD.findAllLatestEnabledByMerchantAndEntity person.merchantId driverEntity
   let accepted = acceptedPoliciesMap person.acceptedPolicies
   pure
     [ d

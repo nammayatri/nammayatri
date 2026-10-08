@@ -17,7 +17,9 @@ data PolicyAcceptReq = PolicyAcceptReq {policyDocId :: Kernel.Types.Id.Id Domain
 
 data PolicyDocumentResp = PolicyDocumentResp
   { createdAt :: Kernel.Prelude.UTCTime,
+    effectiveDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Bool,
+    entityType :: Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType,
     id :: Kernel.Types.Id.Id Domain.Types.PolicyAndComplianceDocument.PolicyAndComplianceDocument,
     isMandatory :: Kernel.Prelude.Bool,
     metadata :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -31,7 +33,9 @@ data PolicyDocumentResp = PolicyDocumentResp
 data PolicyDocumentWithAcceptance = PolicyDocumentWithAcceptance
   { accepted :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
+    effectiveDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Bool,
+    entityType :: Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType,
     id :: Kernel.Types.Id.Id Domain.Types.PolicyAndComplianceDocument.PolicyAndComplianceDocument,
     isMandatory :: Kernel.Prelude.Bool,
     metadata :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

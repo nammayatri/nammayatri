@@ -12,17 +12,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PolicyAndComplianceDocumentT f = PolicyAndComplianceDocumentT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    id :: (B.C f Kernel.Prelude.Text),
-    isMandatory :: (B.C f Kernel.Prelude.Bool),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    policyType :: (B.C f Dashboard.Common.PolicyType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    url :: (B.C f Kernel.Prelude.Text),
-    version :: (B.C f Kernel.Prelude.Text)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    effectiveDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    enabled :: B.C f Kernel.Prelude.Bool,
+    entityType :: B.C f (Kernel.Prelude.Maybe Dashboard.Common.LegalEntityType),
+    id :: B.C f Kernel.Prelude.Text,
+    isMandatory :: B.C f Kernel.Prelude.Bool,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metadata :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    policyType :: B.C f Dashboard.Common.PolicyType,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    url :: B.C f Kernel.Prelude.Text,
+    version :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +34,6 @@ instance B.Table PolicyAndComplianceDocumentT where
 
 type PolicyAndComplianceDocument = PolicyAndComplianceDocumentT Identity
 
-$(enableKVPG (''PolicyAndComplianceDocumentT) [('id)] [[('policyType)]])
+$(enableKVPG ''PolicyAndComplianceDocumentT ['id] [['policyType]])
 
-$(mkTableInstances (''PolicyAndComplianceDocumentT) "policy_and_compliance_document")
+$(mkTableInstances ''PolicyAndComplianceDocumentT "policy_and_compliance_document")
