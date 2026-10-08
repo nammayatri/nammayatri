@@ -113,6 +113,15 @@ instance FromJSONKey PolicyType where
 
 $(mkBeamInstancesForEnum ''PolicyType)
 
+data LegalEntityType
+  = CustomerLegal
+  | DriverLegal
+  | FleetOwnerLegal
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Hashable)
+
+$(mkBeamInstancesForEnum ''LegalEntityType)
+
 newtype AcceptedPolicies = AcceptedPolicies (HM.HashMap PolicyType Text)
   deriving stock (Generic, Show, Eq)
   deriving newtype (Ord)
