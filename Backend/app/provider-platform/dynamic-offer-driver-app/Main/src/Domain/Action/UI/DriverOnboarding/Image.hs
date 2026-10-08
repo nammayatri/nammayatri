@@ -438,6 +438,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
     _ -> do
       when -- This Condition could be merged with the 1st condition above by replacing images with allImages for mValidatedImage.
         ( imageType == DVC.ProfilePhoto
+            && isJust workflowTransactionId
             && any
               ( \img ->
                   img.verificationStatus == Just Documents.VALID
