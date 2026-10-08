@@ -424,9 +424,11 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
     Just driverLicense -> do
       (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
       -- Promote non-terminal images before resolution so MANUAL_VERIFICATION_REQUIRED doesn't read as FMDeferred.
-      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
-        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
-          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
+      -- With no verifier and no face match nothing has checked the images: they stay pending until an admin decides.
+      when (documentVerificationConfig.doStrictVerifcation || isJust documentVerificationConfig.faceMatchSourceDoc) $
+        forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+          when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
+            whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
       -- Record stays PENDING until the face match passes; reuses a recorded result when the match already ran.
       finalStatus <-
         if driverLicense.verificationStatus == Documents.VALID
