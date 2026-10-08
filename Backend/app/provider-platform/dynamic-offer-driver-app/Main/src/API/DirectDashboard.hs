@@ -40,31 +40,47 @@ import qualified API.Action.DashboardAuth.IssueManagement as IssueManagementDSL
 import qualified API.Action.DashboardAuth.Management as ManagementDSL
 import qualified API.Action.DashboardAuth.Operator as OperatorDSL
 import qualified API.Action.DashboardAuth.RideBooking as RideBookingDSL
+import qualified "this" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified Domain.Action.Dashboard.Management.Merchant as DMerchant
 import qualified Domain.Types.Merchant as DM
 import Environment
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common (withDashboardFlowHandlerAPI)
 import Servant
+import qualified Tools.ActorInfo
 
 type API =
   "direct-dashboard"
     :> Capture "merchantId" (ShortId DM.Merchant)
-    :> Capture "city" Context.City
-    :> ( AppManagementDSL.API
-           :<|> FleetDSL.API
-           :<|> OperatorDSL.API
-           :<|> RideBookingDSL.API
-           :<|> ManagementDSL.API
-           :<|> IssueManagementDSL.API
-           :<|> IncentiveJourneyDSL.API
+    :> ( MerchantCityListAPI
+           :<|> ( Capture "city" Context.City
+                    :> ( AppManagementDSL.API
+                           :<|> FleetDSL.API
+                           :<|> OperatorDSL.API
+                           :<|> RideBookingDSL.API
+                           :<|> ManagementDSL.API
+                           :<|> IssueManagementDSL.API
+                           :<|> IncentiveJourneyDSL.API
+                       )
+                )
        )
 
+type MerchantCityListAPI =
+  "merchant" :> "cityList" :> Get '[JSON] Common.CityListResp
+
 handler :: FlowServer API
-handler merchantId city =
-  AppManagementDSL.handler merchantId city
-    :<|> FleetDSL.handler merchantId city
-    :<|> OperatorDSL.handler merchantId city
-    :<|> RideBookingDSL.handler merchantId city
-    :<|> ManagementDSL.handler merchantId city
-    :<|> IssueManagementDSL.handler merchantId city
-    :<|> IncentiveJourneyDSL.handler merchantId city
+handler merchantId =
+  getMerchantCityList merchantId
+    :<|> \city ->
+      AppManagementDSL.handler merchantId city
+        :<|> FleetDSL.handler merchantId city
+        :<|> OperatorDSL.handler merchantId city
+        :<|> RideBookingDSL.handler merchantId city
+        :<|> ManagementDSL.handler merchantId city
+        :<|> IssueManagementDSL.handler merchantId city
+        :<|> IncentiveJourneyDSL.handler merchantId city
+
+getMerchantCityList :: ShortId DM.Merchant -> FlowHandler Common.CityListResp
+getMerchantCityList merchantId =
+  withDashboardFlowHandlerAPI (Tools.ActorInfo.withRequestIdActorInfo (DMerchant.getMerchantCityListByMerchant merchantId))

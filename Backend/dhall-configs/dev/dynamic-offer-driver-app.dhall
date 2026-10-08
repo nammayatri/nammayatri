@@ -350,6 +350,7 @@ let AllocatorJobType =
       | BulkUserCohortMappingUpload
       | FleetEngineRetry
       | DeleteUnreferencedFarePolicies
+      | GenerateInvoicePdf
       >
 
 let jobRetryOnExceptionMapx =

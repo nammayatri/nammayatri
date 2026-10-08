@@ -492,9 +492,9 @@ updateRequiredDeliveryDetails searchRequestId merchantId merchantOperatingCityId
   QParcel.create $ DParcel.ParcelDetails {createdAt = now, updatedAt = now, ..}
 
 insertVehicleServiceTierAndCategory :: (Eq a) => Int -> a -> [a] -> [a]
-insertVehicleServiceTierAndCategory n newVehicle currentList
-  | length currentList < n = currentList ++ [newVehicle]
-  | otherwise = tail currentList ++ [newVehicle]
+insertVehicleServiceTierAndCategory n newVehicle currentList =
+  let updated = currentList ++ [newVehicle]
+   in drop (length updated - max 0 n) updated
 
 data MultimodalSelectRes = MultimodalSelectRes
   { journeyId :: Maybe (Id DJ.Journey),
