@@ -11,6 +11,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassSwitchDeviceId,
     postMultimodalPassResetDeviceSwitchCount,
     getMultimodalPassTransactions,
+    getMultimodalPassFrfsStatistics,
     postMultimodalPassActivateToday,
     postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
@@ -118,6 +119,7 @@ import qualified Storage.CachedQueries.Translations as QT
 import Storage.ConfigPilot.Config.PassCategory (PassCategoryDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.FRFSPassTicketStatistics as QFRFSPassTicketStatistics
 -- Storage.Queries.Pass re-exports Storage.Queries.PassExtra, so this alias covers
 -- both the generated CRUD and the hand-written Extra queries.
 import qualified Storage.Queries.Pass as QPass
@@ -1771,6 +1773,38 @@ getMultimodalPassTransactions (mbCallerPersonId, _) mbLimitParam mbOffsetParam m
     [] -> QPurchasedPassPayment.findAllWithPersonId (Just limit) (Just offset) personId
     _ -> QPurchasedPassPayment.findAllByPersonIdAndStatuses (Just limit) (Just offset) personId statuses
   buildPurchasedPassPaymentAPIEntities allPurchasedPassTransactions
+
+getMultimodalPassFrfsStatistics ::
+  ( ( Maybe (Id.Id DP.Person),
+      Id.Id DM.Merchant
+    ) ->
+    Id.Id DPurchasedPassPayment.PurchasedPassPayment ->
+    Environment.Flow PassAPI.FRFSPassTicketStatisticsResp
+  )
+getMultimodalPassFrfsStatistics (mbCallerPersonId, merchantId) purchasedPassPaymentId = do
+  personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
+  payment <- QPurchasedPassPayment.findByPrimaryKey purchasedPassPaymentId >>= fromMaybeM (InvalidRequest $ "Purchased pass payment not found: " <> purchasedPassPaymentId.getId)
+  unless (payment.personId == personId) $ throwError AccessDenied
+  unless (payment.merchantId == merchantId) $ throwError AccessDenied
+  let termDays = [payment.startDate .. payment.endDate]
+  statistics <- QFRFSPassTicketStatistics.findAllByPurchasedPassPaymentIdAndDates purchasedPassPaymentId termDays
+  let statByDay = Map.fromList [(stat.date, stat) | stat <- statistics]
+      daily =
+        [ case Map.lookup day statByDay of
+            Just stat -> PassAPI.FRFSPassDailyTicketStatAPIEntity {date = day, ticketCount = stat.ticketCount, fareAmount = fromMaybe 0 stat.fareAmount, savedAmount = fromMaybe 0 stat.savedAmount}
+            Nothing -> PassAPI.FRFSPassDailyTicketStatAPIEntity {date = day, ticketCount = 0, fareAmount = 0, savedAmount = 0}
+          | day <- termDays
+        ]
+  pure $
+    PassAPI.FRFSPassTicketStatisticsResp
+      { purchasedPassPaymentId = payment.id,
+        startDate = payment.startDate,
+        endDate = payment.endDate,
+        totalTicketCount = sum (map (.ticketCount) statistics),
+        totalFareAmount = sum (mapMaybe (.fareAmount) statistics),
+        totalSavedAmount = sum (mapMaybe (.savedAmount) statistics),
+        daily
+      }
 
 buildPurchasedPassPaymentAPIEntities ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

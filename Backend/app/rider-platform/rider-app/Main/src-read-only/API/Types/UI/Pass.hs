@@ -26,6 +26,22 @@ import Servant
 import qualified SharedLogic.Offer
 import Tools.Auth
 
+data FRFSPassDailyTicketStatAPIEntity = FRFSPassDailyTicketStatAPIEntity {date :: Data.Time.Day, fareAmount :: Kernel.Types.Common.HighPrecMoney, savedAmount :: Kernel.Types.Common.HighPrecMoney, ticketCount :: Kernel.Prelude.Int}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSPassTicketStatisticsResp = FRFSPassTicketStatisticsResp
+  { daily :: [FRFSPassDailyTicketStatAPIEntity],
+    endDate :: Data.Time.Day,
+    purchasedPassPaymentId :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
+    startDate :: Data.Time.Day,
+    totalFareAmount :: Kernel.Types.Common.HighPrecMoney,
+    totalSavedAmount :: Kernel.Types.Common.HighPrecMoney,
+    totalTicketCount :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FrfsOverrideConfigAPIEntity = FrfsOverrideConfigAPIEntity
   { fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
