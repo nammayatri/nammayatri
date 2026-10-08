@@ -54,9 +54,11 @@ jobs:
           fetch-depth: 0
           filter: blob:none
           # sql-seed: upstream's passetto seed, for tests/restore.test.sh.
+          # The report is there for tests/docs-links.test.py: the README links it.
           sparse-checkout: |
             Backend/dev/local-stack
             Backend/dev/sql-seed
+            docs/Movin-backend-restructuring-report.pdf
             .github
           sparse-checkout-cone-mode: false
 
