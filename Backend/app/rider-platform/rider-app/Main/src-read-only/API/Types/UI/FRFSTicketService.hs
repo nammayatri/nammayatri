@@ -10,6 +10,7 @@ import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -236,6 +237,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     categories :: [CategoryInfoResponse],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    frfsRouteDetails :: Data.Maybe.Maybe [Domain.Types.FRFSRouteDetails.FRFSRouteDetails],
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,

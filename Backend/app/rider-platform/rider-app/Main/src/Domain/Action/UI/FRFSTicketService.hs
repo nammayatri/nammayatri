@@ -889,6 +889,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
     mapM
       ( \(quote, quoteCategories) -> do
           let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+              frfsRouteDetails = FRFSUtils.mkFRFSQuoteRouteDetails quote.vehicleType decodedRouteStations
               mbFirstRouteStation = decodedRouteStations >>= listToMaybe
               mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
               serviceTierType = mbVehicleServiceTier <&> (._type)
