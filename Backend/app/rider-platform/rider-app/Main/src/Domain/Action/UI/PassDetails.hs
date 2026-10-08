@@ -355,7 +355,7 @@ stagesViaOTP riderConfig integratedBPPConfig srcStopCode destStopCode srcLL dest
             walkSpeed = Nothing
           }
 
-  eOtpResponse <- withTryCatch "stagesViaOTP:getTransitRoutes" (KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq)
+  eOtpResponse <- withTryCatch "stagesViaOTP:getTransitRoutes" (KMultiModal.getTransitRoutes Nothing (Just integratedBPPConfig.merchantOperatingCityId.getId) transitServiceReq transitRoutesReq)
   otpResponse <- case eOtpResponse of
     Right (Just r) -> pure r
     _ -> Utils.throwError $ InvalidRequest $ "No routes found between stops " <> srcStopCode <> " and " <> destStopCode

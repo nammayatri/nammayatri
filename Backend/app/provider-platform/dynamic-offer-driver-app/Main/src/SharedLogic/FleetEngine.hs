@@ -137,7 +137,7 @@ notifyDriverOnline merchantOpCityId driverId =
   withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
     logInfo $ "FleetEngine: driverOnline provider=" <> providerId <> " driverId=" <> driverId.getId
     mbVeh <- QVeh.findById driverId
-    ok <- ensureVehicleExists baseUrl providerId token driverId.getId mbVeh
+    ok <- ensureVehicleExists (Just merchantOpCityId.getId) baseUrl providerId token driverId.getId mbVeh
     unless ok $ logError $ "FleetEngine: ensureVehicleExists failed for driver " <> driverId.getId
 
 -- | Silent skip when Fleet Engine is off; logs (never throws) on config/token errors.
@@ -174,13 +174,13 @@ notifyTripCreatedInternal booking ride =
         pickupPoint = Just (FETypes.LatLng booking.fromLocation.lat booking.fromLocation.lon)
         dropoffPoint = (\loc -> FETypes.LatLng loc.lat loc.lon) <$> booking.toLocation
     mbVeh <- QVeh.findById ride.driverId
-    vehOk <- ensureVehicleExists baseUrl providerId token vehicleId mbVeh
+    vehOk <- ensureVehicleExists (Just booking.merchantOperatingCityId.getId) baseUrl providerId token vehicleId mbVeh
     unless vehOk $ throwError (InternalError $ "FleetEngine ensureVehicleExists failed for ride " <> tripId)
     tripOk <-
-      FEClient.createTrip baseUrl providerId token tripId $
+      FEClient.createTrip (Just booking.merchantOperatingCityId.getId) baseUrl providerId token tripId $
         FETypes.mkCreateTripBody (bookingToTripType booking) pickupPoint dropoffPoint (bookingToNumberOfPassengers booking)
     unless tripOk $ throwError (InternalError $ "FleetEngine createTrip failed for ride " <> tripId)
-    assignOk <- FEClient.assignVehicleAndStart baseUrl providerId token tripId vehicleId
+    assignOk <- FEClient.assignVehicleAndStart (Just booking.merchantOperatingCityId.getId) baseUrl providerId token tripId vehicleId
     unless assignOk $ throwError (InternalError $ "FleetEngine assignVehicleAndStart failed for ride " <> tripId)
 
 notifyTripCreated :: FleetEngineRetryFlow m r => DRB.Booking -> SRide.Ride -> m ()
@@ -190,12 +190,12 @@ notifyTripCreated booking ride =
 
 -- | GET-first: don't overwrite state the Driver SDK may set once mobile integration lands.
 -- Returns True if vehicle already existed or was successfully created; False if createVehicle failed.
-ensureVehicleExists :: FleetEngineFlow m r => BaseUrl -> Text -> Text -> Text -> Maybe DVeh.Vehicle -> m Bool
-ensureVehicleExists baseUrl providerId token vehicleId mbVeh = do
-  mbFleetVeh <- FEClient.getVehicle baseUrl providerId token vehicleId
+ensureVehicleExists :: FleetEngineFlow m r => Maybe Text -> BaseUrl -> Text -> Text -> Text -> Maybe DVeh.Vehicle -> m Bool
+ensureVehicleExists merchantCityId baseUrl providerId token vehicleId mbVeh = do
+  mbFleetVeh <- FEClient.getVehicle merchantCityId baseUrl providerId token vehicleId
   case mbFleetVeh of
     Just _ -> pure True
-    Nothing -> FEClient.createVehicle baseUrl providerId token vehicleId (mkFleetEngineVehicle mbVeh)
+    Nothing -> FEClient.createVehicle merchantCityId baseUrl providerId token vehicleId (mkFleetEngineVehicle mbVeh)
 
 mkFleetEngineVehicle :: Maybe DVeh.Vehicle -> FETypes.Vehicle
 mkFleetEngineVehicle mbVeh =
@@ -227,7 +227,7 @@ notifyTripStatus merchantOpCityId rideId status =
   withFleetEngine merchantOpCityId $ \providerId token baseUrl -> do
     logInfo $ "FleetEngine: updateTripStatus provider=" <> providerId <> " tripId=" <> rideId.getId <> " status=" <> show status
     -- Bypasses FEClient.updateTripStatus (which void's the Maybe) so retry-wrapper callers can catch and enqueue.
-    result <- FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus" (FETypes.emptyTrip {FETypes.tripStatus = Just status})
+    result <- FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "tripStatus" (FETypes.emptyTrip {FETypes.tripStatus = Just status})
     when (isNothing result) $
       throwError (InternalError $ "FleetEngine updateTripStatus returned no body for ride " <> rideId.getId <> " status " <> show status)
 
@@ -244,7 +244,7 @@ notifyRideStartedInternal booking ride =
         logInfo $ "FleetEngine: rideStarted (enroute to dropoff) provider=" <> providerId <> " tripId=" <> ride.id.getId
         -- Bypass FEClient.updateTripStatus (silent m ()) so caller can catch and retry.
         result <-
-          FEClient.updateTrip baseUrl providerId token ride.id.getId "tripStatus" $
+          FEClient.updateTrip (Just booking.merchantOperatingCityId.getId) baseUrl providerId token ride.id.getId "tripStatus" $
             FETypes.emptyTrip {tripStatus = Just FETypes.ENROUTE_TO_DROPOFF}
         when (isNothing result) $
           throwError (InternalError $ "FleetEngine rideStarted (enroute to dropoff) returned no body for ride " <> ride.id.getId)
@@ -252,7 +252,7 @@ notifyRideStartedInternal booking ride =
         mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey ride.id)
         logInfo $ "FleetEngine: rideStarted (enroute to intermediate, index=0) provider=" <> providerId <> " tripId=" <> ride.id.getId
         result <-
-          FEClient.updateTrip baseUrl providerId token ride.id.getId "tripStatus,intermediateDestinationIndex" $
+          FEClient.updateTrip (Just booking.merchantOperatingCityId.getId) baseUrl providerId token ride.id.getId "tripStatus,intermediateDestinationIndex" $
             FETypes.emptyTrip
               { tripStatus = Just FETypes.ENROUTE_TO_INTERMEDIATE_DESTINATION,
                 intermediateDestinationIndex = Just 0,
@@ -346,7 +346,7 @@ notifyDropoffChangedInternal merchantOpCityId rideId newDrop =
     logInfo $ "FleetEngine: updateDropoff provider=" <> providerId <> " tripId=" <> rideId.getId
     let newDropTL = FETypes.TerminalLocation {point = FETypes.LatLng {latitude = newDrop.lat, longitude = newDrop.lon}}
     result <-
-      FEClient.updateTrip baseUrl providerId token rideId.getId "dropoffPoint" $
+      FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "dropoffPoint" $
         FETypes.emptyTrip {dropoffPoint = Just newDropTL}
     when (isNothing result) $
       throwError (InternalError $ "FleetEngine updateDropoff returned no body for ride " <> rideId.getId)
@@ -363,7 +363,7 @@ notifyPickupChangedInternal merchantOpCityId rideId newPickup =
     logInfo $ "FleetEngine: updatePickup provider=" <> providerId <> " tripId=" <> rideId.getId
     let newPickupTL = FETypes.TerminalLocation {point = FETypes.LatLng {latitude = newPickup.lat, longitude = newPickup.lon}}
     result <-
-      FEClient.updateTrip baseUrl providerId token rideId.getId "pickupPoint" $
+      FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "pickupPoint" $
         FETypes.emptyTrip {pickupPoint = Just newPickupTL}
     when (isNothing result) $
       throwError (InternalError $ "FleetEngine updatePickup returned no body for ride " <> rideId.getId)
@@ -384,7 +384,7 @@ notifyStopsChangedInternal merchantOpCityId rideId stops =
     let stopsTL = map (\ll -> FETypes.TerminalLocation {point = FETypes.LatLng {latitude = ll.lat, longitude = ll.lon}}) stops
     logInfo $ "FleetEngine: updateIntermediateDestinations provider=" <> providerId <> " tripId=" <> rideId.getId <> " count=" <> show (length stops)
     mbResp <-
-      FEClient.updateTrip baseUrl providerId token rideId.getId "intermediateDestinations" $
+      FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "intermediateDestinations" $
         FETypes.emptyTrip
           { intermediateDestinations = Just stopsTL,
             intermediateDestinationsVersion = mbVersion
@@ -406,7 +406,7 @@ notifyStopArrivedInternal merchantOpCityId rideId stopIndex =
     mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey rideId)
     logInfo $ "FleetEngine: stopArrived tripId=" <> rideId.getId <> " index=" <> show stopIndex
     result <-
-      FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
+      FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
         FETypes.emptyTrip
           { tripStatus = Just FETypes.ARRIVED_AT_INTERMEDIATE_DESTINATION,
             intermediateDestinationIndex = Just stopIndex,
@@ -428,7 +428,7 @@ notifyStopDepartedInternal merchantOpCityId rideId mbNextIdx =
       logInfo $ "FleetEngine: stopDeparted (enroute to dropoff) tripId=" <> rideId.getId
       -- Bypass FEClient.updateTripStatus (silent m ()) so caller can catch and retry.
       result <-
-        FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus" $
+        FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "tripStatus" $
           FETypes.emptyTrip {tripStatus = Just FETypes.ENROUTE_TO_DROPOFF}
       when (isNothing result) $
         throwError (InternalError $ "FleetEngine stopDeparted (to dropoff) returned no body for ride " <> rideId.getId)
@@ -436,7 +436,7 @@ notifyStopDepartedInternal merchantOpCityId rideId mbNextIdx =
       mbVersion <- Redis.safeGet (intermediateDestinationsVersionKey rideId)
       logInfo $ "FleetEngine: stopDeparted (enroute to intermediate) tripId=" <> rideId.getId <> " nextIndex=" <> show nextIdx
       result <-
-        FEClient.updateTrip baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
+        FEClient.updateTrip (Just merchantOpCityId.getId) baseUrl providerId token rideId.getId "tripStatus,intermediateDestinationIndex" $
           FETypes.emptyTrip
             { tripStatus = Just FETypes.ENROUTE_TO_INTERMEDIATE_DESTINATION,
               intermediateDestinationIndex = Just nextIdx,

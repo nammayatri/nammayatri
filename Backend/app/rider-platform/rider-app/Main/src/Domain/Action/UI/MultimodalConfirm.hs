@@ -1905,7 +1905,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
               }
 
       transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId
-      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
+      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) (Just reqJourneyLeg.merchantOperatingCityId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
 
       -- Metro/subway station change: no integrated BPP config in scope to resolve a station's
       -- platforms through, so the codes are matched as they arrive, exactly as before.
@@ -2326,7 +2326,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                 walkSpeed = Nothing
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq routeServiceabilityContext.merchantId routeServiceabilityContext.merchantOperatingCityId
-      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) ("MultiModal.getTransitRoutes req=" <> show transitRoutesReq)
+      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes Nothing (Just routeServiceabilityContext.merchantOperatingCityId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) ("MultiModal.getTransitRoutes req=" <> show transitRoutesReq)
       -- OTP names the platform a bus calls at, so a requested station is matched via its platforms.
       srcCodes <- OTPRest.getEquivalentStopCodes srcCode' routeServiceabilityContext.integratedBPPConfig
       destCodes <- OTPRest.getEquivalentStopCodes destCode' routeServiceabilityContext.integratedBPPConfig

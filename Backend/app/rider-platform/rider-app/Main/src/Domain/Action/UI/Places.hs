@@ -56,7 +56,7 @@ getMultiModalModes req toLatLong merchantId person merchantOperatingCityId = do
             walkSpeed = Nothing
           }
   transitServiceReq <- TMultiModal.getTransitServiceReq merchantId person.merchantOperatingCityId
-  MultiModal.getTransitRoutes (Just person.id.getId) transitServiceReq transitRoutesReq
+  MultiModal.getTransitRoutes (Just person.id.getId) (Just person.merchantOperatingCityId.getId) transitServiceReq transitRoutesReq
 
 mkRecentLocation :: Maybe MultiModal.MultiModalResponse -> DRecntLoc.RecentLocation -> Maybe API.MultiModalLocation
 mkRecentLocation multimodalRoutes recentLoc =
