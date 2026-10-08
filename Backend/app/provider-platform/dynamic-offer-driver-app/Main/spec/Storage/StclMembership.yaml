@@ -25,7 +25,7 @@ StclMembership:
     panNumber: EncryptedHashedField e Text
     mobileNumber: EncryptedHashedField e Text
     emailId: Text
-    fatherMotherName: Text
+    fatherMotherName: Maybe Text
     addressStreetAddress1: Text
     addressStreetAddress2: Maybe Text
     addressCity: Text
@@ -33,14 +33,14 @@ StclMembership:
     addressPostalCode: Text
     addressProofType: Maybe Text
     addressProofImageId: Maybe Text
-    bankName: Text
-    bankBranch: Text
-    accountNumber: EncryptedHashedField e Text
-    ifscCode: EncryptedHashedField e Text
-    vehicleType: Text
+    bankName: Maybe Text
+    bankBranch: Maybe Text
+    accountNumber: Maybe (EncryptedHashedField e Text)
+    ifscCode: Maybe (EncryptedHashedField e Text)
+    vehicleType: Maybe Text
     fuelTypes: "[Text]"
-    nomineeName: Text
-    declarationPlace: Text
+    nomineeName: Maybe Text
+    declarationPlace: Maybe Text
     declarationDate: Day
     declarationSignature: Text
     termsAccepted: Bool
@@ -56,6 +56,16 @@ StclMembership:
       enum: "SUBMITTED,PENDING,APPROVED,REJECTED"
   default:
     status: "'SUBMITTED'"
+    fatherMotherName: "NULL"
+    bankName: "NULL"
+    bankBranch: "NULL"
+    accountNumberEncrypted: "NULL"
+    accountNumberHash: "NULL"
+    ifscCodeEncrypted: "NULL"
+    ifscCodeHash: "NULL"
+    vehicleType: "NULL"
+    nomineeName: "NULL"
+    declarationPlace: "NULL"
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
@@ -71,25 +81,25 @@ StclMembership:
       mobileNumberEncrypted: Text
       mobileNumberHash: DbHash
     accountNumber:
-      accountNumberEncrypted: Text
-      accountNumberHash: DbHash
+      accountNumberEncrypted: Maybe Text
+      accountNumberHash: Maybe DbHash
     ifscCode:
-      ifscCodeEncrypted: Text
-      ifscCodeHash: DbHash
+      ifscCodeEncrypted: Maybe Text
+      ifscCodeHash: Maybe DbHash
   fromTType:
     panNumber: EncryptedHashed (Encrypted panNumberEncrypted) panNumberHash|E
     mobileNumber: EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash|E
-    accountNumber: EncryptedHashed (Encrypted accountNumberEncrypted) accountNumberHash|E
-    ifscCode: EncryptedHashed (Encrypted ifscCodeEncrypted) ifscCodeHash|E
+    accountNumber: EncryptedHashed <$> (Encrypted <$> accountNumberEncrypted) <*> accountNumberHash|E
+    ifscCode: EncryptedHashed <$> (Encrypted <$> ifscCodeEncrypted) <*> ifscCodeHash|E
   toTType:
     panNumberEncrypted: (unEncrypted . (.encrypted) $ panNumber)|E
     panNumberHash: ((.hash) panNumber)|E
     mobileNumberEncrypted: (unEncrypted . (.encrypted) $ mobileNumber)|E
     mobileNumberHash: ((.hash) mobileNumber)|E
-    accountNumberEncrypted: (unEncrypted . (.encrypted) $ accountNumber)|E
-    accountNumberHash: ((.hash) accountNumber)|E
-    ifscCodeEncrypted: (unEncrypted . (.encrypted) $ ifscCode)|E
-    ifscCodeHash: ((.hash) ifscCode)|E
+    accountNumberEncrypted: accountNumber <&> unEncrypted . (.encrypted)|E
+    accountNumberHash: accountNumber <&> (.hash)|E
+    ifscCodeEncrypted: ifscCode <&> unEncrypted . (.encrypted)|E
+    ifscCodeHash: ifscCode <&> (.hash)|E
   sqlType:
     panNumberEncrypted: character varying(255)
     panNumberHash: bytea

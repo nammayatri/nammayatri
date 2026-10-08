@@ -26,7 +26,7 @@ data BankDetails = BankDetails {accountNumber :: Kernel.Prelude.Text, bankName :
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data Declaration = Declaration {date :: Data.Time.Day, place :: Kernel.Prelude.Text, signature :: Kernel.Prelude.Text, termsAccepted :: Kernel.Prelude.Bool}
+data Declaration = Declaration {date :: Data.Time.Day, place :: Kernel.Prelude.Maybe Kernel.Prelude.Text, signature :: Kernel.Prelude.Text, termsAccepted :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -45,21 +45,21 @@ data MembershipApplicationReq = MembershipApplicationReq
     addressProofImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     amount :: Kernel.Types.Common.Money,
-    bankDetails :: BankDetails,
+    bankDetails :: Kernel.Prelude.Maybe BankDetails,
     dateOfBirth :: Data.Time.Day,
     declaration :: Declaration,
     driverId :: Kernel.Prelude.Text,
     emailId :: Kernel.Prelude.Text,
-    fatherMotherName :: Kernel.Prelude.Text,
+    fatherMotherName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     firstName :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
     memberCategory :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
-    nomineeInfo :: NomineeInfo,
+    nomineeInfo :: Kernel.Prelude.Maybe NomineeInfo,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.Prelude.Text,
     paymentServiceType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PaymentOrder.PaymentServiceType,
-    vehicleInfo :: VehicleInfo
+    vehicleInfo :: Kernel.Prelude.Maybe VehicleInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -74,19 +74,19 @@ data MembershipDetailsResp = MembershipDetailsResp
     addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     applicationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     applicationId :: Kernel.Prelude.Text,
-    bankDetails :: BankDetails,
+    bankDetails :: Kernel.Prelude.Maybe BankDetails,
     createdAt :: Kernel.Prelude.UTCTime,
     dateOfBirth :: Data.Time.Day,
     declaration :: Declaration,
     driverId :: Kernel.Prelude.Text,
     emailId :: Kernel.Prelude.Text,
-    fatherMotherName :: Kernel.Prelude.Text,
+    fatherMotherName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     firstName :: Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
     lastName :: Kernel.Prelude.Text,
     memberCategory :: Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Text,
-    nomineeInfo :: NomineeInfo,
+    nomineeInfo :: Kernel.Prelude.Maybe NomineeInfo,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.Prelude.Text,
     shareAllotments :: [ShareAllotment],
@@ -94,7 +94,7 @@ data MembershipDetailsResp = MembershipDetailsResp
     shareStartCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Domain.Types.StclMembership.ApplicationStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleInfo :: VehicleInfo
+    vehicleInfo :: Kernel.Prelude.Maybe VehicleInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -122,7 +122,13 @@ data TopUpSharesReq = TopUpSharesReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdateBankDetails = UpdateBankDetails {accountNumber :: Kernel.Prelude.Text, branch :: Kernel.Prelude.Text, confirmAccountNumber :: Kernel.Prelude.Text, ifscCode :: Kernel.Prelude.Text}
+data UpdateBankDetails = UpdateBankDetails
+  { accountNumber :: Kernel.Prelude.Text,
+    bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    branch :: Kernel.Prelude.Text,
+    confirmAccountNumber :: Kernel.Prelude.Text,
+    ifscCode :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -131,6 +137,9 @@ data UpdateMembershipApplicationReq = UpdateMembershipApplicationReq
     addressProofImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankDetails :: Kernel.Prelude.Maybe UpdateBankDetails,
+    declarationPlace :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fatherMotherName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fuelTypes :: Kernel.Prelude.Maybe [FuelType],
     nomineeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: Kernel.Prelude.Maybe VehicleType
   }

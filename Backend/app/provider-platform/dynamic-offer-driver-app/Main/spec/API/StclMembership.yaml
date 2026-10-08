@@ -22,6 +22,7 @@ types:
     accountNumber: Text
     ifscCode: Text
   UpdateBankDetails:
+    bankName: Maybe Text
     branch: Text
     accountNumber: Text
     confirmAccountNumber: Text
@@ -37,7 +38,7 @@ types:
     nomineeName: Text
     nomineeAadhar: Maybe Text
   Declaration:
-    place: Text
+    place: Maybe Text
     date: Day
     signature: Text
     termsAccepted: Bool
@@ -59,13 +60,13 @@ types:
     panNumber: Text
     mobileNumber: Text
     emailId: Text
-    fatherMotherName: Text
+    fatherMotherName: Maybe Text
     address: Address
     addressProofType: Maybe Text
     addressProofImageId: Maybe Text
-    bankDetails: BankDetails
-    vehicleInfo: VehicleInfo
-    nomineeInfo: NomineeInfo
+    bankDetails: Maybe BankDetails
+    vehicleInfo: Maybe VehicleInfo
+    nomineeInfo: Maybe NomineeInfo
     declaration: Declaration
     amount: Money
     paymentServiceType: Maybe PaymentServiceType
@@ -79,7 +80,10 @@ types:
     addressProofType: Maybe Text
     addressProofImageId: Maybe Text
     vehicleType: Maybe VehicleType
+    fuelTypes: "Maybe [FuelType]"
     nomineeName: Maybe Text
+    fatherMotherName: Maybe Text
+    declarationPlace: Maybe Text
   MembershipApplicationResp:
     applicationId: Text
     status: ApplicationStatus
@@ -97,13 +101,13 @@ types:
     panNumber: Text
     mobileNumber: Text
     emailId: Text
-    fatherMotherName: Text
+    fatherMotherName: Maybe Text
     address: Address
     addressProofType: Maybe Text
     addressProofImageId: Maybe Text
-    bankDetails: BankDetails
-    vehicleInfo: VehicleInfo
-    nomineeInfo: NomineeInfo
+    bankDetails: Maybe BankDetails
+    vehicleInfo: Maybe VehicleInfo
+    nomineeInfo: Maybe NomineeInfo
     declaration: Declaration
     status: ApplicationStatus
     # Deprecated — reflects only the latest allotment for the driver. Use shareAllotments instead.

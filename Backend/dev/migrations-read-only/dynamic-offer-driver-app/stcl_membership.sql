@@ -78,3 +78,27 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN address_proof_imag
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN is_additional_share_purchase boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN vehicle_type SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN vehicle_type DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN nominee_name SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN nominee_name DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN ifsc_code_hash SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN ifsc_code_hash DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN ifsc_code_encrypted SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN ifsc_code_encrypted DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN father_mother_name SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN father_mother_name DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN declaration_place SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN declaration_place DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN bank_name SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN bank_name DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN bank_branch SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN bank_branch DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_hash SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_hash DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_encrypted SET DEFAULT NULL;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ALTER COLUMN account_number_encrypted DROP NOT NULL;
