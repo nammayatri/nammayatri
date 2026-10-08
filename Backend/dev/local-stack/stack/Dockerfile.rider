@@ -1,0 +1,85 @@
+# Patched rider-app image.
+#
+# The published image (ghcr.io/nammayatri/nammayatri:03a7531) is Ubuntu 18.04 and
+# ships librdkafka 0.11 (Feb 2018), but rider-app-exe requires >= 1.0 — it calls
+# rd_kafka_destroy_flags(), which does not exist in 0.11. No newer copy exists
+# anywhere in the image, so the binary dies on startup with:
+#
+#   rider-app-exe: symbol lookup error: undefined symbol: rd_kafka_destroy_flags
+#
+# Taking librdkafka from a modern distro doesn't work either: it drags in
+# OpenSSL 3 and a newer glibc, which breaks the loader on 18.04. So build
+# librdkafka from source on the SAME 18.04 base — identical glibc, no ABI
+# conflict, same soname (librdkafka.so.1) — and drop it in.
+
+# ARGs consumed by a FROM must be declared before the first FROM.
+ARG RIDER_IMAGE=ghcr.io/nammayatri/nammayatri:03a7531
+ARG LIBRDKAFKA_VERSION=1.9.2
+
+FROM ubuntu:18.04 AS libbuild
+ARG LIBRDKAFKA_VERSION
+# bionic is EOL; fall back to old-releases if the main archive 404s.
+RUN set -eux; \
+    (apt-get update || (sed -i 's|archive.ubuntu.com|old-releases.ubuntu.com|g; s|security.ubuntu.com|old-releases.ubuntu.com|g' /etc/apt/sources.list && apt-get update)); \
+    apt-get install -y --no-install-recommends \
+        build-essential ca-certificates wget libssl-dev zlib1g-dev libsasl2-dev; \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+# Note: no `#` comments inside this RUN — the line continuations collapse it
+# into a single shell line, so a comment would swallow everything after it.
+# --tries/--timeout guard against flaky network during the build.
+RUN set -eux; \
+    wget -q --tries=5 --timeout=30 --retry-connrefused \
+        "https://github.com/confluentinc/librdkafka/archive/refs/tags/v${LIBRDKAFKA_VERSION}.tar.gz"; \
+    tar xzf "v${LIBRDKAFKA_VERSION}.tar.gz"; \
+    cd "librdkafka-${LIBRDKAFKA_VERSION}"; \
+    ./configure --prefix=/usr; \
+    make -j"$(nproc)"; \
+    make install
+
+# Fail the build early if the symbol we need still isn't there.
+RUN nm -D /usr/lib/librdkafka.so.1 | grep -q rd_kafka_destroy_flags
+
+FROM ${RIDER_IMAGE}
+COPY --from=libbuild /usr/lib/librdkafka.so.1 /usr/lib/x86_64-linux-gnu/librdkafka.so.1
+RUN ldconfig 2>/dev/null || true
+
+# Our own build of the backend, from
+# .github/workflows/algeria-backend-build.yml. Staged into ./bin by setup.sh,
+# which refuses to build without them.
+#
+# Two of these replace what the published image ships:
+#
+#   rider-app-exe                  accepts +213 instead of only +91
+#   dynamic-offer-driver-app-exe   same, plus the driver-side +91 lookups
+#
+# and two are not in the published image at all — it ships beckn-cli-exe only:
+#
+#   beckn-gateway-exe              the BAP <-> BPP connector
+#   mock-registry-exe              the registry both sides resolve through
+#
+# Same GHC 8.8.4 / glibc 2.27 as this base image, so they load here unchanged;
+# they need the librdkafka above for exactly the same reason the originals do.
+COPY bin/rider-app-exe \
+     bin/dynamic-offer-driver-app-exe \
+     bin/beckn-gateway-exe \
+     bin/mock-registry-exe \
+     /opt/app/
+
+# COPY carries the mode from the build context, and this context is usually a
+# Windows path (Docker Desktop cannot bind-mount \\wsl.localhost, so the stack
+# is run from C:\). Windows has no execute bit to carry, so set it here rather
+# than discover it as "permission denied" in a container that will not start.
+# Also fail the build now if a binary is not the ELF we think it is.
+RUN set -eux; \
+    chmod +x /opt/app/rider-app-exe \
+             /opt/app/dynamic-offer-driver-app-exe \
+             /opt/app/beckn-gateway-exe \
+             /opt/app/mock-registry-exe; \
+    for e in rider-app-exe dynamic-offer-driver-app-exe \
+             beckn-gateway-exe mock-registry-exe; do \
+      head -c4 "/opt/app/$e" | grep -q 'ELF' || { echo "$e is not an ELF binary"; exit 1; }; \
+    done
+
+WORKDIR /opt/app

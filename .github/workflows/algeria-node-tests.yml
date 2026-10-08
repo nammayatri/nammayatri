@@ -1,0 +1,91 @@
+# The Node services in front of the backend, tested on every push.
+#
+# ── What this covers, and why it is worth a workflow ────────────────────────
+# `auth-guard` and `maps-shim` are where this deployment's own rules live: who
+# may sign in, which country is open, who pays before working, and what a phone
+# is actually told when a ride changes. A release restarts them in seconds,
+# with no build -- which is exactly why they need a test that runs without one.
+#
+# Every test in tests/ runs, through tests/run-all.sh, which globs: until
+# phase 5 (2026-10-06) this file named four tests and seven others never ran
+# here. The money path -- wallet.js, restricted.js, deletion.js and the guard's
+# WALLET_EMPTY gate -- runs its SQL against a real Postgres (PGlite, in-process;
+# no service container). Fakes on loopback stand in for Firebase, APNs, the
+# gateways, Redis and the Haskell apps. No key, no secret, nothing on the VPS.
+# tests/restore.test.sh uses the runner's docker: an invented stack (PostGIS,
+# passetto) backed up by the real backup.sh and put back by restore.sh.
+#
+# Twice: on Node 20, what the server runs today, and on Node 22, what it moves
+# to in phase 5 -- so the move is proven before it is made.
+#
+# ── What it does NOT do ─────────────────────────────────────────────────────
+# It does not build the Haskell backend (that is `algeria: build backend`, 44
+# minutes and its own trigger), and it does not deploy anything. A green tick
+# here means the guard and the shim still behave as written, not that the
+# server is running them -- `ops/deploy.sh verify` answers that.
+name: "algeria: node tests"
+
+on:
+  # Every push to our branches, as the ride regression does since phase 4: a
+  # path list is how tests stop running without anyone noticing.
+  push:
+    branches: ['algeria/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: algeria-node-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: every test, node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The release rehearsal rebuilds the server's old layout from commit
+          # c6562a1926, so it needs history; blob:none keeps that cheap.
+          fetch-depth: 0
+          filter: blob:none
+          # sql-seed: upstream's passetto seed, for tests/restore.test.sh.
+          # The report is there for tests/docs-links.test.py: the README links it.
+          sparse-checkout: |
+            Backend/dev/local-stack
+            Backend/dev/sql-seed
+            docs/Movin-backend-restructuring-report.pdf
+            .github
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: Backend/dev/local-stack/tests/package-lock.json
+
+      - name: Syntax
+        working-directory: Backend/dev/local-stack
+        run: |
+          for f in stack/auth-guard/*.js stack/maps-shim/*.js; do node --check "$f"; done
+          echo "every file parses"
+
+      # The shims' own lockfiles must install as the image does.
+      - name: maps-shim installs from its lockfile
+        working-directory: Backend/dev/local-stack/stack/maps-shim
+        run: |
+          npm ci --omit=dev --no-fund --no-audit --loglevel=error
+          node -e "require('pg'); console.log('pg loads')"
+          rm -rf node_modules
+
+      - name: Test dependencies (PGlite)
+        working-directory: Backend/dev/local-stack/tests
+        run: npm ci --no-fund --no-audit --loglevel=error
+
+      - name: Every test
+        working-directory: Backend/dev/local-stack
+        run: bash tests/run-all.sh

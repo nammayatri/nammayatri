@@ -138,3 +138,302 @@ Types: feat, fix, chore, ci, docs, perf, refactor, test
 | `15-conventions.md` | Haskell conventions |
 | `16-status-definitions.md` | Status enums, state transitions |
 | `17-testing-framework.md` | Config sync, integration tests, mock servers, test tools |
+
+---
+
+# This fork: Movin (Mauritania and Algeria on one stack, since 2026-09-13)
+
+Everything above is upstream Namma Yatri and still applies to the Haskell
+services. This section is what is different here, and it is mostly about what
+**not** to look for.
+
+## What we actually run
+
+The whole deployment is `Backend/dev/local-stack` — Docker Compose, one VPS,
+~20 containers. Read that directory's README first; it is the real
+documentation for this fork, and since phase 7 (2026-10-08) a map: one page per
+subject in `local-stack/docs/`, the decisions in `docs/adr/`, the release and
+rollback runbooks in `docs/runbooks/`, and what is ours vs upstream's in
+`docs/ours-and-upstream.md`. `stack/setup.sh` brings it up. **Everything the
+server runs is under `local-stack/stack/`** (it mirrors `/opt/ny/local-stack`;
+the SQL is in `stack/db/`); probes are in `investigations/`, laptop tools in
+`ops/` (layout sorted 2026-10-06).
+
+Three services were replaced so the stack needs no Google account and no bill:
+
+| Upstream | Here |
+|---|---|
+| Google Directions | **OSRM**, our own, on the country OSM extract |
+| Google Maps tiles | **tileserver-gl**, same extract |
+| Google Places / geocoding | **`maps-shim`**, answering from a Postgres place index |
+
+The trick that makes those possible is worth knowing before adding a fourth:
+**service endpoints are database config, not compiled in.** `Maps_Google` in
+`atlas_app.merchant_service_config` carries `"googleMapsUrl"`, and pointing it
+at `maps-shim` is the entire integration.
+
+`Sms_MyValueFirst` is the same shape and was the obvious place to put a real SMS
+gateway — but **that is not where it went**, and the reason generalises. The
+backend's `useFakeSms = Some 7891` short-circuits the whole SMS path, so
+repointing the config changes nothing until that setting goes, and it is in
+dhall, in the image. Instead `auth-guard` in front makes the code, sends it
+through Moorsyl, checks it, and substitutes 7891 before forwarding. The backend
+still believes in its fixed code and was never touched. **When a config knob sits
+behind a compiled-in switch, the config knob is not the integration point.**
+
+## The rider app is NOT in this repository
+
+`Frontend/` here is upstream's PureScript app and **we do not build or ship
+it.** The Movin DZ rider app is React Native (Expo), in its own private repo,
+cloned alongside this one:
+
+    ~/ny-algeria-passenger      github.com/nammayatri-algeria/namma-yatri-frontend
+
+Anything about screens, the APK, the signing key or the map UI belongs there.
+
+## Binaries, and why patches go around the backend
+
+The services run as **prebuilt images** from a CI job
+(`.github/workflows/algeria-backend-build.yml`, free GitHub Actions).
+
+**Rebuilding is affordable, and the reason to avoid it is not the clock.**
+Measured: **44 minutes cold**, 33 on the company org, 8 warm. The
+`timeout-minutes: 350` in that workflow is the *cap*, and reading it as a
+duration is how this file previously said "~6-hour budget" — which made every
+backend change sound like a day's work and led to at least one wrong answer to
+the client.
+
+The real cost is that a rebuild produces **new binaries, and every measurement
+in this project was taken against the current ones**. So: batch backend changes
+into one run, and re-prove the ride flow afterwards. Prefer config, SQL or a
+shim when one will do — most things have turned out not to need Haskell at all
+(routing, maps, geocoding, push, the fare policy, the driver's answer window).
+
+So: prefer config, SQL, or a shim in front. The OTP attempt limit lives in
+nginx for exactly this reason, not in the Haskell that already had the counter.
+
+**The running binary is older than this tree, and on some paths they disagree
+outright.** It is built from upstream ref `03a7531`, an *ancestor* of this
+branch, plus our patches. **The rider and driver apps run from the image
+`ghcr.io/nammayatri-algeria/ny-backend:latest`** (CI run #10, 2026-09-14, tag
+`03a7531-10`, digest `108eca6c…`), **not from `bin/`**: `stack/bin/MANIFEST.txt`
+describes the 5 August binaries in that folder, and only the gateway and the
+registry there are the ones running (measured by hash, 2026-10-05). Upstream has since replaced
+whole subsystems. Measured case: the tree says driver positions come from the
+location-tracking service, a separate Rust binary we do not run; the deployed
+binary still has `POST /ui/driver/location` writing Postgres directly, and that
+is what actually serves us.
+
+So when the question is "what does the server do", **ask the server**, not the
+source. It publishes its own route list at `/openapi`, and `strings` on the
+binaries in `bin/` settles anything else. Reading the tree instead has already
+produced one confident, wrong conclusion — that a driver app required deploying
+another service first. See `local-stack/docs/driver-api.md`.
+
+## Country-specific data
+
+**Two countries at once since 2026-09-13.** The pilot moved Algeria →
+Mauritania on 2026-09-03 by *replacing* one with the other; the client then
+chose to run both. Mauritania is live; Algeria is built, priced and routed,
+and since 2026-09-27 **open to sign-in by WhatsApp**, and since 2026-09-29
+also by an SMS the person **sends** to the office SIM (+213 783 07 91 61,
+`SMS_INBOX_NUMBERS`; `auth-guard/sms-inbox.js`). We never text Algeria — no SMS
+provider — so the guard refuses a `+213` SMS start (`OPEN_COUNTRIES` /
+`SMS_COUNTRIES` in `docker-compose.yml`). The bot alerts when the office phone
+goes silent for 15 min. The whole design — one rider merchant, one driver merchant per
+country, and the search-lock race that design exposed — is in
+`local-stack/docs/countries.md`, section *Two countries*. Read it before touching merchants, tariffs,
+the registry or the map.
+
+- **One driver merchant per country:** `favorit0-…` is Mauritania,
+  `algeria0-0000-0000-0000-00000algeria` is Algeria. Both tariff files and every
+  per-merchant script are keyed by `merchant_id` — an unkeyed statement reprices
+  the other country.
+- The map is one combined build, `MAP_COUNTRY=algeria-mauritania`, now written
+  in `.env` (it used to be typed inline, and a plain `docker compose up` would
+  have reverted it). `COUNTRY=` on `osrm-prepare.sh` / `tiles-prepare.sh` still
+  builds one country; `maps-two-countries.sh` builds both. **Never
+  `geocoder-prepare.sh load`**: it drops the place index and its reviewed Arabic
+  names; add a country with `geocoder/append-country.sql`.
+- **There are TWO service areas, not one.** `atlas_app.geometry` +
+  `atlas_app.merchant.origin_restriction` for the rider, and
+  `atlas_driver_offer_bpp.geometry` + its own two merchants for the provider.
+  Switching only the rider's leaves searches reaching the BPP and being dropped
+  there, with no error and no estimate. `mauritania-geofences.sql`.
+- `serviceable: true` means "inside the country", not "a car will come" — the
+  Majabat al-Koubra is serviceable and several hundred km from any driver.
+- Phone numbers, and they are each other's inverse: **Mauritania** `+222`,
+  eight digits, no trunk prefix, mobiles start 2/3/4 and never `x5`;
+  **Algeria** `+213`, nine digits typed and sent as ten WITH the trunk zero,
+  mobiles start 5/6/7. The backend accepts either (`Or` patches); the app's
+  `src/lib/country.ts` pairs code and length; the guard decides which country
+  is open.
+- Tariffs: `mauritania-tariff.sql` (MRU, the Algerian table × 0.30, a
+  **placeholder**) and `algeria-tariff.sql` (DA, the Mauritanian ÷ 0.30).
+  Each is keyed to its own merchant.
+- **No test accounts on the live server since 2026-10-01** (owner's
+  decision, before launch). `SMS_BYPASS` and the drivers' personal codes are
+  empty (old files `/opt/ny/secrets/*.before-*`); every account on an invented
+  number — 37 drivers incl. the simulated Nouakchott fleet and the pilot's
+  parked Algiers drivers, and 69 passengers — was erased with the console's
+  `anonymise.sql`, and `movin-fleet` / `movin-drivers` are uninstalled. The
+  scripts that made them (`seed-mauritanian-fleet.sh`, `fleet-service.sh`,
+  `drivers-keepalive.sh`, `algerian-test-accounts.sh`) are marked RETIRED:
+  dev stacks only. `local-stack/docs/countries.md` → *The test fleet*. **Exception since
+  2026-10-03, while the launch is delayed:** a simulated fleet is back —
+  twelve cars, six in Nouakchott and six in Algiers (`simulate-driver.py`,
+  service `movin-fleet`), plus the ride test's two passengers (`+222 22778899`,
+  `+213 0555000199`, `probe-two-country-rides.py`). They answer real
+  requests: uninstall and erase all fourteen before the first real passenger.
+- **No top-up, no work (client's rule, 2026-09-14).** The driver wallet holds
+  only his own Chargily / Moosyl top-ups — never ride money; Movin takes 0 % on
+  rides. Without credit for a day and no day paid for, he may not work, and
+  that is enforced at three layers: dispatch (`movinOnlyPaying`, key
+  `movin:unpaid`), the auth guard (403 `WALLET_EMPTY`), and the app. Never
+  soften any of them into a preference. `docs/wallet.md` → *No top-up, no work*.
+- **With more than one merchant in one process, audit every per-message
+  lock.** The search handler's `whenWithLockRedis` on the message id silently
+  dropped whichever merchant arrived second; patched to merchant + message.
+
+## Backups
+
+`./backup.sh` — nightly, encrypted, off to cloud storage. It deliberately skips
+the 155 MB place index (rebuildable) and deliberately includes the **passetto**
+database, without which restored phone numbers are unreadable ciphertext, and
+(since 2026-10-08) the index's Arabic names by `place_id`. See the header of
+that script.
+
+**Putting one back is `./restore.sh`** (2026-10-08): `rehearse offsite:latest`
+proves a backup in a throwaway copy (rehearsed on the server: 71 s, 106 tables
+exact); `live F` restores the live stack, one transaction per part, after a
+safety backup. The Drive remote uses our own OAuth client (`drive.file`), so
+rclone sees only what it uploaded since then; older backups are in Drive's
+`movin-backups-old`, browser download only. `docs/backups.md`,
+`docs/runbooks/rollback.md`.
+
+## Traps that have each cost an afternoon
+
+- **Driver locations go stale silently.** The dispatch pool ignores old
+  positions, so search returns zero estimates with no error anywhere. On a dev
+  stack, run `stack/setup.sh drivers` before any demo. On the live server there is
+  no fake fleet any more (2026-10-01): zero estimates there means no real
+  driver is online.
+- **`docker exec -i` inside `ssh host "bash -s" <<EOF` eats the rest of the
+  script** from stdin. Drop the `-i`.
+- **`ufw limit` rejects the sixth SSH connection in 30 seconds** — exit 255 and
+  no output. Batch remote work into one connection.
+- **Replacing a bind-mounted file breaks the mount.** `tar -x` unlinks the
+  inode; the container keeps serving the old file while `nginx -t` passes.
+  Use `scp`, which truncates in place.
+- **Editing a script through the Windows UNC path strips its exec bit.**
+- **A heredoc terminator does not survive the Windows→WSL hop.** `<<'PYEOF'` …
+  `PYEOF` fails with *"unexpected EOF while looking for matching `'`"* — the
+  terminator line arrives with a carriage return and never matches, so the shell
+  swallows the whole script. Write the file, then run the file. Same for
+  `python3 - <<EOF`: it may run and still no-op, because `str.replace` that
+  matches nothing is silent. **Assert `count == 1` on every scripted edit.**
+- **Backslash escapes and pipes are rewritten on the same hop**, and both
+  failures lie about their cause. `sed -i "s/\r$//"` arrives as `s/r$//` and
+  **deletes a trailing letter `r` from every line** — it turned `FROM …ride r`
+  into `FROM …ride` and the error read *missing FROM-clause entry for table
+  "r"*, which looks like a bad query. That sed was never needed anyway: files
+  written from the editor are already LF, and `file x.sh` says so. `grep -E
+  "a|b"` splits at the pipe and tries to run `b` as a command. Same fix as
+  above: put it in a file and run the file. `<` is worse — it is reserved in
+  PowerShell and never reaches bash at all, so `ssh ny "bash -s" < script.sh`
+  silently does nothing. Wrap that in a script too.
+- **A lone connection timeout from the laptop is not a result** — but two in a
+  row, while `ssh` to the same box still works, means the guard in front is
+  rate-limiting you. Run the probe *on* the VPS instead of against it.
+- **BECKN could not parse a negative coordinate**, and had not been able to
+  since 2023. `Beckn/Types/Core/Taxi/Common/Gps.hs` read the gps string with
+  Parsec's `P.float`, which is unsigned, so every longitude west of Greenwich
+  failed. Algeria is at +3 and this was invisible for the whole pilot;
+  Nouakchott is at −15.9 and no search reached the driver pool. **The provider
+  logged nothing** — it answered the gateway 400, which from its side is
+  correct behaviour. The reason existed only in the response body the *gateway*
+  received. Patched now, but the shape of the lesson generalises: when a
+  component reports no error, read what its caller got back.
+- **Whatever you are grepping the logs for, parse them as JSON instead.** The
+  container log is one JSON object per line and the useful message is inside a
+  `"log"` field with escaped quotes. Three separate greps truncated the answer
+  above at the first `\"` before it was found.
+- **`npx prettier` is not part of the app project.** `package.json` has only
+  `expo lint` and there is no prettier config, so prettier runs with its own
+  defaults — double quotes, 80 columns — against a codebase written with single
+  quotes at 100. Running `--write` on two files rewrote 839 lines for a
+  two-line change. A tool absent from `package.json` is not this project's
+  standard.
+- **`merchant` and `transporter_config` are cached in Redis, so an `UPDATE` and
+  a restart change nothing.** `app-backend:CachedQueries:Merchant:Id-…` and
+  `driver-offer:CachedQueries:TransporterConfig:MerchantId-…` survive a
+  container restart and keep serving the old row until they expire. Found while
+  pointing `fcm_url` at the push relay (2026-09-16): two stale entries still
+  named Google. Drop the keys after writing either table.
+- **The backend clears a driver's cache BEFORE writing the row, so a read in
+  between re-caches the old state for a day.** `CQDriverInformation.update*`
+  (enable, block, unblock, activity…): delete the Redis key, then commit. The
+  driver's phone polls its profile every few seconds; on 2026-10-02 one poll
+  landed in that window during the boss's acceptance and
+  `driver-offer:CachedQueries:DriverInformation:DriverId-…` kept
+  `blocked: true` while the row said false — « compte bloqué », no way online.
+  The console now says every state change twice (`settle()` in the website's
+  `apps/api/src/shared/driver-app.ts`). Anything else that changes a driver's
+  state must do the same, or drop that key after its write.
+- **The auth guard's code folder is mounted read-only (`./auth-guard:/app:ro`).**
+  Anything it must write goes on the `auth-guard-state` volume at `/state` —
+  today only `trusted-phones.json` (2026-10-03: a phone that already proved its
+  number signs back in with no code). A write to `/app` fails with EROFS.
+- **A passenger's own data is found by her phone number's hash, not her id.**
+  Her photograph (`maps-shim/avatars.js`, `h_<hash>`) and her rating (the
+  provider's `rider_details`, one row per number) both are. Since people can
+  change their number themselves (2026-10-03), anything keyed that way must
+  be moved in `maps-shim/number-change.js` — the first real change blanked
+  the owner's photograph, the second reset his rating to « Nouveau ». A
+  driver's data is keyed by his id and never needs it.
+- **iPhone push does not go through Firebase.** `fcm_url` points at
+  `maps-shim/push-relay.js`, which forwards FCM tokens to Google and sends iOS
+  tokens to APNs with the app's own words. The notification text for iOS is a
+  copy of the app's `notifications.ts` — change both. `local-stack/docs/push.md`
+  → *iPhones — the push relay*.
+- **The auth guard does more than sign-in now, and two of its jobs are
+  invisible.** Since 2026-09-27 it reports every accepted driver → passenger
+  rating to admin-api (`noteDriverRating`) — the backend keeps no row, so
+  dropping that call silently empties the console's Notes — and it answers
+  Meta's WhatsApp webhook (`auth-guard/whatsapp.js`). `local-stack/docs/`
+  `riders.md` → *Ratings*, and `sign-in.md` → *WhatsApp*.
+- **Release the stack with `ops/deploy.sh`, never by copying files.** Since
+  2026-10-06 git and the server are identical (phase 1: 94/94 files), the
+  website's `admin-api` is its own overlay (`ops/deploy/compose.admin.yml` in
+  the website repo, named in the stack's `.env` `COMPOSE_FILE`), and a release
+  writes only what git ships, in place, restarts only what changed, and records
+  itself in `/opt/ny/local-stack/.shipped`. Before that, the deployed
+  `docker-compose.yml` was a superset of git's, and copying the repo's over it
+  would have taken the console and the drivers' papers down. `ops/deploy.sh
+  status` says whether anyone has edited the server by hand since; a hand edit
+  makes the next release stop. `ops/deploy.sh verify` (also run after every
+  release) hashes the server against the commit it claims, expected side from
+  git. Since phase 4 the nightly backup's units are in `stack/systemd/` and the
+  unit runs the shipped `/opt/ny/local-stack/backup.sh`, not `/root`'s copy.
+  A release keeps each image it replaces as `<container>:previous`.
+  `local-stack/docs/releasing.md`, and step by step `docs/runbooks/release.md`
+  and `rollback.md` (rollback does NOT undo SQL).
+- **The shims are split by subject and guarded by golden files (phase 5).**
+  `tests/maps-shim-routes.test.js` and `tests/auth-guard-routes.test.js` replay
+  recorded requests and compare every answer, query and outgoing call. A change
+  that is MEANT to alter behaviour must re-record (`--record`) in the same
+  commit, and say so; a refactor must pass them untouched. The money path's
+  SQL is tested for real in PGlite (`tests/wallet.test.js` etc.); run
+  everything with `(cd tests && npm ci) && bash tests/run-all.sh`.
+- **The CI ride regression was red for its first 19 runs for reasons unrelated
+  to any commit** (no routing: the image's mock-google has no
+  `/directions/json`; a pipefail-killed poll; two columns of ours the live DB
+  got by hand). Green since 2026-10-06. When it goes red, read the rider's and
+  driver's logs in the uploaded artifact, never just the job's FAILED line.
+  Since 2026-10-08 it runs the live two-merchant layout (`setup.sh
+  two-countries` / `price-both`: a ride priced in each country, each by its own
+  merchant), weekly as well, because `algeria/osrm-routing` is now the DEFAULT
+  branch of both repositories. **It tests `ghcr.io/nammayatri-algeria/
+  ny-backend` — the image the server runs.** Until then it pulled
+  `ghcr.io/<repo owner>/...`, which on MohaGNPro is a six-week-old build; for
+  the same reason, run the backend BUILD workflow in the company repository.

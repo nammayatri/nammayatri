@@ -1,0 +1,119 @@
+{
+  "name": "atlas-ui-driver",
+  "version": "3.0.118",
+  "description": "Atlas Driver",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "compile:purs": "spago build --purs-args '--censor-warnings'",
+    "bundle:android": "webpack --env prod --mode=production --progress --config webpack.android.js",
+    "bundle:ios": "webpack --env prod --mode=production --progress --config webpack.ios.js",
+    "prod:android": "npm-run-all compile:purs \"bundle:android\"",
+    "prod:ios": "npm-run-all compile:purs bundle:ios",
+    "compileAndCreateJsa": "sh compileAndCreateJsa.sh",
+    "dev": "spago build --watch",
+    "webpack-dev": "webpack-dev-server --env sandbox --mode development --config webpack.config.js --host",
+    "start": "npm-run-all -p dev webpack-dev",
+    "clean": "sh cleanSpago.sh",
+    "fast:purs": "spago build -w --purs-args '--purs=fastpurs'",
+    "fast:start": "npm-run-all -p fast:purs webpack-dev"
+  },
+  "author": "juspay",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/generator": "^7.27.0",
+    "@babel/parser": "^7.27.0",
+    "@babel/preset-env": "^7.7.7",
+    "@babel/traverse": "^7.27.0",
+    "@babel/types": "^7.27.0",
+    "@commitlint/cli": "^17.1.2",
+    "@commitlint/config-conventional": "^17.1.0",
+    "@digitalroute/cz-conventional-changelog-for-jira": "^7.4.1",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^9.0.2",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/npm": "^9.0.1",
+    "@semantic-release/release-notes-generator": "^10.0.3",
+    "babel-loader": "^8.0.6",
+    "commitlint-config-jira": "^1.6.4",
+    "commitlint-plugin-jira-rules": "^1.6.4",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.1",
+    "hyper-purescript": "^0.0.25",
+    "imports-loader": "1.2.0",
+    "node-notifier": "^10.0.1",
+    "npm-run-all": "^4.1.5",
+    "purescript-psa": "0.8.2",
+    "semantic-release": "^19.0.5",
+    "webpack": "^4.47.0",
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.10.1",
+    "webpack-merge": "^5.8.0"
+  },
+  "dependencies": {
+    "axios": ">=1.6.0",
+    "core-js": "^2.6.11",
+    "presto-ui": "git+https://github.com/Vignesh-772/presto-ui.git#nammayatri",
+    "purty": "^7.0.0",
+    "ramda": "^0.26.1",
+    "regenerator-runtime": "^0.13.5",
+    "spago": "^0.21.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/@digitalroute/cz-conventional-changelog-for-jira",
+      "jiraPrefix": "BKN",
+      "jiraLocation": "post-type",
+      "jiraAppend": ":"
+    }
+  },
+  "commitlint": {
+    "plugins": [
+      "commitlint-plugin-jira-rules"
+    ],
+    "extends": [
+      "jira"
+    ],
+    "rules": {
+      "jira-task-id-max-length": [
+        0
+      ],
+      "jira-commit-message-separator": [
+        0
+      ],
+      "jira-commit-status-case": [
+        0
+      ],
+      "jira-task-id-project-key": [
+        0
+      ],
+      "jira-task-id-separator": [
+        0
+      ],
+      "jira-task-id-case": [
+        0
+      ],
+      "jira-task-id-min-length": [
+        0
+      ]
+    }
+  },
+  "release": {
+    "branches": [
+      "main",
+      {
+        "name": "hotfix-[0-9]+",
+        "prerelease": true
+      }
+    ],
+    "repositoryUrl": "https://github.com/nammayatri/nammayatri.git",
+    "plugins": [
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/npm",
+      "@semantic-release/changelog",
+      "@semantic-release/git"
+    ]
+  }
+}

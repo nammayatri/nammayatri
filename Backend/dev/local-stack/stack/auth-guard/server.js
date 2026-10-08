@@ -1,0 +1,1119 @@
+'use strict';
+//
+// The lock on the OTP check, for both sides of the stack.
+//
+// ── The hole ────────────────────────────────────────────────────────────────
+// `POST /v2/auth` answers with `attempts: 3`, and the backend does not enforce
+// it. Measured on this stack: ~62 ms per guess, 62 consecutive wrong codes, the
+// counter never moved, and the same auth session still accepted the right code
+// afterwards. Four digits is 10,000 possibilities -- about ten minutes
+// single-threaded, far less in parallel.
+//
+// That is harmless while every port but SSH is shut. It stops being harmless
+// the moment the API is published on 443, which is why this went in before the
+// edge did.
+//
+// ── The second hole, which is worse ─────────────────────────────────────────
+// The code is not merely guessable, it is *fixed*: `useFakeSms = Some 7891` in
+// dhall-configs/dev/, on the rider app and the driver app alike. Measured
+// against the driver app on 2026-08-18: 0000 refused, 1234 refused, 7891
+// accepted. That setting is still there and is not going away: turning it off
+// means no code is delivered at all, because the gateway it would then look for
+// is a dead port, and changing which gateway the *binary* calls is a rebuild.
+//
+// A fixed code is survivable on the rider side of a pilot. On the driver side
+// it is not: publishing /ui/ with a code the whole internet knows means anyone
+// who knows a driver's phone number owns that driver's account, his shift, and
+// his earnings. The same probe also created a driver record for a number nobody
+// approved, just by asking -- so self-enrolment is open too.
+//
+// So this guard now does one more thing for the driver side: it holds a
+// PERSONAL CODE per approved number, checks the driver's code itself, and only
+// then rewrites the body to the fixed code the backend expects. 7891 stops
+// working from the internet, because the guard never forwards it. See
+// `driver-codes.json` and `enrol-driver.sh`.
+//
+// That was not a workaround waiting to be replaced -- it was the same shape the
+// real thing has. Since 2026-09-06 the guard also generates a random code per
+// sign-in and sends it through Moorsyl, and substitutes exactly as before; only
+// the source of the code changed, which is what this file predicted.
+//
+// ── So where does the code come from now ────────────────────────────────────
+// This process, and nowhere else. On a sign-in it makes a random code, texts
+// it, and remembers it against the authId. On verify it checks what was typed
+// and forwards 7891 upstream regardless. The backend therefore still believes
+// in its fixed code and has never been told otherwise -- 7891 is no longer a
+// password anybody holds, it is an internal detail between these two processes.
+//
+// Two consequences worth knowing before changing anything here:
+//
+//   • The code lives in memory. A restart of this container invalidates every
+//     sign-in in flight, and those riders start over. That is seconds, and it
+//     is the same trade the session counters already make.
+//   • The driver's personal code still works alongside the texted one. That is
+//     deliberate: the fleet must not be grounded by an outage at a third party
+//     or by an unpaid balance. `enrol-driver.sh` still governs who may sign in
+//     at all -- an unlisted number is refused before it costs an SMS.
+//
+// ── Why here and not in the backend ─────────────────────────────────────────
+// That is where it belongs: the `attempts` counter already exists in the
+// response, and enforcing it in Haskell would be a few lines. But this stack
+// runs *prebuilt* binaries from a CI job with a 350-minute budget and a cache
+// that accumulates across runs. Rebuilding to change a counter means a
+// multi-hour cycle and a real chance of ending up with binaries that differ
+// from the ones every test so far has run against.
+//
+// So the rule is enforced in front, in code we can deploy in seconds and revert
+// just as fast. When the backend is next rebuilt for another reason, the check
+// should move into it and this guard should become belt-and-braces.
+//
+// ── Everything goes through here ────────────────────────────────────────────
+// The edge proxies *all* of /v2/ and *all* of /ui/ to this process, not just
+// the auth paths. A guard you can route around is not a guard, and one mistyped
+// nginx `location` is all it would take.
+//
+// It is not a general proxy: a path matching no route below is refused here as
+// well as at the edge. The driver binary also serves 41 `/dashboard/` routes --
+// the office API, which enables drivers and attaches vehicles -- and two
+// independent refusals is the right number for that.
+//
+// State is in memory on purpose. An auth session lives ten minutes; there is
+// one replica; and an external store would be one more thing to be down. A
+// restart clears the counters, which is why nginx also rate-limits by IP -- that
+// layer survives a restart of this one. If this ever runs as more than one
+// process, the counters must move to Redis, and that is the moment to notice.
+//
+// No dependencies: Node's built-in modules plus global fetch. Each subject
+// lives in its own module beside this one (phase 5 split, 2026-10-06):
+//   limits.js, gateway.js, personal-codes.js, number-change.js,
+//   driver-rules.js, whatsapp.js, sms-inbox.js, trusted-phones.js
+
+const http = require('http');
+const whatsapp = require('./whatsapp');
+const smsInbox = require('./sms-inbox');
+const trusted = require('./trusted-phones');
+const { noteDriverRating, outOfBounds, isWork, walletAllows } = require('./driver-rules');
+const {
+  MAX_STARTS, START_WINDOW_MS, MAX_STARTS_PER_IP, MAX_SMS_PER_HOUR, MAX_SMS_PER_DAY,
+  smsSpend, smsBudgetLeft, starts, ipStarts, tooManyStarts, tooManyStartsFromIp, callerIp,
+} = require('./limits');
+const {
+  SMS_MODE, SMS_URL, VERIFY_SEND_URL, SMS_KEY, SMS_SENDER,
+  mkCode, sameCode, verifyCheck, issueCode, smsStats,
+} = require('./gateway');
+const { loadCodes, codeMatches } = require('./personal-codes');
+const numberChangeRoute = require('./number-change');
+const { handleNumberChange } = numberChangeRoute;
+
+const PORT = Number(process.env.PORT || 8031);
+
+const strip = (u) => String(u).replace(/\/$/, '');
+const RIDER_URL = strip(process.env.UPSTREAM_URL || 'http://127.0.0.1:8013');
+const DRIVER_URL = strip(process.env.DRIVER_UPSTREAM_URL || 'http://127.0.0.1:8016');
+
+/** Wrong codes allowed per auth session. The number the backend already claims. */
+const MAX_ATTEMPTS = Number(process.env.MAX_ATTEMPTS || 3);
+
+/**
+ * How long an auth session may be used at all, in ms. The backend never expires
+ * one -- an authId issued yesterday still verifies today, which turns every
+ * abandoned sign-in into a permanent guessing target.
+ */
+const AUTH_TTL_MS = Number(process.env.AUTH_TTL_MS || 10 * 60 * 1000);
+
+/** How long a locked-out session stays locked. */
+const LOCK_MS = Number(process.env.LOCK_MS || 15 * 60 * 1000);
+
+
+/**
+ * Resends allowed per session.
+ *
+ * A resend legitimately clears the wrong-code count -- a new code was sent, so
+ * the old count describes nothing. Uncapped, that is also a way to walk around
+ * the lockout: three guesses, resend, three guesses, forever. Probed on
+ * 2026-08-18 and found unreachable for an unrelated reason (the backend answers
+ * resend with 500 on this stack, there being no gateway to resend through), so
+ * this closes a hole that is currently boarded up by an accident. It costs one
+ * counter and it will still be right when resend starts working.
+ */
+const MAX_RESENDS = Number(process.env.MAX_RESENDS || 3);
+
+const UPSTREAM_TIMEOUT_MS = 20000;
+
+/**
+ * Biggest body accepted. Was 1 MB, which was right when the only callers were
+ * sign-in and booking. The driver app posts licence and registration photos to
+ * /ui/driver/register/validateImage as base64 -- a 1.5 MB phone photo is ~2 MB
+ * encoded -- so a 1 MB cap here would reject document upload with a 413 that
+ * looks like a network fault from the phone. nginx has a matching limit; both
+ * have to be raised or neither means anything.
+ */
+const MAX_BODY = Number(process.env.MAX_BODY || 8 * 1024 * 1024);
+
+
+/**
+ * Numbers that skip the gateway entirely and keep the fixed code.
+ *
+ * Not a convenience -- without it this change locks the people building the app
+ * out of it. The gateway only accepts real Mauritanian mobiles, and everyone
+ * testing from Algeria signs in as an invented +222 number. Once every code is
+ * texted, an invented number gets a message that is delivered nowhere, and the
+ * sign-in fails with no way round it.
+ *
+ * So: a short, explicit list, in full international form
+ * (`SMS_BYPASS=+22222778899,+22222778800`). These numbers cost no credit, send
+ * nothing, and still verify with the fixed code exactly as every number did
+ * before today.
+ *
+ * It is a hole, and it is meant to be an obvious one. It is printed at startup
+ * and counted on /healthz so that nobody has to read this file to discover that
+ * some numbers are exempt. Empty it the day the pilot has real riders -- that
+ * is the same instruction TEST_OTP carries in the app, and they go together.
+ */
+const SMS_BYPASS_LISTED = new Set(
+  (process.env.SMS_BYPASS || '').split(',').map((s) => s.trim()).filter(Boolean),
+);
+
+/**
+ * What an exempt number types instead of a code it never received.
+ *
+ * ── Out of git since 2026-09-27, and it fails CLOSED ────────────────────────
+ * This repository is PUBLIC (a fork of public Namma Yatri), and both the list
+ * of exempt numbers and the code they accept used to be in it: the list in
+ * docker-compose.yml, the code as this constant's default. Anybody could read
+ * them and sign in as the test passengers, the test drivers and the simulated
+ * fleet. Both now come from /opt/ny/secrets/test-accounts.env on the box, and
+ * the code has no default: no code, or the old public one, means NO number is
+ * exempt, and the guard says so at startup.
+ *
+ * It cannot be the backend's own 7891. The app's input is six characters wide
+ * now, because Moorsyl's Verify codes are exactly six, so a four-character code
+ * can no longer be typed in full — an exempt number would be locked out by the
+ * very screen built to let it in. So the guard accepts this instead and
+ * substitutes the backend's fixed code exactly as it does for a real one.
+ *
+ * Six ones, because it should be impossible to mistake for a real code in a
+ * screenshot or a log.
+ */
+const SMS_BYPASS_CODE = (process.env.SMS_BYPASS_CODE || '').trim();
+
+/** The code everybody could read in git until 2026-09-27. Never accepted again. */
+const PUBLISHED_BYPASS_CODE = '111111';
+
+const BYPASS_CODE_USABLE = /^\d{6}$/.test(SMS_BYPASS_CODE) && SMS_BYPASS_CODE !== PUBLISHED_BYPASS_CODE;
+
+/** The exempt numbers actually honoured: none unless the code is private and usable. */
+const SMS_BYPASS = BYPASS_CODE_USABLE ? SMS_BYPASS_LISTED : new Set();
+
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Routes
+
+   The prefix decides the upstream and whether personal codes apply. Order
+   matters only in that the first match wins; the two prefixes are disjoint.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const ROUTES = [
+  {
+    name: 'rider',
+    prefix: '/v2/',
+    upstream: RIDER_URL,
+    // No personal codes on this side: a rider is whoever holds the phone, and
+    // the SMS below is what proves it. There is no agency to issue him one.
+    codesFile: null,
+    // Now that a code is really delivered, the rider side substitutes too --
+    // otherwise the code we texted would be forwarded to a backend that accepts
+    // only 7891, and every correct code would come back refused.
+    fixedOtp: process.env.RIDER_FIXED_OTP || '7891',
+    // Six, matching CODE_LENGTH in the app's config.ts. It was four until
+    // 2026-09-06: Moorsyl's Verify takes a code of exactly six characters, and
+    // the `sms` mode uses six as well so that the app is built once and the
+    // mode switch is invisible to it. A mismatch here is a code that cannot be
+    // typed in full, and on screen that looks like the SMS was wrong.
+    codeDigits: 6,
+    sms: true,
+  },
+  {
+    name: 'driver',
+    prefix: '/ui/',
+    upstream: DRIVER_URL,
+    codesFile: process.env.DRIVER_CODES || '/app/driver-codes.json',
+    // What the backend accepts, and what the guard substitutes once it has
+    // checked the driver's own code. Kept out of the log on purpose.
+    fixedOtp: process.env.DRIVER_FIXED_OTP || '7891',
+    codeDigits: 6,
+    // Both work here, deliberately. The texted code is the way in; the personal
+    // code stays valid so that an outage at the gateway -- or an unpaid balance
+    // -- does not ground the fleet. It is no weaker than it was yesterday, and
+    // it is the only credential that does not depend on a third party being up.
+    sms: true,
+  },
+];
+
+function routeFor(pathname) {
+  return ROUTES.find((r) => pathname.startsWith(r.prefix)) || null;
+}
+
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Session bookkeeping
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/** `${route}:${authId}` -> { born, attempts, resends, lockedUntil, number } */
+const sessions = new Map();
+
+
+// Sweep, so a long-running process does not accumulate dead sessions. Cheap:
+// these maps hold one entry per sign-in attempt in the last few minutes.
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, s] of sessions) {
+    if (now - s.born > AUTH_TTL_MS && now > (s.lockedUntil || 0)) sessions.delete(id);
+  }
+  for (const map of [starts, ipStarts]) {
+    for (const [key, times] of map) {
+      const live = times.filter((t) => now - t < START_WINDOW_MS);
+      if (live.length) map.set(key, live);
+      else map.delete(key);
+    }
+  }
+}, 60_000).unref();
+
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Talking upstream
+   ──────────────────────────────────────────────────────────────────────────── */
+
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      // Refusing early keeps a hostile body from becoming a memory problem.
+      if (size > MAX_BODY) { reject(new Error('body too large')); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
+async function forward(route, req, body) {
+  const headers = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    // Hop-by-hop headers, and the ones the upstream must set itself.
+    if (['host', 'connection', 'content-length', 'transfer-encoding'].includes(k)) continue;
+    headers[k] = v;
+  }
+  const res = await fetch(`${route.upstream}${req.url}`, {
+    method: req.method,
+    headers,
+    body: ['GET', 'HEAD'].includes(req.method) ? undefined : body,
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+  });
+  return { status: res.status, type: res.headers.get('content-type'), text: await res.text() };
+}
+
+function send(res, status, obj, extra = {}) {
+  const body = JSON.stringify(obj);
+  res.writeHead(status, {
+    'content-type': 'application/json;charset=utf-8',
+    'content-length': Buffer.byteLength(body),
+    ...extra,
+  });
+  res.end(body);
+}
+
+/**
+ * The backend's own error shape, so the app needs no special case: it already
+ * treats any 4xx here as "that code was not accepted".
+ */
+const refusal = (code) => ({ errorPayload: null, errorCode: code, errorMessage: null });
+
+/* ────────────────────────────────────────────────────────────────────────────
+   The rules
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const rx = {
+  verify: (p) => new RegExp(`^${p}auth/([^/?]+)/verify/?$`),
+  resend: (p) => new RegExp(`^${p}auth/otp/([^/?]+)/resend/?$`),
+  start: (p) => new RegExp(`^${p}auth/?$`),
+  // Sign-in by WhatsApp, 2026-09-27: the same start, and a status to poll.
+  waStart: (p) => new RegExp(`^${p}auth/whatsapp/?$`),
+  waStatus: (p) => new RegExp(`^${p}auth/([^/?]+)/whatsapp/?$`),
+  // Sign-in by an SMS the passenger SENDS, 2026-09-29: the WhatsApp flow over
+  // the office SIM. `countries` says where it exists; see sms-inbox.js.
+  smsInStart: (p) => new RegExp(`^${p}auth/sms-in/?$`),
+  smsInStatus: (p) => new RegExp(`^${p}auth/([^/?]+)/sms-in/?$`),
+  smsInCountries: (p) => new RegExp(`^${p}auth/sms-in/countries/?$`),
+  // Which ways in each country has, for the phone screen (2026-09-30).
+  channels: (p) => new RegExp(`^${p}auth/channels/?$`),
+  // Signing back in on a phone that already proved the number (2026-10-03).
+  trusted: (p) => new RegExp(`^${p}auth/trusted/?$`),
+  // A signed-in person changing their own number (2026-10-03).
+  numberStart: (p) => new RegExp(`^${p}number/change/?$`),
+  numberStatus: (p) => new RegExp(`^${p}number/change/([^/?]+)/?$`),
+  numberConfirm: (p) => new RegExp(`^${p}number/change/([^/?]+)/confirm/?$`),
+};
+
+
+/**
+ * Which countries may sign in at all, by dialling code.
+ *
+ * A country missing here is refused with `COUNTRY_NOT_OPEN` -- which the app
+ * shows as "not open yet" rather than as a wrong number. Refused BEFORE
+ * forwarding, so no person row is created and no code is sent. Algeria was
+ * such a country from 2026-09-13 until 2026-09-27, when it opened by WhatsApp
+ * only (see SMS_COUNTRIES below).
+ *
+ * A setting and not code: `OPEN_COUNTRIES` in docker-compose.yml, and a
+ * recreate -- no build, and no new APK.
+ *
+ * Numbers on SMS_BYPASS pass regardless. That is how an Algerian test account
+ * signed in from a real phone before the country opened.
+ */
+const OPEN_COUNTRIES = new Set(
+  (process.env.OPEN_COUNTRIES || '+222').split(',').map((s) => s.trim()).filter(Boolean),
+);
+
+/**
+ * Which open countries a code may be SENT to by SMS (2026-09-27).
+ *
+ * Opening a country and texting it are separate questions since sign-in by
+ * WhatsApp: there the caller sends us the code, so a country with no SMS
+ * provider can open all the same. Algeria is that country -- Moorsyl is
+ * Mauritanian, and every text it sent to +213 would spend the Mauritanian
+ * budget on a network nobody has measured it reaching.
+ *
+ * So an SMS start from an open country missing here is refused with
+ * `SMS_NOT_AVAILABLE`, which the app answers by pointing at the WhatsApp
+ * button -- before forwarding, like every refusal above, so no person row and
+ * no send. A resend is refused the same way. Two exceptions, both of which
+ * send nothing: exempt numbers, and a driver who already holds a personal
+ * code, who signs in with it exactly as when the gateway is down.
+ */
+const SMS_COUNTRIES = new Set(
+  (process.env.SMS_COUNTRIES || '+222').split(',').map((s) => s.trim()).filter(Boolean),
+);
+const textable = (dialCode) => !dialCode || SMS_COUNTRIES.has(dialCode);
+
+/**
+ * ── New drivers sign themselves up, 2026-09-17 ──────────────────────────────
+ * Until today a driver number nobody had enrolled was refused here with
+ * `NOT_REGISTERED`, so the only way in was the agency typing the number into
+ * `enrol-driver.sh`. The client's rule now: a new driver enters his number, gets
+ * a code by SMS like a passenger, and lands in the app's sign-up screens (name,
+ * licence, car, papers). The agency then accepts him on the website.
+ *
+ * Opening sign-in does NOT let him work, and that is what makes this safe. The
+ * backend creates a new driver with `enabled = false`, and `setActivity` refuses
+ * to put a disabled driver online (`DRIVER_ACCOUNT_DISABLED`) until the
+ * website's Valider sets `enabled`. The wallet gate below applies on top.
+ *
+ * What it does cost: anyone with a real mobile in an open country can create a
+ * pending driver record, at one SMS per sign-in, limited by the same per-number
+ * throttle as passengers. Enrolled drivers keep their personal code as before.
+ *
+ * `DRIVER_SIGNUP=closed` restores the old refusal, with a restart and no build.
+ */
+const DRIVER_SIGNUP_OPEN = (process.env.DRIVER_SIGNUP || 'open').trim() !== 'closed';
+
+
+async function handle(req, res) {
+  const pathname = req.url.split('?')[0];
+
+  // Meta's webhook for the WhatsApp number. Not a /v2/ or /ui/ route, and
+  // forwarded nowhere: whatsapp.js answers it itself. See that file.
+  if (pathname === '/whatsapp/webhook') {
+    let status;
+    let text;
+    if (req.method === 'GET') {
+      [status, text] = whatsapp.handshake(req.url);
+    } else if (req.method === 'POST') {
+      [status, text] = whatsapp.deliver(await readBody(req), req.headers);
+    } else {
+      [status, text] = [405, 'method not allowed'];
+    }
+    res.writeHead(status, { 'content-type': 'text/plain;charset=utf-8' });
+    return res.end(text);
+  }
+
+  // The office phone's forwarder: the texts people send to Movin's SIM
+  // (2026-09-29). Answered here, forwarded nowhere. See sms-inbox.js.
+  if (pathname === '/sms/inbox') {
+    if (req.method !== 'POST') return send(res, 405, { ok: false, error: 'method not allowed' });
+    const [status, out] = smsInbox.deliver(await readBody(req), req.headers);
+    return send(res, status, out);
+  }
+
+  if (pathname === '/healthz') {
+    return send(res, 200, {
+      ok: true,
+      whatsapp: whatsapp.health(),
+      smsInbox: smsInbox.health(),
+      trustedPhones: trusted.health(),
+      routes: ROUTES.map((r) => ({
+        prefix: r.prefix,
+        upstream: r.upstream,
+        personalCodes: r.codesFile ? Object.keys(loadCodes(r.codesFile)).length : null,
+        sms: !!r.sms,
+        codeDigits: r.codeDigits,
+        signupOpen: r.codesFile ? DRIVER_SIGNUP_OPEN : null,
+      })),
+      sessions: sessions.size,
+      numbers: starts.size,
+      // Which countries may sign in, and which of them by SMS -- the rest of
+      // the open ones by WhatsApp only. What a deploy is checked against.
+      countries: { open: [...OPEN_COUNTRIES], sms: [...SMS_COUNTRIES] },
+      // Enough to tell "the gateway is down" from "the key was never mounted"
+      // without opening a shell. The key itself is only ever a boolean here.
+      gateway: {
+        configured: !!SMS_KEY,
+        mode: SMS_MODE,
+        // Only meaningful in `sms` mode; in `verify` mode Moorsyl's own sender
+        // is used and this is ignored.
+        sender: SMS_MODE === 'sms' ? SMS_SENDER : null,
+        sent: smsStats().sent,
+        /* The budget, as a number somebody can watch. Moorsyl publishes no
+           balance route (measured 2026-09-23: /api/balance, /api/account and
+           /api/me all 404), so this counter is the only view of the spend
+           there is -- worth a cron and an alert, not just a glance. */
+        budget: {
+          hour: smsSpend().hour,
+          hourMax: MAX_SMS_PER_HOUR,
+          day: smsSpend().day,
+          dayMax: MAX_SMS_PER_DAY,
+          exhausted: !smsBudgetLeft().ok,
+        },
+        lastError: smsStats().lastError,
+        // Counted, not listed: enough to notice the exemption exists without
+        // publishing which numbers can be signed into with a known code.
+        bypassNumbers: SMS_BYPASS.size,
+      },
+    });
+  }
+
+  const route = routeFor(pathname);
+  if (!route) {
+    // Not a proxy. /dashboard/ in particular is the office API and has no
+    // business being reachable from a phone.
+    return send(res, 404, refusal('NOT_FOUND'));
+  }
+
+  let body;
+  try {
+    body = await readBody(req);
+  } catch {
+    return send(res, 413, refusal('REQUEST_TOO_LARGE'));
+  }
+
+  const codes = loadCodes(route.codesFile);
+  const key = (id) => `${route.name}:${id}`;
+  const verify = rx.verify(route.prefix).exec(pathname);
+  const resend = rx.resend(route.prefix).exec(pathname);
+  const waStart = rx.waStart(route.prefix).test(pathname);
+  const waStatus = rx.waStatus(route.prefix).exec(pathname);
+  const smsInStart = rx.smsInStart(route.prefix).test(pathname);
+  const smsInStatus = rx.smsInStatus(route.prefix).exec(pathname);
+  // A WhatsApp start IS a start: every check below -- closed country,
+  // enrolment, both throttles -- applies to it unchanged. Only the way the
+  // code travels differs, and that is decided after the backend has said yes.
+  // The same holds for a start by SMS sent to us.
+  const isStart = rx.start(route.prefix).test(pathname) || waStart || smsInStart;
+  // The code travels TO us, so it is nobody's SMS bill and Moorsyl is not asked.
+  const inbound = waStart || smsInStart;
+
+  /* Which countries have a SIM to text. Asked by the phone screen before it
+     offers the button, so a country without one never shows it. Public on
+     purpose: it lists dialling codes, the numbers come with a start. */
+  if (rx.smsInCountries(route.prefix).test(pathname) && req.method === 'GET') {
+    return send(res, 200, { countries: smsInbox.countries() });
+  }
+
+  /* Every way in, per country, so the phone screen offers exactly the ones
+     that work there (the owner, 2026-09-30: Algeria shows WhatsApp and « SMS
+     to us », Mauritania SMS and WhatsApp). Read from the same settings the
+     starts obey -- `SMS_COUNTRIES` for a code we text, the SIM list for a
+     text to us -- so changing a country stays a setting, not an app build.
+     Public: dialling codes and a yes/no, nothing else. The older
+     `sms-in/countries` stays for the APKs that still ask it. */
+  if (rx.channels(route.prefix).test(pathname) && req.method === 'GET') {
+    return send(res, 200, {
+      sms: [...SMS_COUNTRIES].filter((c) => OPEN_COUNTRIES.has(c)),
+      smsIn: smsInbox.countries().filter((c) => OPEN_COUNTRIES.has(c)),
+      whatsapp: whatsapp.ready(),
+    });
+  }
+
+  /* ── signing back in on a phone that already proved the number ───────────
+     The boss, 2026-10-03: after « Se déconnecter », or to switch between
+     passenger and driver, the phone that confirmed a number should not need
+     a code for it again. It presents the key it was given at that verify
+     (trusted-phones.js); a match opens the session here, start and verify in
+     one, with the backend's fixed code -- no SMS, no WhatsApp, nothing spent.
+     Every gate of a normal start still applies, bar the one about how a code
+     travels, since none does. No match is a plain 401: the app falls back to
+     the usual buttons. Under the `auth` rate limit at the edge, not the
+     start's: it texts nobody, and a 32-byte key is not guessed. */
+  if (rx.trusted(route.prefix).test(pathname) && req.method === 'POST') {
+    let parsed;
+    try { parsed = JSON.parse(body.toString('utf8')); } catch { parsed = null; }
+    if (!parsed || typeof parsed.mobileCountryCode !== 'string' || !parsed.mobileNumber) {
+      return send(res, 400, refusal('INVALID_REQUEST'));
+    }
+    const dialCode = parsed.mobileCountryCode;
+    const number = `${dialCode}${parsed.mobileNumber}`;
+
+    if (!OPEN_COUNTRIES.has(dialCode)) return send(res, 403, refusal('COUNTRY_NOT_OPEN'));
+    if (codes && !codes[number] && !DRIVER_SIGNUP_OPEN) return send(res, 403, refusal('NOT_REGISTERED'));
+    if (tooManyStarts(key(number)) || tooManyStartsFromIp(callerIp(req))) {
+      return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+        { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
+    }
+    if (!trusted.check(number, parsed.deviceTrust)) {
+      console.warn(`[guard] ${route.name}: phone not trusted for ${number}`);
+      return send(res, 401, refusal('PHONE_NOT_TRUSTED'));
+    }
+
+    const upstream = async (url, payload) => {
+      const out = Buffer.from(JSON.stringify(payload));
+      const proxied = Object.create(req);
+      proxied.url = url;
+      proxied.method = 'POST';
+      proxied.headers = { ...req.headers, 'content-type': 'application/json', 'content-length': String(out.length) };
+      return forward(route, proxied, out);
+    };
+    try {
+      const started = await upstream(`${route.prefix}auth`, {
+        mobileCountryCode: dialCode,
+        mobileNumber: parsed.mobileNumber,
+        merchantId: parsed.merchantId,
+      });
+      let authId = null;
+      try { ({ authId } = JSON.parse(started.text)); } catch { /* below */ }
+      if (started.status !== 200 || !authId) {
+        res.writeHead(started.status, { 'content-type': started.type || 'application/json' });
+        return res.end(started.text);
+      }
+      const verified = await upstream(`${route.prefix}auth/${encodeURIComponent(authId)}/verify`, {
+        otp: route.fixedOtp,
+        deviceToken: parsed.deviceToken,
+        ...(parsed.whatsappNotificationEnroll ? { whatsappNotificationEnroll: parsed.whatsappNotificationEnroll } : {}),
+      });
+      if (verified.status !== 200) {
+        res.writeHead(verified.status, { 'content-type': verified.type || 'application/json' });
+        return res.end(verified.text);
+      }
+      console.log(`[guard] ${route.name}: trusted phone signed in ${number}`);
+      let out = {};
+      try { out = JSON.parse(verified.text); } catch { /* the backend said 200 */ }
+      return send(res, 200, { ...out, deviceTrust: parsed.deviceTrust });
+    } catch (err) {
+      console.error(`[guard] ${route.name} upstream: ${err.message}`);
+      return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
+    }
+  }
+
+  /* ── changing one's own number (the boss, 2026-10-03) ─────────────────────
+     A signed-in person proves a NEW number exactly as a sign-in would -- an
+     SMS code, WhatsApp, or the SMS sent to us, under the same throttles and
+     the same three-strikes lock -- and only then is it written to HIS account
+     (maps-shim/number-change.js; whose account is read from his own token
+     there, never from this request). Same country only; never a number
+     another account holds. He stays signed in, and this phone is trusted for
+     the new number (trusted-phones.js). */
+  const numberStart = rx.numberStart(route.prefix).test(pathname);
+  const numberConfirm = rx.numberConfirm(route.prefix).exec(pathname);
+  const numberStatus = numberConfirm ? null : rx.numberStatus(route.prefix).exec(pathname);
+  if ((numberStart || numberConfirm) && req.method === 'POST' || (numberStatus && req.method === 'GET')) {
+    return handleNumberChange(req, res, route, body, key, numberStart, numberConfirm, numberStatus);
+  }
+
+  /* ── starting a sign-in ──────────────────────────────────────────────────
+     Checked before forwarding, so a throttled or unknown number never reaches
+     the backend: it costs no SMS once there is a gateway, and -- the reason
+     this matters on the driver side -- it creates no driver record. Asking for
+     a code is enough to bring a `person` row into existence otherwise, which
+     was measured, not assumed. */
+  if (isStart && req.method === 'POST') {
+    let number = null;
+    let dialCode = null;
+    try {
+      const parsed = JSON.parse(body.toString('utf8'));
+      dialCode = typeof parsed.mobileCountryCode === 'string' ? parsed.mobileCountryCode : null;
+      number = `${parsed.mobileCountryCode || ''}${parsed.mobileNumber || ''}`;
+    } catch { /* malformed: let the backend give its own 400 */ }
+
+    // First, before enrolment and throttling: a closed country is not a
+    // question about this number at all. See OPEN_COUNTRIES.
+    if (dialCode && !OPEN_COUNTRIES.has(dialCode) && !SMS_BYPASS.has(number)) {
+      console.warn(`[guard] ${route.name}: ${dialCode} is not open for sign-in`);
+      return send(res, 403, refusal('COUNTRY_NOT_OPEN'));
+    }
+
+    // Open, but not by SMS: this country signs in by WhatsApp. See SMS_COUNTRIES.
+    if (!inbound && route.sms && !textable(dialCode) && !SMS_BYPASS.has(number)
+        && !(codes && number && codes[number])) {
+      console.warn(`[guard] ${route.name}: no SMS to ${dialCode}, WhatsApp only`);
+      return send(res, 403, refusal('SMS_NOT_AVAILABLE'));
+    }
+
+    // Only when sign-up is closed. When it is open, an unenrolled driver goes on
+    // to the SMS code below exactly like a passenger. See DRIVER_SIGNUP_OPEN.
+    if (codes && number && !codes[number] && !DRIVER_SIGNUP_OPEN) {
+      console.warn(`[guard] ${route.name}: ${number} is not enrolled`);
+      // Deliberately the same shape and status for "never approved" and
+      // "approved but removed": the caller learns that this number cannot sign
+      // in here, and not whether it is one the agency knows.
+      return send(res, 403, refusal('NOT_REGISTERED'));
+    }
+
+    if (number && tooManyStarts(key(number))) {
+      console.warn(`[guard] ${route.name}: throttled sign-ins for ${number}`);
+      return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+        { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
+    }
+
+    /* Rotating numbers from one host is what the counter above cannot see, and
+       it is the expensive attack -- see MAX_STARTS_PER_IP. Exempt numbers are
+       not counted: they send nothing, so they cost nothing, and counting them
+       would let our own testing use up a real caller's allowance. */
+    if (number && !SMS_BYPASS.has(number) && tooManyStartsFromIp(callerIp(req))) {
+      console.warn(`[guard] ${route.name}: throttled sign-ins from ${callerIp(req)} ` +
+        `(${MAX_STARTS_PER_IP}/${START_WINDOW_MS / 60000} min)`);
+      return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+        { 'retry-after': String(Math.ceil(START_WINDOW_MS / 1000)) });
+    }
+
+    // Refused before the backend is asked, so no session is opened for a
+    // button that could never finish. See whatsapp.ready().
+    if (waStart && !whatsapp.ready()) return send(res, 503, refusal('WHATSAPP_UNAVAILABLE'));
+    // No SIM for this country, so nowhere to text: same reasoning.
+    if (smsInStart && !smsInbox.simFor(dialCode)) return send(res, 503, refusal('SMS_IN_UNAVAILABLE'));
+
+    let up;
+    try {
+      // The backend knows one start route; a WhatsApp start is that route.
+      let upstreamReq = req;
+      if (inbound) {
+        upstreamReq = Object.create(req);
+        upstreamReq.url = `${route.prefix}auth`;
+      }
+      up = await forward(route, upstreamReq, body);
+    } catch (err) {
+      console.error(`[guard] ${route.name} upstream: ${err.message}`);
+      return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
+    }
+
+    let authId = null;
+    if (up.status === 200) {
+      try {
+        ({ authId } = JSON.parse(up.text));
+        // Recording the birth is what makes expiry possible at all -- the
+        // backend never expires an auth id, so without this an abandoned
+        // sign-in stays guessable indefinitely. Recording the number is what
+        // makes the personal code checkable: the verify request carries only
+        // the authId, so this is the guard's only chance to learn who it is for.
+        if (authId) {
+          sessions.set(key(authId),
+            {
+            born: Date.now(),
+            attempts: 0,
+            resends: 0,
+            lockedUntil: 0,
+            number,
+            dialCode,
+            smsCode: null,
+            verificationId: null,
+          });
+        }
+      } catch { /* not JSON we recognise; nothing to remember */ }
+    }
+
+    /* ── by WhatsApp: the code goes the other way ────────────────────────────
+       No SMS and no cost. The caller is given the code and a link that opens
+       WhatsApp to our number with `MOVIN <code>` already typed; he presses
+       Send. Knowing the code opens nothing: verify accepts it only once Meta
+       has delivered it, signed, FROM the number signing in (see the verify
+       route). That is the proof -- WhatsApp's word for who sent it. */
+    if (authId && waStart) {
+      const s = sessions.get(key(authId));
+      if (s) {
+        s.waCode = mkCode(6);
+        const wa = whatsapp.expect(number, s.waCode);
+        console.log(`[guard] ${route.name}: WhatsApp sign-in started for ${number}`);
+        let upBody = {};
+        try { upBody = JSON.parse(up.text); } catch { /* the authId was read above */ }
+        return send(res, 200, { ...upBody, whatsapp: { code: s.waCode, ...wa } });
+      }
+    }
+
+    /* ── by an SMS he sends us: the same, over the office SIM ────────────────
+       The code and the SIM to text it to. As with WhatsApp, knowing the code
+       opens nothing: verify accepts it only once the office phone has
+       forwarded it FROM the number signing in. Weaker than WhatsApp in one
+       way -- an SMS sender can be forged on some routes, Meta's signature
+       cannot -- which is why this is a separate, switchable channel. */
+    if (authId && smsInStart) {
+      const s = sessions.get(key(authId));
+      if (s) {
+        s.smsInCode = mkCode(6);
+        const sms = smsInbox.expect(dialCode, s.smsInCode);
+        console.log(`[guard] ${route.name}: SMS-in sign-in started for ${number}`);
+        let upBody = {};
+        try { upBody = JSON.parse(up.text); } catch { /* the authId was read above */ }
+        return send(res, 200, { ...upBody, smsIn: { code: s.smsInCode, ...sms } });
+      }
+    }
+
+    /* ── the code the caller will have to type ──────────────────────────────
+       Sent after the throttle, so a number being hammered costs no credit, and
+       after the upstream 200, so no code goes out for a session the backend
+       declined to open. */
+    if (authId && route.sms && SMS_BYPASS.has(number)) {
+      // Given the test code directly, so it travels the same path a real one
+      // does -- checked here, and the backend's fixed code substituted before
+      // forwarding. Logged every time: an exempt number should never be a
+      // surprise when reading why somebody got in.
+      const s = sessions.get(key(authId));
+      if (s) s.smsCode = SMS_BYPASS_CODE;
+      console.log(`[guard] ${route.name}: ${number} is exempt, test code accepted`);
+    } else if (authId && route.sms && !textable(dialCode)) {
+      // Only a driver holding a personal code gets here (see SMS_COUNTRIES):
+      // nothing is sent, and that code is what he types.
+      console.log(`[guard] ${route.name}: no SMS to ${dialCode}, personal code stands`);
+    } else if (authId && route.sms) {
+      const s = sessions.get(key(authId));
+      const sent = await issueCode(route, s, number);
+      if (!sent.ok) {
+        // An enrolled driver can still use his personal code. A new driver has
+        // no other code, so he is told the SMS failed, like a passenger.
+        if (route.codesFile && codes && codes[number]) {
+          // The driver still has his permanent code, so this is a warning and
+          // not a refusal. Losing the gateway must not also ground the fleet.
+          console.warn(`[guard] ${route.name}: no SMS for ${number}, personal code still stands`);
+        } else {
+          // A rider has nothing else to sign in with. Saying so beats a screen
+          // that waits for a message which is not coming, and the session is
+          // dropped so the number is not left with a guessable open session.
+          sessions.delete(key(authId));
+          return send(res, 502, refusal('SMS_SEND_FAILED'));
+        }
+      }
+    }
+
+    res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
+    return res.end(up.text);
+  }
+
+  /* ── has the WhatsApp message come? ───────────────────────────────────────
+     Polled by the app while it waits. Costs no attempt and says only yes or
+     no about the caller's own session. */
+  if (waStatus && req.method === 'GET') {
+    const s = sessions.get(key(decodeURIComponent(waStatus[1])));
+    if (!s || !s.waCode) return send(res, 404, refusal('INVALID_AUTH_DATA'));
+    if (Date.now() - s.born > AUTH_TTL_MS) return send(res, 400, refusal('INVALID_AUTH_DATA'));
+    return send(res, 200, { confirmed: whatsapp.codeFrom(s.number) === s.waCode });
+  }
+
+  /* ── has his SMS come? ───────────────────────────────────────────────────
+     The WhatsApp status, for the office SIM. Same rules. */
+  if (smsInStatus && req.method === 'GET') {
+    const s = sessions.get(key(decodeURIComponent(smsInStatus[1])));
+    if (!s || !s.smsInCode) return send(res, 404, refusal('INVALID_AUTH_DATA'));
+    if (Date.now() - s.born > AUTH_TTL_MS) return send(res, 400, refusal('INVALID_AUTH_DATA'));
+    return send(res, 200, { confirmed: smsInbox.codeFrom(s.number) === s.smsInCode });
+  }
+
+  /* ── the guarded path ────────────────────────────────────────────────────── */
+  if (verify && req.method === 'POST') {
+    const id = decodeURIComponent(verify[1]);
+    const now = Date.now();
+    const known = sessions.get(key(id));
+
+    // An id this process has not seen -- it restarted, or the session began
+    // before the guard did.
+    //
+    // On an uncoded route: start counting from now rather than waving it
+    // through. We lose the age, we do not lose the attempt limit.
+    //
+    // On a coded route it has to be a refusal, and this is the hinge of the
+    // whole design: without the remembered number there is nothing to check
+    // the personal code against, and forwarding anyway would hand the raw body
+    // to a backend that accepts 7891 from anyone. The cost is that a guard
+    // restart makes drivers mid-sign-in start over, which is ten seconds.
+    if (!known && (codes || route.sms)) {
+      console.warn(`[guard] ${route.name}: unknown session ${id}`);
+      return send(res, 400, refusal('INVALID_AUTH_DATA'));
+    }
+    const s = known || { born: now, attempts: 0, resends: 0, lockedUntil: 0, number: null };
+    sessions.set(key(id), s);
+
+    if (now < s.lockedUntil) {
+      const after = Math.ceil((s.lockedUntil - now) / 1000);
+      console.warn(`[guard] ${route.name}: locked ${id} (${after}s left)`);
+      return send(res, 429, refusal('TOO_MANY_ATTEMPTS'), { 'retry-after': String(after) });
+    }
+
+    if (now - s.born > AUTH_TTL_MS) {
+      console.warn(`[guard] ${route.name}: expired ${id}`);
+      sessions.delete(key(id));
+      return send(res, 400, refusal('INVALID_AUTH_DATA'));
+    }
+
+    // Counting a wrong code, and locking on the third. Shared by the personal
+    // code check and the upstream's own verdict so the two cannot drift.
+    const countWrong = () => {
+      s.attempts += 1;
+      if (s.attempts >= MAX_ATTEMPTS) {
+        s.lockedUntil = now + LOCK_MS;
+        console.warn(`[guard] ${route.name}: LOCKED ${id} after ${s.attempts} wrong codes`);
+        return send(res, 429, refusal('TOO_MANY_ATTEMPTS'),
+          { 'retry-after': String(Math.ceil(LOCK_MS / 1000)) });
+      }
+      console.log(`[guard] ${route.name}: wrong code ${id} (${s.attempts}/${MAX_ATTEMPTS})`);
+      // The shape the backend gives for a wrong code, so the app's existing
+      // handling applies unchanged.
+      return send(res, 400, refusal('INVALID_AUTH_DATA'));
+    };
+
+    let outgoing = body;
+
+    // ── the code ───────────────────────────────────────────────────────────
+    // Two things can open a session and either one is enough: the code texted
+    // for this session, and -- on the driver side -- the permanent code the
+    // agency issued. Neither is ever forwarded. What goes upstream is always
+    // the fixed code the deployed binary was built with, which is how 7891
+    // stops being a password anybody has: it becomes an internal detail
+    // between this process and a backend that costs 45 minutes to change.
+    if (codes || s.smsCode || s.verificationId || s.waCode || s.smsInCode) {
+      let given = null;
+      let parsed = null;
+      try {
+        parsed = JSON.parse(body.toString('utf8'));
+        given = parsed.otp == null ? null : String(parsed.otp);
+      } catch { /* handled below */ }
+
+      if (given === null) return send(res, 400, refusal('INVALID_REQUEST'));
+
+      // Both are evaluated -- no short-circuit -- so how long this takes does
+      // not say which of the two the caller got closer to.
+      const bySms = s.smsCode ? sameCode(given, s.smsCode) : false;
+      const byPersonal = codes ? codeMatches(codes[s.number], s.number, given) : false;
+      // Knowing the code is not enough -- it was handed to the caller. What
+      // opens the session is Meta having delivered it, signed, from this very
+      // number (whatsapp.codeFrom never returns an unsigned message).
+      const byWhatsapp = s.waCode
+        ? sameCode(given, s.waCode) && whatsapp.codeFrom(s.number) === s.waCode
+        : false;
+      // The same proof by the office SIM: forwarded, from this number.
+      const bySmsIn = s.smsInCode
+        ? sameCode(given, s.smsInCode) && smsInbox.codeFrom(s.number) === s.smsInCode
+        : false;
+
+      // Only asked when nothing local already opened the session: it is a
+      // network round trip, and in Verify mode Moorsyl counts the attempt at
+      // its end too. A driver who used his own code should not spend one.
+      let byVerify = false;
+      if (s.verificationId && !bySms && !byPersonal && !byWhatsapp && !bySmsIn) {
+        const checked = await verifyCheck(s.verificationId, given);
+        if (!checked.reachable) {
+          // An outage is not a wrong code. Saying so costs the caller nothing
+          // and keeps a bad afternoon at the gateway from locking accounts.
+          return send(res, 502, refusal('SMS_CHECK_FAILED'));
+        }
+        byVerify = checked.approved;
+      }
+
+      if (!bySms && !byPersonal && !byVerify && !byWhatsapp && !bySmsIn) return countWrong();
+
+      parsed.otp = route.fixedOtp;
+      outgoing = Buffer.from(JSON.stringify(parsed));
+    }
+
+    let up;
+    try {
+      const proxied = Object.create(req);
+      proxied.headers = { ...req.headers, 'content-length': String(outgoing.length) };
+      up = await forward(route, proxied, outgoing);
+    } catch (err) {
+      console.error(`[guard] ${route.name} upstream: ${err.message}`);
+      return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
+    }
+
+    if (up.status === 200) {
+      // Spent. Nothing more can be tried against it.
+      sessions.delete(key(id));
+      console.log(`[guard] ${route.name}: verified ${id}`);
+    } else {
+      return countWrong();
+    }
+
+    // This phone has just proved this number: from now on it may sign back in
+    // without a code (trusted-phones.js). Added to the backend's own answer,
+    // which the app reads leniently.
+    if (s.number) {
+      try {
+        const answer = JSON.parse(up.text);
+        if (answer && typeof answer === 'object') {
+          const deviceTrust = trusted.issue(s.number);
+          if (deviceTrust) return send(res, 200, { ...answer, deviceTrust });
+        }
+      } catch { /* not JSON: pass it through untouched */ }
+    }
+
+    res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
+    return res.end(up.text);
+  }
+
+  /* ── resend ──────────────────────────────────────────────────────────────
+     A new code was sent, so the old wrong-code count describes nothing and is
+     cleared. Capped, because clearing it without limit is a way around the
+     lockout. On a coded route there is nothing to resend -- the driver's code
+     does not change -- so it is refused outright rather than forwarded to a
+     backend that would answer 500 anyway. */
+  if (resend && req.method === 'POST') {
+    const id = decodeURIComponent(resend[1]);
+    const s = sessions.get(key(id));
+
+    /* With a gateway, a resend is this process's job and not the backend's:
+       another code, sent, and the wrong-code count cleared -- that count
+       describes a code which no longer opens anything. The backend is never
+       asked. Its own resend answers 500 on this stack, there being no gateway
+       behind it, and that 500 is what made the button look broken. */
+    if (route.sms) {
+      if (!s || !s.number) return send(res, 400, refusal('INVALID_AUTH_DATA'));
+      if (!textable(s.dialCode)) return send(res, 403, refusal('SMS_NOT_AVAILABLE'));
+      if (s.resends >= MAX_RESENDS) {
+        console.warn(`[guard] ${route.name}: resend cap on ${id}`);
+        return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+          { 'retry-after': String(Math.ceil(LOCK_MS / 1000)) });
+      }
+      const sent = await issueCode(route, s, s.number);
+      if (!sent.ok) return send(res, 502, refusal('SMS_SEND_FAILED'));
+      s.resends += 1;
+      s.attempts = 0;
+      s.lockedUntil = 0;
+      s.born = Date.now();
+      console.log(`[guard] ${route.name}: resent to ${s.number} (${s.resends}/${MAX_RESENDS})`);
+      // The shape the app reads back -- it takes the authId from the reply
+      // rather than assuming the one it sent.
+      return send(res, 200, { authId: id });
+    }
+
+    if (codes) {
+      console.log(`[guard] ${route.name}: resend refused, codes are permanent`);
+      return send(res, 400, refusal('RESEND_NOT_SUPPORTED'));
+    }
+    if (s && s.resends >= MAX_RESENDS) {
+      console.warn(`[guard] ${route.name}: resend cap on ${id}`);
+      return send(res, 429, refusal('TOO_MANY_REQUESTS'),
+        { 'retry-after': String(Math.ceil(LOCK_MS / 1000)) });
+    }
+
+    let up;
+    try {
+      up = await forward(route, req, body);
+    } catch (err) {
+      console.error(`[guard] ${route.name} upstream: ${err.message}`);
+      return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
+    }
+    if (up.status === 200) {
+      sessions.set(key(id), {
+        born: Date.now(),
+        attempts: 0,
+        resends: (s ? s.resends : 0) + 1,
+        lockedUntil: 0,
+        number: s ? s.number : null,
+      });
+    }
+    res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
+    return res.end(up.text);
+  }
+
+  /* ── bounds on what a person may store: see `outOfBounds` ───────────────── */
+  if (route.name === 'driver') {
+    const refused = outOfBounds(pathname, req.method, body);
+    if (refused) return send(res, 400, refusal(refused));
+  }
+
+  /* ── the wallet gate: see `isWork` above ────────────────────────────────── */
+  if (route.name === 'driver' && req.method === 'POST' && isWork(pathname, req.url, body)) {
+    if ((await walletAllows(req.headers.token)) === false) {
+      console.log(`[guard] driver: ${pathname} refused, no credit for the day`);
+      return send(res, 403, refusal('WALLET_EMPTY'));
+    }
+  }
+
+  /* ── everything else: forwarded unchanged ───────────────────────────────── */
+  let up;
+  try {
+    up = await forward(route, req, body);
+  } catch (err) {
+    console.error(`[guard] ${route.name} ${req.url}: ${err.message}`);
+    return send(res, 502, refusal('UPSTREAM_UNAVAILABLE'));
+  }
+
+  res.writeHead(up.status, { 'content-type': up.type || 'application/json' });
+  res.end(up.text);
+
+  if (route.name === 'driver' && req.method === 'POST') noteDriverRating(pathname, body, up.status);
+}
+
+numberChangeRoute.use({
+  send, refusal, sessions, OPEN_COUNTRIES, textable, AUTH_TTL_MS, LOCK_MS, MAX_ATTEMPTS,
+});
+
+http.createServer((req, res) => {
+  handle(req, res).catch((err) => {
+    console.error(`[guard] ${err.stack || err.message}`);
+    if (!res.headersSent) send(res, 500, refusal('GUARD_ERROR'));
+  });
+}).listen(PORT, () => {
+  for (const r of ROUTES) {
+    const n = r.codesFile ? Object.keys(loadCodes(r.codesFile)).length : null;
+    const how = [
+      r.sms
+        ? `${r.codeDigits}-digit code via ${SMS_MODE === 'verify' ? 'Moorsyl Verify' : 'our own SMS'}`
+        : 'no SMS',
+      n === null ? null : `${n} personal codes`,
+    ].filter(Boolean).join(', ');
+    console.log(`auth-guard  ${r.prefix} -> ${r.upstream}  (${how})`);
+  }
+  console.log(
+    `auth-guard on :${PORT}  ` +
+    `${MAX_ATTEMPTS} attempts, session ${AUTH_TTL_MS / 60000} min, lock ${LOCK_MS / 60000} min, ` +
+    `${MAX_STARTS} sign-ins per number per ${START_WINDOW_MS / 60000} min, ` +
+    `${MAX_STARTS_PER_IP} per address, ` +
+    `${MAX_RESENDS} resends, body ${Math.round(MAX_BODY / 1024)} kB`,
+  );
+  // The bill's ceiling, said out loud at startup: the one line that answers
+  // "what is the worst tonight can cost" without reading this file.
+  console.log(
+    `auth-guard  SMS budget ${MAX_SMS_PER_HOUR}/hour, ${MAX_SMS_PER_DAY}/day ` +
+    '(rolling; refuses past it and says so)',
+  );
+  // Loud, because without a key the rider side refuses every sign-in rather
+  // than falling back to something -- there is nothing to fall back to.
+  if (!SMS_KEY) {
+    console.error('auth-guard  WARNING: no MOORSYL_API_KEY -- riders cannot sign in at all');
+  } else if (SMS_MODE === 'verify') {
+    console.log(`auth-guard  gateway ${VERIFY_SEND_URL} (Moorsyl Verify, its sender and template)`);
+  } else {
+    console.log(`auth-guard  gateway ${SMS_URL} as "${SMS_SENDER}"`);
+  }
+  // Printed in full, on purpose. These numbers can be signed into by anyone who
+  // knows the fixed code, and that should be impossible to forget about.
+  if (SMS_BYPASS_LISTED.size && !BYPASS_CODE_USABLE) {
+    console.error(
+      `auth-guard  ${SMS_BYPASS_LISTED.size} exempt number(s) listed but IGNORED: SMS_BYPASS_CODE is ` +
+        `${SMS_BYPASS_CODE === PUBLISHED_BYPASS_CODE ? 'the old public code' : 'missing or not six digits'} ` +
+        '-- set it in /opt/ny/secrets/test-accounts.env',
+    );
+  }
+  if (SMS_BYPASS.size) {
+    console.warn(`auth-guard  ${SMS_BYPASS.size} number(s) EXEMPT from SMS, ` +
+      `the private test code accepted for: ${[...SMS_BYPASS].join(', ')}`);
+  }
+});

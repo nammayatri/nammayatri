@@ -1,0 +1,28 @@
+# maps-shim speaks Google and answers from our own services: routes from OSRM
+# over HTTP, and search from Postgres. OSRM needs nothing but `fetch`; Postgres
+# needs a driver, and that one package is the entire reason this image exists
+# rather than plain node.
+#
+# node_modules lives outside /app on purpose. The source stays a read-only bind
+# mount, so editing server.js and restarting the container is still the whole
+# edit-test loop -- no rebuild, no npm install, nothing written into the repo.
+#
+# What gets installed is maps-shim/package.json and its lockfile, with `npm ci`:
+# the exact tree, every transitive version pinned (phase 5, 2026-10-06). The
+# lockfile was taken from the image that ran until then, so the first build
+# from it installs the same 13 packages, byte for byte the same versions.
+#
+# Node 22 since phase 5 (2026-10-06): Node 20 reached end of life in April
+# 2026. CI runs every test on both before the switch. The image that ran
+# before each rebuild is kept as ny-maps-shim:previous (ops/release-remote.py).
+FROM node:22-alpine
+
+COPY maps-shim/package.json maps-shim/package-lock.json /opt/shim/
+RUN cd /opt/shim \
+ && npm ci --omit=dev --no-fund --no-audit --loglevel=error
+
+# How `require('pg')` is found from /app, which has no node_modules of its own.
+ENV NODE_PATH=/opt/shim/node_modules
+
+WORKDIR /app
+CMD ["node", "server.js"]
