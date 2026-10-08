@@ -50,11 +50,11 @@ data PayoutOrderT f = PayoutOrderT
   deriving (Generic, B.Beamable)
 
 instance B.Table PayoutOrderT where
-  data PrimaryKey PayoutOrderT f = PayoutOrderId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PayoutOrderId <$> id <*> orderId
+  data PrimaryKey PayoutOrderT f = PayoutOrderId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = PayoutOrderId . id
 
 type PayoutOrder = PayoutOrderT Identity
 
-$(enableKVPG ''PayoutOrderT ['id, 'orderId] [['customerId], ['entityIds], ['id]])
+$(enableKVPG ''PayoutOrderT ['id] [['customerId], ['entityIds], ['orderId]])
 
 $(mkTableInstancesGenericSchema ''PayoutOrderT "payout_order")

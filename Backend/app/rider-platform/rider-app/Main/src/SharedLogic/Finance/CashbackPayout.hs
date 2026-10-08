@@ -130,9 +130,17 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
             ledgerEntryIds = map (.getId) originalEntryIds, -- TODO :: Can be made empty in next release `[]` as now using Redis for storing ids for not bloating DB rows with ids in a row.
             payoutServiceFlow = Payout.JuspayFlow -- StripeFlow not supported currently in rider-app
           }
-  result <- PayoutRequest.submitPayoutRequest submission payoutCall afterPayoutOrderCreated
+  -- Reserve the entries before calling Juspay, so no other run picks them while the order is in flight.
+  -- They become PAID_OUT on a success status and UNSETTLED again on a failure status.
+  RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds Nothing
+  result <-
+    PayoutRequest.submitPayoutRequest submission payoutCall afterPayoutOrderCreated
+      `catch` \(e :: SomeException) -> do
+        RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
+        throwM e
   case result of
     PayoutRequest.PayoutInitiated pr _ -> do
+      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
       let ownerPayoutCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId payoutConfig.currency True person.id.getId pr.id.getId Nothing Nothing Nothing
       RidePaymentFinance.postCashbackOwnerPayoutLiability ownerPayoutCtx totalAmount
         >>= either (\err -> logError $ "Failed to move cashback payout amount to owner payout liability for payoutRequest " <> pr.id.getId <> ": " <> show err) (const (pure ()))
@@ -147,7 +155,10 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
           <> " amount="
           <> show totalAmount
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
-    PayoutRequest.PayoutProcessing pr status ->
+    PayoutRequest.PayoutProcessing pr status -> do
+      -- Also returned when Juspay accepted the order but it could not be read back, so an order may be
+      -- in flight: keep the entries reserved under this request until a status check resolves it.
+      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
       logInfo $
         "Cashback payout already in flight. person="
           <> person.id.getId
@@ -156,5 +167,6 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
           <> " status="
           <> show status
     PayoutRequest.PayoutFailed _ err -> do
+      RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount

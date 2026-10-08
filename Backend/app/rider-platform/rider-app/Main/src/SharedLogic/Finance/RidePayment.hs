@@ -91,6 +91,7 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefCashbackPayoutSettlement,
     postCashbackOwnerPayoutLiability,
     releaseCashbackEntriesReservation,
+    reserveCashbackEntriesForPayout,
     cashbackPayoutLedgerRefs,
     settleCashbackPayoutLedger,
     ridePaymentRefTollFare,
@@ -781,8 +782,18 @@ getPayoutEligibilityData counterparty personId = do
             <> show (map (\e -> (e.id, e.amount)) unsettledEntries)
       pure (walletBalance, entriesWithNet)
 
--- | TODO: remove post release, kept only for backward compatibility with payouts initiated before OwnerPayoutLiability: legacy payouts reserved
---   their accrual entries as PROCESSING, so a failed one must flip them back to UNSETTLED.
+-- | Reserve cashback accrual entries for an in-flight payout (UNSETTLED → PROCESSING), so a later
+--   run cannot pay them again while the order has no terminal status. The optional settlementId is
+--   the PayoutRequest id, stamped once the request exists.
+reserveCashbackEntriesForPayout ::
+  (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
+  [Id LE.LedgerEntry] ->
+  Maybe Text ->
+  m ()
+reserveCashbackEntriesForPayout = Lib.Finance.Ledger.Service.markEntriesAsProcessing
+
+-- | Release reserved cashback entries (PROCESSING → UNSETTLED) when a payout fails or is not sent,
+--   so the next run pays them.
 releaseCashbackEntriesReservation ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   [Id LE.LedgerEntry] ->

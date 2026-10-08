@@ -61,8 +61,8 @@ PayoutOrder:
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
   constraints:
-    id: SecondaryKey
-    orderId: PrimaryKey
+    id: PrimaryKey
+    orderId: "!SecondaryKey"
     customerId: "!SecondaryKey"
     entityIds: "!SecondaryKey"
   queries:
