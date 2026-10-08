@@ -169,8 +169,8 @@ runStageA order
 
 -- Stage C (check 5): a leg that revises an ACCEPTED (order, UTR) claim on a UTR we already reported
 -- is refused (70011) and takes its whole order with it. Everything else still PENDING becomes
--- ACCEPTED -- written exactly once, here -- and a fresh claim on an already-verified UTR is funded
--- from that UTR's unallocated money. Returns how many claims stayed PENDING (ride in flight).
+-- ACCEPTED -- written exactly once, here. Money is handed out later by autoAllocate.
+-- Returns how many claims stayed PENDING (ride in flight).
 runStageC :: Text -> Text -> [Text] -> Map.Map Text DRide.Ride -> Flow Int
 runStageC mid messageId orderIds rideByOrderId = do
   entries <- QLedger.findAllByMerchantAndOrderIds mid orderIds
@@ -192,7 +192,6 @@ runStageC mid messageId orderIds rideByOrderId = do
     if isRefused e
       then QLedger.updateClaimStatus e.id L.REJECTED_UTR_IMBALANCE Nothing
       else QLedger.updateClaimStatus e.id L.ACCEPTED Nothing
-  forM_ (nub $ mapMaybe (.utr) (filter (not . isRefused) judgeable)) $ RSFLedger.allocateUtr mid
   pure (length inFlight)
   where
     partitionByMessage = foldr (\e (a, b) -> if e.messageId == Just messageId then (e : a, b) else (a, e : b)) ([], [])
