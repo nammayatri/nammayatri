@@ -14,8 +14,11 @@ where
 
 import "dynamic-offer-driver-app" Domain.Types.Event.RideEndedEvent (RideEndedEvent)
 import Environment
+import qualified EulerHS.Language as L
+import EulerHS.Types (AwaitingError (..), Microseconds (..))
 import Kernel.Prelude
-import Kernel.Utils.Common (withLogTag, withTryCatch)
+import Kernel.Types.Forkable (awaitableFork)
+import Kernel.Utils.Common (logError, withLogTag, withTryCatch)
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeGeneric)
 import qualified Processor.RideEvents.Handlers as Handlers
 import qualified Processor.RideEvents.Idempotency as Idem
@@ -37,6 +40,10 @@ processRideEnded event =
         runHandler "sendReferralAndDriverToDriverReward" event Handlers.handleReferral
         runHandler "migrateDriverOperatingCity" event Handlers.handleDriverCityMigration
         runHandler "processDriverCoinsAndJourney" event Handlers.handleDriverCoinsAndJourney
+        runIsolated "recomputeUpgradeTiers" 30 event Handlers.handleUpgradeTiers
+        runIsolated "sendCallBasedEndRideSms" 20 event Handlers.handleCallBasedEndRideSms
+        runIsolated "deferredPanVerification" 30 event Handlers.handleDeferredPanVerification
+        runIsolated "reportGoogleMobilityBilling" 20 event Handlers.handleGoogleMobilityBilling
 
 runHandler :: Text -> RideEndedEvent -> (RideEndedEvent -> Flow ()) -> Flow ()
 runHandler name event handler =
@@ -51,3 +58,18 @@ runHandler name event handler =
         -- exactly as before. withTryCatch has already recorded the per-handler
         -- failure in try_exception_error_counter{ErrorContext="rs-handler:<name>"}.
         Left e -> throwM e
+
+runIsolated :: Text -> Int -> RideEndedEvent -> (RideEndedEvent -> Flow ()) -> Flow ()
+runIsolated name timeoutSeconds event handler =
+  withLogTag name $
+    Idem.withIdempotency name event.rideId $ do
+      awaitable <-
+        awaitableFork ("rs-isolated:" <> name) $
+          void $ withTimeGeneric ("rs-handler:" <> name) (handler event)
+      outcome <- L.await (Just (Microseconds (fromIntegral timeoutSeconds * 1000000))) awaitable
+      case outcome of
+        Right _ -> pure ()
+        Left AwaitingTimeout ->
+          logError $ "ride-events.isolated-timeout handler=" <> name <> " rideId=" <> event.rideId <> " seconds=" <> show timeoutSeconds
+        Left (ForkedFlowError err) ->
+          logError $ "ride-events.isolated-failed handler=" <> name <> " rideId=" <> event.rideId <> " err=" <> err

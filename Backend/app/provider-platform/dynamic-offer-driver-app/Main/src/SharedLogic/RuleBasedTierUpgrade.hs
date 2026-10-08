@@ -1,5 +1,6 @@
 module SharedLogic.RuleBasedTierUpgrade
   ( computeEligibleUpgradeTiers,
+    computeEligibleUpgradeTiersSync,
   )
 where
 
@@ -56,25 +57,34 @@ computeEligibleUpgradeTiers ::
   m ()
 computeEligibleUpgradeTiers ride transporterConfig =
   when (isJust transporterConfig.upgradeTierDropRetentionTime) $
-    fork ("computeEligibleUpgradeTiers for driver: " <> ride.driverId.getId) $ do
-      now <- getCurrentTime
-      driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: DriverStatsNotFound: " <> ride.driverId.getId)
-      rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: RideDetailsNotFound: " <> ride.id.getId)
-      driverInfo <- QDriverInformation.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: DriverInfoNotFound: " <> ride.driverId.getId)
-      vehicle <- runInReplica $ QVehicle.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: VehicleNotFound for driver: " <> ride.driverId.getId)
-      let upgradeTierTagData =
-            Yudhishthira.UpgradeTierTagData
-              { driverRating = realToFrac <$> driverStats.rating,
-                vehicleAgeInMonths = (.getMonths) <$> rideDetails.vehicleAge,
-                ridesCount = driverStats.totalRides,
-                favRiderCount = driverStats.favRiderCount,
-                vehicleVariant = vehicle.variant
-              }
-      mbBooking <- QBooking.findById ride.bookingId
-      let mbTransactionId = (.transactionId) <$> mbBooking
-      nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier mbTransactionId upgradeTierTagData)
-      let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
-          newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
-          vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers
-      QDriverInformation.updateUpgradedTiers (Just newUpgrades) driverInfo.driverId
-      QVehicle.updateRuleBasedUpgradeTiers (Just vehicleNewUpgrades) vehicle.driverId
+    fork ("computeEligibleUpgradeTiers for driver: " <> ride.driverId.getId) $
+      computeEligibleUpgradeTiersSync ride transporterConfig
+
+computeEligibleUpgradeTiersSync ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, ClickhouseFlow m r) =>
+  DRide.Ride ->
+  DTTC.TransporterConfig ->
+  m ()
+computeEligibleUpgradeTiersSync ride transporterConfig =
+  when (isJust transporterConfig.upgradeTierDropRetentionTime) $ do
+    now <- getCurrentTime
+    driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: DriverStatsNotFound: " <> ride.driverId.getId)
+    rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: RideDetailsNotFound: " <> ride.id.getId)
+    driverInfo <- QDriverInformation.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: DriverInfoNotFound: " <> ride.driverId.getId)
+    vehicle <- runInReplica $ QVehicle.findById ride.driverId >>= fromMaybeM (InternalError $ "computeEligibleUpgradeTiers: VehicleNotFound for driver: " <> ride.driverId.getId)
+    let upgradeTierTagData =
+          Yudhishthira.UpgradeTierTagData
+            { driverRating = realToFrac <$> driverStats.rating,
+              vehicleAgeInMonths = (.getMonths) <$> rideDetails.vehicleAge,
+              ridesCount = driverStats.totalRides,
+              favRiderCount = driverStats.favRiderCount,
+              vehicleVariant = vehicle.variant
+            }
+    mbBooking <- QBooking.findById ride.bookingId
+    let mbTransactionId = (.transactionId) <$> mbBooking
+    nammaTags <- withTryCatch "computeNammaTags:UpgradeTier" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (Id.cast ride.merchantOperatingCityId) Yudhishthira.UpgradeTier mbTransactionId upgradeTierTagData)
+    let newEligibleTiers = eligibleTiersFromTags $ fromMaybe [] $ eitherToMaybe nammaTags
+        newUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] driverInfo.ruleBasedUpgradeTiers) newEligibleTiers
+        vehicleNewUpgrades = computeMergedUpgrades now (fromMaybe 0 transporterConfig.upgradeTierDropRetentionTime) (fromMaybe [] vehicle.ruleBasedUpgradeTiers) newEligibleTiers
+    QDriverInformation.updateUpgradedTiers (Just newUpgrades) driverInfo.driverId
+    QVehicle.updateRuleBasedUpgradeTiers (Just vehicleNewUpgrades) vehicle.driverId

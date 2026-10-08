@@ -17,10 +17,15 @@ module Processor.RideEvents.Handlers
     handleReferral,
     handleDriverCityMigration,
     handleDriverCoinsAndJourney,
+    handleUpgradeTiers,
+    handleCallBasedEndRideSms,
+    handleDeferredPanVerification,
+    handleGoogleMobilityBilling,
   )
 where
 
 import qualified Data.Aeson as A
+import qualified "dynamic-offer-driver-app" Domain.Action.UI.DriverOnboarding.PanVerification as PanVerification
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Registration as DReg
 import "dynamic-offer-driver-app" Domain.Action.UI.Ride.EndRide (RideInterpolationData (..))
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as SRB
@@ -33,12 +38,14 @@ import qualified "dynamic-offer-driver-app" Domain.Types.Ride as Ride
 import qualified "dynamic-offer-driver-app" Domain.Types.RideRelatedNotificationConfig as DRN
 import "dynamic-offer-driver-app" Domain.Types.TransporterConfig (TransporterConfig)
 import qualified "beckn-spec" Domain.Types.Trip as DTrip
+import qualified "dynamic-offer-driver-app" Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Encryption as EncFlow
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Clickhouse.Config as CHConfig
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto.Config as Esq
@@ -64,7 +71,7 @@ import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
-import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig)
+import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.LocationUpdates.Internal as LU
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
@@ -79,22 +86,27 @@ import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetVehicleStats as FVS
+import qualified "dynamic-offer-driver-app" SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import "dynamic-offer-driver-app" SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import qualified "dynamic-offer-driver-app" SharedLogic.RideEvents.DriverCoinsAndJourney as DriverCoinsAndJourney
+import "dynamic-offer-driver-app" SharedLogic.RuleBasedTierUpgrade (computeEligibleUpgradeTiersSync)
 import qualified "dynamic-offer-driver-app" SharedLogic.ScheduledNotifications as SN
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.RideRelatedNotificationConfig as CRN
+import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import "dynamic-offer-driver-app" Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as QRB
 import qualified "dynamic-offer-driver-app" Storage.Queries.DailyStats as QDailyStats
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformationExtra as QDriverInfo
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverPanCard as DPQuery
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverPlan as QDPlan
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverProfileQuestions as QDriverProfileQuestions
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverRCAssociation as QDRCA
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverReferral as QDriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverStats as QDriverStats
+import qualified "dynamic-offer-driver-app" Storage.Queries.IdfyVerificationExtra as IVQueryExtra
 import qualified "dynamic-offer-driver-app" Storage.Queries.Image as QImage
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QPerson
 import qualified "dynamic-offer-driver-app" Storage.Queries.RCStatsExtra as QRCStats
@@ -109,6 +121,7 @@ import "dynamic-offer-driver-app" Tools.Error
 import "dynamic-offer-driver-app" Tools.Event (BookingEventData (..), RideEventData (..))
 import qualified "dynamic-offer-driver-app" Tools.Event as Event
 import "dynamic-offer-driver-app" Tools.Notifications (notifyDriver)
+import qualified "dynamic-offer-driver-app" Tools.SMS as Sms
 
 ------------------------------------------------------------
 -- Helpers
@@ -588,3 +601,85 @@ handleDriverCoinsAndJourney ::
 handleDriverCoinsAndJourney ev = ActorInfo.withMbActorInfo ev.actorInfo . withRideAndBooking ev $ \ride booking -> do
   thresholdConfig <- fetchTransporterConfig ride
   DriverCoinsAndJourney.processRideEndedCoinsAndJourney ride booking thresholdConfig
+
+handleUpgradeTiers ::
+  ( CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    MonadFlow m,
+    CHConfig.ClickhouseFlow m r
+  ) =>
+  RideEndedEvent ->
+  m ()
+handleUpgradeTiers ev = withRideAndBooking ev $ \ride _booking -> do
+  thresholdConfig <- fetchTransporterConfig ride
+  computeEligibleUpgradeTiersSync ride thresholdConfig
+
+handleCallBasedEndRideSms ::
+  ( CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    MonadFlow m,
+    ServiceFlow m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig]
+  ) =>
+  RideEndedEvent ->
+  m ()
+handleCallBasedEndRideSms ev = withRideAndBooking ev $ \ride booking ->
+  when (ride.rideEndedBy == Just Ride.CallBased) $ do
+    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+    Sms.sendDashboardSms driver.merchantId booking.merchantOperatingCityId Sms.ENDRIDE (Just ride) ride.driverId (Just booking) (fromMaybe 0 ride.fare)
+
+handleDeferredPanVerification ::
+  ( CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow.EncFlow m r,
+    ServiceFlow m r
+  ) =>
+  RideEndedEvent ->
+  m ()
+handleDeferredPanVerification ev = withRideAndBooking ev $ \ride booking -> do
+  mbDriverPerson <- QPerson.findById ride.driverId
+  whenJust mbDriverPerson $ \driverPerson -> do
+    mbDriverPanCard <- DPQuery.findByDriverId ride.driverId
+    whenJust mbDriverPanCard $ \driverPanCard ->
+      when (driverPanCard.verificationStatus == Documents.PENDING) $ do
+        panDocCfg <-
+          getOneConfig
+            ( DocumentVerificationConfigDimensions
+                { merchantOperatingCityId = booking.merchantOperatingCityId.getId,
+                  documentType = Just DTO.PanCard,
+                  vehicleCategory = Just DVC.CAR
+                }
+            )
+            Nothing
+            >>= fromMaybeM (DocumentVerificationConfigNotFound booking.merchantOperatingCityId.getId (show DTO.PanCard))
+        when (fromMaybe False panDocCfg.doNotValidateDuringOnboarding) $ do
+          mbInFlight <- IVQueryExtra.findLatestPendingByDriverIdAndDocType ride.driverId DTO.PanCard
+          when (isNothing mbInFlight) $ do
+            panNumber <- EncFlow.decrypt driverPanCard.panCardNumber
+            nowForDob <- getCurrentTime
+            let dob = fromMaybe nowForDob driverPanCard.driverDob
+            PanVerification.verifyPanFlow
+              driverPerson
+              driverPerson.merchantOperatingCityId
+              panDocCfg
+              panNumber
+              dob
+              driverPanCard.documentImageId1
+              driverPanCard.driverNameOnGovtDB
+
+handleGoogleMobilityBilling ::
+  ( CacheFlow m r,
+    Esq.EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow.EncFlow m r,
+    CoreMetrics.CoreMetrics m,
+    HasRequestId r
+  ) =>
+  RideEndedEvent ->
+  m ()
+handleGoogleMobilityBilling ev = withRideAndBooking ev $ \ride booking -> do
+  thresholdConfig <- fetchTransporterConfig ride
+  when (thresholdConfig.enableMobilityBilling == Just True) $
+    GoogleMobilityBilling.reportNavBillableEvent booking ride
