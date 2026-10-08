@@ -4,8 +4,8 @@
 #     bash tests/restore.test.sh          (needs docker; skipped without it)
 #
 # A small "live" stack is built from nothing -- PostGIS with the four data
-# schemas and the extension schemas the guard expects, passetto with the same
-# seed keys the server's has, a documents volume, a codes file, Arabic place
+# schemas and the extension schemas the guard expects, passetto with upstream's
+# development seed keys, a documents volume, a codes file, Arabic place
 # names -- and phone numbers are ENCRYPTED BY PASSETTO, as the apps do. Then:
 #
 #   1. the real backup.sh takes a backup of it;

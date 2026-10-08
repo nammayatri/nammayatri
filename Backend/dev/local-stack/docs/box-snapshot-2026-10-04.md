@@ -346,10 +346,9 @@ page that carries it. Not yet proven by a newcomer actually doing it.
    `./restore.sh rehearse offsite:latest` on the server: **passed in 71 s** —
    106 tables exact, 20/20 numbers decrypted, 58 329 names, 25 documents —
    with 21 containers running before and after and nothing left behind.
-   Found on the way: the Arabic place names were in no backup, and the phone
-   numbers' encryption keys are upstream's public demo keys (4 of 4 identical
-   to `Backend/dev/sql-seed/passetto-seed.sql`) — the second is the owner's
-   decision, not fixed here.
+   Found on the way: the Arabic place names were in no backup (fixed in L),
+   and one security hardening item, tracked privately and scheduled by the
+   owner as a separate step before the first real passenger.
 3. **Both decisions, taken.** `algeria/osrm-routing` is the default branch of
    both repositories (upstream's `stale.yaml` disabled on both first); the
    weekly ride regression runs and the Run-workflow button works (proven by a

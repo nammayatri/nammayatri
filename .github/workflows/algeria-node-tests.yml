@@ -53,8 +53,7 @@ jobs:
           # c6562a1926, so it needs history; blob:none keeps that cheap.
           fetch-depth: 0
           filter: blob:none
-          # sql-seed: the passetto seed, for tests/restore.test.sh (the same
-          # keys the server's passetto holds).
+          # sql-seed: upstream's passetto seed, for tests/restore.test.sh.
           sparse-checkout: |
             Backend/dev/local-stack
             Backend/dev/sql-seed
