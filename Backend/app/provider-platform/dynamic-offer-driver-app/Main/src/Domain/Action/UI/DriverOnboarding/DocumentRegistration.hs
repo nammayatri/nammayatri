@@ -129,7 +129,7 @@ validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) Valid
                 DL.cacheExtractedDl personId documentNumber (show operatingCity.city)
                 DL.cacheExtractedDlName personId nameOnCard
                 logDebug $ "DocumentRegistration.validateDocument: Validation completed, returning response with documentNumber=" <> show documentNumber <> ", dateOfBirth=" <> show dateOfBirth
-                pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard}
+                pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, dateOfBirth, nameOnCard, ocrProvider = resp.provider}
               Nothing ->
                 return $ emptyValidateDocumentImageResponse imageId
         DVC.VehicleRegistrationCertificate -> do
@@ -152,7 +152,8 @@ validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) Valid
                       chassisNumber = extractedRC.chassisNumber,
                       engineNumber = extractedRC.engineNumber,
                       registrationDate = extractedRC.registrationDate,
-                      ownerName = extractedRC.ownerName
+                      ownerName = extractedRC.ownerName,
+                      ocrProvider = resp.provider
                     }
               Nothing ->
                 return $ emptyValidateDocumentImageResponse imageId
@@ -166,7 +167,7 @@ validateDocumentImage isDashboard (personId, merchantId, merchantOpCityId) Valid
                 let documentNumber = removeSpaceAndDash <$> extractedPan.id_number
                 let nameOnCard = extractedPan.name_on_card
                 let dateOfBirth = fmap convertUTCTimetoDate (parseDateTime =<< extractedPan.date_of_birth)
-                pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, nameOnCard, dateOfBirth}
+                pure $ (emptyValidateDocumentImageResponse imageId) {documentNumber, nameOnCard, dateOfBirth, ocrProvider = resp.provider}
               Nothing ->
                 return $ emptyValidateDocumentImageResponse imageId
         _ -> return $ emptyValidateDocumentImageResponse imageId
