@@ -581,7 +581,7 @@ appendAgentResolvedChats issueReport targetStatus merchantOpCityId identifier is
               )
               issueMessageIds
     QIR.updateChats issueReport.id updatedChats
-    mapM_ (\im -> UIR.forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle im.message []) (catMaybes mbIssueMessages)
+    mapM_ (\im -> UIR.forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle im.message [] (Just $ UIR.xyneHistoricalExternalId im.id.getId issueReport.id now)) (catMaybes mbIssueMessages)
   pure effectiveStatus
 
 issueAddComment ::
@@ -2256,7 +2256,7 @@ sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle identi
   -- Skipped when the label is Nothing (the inbound-Xyne-webhook path), which
   -- avoids echoing the agent's own message straight back to Xyne.
   whenJust mbForwardSenderLabel $ \senderLabel ->
-    UIR.forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle req.message mediaIds
+    UIR.forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle req.message mediaIds (Just $ UIR.xyneLiveMessageExternalId msgId issueReport.id)
   UIR.toChatMessageItem identifier chatMsg
 
 listDashboardChatMessages ::

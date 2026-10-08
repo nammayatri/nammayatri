@@ -10,7 +10,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
@@ -260,11 +260,11 @@ getIssueOption (personId, merchantId, merchantOpCityId) issueCategoryId issueOpt
 
         mbSelectedOptionTranslation <- CQIO.findByIdAndLanguage optionId language identifier
         whenJust mbSelectedOptionTranslation $ \optionTranslation ->
-          forwardChatToTicketService issueReport identifier issueHandle (mkIssueOptionList issueConfig language mbRideInfoRes optionTranslation).option []
+          forwardChatToTicketService issueReport identifier issueHandle (mkIssueOptionList issueConfig language mbRideInfoRes optionTranslation).option [] (Just $ xyneHistoricalExternalId optionId.getId issueReport.id now)
         -- Mirror the auto-generated replies shown on option selection into the
         -- ticket service, so the Xyne agent sees the same bot conversation the
         -- user does — not just the status-change replies.
-        mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
+        mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message [] (Just $ xyneHistoricalExternalId message.id.getId issueReport.id now)) issueMessages
       _ -> return ()
     if null issueMessages
       then pure []
@@ -874,11 +874,11 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
     -- "Customer Name" metadata sidebar all read issueDescription/name
     -- directly and must keep showing the real submission, not whichever
     -- history entry happens to be chronologically first).
-    let (mbTicketBody, mbSenderName, remainingHistory) = case resolvedHistory of
-          [] -> (Nothing, Nothing, [])
-          (Left botMessage : rest) -> (Just botMessage, Just "Auto Reply", rest)
-          (Right userText : rest) -> (Just userText, Nothing, rest)
-    ticket <- buildTicket issueReport category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName
+    let (mbTicketBody, mbSenderName, ticketExternalId, remainingHistory) = case resolvedHistory of
+          [] -> (Nothing, Nothing, xyneDescriptionExternalId issueReport.id, [])
+          ((chat, Left botMessage) : rest) -> (Just botMessage, Just "Auto Reply", xyneChatExternalId issueReport.id chat, rest)
+          ((chat, Right userText) : rest) -> (Just userText, Nothing, xyneChatExternalId issueReport.id chat, rest)
+    ticket <- buildTicket issueReport category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -895,12 +895,12 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         -- as a normal customer message, so it lands after the history it
         -- chronologically follows rather than ahead of it.
         unless (null resolvedHistory) $
-          forwardChatToTicketService issueReportWithTicket identifier issueHandle description []
+          forwardChatToTicketService issueReportWithTicket identifier issueHandle description [] (Just $ xyneDescriptionExternalId issueReport.id)
         -- Forward the auto-generated onCreateIssue replies to the ticket service so
         -- the Xyne agent sees the bot's opening messages too. Runs inside the
         -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
         -- append to (forwarding keys on issueReport.id as the Xyne threadId).
-        mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReportWithTicket identifier issueHandle message.message []) messages
+        mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReportWithTicket identifier issueHandle message.message [] (Just $ xyneHistoricalExternalId message.id.getId issueReport.id now)) messages
       Left err -> do
         -- Ticket creation itself failed — skip forwarding history/replies rather
         -- than posting comments against a thread that may not exist.
@@ -1017,8 +1017,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> m TIT.CreateTicketReq
-    buildTicket issue category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> Text -> m TIT.CreateTicketReq
+    buildTicket issue category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName ticketExternalId = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -1050,7 +1050,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             rideDescription = Just info,
             becknIssueId,
             ticketContext = Just TIT.IssueTicket,
-            xyneChannelId = category.xyneChannelId
+            xyneChannelId = category.xyneChannelId,
+            xyneExternalId = Just ticketExternalId
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
@@ -1183,27 +1184,29 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
     -- (see 'forwardResolvedHistory' below for why). Skips MediaFile/
     -- IssueDescription entries — the frontend never includes those in the
     -- pre-submit chats list (they're appended separately by updateChats).
-    resolveHistoricalChats :: (BeamFlow m r) => [Chat] -> Identifier -> Language -> D.IssueConfig -> Maybe RideInfoRes -> m [Either Text Text]
+    resolveHistoricalChats :: (BeamFlow m r) => [Chat] -> Identifier -> Language -> D.IssueConfig -> Maybe RideInfoRes -> m [(Chat, Either Text Text)]
     resolveHistoricalChats issueChats identifier' language' issueConfig' mbRideInfoRes' =
       fmap catMaybes $
         forM issueChats $ \item -> case item.chatType of
           IssueMessage -> do
             mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language' identifier'
             let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language' issueConfig' mbRideInfoRes') . (: []) =<< mbIssueMessageTranslation
-            pure $ Left . (.message) <$> mbMessage
+            pure $ (item,) . Left . (.message) <$> mbMessage
           IssueOption -> do
             mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language' identifier'
             let mbIssueOption = mkIssueOptionList issueConfig' language' mbRideInfoRes' <$> mbIssueOptionTranslation
-            pure $ Right . (.option) <$> mbIssueOption
+            pure $ (item,) . Right . (.option) <$> mbIssueOption
           _ -> pure Nothing
 
     -- Forwards already-resolved history entries (see 'resolveHistoricalChats')
     -- onto the now-created Xyne thread, in order.
-    forwardResolvedHistory :: (EncFlow m r, BeamFlow m r) => [Either Text Text] -> D.IssueReport -> Identifier -> ServiceHandle m -> m ()
+    forwardResolvedHistory :: (EncFlow m r, BeamFlow m r) => [(Chat, Either Text Text)] -> D.IssueReport -> Identifier -> ServiceHandle m -> m ()
     forwardResolvedHistory resolvedHistory issueReport' identifier' issueHandle' =
-      forM_ resolvedHistory $ \case
-        Left botMessage -> forwardChatToTicketServiceAs "Auto Reply" issueReport' identifier' issueHandle' botMessage []
-        Right userText -> forwardChatToTicketService issueReport' identifier' issueHandle' userText []
+      forM_ resolvedHistory $ \(chat, entry) -> do
+        let externalId = Just $ xyneChatExternalId issueReport'.id chat
+        case entry of
+          Left botMessage -> forwardChatToTicketServiceAs "Auto Reply" issueReport' identifier' issueHandle' botMessage [] externalId
+          Right userText -> forwardChatToTicketService issueReport' identifier' issueHandle' userText [] externalId
 
     castIdentifierToClassification :: Identifier -> TIT.Classification
     castIdentifierToClassification = \case
@@ -1346,7 +1349,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
                   else issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
           unless alreadyAppended $ do
             QIR.updateChats issueReportId updatedChats
-            mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
+            mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message [] (Just $ xyneHistoricalExternalId message.id.getId issueReport.id now)) issueMessages
           pure $ Common.IssueStatusUpdateRes {messages = issueMessages}
         _ | issueReport.status == status -> pure Common.IssueStatusUpdateRes {messages = []}
         (CLOSED, _) -> do
@@ -1370,7 +1373,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           now <- getCurrentTime
           let updatedChats = issueReport.chats ++ map (\message -> mkIssueChat IssueMessage message.id.getId now) issueMessages
           QIR.updateChats issueReportId updatedChats
-          mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message []) issueMessages
+          mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReport identifier issueHandle message.message [] (Just $ xyneHistoricalExternalId message.id.getId issueReport.id now)) issueMessages
           pure $
             Common.IssueStatusUpdateRes
               { messages = issueMessages
@@ -1396,13 +1399,14 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
       mbCategoryChannelId <- case issueReport.categoryId of
         Just cid -> ((.xyneChannelId) =<<) <$> CQIC.findById cid identifier
         Nothing -> pure Nothing
+      now <- getCurrentTime
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
           -- issueDetails.issueId carries our IssueReport id as Xyne's threadId
           -- (see Kernel.External.Ticket.Interface.XyneSpaces.updateTicket);
           -- ticketId above is the provider's own opaque ticket id.
-          (issueHandle.updateTicket merchantId merchantOperatingCityId (issueReport.additionalTicketIds <|> Just ticketId) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Just TIT.UpdateIssueDetails {issueDescription = Nothing, issueId = Just issueReport.id.getId, mediaFiles = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = mbCategoryChannelId})
+          (issueHandle.updateTicket merchantId merchantOperatingCityId (issueReport.additionalTicketIds <|> Just ticketId) TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Just TIT.UpdateIssueDetails {issueDescription = Nothing, issueId = Just issueReport.id.getId, mediaFiles = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}, requesterId = Nothing, ticketContext = Nothing, name = Nothing, phoneNo = Nothing, xyneChannelId = mbCategoryChannelId, xyneExternalId = Just $ xyneStatusExternalId status issueReport.id now})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
@@ -1804,8 +1808,30 @@ createChatMessage personId issueReportId identifier issueHandle req = do
             merchantId = issueReport.merchantId
           }
   QCM.create chatMsg
-  forwardChatToTicketService issueReport identifier issueHandle req.text mediaIds
+  forwardChatToTicketService issueReport identifier issueHandle req.text mediaIds (Just $ xyneLiveMessageExternalId msgId issueReport.id)
   toChatMessageItem identifier chatMsg
+
+-- Xyne dedup keys. The live push and the /internal/xyne/webhook/issues fetch must
+-- produce identical ids for the same message, so both go through these.
+xyneLiveMessageExternalId :: Id DCM.ChatMessage -> Id D.IssueReport -> Text
+xyneLiveMessageExternalId msgId threadId = msgId.getId <> "|" <> threadId.getId
+
+-- Template ids (IssueMessage/IssueOption) are reused across issues and resends,
+-- so the chat's own timestamp is what makes these unique.
+xyneHistoricalExternalId :: Text -> Id D.IssueReport -> UTCTime -> Text
+xyneHistoricalExternalId templateId threadId ts = templateId <> "|" <> threadId.getId <> "|" <> epochMillis ts
+
+xyneChatExternalId :: Id D.IssueReport -> Chat -> Text
+xyneChatExternalId threadId chat = xyneHistoricalExternalId chat.chatId threadId chat.timestamp
+
+xyneDescriptionExternalId :: Id D.IssueReport -> Text
+xyneDescriptionExternalId threadId = "description|" <> threadId.getId
+
+xyneStatusExternalId :: TIT.TicketStatus -> Id D.IssueReport -> UTCTime -> Text
+xyneStatusExternalId status threadId ts = "status|" <> show status <> "|" <> threadId.getId <> "|" <> epochMillis ts
+
+epochMillis :: UTCTime -> Text
+epochMillis ts = show (floor (utcTimeToPOSIXSeconds ts * 1000) :: Integer)
 
 -- | Forward a customer-side chat message to the merchant's configured ticket
 -- service. Uses the original @IssueReport.id@ as the Xyne @threadId@ (via
@@ -1821,8 +1847,9 @@ forwardChatToTicketService ::
   ServiceHandle m ->
   Text ->
   [Id D.MediaFile] ->
+  Maybe Text ->
   m ()
-forwardChatToTicketService issueReport identifier issueHandle messageText mediaIds =
+forwardChatToTicketService issueReport identifier issueHandle messageText mediaIds mbExternalId =
   case (issueReport.merchantId, issueReport.merchantOperatingCityId) of
     (Just merchantId, Just mocId) -> do
       -- Only forward when the app opts in (typically: primary ticket service
@@ -1875,7 +1902,8 @@ forwardChatToTicketService issueReport identifier issueHandle messageText mediaI
                 ticketContext = Just TIT.IssueTicket,
                 name = mbSenderName,
                 phoneNo = mbSenderPhone,
-                xyneChannelId = mbCategory >>= (.xyneChannelId)
+                xyneChannelId = mbCategory >>= (.xyneChannelId),
+                xyneExternalId = mbExternalId
               }
       -- Prefer the targeted-service handle so we hit Xyne regardless of
       -- whether it is the primary or a secondary. Fall back to the general
@@ -1900,8 +1928,9 @@ forwardChatToTicketServiceAs ::
   ServiceHandle m ->
   Text ->
   [Id D.MediaFile] ->
+  Maybe Text ->
   m ()
-forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle messageText mediaIds =
+forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle messageText mediaIds mbExternalId =
   case (issueReport.merchantId, issueReport.merchantOperatingCityId) of
     (Just merchantId, Just mocId) -> do
       shouldForward <- maybe (pure False) (\chk -> chk merchantId mocId) issueHandle.mbShouldForwardChatToTicketService
@@ -1937,7 +1966,8 @@ forwardChatToTicketServiceAs senderLabel issueReport identifier issueHandle mess
                 ticketContext = Just TIT.IssueTicket,
                 name = Just senderLabel,
                 phoneNo = Nothing,
-                xyneChannelId = mbCategory >>= (.xyneChannelId)
+                xyneChannelId = mbCategory >>= (.xyneChannelId),
+                xyneExternalId = mbExternalId
               }
       let call = case issueHandle.mbUpdateTicketOnService of
             Just onService -> onService merchantId mocId TicketTypes.XyneSpaces ticketReq

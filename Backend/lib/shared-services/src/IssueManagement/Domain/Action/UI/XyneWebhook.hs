@@ -72,8 +72,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Text.Show as Show
 
--- | What we 2xx back to Xyne. The @externalId@ field correlates the reply with
--- our @ChatMessage.id@ so Xyne can store it against the message on their side.
+-- | What we 2xx back to Xyne. The @externalId@ is the same id 'fetchXyneIssues'
+-- reports for the persisted reply, so Xyne can dedup it on their side.
 newtype XyneWebhookAck = XyneWebhookAck
   { externalId :: Text
   }
@@ -199,8 +199,9 @@ handleDeskReply lookupXyneCfg issueHandle identifier payload = do
               -- back to Xyne.
               Nothing
               req
-          Redis.setExp key resp.messageId dedupTtlSeconds
-          pure $ XyneWebhookAck {externalId = resp.messageId}
+          let ackExternalId = DUI.xyneLiveMessageExternalId (Id resp.messageId) issueReport.id
+          Redis.setExp key ackExternalId dedupTtlSeconds
+          pure $ XyneWebhookAck {externalId = ackExternalId}
 
 -- | Persist a Xyne attachment and rehost it on our own S3.
 --
@@ -461,6 +462,7 @@ maxXyneIssuesPageSize = 100
 fetchXyneIssues ::
   (Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   Text ->
+  (Id Common.Merchant -> Id Common.MerchantOperatingCity -> m Xyne.XyneSpacesCfg) ->
   DUI.ServiceHandle m ->
   Common.Identifier ->
   Maybe UTCTime ->
@@ -469,7 +471,7 @@ fetchXyneIssues ::
   Maybe Int ->
   Maybe Text ->
   m [Xyne.XyneInboundReq]
-fetchXyneIssues bearerToken issueHandle identifier mbSince mbEndDate mbLimit mbOffset mbAuthHeader = do
+fetchXyneIssues bearerToken lookupXyneCfg issueHandle identifier mbSince mbEndDate mbLimit mbOffset mbAuthHeader = do
   unless (mbAuthHeader == Just ("Bearer " <> bearerToken)) $
     throwError $ AuthBlocked "Invalid Authorization header"
   let cappedLimit = min maxXyneIssuesPageSize (fromMaybe maxXyneIssuesPageSize mbLimit)
@@ -478,7 +480,8 @@ fetchXyneIssues bearerToken issueHandle identifier mbSince mbEndDate mbLimit mbO
   where
     toXyneInboundReqs issue = do
       mbCategory <- maybe (pure Nothing) (`CQIC.findById` identifier) issue.categoryId
-      let channelId = fromMaybe "" (mbCategory >>= (.xyneChannelId))
+      defaultChannelId <- resolveDefaultChannelId issue
+      let channelId = fromMaybe defaultChannelId (mbCategory >>= (.xyneChannelId))
           subject = maybe issue.description (.category) mbCategory
       chatMessages <- QCM.findChatMessagesAfter issue.id Nothing Nothing
       liveReqs <- forM chatMessages $ \chatMessage -> do
@@ -487,6 +490,9 @@ fetchXyneIssues bearerToken issueHandle identifier mbSince mbEndDate mbLimit mbO
         pure $ toXyneInboundReq channelId subject issue senderName item
       historicalReqs <- resolveHistoricalReqs issue channelId subject
       pure $ liveReqs <> historicalReqs
+    resolveDefaultChannelId issue = case (issue.merchantId, issue.merchantOperatingCityId) of
+      (Just merchantId, Just mocId) -> either (const "") (.channelId) <$> withTryCatch "fetchXyneIssues:lookupXyneCfg" (lookupXyneCfg merchantId mocId)
+      _ -> pure ""
     resolveSenderName chatMessage = case chatMessage.senderType of
       DCM.SENDER_OPERATOR -> pure $ senderLabel DCM.SENDER_OPERATOR
       senderType -> do
@@ -506,24 +512,27 @@ fetchXyneIssues bearerToken issueHandle identifier mbSince mbEndDate mbLimit mbO
               mbRideInfoRes <- mapM (issueHandle.getRideInfo merchantId mocId) issue.rideId
               language <- DUI.getLanguage issue.personId Nothing issueHandle
               customerName <- resolvePersonName issue.personId
-              let historicalChats = filter (\c -> c.chatType `elem` [Common.IssueMessage, Common.IssueOption]) issue.chats
+              let historicalChats = filter (\c -> c.chatType `elem` [Common.IssueMessage, Common.IssueOption, Common.IssueDescription]) issue.chats
                   issueForHistory = issue {DIR.chats = historicalChats}
               chatDetails <- DUI.recreateIssueChats issueForHistory issueConfig mbRideInfoRes language identifier
-              pure $ mapMaybe (toHistoricalReq channelId subject issue customerName) chatDetails
+              pure $ catMaybes $ zipWith (toHistoricalReq channelId subject issue customerName) historicalChats chatDetails
         _ -> pure []
     resolvePersonName personId = do
       mbPerson <- issueHandle.findPersonById personId
       pure $ fromMaybe "Customer" (mbPerson >>= personFullName)
 
-    toHistoricalReq channelId subject issue customerName chatDetail = do
+    toHistoricalReq channelId subject issue customerName chat chatDetail = do
       text <- chatDetail.content
+      let externalId = case chat.chatType of
+            Common.IssueDescription -> DUI.xyneDescriptionExternalId issue.id
+            _ -> DUI.xyneChatExternalId issue.id chat
       pure $
         Xyne.XyneInboundReq
           { channelId = channelId,
             threadId = issue.id.getId,
             subject = subject,
             body = text,
-            externalId = Just chatDetail.id,
+            externalId = Just externalId,
             senderName =
               Just $ case chatDetail.sender of
                 Common.BOT -> "Auto Reply"
@@ -547,7 +556,7 @@ fetchXyneIssues bearerToken issueHandle identifier mbSince mbEndDate mbLimit mbO
           threadId = issue.id.getId,
           subject = subject,
           body = item.text,
-          externalId = Just item.messageId,
+          externalId = Just $ DUI.xyneLiveMessageExternalId (Id item.messageId) issue.id,
           senderName = Just senderName,
           senderEmail = Nothing,
           additionalFormFields = Just (buildFormFields item)
