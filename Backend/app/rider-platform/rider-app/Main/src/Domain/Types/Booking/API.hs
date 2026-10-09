@@ -304,6 +304,7 @@ instance ToSchema BookingAPIDetails where
 
 data RentalBookingAPIDetails = RentalBookingAPIDetails
   { stopLocation :: Maybe LocationAPIEntity,
+    stops :: [LocationAPIEntity],
     otpCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
@@ -529,6 +530,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
     mkRentalAPIDetails RentalBookingDetails {..} =
       RentalBookingAPIDetails
         { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation,
+          stops = map SLoc.makeLocationAPIEntity stops,
           ..
         }
     mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =

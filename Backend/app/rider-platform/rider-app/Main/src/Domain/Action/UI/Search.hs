@@ -175,7 +175,8 @@ extractSearchDetails now = \case
       { riderPreferredOption = DRPO.Rental,
         roundTrip = False,
         stops = fromMaybe [] stops,
-        hasStops = Nothing,
+        -- Last element is the drop; only the rest are intermediate stops.
+        hasStops = stops >>= \s -> Just (length s > 1),
         returnTime = Nothing,
         driverIdentifier_ = Nothing,
         routeCode = Nothing,
