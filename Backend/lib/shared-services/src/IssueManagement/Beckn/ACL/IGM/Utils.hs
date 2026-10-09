@@ -42,7 +42,7 @@ buildContext action domain bppId merchant txnId msgId city bapData mTTL = do
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
-      { contextVersion = Just "1.0.0",
+      { contextVersion = Just "2.1.0",
         contextDomain = encodeToText' domain,
         contextAction = encodeToText' action,
         contextBapId,
@@ -63,13 +63,16 @@ buildContext action domain bppId merchant txnId msgId city bapData mTTL = do
         String code -> pure code
         _ -> throwError $ InvalidRequest "Incorrect city"
 
+encodeToText' :: (ToJSON a) => a -> Maybe Text
+encodeToText' = A.decode . A.encode
+
 tfLocation :: Text -> Spec.Location
-tfLocation location_code =
+tfLocation cityCode =
   Spec.Location
     { locationCity =
         Just $
           Spec.City
-            { cityCode = Just location_code,
+            { cityCode = Just cityCode,
               cityName = Nothing
             },
       locationCountry =
@@ -79,9 +82,6 @@ tfLocation location_code =
               countryName = Nothing
             }
     }
-
-encodeToText' :: (ToJSON a) => a -> Maybe Text
-encodeToText' = A.decode . A.encode
 
 buildTTL :: Int -> UTCTime -> Maybe Text
 buildTTL ttlInt now = do

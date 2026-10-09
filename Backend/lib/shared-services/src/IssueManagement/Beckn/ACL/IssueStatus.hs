@@ -6,10 +6,10 @@ import qualified IGM.Types as Spec
 import IGM.Utils (mkOrgName)
 import qualified IGM.Utils as Utils
 import qualified IssueManagement.Beckn.ACL.IGM.Utils as Utils
+import qualified IssueManagement.Domain.Action.Beckn.Issue as DIssue
 import qualified IssueManagement.Domain.Action.Beckn.IssueStatus as DIssueStatus
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildIssueStatusReq ::
@@ -37,8 +37,12 @@ buildOnIssueStatusReq ::
   DIssueStatus.IssueStatusRes ->
   m Spec.OnIssueStatusReq
 buildOnIssueStatusReq txnId msgId bapId bapUri res = do
-  context <- Utils.buildContext Spec.ON_ISSUE_STATUS Spec.PUBLIC_TRANSPORT res.merchant.subscriberId.getShortId res.merchant txnId msgId res.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) (Utils.buildTTL 30 (convertRFC3339ToUTC res.updatedAt))
-  let message = tfOnIssueStatusMessage res
+  let issueDomain = res.domain
+  context <- Utils.buildContext Spec.ON_ISSUE_STATUS issueDomain res.merchant.subscriberId.getShortId res.merchant txnId msgId res.merchantOperatingCity.city (Just $ Utils.BapData bapId bapUri) Nothing
+  let message =
+        if res.isValueAddNP
+          then tfOnIssueStatusMessage res
+          else tfOnIssueStatusMessageOffUs res
   pure $
     Spec.OnIssueStatusReq
       { onIssueStatusReqContext = context,
@@ -46,6 +50,7 @@ buildOnIssueStatusReq txnId msgId bapId bapUri res = do
         onIssueStatusReqError = Nothing
       }
 
+-- OnUs: existing response
 tfOnIssueStatusMessage :: DIssueStatus.IssueStatusRes -> Maybe Spec.IssueReqMessage
 tfOnIssueStatusMessage res =
   Just
@@ -69,7 +74,7 @@ tfIssue res =
       issueResolution = tfIssueResolution res,
       issueResolutionProvider = tfResolutionProvider res,
       issueSource = Nothing,
-      issueStatus = Nothing,
+      issueStatus = DIssue.mapDomainStatusToSpecStatus res.issueStatus,
       issueSubCategory = Nothing,
       issueUpdatedAt = res.updatedAt,
       issueRating = Nothing
@@ -87,43 +92,57 @@ tfRespondentActions :: DIssueStatus.IssueStatusRes -> Maybe [Spec.RespondentActi
 tfRespondentActions res =
   Just
     [ Spec.RespondentAction
-        { respondentActionRespondentAction = Just res.respondentAction,
+        { respondentActionCascadedLevel = Nothing,
+          respondentActionRespondentAction = Just res.respondentAction,
           respondentActionShortDesc = Just $ "Issue registered and " <> toLower res.respondentAction,
           respondentActionUpdatedAt = Just res.updatedAt,
           respondentActionUpdatedBy = tfUpdatedBy res
         }
     ]
 
-tfUpdatedBy :: DIssueStatus.IssueStatusRes -> Maybe Spec.Organization
-tfUpdatedBy res =
-  Just $
-    Spec.Organization
-      { organizationContact = tfOrganizationContact res,
-        organizationOrg = tfOrganzationOrg res,
-        organizationPerson = tfOrganizationPerson res
+-- OffUs: spec-compliant response
+tfOnIssueStatusMessageOffUs :: DIssueStatus.IssueStatusRes -> Maybe Spec.IssueReqMessage
+tfOnIssueStatusMessageOffUs res =
+  Just
+    Spec.IssueReqMessage
+      { issueReqMessageIssue = tfIssueOffUs res
       }
 
-tfOrganizationContact :: DIssueStatus.IssueStatusRes -> Maybe Spec.GROContact
-tfOrganizationContact res =
-  Just $
-    Spec.GROContact
-      { gROContactEmail = Just res.groEmail,
-        gROContactPhone = Just res.groPhone
-      }
-
-tfOrganzationOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.OrganizationOrg
-tfOrganzationOrg res =
-  Just $
-    Spec.OrganizationOrg
-      { organizationOrgName = mkOrgName res.merchant.subscriberId.getShortId Spec.PUBLIC_TRANSPORT
-      }
-
-tfOrganizationPerson :: DIssueStatus.IssueStatusRes -> Maybe Spec.ComplainantPerson
-tfOrganizationPerson res =
-  Just $
-    Spec.ComplainantPerson
-      { complainantPersonName = Just res.groName
-      }
+tfIssueOffUs :: DIssueStatus.IssueStatusRes -> Spec.Issue
+tfIssueOffUs res =
+  Spec.Issue
+    { issueCategory = Nothing,
+      issueComplainantInfo = Nothing,
+      issueCreatedAt = res.createdAt,
+      issueDescription = Nothing,
+      issueExpectedResolutionTime = Nothing,
+      issueExpectedResponseTime = Nothing,
+      issueId = res.issueId.getId,
+      issueIssueActions =
+        Just
+          Spec.IssueActions
+            { issueActionsComplainantActions = Nothing,
+              issueActionsRespondentActions =
+                Just
+                  [ Spec.RespondentAction
+                      { respondentActionCascadedLevel = Just 1,
+                        respondentActionRespondentAction = Just res.respondentAction,
+                        respondentActionShortDesc = Just $ "Issue registered and " <> toLower res.respondentAction,
+                        respondentActionUpdatedAt = Just res.updatedAt,
+                        respondentActionUpdatedBy = tfUpdatedBy res
+                      }
+                  ]
+            },
+      issueIssueType = Nothing,
+      issueOrderDetails = Nothing,
+      issueResolution = tfIssueResolutionFromStored res,
+      issueResolutionProvider = tfResolutionProvider res,
+      issueSource = Nothing,
+      issueStatus = Nothing,
+      issueSubCategory = Nothing,
+      issueUpdatedAt = res.updatedAt,
+      issueRating = Nothing
+    }
 
 tfIssueResolution :: DIssueStatus.IssueStatusRes -> Maybe Spec.IssueResolution
 tfIssueResolution _res =
@@ -133,8 +152,24 @@ tfIssueResolution _res =
         issueResolutionActionTriggered = show Spec.REFUND,
         issueResolutionGroRemarks = Nothing,
         issueResolutionLongDesc = Nothing,
+        issueResolutionRefundAmount = Nothing,
         issueResolutionShortDesc = show Spec.REFUND
       }
+
+tfIssueResolutionFromStored :: DIssueStatus.IssueStatusRes -> Maybe Spec.IssueResolution
+tfIssueResolutionFromStored res =
+  case res.resolutionActionTriggered of
+    Just actionTriggered ->
+      Just $
+        Spec.IssueResolution
+          { issueResolutionAction = Nothing,
+            issueResolutionActionTriggered = actionTriggered,
+            issueResolutionGroRemarks = Nothing,
+            issueResolutionLongDesc = res.resolutionLongDesc,
+            issueResolutionRefundAmount = res.resolutionRefundAmount,
+            issueResolutionShortDesc = fromMaybe actionTriggered res.resolutionShortDesc
+          }
+    Nothing -> Nothing
 
 tfResolutionProvider :: DIssueStatus.IssueStatusRes -> Maybe Spec.ResolutionProvider
 tfResolutionProvider res =
@@ -146,7 +181,7 @@ tfResolutionProvider res =
 tfRespondentInfo :: DIssueStatus.IssueStatusRes -> Spec.ResolutionProviderRespondentInfo
 tfRespondentInfo res =
   Spec.ResolutionProviderRespondentInfo
-    { resolutionProviderRespondentInfoOrganization = tfUpdatedBy res,
+    { resolutionProviderRespondentInfoOrganization = tfResolutionProviderOrg res,
       resolutionProviderRespondentInfoResolutionSupport = tfResolutionSupport res,
       resolutionProviderRespondentInfoType = Just $ show Spec.TRANSACTION_COUNTERPARTY_NP
     }
@@ -155,7 +190,7 @@ tfResolutionSupport :: DIssueStatus.IssueStatusRes -> Maybe Spec.ResolutionSuppo
 tfResolutionSupport res =
   Just $
     Spec.ResolutionSupport
-      { resolutionSupportContact = tfOrganizationContact res,
+      { resolutionSupportContact = tfGROContact res,
         resolutionSupportGros = tfSupportGros res
       }
 
@@ -163,8 +198,41 @@ tfSupportGros :: DIssueStatus.IssueStatusRes -> Maybe [Spec.GRO]
 tfSupportGros res =
   Just
     [ Spec.GRO
-        { gROContact = tfOrganizationContact res,
-          gROGroType = show Spec.TRANSACTION_COUNTERPARTY_NP,
-          gROPerson = tfOrganizationPerson res
+        { gROContact = tfGROContact res,
+          gROGroType = show Spec.TRANSACTION_COUNTERPARTY_NP_GRO,
+          gROPerson = Just $ Spec.ComplainantPerson {complainantPersonName = Just res.groName}
         }
     ]
+
+tfUpdatedBy :: DIssueStatus.IssueStatusRes -> Maybe Spec.Organization
+tfUpdatedBy res =
+  Just $
+    Spec.Organization
+      { organizationContact = Just $ Spec.GROContact {gROContactEmail = Just res.respondentEmail, gROContactPhone = Just res.respondentPhone},
+        organizationOrg = tfOrganzationOrg res,
+        organizationPerson = Just $ Spec.ComplainantPerson {complainantPersonName = Just res.respondentName}
+      }
+
+tfResolutionProviderOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.Organization
+tfResolutionProviderOrg res =
+  Just $
+    Spec.Organization
+      { organizationContact = Just $ Spec.GROContact {gROContactEmail = Just res.resolutionProviderEmail, gROContactPhone = Just res.resolutionProviderPhone},
+        organizationOrg = tfOrganzationOrg res,
+        organizationPerson = Just $ Spec.ComplainantPerson {complainantPersonName = Just res.resolutionProviderName}
+      }
+
+tfGROContact :: DIssueStatus.IssueStatusRes -> Maybe Spec.GROContact
+tfGROContact res =
+  Just $
+    Spec.GROContact
+      { gROContactEmail = Just res.groEmail,
+        gROContactPhone = Just res.groPhone
+      }
+
+tfOrganzationOrg :: DIssueStatus.IssueStatusRes -> Maybe Spec.OrganizationOrg
+tfOrganzationOrg res =
+  Just $
+    Spec.OrganizationOrg
+      { organizationOrgName = mkOrgName res.merchant.subscriberId.getShortId res.domain
+      }

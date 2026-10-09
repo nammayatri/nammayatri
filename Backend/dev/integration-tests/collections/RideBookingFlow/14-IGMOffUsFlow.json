@@ -1,0 +1,1111 @@
+{
+  "info": {
+    "name": "IGM OffUs E2E Flow",
+    "description": "IGM OffUs test cases. Run AFTER a completed ride flow (01-AutoRideFlow).\n\nExpects these env vars from the ride flow:\n- customer_bookingId\n- driver_merchant_id\n- dashboard_token\n\nPrereqs (seed before running):\n1. igm_config for merchant\n2. issue_category igm_category=FULFILLMENT\n3. issue_option igm_sub_category=FLM111\n4. capability_endpoint for IGM dashboard APIs\n5. offus-bap.test.com NOT in value_add_np\n6. allTablesDisabled=true in kv_configs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "if(!pm.collectionVariables.get(\"_igm_issue_id\")){",
+          "  pm.collectionVariables.set(\"_igm_issue_id\",\"IGM-\"+Date.now());",
+          "  pm.collectionVariables.set(\"_igm_issue_id_2\",\"IGM2-\"+Date.now());",
+          "  console.log(\"IGM IDs:\",pm.collectionVariables.get(\"_igm_issue_id\"),pm.collectionVariables.get(\"_igm_issue_id_2\"));",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "IGM 1.1: Open Issue (OPEN)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 1.1: Open Issue (OPEN)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "pm.test('Has ack',function(){pm.expect(d.message.ack.status).to.eql('200');});",
+              "console.log('IGM opened:',pm.collectionVariables.get('_igm_issue_id'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-001\",\"message_id\":\"MSG-IGM-001\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Driver took wrong route\",\"long_desc\":\"Extra fare due to route deviation\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"short_desc\":\"Complaint registered\",\"updated_at\":\"2026-08-17T21:00:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM: Wait 5s",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var s=Date.now();while(Date.now()-s<5000){}",
+              "console.log('Waited 5000ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"Waited for async processing\");"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:8016/ui/beckn/get-version",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "ui",
+            "beckn",
+            "get-version"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 5.1: Duplicate OPEN (idempotent)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 5.1: Duplicate OPEN (idempotent)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200 idempotent',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-DUP\",\"message_id\":\"MSG-IGM-DUP\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Driver took wrong route\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"short_desc\":\"Dup\",\"updated_at\":\"2026-08-17T21:01:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 2.1: Missing bap_id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 2.1: Missing bap_id] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('Error response',function(){var d=pm.response.json();pm.expect(d.errorCode).to.exist;console.log('Missing bap_id:',JSON.stringify(d));});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_uri\":\"http://x\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-V1\",\"message_id\":\"MSG-V1\",\"timestamp\":\"2026-08-17T21:00:00.000Z\"},\"message\":{\"issue\":{\"id\":\"V1\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"X\"},\"contact\":{\"phone\":\"1\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\"},\"description\":{\"short_desc\":\"t\"},\"source\":{\"type\":\"CONSUMER\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"updated_at\":\"2026-08-17T21:00:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"x\"},\"contact\":{\"phone\":\"1\"},\"person\":{\"name\":\"X\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 2.2: Missing transaction_id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 2.2: Missing transaction_id] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('Error',function(){var d=pm.response.json();pm.expect(d.errorCode).to.exist;console.log('Missing txn_id:',JSON.stringify(d));});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"message_id\":\"MSG-V2\",\"timestamp\":\"2026-08-17T21:00:00.000Z\"},\"message\":{\"issue\":{\"id\":\"V2\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"X\"},\"contact\":{\"phone\":\"1\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\"},\"description\":{\"short_desc\":\"t\"},\"source\":{\"type\":\"CONSUMER\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"updated_at\":\"2026-08-17T21:00:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"x\"},\"contact\":{\"phone\":\"1\"},\"person\":{\"name\":\"X\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 8.1: Issue Status Query",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 8.1: Issue Status Query] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue_status",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue_status"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue_status\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-S1\",\"message_id\":\"MSG-IGM-S1\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue_id\":\"{{_igm_issue_id}}\"}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 8.5: Issue Status Wrong BAP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 8.5] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test(\"400 BAP unauthorized\",function(){pm.response.to.have.status(400);});",
+              "var d=pm.response.json();",
+              "pm.test(\"Error message\",function(){pm.expect(d.errorMessage).to.include(\"not authorized\");});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue_status",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue_status"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue_status\",\"core_version\":\"1.0.0\",\"bap_id\":\"wrong-bap.test.com\",\"bap_uri\":\"http://wrong-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-SB\",\"message_id\":\"MSG-IGM-SB\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue_id\":\"{{_igm_issue_id}}\"}}"
+        }
+      }
+    },
+    {
+      "name": "IGM: Find issue report ID",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var s=Date.now();while(Date.now()-s<3000){}",
+              "console.log('Waited 3000ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[Find report ID] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test(\"Status 200\",function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "var igmId=pm.collectionVariables.get(\"_igm_issue_id\");",
+              "if(d.issues){",
+              "  for(var i=0;i<d.issues.length;i++){",
+              "    if(d.issues[i].becknIssueId===igmId){",
+              "      pm.collectionVariables.set(\"igm_issue_report_id\",d.issues[i].issueReportId);",
+              "      console.log(\"Found issue_report_id:\",d.issues[i].issueReportId,\"for IGM:\",igmId);",
+              "      break;",
+              "    }",
+              "  }",
+              "}",
+              "pm.test(\"Found IGM issue report\",function(){",
+              "  pm.expect(pm.collectionVariables.get(\"igm_issue_report_id\")).to.not.be.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/list?limit=10&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "list?limit=10&offset=0"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 11.1: Trail (OPEN)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 11.1: Trail (OPEN)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "pm.test('OPEN',function(){pm.expect(d.igmStatus).to.eql('OPEN');});",
+              "pm.test('Complainant OPEN',function(){pm.expect(d.complainantActions[0].action).to.eql('OPEN');});",
+              "pm.test('Respondent PROCESSING',function(){pm.expect(d.respondentActions[0].action).to.eql('PROCESSING');});",
+              "pm.test('No resolution',function(){pm.expect(d.resolution).to.be.null;});",
+              "pm.test('FULFILLMENT',function(){pm.expect(d.category).to.eql('FULFILLMENT');});",
+              "pm.test('FLM111',function(){pm.expect(d.subCategory).to.eql('FLM111');});",
+              "pm.test('CONSUMER',function(){pm.expect(d.source).to.eql('CONSUMER');});",
+              "pm.test('PT2H',function(){pm.expect(d.expectedResponseTime).to.eql('PT2H');});",
+              "pm.test('P1D',function(){pm.expect(d.expectedResolutionTime).to.eql('P1D');});",
+              "pm.test('GRO',function(){pm.expect(d.resolutionProvider.groName).to.not.be.null;});",
+              "console.log('Trail OPEN OK');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/trail",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "trail"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 12.1: Dashboard PROCESSING",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 12.1: Dashboard PROCESSING] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test(\"Response\",function(){pm.expect(pm.response.code).to.be.oneOf([200,500]);",
+              "  if(pm.response.code===500){var d=pm.response.json();pm.expect(d.errorCode).to.eql(\"EXTERNAL_API_CALL_ERROR\");}",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/actionUpdate",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "actionUpdate"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"PROCESSING\",\"shortDesc\":\"Investigating route deviation\"}"
+        }
+      }
+    },
+    {
+      "name": "IGM 12.2: Dashboard NEED-MORE-INFO",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 12.2: Dashboard NEED-MORE-INFO] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test(\"Response\",function(){pm.expect(pm.response.code).to.be.oneOf([200,500]);",
+              "  if(pm.response.code===500){var d=pm.response.json();pm.expect(d.errorCode).to.eql(\"EXTERNAL_API_CALL_ERROR\");}",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/actionUpdate",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "actionUpdate"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"NEED-MORE-INFO\",\"shortDesc\":\"Need more details from rider\"}"
+        }
+      }
+    },
+    {
+      "name": "IGM 6.1: Escalate (GRIEVANCE)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 6.1: Escalate (GRIEVANCE)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-ESC\",\"message_id\":\"MSG-IGM-ESC\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"GRIEVANCE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Driver took wrong route\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"short_desc\":\"Complaint\",\"updated_at\":\"2026-08-17T21:00:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}},{\"complainant_action\":\"ESCALATE\",\"short_desc\":\"Escalated\",\"updated_at\":\"2026-08-17T21:30:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 11.2: Trail (ESCALATED)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var s=Date.now();while(Date.now()-s<5000){}",
+              "console.log('Waited 5000ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 11.2: Trail (ESCALATED)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "pm.test('ESCALATED',function(){pm.expect(d.igmStatus).to.eql('ESCALATED');});",
+              "pm.test('2 complainant',function(){pm.expect(d.complainantActions.length).to.eql(2);});",
+              "pm.test('ESCALATE action',function(){pm.expect(d.complainantActions[1].action).to.eql('ESCALATE');});",
+              "pm.test('2 respondent',function(){pm.expect(d.respondentActions.length).to.be.gte(2);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/trail",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "trail"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 6.6: Double Escalate (reject)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 6.6: Double Escalate (reject)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-ESC2\",\"message_id\":\"MSG-IGM-ESC2\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"GRIEVANCE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Driver took wrong route\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"ESCALATE\",\"short_desc\":\"Double\",\"updated_at\":\"2026-08-17T22:00:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 12.3: Dashboard RESOLVED (REFUND)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 12.3: Dashboard RESOLVED (REFUND)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test(\"Response\",function(){pm.expect(pm.response.code).to.be.oneOf([200,500]);",
+              "  if(pm.response.code===500){var d=pm.response.json();pm.expect(d.errorCode).to.eql(\"EXTERNAL_API_CALL_ERROR\");}",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/actionUpdate",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "actionUpdate"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\":\"RESOLVED\",\"shortDesc\":\"Resolved with refund\",\"resolution\":{\"shortDesc\":\"Partial refund for route deviation\",\"longDesc\":\"Driver took longer route\",\"actionTriggered\":\"REFUND\",\"refundAmount\":\"75.00\"}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 11.3: Trail (RESOLVED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 11.3: Trail (RESOLVED)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "pm.test('RESOLVED',function(){pm.expect(d.igmStatus).to.eql('RESOLVED');});",
+              "pm.test('Resolution',function(){pm.expect(d.resolution).to.not.be.null;});",
+              "pm.test('REFUND',function(){pm.expect(d.resolution.actionTriggered).to.eql('REFUND');});",
+              "pm.test('75.00',function(){pm.expect(d.resolution.refundAmount).to.eql('75.00');});",
+              "pm.test('Desc',function(){pm.expect(d.resolution.shortDesc).to.include('refund');});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/trail",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "trail"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 7.8: Close RESOLVED (reject)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 7.8: Close RESOLVED (reject)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-CL-REJ\",\"message_id\":\"MSG-IGM-CL-REJ\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"CLOSED\",\"issue_type\":\"GRIEVANCE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Driver took wrong route\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"CLOSE\",\"short_desc\":\"Close attempt\",\"updated_at\":\"2026-08-17T23:00:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 13.10: Still RESOLVED after rejected close",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var s=Date.now();while(Date.now()-s<3000){}",
+              "console.log('Waited 3000ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 13.10: Still RESOLVED after rejected close] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "pm.test('Still RESOLVED',function(){pm.expect(d.igmStatus).to.eql('RESOLVED');});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id}}/trail",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id}}",
+            "trail"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 8.3: Issue Status (RESOLVED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 8.3: Issue Status (RESOLVED)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue_status",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue_status"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue_status\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-S-RES\",\"message_id\":\"MSG-IGM-S-RES\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue_id\":\"{{_igm_issue_id}}\"}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 7.1: Open second issue",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 7.1: Open second issue] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-CL1\",\"message_id\":\"MSG-IGM-CL1\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id_2}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"OPEN\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Safety concern\",\"long_desc\":\"Driver was rude\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"short_desc\":\"Complaint\",\"updated_at\":\"2026-08-17T23:10:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM 7.1b: Close second issue",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var s=Date.now();while(Date.now()-s<5000){}",
+              "console.log('Waited 5000ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 7.1b: Close second issue] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-CL2\",\"message_id\":\"MSG-IGM-CL2\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id_2}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"CLOSED\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Safety concern\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"OPEN\",\"short_desc\":\"Complaint\",\"updated_at\":\"2026-08-17T23:10:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}},{\"complainant_action\":\"CLOSE\",\"short_desc\":\"Issue closed\",\"updated_at\":\"2026-08-17T23:30:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    },
+    {
+      "name": "IGM: Find second report ID",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var s=Date.now();while(Date.now()-s<5000){}",
+              "console.log('Waited 5000ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[Find report ID 2] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test(\"200\",function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "var id2=pm.collectionVariables.get(\"_igm_issue_id_2\");",
+              "if(d.issues){",
+              "  for(var i=0;i<d.issues.length;i++){",
+              "    if(d.issues[i].becknIssueId===id2){",
+              "      pm.collectionVariables.set(\"igm_issue_report_id_2\",d.issues[i].issueReportId);",
+              "      console.log(\"Found issue_report_id_2:\",d.issues[i].issueReportId);",
+              "      break;",
+              "    }",
+              "  }",
+              "}",
+              "pm.test(\"Found second report\",function(){",
+              "  pm.expect(pm.collectionVariables.get(\"igm_issue_report_id_2\")).to.not.be.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/list?limit=10&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "list?limit=10&offset=0"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 11.4: Trail (CLOSED)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 11.4: Trail (CLOSED)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "var d=pm.response.json();",
+              "pm.test('CLOSED',function(){pm.expect(d.igmStatus).to.eql('CLOSED');});",
+              "pm.test('CLOSE action',function(){var a=d.complainantActions.map(function(x){return x.action;});pm.expect(a).to.include('CLOSE');});",
+              "pm.test('RESOLVED resp',function(){var a=d.respondentActions.map(function(x){return x.action;});pm.expect(a).to.include('RESOLVED');});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/issue/igm/{{igm_issue_report_id_2}}/trail",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "issue",
+            "igm",
+            "{{igm_issue_report_id_2}}",
+            "trail"
+          ]
+        },
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ]
+      }
+    },
+    {
+      "name": "IGM 7.9: Close already CLOSED (reject)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log(\"[IGM 7.9: Close already CLOSED (reject)] Response:\", (pm.response && pm.response.text() || \"NO RESPONSE\").substring(0, 800));",
+              "pm.test('ACK 200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "http://localhost:8016/beckn/{{driver_merchant_id}}/issue",
+          "host": [
+            "http://localhost:8016"
+          ],
+          "path": [
+            "beckn",
+            "{{driver_merchant_id}}",
+            "issue"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"context\":{\"domain\":\"ONDC:TRV10\",\"country\":\"IND\",\"city\":\"std:080\",\"action\":\"issue\",\"core_version\":\"1.0.0\",\"bap_id\":\"offus-bap.test.com\",\"bap_uri\":\"http://offus-bap.test.com\",\"bpp_id\":\"NAMMA_YATRI_PARTNER\",\"bpp_uri\":\"http://localhost:8016\",\"transaction_id\":\"TXN-IGM-CL3\",\"message_id\":\"MSG-IGM-CL3\",\"timestamp\":\"2026-08-17T21:00:00.000Z\",\"ttl\":\"PT30S\"},\"message\":{\"issue\":{\"id\":\"{{_igm_issue_id_2}}\",\"category\":\"FULFILLMENT\",\"sub_category\":\"FLM111\",\"status\":\"CLOSED\",\"issue_type\":\"ISSUE\",\"complainant_info\":{\"person\":{\"name\":\"Test Rider\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"}},\"order_details\":{\"id\":\"{{customer_bookingId}}\",\"state\":\"Completed\",\"provider_id\":\"P1\"},\"description\":{\"short_desc\":\"Driver took wrong route\"},\"source\":{\"network_participant_id\":\"offus-bap.test.com\",\"type\":\"CONSUMER\"},\"expected_response_time\":{\"duration\":\"PT2H\"},\"expected_resolution_time\":{\"duration\":\"P1D\"},\"issue_actions\":{\"complainant_actions\":[{\"complainant_action\":\"CLOSE\",\"short_desc\":\"Double close\",\"updated_at\":\"2026-08-17T23:50:00.000Z\",\"updated_by\":{\"org\":{\"name\":\"offus-bap.test.com::ONDC:TRV10\"},\"contact\":{\"phone\":\"9876543210\",\"email\":\"rider@test.com\"},\"person\":{\"name\":\"Test Rider\"}}}]},\"created_at\":\"2026-08-17T21:00:00.000Z\",\"updated_at\":\"2026-08-17T21:00:00.000Z\"}}}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_igm_issue_id",
+      "value": ""
+    },
+    {
+      "key": "_igm_issue_id_2",
+      "value": ""
+    },
+    {
+      "key": "igm_issue_report_id",
+      "value": ""
+    },
+    {
+      "key": "igm_issue_report_id_2",
+      "value": ""
+    }
+  ]
+}
