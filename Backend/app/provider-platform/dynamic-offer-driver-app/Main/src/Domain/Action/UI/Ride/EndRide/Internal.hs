@@ -1396,6 +1396,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         cancellationPenaltyAmount = Nothing,
         addedToFeeId = Nothing,
         collectedAtVendorId = Nothing,
+        specialZoneRideCharges = if isSpecialZoneCharge then Just (QDF.addSpecialZoneRideCharge totalFee Nothing) else Nothing,
         ..
       }
   where

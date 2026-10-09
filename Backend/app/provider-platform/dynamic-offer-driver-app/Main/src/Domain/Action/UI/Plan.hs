@@ -221,6 +221,7 @@ data DriverDuesEntity = DriverDuesEntity
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
     totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
+    specialZoneRideCharges :: Maybe [DF.SpecialZoneRideCharge],
     driverFeeId :: Text,
     status :: DF.DriverFeeStatus
   }
@@ -1053,6 +1054,7 @@ mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency mbCur
         amountPaidByCoin = Nothing,
         specialZoneRideCount = 0,
         specialZoneAmount = 0,
+        specialZoneRideCharges = Nothing,
         planId = Just $ plan.id,
         planMode = Just plan.paymentMode,
         notificationRetryCount = 0,
@@ -1642,6 +1644,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               specialZoneRideCount = driverFee.specialZoneRideCount,
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
               totalSpecialZoneChargesWithCurrency = PriceAPIEntity driverFee.specialZoneAmount driverFee.currency,
+              specialZoneRideCharges = driverFee.specialZoneRideCharges,
               totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
               driverFeeId = driverFee.id.getId,
               status = driverFee.status

@@ -57,6 +57,7 @@ data DriverFee = DriverFee
     serviceName :: Domain.Types.Plan.ServiceNames,
     siblingFeeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee),
     specialZoneAmount :: Kernel.Types.Common.HighPrecMoney,
+    specialZoneRideCharges :: Kernel.Prelude.Maybe [Domain.Types.DriverFee.SpecialZoneRideCharge],
     specialZoneRideCount :: Kernel.Prelude.Int,
     splitOfDriverFeeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee),
     stageUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -123,6 +124,9 @@ data RefundInfo = RefundInfo
   deriving (Generic, Eq, Show)
 
 data RefundedBy = PAYOUT | REFUNDS_API deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+
+data SpecialZoneRideCharge = SpecialZoneRideCharge {platformFee :: Kernel.Types.Common.HighPrecMoney, rideCount :: Kernel.Prelude.Int}
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''DriverFeeStatus)
 
