@@ -195,7 +195,6 @@ FRFSQuote:
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     offerSegment: Maybe Text
-    routeGroupKey: Maybe Text # Same for every service tier quote of one journey (CRIS subway), so the client can pair them for tier switching
   beamFields:
     fromStationCode:
       fromStationId: Text

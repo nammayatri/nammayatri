@@ -585,8 +585,7 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.toStationAddress = quotesFromOnSearch.toStationAddress,
       Quote.toStationName = quotesFromOnSearch.toStationName,
       Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
-      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber,
-      Quote.routeGroupKey = quotesFromOnSearch.routeGroupKey
+      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber
     }
   where
     toJsonText :: FRFSCachedQuote -> Text

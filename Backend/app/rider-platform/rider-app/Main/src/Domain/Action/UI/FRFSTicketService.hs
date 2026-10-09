@@ -933,7 +933,6 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 offer = mbOffer,
                 providerRouteId = quote.fareDetails <&> (.providerRouteId),
                 ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode),
-                routeGroupKey = quote.routeGroupKey,
                 ..
               }
       )
