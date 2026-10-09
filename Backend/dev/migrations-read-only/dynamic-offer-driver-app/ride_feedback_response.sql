@@ -1,0 +1,25 @@
+CREATE TABLE atlas_driver_offer_bpp.ride_feedback_response ();
+
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN action_results json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN answer json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN booking_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN config_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN config_pilot_versions integer[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN driver_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN lat double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN logic_version integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN lon double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN parent_response_id character varying(36) ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN question_key text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN ride_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN ride_status_at_response text ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN seconds_into_ride integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY ride_feedback_response_idx_ride_id ON atlas_driver_offer_bpp.ride_feedback_response USING btree (ride_id);
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_response ADD CONSTRAINT ride_feedback_response_unique_idx_config_id_ride_id UNIQUE (config_id, ride_id);

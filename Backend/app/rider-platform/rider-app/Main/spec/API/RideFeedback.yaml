@@ -1,0 +1,130 @@
+imports:
+  Ride: Domain.Types.Ride
+  Language: Kernel.External.Types
+  LatLong: Kernel.External.Maps.Types
+  Value: Data.Aeson
+
+module: RideFeedback
+
+# During-ride feedback for the rider app. Questions, answers and targeting live in the driver platform
+# (dynamic-offer-driver-app); rider-app forwards these calls there and runs the actions an answer triggers.
+types:
+  RideFeedbackQuestionType:
+    enum: "SINGLE_SELECT,MULTI_SELECT,YES_NO,STAR_RATING,EMOJI_SCALE,THUMBS,SCALE,TEXT_INPUT,NUMBER_INPUT,IMAGE_UPLOAD,AUDIO"
+
+  RideFeedbackResponseStatus:
+    enum: "SHOWN,ANSWERED,SKIPPED,DISMISSED,EXPIRED"
+
+  RideFeedbackAnswer:
+    selectedOptionKeys: Maybe [Text]
+    text: Maybe Text
+    number: Maybe Double
+    rating: Maybe Int
+    mediaFileIds: Maybe [Text]
+
+  RideFeedbackQuestionsRes:
+    rideId: Id Ride
+    serverTime: UTCTime
+    questions: "[FeedbackQuestionItem]"
+    followUpQuestions: "[FeedbackQuestionItem]"
+
+  FeedbackQuestionItem:
+    questionId: Text
+    questionKey: Text
+    questionType: RideFeedbackQuestionType
+    title: Text
+    description: Maybe Text
+    options: Maybe [FeedbackOptionItem]
+    inputConfig: Maybe FeedbackInputConfigRes
+    acknowledgement: Maybe Text
+    isSkippable: Bool
+    showAt: UTCTime
+    autoDismissAfterSeconds: Maybe Int
+    priority: Int
+    uiConfig: Maybe Value
+
+  FeedbackOptionItem:
+    key: Text
+    label: Text
+    iconUrl: Maybe Text
+    nextQuestionKey: Maybe Text
+    requiresText: Bool
+    isExclusive: Bool
+
+  FeedbackInputConfigRes:
+    placeholder: Maybe Text
+    minLength: Maybe Int
+    maxLength: Maybe Int
+    minValue: Maybe Double
+    maxValue: Maybe Double
+    step: Maybe Double
+    minSelections: Maybe Int
+    maxSelections: Maybe Int
+    maxFiles: Maybe Int
+    maxDurationSec: Maybe Int
+    minLabel: Maybe Text
+    maxLabel: Maybe Text
+
+  SubmitRideFeedbackReq:
+    responses: "[FeedbackResponseItem]"
+
+  FeedbackResponseItem:
+    questionId: Text
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    parentQuestionId: Maybe Text
+    clientTimestamp: Maybe UTCTime
+    location: Maybe LatLong
+
+  SubmitRideFeedbackRes:
+    results: "[FeedbackSubmitResult]"
+
+  FeedbackSubmitResult:
+    questionId: Text
+    accepted: Bool
+    errorCode: Maybe Text
+    acknowledgement: Maybe Text
+
+  RideFeedbackSubmittedRes:
+    responses: "[SubmittedFeedbackItem]"
+
+  SubmittedFeedbackItem:
+    questionId: Text
+    questionKey: Text
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    updatedAt: UTCTime
+
+apis:
+  # GET /ride/{rideId}/feedback/questions
+  - GET:
+      endpoint: /ride/{rideId}/feedback/questions
+      auth: TokenAuth
+      headers:
+        x-language: Language
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.RideFeedback.RideFeedbackQuestionsRes
+
+  # POST /ride/{rideId}/feedback
+  - POST:
+      endpoint: /ride/{rideId}/feedback
+      auth: TokenAuth
+      headers:
+        x-language: Language
+      params:
+        rideId: Id Ride
+      request:
+        type: API.Types.UI.RideFeedback.SubmitRideFeedbackReq
+      response:
+        type: API.Types.UI.RideFeedback.SubmitRideFeedbackRes
+
+  # GET /ride/{rideId}/feedback
+  - GET:
+      endpoint: /ride/{rideId}/feedback
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.RideFeedback.RideFeedbackSubmittedRes

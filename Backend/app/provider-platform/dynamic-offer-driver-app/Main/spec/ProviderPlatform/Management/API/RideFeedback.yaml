@@ -1,0 +1,91 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  IssueReportType: IssueManagement.Common
+  Ride: Dashboard.Common
+  RideStatus: Domain.Types.Ride
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackResponse: Domain.Types.RideFeedbackResponse
+  RideFeedbackResponseStatus: Domain.Types.RideFeedbackResponse
+  RideFeedbackAnswer: Domain.Types.RideFeedbackResponse
+  RideFeedbackActionResult: Domain.Types.RideFeedbackResponse
+
+# Ride inspector for during-ride feedback in one merchant + city. The questions (ride_feedback_config)
+# are a Config Pilot table, managed through the generic nammaTag/configPilot APIs; which rides get a
+# question is the driver-side RIDE-FEEDBACK logic (NammaTag APIs). Answers are stored here, linked to
+# the driver, with the results of the actions rider-app ran.
+module: RideFeedback
+
+types:
+  RideFeedbackPreviewRes:
+    rideId: Id Ride
+    rideStatus: RideStatus
+    logicVersion: Maybe Int
+    selectedQuestionKeys: "[Text]"
+    context: Value
+    evaluations: "[QuestionEvaluation]"
+
+  QuestionEvaluation:
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    eligible: Bool
+    isFollowUp: Bool
+    reason: Maybe Text
+    showAt: Maybe UTCTime
+
+  RideFeedbackResponseItem:
+    id: Id RideFeedbackResponse
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    logicVersion: Maybe Int
+    configPilotVersions: Maybe [Int]
+    driverId: Text
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    parentResponseId: Maybe (Id RideFeedbackResponse)
+    rideStatusAtResponse: Maybe RideStatus
+    secondsIntoRide: Maybe Int
+    actionResults: Maybe [RideFeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # What the question schema cannot say: questions themselves are managed through the generic
+  # Config Pilot APIs (nammaTag/configPilot/RideFeedbackConfig/*), whose schemas carry the enums.
+  RideFeedbackMetaRes:
+    allowedRideStatuses: "[RideStatus]"
+    issueReportTypes: "[IssueReportType]"
+    uiLayouts: "[Text]"
+    supportedOperators: "[Text]"
+
+apis:
+  # GET /rideFeedback/ride/{rideId}/preview
+  - GET:
+      endpoint: /ride/{rideId}/preview
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideFeedbackPreviewRes
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # GET /rideFeedback/ride/{rideId}/responses
+  - GET:
+      endpoint: /ride/{rideId}/responses
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: "[RideFeedbackResponseItem]"
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # GET /rideFeedback/meta
+  - GET:
+      endpoint: /meta
+      auth: ApiAuthV2
+      response:
+        type: RideFeedbackMetaRes
+      migrate:
+        capability: system-config.ride_feedback.read

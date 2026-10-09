@@ -1,0 +1,24 @@
+CREATE TABLE atlas_driver_offer_bpp.ride_feedback_config ();
+
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN acknowledgement json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN action_rules json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN allowed_ride_statuses text[] ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN description json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN display_trigger json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN enabled boolean NOT NULL default false;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN input_config json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN is_follow_up_only boolean ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN is_skippable boolean ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN options json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN priority integer ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN question_key text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN question_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN title json NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN ui_config json ;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD PRIMARY KEY ( id);
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD CONSTRAINT ride_feedback_config_unique_idx_merchant_operating_city_id_question_key UNIQUE (merchant_operating_city_id, question_key);

@@ -71,6 +71,24 @@ instance IsHTTPError RatingError where
 
 instance IsAPIError RatingError
 
+data RideFeedbackError
+  = RideFeedbackAccessDenied Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideFeedbackError
+
+instance IsBaseError RideFeedbackError where
+  toMessage = \case
+    RideFeedbackAccessDenied rideId -> Just $ "Ride " <> rideId <> " does not belong to this person."
+
+instance IsHTTPError RideFeedbackError where
+  toErrorCode = \case
+    RideFeedbackAccessDenied _ -> "RIDE_FEEDBACK_ACCESS_DENIED"
+  toHttpCode = \case
+    RideFeedbackAccessDenied _ -> E403
+
+instance IsAPIError RideFeedbackError
+
 data EstimateError = EstimateDoesNotExist Text | EstimateStatusDoesNotExist Text | EstimateCancelled Text | EstimateNotFound
   deriving (Eq, Show, IsBecknAPIError)
 

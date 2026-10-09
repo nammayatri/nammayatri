@@ -1,0 +1,108 @@
+imports:
+  Booking: Domain.Types.Booking
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  RideStatus: Domain.Types.Ride
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackActionType: Domain.Types.RideFeedbackConfig
+  Value: Data.Aeson
+
+RideFeedbackResponse:
+  tableName: ride_feedback_response
+
+  # One row per (ride, question): the rider's answer about this ride, linked to its driver.
+  # Created as SHOWN on first impression, then moved to a final status. Actions matched by the answer
+  # are recorded here as PENDING; rider-app runs them and reports each result back.
+  fields:
+    id: Id RideFeedbackResponse
+    rideId: Id Ride
+    bookingId: Id Booking
+    driverId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    logicVersion: Maybe Int # RIDE-FEEDBACK dynamic logic version that selected the question
+    configPilotVersions: Maybe [Int] # Config Pilot versions of ride_feedback_config the question was served from
+    parentResponseId: Maybe (Id RideFeedbackResponse)
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    rideStatusAtResponse: Maybe RideStatus
+    secondsIntoRide: Maybe Int
+    lat: Maybe Double
+    lon: Maybe Double
+    actionResults: Maybe [RideFeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    RideFeedbackResponseStatus:
+      enum: "SHOWN,ANSWERED,SKIPPED,DISMISSED,EXPIRED"
+      derive: "Bounded, Enum"
+
+    # Mirrored in rider-app's SharedLogic.RideFeedback.Types (with RideFeedbackActionResult).
+    RideFeedbackActionStatus:
+      enum: "PENDING,SUCCESS,FAILED"
+      derive: "Bounded, Enum"
+
+    RideFeedbackActionResult:
+      ruleId: Text
+      actionType: RideFeedbackActionType
+      status: RideFeedbackActionStatus
+      attempts: Int
+      externalRef: Maybe Text
+      errorMessage: Maybe Text
+      updatedAt: UTCTime
+
+    RideFeedbackAnswer:
+      selectedOptionKeys: Maybe [Text]
+      text: Maybe Text
+      number: Maybe Double
+      rating: Maybe Int
+      mediaFileIds: Maybe [Text]
+
+  beamType:
+    answer: Maybe Value
+    rideStatusAtResponse: Maybe Text
+    actionResults: Maybe Value
+
+  sqlType:
+    questionKey: text
+    status: text
+    answer: json
+    rideStatusAtResponse: text
+    actionResults: json
+    configPilotVersions: "integer[]"
+
+  toTType:
+    answer: Data.Aeson.toJSON <$> answer|E
+    rideStatusAtResponse: Kernel.Prelude.show <$> rideStatusAtResponse|E
+    actionResults: Data.Aeson.toJSON <$> actionResults|E
+
+  fromTType:
+    answer: Kernel.Utils.JSON.valueToMaybe =<< answer|E
+    rideStatusAtResponse: Kernel.Prelude.readMaybe . Data.Text.unpack =<< rideStatusAtResponse|E
+    actionResults: Kernel.Utils.JSON.valueToMaybe =<< actionResults|E
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+
+  extraIndexes:
+    - columns: [rideId, configId]
+      unique: true
+
+  queries:
+    findAllByRideId:
+      kvFunction: findAllWithKV
+      where: rideId
+
+    updateActionResults:
+      kvFunction: updateWithKV
+      params: [actionResults]
+      where: id
+
+  extraOperations:
+    - GENERATE_INDEXES

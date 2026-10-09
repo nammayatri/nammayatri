@@ -66,11 +66,19 @@ selectActiveElementVersions logicDomain merchantOpCityId = do
     getTxnIdStickyVersions txnId = do
       let stickyKey = mkTxnIdConfigStickyKey txnId
       mVersions <- Hedis.get stickyKey
-      case mVersions of
+      -- A frozen choice holds only while all its versions are still rolled out: once an
+      -- experiment is aborted, concluded or reverted, the transaction re-tosses rather than
+      -- bringing a retired patch (or retired base) back when a later experiment starts.
+      stillActive <- case mVersions of
         Just versions -> do
+          activeVersions <- map (.version) <$> CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
+          pure $ all (`elem` activeVersions) versions
+        Nothing -> pure False
+      case mVersions of
+        Just versions | stillActive -> do
           logDebug $ "CP Log: [SELECT_TXN_HIT] domain=" <> show logicDomain <> " stickyKey=" <> stickyKey <> " versions=" <> show versions
           pure versions
-        Nothing -> do
+        _ -> do
           versions <- getActiveRolloutVersionsWithToss
           Hedis.setExp stickyKey versions 7200
           logDebug $ "CP Log: [SELECT_TXN_NEW] domain=" <> show logicDomain <> " stickyKey=" <> stickyKey <> " frozeVersions=" <> show versions <> " ttlSec=7200"
