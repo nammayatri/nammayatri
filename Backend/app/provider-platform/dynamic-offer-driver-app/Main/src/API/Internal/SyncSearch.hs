@@ -28,7 +28,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Error
+import Tools.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
@@ -77,7 +77,7 @@ syncSearch merchantIdRaw mbToken mbIsShadowSearch mbParentTransactionId reqV2 = 
       -- search request for it), so it never collides with the search it shadows here.
       isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
       unless isFirst $
-        throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
+        throwError $ SearchAlreadyProcessed transactionId
       (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country (bool "sync_search" "sync_search_shadow" isShadowSearch) (toJSON reqV2)
       logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
       pure onSearchReq
