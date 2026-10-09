@@ -54,3 +54,7 @@ upsert cancellationReason = do
 
 findAllBookingIdsCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Id Booking]
 findAllBookingIdsCancelledByDriverId driverId = findAllWithDb [Se.And [Se.Is BeamBCR.driverId $ Se.Eq (Just $ getId driverId), Se.Is BeamBCR.source $ Se.Eq ByDriver]] <&> (DBCR.bookingId <$>)
+
+findAllByBookingIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m [BookingCancellationReason]
+findAllByBookingIds [] = pure []
+findAllByBookingIds bookingIds = findAllWithKV [Se.Is BeamBCR.bookingId $ Se.In (getId <$> bookingIds)]

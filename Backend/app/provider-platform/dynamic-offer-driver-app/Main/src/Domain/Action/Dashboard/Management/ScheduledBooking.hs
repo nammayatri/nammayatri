@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
+import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.DriverLocation as DDL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -88,10 +89,9 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import qualified Tools.Maps as Maps
 
--- | Include bookings whose startTime just passed, so a ride does not vanish from the ops
--- list at the exact moment of pickup (agreed 30-minute grace window).
-graceWindowSeconds :: Int
-graceWindowSeconds = 30 * 60
+-- | Live list keeps a started booking until it completes or is cancelled, at most a day past its start time.
+liveLookbackSeconds :: Int
+liveLookbackSeconds = 24 * 60 * 60
 
 scheduledBookingIssuePersonId :: Id DP.Person
 scheduledBookingIssuePersonId = Id "00000000-0000-0000-0000-000000000000"
@@ -145,7 +145,7 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
       defaultFrom =
         if isHistory
           then addUTCTime (secondsToNominalDiffTime . Seconds $ negate defaultHistoryLookbackSeconds) now
-          else addUTCTime (secondsToNominalDiffTime . Seconds $ negate graceWindowSeconds) now
+          else addUTCTime (secondsToNominalDiffTime . Seconds $ negate liveLookbackSeconds) now
       defaultTo = if isHistory then now else addUTCTime (secondsToNominalDiffTime $ Seconds defaultLookaheadSeconds) now
       fromTime = fromMaybe defaultFrom mbFrom
       toTime = fromMaybe defaultTo mbTo
@@ -161,26 +161,31 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
         (_, Just Common.UNASSIGNED) -> [SRB.NEW]
         (True, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED, SRB.COMPLETED, SRB.CANCELLED, SRB.REALLOCATED]
         (False, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED]
-  liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset isHistory
-  let pageRows = take limit liteBookings
-      hasMorePages = length liteBookings > limit
-  txnBookings <- QBookingLite.findAllByTransactionIdsLite (nub $ map (.transactionId) pageRows)
-  -- Terminal statuses bring every reallocation attempt into the window, so history collapses them per transaction.
-  let rows = if isHistory then toTransactionLevel txnBookings pageRows else pageRows
+  -- History pages by transaction (it includes superseded attempts); live statuses exclude those, so a booking page is a transaction page.
+  (rows, hasMorePages, txnBookings) <-
+    if isHistory
+      then do
+        txnIds <- QBookingLite.findScheduledTransactionIdsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
+        let pageTxnIds = take limit txnIds
+        pageTxnBookings <- QBookingLite.findAllByTransactionIdsLite pageTxnIds
+        pure (latestBookingPerTransaction pageTxnBookings pageTxnIds, length txnIds > limit, pageTxnBookings)
+      else do
+        liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
+        let pageRows = take limit liteBookings
+        pageTxnBookings <- QBookingLite.findAllByTransactionIdsLite (nub $ map (.transactionId) pageRows)
+        pure (pageRows, length liteBookings > limit, pageTxnBookings)
   ctx <- buildListPageContext isHistory txnBookings rows
   let bookings = map (buildListItem ctx) rows
   pure Common.ScheduledBookingListRes {totalItems = offset + length rows + (if hasMorePages then 1 else 0), bookings}
 
--- | One row per transactionId, showing its latest booking: reallocation keeps the transactionId but mints a new bookingId.
-toTransactionLevel :: [QBookingLite.BookingLite] -> [QBookingLite.BookingLite] -> [QBookingLite.BookingLite]
-toTransactionLevel txnBookings =
-  nubBy (\a b -> a.transactionId == b.transactionId) . map latestOfTxn
+-- | Each transaction's latest booking, in the given order: reallocation keeps the transactionId but mints a new bookingId.
+latestBookingPerTransaction :: [QBookingLite.BookingLite] -> [Text] -> [QBookingLite.BookingLite]
+latestBookingPerTransaction txnBookings = mapMaybe (`HashMap.lookup` latestByTxnId)
   where
     latestByTxnId =
       HashMap.fromListWith
         (\new old -> if new.createdAt > old.createdAt then new else old)
         [(b.transactionId, b) | b <- txnBookings]
-    latestOfTxn row = fromMaybe row $ HashMap.lookup row.transactionId latestByTxnId
 
 -- | Per-page lookups for the list, batched into one read per entity type instead of one per row,
 -- so the response cost is a fixed number of round trips regardless of page size.
@@ -189,7 +194,8 @@ data ListPageContext = ListPageContext
     pickupByBookingId :: HashMap.HashMap Text DLoc.Location,
     phoneByRiderId :: HashMap.HashMap Text Text,
     driverByDriverId :: HashMap.HashMap Text (Text, Maybe Text),
-    bookingCountByTxnId :: HashMap.HashMap Text Int
+    bookingCountByTxnId :: HashMap.HashMap Text Int,
+    cancellationByBookingId :: HashMap.HashMap Text DBCReason.BookingCancellationReason
   }
 
 buildListPageContext :: Bool -> [QBookingLite.BookingLite] -> [QBookingLite.BookingLite] -> Flow ListPageContext
@@ -206,6 +212,10 @@ buildListPageContext includeCancelledRides txnBookings pageRows = do
         HashMap.fromListWith
           (\new old -> if old.status == DRide.CANCELLED then new else old)
           [(ride.bookingId.getId, ride) | ride <- rides]
+
+  -- Only history rows can be cancelled; the live view's statuses exclude them.
+  cancellationReasons <- if includeCancelledRides then QBCReason.findAllByBookingIds bookingIds else pure []
+  let cancellationByBookingId = HashMap.fromList [(bcr.bookingId.getId, bcr) | bcr <- cancellationReasons]
 
   mappings <- QLM.getLatestStartByEntityIds (map (.getId) bookingIds)
   locations <- QL.getBookingLocs (map (.locationId) mappings)
@@ -238,6 +248,7 @@ buildListItem ctx booking =
       mbRiderPhoneNo = flip HashMap.lookup ctx.phoneByRiderId . (.getId) =<< booking.riderId
       mbDriver = flip HashMap.lookup ctx.driverByDriverId . (.getId) . (.driverId) =<< mbRide
       txnBookingCount = fromMaybe 1 $ HashMap.lookup booking.transactionId ctx.bookingCountByTxnId
+      mbCancellation = if booking.status == SRB.CANCELLED then HashMap.lookup booking.id.getId ctx.cancellationByBookingId else Nothing
    in Common.ScheduledBookingListItem
         { transactionId = booking.transactionId,
           bookingId = booking.id.getId,
@@ -256,7 +267,10 @@ buildListItem ctx booking =
           estimatedFare = booking.estimatedFare,
           currency = booking.currency,
           vehicleServiceTier = booking.vehicleServiceTier,
-          vehicleServiceTierName = booking.vehicleServiceTierName
+          vehicleServiceTierName = booking.vehicleServiceTierName,
+          cancellationSource = castCancellationSource . (.source) <$> mbCancellation,
+          cancellationReasonCode = cancellationReasonCodeText =<< mbCancellation,
+          cancellationAdditionalInfo = (.additionalInfo) =<< mbCancellation
         }
 
 getScheduledBookingInfo ::
@@ -335,7 +349,9 @@ buildReallocationHistory transactionId = do
           bookingStatus = castBookingStatus b.status,
           becameCurrentAt = b.createdAt,
           cancelledAt = if b.status == SRB.CANCELLED then Just b.updatedAt else Nothing,
-          cancellationSource = castCancellationSource . (.source) <$> mbBCReason,
+          cancellationSource = castCancellationSource <$> maybe (mbBCReason <&> (.source)) Just (mbRide >>= (.cancelledBy) >>= (readMaybe . T.unpack)),
+          cancellationReasonCode = cancellationReasonCodeText =<< mbBCReason,
+          cancellationAdditionalInfo = (.additionalInfo) =<< mbBCReason,
           driverDistToPickupAtCancel = mbBCReason >>= (.driverDistToPickup)
         }
 
@@ -712,3 +728,6 @@ castCancellationSource = \case
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
   DBCReason.ByFleetOwner -> Common.ByFleetOwner
+
+cancellationReasonCodeText :: DBCReason.BookingCancellationReason -> Maybe Text
+cancellationReasonCodeText bcr = (\(DCR.CancellationReasonCode code) -> code) <$> bcr.reasonCode

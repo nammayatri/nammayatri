@@ -15,11 +15,13 @@
 
 module Storage.Queries.QueriesExtra.BookingLite where
 
+import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.RiderDetails
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -30,6 +32,7 @@ import qualified Kernel.Utils.JSON
 import qualified Lib.Yudhishthira.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.Booking as Beam
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Queries.Transformers.Booking
 
 ---------------- Use this function if you need the data which are here as per your domain requirement ----------------
@@ -45,7 +48,6 @@ findBookingsFromDBLite bookingIds = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel
 
 -- Lite list read for the ops "scheduled bookings" dashboard: scalar columns only, NO
 -- LocationMapping/Location joins (pickup is resolved per-page in the handler).
--- latestFirst flips the start_time ordering for history; idx_booking_scheduled_ops serves both directions.
 findScheduledUpcomingBookingsLite ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -54,9 +56,8 @@ findScheduledUpcomingBookingsLite ::
   UTCTime ->
   Int ->
   Int ->
-  Bool ->
   m [BookingLite]
-findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limit offset latestFirst =
+findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limit offset =
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just (Kernel.Types.Id.getId merchantOpCityId)),
@@ -66,9 +67,44 @@ findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limi
           Se.Is Beam.startTime $ Se.LessThanOrEq toTime
         ]
     ]
-    (if latestFirst then Se.Desc Beam.startTime else Se.Asc Beam.startTime)
+    (Se.Asc Beam.startTime)
     (Just limit)
     (Just offset)
+
+-- | History page of transactionIds (latest pickup first): paging booking rows would split reallocated transactions.
+findScheduledTransactionIdsLite ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  [Domain.Types.Booking.BookingStatus] ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [Text]
+findScheduledTransactionIdsLite merchantOpCityId statuses fromTime toTime limit offset = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limit) $
+            B.offset_ (fromIntegral offset) $
+              B.orderBy_ (\(txnId, latestStart) -> (B.desc_ latestStart, B.asc_ txnId)) $
+                B.aggregate_ (\booking -> (B.group_ (Beam.transactionId booking), B.max_ (Beam.startTime booking))) $
+                  B.filter_'
+                    ( \booking ->
+                        B.sqlBool_ (Beam.merchantOperatingCityId booking B.==. B.val_ (Just (Kernel.Types.Id.getId merchantOpCityId)))
+                          B.&&?. B.sqlBool_ (Beam.isScheduled booking B.==. B.val_ (Just True))
+                          B.&&?. B.sqlBool_ (Beam.status booking `B.in_` (B.val_ <$> statuses))
+                          B.&&?. B.sqlBool_ (Beam.startTime booking B.>=. B.val_ fromTime)
+                          B.&&?. B.sqlBool_ (Beam.startTime booking B.<=. B.val_ toTime)
+                    )
+                    $ B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+  case res of
+    Right rows -> pure $ map fst rows
+    Left err -> do
+      Kernel.Utils.Common.logTagError "findScheduledTransactionIdsLite" ("DB failure. Error: " <> show err)
+      pure []
 
 -- All bookings sharing a transactionId, lite (for reallocation-count without location joins).
 findAllByTransactionIdLite :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [BookingLite]
