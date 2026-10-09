@@ -93,6 +93,7 @@ import qualified Text.Regex as TR
 import Tools.Error
 import qualified Tools.EventTracking as ET
 import qualified Tools.Metrics.BAPMetrics as Metrics
+import qualified Tools.Notifications as Notifications
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
 import qualified Utils.Common.JWT.Config as GW
@@ -420,6 +421,9 @@ onConfirm merchant booking' quoteCategories dOrder = do
                       purchaseCount
                       isFirstPurchase
                 Left err -> logError $ "Failed to record PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
+              when (FRFSPassOverride.fullyCoveredByPass booking) $
+                fork "onConfirm:notifyShuttleBookingConfirmed" . void $
+                  Notifications.notifyShuttleBookingConfirmed booking.riderId booking.id
             return ()
       if isNothing booking.overrideAppliedEntityId
         then postConfirmWork
