@@ -362,6 +362,7 @@ library
       Domain.Action.UI.DriverAcceptOffer
       Domain.Action.UI.DriverAreaPreference
       Domain.Action.UI.DriverCoin
+      Domain.Action.UI.DriverConduct
       Domain.Action.UI.DriverDocument
       Domain.Action.UI.DriverFyEarnings
       Domain.Action.UI.DriverGoHomeRequest
@@ -614,6 +615,7 @@ library
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.AutoAcceptCancellation
       SharedLogic.BehaviourManagement.CancellationRate
+      SharedLogic.BehaviourManagement.Conduct
       SharedLogic.BehaviourManagement.ConsequenceDispatcher
       SharedLogic.BehaviourManagement.GpsTollBehavior
       SharedLogic.BehaviourManagement.IssueBreach
@@ -1248,6 +1250,7 @@ library
       API.Action.UI.CancellationReasonLookup
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverAreaPreference
+      API.Action.UI.DriverConduct
       API.Action.UI.DriverDocument
       API.Action.UI.DriverFyEarnings
       API.Action.UI.DriverIncentiveCoins
@@ -1439,6 +1442,7 @@ library
       API.Types.UI.CancellationReasonLookup
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverAreaPreference
+      API.Types.UI.DriverConduct
       API.Types.UI.DriverFyEarnings
       API.Types.UI.DriverIncentiveCoins
       API.Types.UI.DriverOnboardingV2
