@@ -245,6 +245,7 @@ apis:
         type: CommonDocumentCreateRes
   - POST: # DocumentRegisterAPI
       endpoint: /{driverId}/document/register
+      appServerHandler: custom
       auth: ApiAuthV2
       query:
         - autoApprove: Bool
