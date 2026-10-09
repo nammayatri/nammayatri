@@ -511,6 +511,20 @@ let emailServiceConfig =
       , maxAttachmentBytes = +10485760
       }
 
+let GCSGcpConfig = { gcpProjectId : Text, bucketName : Text, pathPrefix : Text }
+
+let storageServiceConfig =
+      { isForcedAWS = True
+      , awsConfig = Some common.s3Config
+      , gcsConfig = None GCSGcpConfig
+      }
+
+let storagePublicServiceConfig =
+      { isForcedAWS = True
+      , awsConfig = Some common.s3PublicConfig
+      , gcsConfig = None GCSGcpConfig
+      }
+
 let rideEventsStream =
       { streamPrefix = "ride_events_stream_"
       , shardCount = +10
@@ -692,6 +706,8 @@ in  { esqDBCfg
     , bapHostRedirectMap
     , blackListedJobs = [] : List Text
     , emailServiceConfig
+    , storageServiceConfig
+    , storagePublicServiceConfig
     , ttenTokenCacheExpiry = +86390
     , imageExtractionTimeoutSec = +20
     , masterCloudProxyConfig =

@@ -481,6 +481,20 @@ let dashboardDataServers =
         }
       ]
 
+let GCSGcpConfig = { gcpProjectId : Text, bucketName : Text, pathPrefix : Text }
+
+let storageServiceConfig =
+      { isForcedAWS = True
+      , awsConfig = Some common.s3Config
+      , gcsConfig = None GCSGcpConfig
+      }
+
+let storagePublicServiceConfig =
+      { isForcedAWS = True
+      , awsConfig = Some common.s3PublicConfig
+      , gcsConfig = None GCSGcpConfig
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , esqDashboardDBCfg = Some esqDashboardDBCfg
@@ -628,6 +642,8 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , useCachedActiveRidesList = False
     , emailServiceConfig
+    , storageServiceConfig
+    , storagePublicServiceConfig
     , masterCloudProxyConfig =
       { masterUrl = Some "http://localhost:${driverAppInternalPort}"
       , masterSecret = Some "123"
