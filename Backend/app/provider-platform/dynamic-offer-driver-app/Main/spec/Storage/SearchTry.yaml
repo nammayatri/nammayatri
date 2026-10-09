@@ -20,7 +20,7 @@ SearchTry:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
     SearchRepeatType:
-      enum: "INITIAL, RETRIED, REALLOCATION, CANCELLED_AND_RETRIED"
+      enum: "INITIAL, RETRIED, REALLOCATION, CANCELLED_AND_RETRIED, BETTER_DRIVER_SEARCH"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   fields:
@@ -55,7 +55,8 @@ SearchTry:
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
     paymentInstrument: Maybe PaymentInstrument
-    addOnData: "[AddOnData]"
+    addOnData: "[AddOnData]"  
+    standInForBookingId: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -144,6 +145,7 @@ SearchTry:
     id: PrimaryKey
     requestId: "!SecondaryKey" # forcing to be a secondary key
     estimateId: "!SecondaryKey" # forcing to be a secondary key
+    standInForBookingId: "!SecondaryKey" # forcing to be a secondary key
 
   queries:
     findById:

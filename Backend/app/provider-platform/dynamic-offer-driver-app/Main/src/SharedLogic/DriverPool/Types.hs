@@ -22,6 +22,7 @@ import Data.Default.Class
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
+import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Common as DI (DriverMode (..))
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -494,5 +495,9 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     emailDomain :: Maybe Text,
     businessEmailDomain :: Maybe Text,
     driverPreference :: Maybe [Text],
-    addOnData :: [DAddOnConfig.AddOnData]
+    addOnData :: [DAddOnConfig.AddOnData],
+    -- | Set only by the "find a better driver" trigger: the existing, already-assigned
+    -- booking this search is a stand-by attempt for. Nothing for every normal search
+    -- (first-time, retry, or driver-cancel reallocation).
+    betterDriverSearchForBookingId :: Maybe (Id DBooking.Booking)
   }

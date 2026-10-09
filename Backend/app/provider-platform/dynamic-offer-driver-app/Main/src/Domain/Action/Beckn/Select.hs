@@ -207,7 +207,8 @@ handler merchant sReq searchReq estimates addOnData = do
             emailDomain = sReq.emailDomain,
             businessEmailDomain = sReq.businessEmailDomain,
             driverPreference = sReq.driverPreference,
-            addOnData = addOnData
+            addOnData = addOnData,
+            betterDriverSearchForBookingId = Nothing
           }
   void $ initiateDriverSearchBatch driverSearchBatchInput
   -- NOTE: Special zone demand pipeline has been moved to Init handler (Domain.Action.Beckn.Init)

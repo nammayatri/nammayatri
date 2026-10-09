@@ -164,6 +164,8 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.badDebtSchedulerTime (Kernel.Utils.Common.nominalDiffTimeToSeconds badDebtSchedulerTime),
       Se.Set Beam.badDebtTimeThreshold badDebtTimeThreshold,
       Se.Set Beam.bankErrorExpiry (Kernel.Utils.Common.nominalDiffTimeToSeconds bankErrorExpiry),
+      Se.Set Beam.betterDriverProximityAbortRadiusMeters betterDriverProximityAbortRadiusMeters,
+      Se.Set Beam.betterDriverSearchMaxRadiusMeters betterDriverSearchMaxRadiusMeters,
       Se.Set Beam.blockDriverOwnRCForFleetDrivers blockDriverOwnRCForFleetDrivers,
       Se.Set Beam.bookAnyVehicleDowngradeLevel bookAnyVehicleDowngradeLevel,
       Se.Set Beam.bulkWaiveOffLimit (Just bulkWaiveOffLimit),

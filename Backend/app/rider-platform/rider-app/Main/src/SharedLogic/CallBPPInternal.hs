@@ -398,6 +398,41 @@ blackListDriver apiKey internalUrl merchantId phoneNumber countryCode driverId b
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (blackListDriverClient merchantId driverId (Just apiKey) (BlackListDriverReq phoneNumber countryCode blackListed)) "BlackListDriver" blackListDriverApi
 
+newtype BetterDriverSearchReq = BetterDriverSearchReq
+  { bookingId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type BetterDriverSearchAPI =
+  "internal"
+    :> "betterDriverSearch"
+    :> ReqBody '[JSON] BetterDriverSearchReq
+    :> Post '[JSON] APISuccess
+
+betterDriverSearchClient :: BetterDriverSearchReq -> EulerClient APISuccess
+betterDriverSearchClient = client betterDriverSearchApi
+
+betterDriverSearchApi :: Proxy BetterDriverSearchAPI
+betterDriverSearchApi = Proxy
+
+-- | Calls the BPP's internal betterDriverSearch endpoint directly - no merchantId/
+-- driverId path captures, no auth header, matching that endpoint's actual (simpler)
+-- shape (it mirrors BulkLocPickupUpdate's internal-API convention, not
+-- BlackListDriver's). The BPP re-checks everything it alone knows (live driver
+-- proximity) before actually starting anything; this call only gets the request there.
+betterDriverSearch ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  BaseUrl ->
+  Text ->
+  m APISuccess
+betterDriverSearch internalUrl bookingId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (betterDriverSearchClient (BetterDriverSearchReq bookingId)) "BetterDriverSearch" betterDriverSearchApi
+
 type CustomerCancellationDuesSyncAPI =
   "internal"
     :> Capture "merchantId" Text

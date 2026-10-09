@@ -48,6 +48,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation (runAggregatedCommissionInvoiceCreationJob)
 import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
+import SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (checkBetterDriverSearchProximity)
 import SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
 import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
@@ -166,6 +167,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env sendTagActionNotification
           & putJobHandlerInListWrapper flowRt env sendScheduledRideAssignedOnUpdate
           & putJobHandlerInListWrapper flowRt env checkDriverPickupProgress
+          & putJobHandlerInListWrapper flowRt env checkBetterDriverSearchProximity
           & putJobHandlerInListWrapper flowRt env checkExotelCallStatusAndNotifyBAP
           & putJobHandlerInListWrapper flowRt env sendFleetAlert
           & putJobHandlerInListWrapper flowRt env runDailyJob

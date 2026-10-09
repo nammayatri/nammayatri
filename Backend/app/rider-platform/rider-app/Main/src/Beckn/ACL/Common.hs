@@ -145,6 +145,7 @@ parseBookingDetails order msgId = do
         vehicleModel = fromMaybe "UNKWOWN" vehicleModel,
         vehicleNumber = fromMaybe "UNKWOWN" vehicleNumber,
         driverAlternatePhoneNumber = Nothing,
+        isBetterDriverSwap = False,
         ..
       }
 

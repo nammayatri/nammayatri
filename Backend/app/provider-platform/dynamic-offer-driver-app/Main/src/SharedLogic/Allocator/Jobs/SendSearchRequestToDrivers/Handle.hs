@@ -57,6 +57,10 @@ data Handle m r = Handle
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
     isScheduledBooking :: Bool,
+    -- | False for a "find a better driver" stand-by search: the rider must never learn
+    -- it ran at all, successful or not, so the BAP must not be told it expired - unlike
+    -- a normal search, where the rider is actively waiting and needs to know.
+    notifyBapOnExpiry :: Bool,
     mbTopUpSize :: Maybe Int,
     popTopUpDrivers :: Int -> m [DriverPoolWithActualDistResult],
     markDriversAttempted :: [DriverPoolWithActualDistResult] -> m ()
@@ -110,9 +114,10 @@ processBatchChainDispatch Handle {..} goHomeCfg transactionId = do
         else do
           metrics.incrementFailedTaskCounter
           logInfo "No driver accepted"
-          appBackendBapInternal <- asks (.appBackendBapInternal)
-          let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
-          void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
+          when notifyBapOnExpiry $ do
+            appBackendBapInternal <- asks (.appBackendBapInternal)
+            let request = CallBAPInternal.RideSearchExpiredReq {transactionId = transactionId}
+            void $ CallBAPInternal.rideSearchExpired appBackendBapInternal.apiKey appBackendBapInternal.url request
           cancelSearchTry
           cancelBookingIfApplies
           return (Complete, NormalPool, Nothing)

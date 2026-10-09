@@ -437,6 +437,24 @@ cancelBookings bookingIds now =
     ]
     [Se.Is BeamB.id (Se.In $ getId <$> bookingIds)]
 
+-- | Rolled once, at ride-assignment time, against
+-- RiderConfig.betterDriverSearchEligibilityProbability - never re-rolled since.
+updateEligibleForBetterDriverSearch :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Bool -> UTCTime -> m ()
+updateEligibleForBetterDriverSearch bookingId eligible now =
+  updateWithKV
+    [ Se.Set BeamB.eligibleForBetterDriverSearch (Just eligible),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq (getId bookingId))]
+
+-- | Set on the OLD booking once a "find a better driver" stand-by search swaps in a
+-- new driver - points at the new Booking the rider should switch to.
+updateSupersededByBookingId :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe (Id Booking) -> m ()
+updateSupersededByBookingId bookingId supersededByBookingId =
+  updateWithKV
+    [Se.Set BeamB.supersededByBookingId (getId <$> supersededByBookingId)]
+    [Se.Is BeamB.id (Se.Eq (getId bookingId))]
+
 buildLocation ::
   (MonadFlow m, EsqDBFlow m r) =>
   Id DM.Merchant ->

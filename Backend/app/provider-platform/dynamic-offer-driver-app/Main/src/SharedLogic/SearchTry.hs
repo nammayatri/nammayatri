@@ -39,7 +39,9 @@ import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
@@ -50,6 +52,7 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getBatchingMode, getNextBatchScheduleTime)
 import SharedLogic.DriverPool.Types
+import qualified SharedLogic.External.LocationTrackingService.Flow as LTSF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -57,12 +60,14 @@ import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
+import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQ
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -107,6 +112,56 @@ getNextScheduleTime driverPoolConfig searchRequest now = do
     setKey scheduleTryTimes = Redis.withCrossAppRedis $ Redis.setExp scheduleSearchKey scheduleTryTimes 432000
     getKey = Redis.withCrossAppRedis $ Redis.safeGet scheduleSearchKey
 
+-- | "Find a better driver" only: computes this one search's own radius override,
+-- fresh, every time it's called - once for batch 1 (right below, in
+-- initiateDriverSearchBatch) and again for every later batch (SharedLogic.Allocator.
+-- Jobs.SendSearchRequestToDrivers's processSendSearchRequestJob, via the SST import).
+-- Deliberately not cached or persisted anywhere: the driver keeps moving the whole
+-- time the search runs, so a fresh fix is more accurate than a snapshot from whenever
+-- the search started. Nothing for every normal search, or if any piece (the original
+-- ride, a fresh LTS fix, or this city's own cap) isn't available right now - in which
+-- case the caller just falls back to the normal, uncapped pool radius.
+computeBetterDriverSearchRadiusOverride ::
+  ( EncFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    CoreMetrics m,
+    LT.HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasHttpClientOptions r c
+  ) =>
+  DST.SearchTry ->
+  m (Maybe Meters)
+computeBetterDriverSearchRadiusOverride searchTry
+  | searchTry.searchRepeatType /= DST.BETTER_DRIVER_SEARCH = pure Nothing
+  | otherwise =
+    case searchTry.standInForBookingId of
+      Nothing -> pure Nothing
+      Just oldBookingIdText -> do
+        mbBooking <- QRB.findById (Id oldBookingIdText)
+        case mbBooking of
+          Nothing -> pure Nothing
+          Just booking -> do
+            mbRide <- QRide.findActiveByRBId booking.id
+            case mbRide of
+              Nothing -> pure Nothing
+              Just ride -> do
+                mbMerchant <- QMerchant.findById booking.providerId
+                mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+                case (,) <$> mbMerchant <*> (mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters)) of
+                  Nothing -> pure Nothing
+                  Just (merchant, cap) -> do
+                    driverLocationResp <- LTSF.driverLocation ride.id merchant.id ride.driverId
+                    pure $
+                      ( \latest ->
+                          highPrecMetersToMeters (min (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates booking.fromLocation)) cap)
+                      )
+                        <$> lastMaybe driverLocationResp.loc
+  where
+    lastMaybe [] = Nothing
+    lastMaybe xs = Just (last xs)
+
 initiateDriverSearchBatch ::
   ( EncFlow m r,
     TranslateFlow m r,
@@ -145,7 +200,11 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
   withTryCatch
     "initiateDriverSearchBatch"
     ( do
-        driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+        driverPoolConfigFetched <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) searchReq.estimatedDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+        -- "find a better driver" only: caps this one search's own radius, without
+        -- touching the shared, normal-search config path at all.
+        mbSearchRadiusOverride <- computeBetterDriverSearchRadiusOverride searchTry
+        let driverPoolConfig = maybe driverPoolConfigFetched (\radius -> driverPoolConfigFetched {maxRadiusOfSearch = radius}) mbSearchRadiusOverride
         goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
         singleBatchProcessingTempDelay <- asks (.singleBatchProcessingTempDelay)
         now <- getCurrentTime
@@ -230,6 +289,10 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
 
     createNewSearchTry = do
       mbLastSearchTry <- QST.findLastByRequestId searchReq.id
+      -- Unwrapped to plain Text here: SearchTry.standInForBookingId can't be a typed
+      -- Id Booking (Domain.Types.Booking already imports Domain.Types.SearchTry via its
+      -- own searchTryId field, so the reverse import would be a module cycle).
+      let standInForBookingId = (.getId) <$> searchBatchInput.betterDriverSearchForBookingId
       case tripQuoteDetails of
         [] -> throwError $ InternalError "No trip quote details found"
         (firstQuoteDetail : _) -> do
@@ -244,12 +307,14 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
           transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
           searchTry <- case mbLastSearchTry of
             Nothing -> do
-              mbBatchingMode <- resolveBatchingMode serviceTier tripCategory DST.INITIAL 0
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 DST.INITIAL tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData
+              let searchRepeatType = if isJust standInForBookingId then DST.BETTER_DRIVER_SEARCH else DST.INITIAL
+              mbBatchingMode <- resolveBatchingMode serviceTier tripCategory searchRepeatType 0
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare 0 searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData standInForBookingId
               _ <- QST.create searchTry
               return searchTry
             Just oldSearchTry -> do
               let searchRepeatType
+                    | isJust standInForBookingId = DST.BETTER_DRIVER_SEARCH
                     | isRepeatSearch = DST.REALLOCATION
                     | oldSearchTry.status == DST.ACTIVE = DST.CANCELLED_AND_RETRIED
                     | otherwise = DST.RETRIED
@@ -257,8 +322,11 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- unless (pureEstimatedFare == oldSearchTry.baseFare - fromMaybe 0 oldSearchTry.customerExtraFee) $
               --   throwError SearchTryEstimatedFareChanged
               mbBatchingMode <- resolveBatchingMode serviceTier tripCategory searchRepeatType (oldSearchTry.searchRepeatCounter + 1)
-              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData
-              when (oldSearchTry.status == DST.ACTIVE) $ do
+              searchTry <- buildSearchTry merchant.id searchReq estimateOrQuoteIds estOrQuoteId estimatedFare (oldSearchTry.searchRepeatCounter + 1) searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment firstQuoteDetail.petCharges messageId estimateOrQuoteServiceTierNames serviceTier emailDomain searchBatchInput.businessEmailDomain driverPreference ((.paymentInstrument) <$> paymentMethodInfo) transporterConfig mbBatchingMode searchBatchInput.addOnData standInForBookingId
+              -- A better-driver-search must never cancel the real, currently-assigned try -
+              -- in practice this never fires for that case anyway, since the real try is
+              -- already COMPLETED (not ACTIVE) by the time a rider can trigger one.
+              when (oldSearchTry.status == DST.ACTIVE && isNothing standInForBookingId) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
               _ <- QST.create searchTry
@@ -303,8 +371,11 @@ buildSearchTry ::
   DTTC.TransporterConfig ->
   Maybe BatchingMode ->
   [DAddOnConfig.AddOnData] ->
+  -- | Set only when searchRepeatType = BETTER_DRIVER_SEARCH: the booking this
+  -- stand-by search is trying to find a better driver for.
+  Maybe Text ->
   m DST.SearchTry
-buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig mbBatchingMode addOnData = do
+buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare searchRepeatCounter searchRepeatType tripCategory billingCategory customerExtraFee negativeFareAdjustment petCharges messageId estimateOrQuoteServTierNames serviceTier emailDomain businessEmailDomain driverPreference mbPaymentInstrument transporterConfig mbBatchingMode addOnData standInForBookingId = do
   now <- getCurrentTime
   id_ <- Id <$> generateGUID
   vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow serviceTier searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show serviceTier))

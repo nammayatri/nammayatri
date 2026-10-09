@@ -1366,6 +1366,16 @@ TransporterConfig:
     arrivedStopThreshold: Maybe HighPrecMeters
     arrivedPickupThreshold: HighPrecMeters
     arrivingPickupThreshold: HighPrecMeters
+    # "find a better driver" feature: once the currently-assigned driver's live distance
+    # to pickup drops below this, any in-flight stand-by search for that booking is
+    # aborted (see cancelBetterDriverSearchByBookingId) - unset means the feature never
+    # self-aborts on proximity for this city.
+    betterDriverProximityAbortRadiusMeters: Maybe HighPrecMeters
+    # "find a better driver" feature: the stand-by search never looks wider than this,
+    # capping the min(currentDriverDistanceToPickup, this) radius computed in
+    # SharedLogic.BetterDriverSearch.startBetterDriverSearch - unset means no override
+    # is applied and the search falls back to the normal full pool radius for this city.
+    betterDriverSearchMaxRadiusMeters: Maybe HighPrecMeters
     specialDrivers: "[Text]"
     specialLocationTags: "[Text]"
     createdAt: UTCTime
@@ -1961,6 +1971,8 @@ TransporterConfig:
     arrivedStopThreshold: double precision
     arrivedPickupThreshold: double precision
     arrivingPickupThreshold: double precision
+    betterDriverProximityAbortRadiusMeters: double precision
+    betterDriverSearchMaxRadiusMeters: double precision
     variantsToEnableForSubscription: "text[]"
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json
