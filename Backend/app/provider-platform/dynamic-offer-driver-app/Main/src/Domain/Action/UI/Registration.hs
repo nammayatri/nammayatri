@@ -388,14 +388,17 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       SP.GIMS_EMPLOYEE_ID_PASSWORD -> throwError $ InvalidRequest "GIMS_EMPLOYEE_ID_PASSWORD does not use OTP auth"
 
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
-  whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
-    transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
-        >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
-    mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
-    whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
-    updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
+  -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
+  -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
+  unless (isJust person.useFakeOtp) $
+    whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash -> do
+      transporterConfig <-
+        getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+          >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let phoneNumberHashText = Hex.encodeHex (unDbHash mobileNumberHash)
+      mbResetSeconds <- checkAuthLimitExceededByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
+      whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+      updateAuthCountersByPhone merchantOpCityId.getId phoneNumberHashText transporterConfig
   whenJust mbClientIP $ \clientIP -> fork "Driver Auth IP Fraud Check" $ do
     transporterConfig <-
       getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
@@ -841,16 +844,18 @@ resend tokenId mbSenderHash = do
   mobileNumber <- mapM decrypt person.mobileNumber
   let receiverEmail = person.email
 
-  SOTP.sendOTP
-    otpChannel
-    otpCode
-    person.id
-    person.merchantId
-    merchantOpCityId
-    person.mobileCountryCode
-    mobileNumber
-    receiverEmail
-    mbSenderHash
+  -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
+  unless (isJust person.useFakeOtp) $
+    SOTP.sendOTP
+      otpChannel
+      otpCode
+      person.id
+      person.merchantId
+      merchantOpCityId
+      person.mobileCountryCode
+      mobileNumber
+      receiverEmail
+      mbSenderHash
 
   void $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) Nothing Nothing
