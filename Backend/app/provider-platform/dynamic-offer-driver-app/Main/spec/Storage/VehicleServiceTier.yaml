@@ -31,6 +31,8 @@ VehicleServiceTier:
     isRentalsEnabled: Maybe Bool
     isSpotRideEnabled: Maybe Bool
     spotServiceTierName: Maybe Text
+    spotServiceTierShortDesc: Maybe Text
+    spotRideAllowedVariants: Maybe [VehicleVariant]
     oxygen: Maybe Double
     ventilator: Maybe Int
     luggageCapacity: Maybe Int
@@ -63,6 +65,7 @@ VehicleServiceTier:
     defaultForVehicleVariant: text[]
     autoSelectedVehicleVariant: text[]
     specialZoneQueueCalloutVariants: text[]
+    spotRideAllowedVariants: text[]
     driverRating: double precision
     vehicleIconUrl: character varying(255)
     allowedAreas: text[]
