@@ -17,6 +17,8 @@ module SharedLogic.DriverOnlineHoursCache
     markOfflineToday,
     getTodayOnlineDuration,
     localDay,
+    localMidnightUtc,
+    diffUTCTimeInSeconds,
   )
 where
 
@@ -63,19 +65,22 @@ markOnlineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
         _ -> Seconds 0
   Redis.setExp key (DriverOnlineHoursCache {day = today, totalOnline = carriedOverTotal, lastOnlineAt = Just now}) onlineHoursKeyExpiry
 
-markOfflineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m ()
+markOfflineToday :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m (Maybe (UTCTime, UTCTime))
 markOfflineToday driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
   now <- getCurrentTime
   let today = localDay timeDiffFromUtc now
       todayStart = localMidnightUtc timeDiffFromUtc today
       key = mkOnlineHoursKey driverId.getId
   (mbCache :: Maybe DriverOnlineHoursCache) <- Redis.safeGet key
-  whenJust mbCache $ \cache ->
-    whenJust cache.lastOnlineAt $ \lastOnlineAt -> do
-      let effectiveStart = max lastOnlineAt todayStart
-          priorTotal = if cache.day == today then cache.totalOnline else Seconds 0
-          newTotalOnline = priorTotal + max (Seconds 0) (diffUTCTimeInSeconds now effectiveStart)
-      Redis.setExp key (cache {day = today, totalOnline = newTotalOnline, lastOnlineAt = Nothing}) onlineHoursKeyExpiry
+  case mbCache of
+    Just cache
+      | Just lastOnlineAt <- cache.lastOnlineAt -> do
+        let effectiveStart = max lastOnlineAt todayStart
+            priorTotal = if cache.day == today then cache.totalOnline else Seconds 0
+            newTotalOnline = priorTotal + max (Seconds 0) (diffUTCTimeInSeconds now effectiveStart)
+        Redis.setExp key (cache {day = today, totalOnline = newTotalOnline, lastOnlineAt = Nothing}) onlineHoursKeyExpiry
+        pure $ Just (lastOnlineAt, now)
+    _ -> pure Nothing
 
 getTodayOnlineDuration :: (Redis.HedisFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Seconds
 getTodayOnlineDuration driverId timeDiffFromUtc = Redis.withCrossAppRedis $ do
