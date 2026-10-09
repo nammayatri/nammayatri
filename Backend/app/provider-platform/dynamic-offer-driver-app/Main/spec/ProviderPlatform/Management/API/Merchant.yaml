@@ -1245,6 +1245,8 @@ types:
     - isRentalsEnabled: Maybe Bool
     - isSpotRideEnabled: Maybe Bool
     - spotServiceTierName: Maybe Text
+    - spotServiceTierShortDesc: Maybe Text
+    - spotRideAllowedVariants: Maybe [VehicleVariant]
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]
@@ -1282,6 +1284,8 @@ types:
     - isRentalsEnabled: Maybe Bool
     - isSpotRideEnabled: Maybe Bool
     - spotServiceTierName: Maybe Text
+    - spotServiceTierShortDesc: Maybe Text
+    - spotRideAllowedVariants: Maybe [VehicleVariant]
     - allowedVehicleVariant: Maybe [VehicleVariant]
     - autoSelectedVehicleVariant: Maybe [VehicleVariant]
     - defaultForVehicleVariant: Maybe [VehicleVariant]
@@ -1321,6 +1325,8 @@ types:
     - isRentalsEnabled: Maybe Bool
     - isSpotRideEnabled: Maybe Bool
     - spotServiceTierName: Maybe Text
+    - spotServiceTierShortDesc: Maybe Text
+    - spotRideAllowedVariants: Maybe [VehicleVariant]
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]

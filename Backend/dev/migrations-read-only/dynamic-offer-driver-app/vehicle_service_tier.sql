@@ -484,3 +484,13 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_spot_ride_
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_service_tier_name text ;
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_service_tier_short_desc text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_ride_allowed_variants text[] ;
+
