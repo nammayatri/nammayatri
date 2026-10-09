@@ -115,7 +115,13 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                     then findValueAddNP personStatus providerId now
                     else return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_BOOKINGS activeBookings.list) Nothing
                 Nothing -> findValueAddNP personStatus providerId now
-            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing now
+            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT bookingId _ _ _ -> do
+              mbBooking <- QB.findById bookingId
+              case mbBooking of
+                Just booking
+                  | booking.status `notElem` DB.terminalBookingStatus ->
+                    expirePersonStatusIfNeeded personStatus Nothing now
+                _ -> checkForActiveBooking
             DPFS.WAITING_FOR_BOOKING_FEE_PAYMENT feeBookingId _ _ _ -> do
               mbFeeBooking <- QB.findById feeBookingId
               case mbFeeBooking of
