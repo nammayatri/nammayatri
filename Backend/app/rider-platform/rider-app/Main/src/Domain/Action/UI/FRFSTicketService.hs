@@ -53,9 +53,6 @@ import qualified ExternalBPP.CallAPI.Search as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Select as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Verify as CallExternalBPP
-import ExternalBPP.ExternalAPI.CallAPI as CallAPI
-import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as RouteFareV3
-import ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
@@ -760,48 +757,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
       >>= \case
         Right frfsQuotes -> return frfsQuotes
         Left _ -> return []
-  mbCrisSdkToken <-
-    withTryCatch "getCrisSdkToken" (getCrisSdkToken personId merchantOperatingCity.id integratedBPPConfig vehicleType_ fromStationCode toStationCode quotes) >>= \case
-      Right token -> return token
-      Left err -> do
-        logError $ "Failed to get CRIS sdk token for search " <> searchReqId.getId <> ": " <> show err
-        return Nothing
-  return $ FRFSSearchAPIRes mbCrisSdkToken quotes searchReqId
-
-getCrisSdkToken :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> Spec.VehicleCategory -> Text -> Text -> [FRFSQuoteAPIRes] -> m (Maybe Text)
-getCrisSdkToken personId merchantOperatingCityId integratedBPPConfig vehicleType_ fromStationCode toStationCode quotes
-  | vehicleType_ /= Spec.SUBWAY = return Nothing
-  | otherwise =
-    case integratedBPPConfig.providerConfig of
-      DIBC.CRIS config ->
-        if config.useRouteFareV4 == Just True
-          then
-            mkGetSDKDataReq personId >>= \case
-              Just getSDKDataReq -> do
-                getSdkDataResp <- getSDKData config getSDKDataReq
-                return $ Just getSdkDataResp.sdkData
-              Nothing -> return Nothing
-          else do
-            (viaPoints, changeOver, rawChangeOver) <- CallAPI.getChangeOverAndViaPoints basicRouteDetails integratedBPPConfig
-            routeFareReq <- CallAPI.getRouteFareRequest fromStationCode toStationCode changeOver rawChangeOver viaPoints personId False
-            snd <$> RouteFareV3.getRouteFare config merchantOperatingCityId routeFareReq True
-      _ -> return Nothing
-  where
-    basicRouteDetails =
-      fromMaybe [CallAPI.BasicRouteDetail {routeCode = "-", startStopCode = fromStationCode, endStopCode = toStationCode, color = Nothing}] $
-        listToMaybe (mapMaybe segmentsOfQuote quotes)
-
-    segmentsOfQuote :: FRFSQuoteAPIRes -> Maybe [CallAPI.BasicRouteDetail]
-    segmentsOfQuote quote = do
-      routeStations <- quote.routeStations
-      guard (not $ null routeStations)
-      mapM toBasicRouteDetail routeStations
-
-    toBasicRouteDetail :: FRFSRouteStationsAPI -> Maybe CallAPI.BasicRouteDetail
-    toBasicRouteDetail routeStation = do
-      firstStation <- listToMaybe routeStation.stations
-      lastStation <- listToMaybe (reverse routeStation.stations)
-      Just CallAPI.BasicRouteDetail {routeCode = routeStation.code, startStopCode = firstStation.code, endStopCode = lastStation.code, color = routeStation.color}
+  return $ FRFSSearchAPIRes quotes searchReqId
 
 enrichQuotesWithPassOverride ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -931,8 +887,6 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 stations = fromMaybe [] stations,
                 observingFailures = Just observingFailures,
                 offer = mbOffer,
-                providerRouteId = quote.fareDetails <&> (.providerRouteId),
-                ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode),
                 ..
               }
       )
