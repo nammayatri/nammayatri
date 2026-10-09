@@ -60,3 +60,7 @@ cancelledBookingIdSetByDriverId driverId = do
 
 findAllBookingIdsCancelledByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Id Booking]
 findAllBookingIdsCancelledByDriverId driverId = Set.toList <$> cancelledBookingIdSetByDriverId driverId
+
+findAllByBookingIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Booking] -> m [BookingCancellationReason]
+findAllByBookingIds [] = pure []
+findAllByBookingIds bookingIds = findAllWithKV [Se.Is BeamBCR.bookingId $ Se.In (getId <$> bookingIds)]
