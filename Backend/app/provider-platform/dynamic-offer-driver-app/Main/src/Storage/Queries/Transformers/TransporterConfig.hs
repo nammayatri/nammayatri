@@ -60,7 +60,8 @@ parseScheduledRideConfig merchantOperatingCityId mbVal = do
             maxLeadTime = Nothing,
             avgSpeedKmph = Nothing,
             maxHoldsPerDriver = 1,
-            enableScheduledRideActivationChecks = Just True
+            enableScheduledRideActivationChecks = Just True,
+            driverActivationWindow = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "scheduledRideConfig" merchantOperatingCityId def parseScheduledRideConfigWithDefault mbVal
 

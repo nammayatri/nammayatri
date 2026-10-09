@@ -458,7 +458,8 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                      avgSpeedKmph = maybe config.scheduledRideConfig.avgSpeedKmph (.value) req.scheduledRideAvgSpeedKmph,
                      minLeadTime = maybe config.scheduledRideConfig.minLeadTime (.value) req.scheduledRideMinLeadTime,
                      maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime,
-                     enableScheduledRideActivationChecks = config.scheduledRideConfig.enableScheduledRideActivationChecks
+                     enableScheduledRideActivationChecks = config.scheduledRideConfig.enableScheduledRideActivationChecks,
+                     driverActivationWindow = config.scheduledRideConfig.driverActivationWindow
                    }
               }
   whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
