@@ -179,8 +179,9 @@ updateVerificationStatusByIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id DImage.Image -> DocumentType -> m ())
 updateVerificationStatusByIdAndType verificationStatus (Kernel.Types.Id.Id id) imageType = do
+  now <- getCurrentTime
   updateOneWithKV
-    [Se.Set BeamI.verificationStatus (Just verificationStatus)]
+    [Se.Set BeamI.verificationStatus (Just verificationStatus), Se.Set BeamI.updatedAt now]
     [ Se.And
         [ Se.Is BeamI.id $ Se.Eq id,
           Se.Is BeamI.imageType $ Se.Eq imageType
