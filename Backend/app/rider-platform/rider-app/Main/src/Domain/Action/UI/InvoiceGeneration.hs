@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.InvoiceGeneration where
 
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Calendar (toGregorian)
@@ -42,6 +43,7 @@ import qualified Storage.Queries.Person as QPerson
 import System.Directory (doesFileExist)
 import Tools.Error
 import Tools.InvoicePDF as PDF
+import Tools.Metrics (CoreMetrics)
 
 -- | Request types
 data GenerateInvoiceReq = GenerateInvoiceReq
@@ -80,7 +82,10 @@ generateInvoice ::
     ClickhouseFlow m r,
     BeamFlow m r,
     PaymentBeamFlow.BeamFlow m r,
-    HasField "emailServiceConfig" r Email.EmailServiceConfig
+    HasField "emailServiceConfig" r Email.EmailServiceConfig,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   GenerateInvoiceReq ->

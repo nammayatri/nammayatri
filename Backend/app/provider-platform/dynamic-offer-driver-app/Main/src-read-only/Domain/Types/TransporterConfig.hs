@@ -253,6 +253,7 @@ data TransporterConfig = TransporterConfig
     mandateExecutionRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateNotificationRescheduleInterval :: Kernel.Prelude.NominalDiffTime,
     mandateValidity :: Kernel.Prelude.Int,
+    manualTollChargeConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ManualTollChargeConfig,
     maxAllowedDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAllowedVideoDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxNumberOfLuggages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -546,6 +547,14 @@ data LimitsConfig = LimitsConfig
     maxVehiclesCsvRows :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ManualTollChargeConfig = ManualTollChargeConfig
+  { approvalTimeoutSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxAmountWithoutEstimate :: Kernel.Types.Common.HighPrecMoney,
+    maxApprovalAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    tripCategories :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data PaymentChargeBearer = PAYMENT_CUSTOMER | PAYMENT_DRIVER | PAYMENT_PLATFORM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

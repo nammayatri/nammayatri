@@ -1053,6 +1053,12 @@ TransporterConfig:
       maxHoldsPerDriver: Int
       enableScheduledRideActivationChecks: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    ManualTollChargeConfig:
+      tripCategories: Maybe [Text]
+      maxAmountWithoutEstimate: HighPrecMoney
+      approvalTimeoutSeconds: Maybe Int # defaults to 180 when absent
+      maxApprovalAttempts: Maybe Int # defaults to 3 when absent
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     PayoutFeeType:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
@@ -1516,6 +1522,9 @@ TransporterConfig:
     enableDirectWalletIncentives: Maybe Bool
     driverSearchBlacklistDurationSeconds: Maybe Seconds
     driverLocationStalenessThresholdSeconds: Maybe Seconds
+    # Absent means the manual toll charge feature is off for this city; present is the single
+    # switch that turns it on, folding what used to be a separate enabled-trip-categories check.
+    manualTollChargeConfig: Maybe ManualTollChargeConfig
     driverCoolOffPeriod: Maybe Seconds # Post-ride window excluding a driver from silent auto-assignment; broadcast unaffected.
     tdsFromEmail: Maybe Text
     sameRiderDriverRideCountLookbackDays: Int
@@ -1586,6 +1595,7 @@ TransporterConfig:
     cachedDevicesOSForSearchRequest: "Maybe [Text]"
     arrivalTimeBufferOfVehicle: Maybe Value
     demandHotspotsConfig: Maybe Value
+    manualTollChargeConfig: Maybe Value
     scheduledRideSearchRepeatLimit: Maybe Int
     driverDrivenSearchReqExpiry: Maybe Seconds
     disableListScheduledBookingAPI: Maybe Bool
@@ -1688,6 +1698,7 @@ TransporterConfig:
       cachedDevicesOSForSearchRequest)|E
     arrivalTimeBufferOfVehicle: Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: Kernel.Prelude.toJSON <$> demandHotspotsConfig|E
+    manualTollChargeConfig: Kernel.Prelude.toJSON <$> manualTollChargeConfig|E
     scheduledRideSearchRepeatLimit: Just scheduledRideSearchRepeatLimit|E
     scheduledRideConfig: Just . Data.Aeson.toJSON|I
     driverDrivenSearchReqExpiry:
@@ -1802,6 +1813,8 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle|E
     demandHotspotsConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< demandHotspotsConfig|E
+    manualTollChargeConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< manualTollChargeConfig|E
     scheduledRideSearchRepeatLimit: fromMaybe 10 scheduledRideSearchRepeatLimit|E
     scheduledRideConfig:
       Storage.Queries.Transformers.TransporterConfig.parseScheduledRideConfig
@@ -1932,6 +1945,7 @@ TransporterConfig:
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
     fareRecomputePolicy: json
+    manualTollChargeConfig: json
     issueBreachConfig: json
     gpsTollBehaviorWindowDays: int
     enableGpsTollBehavior: boolean
@@ -2209,6 +2223,7 @@ TransporterConfig:
         - metricsDistanceBucketsKm
         - driverCoolOffPeriod
         - enableBppReallocation
+        - manualTollChargeConfig
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId

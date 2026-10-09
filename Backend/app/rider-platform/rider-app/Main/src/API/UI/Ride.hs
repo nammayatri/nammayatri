@@ -24,11 +24,13 @@ where
 
 import Data.Aeson.Types ()
 import qualified Domain.Action.UI.Ride as DRide
+import qualified Domain.Action.UI.TollChargeApproval as TollChargeApproval
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as SPerson
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -55,6 +57,13 @@ type API =
                   :<|> "deliveryImage"
                   :> TokenAuth
                   :> Get '[JSON] Text
+                  :<|> "tollChargeApproval"
+                  :> TokenAuth
+                  :> ReqBody '[JSON] TollChargeApproval.TollChargeApprovalDecisionReq
+                  :> Post '[JSON] APISuccess
+                  :<|> "tollChargeApproval"
+                  :> TokenAuth
+                  :> Get '[JSON] (Maybe TollChargeApproval.TollChargeApprovalRequestRes)
               )
            :<|> "driver"
              :> "photo"
@@ -74,6 +83,8 @@ handler =
         :<|> getRideStatus rideId
         :<|> editLocation rideId
         :<|> getDeliveryImage rideId
+        :<|> tollChargeApproval rideId
+        :<|> getTollChargeApproval rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DARide.GetDriverLocResp
 getDriverLoc rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DARide.getDriverLoc rideId
@@ -86,6 +97,12 @@ getRideStatus rideId (personId, _) = withFlowHandlerAPIPersonId personId . withP
 
 editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
 editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
+
+tollChargeApproval :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> TollChargeApproval.TollChargeApprovalDecisionReq -> FlowHandler APISuccess
+tollChargeApproval rideId (personId, _) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ TollChargeApproval.tollChargeApprovalDecision personId rideId req
+
+getTollChargeApproval :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler (Maybe TollChargeApproval.TollChargeApprovalRequestRes)
+getTollChargeApproval rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ TollChargeApproval.getTollChargeApproval personId rideId
 
 getDeliveryImage :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler Text
 getDeliveryImage rideId (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.getDeliveryImage rideId (personId, merchantId)

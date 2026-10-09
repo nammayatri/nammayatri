@@ -19,10 +19,12 @@ module Domain.Types.Booking.API where
 
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Aeson (eitherDecode, encode)
+import qualified Data.HashMap.Strict as HM
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
+import Domain.Action.UI.TollChargeApproval (TollChargeApprovalRequestRes, acknowledgeSurfacedTollChargeApproval, getPendingTollChargeApproval)
 import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types
 import Domain.Types.Booking
@@ -48,6 +50,7 @@ import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.Trip as Trip
 import Domain.Types.VehicleVariant (VehicleVariant (..))
+import Environment (Flow)
 import EulerHS.Prelude hiding (elem, find, id, length, map, notElem, null)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
@@ -96,6 +99,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import qualified Tools.JSON as J
+import Tools.Metrics (CoreMetrics)
 import qualified Tools.Schema as S
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 
@@ -265,7 +269,8 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     tipAmount :: Maybe PriceAPIEntity,
     bookingDepositAmount :: Maybe HighPrecMoney,
     pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo,
-    isSilentReallocation :: Maybe Bool
+    isSilentReallocation :: Maybe Bool,
+    tollChargeApproval :: Maybe TollChargeApprovalRequestRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -371,7 +376,7 @@ data DeliveryPersonDetailsAPIEntity = DeliveryPersonDetailsAPIEntity
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeBookingAPIEntity ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r, CoreMetrics m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r) =>
   Id Person.Person ->
   Booking ->
   Maybe DRide.Ride ->
@@ -637,7 +642,7 @@ getActiveSos' mbRide personId = do
 makeCancellationReasonAPIEntity :: BookingCancellationReason -> BookingCancellationReasonAPIEntity
 makeCancellationReasonAPIEntity BookingCancellationReason {..} = BookingCancellationReasonAPIEntity {..}
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
+buildBookingAPIEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, ClickhouseFlow m r, BeamFlow m r, PaymentBeamFlow.BeamFlow m r, CoreMetrics m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasRequestId r) => Booking -> Id Person.Person -> Bool -> m BookingAPIEntity
 buildBookingAPIEntity booking personId dontNeedFareBreakup = do
   -- mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
   mbRide <- runInReplica $ QRide.findOneByBookingId booking.id
@@ -693,7 +698,7 @@ getOrderCardInfo mbOrder = runMaybeT $ do
       }
 
 --Note :- if you are adding and extra field in BookingStatusAPIEntity then add it in BookingAPIEntity as well
-buildBookingStatusAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingStatusAPIEntity
+buildBookingStatusAPIEntity :: Booking -> Flow BookingStatusAPIEntity
 buildBookingStatusAPIEntity booking = do
   mbActiveRide <- runInReplica $ QRideLite.findActiveByRBIdLite booking.id
   batchConfig <- maybe (SharedRedisKeys.getBatchConfig booking.transactionId) (\_ -> pure Nothing) mbActiveRide
@@ -714,12 +719,36 @@ buildBookingStatusAPIEntity booking = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing
+  -- This response is already polled continuously for the ride's whole duration, so a pending toll
+  -- approval rides along here instead of needing its own poll. Only an in-progress ride can have one.
+  tollChargeApproval <- case mbActiveRide of
+    Just ride | ride.status == DRide.INPROGRESS -> do
+      mbPending <- getPendingTollChargeApproval ride.id
+      -- Surfacing the prompt here is what acknowledges it to the driver side.
+      case mbPending of
+        Just _ -> acknowledgeSurfacedTollChargeApproval booking ride.id
+        Nothing -> pure ()
+      pure mbPending
+    _ -> pure Nothing
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
 
-buildRideAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r) => (Id Person.Person, Booking, Bool) -> DRide.Ride -> m RideAPIEntity
+buildRideAPIEntity ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  (Id Person.Person, Booking, Bool) ->
+  DRide.Ride ->
+  m RideAPIEntity
 buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = do
   stopsInfo <- if (fromMaybe False hasStops) then QSI.findAllByRideId id else return []
   let oneYearAgo = - (365 * 24 * 60 * 60)
@@ -773,6 +802,13 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                   estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
                 }
         Nothing -> return Nothing
+  tollChargeApproval <-
+    if status == DRide.INPROGRESS
+      then do
+        mbPending <- getPendingTollChargeApproval id
+        Kernel.Prelude.whenJust mbPending $ \_ -> acknowledgeSurfacedTollChargeApproval booking id
+        pure mbPending
+      else pure Nothing
   return $
     RideAPIEntity
       { shortRideId = shortId,
