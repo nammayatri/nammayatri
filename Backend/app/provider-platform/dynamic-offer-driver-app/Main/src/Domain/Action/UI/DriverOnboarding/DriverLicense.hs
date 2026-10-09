@@ -130,11 +130,13 @@ isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLN
 verifyDL ::
   OnboardingFlow m r =>
   DPan.VerifiedBy ->
+  -- | the caller approves this submit right away (admin upload with auto-approve), so it may replace an approved DL
+  Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverDLReq ->
   m DriverDLRes
-verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
+verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
   let isDashboard = verifyBy == DPan.DASHBOARD
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
@@ -237,7 +239,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
               else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-            when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
+            when (driverLicense.verificationStatus == Documents.VALID && not autoApproved && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwError $ DocumentAlreadyValidated "DL"
             runDlFaceMatch
@@ -251,15 +253,17 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
             mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
-            when (isJust mDriverDL) $ do
+            -- A different number over an approved DL is a correction only an auto-approving admin may make.
+            when (isJust mDriverDL && not autoApproved) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwImageError imageId1 DriverAlreadyLinked
             runDlFaceMatch
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
-  groupRegisteredImages (imageId1 : maybeToList imageId2)
   withDocumentOperationLock "DL" personId.getId runBody
+  -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
+  groupRegisteredImages (imageId1 : maybeToList imageId2)
   return Success
   where
     getImage imageId = do
@@ -561,5 +565,5 @@ dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq pe
             sdkTransactionId = Nothing,
             isDLImageValidated = Nothing
           }
-  void $ verifyDL DPan.FRONTEND_SDK Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
+  void $ verifyDL DPan.FRONTEND_SDK False Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
   return Ack

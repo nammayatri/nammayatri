@@ -223,6 +223,7 @@ data DLDetails = DLDetails
 data RCDetails = RCDetails
   { vehicleRegistrationCertNumber :: Text,
     imageId :: Text,
+    imageId2 :: Maybe Text,
     operatingCity :: Text,
     dateOfRegistration :: Maybe UTCTime,
     vehicleCategory :: Maybe Text,
@@ -803,6 +804,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
             imageId = rc.documentImageId.getId,
+            imageId2 = getId <$> rc.documentImageId2,
             operatingCity = show entityImagesInfo.merchantOperatingCity.city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,

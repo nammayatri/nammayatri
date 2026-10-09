@@ -281,22 +281,22 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcI
   vehicleLeftImgs <- whenMatch DVC.VehicleLeft $ getVehicleImages merchant.id DVC.VehicleLeft
   vehicleFrontInteriorImgs <- whenMatch DVC.VehicleFrontInterior $ getVehicleImages merchant.id DVC.VehicleFrontInterior
   vehicleBackInteriorImgs <- whenMatch DVC.VehicleBackInterior $ getVehicleImages merchant.id DVC.VehicleBackInterior
-  pucImages <- whenMatch DVC.VehiclePUC $ getDriverImages merchant.id DVC.VehiclePUC
-  permitImages <- whenMatch DVC.VehiclePermit $ getDriverImages merchant.id DVC.VehiclePermit
+  pucImages <- whenMatch DVC.VehiclePUC $ getVehicleDocImages merchant.id DVC.VehiclePUC
+  permitImages <- whenMatch DVC.VehiclePermit $ getVehicleDocImages merchant.id DVC.VehiclePermit
   dlImages <- if matches DVC.DriverLicense then runInReplica (findImagesByPersonAndType Nothing Nothing merchant.id (cast driverId) DVC.DriverLicense) else pure []
   let dlImgs = groupByTxnIdInHM dlImages
   vInspectionImgs <- whenMatch DVC.VehicleInspectionForm $ getDriverImages merchant.id DVC.VehicleInspectionForm
-  vehRegImgs <- whenMatch DVC.VehicleRegistrationCertificate $ getDriverImages merchant.id DVC.VehicleRegistrationCertificate
+  vehRegImgs <- whenMatch DVC.VehicleRegistrationCertificate $ getRcImages merchant.id
   uploadProfImgs <- whenMatch DVC.UploadProfile $ getDriverImages merchant.id DVC.UploadProfile
-  vehicleFitnessCertImgs <- whenMatch DVC.VehicleFitnessCertificate $ getDriverImages merchant.id DVC.VehicleFitnessCertificate
-  vehicleInsImgs <- whenMatch DVC.VehicleInsurance $ getDriverImages merchant.id DVC.VehicleInsurance
+  vehicleFitnessCertImgs <- whenMatch DVC.VehicleFitnessCertificate $ getVehicleDocImages merchant.id DVC.VehicleFitnessCertificate
+  vehicleInsImgs <- whenMatch DVC.VehicleInsurance $ getVehicleDocImages merchant.id DVC.VehicleInsurance
   profilePics <- whenMatch DVC.ProfilePhoto $ getDriverImages merchant.id DVC.ProfilePhoto
   gstImgs <- whenMatch DVC.GSTCertificate $ getDriverImages merchant.id DVC.GSTCertificate
   udyamImgs <- whenMatch DVC.UDYAMCertificate $ getDriverImages merchant.id DVC.UDYAMCertificate
   panImgs <- whenMatch DVC.PanCard $ getDriverImages merchant.id DVC.PanCard
   businessLicenseImgs <- whenMatch DVC.BusinessLicense $ getDriverImages merchant.id DVC.BusinessLicense
   aadhaarImgs <- whenMatch DVC.AadhaarCard $ getDriverImages merchant.id DVC.AadhaarCard
-  vehicleNOCImgs <- whenMatch DVC.VehicleNOC $ getDriverImages merchant.id DVC.VehicleNOC
+  vehicleNOCImgs <- whenMatch DVC.VehicleNOC $ getVehicleDocImages merchant.id DVC.VehicleNOC
   driverVehicleNOCImgs <- whenMatch DVC.DriverVehicleNOC $ getDriverImages merchant.id DVC.DriverVehicleNOC
   localResidenceProofImgs <- whenMatch DVC.LocalResidenceProof $ getDriverImages merchant.id DVC.LocalResidenceProof
   policeVerificationCertificateImgs <- whenMatch DVC.PoliceVerificationCertificate $ getDriverImages merchant.id DVC.PoliceVerificationCertificate
@@ -354,6 +354,26 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcI
       Just rcId -> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing)
       Nothing -> pure []
 
+    -- Vehicle documents belong to the RC when the caller names one. Uploads from before rcId was
+    -- recorded carry none, so when the RC has no tagged images the person's uploads are listed.
+    getVehicleDocImages merchantId imageType = case mbRcId of
+      Just rcId ->
+        runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing) >>= \case
+          [] -> getDriverImages merchantId imageType
+          imagesTaggedWithRcId -> pure imagesTaggedWithRcId
+      Nothing -> getDriverImages merchantId imageType
+
+    -- The RC doc row's own front/back images are included even when they predate rcId tagging.
+    getRcImages merchantId = case mbRcId of
+      Nothing -> getDriverImages merchantId DVC.VehicleRegistrationCertificate
+      Just rcId -> do
+        imagesTaggedWithRcId <- runInReplica (findImagesByRCAndType merchantId (Just rcId) DVC.VehicleRegistrationCertificate Nothing)
+        mbRcDocRow <- runInReplica (QRC.findById (Id rcId))
+        let docRowImageIds = maybe [] (\rcDocRow -> rcDocRow.documentImageId : maybeToList rcDocRow.documentImageId2) mbRcDocRow
+            docRowImageIdsNotTagged = filter (`notElem` map (.id) imagesTaggedWithRcId) docRowImageIds
+        docRowImagesNotTagged <- if null docRowImageIdsNotTagged then pure [] else runInReplica (findImagesByIds docRowImageIdsNotTagged)
+        pure $ sortOn (Down . (.createdAt)) (imagesTaggedWithRcId <> docRowImagesNotTagged)
+
     getDriverImages merchantId imageType = runInReplica (findImagesByPersonAndType Nothing Nothing merchantId (cast driverId) imageType)
 
     imageIds = map (.id.getId)
@@ -390,6 +410,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcI
         Common.RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
             imageId = rc.documentImageId.getId,
+            imageId2 = getId <$> rc.documentImageId2,
             operatingCity = show city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,
@@ -883,6 +904,7 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
         Nothing -> DPan.DASHBOARD
   verifyDL
     verifyBy
+    False
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq
@@ -957,16 +979,16 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let autoApprove = mbAutoApprove == Just True && transporterConfig.autoApproveOnAdminUpload == Just True
-  mbApproveDetails <- registerDocument merchant merchantOpCityId
+  mbApproveDetails <- registerDocument merchant merchantOpCityId autoApprove
   case (autoApprove, mbApproveDetails) of
     (True, Just approveDetails) -> void $ postDriverRegistrationDocumentsUpdate merchantShortId opCity (Common.Approve approveDetails)
     _ -> refreshOnboardingFlags (cast driverId_)
   pure Success
   where
-    registerDocument merchant merchantOpCityId =
+    registerDocument merchant merchantOpCityId autoApprove =
       case metadata of
         Common.DLData dlReq -> do
-          void $ registerDL merchant merchantOpCityId dlReq
+          void $ registerDL merchant merchantOpCityId autoApprove dlReq
           pure . Just . Common.DL $
             Common.DLApproveDetails
               { documentImageId = dlReq.imageId1,
@@ -1006,7 +1028,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
         Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate Nothing (\st -> upsertGST st req) >> pure (Just (Common.GSTApprove req))
         Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense Nothing (\st -> upsertBusinessLicense st req) >> pure (Just (Common.BusinessLicenseImg req))
 
-    registerDL merchant merchantOpCityId Common.RegisterDLReq {..} = do
+    registerDL merchant merchantOpCityId autoApprove Common.RegisterDLReq {..} = do
       let verifyBy = case defaultVerifyBy of
             DPan.FRONTEND_SDK -> DPan.FRONTEND_SDK
             _ -> case accessType of
@@ -1017,6 +1039,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
               Nothing -> defaultVerifyBy
       verifyDL
         verifyBy
+        autoApprove
         (Just merchant)
         (cast driverId_, cast merchant.id, merchantOpCityId)
         DriverDLReq
@@ -1284,6 +1307,7 @@ castMgmtRCDetails rc =
   Common.RCDetails
     { vehicleRegistrationCertNumber = rc.vehicleRegistrationCertNumber,
       imageId = rc.imageId,
+      imageId2 = rc.imageId2,
       operatingCity = rc.operatingCity,
       dateOfRegistration = rc.dateOfRegistration,
       vehicleCategory = rc.vehicleCategory,
@@ -2762,7 +2786,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       case newestApproved of
         Nothing -> pure Nothing
         Just img
-          | hasNoVersionId img && length docRowHoldingClickedImages > 1 -> pure Nothing -- uploaded before versioning: can't tell whether it has both sides
+          | hasNoVersionId img -> pure Nothing -- registered before versioning: its other side is unknown, so it never becomes current again
           | otherwise -> Just . versionImageIds img.id <$> QImage.findImageGroup img
       where
         approvedOthers = filter (\img -> img.verificationStatus == Just VALID && img.id `notElem` docRowHoldingClickedImages) images
