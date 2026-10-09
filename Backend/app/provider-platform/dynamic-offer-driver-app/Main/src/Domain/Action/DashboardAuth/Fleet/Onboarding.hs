@@ -44,7 +44,10 @@ getOnboardingDocumentConfigs a7 a6 a5 a4 a3 a2 a1 = do
 getOnboardingRegisterStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Domain.Types.VehicleCategory.VehicleCategory) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.DocsVerificationStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.StatusRes)
 getOnboardingRegisterStatus a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
   fleetOwnerId <- SharedLogic.Fleet.getFleetOwnerId (Tools.Auth.DashboardUserAuth.dashboardRequestorId a9) Kernel.Prelude.Nothing
-  Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingRegisterStatus a11 a10 fleetOwnerId a8 a7 a6 a5 a4 a3 a2 a1
+  res <- Domain.Action.Dashboard.Fleet.Onboarding.getOnboardingRegisterStatus a11 a10 fleetOwnerId a8 a7 a6 a5 a4 a3 a2 a1
+  Kernel.Prelude.when (Kernel.Prelude.maybe fleetOwnerId Kernel.Types.Id.getId a8 Kernel.Prelude.== fleetOwnerId) $
+    Tools.Auth.DashboardUserAuth.syncDashboardPersonVerified fleetOwnerId res.verified
+  Kernel.Prelude.pure res
 
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify a5 a4 a3 a2 a1 = do

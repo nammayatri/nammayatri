@@ -1757,7 +1757,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
   filteredDrivers <- filterDriversByServiceTier mbServiceTier listOfAllDriversFinal
   let (filteredFdaList, _, _) = filteredDrivers
       fleetOwnerIdsFromResponse = nub $ map (.fleetOwnerId) filteredFdaList
-  fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
+  fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest (nub $ fleetOwnerIds <> fleetOwnerIdsFromResponse)
+  let mbEffectiveFleetOwnerNames = effectiveFleetOwnerId >>= (`Map.lookup` fleetOwnerNameMap)
   listItems <- createFleetDriverAssociationListItem merchant fleetOwnerNameMap filteredDrivers
   let count = length listItems
       onRideCount = length $ filter (\item -> fromMaybe False item.isDriverOnRide || fromMaybe False item.isDriverOnPickup) listItems
@@ -1766,6 +1767,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
   pure $
     Common.DrivertoVehicleAssociationResT
       { fleetOwnerId = requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
+        fleetOwnerName = fst <$> mbEffectiveFleetOwnerNames,
+        fleetName = mbEffectiveFleetOwnerNames >>= snd,
         listItem = listItems,
         summary = summary
       }
@@ -2005,7 +2008,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
           else fetchVehicles
       else pure listOfAllVehicle
   let fleetOwnerIdsFromResponse = nub $ mapMaybe (.fleetOwnerId) listOfAllVehicleFinal
-  fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
+  fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest (nub $ fleetOwnerIds <> fleetOwnerIdsFromResponse)
+  let mbEffectiveFleetOwnerNames = effectiveFleetOwnerId >>= (`Map.lookup` fleetOwnerNameMap)
   let listOfAllVehicleWithFleetInfo = catMaybes $ map (\vrc -> vrc.fleetOwnerId >>= \fleetOwnerId -> let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap) in Just (vrc, fleetOwnerId, fleetOwnerName, fleetName)) listOfAllVehicleFinal
   listItems <- createFleetVehicleAssociationListItem merchant listOfAllVehicleWithFleetInfo
   let assignedItems = filter (isJust . (.driverId)) listItems
@@ -2016,6 +2020,8 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
   pure $
     Common.DrivertoVehicleAssociationResT
       { fleetOwnerId = requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
+        fleetOwnerName = fst <$> mbEffectiveFleetOwnerNames,
+        fleetName = mbEffectiveFleetOwnerNames >>= snd,
         listItem = listItems,
         summary = summary
       }
