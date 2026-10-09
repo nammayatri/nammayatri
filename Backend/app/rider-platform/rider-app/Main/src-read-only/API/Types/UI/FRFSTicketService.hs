@@ -241,7 +241,6 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
-    providerRouteId :: Data.Maybe.Maybe Data.Text.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
@@ -251,7 +250,6 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
-    ticketTypeCode :: Data.Maybe.Maybe Data.Text.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
@@ -363,7 +361,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIRes = FRFSSearchAPIRes {crisSdkToken :: Data.Maybe.Maybe Data.Text.Text, quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
+data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

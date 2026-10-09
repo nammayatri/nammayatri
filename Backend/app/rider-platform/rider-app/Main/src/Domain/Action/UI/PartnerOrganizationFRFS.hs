@@ -613,9 +613,6 @@ mkQuoteRes (quote, quoteCategories) = do
         observingFailures = Nothing,
         offer = Nothing,
         routeDetails = Nothing,
-        providerRouteId = quote.fareDetails <&> (.providerRouteId),
-        ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode),
-        routeGroupKey = quote.routeGroupKey,
         ..
       }
 
