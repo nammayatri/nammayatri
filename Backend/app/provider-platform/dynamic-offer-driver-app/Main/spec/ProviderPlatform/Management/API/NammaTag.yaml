@@ -44,6 +44,7 @@ imports:
   ConfigPilotCreateRowRequest: Lib.Yudhishthira.Types
   ConfigPilotVerifyReq: Lib.Yudhishthira.Types
   ConfigPilotRolloutReq: Lib.Yudhishthira.Types
+  ConfigPilotBulkRolloutReq: Lib.Yudhishthira.Types
   ConfigPilotActionChangeRequest: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
   NammaTagV2: Lib.Yudhishthira.Types.NammaTagV2
@@ -439,6 +440,20 @@ apis:
         type: ConfigPilotRolloutReq
       response:
         type: APISuccess
+      migrate:
+        capability: system-config.config_pilot.write
+  - POST:
+      endpoint: /configPilot/{configType}/bulkUpsertLogicRollout
+      auth: ApiAuthV2
+      params:
+        configType: ConfigType
+      # Every merchant/city pair is checked against the caller's merchant_access
+      # before anything is rolled out.
+      appServerHandler: custom
+      request:
+        type: ConfigPilotBulkRolloutReq
+      response:
+        type: BulkLogicRolloutResult
       migrate:
         capability: system-config.config_pilot.write
   - POST:

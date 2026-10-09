@@ -21,6 +21,7 @@
 -- to do it here or one operator could roll logic out to any merchant.
 module Domain.Action.DashboardAuth.Management.NammaTag
   ( postNammaTagAppDynamicLogicBulkUpsertLogicRollout,
+    postNammaTagConfigPilotBulkUpsertLogicRollout,
   )
 where
 
@@ -55,4 +56,26 @@ postNammaTagAppDynamicLogicBulkUpsertLogicRollout a4 a3 a2 a1 = do
       result <-
         Domain.Action.Dashboard.Management.NammaTag.postNammaTagAppDynamicLogicBulkUpsertLogicRollout a4 a3 $
           Lib.Yudhishthira.Types.BulkLogicRolloutReq allowedEntries a1.rollout
+      Kernel.Prelude.pure (Lib.Yudhishthira.Types.BulkLogicRolloutResult result.succeeded (result.failures <> deniedFailures))
+
+-- | Config-scoped twin of postNammaTagAppDynamicLogicBulkUpsertLogicRollout: same access check and allow/deny split.
+postNammaTagConfigPilotBulkUpsertLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.ConfigType -> Lib.Yudhishthira.Types.ConfigPilotBulkRolloutReq -> Environment.Flow Lib.Yudhishthira.Types.BulkLogicRolloutResult)
+postNammaTagConfigPilotBulkUpsertLogicRollout a5 a4 a3 a2 a1 = do
+  authorised <- Kernel.Prelude.forM a1.merchantsAndCities $ \entry -> do
+    mbAccess <- requestorCityAccess a3 entry.merchantShortId entry.cities
+    Kernel.Prelude.pure $ case mbAccess of
+      Kernel.Prelude.Nothing ->
+        ([], [Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId city "Merchant not found." | city <- entry.cities])
+      Kernel.Prelude.Just (allowedCities, deniedCities) ->
+        ( [Lib.Yudhishthira.Types.MerchantCitiesEntry entry.merchantShortId allowedCities | not (null allowedCities)],
+          [Lib.Yudhishthira.Types.BulkRolloutCityFailure entry.merchantShortId city "You have no access to this operation." | city <- deniedCities]
+        )
+  let allowedEntries = concatMap fst authorised
+      deniedFailures = concatMap snd authorised
+  if null allowedEntries
+    then Kernel.Prelude.pure (Lib.Yudhishthira.Types.BulkLogicRolloutResult [] deniedFailures)
+    else do
+      result <-
+        Domain.Action.Dashboard.Management.NammaTag.postNammaTagConfigPilotBulkUpsertLogicRollout a5 a4 a2 $
+          Lib.Yudhishthira.Types.ConfigPilotBulkRolloutReq allowedEntries a1.rollout
       Kernel.Prelude.pure (Lib.Yudhishthira.Types.BulkLogicRolloutResult result.succeeded (result.failures <> deniedFailures))

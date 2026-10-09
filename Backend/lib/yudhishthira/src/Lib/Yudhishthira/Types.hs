@@ -55,6 +55,7 @@ module Lib.Yudhishthira.Types
     ConfigPilotVerifyReq (..),
     ConfigPilotRolloutObject (..),
     ConfigPilotRolloutReq,
+    ConfigPilotBulkRolloutReq (..),
     ConfigPilotActionChangeRequest (..),
     ConfigPilotVersionReq (..),
     RolloutVersion (..),
@@ -1011,6 +1012,16 @@ instance HideSecrets ConfigPilotRolloutObject where
 type ConfigPilotRolloutReq = [ConfigPilotRolloutObject]
 
 instance HideSecrets ConfigPilotRolloutReq where
+  hideSecrets = identity
+
+-- | Config-scoped twin of BulkLogicRolloutReq; configType travels in the URL, same as ConfigPilotRolloutReq.
+data ConfigPilotBulkRolloutReq = ConfigPilotBulkRolloutReq
+  { merchantsAndCities :: [MerchantCitiesEntry],
+    rollout :: ConfigPilotRolloutReq
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets ConfigPilotBulkRolloutReq where
   hideSecrets = identity
 
 data ConfigPilotActionChangeRequest

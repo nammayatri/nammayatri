@@ -48,6 +48,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagConfigPilotCreateRow,
     postNammaTagConfigPilotVerify,
     postNammaTagConfigPilotUpsertLogicRollout,
+    postNammaTagConfigPilotBulkUpsertLogicRollout,
     postNammaTagConfigPilotRolloutAction,
     getNammaTagBehaviorVisibility,
     getNammaTagBehaviorStatus,
@@ -665,14 +666,21 @@ postNammaTagAppDynamicLogicBulkUpsertLogicRollout :: Kernel.Types.Id.ShortId Dom
 postNammaTagAppDynamicLogicBulkUpsertLogicRollout _authMerchantShortId _authOpCity req = do
   results <- forM req.merchantsAndCities $ \entry ->
     forM entry.cities $ \city -> do
-      attempt <- Prelude.try $ postNammaTagAppDynamicLogicUpsertLogicRollout (ShortId entry.merchantShortId) city req.rollout
+      -- withTryCatch logs the full exception server-side; bulkRolloutFailureReason
+      -- only ever surfaces a known-safe domain message (never internals) in the response.
+      attempt <- withTryCatch ("bulkUpsertLogicRollout:" <> entry.merchantShortId <> ":" <> Text.pack (show city)) $ postNammaTagAppDynamicLogicUpsertLogicRollout (ShortId entry.merchantShortId) city req.rollout
       case attempt of
-        Left (e :: SomeException) -> do
-          logError $ "bulkUpsertLogicRollout failed for " <> entry.merchantShortId <> "/" <> Text.pack (show city) <> ": " <> show e
-          pure $ Left (LYT.BulkRolloutCityFailure entry.merchantShortId city "Failed to upsert rollout for this merchant and city.")
+        Left e -> pure $ Left (LYT.BulkRolloutCityFailure entry.merchantShortId city (bulkRolloutFailureReason e))
         Right _ -> pure $ Right (entry.merchantShortId <> ":" <> Text.pack (show city))
   let flatResults = concat results
   pure $ LYT.BulkLogicRolloutResult [s | Right s <- flatResults] [f | Left f <- flatResults]
+
+-- | Safe-message extraction for bulk-rollout per-item failures: a recognized domain
+-- error's own non-internal message, never the raw exception (which can carry DB/internal detail).
+bulkRolloutFailureReason :: SomeException -> Text
+bulkRolloutFailureReason e =
+  fromMaybe "Failed to upsert rollout for this merchant and city." $
+    (fromException e :: Maybe HTTPException) >>= toMessageIfNotInternal
 
 postNammaTagAppDynamicLogicUpdateExperimentGroup :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.UpdateRolloutGroupReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagAppDynamicLogicUpdateExperimentGroup merchantShortId opCity req = do
@@ -1334,6 +1342,24 @@ postNammaTagConfigPilotUpsertLogicRollout merchantShortId opCity configType req 
           timeBounds = r.timeBounds,
           rollout = r.rollout,
           modifiedBy = r.modifiedBy
+        }
+
+postNammaTagConfigPilotBulkUpsertLogicRollout :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> LYT.ConfigPilotBulkRolloutReq -> Environment.Flow LYT.BulkLogicRolloutResult
+postNammaTagConfigPilotBulkUpsertLogicRollout merchantShortId opCity configType req =
+  postNammaTagAppDynamicLogicBulkUpsertLogicRollout merchantShortId opCity bulkReq
+  where
+    toRolloutObject :: LYT.ConfigPilotRolloutObject -> LYT.LogicRolloutObject
+    toRolloutObject r =
+      LYT.LogicRolloutObject
+        { domain = LYT.DRIVER_CONFIG configType,
+          timeBounds = r.timeBounds,
+          rollout = r.rollout,
+          modifiedBy = r.modifiedBy
+        }
+    bulkReq =
+      LYT.BulkLogicRolloutReq
+        { merchantsAndCities = req.merchantsAndCities,
+          rollout = map toRolloutObject req.rollout
         }
 
 postNammaTagConfigPilotRolloutAction :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> LYT.ConfigPilotActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess

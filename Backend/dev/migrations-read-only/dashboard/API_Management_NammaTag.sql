@@ -85,3 +85,13 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostNammaTagBehaviorMarkCanonical","migration":"capability","param":"system-config.dynamic_logic.write","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.dynamic_logic.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_MARK_CANONICAL' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"PostNammaTagConfigPilotBulkUpsertLogicRollout","migration":"capability","param":"system-config.config_pilot.write","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.config_pilot.write', 'DASHBOARD', 'RIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_BULK_UPSERT_LOGIC_ROLLOUT' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostNammaTagConfigPilotBulkUpsertLogicRollout","migration":"capability","param":"system-config.config_pilot.write","schema":"atlas_dashboard"}
+-- Driver-app row, added by hand: the generator only emitted the rider-app one on this pass.
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'system-config.config_pilot.write', 'DASHBOARD', 'PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_BULK_UPSERT_LOGIC_ROLLOUT' ) ON CONFLICT DO NOTHING;
