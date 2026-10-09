@@ -118,6 +118,7 @@ data AllocatorJobType
   | FleetEngineRetry
   | DeleteUnreferencedFarePolicies
   | GenerateInvoicePdf
+  | RegistrySync
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -198,6 +199,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SFleetEngineRetry jobData = AnyJobInfo <$> restoreJobInfo SFleetEngineRetry jobData
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
   restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
+  restoreAnyJobInfo SRegistrySync jobData = AnyJobInfo <$> restoreJobInfo SRegistrySync jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -587,6 +589,13 @@ data FleetEngineRetryJobData = FleetEngineRetryJobData
 instance JobInfoProcessor 'FleetEngineRetry
 
 type instance JobContent 'FleetEngineRetry = FleetEngineRetryJobData
+
+data RegistrySyncJobData = RegistrySyncJobData
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RegistrySync
+
+type instance JobContent 'RegistrySync = RegistrySyncJobData
 
 data CheckDashCamInstallationStatusJobData = CheckDashCamInstallationStatusJobData
   { merchantId :: Id DM.Merchant,
