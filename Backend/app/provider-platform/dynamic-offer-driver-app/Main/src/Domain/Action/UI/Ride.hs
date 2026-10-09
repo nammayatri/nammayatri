@@ -24,6 +24,8 @@ module Domain.Action.UI.Ride
     resolveCallingNumber,
     mayDialDirectly,
     arrivedAtPickup,
+    activateScheduledRideAtPickup,
+    ScheduledRideActivator (..),
     arrivedAtDestination,
     startReturnTrip,
     otpRideCreate,
@@ -50,12 +52,14 @@ import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Trip (isInterCityTrip, isRideOtpTrip)
+import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -85,6 +89,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.Allocator as Alloc
+import qualified SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate as ScheduledRideAssignedOnUpdate
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -301,6 +306,53 @@ arrivedAtPickup rideId req = do
       overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory moCityId "EXTRA_FARE_MITIGATION_WARNING" L.ENGLISH Nothing mbVehicleCategory Nothing >>= fromMaybeM (OverlayKeyNotFound "EXTRA_FARE_MITIGATION_WARNING")
       TN.sendOverlay moCityId driver $ TN.mkOverlayReq overlay
       QDI.updateExtraFareMitigation (Just False) driverId
+
+data ScheduledRideActivator
+  = DriverActivator (Id DP.Person)
+  | DashboardActivator (Id DM.Merchant) (Id DMOC.MerchantOperatingCity)
+
+activateScheduledRideAtPickup ::
+  ScheduledRideAssignedOnUpdate.ScheduledRideAssignedOnUpdateFlow m r c =>
+  ScheduledRideActivator ->
+  Id DRide.Ride ->
+  LatLong ->
+  m APISuccess
+activateScheduledRideAtPickup activator rideId driverLocation = do
+  (ride, booking, driver, vehicle, transporterConfig) <- validateScheduledRideActivationAtPickup activator rideId driverLocation
+  ScheduledRideAssignedOnUpdate.activateScheduledRide ride.driverId booking.id booking ride driver vehicle transporterConfig (Just driverLocation)
+  pure Success
+
+validateScheduledRideActivationAtPickup ::
+  ScheduledRideAssignedOnUpdate.ScheduledRideAssignedOnUpdateFlow m r c =>
+  ScheduledRideActivator ->
+  Id DRide.Ride ->
+  LatLong ->
+  m (DRide.Ride, DRB.Booking, DP.Person, DVeh.Vehicle, DTC.TransporterConfig)
+validateScheduledRideActivationAtPickup activator rideId driverLocation = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  -- ownership before status, so a ride outside the caller's scope reads as missing instead of leaking its state
+  case activator of
+    DriverActivator driverId ->
+      unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId.getId)
+    DashboardActivator merchantId merchantOpCityId ->
+      unless (booking.providerId == merchantId && booking.merchantOperatingCityId == merchantOpCityId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (ride.status == DRide.UPCOMING) $ throwError $ RideInvalidStatus ("Scheduled ride should be upcoming. Current status: " <> Text.pack (show ride.status))
+  unless booking.isScheduled $ throwError $ InvalidRequest "Only scheduled rides can be activated"
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  -- no window configured means the driver may activate any time they are at pickup
+  whenJust transporterConfig.scheduledRideConfig.driverActivationWindow $ \activationWindow -> do
+    now <- getCurrentTime
+    let earliestActivationTime = addUTCTime (negate $ secondsToNominalDiffTime activationWindow) booking.startTime
+    when (now < earliestActivationTime) $ throwError $ ScheduledRideActivationTooEarly earliestActivationTime
+  let pickupLoc = getCoordinates booking.fromLocation
+      distance = distanceBetweenInMeters driverLocation pickupLoc
+  unless (distance < transporterConfig.arrivedPickupThreshold) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
+  driverInfo <- QDI.findById ride.driverId >>= fromMaybeM (DriverNotFound ride.driverId.getId)
+  when driverInfo.onRide $ throwError $ ScheduledRideDriverOnAnotherRide ride.driverId.getId
+  driver <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- runInReplica $ QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  pure (ride, booking, driver, vehicle, transporterConfig)
 
 otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Maybe Text -> Flow RideCommon.DriverRideRes
 otpRideCreate driver otpCode booking clientId = do

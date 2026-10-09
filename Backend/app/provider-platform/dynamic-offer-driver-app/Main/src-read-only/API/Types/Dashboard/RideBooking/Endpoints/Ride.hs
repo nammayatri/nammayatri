@@ -19,6 +19,13 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data ActivateScheduledRideReq = ActivateScheduledRideReq {point :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets ActivateScheduledRideReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data BookingWithVehicleAndPhoneReq = BookingWithVehicleAndPhoneReq
   { vehicleNumber :: Kernel.Prelude.Text,
     phoneNumber :: Kernel.Prelude.Text,
@@ -60,63 +67,80 @@ data StartRideReq = StartRideReq {point :: Kernel.Prelude.Maybe Kernel.External.
 instance Kernel.Types.HideSecrets.HideSecrets StartRideReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("ride" :> (PostRideStartHelper :<|> PostRideEndHelper :<|> GetRideCurrentActiveRide :<|> PostRideCancelHelper :<|> PostRideBookingWithVehicleNumberAndPhoneHelper))
+type API = ("ride" :> (PostRideStartHelper :<|> PostRideScheduledActivateHelper :<|> PostRideEndHelper :<|> GetRideCurrentActiveRide :<|> PostRideCancelHelper :<|> PostRideBookingWithVehicleNumberAndPhoneHelper))
 
-type PostRideStart = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "start" :> ReqBody '[JSON] StartRideReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostRideStart = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "start" :> ReqBody ('[JSON]) StartRideReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostRideStartHelper =
-  ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "start" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] StartRideReq
+  ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "start" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) StartRideReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
-type PostRideEnd = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "end" :> ReqBody '[JSON] EndRideReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostRideScheduledActivate =
+  ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "scheduled" :> "activate" :> ReqBody ('[JSON]) ActivateScheduledRideReq
+      :> Post
+           ('[JSON])
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostRideScheduledActivateHelper =
+  ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "scheduled" :> "activate" :> QueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           ('[JSON])
+           ActivateScheduledRideReq
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+  )
+
+type PostRideEnd = (Capture "rideId" ((Kernel.Types.Id.Id Dashboard.Common.Ride)) :> "end" :> ReqBody ('[JSON]) EndRideReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostRideEndHelper =
-  ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "end" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] EndRideReq
+  ( Capture "rideId" ((Kernel.Types.Id.Id Dashboard.Common.Ride)) :> "end" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) EndRideReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetRideCurrentActiveRide = (Capture "vehicleNumber" Kernel.Prelude.Text :> "currentActiveRide" :> Get '[JSON] (Kernel.Types.Id.Id Dashboard.Common.Ride))
+type GetRideCurrentActiveRide = (Capture "vehicleNumber" Kernel.Prelude.Text :> "currentActiveRide" :> Get ('[JSON]) ((Kernel.Types.Id.Id Dashboard.Common.Ride)))
 
-type PostRideCancel = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "cancel" :> ReqBody '[JSON] CancelRideReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostRideCancel = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "cancel" :> ReqBody ('[JSON]) CancelRideReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostRideCancelHelper =
   ( Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "cancel" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            CancelRideReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
-type PostRideBookingWithVehicleNumberAndPhone = ("booking" :> "withVehicleNumberAndPhone" :> ReqBody '[JSON] BookingWithVehicleAndPhoneReq :> Post '[JSON] BookingWithVehicleAndPhoneRes)
+type PostRideBookingWithVehicleNumberAndPhone = ("booking" :> "withVehicleNumberAndPhone" :> ReqBody ('[JSON]) BookingWithVehicleAndPhoneReq :> Post ('[JSON]) BookingWithVehicleAndPhoneRes)
 
 type PostRideBookingWithVehicleNumberAndPhoneHelper =
   ( "booking" :> "withVehicleNumberAndPhone" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            BookingWithVehicleAndPhoneReq
-      :> Post '[JSON] BookingWithVehicleAndPhoneRes
+      :> Post ('[JSON]) BookingWithVehicleAndPhoneRes
   )
 
 data RideAPIs = RideAPIs
-  { postRideStart :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> StartRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postRideEnd :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EndRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getRideCurrentActiveRide :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient (Kernel.Types.Id.Id Dashboard.Common.Ride),
-    postRideCancel :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> CancelRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postRideBookingWithVehicleNumberAndPhone :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> BookingWithVehicleAndPhoneReq -> EulerHS.Types.EulerClient BookingWithVehicleAndPhoneRes
+  { postRideStart :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> StartRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postRideScheduledActivate :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> ActivateScheduledRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postRideEnd :: ((Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EndRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getRideCurrentActiveRide :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient (Kernel.Types.Id.Id Dashboard.Common.Ride)),
+    postRideCancel :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> CancelRideReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postRideBookingWithVehicleNumberAndPhone :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> BookingWithVehicleAndPhoneReq -> EulerHS.Types.EulerClient BookingWithVehicleAndPhoneRes)
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    postRideStart :<|> postRideEnd :<|> getRideCurrentActiveRide :<|> postRideCancel :<|> postRideBookingWithVehicleNumberAndPhone = rideClient
+    postRideStart :<|> postRideScheduledActivate :<|> postRideEnd :<|> getRideCurrentActiveRide :<|> postRideCancel :<|> postRideBookingWithVehicleNumberAndPhone = rideClient
 
 data RideUserActionType
   = POST_RIDE_START
+  | POST_RIDE_SCHEDULED_ACTIVATE
   | POST_RIDE_END
   | GET_RIDE_CURRENT_ACTIVE_RIDE
   | POST_RIDE_CANCEL
@@ -124,4 +148,4 @@ data RideUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''RideUserActionType])
+$(Data.Singletons.TH.genSingletons [(''RideUserActionType)])

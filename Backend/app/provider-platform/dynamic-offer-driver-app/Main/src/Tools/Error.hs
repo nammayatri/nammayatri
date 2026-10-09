@@ -2381,3 +2381,26 @@ instance IsHTTPError LedgerAdjustmentError where
     LedgerAdjustmentReferenceTypeNotSupported _ _ _ -> E400
 
 instance IsAPIError LedgerAdjustmentError
+
+data ScheduledRideActivationError
+  = ScheduledRideActivationTooEarly UTCTime
+  | ScheduledRideDriverOnAnotherRide Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ScheduledRideActivationError
+
+instance IsBaseError ScheduledRideActivationError where
+  toMessage (ScheduledRideActivationTooEarly earliestActivationTime) =
+    Just $ "Scheduled ride can be activated only after " <> show earliestActivationTime <> "."
+  toMessage (ScheduledRideDriverOnAnotherRide driverId) =
+    Just $ "Driver \"" <> driverId <> "\" is on another ride. Finish it before activating the scheduled ride."
+
+instance IsHTTPError ScheduledRideActivationError where
+  toErrorCode = \case
+    ScheduledRideActivationTooEarly _ -> "SCHEDULED_RIDE_ACTIVATION_TOO_EARLY"
+    ScheduledRideDriverOnAnotherRide _ -> "SCHEDULED_RIDE_DRIVER_ON_ANOTHER_RIDE"
+  toHttpCode = \case
+    ScheduledRideActivationTooEarly _ -> E400
+    ScheduledRideDriverOnAnotherRide _ -> E400
+
+instance IsAPIError ScheduledRideActivationError
