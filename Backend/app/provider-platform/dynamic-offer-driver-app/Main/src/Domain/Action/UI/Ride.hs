@@ -309,10 +309,19 @@ otpRideCreate driver otpCode booking clientId = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  isVehicleVariantNotAllowed <- isNotAllowedVehicleVariant vehicle.variant booking.vehicleServiceTier
-  when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
-  let isVehicleServiceNotAllowed = booking.vehicleServiceTier `notElem` vehicle.selectedServiceTiers
-  when isVehicleServiceNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Service Tier"
+  vehicleServiceTierItem <- getBookingVehicleServiceTierItem booking.vehicleServiceTier
+  let isSpotRide = isRideOtpTrip booking.tripCategory && booking.area == Just SL.Default
+  if isSpotRide
+    then do
+      let isVehicleVariantNotAllowedForSpotRide = case vehicleServiceTierItem.spotRideAllowedVariants of
+            Just spotAllowedVariants | not (null spotAllowedVariants) -> vehicle.variant `notElem` spotAllowedVariants
+            _ -> vehicle.variant `notElem` vehicleServiceTierItem.allowedVehicleVariant
+      when isVehicleVariantNotAllowedForSpotRide $ throwError $ InvalidRequest "Vehicle variant not allowed for spot ride"
+    else do
+      let isVehicleVariantNotAllowed = vehicle.variant `notElem` vehicleServiceTierItem.allowedVehicleVariant
+      when isVehicleVariantNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Variant"
+      let isVehicleServiceNotAllowed = booking.vehicleServiceTier `notElem` vehicle.selectedServiceTiers
+      when isVehicleServiceNotAllowed $ throwError $ InvalidRequest "Wrong Vehicle Service Tier"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   mFleetOwnerId <- QFDA.findByDriverId driver.id True
@@ -352,9 +361,8 @@ otpRideCreate driver otpCode booking clientId = do
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
       | otherwise = throwM exc
 
-    isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
-      return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
+    getBookingVehicleServiceTierItem bookingServiceTier =
+      CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do

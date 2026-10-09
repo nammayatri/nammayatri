@@ -1108,7 +1108,10 @@ convertQuoteToPricing specialLocationName specialLocationSupportNumber fareSettl
       -- from the normal tier's estimate. Falls back to the VST row's name for any older
       -- persisted quote that predates that field being populated.
       serviceTierName = fromMaybe serviceTier.name vehicleServiceTierName,
-      serviceTierDescription = serviceTier.shortDescription,
+      serviceTierDescription =
+        if tripCategory == DT.OneWay DT.OneWayRideOtp && isNothing area
+          then serviceTier.spotServiceTierShortDesc <|> serviceTier.shortDescription
+          else serviceTier.shortDescription,
       vehicleVariant = fromMaybe (Variant.castServiceTierToVariant vehicleServiceTier) (listToMaybe serviceTier.defaultForVehicleVariant), -- ideally this should not be empty
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       vehicleServiceTierSeatingCapacity = serviceTier.seatingCapacity,
