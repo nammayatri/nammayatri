@@ -208,12 +208,18 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
       allEnablingDocsValid = checkDriverDocs ForEnabling && vehicleDocsOk ForEnabling
       approvalDocs =
         if includeVehicleDocs
-          then driverDocuments <> (case vehicleDocuments of [] -> unavailableVehicleDocs; items -> concatMap (.documents) items)
+          then driverDocuments <> maybe unavailableVehicleDocs (.documents) (mbValidVehicleDoc ForEnabling)
           else driverDocuments
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
-      newApproved =
+  vehicleApproved <-
+    if includeVehicleDocs
+      then case mbValidVehicleDoc ForEnabling of
+        Just item -> maybe True (\rc -> rc.approved == Just True) <$> RCQuery.findLastVehicleRCWrapper item.registrationNo
+        Nothing -> pure True
+      else pure True
+  let newApproved =
         case derivedApproved of
-          Just True | not allMandatoryDocsValid -> Nothing
+          Just True | not allMandatoryDocsValid || not vehicleApproved -> Nothing
           other -> other
       holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (driverInfo.verified || driverInfo.enabled)
       verifiedToWrite =
