@@ -18,6 +18,7 @@ module SharedLogic.PersonPTStats
     recordPurchase,
     reversePurchase,
     findRow,
+    stampPersonCreatedAt,
   )
 where
 
@@ -71,6 +72,21 @@ mkPurchaseEvent person vehicleType vehicleServiceTierType productType passTypeId
       person.mobileNumber
   pure PurchaseEvent {personId = person.id, personCreatedAt = person.createdAt, ..}
 
+stampPersonCreatedAt ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Person.Person ->
+  Maybe Text ->
+  m ()
+stampPersonCreatedAt person mbStaticPersonId = do
+  byPersonId <- QPersonPTStats.findAllByPersonId person.id
+  byStaticPersonId <- maybe (pure []) QPersonPTStats.findAllByStaticPersonId mbStaticPersonId
+  let seen = map (.id) byStaticPersonId
+      rows = byStaticPersonId <> filter (\row -> row.id `notElem` seen) byPersonId
+      needsStamping = filter (isNothing . (.personCreatedAt)) rows
+  unless (null needsStamping) $ do
+    forM_ needsStamping $ \row ->
+      QPersonPTStats.updatePersonCreatedAtById (Just person.createdAt) row.id
+
 recordPurchase ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   PurchaseEvent ->
@@ -88,8 +104,6 @@ recordPurchase ev = do
           now
           ev.personId
           row.id
-        when (isNothing row.personCreatedAt) $
-          QPersonPTStats.updatePersonCreatedAtById (Just ev.personCreatedAt) row.id
         pure (newCount, False)
       Nothing -> do
         newId <- generateGUID
