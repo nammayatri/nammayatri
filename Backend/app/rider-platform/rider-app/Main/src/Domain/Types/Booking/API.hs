@@ -108,6 +108,12 @@ data BookingAPIEntity = BookingAPIEntity
     riderName :: Maybe Text,
     estimatedFare :: Money,
     isBookingUpdated :: Bool,
+    -- Rolled once, at ride-assignment time (Domain.Action.Beckn.Common.assignRideUpdate),
+    -- against RiderConfig.betterDriverSearchEligibilityProbability - never re-rolled since.
+    eligibleForBetterDriverSearch :: Maybe Bool,
+    -- Set once a "find a better driver" stand-by search swaps in a new driver -
+    -- points at the new Booking the frontend should switch polling to.
+    supersededByBookingId :: Maybe (Id Booking),
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     estimatedFareWithCurrency :: PriceAPIEntity,
@@ -265,7 +271,11 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     tipAmount :: Maybe PriceAPIEntity,
     bookingDepositAmount :: Maybe HighPrecMoney,
     pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo,
-    isSilentReallocation :: Maybe Bool
+    isSilentReallocation :: Maybe Bool,
+    -- Rolled once, at ride-assignment time (Domain.Action.Beckn.Common.assignRideUpdate),
+    -- against RiderConfig.betterDriverSearchEligibilityProbability - never re-rolled since.
+    eligibleForBetterDriverSearch :: Maybe Bool,
+    supersededByBookingId :: Maybe (Id Booking)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -445,6 +455,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         hasDisability = (Just . isJust) booking.disabilityTag,
         sosStatus = mbSosStatus,
         isBookingUpdated = booking.isBookingUpdated,
+        eligibleForBetterDriverSearch = booking.eligibleForBetterDriverSearch,
+        supersededByBookingId = Id <$> booking.supersededByBookingId,
         isValueAddNP,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         isPetRide = booking.isPetRide,
@@ -714,7 +726,7 @@ buildBookingStatusAPIEntity booking = do
     if booking.status == CANCELLED
       then QBCR.findByRideBookingId booking.id
       else return Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing booking.eligibleForBetterDriverSearch (Id <$> booking.supersededByBookingId)
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride

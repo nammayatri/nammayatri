@@ -17,18 +17,23 @@ module Domain.Action.Beckn.Confirm where
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
+import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import Domain.Types
 import Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.CancellationReason as DTCR
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQ
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleVariant as DV
@@ -49,10 +54,14 @@ import qualified SharedLogic.AddOn as SAddOn
 import qualified SharedLogic.Allocator as Alloc
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
+import qualified SharedLogic.CallBAP as BP
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FareCalculator (mkFareParamsBreakups)
 import SharedLogic.MerchantPaymentMethod
 import qualified SharedLogic.MetricsLabels as SML
+import SharedLogic.QuickRetry (withQuickRetry)
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
@@ -60,6 +69,7 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
 import Storage.Queries.DriverReferral as QDR
@@ -69,9 +79,11 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.QueriesExtra.SearchRequestLite as QSRLite
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import Storage.Queries.RiderDriverCorrelation as SQR
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchTry as QST
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
@@ -124,6 +136,118 @@ data RideInfo = RideInfo
     driver :: DPerson.Person
   }
 
+cancelOldRideIfBetterDriverSwap :: DM.Merchant -> DDQ.DriverQuote -> DRide.Ride -> DPerson.Person -> DVeh.Vehicle -> DRB.Booking -> Flow ()
+cancelOldRideIfBetterDriverSwap merchant driverQuote newRide newDriver newVehicle newBooking = do
+  searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
+  when (searchTry.searchRepeatType == DST.BETTER_DRIVER_SEARCH) $
+    case searchTry.standInForBookingId of
+      Nothing -> logWarning $ "BETTER_DRIVER_SEARCH searchTry " <> searchTry.id.getId <> " has no standInForBookingId"
+      Just oldBookingIdText -> do
+        mbOldBooking <- QRB.findById (Id oldBookingIdText)
+        case mbOldBooking of
+          Nothing -> logWarning $ "Better-driver-search swap: old booking " <> oldBookingIdText <> " not found"
+          Just oldBooking -> do
+            mbOldRide <- QRide.findActiveByRBId oldBooking.id
+            case mbOldRide of
+              Nothing -> logWarning $ "Better-driver-search swap: no active ride found for old booking " <> oldBookingIdText
+              Just oldRide -> do
+                now <- getCurrentTime
+                let bookingCReason =
+                      SBCR.BookingCancellationReason
+                        { bookingId = oldBooking.id,
+                          rideId = Just oldRide.id,
+                          merchantId = Just merchant.id,
+                          source = SBCR.ByAllocator,
+                          reasonCode = Just (DTCR.CancellationReasonCode "RIDER_FOUND_BETTER_MATCH"),
+                          driverId = Just oldRide.driverId,
+                          additionalInfo = Just "Rider found a better driver match",
+                          ondcCancellationReasonId = Nothing,
+                          driverCancellationLocation = Nothing,
+                          driverDistToPickup = Nothing,
+                          distanceUnit = oldBooking.distanceUnit,
+                          merchantOperatingCityId = Just oldBooking.merchantOperatingCityId,
+                          createdAt = Just now,
+                          updatedAt = Just now
+                        }
+                QBCR.upsert bookingCReason
+                QRide.updateStatus oldRide.id DRide.CANCELLED
+                logInfo $ "Better-driver-search swap: cancelled old ride " <> oldRide.id.getId <> " on booking " <> oldBookingIdText <> " - driverQuote " <> driverQuote.id.getId <> " was the accepted replacement"
+                -- Tell the BAP about the replacement. The BAP never ran a search for this
+                -- stand-by booking, so it has no way to find out otherwise - see
+                -- SharedLogic.CallBAPInternal.betterDriverSwapAssign on the BAP side.
+                -- Forked: the swap on this (BPP) side is already committed; a failed
+                -- callback is only logged, same tolerance OneShotAssign's callback fork has.
+                fork "better-driver-swap assign callback to BAP" $ do
+                  callbackResult <- withTryCatch "betterDriverSwapAssignCallback" $ do
+                    payload <- buildBetterDriverSwapAssignPayload oldBooking newBooking newRide newDriver newVehicle driverQuote
+                    appBackendBapInternal <- asks (.appBackendBapInternal)
+                    void $ withQuickRetry $ CallBAPInternal.betterDriverSwapAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
+                  case callbackResult of
+                    Right _ -> logInfo $ "Better-driver-swap assign callback delivered for new booking " <> newBooking.id.getId
+                    Left err -> logError $ "Better-driver-swap assign callback failed for new booking " <> newBooking.id.getId <> ": " <> show err
+
+-- | Mirrors SharedLogic.OneShotAssign.buildOneShotAssignPayload: reuses the same
+-- rideAssignedCommon builder the Beckn RIDE_ASSIGNED paths use, so driver image,
+-- birthday, favourites, tier upgrade and vehicle-model refill behave identically.
+buildBetterDriverSwapAssignPayload :: DRB.Booking -> DRB.Booking -> DRide.Ride -> DPerson.Person -> DVeh.Vehicle -> DDQ.DriverQuote -> Flow CallBAPInternal.BetterDriverSwapAssignReq
+buildBetterDriverSwapAssignPayload oldBooking booking ride driver vehicle driverQuote = do
+  buildReq <- BP.rideAssignedCommon booking ride driver vehicle
+  rideAssignedReq <- case buildReq of
+    DOU.RideAssignedBuildReq r -> pure r
+    DOU.ScheduledRideAssignedBuildReq r -> pure r
+    _ -> throwError $ InternalError "rideAssignedCommon returned an unexpected build request"
+  let bookingDetails = rideAssignedReq.bookingDetails
+  driverName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
+  driverMobile <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  let fareBreakups = mkFareParamsBreakups True identity CallBAPInternal.OneShotFareBreakupItem booking.fareParams
+  pure
+    CallBAPInternal.BetterDriverSwapAssignReq
+      { oldBppBookingId = oldBooking.id.getId,
+        bppEstimateId = driverQuote.estimateId.getId,
+        bppQuoteId = driverQuote.id.getId,
+        bppBookingId = booking.id.getId,
+        bppRideId = ride.id.getId,
+        currency = booking.currency,
+        estimatedFare = booking.estimatedFare,
+        commission = booking.commission,
+        paymentCharge = booking.paymentCharge,
+        paymentChargeBearer = booking.paymentChargeBearer,
+        fareBreakups = fareBreakups,
+        quoteValidTill = driverQuote.validTill,
+        otp = fromMaybe ride.otp ride.endOtp,
+        trackingUrl = ride.trackingUrl,
+        driverDetails =
+          CallBAPInternal.OneShotDriverDetails
+            { name = driverName,
+              mobileCountryCode = driver.mobileCountryCode,
+              mobileNumber = driverMobile,
+              rating = SP.roundToOneDecimal <$> bookingDetails.driverStats.rating,
+              registeredAt = Just driver.createdAt,
+              image = rideAssignedReq.image,
+              isDriverBirthDay = rideAssignedReq.isDriverBirthDay,
+              accountId = Nothing
+            },
+        vehicleDetails =
+          CallBAPInternal.OneShotVehicleDetails
+            { number = bookingDetails.vehicle.registrationNo,
+              color = Just bookingDetails.vehicle.color,
+              model = Just bookingDetails.vehicle.model,
+              variant = bookingDetails.vehicle.variant,
+              serviceTierType = booking.vehicleServiceTier,
+              serviceTierName = Just booking.vehicleServiceTierName,
+              vehicleAge = rideAssignedReq.vehicleAge
+            },
+        distanceToPickup = Just driverQuote.distanceToPickup,
+        durationToPickup = Just driverQuote.durationToPickup,
+        isAlreadyFav = rideAssignedReq.isAlreadyFav,
+        favCount = Just rideAssignedReq.favCount,
+        isSafetyPlus = rideAssignedReq.isSafetyPlus,
+        isFreeRide = rideAssignedReq.isFreeRide,
+        specialLocationTag = booking.specialLocationTag,
+        assignedServiceTierName = rideAssignedReq.assignedServiceTierName,
+        billingCategory = booking.billingCategory
+      }
+
 handler :: DM.Merchant -> DConfirmReq -> ValidatedQuote -> Flow DConfirmResp
 handler merchant req validatedQuote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
@@ -149,6 +273,7 @@ handler merchant req validatedQuote = do
       (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id) True False Nothing
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId (mkPrice (Just driverQuote.currency) driverQuote.estimatedFare) Nothing
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+      cancelOldRideIfBetterDriverSwap merchant driverQuote ride driver vehicle uBooking2
       -- Booking confirmed: decrement demand at this pickup gate AND complete any
       -- Accepted pickup-zone request for this driver (supply -1). Idempotent with StartRide.
       fork "specialZoneCompletePickupZoneOnConfirm" $
@@ -226,7 +351,8 @@ handler merchant req validatedQuote = do
                 emailDomain = booking.emailDomain,
                 businessEmailDomain = booking.businessEmailDomain,
                 driverPreference = req.driverPreference,
-                addOnData = booking.addOnData
+                addOnData = booking.addOnData,
+                betterDriverSearchForBookingId = Nothing
               }
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id

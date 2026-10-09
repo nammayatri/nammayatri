@@ -159,6 +159,7 @@ import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import System.Random (randomRIO)
 import Tools.Constants
 import Tools.Error
 import Tools.Event
@@ -191,6 +192,11 @@ data BookingDetails = BookingDetails
     assignedVehicleVariant :: Maybe DV.VehicleVariant,
     otp :: Text,
     isInitiatedByCronJob :: Bool,
+    -- | "Find a better driver" swap (internal betterDriverSwapAssign API): this
+    -- assignment replaces an already-active booking for the same rider, so the
+    -- customer notification must say "better driver found", not "driver assigned".
+    -- False on every other path.
+    isBetterDriverSwap :: Bool,
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text
   }
@@ -752,6 +758,16 @@ rideAssignedReqHandler req = do
       if req'.bookingPrePersisted
         then QRB.addActiveBookingAvailableInCache booking.riderId booking.id
         else QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
+      -- "find a better driver" rollout gate: rolled once per booking, right here at
+      -- assignment time, and never re-rolled afterward (see Domain.Action.UI.
+      -- BetterDriverSearch, which enforces this persisted value as a real gate).
+      riderConfigForBetterDriverSearch <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      eligibleForBetterDriverSearch <- case riderConfigForBetterDriverSearch >>= (.betterDriverSearchEligibilityProbability) of
+        Nothing -> pure False
+        Just probability -> do
+          draw <- randomRIO (0 :: Double, 1)
+          pure (draw < probability)
+      QRBE.updateEligibleForBetterDriverSearch booking.id eligibleForBetterDriverSearch now
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
@@ -762,7 +778,12 @@ rideAssignedReqHandler req = do
         -- config/DB reads plus a possible synchronous APNS call. Best-effort already:
         -- the app also learns of the assignment by polling the TRIP_ASSIGNED booking.
         deferPostAssignmentWork "assign:customerNotify" $ do
-          if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
+          if isBetterDriverSwap
+            then Notify.notifyOnBetterDriverAssigned booking ride
+            else
+              if rideStatus == DRide.UPCOMING
+                then Notify.notifyOnScheduledRideAccepted booking ride
+                else Notify.notifyOnRideAssigned booking ride
           when req'.isDriverBirthDay $ do
             Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
       -- One-shot already carries the BPP tracking URL in its payload (set on the ride at

@@ -387,7 +387,25 @@ notifyOnRideAssigned ::
   SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnRideAssigned booking ride = do
+notifyOnRideAssigned = notifyOnDriverAssignedWith Notification.DRIVER_ASSIGNMENT "DRIVER_ASSIGNMENT"
+
+-- | Same as notifyOnRideAssigned, but tagged as a "find a better driver" swap
+-- rather than a first assignment, so the client can tell the two apart.
+notifyOnBetterDriverAssigned ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  SRide.Ride ->
+  m ()
+notifyOnBetterDriverAssigned = notifyOnDriverAssignedWith Notification.BETTER_DRIVER_ASSIGNED "BETTER_DRIVER_ASSIGNED"
+
+notifyOnDriverAssignedWith ::
+  ServiceFlow m r =>
+  Notification.Category ->
+  Text ->
+  SRB.Booking ->
+  SRide.Ride ->
+  m ()
+notifyOnDriverAssignedWith category messageKey booking ride = do
   let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
@@ -408,11 +426,11 @@ notifyOnRideAssigned booking ride = do
 
     -- If vehicle number matches, send custom notification first
     whenJust matchedSpecialVehicleConfig $ \specialConfig -> do
-      notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.DRIVER_ASSIGNMENT person'.merchantOperatingCityId
+      notificationSoundFromConfig <- SQNSC.findByNotificationType category person'.merchantOperatingCityId
       notificationSound <- getNotificationSound tag notificationSoundFromConfig
       let customNotificationData =
             Notification.NotificationReq
-              { category = Notification.DRIVER_ASSIGNMENT,
+              { category = category,
                 subCategory = Nothing,
                 showNotification = Notification.SHOW,
                 messagePriority = Nothing,
@@ -427,10 +445,10 @@ notifyOnRideAssigned booking ride = do
               }
       notifyPerson person'.merchantId person'.merchantOperatingCityId person'.id Nothing customNotificationData Nothing
 
-    -- Always send the normal DRIVER_ASSIGNMENT notification
+    -- Always send the normal driver-assigned notification
     dynamicNotifyPerson
       person'
-      (createNotificationReq "DRIVER_ASSIGNMENT" (\r -> r {soundTag = tag}))
+      (createNotificationReq messageKey (\r -> r {soundTag = tag}))
       dynamicParams
       entity
       booking.tripCategory
@@ -442,7 +460,7 @@ notifyOnRideAssigned booking ride = do
               FCMType.LiveActivityReq
                 { liveActivityToken = _liveActivityToken,
                   liveActivityReqType = "update",
-                  liveActivityNotificationType = "DRIVER_ASSIGNMENT",
+                  liveActivityNotificationType = messageKey,
                   liveActivityContentState =
                     FCMType.LiveActivityContentState
                       { activityStatus = "ASSIGNED",

@@ -47,6 +47,7 @@ data SearchTry = SearchTry
     searchRepeatCounter :: Kernel.Prelude.Int,
     searchRepeatType :: Domain.Types.SearchTry.SearchRepeatType,
     serviceTierArray :: [Kernel.Prelude.Text],
+    standInForBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     status :: Domain.Types.SearchTry.SearchTryStatus,
     tripCategory :: Domain.Types.Common.TripCategory,
@@ -58,7 +59,7 @@ data SearchTry = SearchTry
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SearchRepeatType = INITIAL | RETRIED | REALLOCATION | CANCELLED_AND_RETRIED | BETTER_DRIVER_SEARCH deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SearchTryStatus = ACTIVE | CANCELLED | COMPLETED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 

@@ -326,6 +326,16 @@ RiderConfig:
     # through the point at all, so a fresh route is resolved instead -- one map call, on a
     # path the customer is explicitly waiting on.
     betterPointMaxOffRouteDistance: Maybe Meters
+    # "find a better driver" feature, for a rider who already has an assigned driver:
+    # unset/disabled means the rider never gets the option at all.
+    betterDriverSearchEnabled: Maybe Bool
+    # Below this trip distance the feature is never offered - not worth disrupting a
+    # short ride for.
+    minTripDistanceForBetterDriverSearch: Maybe Meters
+    # Rollout sampling: a random draw in [0, 1), made once per booking at assignment
+    # time and persisted (never re-rolled), is compared against this. Unset behaves as
+    # 0 (nobody eligible) so the feature stays off by default even when enabled above.
+    betterDriverSearchEligibilityProbability: Maybe Double
     # Off/unset: the shape we would pick is priced before /rideSearch answers, so it arrives
     # with the estimates. On: it is dispatched with the others and collected from
     # 'alternateSuggestions' on the results poll instead, which keeps the provider round trip off

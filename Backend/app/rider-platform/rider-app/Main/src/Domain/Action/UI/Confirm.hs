@@ -93,7 +93,7 @@ confirm personId quoteId dashboardAgentId paymentMethodId paymentInstrument isAd
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
     throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
-  SConfirm.confirm SConfirm.DConfirmReq {mbOneShotDetails = Nothing, ..}
+  SConfirm.confirm SConfirm.DConfirmReq {mbOneShotDetails = Nothing, mbBetterDriverSwapDetails = Nothing, ..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
 cancelBooking ::

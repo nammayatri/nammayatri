@@ -1239,6 +1239,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN downward_recomp
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN better_driver_proximity_abort_radius_meters double precision ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN scheduled_ride_config SET DEFAULT '{"minLeadTime": null, "maxLeadTime": null, "avgSpeedKmph": null, "maxHoldsPerDriver": 1, "enableScheduledRideActivationChecks": true}' :: json;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN no_recompute_trip_categories text ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gate_extra_time_charge_by_recompute boolean ;
@@ -1248,6 +1253,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN actual_ride_dur
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN approx_ride_distance_diff_threshold DROP NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_distance_diff_threshold_if_within_pickup_drop DROP NOT NULL;
 --- Drop section ends. Please check before running ---
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN better_driver_search_max_radius_meters double precision ;
 
 
 ------- SQL updates -------

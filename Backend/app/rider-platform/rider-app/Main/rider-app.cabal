@@ -68,6 +68,7 @@ library
       API.IGM
       API.Internal
       API.Internal.Auth
+      API.Internal.BetterDriverSwapAssign
       API.Internal.Cac
       API.Internal.DriverArrivalNotf
       API.Internal.EKDLiveCallFeedback
@@ -100,6 +101,7 @@ library
       API.UI.Aarokya
       API.UI.AddBaggage
       API.UI.AppInstalls
+      API.UI.BetterDriverSearch
       API.UI.Booking
       API.UI.Call
       API.UI.CallEvent
@@ -287,6 +289,7 @@ library
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
       Domain.Action.Internal.Auth
+      Domain.Action.Internal.BetterDriverSwapAssign
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser
@@ -319,6 +322,7 @@ library
       Domain.Action.UI.AssetReleaseInternal
       Domain.Action.UI.AttractionRecommend
       Domain.Action.UI.BBPS
+      Domain.Action.UI.BetterDriverSearch
       Domain.Action.UI.BlackListDriver
       Domain.Action.UI.Booking
       Domain.Action.UI.BookingDeposit

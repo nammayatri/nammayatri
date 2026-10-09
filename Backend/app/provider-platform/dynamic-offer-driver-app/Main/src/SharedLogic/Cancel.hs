@@ -179,6 +179,19 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
         else cancelRideTransactionForNonReallocation Nothing Nothing
 
     performDynamicOfferReallocation transporterConfig driverQuote searchReq searchTry = do
+      mbBetterDriverSearchTry <- QST.findActiveBetterDriverSearchByBookingId booking.id.getId
+      case mbBetterDriverSearchTry of
+        -- A "find a better driver" stand-by search is already live for this booking, and
+        -- a replacement is now actually needed - let it serve as the reallocation instead
+        -- of starting a second, duplicate one. Re-tagging also restores normal on-expiry
+        -- rider notification, since the original driver (the reason it used to stay quiet
+        -- on failure) is the one who just cancelled.
+        Just betterDriverSearchTry -> do
+          QST.promoteBetterDriverSearchToReallocation betterDriverSearchTry.id
+          return True
+        Nothing -> performDynamicOfferReallocation' transporterConfig driverQuote searchReq searchTry
+
+    performDynamicOfferReallocation' transporterConfig driverQuote searchReq searchTry = do
       let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
       DP.addDriverToSearchCancelledList searchBlacklistTtl searchReq.id ride.driverId
       let singleBooking = transporterConfig.enableBppReallocation == Just True
@@ -207,11 +220,22 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference,
-                addOnData = searchTry.addOnData
+                addOnData = searchTry.addOnData,
+                betterDriverSearchForBookingId = Nothing
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False singleBooking
 
     performStaticOfferReallocation quote searchReq searchTry transporterConfig now isRepeatSearch = do
+      mbBetterDriverSearchTry <- QST.findActiveBetterDriverSearchByBookingId booking.id.getId
+      case mbBetterDriverSearchTry of
+        -- Same reasoning as the dynamic-offer path: let the already-live stand-by search
+        -- serve as the reallocation instead of starting a second, duplicate one.
+        Just betterDriverSearchTry -> do
+          QST.promoteBetterDriverSearchToReallocation betterDriverSearchTry.id
+          return True
+        Nothing -> performStaticOfferReallocation' quote searchReq searchTry transporterConfig now isRepeatSearch
+
+    performStaticOfferReallocation' quote searchReq searchTry transporterConfig now isRepeatSearch = do
       let searchBlacklistTtl = fromMaybe 3600 transporterConfig.driverSearchBlacklistDurationSeconds
       DP.addDriverToSearchCancelledList searchBlacklistTtl searchReq.id ride.driverId
       (newBooking, newQuote) <- createNewBookingAndQuote quote transporterConfig now searchReq
@@ -250,7 +274,8 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference,
-                addOnData = searchTry.addOnData
+                addOnData = searchTry.addOnData,
+                betterDriverSearchForBookingId = Nothing
               }
       handleDriverSearchBatch driverSearchBatchInput targetBooking searchTry.estimateId True singleBooking
 
@@ -359,6 +384,10 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       Maybe Text ->
       m Bool
     cancelRideTransactionForNonReallocation mbNewBooking mbEstimateId = do
+      -- This booking isn't getting a replacement driver through the normal path either -
+      -- a live "find a better driver" stand-by search must not quietly keep running and
+      -- swap one in anyway. No-op if there isn't one.
+      QST.cancelBetterDriverSearchByBookingId booking.id.getId
       Redis.del $ multipleRouteKey booking.transactionId
       Redis.del $ searchRequestKey booking.transactionId
       whenJust mbEstimateId $ \estimateId ->

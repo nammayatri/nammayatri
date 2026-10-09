@@ -99,6 +99,11 @@ data DConfirmReq = DConfirmReq
     -- exists, so the booking row is born TRIP_ASSIGNED with the BPP-known fields set —
     -- no NEW -> TRIP_ASSIGNED staircase. Nothing on every Beckn/UI path.
     mbOneShotDetails :: Maybe OneShotConfirmDetails,
+    -- | "Find a better driver" swap (internal betterDriverSwapAssign API): this confirm
+    -- is replacing an already-active booking for the same rider, not double-booking
+    -- them, so the usual "rider already has an active booking" guard must not fire.
+    -- Nothing on every other path.
+    mbBetterDriverSwapDetails :: Maybe BetterDriverSwapDetails,
     supportsBookingDeposit :: Maybe Bool
   }
 
@@ -109,6 +114,10 @@ data OneShotConfirmDetails = OneShotConfirmDetails
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
     paymentChargeBearer :: Maybe Text
+  }
+
+newtype BetterDriverSwapDetails = BetterDriverSwapDetails
+  { oldBookingId :: Id DRB.Booking
   }
 
 data DConfirmRes = DConfirmRes
@@ -199,7 +208,7 @@ confirm DConfirmReq {..} = do
       SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
   activeBooking <- QRideB.findLatestSelfAndPartyBookingByRiderId personId --This query also checks for booking parties
   case activeBooking of
-    Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking searchRequest.isDashboardRequest OnConfirm
+    Just booking | isNothing mbBetterDriverSwapDetails && not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking searchRequest.isDashboardRequest OnConfirm
     _ -> pure ()
 
   existingBookingForQuote <- QRideB.findByQuoteId (Just quote.id)
@@ -263,6 +272,8 @@ confirm DConfirmReq {..} = do
   checkIfActiveRidePresentForParties bookingParties
   void $ QRideB.createBooking booking0
   void $ QBPL.createMany bookingParties
+  whenJust mbBetterDriverSwapDetails $ \swapDetails ->
+    QRideB.updateSupersededByBookingId swapDetails.oldBookingId (Just booking0.id)
   needsFeePayment <- case booking0.bookingDepositAmount of
     Nothing -> pure False
     Just fee -> do

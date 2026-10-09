@@ -265,6 +265,15 @@ Booking:
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
+    # "find a better driver" feature: rolled once, at ride-assignment time, against
+    # RiderConfig.betterDriverSearchEligibilityProbability - never re-rolled afterward.
+    # Nothing/Just False means the rider never gets the option for this booking.
+    eligibleForBetterDriverSearch: Maybe Bool
+    # "find a better driver" feature: set on the OLD booking once a stand-by search
+    # swaps in a new driver - points at the new Booking the rider should switch to.
+    # Self-referential, so stored untyped the same way SearchTry.standInForBookingId
+    # is on the driver-app side (avoids a module self-import).
+    supersededByBookingId: Maybe Text
     commission: Maybe HighPrecMoney
     paymentCharge: Maybe HighPrecMoney
     paymentChargeBearer: Maybe Text

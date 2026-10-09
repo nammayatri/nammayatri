@@ -49,6 +49,7 @@ data SearchTryT f = SearchTryT
     searchRepeatCounter :: B.C f Kernel.Prelude.Int,
     searchRepeatType :: B.C f Domain.Types.SearchTry.SearchRepeatType,
     serviceTierArray :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    standInForBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     status :: B.C f Domain.Types.SearchTry.SearchTryStatus,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
@@ -66,6 +67,6 @@ instance B.Table SearchTryT where
 
 type SearchTry = SearchTryT Identity
 
-$(enableKVPG ''SearchTryT ['id] [['estimateId], ['requestId]])
+$(enableKVPG ''SearchTryT ['id] [['estimateId], ['requestId], ['standInForBookingId]])
 
 $(mkTableInstances ''SearchTryT "search_try")

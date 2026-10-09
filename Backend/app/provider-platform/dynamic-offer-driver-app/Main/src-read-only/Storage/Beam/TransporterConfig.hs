@@ -77,6 +77,8 @@ data TransporterConfigT f = TransporterConfigT
     badDebtSchedulerTime :: B.C f Kernel.Types.Common.Seconds,
     badDebtTimeThreshold :: B.C f Kernel.Prelude.Int,
     bankErrorExpiry :: B.C f Kernel.Types.Common.Seconds,
+    betterDriverProximityAbortRadiusMeters :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    betterDriverSearchMaxRadiusMeters :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     blockDriverOwnRCForFleetDrivers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     bookAnyVehicleDowngradeLevel :: B.C f Kernel.Prelude.Int,
     bulkWaiveOffLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

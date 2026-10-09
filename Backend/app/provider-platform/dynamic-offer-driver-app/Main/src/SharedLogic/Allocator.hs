@@ -81,6 +81,7 @@ data AllocatorJobType
   | DriverReferralPayout
   | ScheduledRideAssignedOnUpdate
   | CheckDriverPickupProgress
+  | CheckBetterDriverSearchProximity
   | CheckExotelCallStatusAndNotifyBAP
   | Daily
   | Weekly
@@ -161,6 +162,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDriverReferralPayout jobData = AnyJobInfo <$> restoreJobInfo SDriverReferralPayout jobData
   restoreAnyJobInfo SScheduledRideAssignedOnUpdate jobData = AnyJobInfo <$> restoreJobInfo SScheduledRideAssignedOnUpdate jobData
   restoreAnyJobInfo SCheckDriverPickupProgress jobData = AnyJobInfo <$> restoreJobInfo SCheckDriverPickupProgress jobData
+  restoreAnyJobInfo SCheckBetterDriverSearchProximity jobData = AnyJobInfo <$> restoreJobInfo SCheckBetterDriverSearchProximity jobData
   restoreAnyJobInfo SCheckExotelCallStatusAndNotifyBAP jobData = AnyJobInfo <$> restoreJobInfo SCheckExotelCallStatusAndNotifyBAP jobData
   restoreAnyJobInfo SDaily jobData = AnyJobInfo <$> restoreJobInfo SDaily jobData
   restoreAnyJobInfo SWeekly jobData = AnyJobInfo <$> restoreJobInfo SWeekly jobData
@@ -540,6 +542,23 @@ data CheckDriverPickupProgressJobData = CheckDriverPickupProgressJobData
 instance JobInfoProcessor 'CheckDriverPickupProgress
 
 type instance JobContent 'CheckDriverPickupProgress = CheckDriverPickupProgressJobData
+
+-- | Ticks on its own schedule (not gated by pickup-stall-monitoring config, or by
+-- whether LTS has flushed a batch yet) for as long as a "find a better driver"
+-- stand-by search is active for this booking. See SharedLogic.Allocator.Jobs.
+-- CheckBetterDriverSearchProximity.
+data CheckBetterDriverSearchProximityJobData = CheckBetterDriverSearchProximityJobData
+  { searchTryId :: Id DST.SearchTry,
+    bookingId :: Id DB.Booking,
+    rideId :: Id SRide.Ride,
+    driverId :: Id DP.Person,
+    merchantId :: Id DM.Merchant
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckBetterDriverSearchProximity
+
+type instance JobContent 'CheckBetterDriverSearchProximity = CheckBetterDriverSearchProximityJobData
 
 data CheckExotelCallStatusAndNotifyBAPJobData = CheckExotelCallStatusAndNotifyBAPJobData
   { rideId :: Id DRide.Ride,

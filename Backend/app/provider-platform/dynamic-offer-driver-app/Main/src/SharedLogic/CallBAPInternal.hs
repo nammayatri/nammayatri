@@ -380,6 +380,68 @@ oneShotAssign apiKey internalUrl request = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (oneShotAssignClient (Just apiKey) request) "OneShotAssign" oneShotAssignAPI
 
+-- "Find a better driver" swap: single callback telling the BAP that a stand-by
+-- search (started on an already-active booking, oldBppBookingId) found a replacement
+-- driver. Mirrors OneShotAssignReq - same single-callback shape - but carries
+-- oldBppBookingId instead of a fresh transactionId, since the BAP never ran its own
+-- search for this and must correlate back to the booking it's replacing.
+type BetterDriverSwapAssignAPI =
+  "internal"
+    :> "betterDriverSwapAssign"
+    :> Header "token" Text
+    :> ReqBody '[JSON] BetterDriverSwapAssignReq
+    :> Post '[JSON] APISuccess
+
+data BetterDriverSwapAssignReq = BetterDriverSwapAssignReq
+  { oldBppBookingId :: Text,
+    bppEstimateId :: Text,
+    bppQuoteId :: Text,
+    bppBookingId :: Text,
+    bppRideId :: Text,
+    currency :: Currency,
+    estimatedFare :: HighPrecMoney,
+    commission :: Maybe HighPrecMoney,
+    paymentCharge :: Maybe HighPrecMoney,
+    paymentChargeBearer :: Maybe Text,
+    fareBreakups :: [OneShotFareBreakupItem],
+    quoteValidTill :: UTCTime,
+    otp :: Text,
+    trackingUrl :: BaseUrl,
+    driverDetails :: OneShotDriverDetails,
+    vehicleDetails :: OneShotVehicleDetails,
+    distanceToPickup :: Maybe Meters,
+    durationToPickup :: Maybe Seconds,
+    isAlreadyFav :: Bool,
+    favCount :: Maybe Int,
+    isSafetyPlus :: Bool,
+    isFreeRide :: Bool,
+    specialLocationTag :: Maybe Text,
+    assignedServiceTierName :: Maybe Text,
+    billingCategory :: SLT.BillingCategory
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+betterDriverSwapAssignClient :: Maybe Text -> BetterDriverSwapAssignReq -> EulerClient APISuccess
+betterDriverSwapAssignClient = client (Proxy @BetterDriverSwapAssignAPI)
+
+betterDriverSwapAssignAPI :: Proxy BetterDriverSwapAssignAPI
+betterDriverSwapAssignAPI = Proxy
+
+betterDriverSwapAssign ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  BetterDriverSwapAssignReq ->
+  m APISuccess
+betterDriverSwapAssign apiKey internalUrl request = do
+  logInfo $ "CallBAPInternal: betterDriverSwapAssign for oldBppBookingId: " <> request.oldBppBookingId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (betterDriverSwapAssignClient (Just apiKey) request) "BetterDriverSwapAssign" betterDriverSwapAssignAPI
+
 type EKDLiveCallFeedbackAPI =
   "internal"
     :> "ekdLiveCallFeedback"

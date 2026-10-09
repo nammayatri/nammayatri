@@ -30,6 +30,7 @@ import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import Domain.Types.SearchTry (SearchTry)
+import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
@@ -250,7 +251,11 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   L.setOptionLocal TxnIdKey searchReq.transactionId
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+  driverPoolConfigFetched <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
+  -- "find a better driver" only: caps this one search's own radius, re-derived fresh
+  -- on every batch (see SharedLogic.SearchTry.computeBetterDriverSearchRadiusOverride).
+  mbSearchRadiusOverride <- SST.computeBetterDriverSearchRadiusOverride searchTry
+  let driverPoolConfig = maybe driverPoolConfigFetched (\radius -> driverPoolConfigFetched {maxRadiusOfSearch = radius}) mbSearchRadiusOverride
   -- An early batch advance orphans the job that was already scheduled. Terminate the orphan here
   -- (Complete, so it does *not* reschedule) to keep exactly one live batch chain per search try.
   superseded <- maybe (I.isBatchChainSuperseded driverPoolConfig searchTryId jobData.batchEpoch) (const $ pure False) jobData.topUpSize
@@ -305,7 +310,11 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 emailDomain = searchTry.emailDomain,
                 businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference,
-                addOnData = searchTry.addOnData
+                addOnData = searchTry.addOnData,
+                -- This job continues batches for a SearchTry that already exists (its own
+                -- searchRepeatType/standInForBookingId are already set); it never creates a
+                -- new SearchTry, so this field is irrelevant here.
+                betterDriverSearchForBookingId = Nothing
               }
       (res, _, _) <- sendSearchRequestToDriversWithTopUp jobData.topUpSize driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
       return res
@@ -454,6 +463,7 @@ sendSearchRequestToDriversWithTopUp mbTopUpSize driverPoolConfig searchTry drive
           isSearchTryValid = I.isSearchTryValid searchTry.id,
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch driverSearchBatchInput,
           isScheduledBooking = searchTry.isScheduled,
+          notifyBapOnExpiry = searchTry.searchRepeatType /= DST.BETTER_DRIVER_SEARCH,
           cancelSearchTry = I.cancelSearchTry searchTry.id,
           isBookingValid = do
             case mbBooking of
