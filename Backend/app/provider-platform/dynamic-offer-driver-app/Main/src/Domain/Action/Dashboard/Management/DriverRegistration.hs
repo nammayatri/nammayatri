@@ -410,6 +410,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcI
         Common.RCDetails
           { vehicleRegistrationCertNumber = certificateNumberDec,
             imageId = rc.documentImageId.getId,
+            imageId2 = getId <$> rc.documentImageId2,
             operatingCity = show city,
             vehicleCategory = show <$> rc.userPassedVehicleCategory,
             airConditioned = rc.airConditioned,
@@ -1304,6 +1305,7 @@ castMgmtRCDetails rc =
   Common.RCDetails
     { vehicleRegistrationCertNumber = rc.vehicleRegistrationCertNumber,
       imageId = rc.imageId,
+      imageId2 = rc.imageId2,
       operatingCity = rc.operatingCity,
       dateOfRegistration = rc.dateOfRegistration,
       vehicleCategory = rc.vehicleCategory,

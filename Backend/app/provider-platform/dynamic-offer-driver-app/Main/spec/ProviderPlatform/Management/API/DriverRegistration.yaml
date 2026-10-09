@@ -312,6 +312,7 @@ types:
   RCDetails:
     - vehicleRegistrationCertNumber: Text
     - imageId: Text
+    - imageId2: Maybe (Text)
     - operatingCity: Text
     - dateOfRegistration: Maybe UTCTime
     - vehicleCategory: Maybe Text

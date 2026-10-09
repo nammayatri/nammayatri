@@ -471,6 +471,7 @@ data RCApproveDetails = RCApproveDetails
 data RCDetails = RCDetails
   { vehicleRegistrationCertNumber :: Kernel.Prelude.Text,
     imageId :: Kernel.Prelude.Text,
+    imageId2 :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     operatingCity :: Kernel.Prelude.Text,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
