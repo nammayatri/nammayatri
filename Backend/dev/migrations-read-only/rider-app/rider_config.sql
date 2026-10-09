@@ -922,13 +922,3 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN min_trip_distance_for_better_drive
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_enabled boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_eligibility_probability double precision ;
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-

@@ -55,7 +55,7 @@ SearchTry:
     emailDomain: Maybe Text
     businessEmailDomain: Maybe Text
     paymentInstrument: Maybe PaymentInstrument
-    addOnData: "[AddOnData]"  
+    addOnData: "[AddOnData]"
     standInForBookingId: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
