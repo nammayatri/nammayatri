@@ -589,7 +589,6 @@ mkQuoteRes :: (MonadFlow m) => (DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuo
 mkQuoteRes (quote, quoteCategories) = do
   (stations :: [FRFSTypes.FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InvalidStationJson $ show quote.stationsJson)
   let routeStations :: Maybe [FRFSTypes.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-      frfsRouteDetails = Utils.mkFRFSQuoteRouteDetails quote.vehicleType routeStations
       mbFirstRouteStation = routeStations >>= KP.listToMaybe
       mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
       serviceTierType = mbVehicleServiceTier <&> (._type)
