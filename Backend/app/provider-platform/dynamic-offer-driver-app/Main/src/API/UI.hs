@@ -25,6 +25,7 @@ import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverAreaPreference as DriverAreaPreference
+import qualified API.Action.UI.DriverConduct as DriverConduct
 import qualified API.Action.UI.DriverDocument as DriverDocument
 import qualified API.Action.UI.DriverFyEarnings as DriverFyEarnings
 import qualified API.Action.UI.DriverIncentiveCoins as DriverIncentiveCoins
@@ -208,6 +209,7 @@ type API =
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
+           :<|> DriverConduct.API
        )
 
 handler :: FlowServer API
@@ -297,3 +299,4 @@ handler =
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
+    :<|> DriverConduct.handler

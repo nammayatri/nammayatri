@@ -152,7 +152,8 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
             { merchantId = merchantId,
               merchantOperatingCityId = merchantOpCityId,
               counterConfig = Just counterConfig,
-              actionEvent = Just actionEvent
+              actionEvent = Just actionEvent,
+              programme = Just LYT.CANCELLATION_RATE_BEHAVIOR
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
