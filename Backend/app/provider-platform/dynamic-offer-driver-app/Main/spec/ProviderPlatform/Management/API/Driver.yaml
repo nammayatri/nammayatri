@@ -139,6 +139,8 @@ apis:
         driverId: Id Driver
       response:
         type: APISuccess
+      migrate:
+        capability: city-operations.driver_block.write
   - POST: # UpdateACUsageRestrictionAPI
       endpoint: /{driverId}/acRestriction/update
       auth: ApiAuthV2
