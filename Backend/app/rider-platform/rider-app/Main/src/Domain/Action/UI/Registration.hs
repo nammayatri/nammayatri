@@ -384,15 +384,18 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
           SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
   -- Phone-number-based auth rate limit (hashed phone, two configurable sliding windows).
-  whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash ->
-    -- DbHash's ToJSON instance hex-encodes it, so this yields a stable non-PII Text
-    -- key without a direct Text.Hex dependency (same idiom as the OTP counters below).
-    case A.toJSON mobileNumberHash of
-      A.String phoneNumberHashText -> do
-        mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
-        whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
-        SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
-      _ -> pure ()
+  -- Skipped for static-OTP test accounts (useFakeOtp): no SMS is sent for them, and shared
+  -- store-review numbers would otherwise exhaust the windows. The per-person limit still applies.
+  unless (isJust person.useFakeOtp) $
+    whenJust ((.hash) <$> person.mobileNumber) $ \mobileNumberHash ->
+      -- DbHash's ToJSON instance hex-encodes it, so this yields a stable non-PII Text
+      -- key without a direct Text.Hex dependency (same idiom as the OTP counters below).
+      case A.toJSON mobileNumberHash of
+        A.String phoneNumberHashText -> do
+          mbResetSeconds <- SMC.checkAuthLimitExceededByPhone merchantConfigs phoneNumberHashText
+          whenJust mbResetSeconds $ \resetSeconds -> throwError (HitsLimitError resetSeconds)
+          SMC.updateCustomerAuthCountersByPhone phoneNumberHashText merchantConfigs
+        _ -> pure ()
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)
   let entityId = getId $ person.id
@@ -1137,17 +1140,19 @@ resend tokenId mbSenderHash = do
   mobileNumber <- mapM decrypt person.mobileNumber
   receiverEmail <- mapM decrypt person.email
 
-  SOTP.sendOTP
-    otpChannel
-    otpCode
-    person.id
-    person.merchantId
-    person.merchantOperatingCityId
-    person.mobileCountryCode
-    mobileNumber
-    receiverEmail
-    riderConfig.emailOtpConfig
-    mbSenderHash
+  -- Static-OTP test accounts (useFakeOtp) never get an SMS from auth; resending a fixed OTP gains nothing.
+  unless (isJust person.useFakeOtp) $
+    SOTP.sendOTP
+      otpChannel
+      otpCode
+      person.id
+      person.merchantId
+      person.merchantOperatingCityId
+      person.mobileCountryCode
+      mobileNumber
+      receiverEmail
+      riderConfig.emailOtpConfig
+      mbSenderHash
 
   void $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1) authType Nothing Nothing person.blocked Nothing Nothing
