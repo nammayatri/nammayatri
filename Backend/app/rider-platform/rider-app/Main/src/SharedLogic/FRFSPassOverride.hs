@@ -28,6 +28,8 @@ module SharedLogic.FRFSPassOverride
     loadPassCandidates,
     filterCandidatesForLeg,
     localTripDay,
+    bookingTripDay,
+    ticketQuantityForBooking,
     withinQuantityCap,
     ConsumeResult (..),
     remainingTrips,
@@ -58,6 +60,7 @@ import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
@@ -69,6 +72,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.FRFSPassTicketStatistics as FRFSPassTicketStatistics
 import qualified Storage.CachedQueries.Pass as CQPass
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -292,8 +296,14 @@ getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType
     pure $ filterCandidatesForLeg candidates vehicleType tripDay
 
 localTripDay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> UTCTime -> m T.Day
-localTripDay person tripTime = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+localTripDay person = localTripDayForCity person.merchantOperatingCityId
+
+bookingTripDay :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m T.Day
+bookingTripDay booking = localTripDayForCity booking.merchantOperatingCityId (fromMaybe booking.createdAt booking.startTime)
+
+localTripDayForCity :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> UTCTime -> m T.Day
+localTripDayForCity cityId tripTime = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   pure . T.utctDay $ addUTCTime (fromIntegral timeDiffFromUtc.getSeconds) tripTime
 
@@ -876,8 +886,9 @@ resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTie
           (passOption : _) -> pure (Just (applicablePass, passOption))
 
 -- | Give back the trips a booking spent. `quantity` must match what it debited -- one per ticket.
-refundPassOverrideTrip :: (CacheFlow m r, EsqDBFlow m r) => Id DFRFSSearch.FRFSSearch -> Id DPPP.PurchasedPassPayment -> Int -> m ()
-refundPassOverrideTrip searchId paymentId quantity = do
+refundPassOverrideTrip :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> Id DPPP.PurchasedPassPayment -> Int -> m ()
+refundPassOverrideTrip booking paymentId quantity = do
+  let searchId = booking.searchId
   mbPayment <- QPurchasedPassPayment.findByPrimaryKey paymentId
   case mbPayment of
     Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip payment not found paymentId=" <> paymentId.getId
@@ -908,6 +919,9 @@ refundPassOverrideTrip searchId paymentId quantity = do
                   -- a legitimate re-confirm on this search would be waved through as AlreadyConsumed
                   -- and ride free.
                   clearTripMarker "TripConsumed" searchId
+                  void . withTryCatch "FRFSPassOverride:releaseTickets" $ do
+                    tripDay <- bookingTripDay booking
+                    FRFSPassTicketStatistics.releaseTickets payment tripDay (FRFSPassTicketStatistics.bookingUsage booking quantity)
             else logInfo $ "FRFSPassOverride:refundPassOverrideTrip already released for searchId=" <> searchId.getId
 
 -- | Give a trip back for a failed booking -- but only if it ever spent one.
@@ -927,7 +941,7 @@ releasePassOverrideTripOnFailure booking =
           else do
             quantity <- ticketQuantityForBooking booking
             logInfo $ "FRFSPassOverride: releasing " <> show quantity <> " trip(s) for failed booking searchId=" <> booking.searchId.getId <> " paymentId=" <> entityId
-            refundPassOverrideTrip booking.searchId (Id entityId) quantity
+            refundPassOverrideTrip booking (Id entityId) quantity
         whenJust booking.startTime $ \startTime -> do
           mbPerson <- QPerson.findById booking.riderId
           whenJust mbPerson $ \person -> releaseBookedTrip person (Id entityId) booking.id.getId startTime
@@ -1060,7 +1074,11 @@ spendTripForBooking person booking = case booking.overrideAppliedEntityId of
               AlreadyConsumed -> do
                 logInfo $ "FRFSPassOverride:spendTripForBooking already debited for searchId=" <> booking.searchId.getId
                 pure TripDebited
-              _ -> pure TripDebited
+              _ -> do
+                void . withTryCatch "FRFSPassOverride:recordTickets" $ do
+                  bookingDay <- bookingTripDay booking
+                  FRFSPassTicketStatistics.recordTickets applicable.purchasedPassPayment bookingDay (FRFSPassTicketStatistics.bookingUsage booking quantity)
+                pure TripDebited
 
 -- | Tickets this booking covers, and therefore trips it costs.
 ticketQuantityForBooking :: (CacheFlow m r, EsqDBFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m Int

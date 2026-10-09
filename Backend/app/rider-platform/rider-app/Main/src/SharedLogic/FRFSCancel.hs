@@ -123,7 +123,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
   when (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED]) $
     whenJust booking.overrideAppliedEntityId $ \entityId ->
       -- One trip per ticket went out at confirm, so the same number comes back here.
-      void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking.searchId (Id entityId) fareParameters.totalQuantity)
+      void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking (Id entityId) fareParameters.totalQuantity)
   whenJust booking.overrideAppliedEntityId $ \entityId ->
     void . withTryCatch "FRFSCancel:releaseBookedTrip" $
       FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
