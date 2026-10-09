@@ -904,6 +904,7 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
         Nothing -> DPan.DASHBOARD
   verifyDL
     verifyBy
+    False
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq
@@ -978,16 +979,16 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let autoApprove = mbAutoApprove == Just True && transporterConfig.autoApproveOnAdminUpload == Just True
-  mbApproveDetails <- registerDocument merchant merchantOpCityId
+  mbApproveDetails <- registerDocument merchant merchantOpCityId autoApprove
   case (autoApprove, mbApproveDetails) of
     (True, Just approveDetails) -> void $ postDriverRegistrationDocumentsUpdate merchantShortId opCity (Common.Approve approveDetails)
     _ -> refreshOnboardingFlags (cast driverId_)
   pure Success
   where
-    registerDocument merchant merchantOpCityId =
+    registerDocument merchant merchantOpCityId autoApprove =
       case metadata of
         Common.DLData dlReq -> do
-          void $ registerDL merchant merchantOpCityId dlReq
+          void $ registerDL merchant merchantOpCityId autoApprove dlReq
           pure . Just . Common.DL $
             Common.DLApproveDetails
               { documentImageId = dlReq.imageId1,
@@ -1027,7 +1028,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
         Common.GSTCertificateData req -> registerDocWithData merchant merchantOpCityId DVC.GSTCertificate Nothing (\st -> upsertGST st req) >> pure (Just (Common.GSTApprove req))
         Common.BusinessLicenseData req -> registerDocWithData merchant merchantOpCityId DVC.BusinessLicense Nothing (\st -> upsertBusinessLicense st req) >> pure (Just (Common.BusinessLicenseImg req))
 
-    registerDL merchant merchantOpCityId Common.RegisterDLReq {..} = do
+    registerDL merchant merchantOpCityId autoApprove Common.RegisterDLReq {..} = do
       let verifyBy = case defaultVerifyBy of
             DPan.FRONTEND_SDK -> DPan.FRONTEND_SDK
             _ -> case accessType of
@@ -1038,6 +1039,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
               Nothing -> defaultVerifyBy
       verifyDL
         verifyBy
+        autoApprove
         (Just merchant)
         (cast driverId_, cast merchant.id, merchantOpCityId)
         DriverDLReq
