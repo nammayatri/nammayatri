@@ -349,7 +349,7 @@ buildReallocationHistory transactionId = do
           bookingStatus = castBookingStatus b.status,
           becameCurrentAt = b.createdAt,
           cancelledAt = if b.status == SRB.CANCELLED then Just b.updatedAt else Nothing,
-          cancellationSource = castCancellationSource <$> maybe (mbBCReason <&> (.source)) Just (mbRide >>= (.cancelledBy) >>= (readMaybe . T.unpack)),
+          cancellationSource = castCancellationSource . (.source) <$> mbBCReason,
           cancellationReasonCode = cancellationReasonCodeText =<< mbBCReason,
           cancellationAdditionalInfo = (.additionalInfo) =<< mbBCReason,
           driverDistToPickupAtCancel = mbBCReason >>= (.driverDistToPickup)
