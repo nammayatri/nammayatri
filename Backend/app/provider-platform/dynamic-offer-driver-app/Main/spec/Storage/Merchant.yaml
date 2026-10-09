@@ -48,6 +48,7 @@ imports:
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
   TdsConfig: Domain.Types.Extra.TransporterConfig
+  RecomputePolicy: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -1033,13 +1034,6 @@ TransporterConfig:
       bikeplus: Maybe Seconds
       erickshaw: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
-    DistanceRecomputeConfigs:
-      estimatedDistanceUpper: Meters
-      minThresholdPercentage: Int
-      minThresholdDistance: Meters
-      minThresholdDurationSeconds: Maybe Seconds # opt-in: duration overage alone can qualify the band
-      minThresholdDurationPercentage: Maybe Int # optional % of estimated duration the overage must also exceed
-      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
     AnalyticsConfig:
@@ -1232,7 +1226,6 @@ TransporterConfig:
     # ACTIVE tables. SHADOW tables evaluate either way, and end-ride recompute
     # replays the pinned surge version regardless of this flag.
     useSurgeConfigPricing: Maybe Bool
-    recomputeCongestionChargeOnEndRide: Maybe Bool
     negativeFareAdjustmentCongestionThreshold: Maybe Double
     negativeFareAdjustmentMinDistanceMeters: Maybe Int
     negativeFareAdjustmentMaxAmount: Maybe Int
@@ -1267,15 +1260,7 @@ TransporterConfig:
     checkImageExtractionForDashboard: Bool
     searchRepeatLimit: Int
     scheduledRideSearchRepeatLimit: Int
-    actualRideDistanceDiffThreshold: HighPrecMeters
-    recomputeIfPickupDropNotOutsideOfThreshold: Bool
-    enableDownwardRecomputeForDifferentDestination: Maybe Bool
-    downwardRecomputeDistanceThreshold: Maybe HighPrecMeters
-    upwardsRecomputeBuffer: HighPrecMeters
-    upwardsRecomputeBufferPercentage: Maybe Int
-    noRecomputeTripCategories: Maybe [TripCategory]
-    actualRideDurationDiffThreshold: Maybe Seconds
-    gateExtraTimeChargeByRecompute: Maybe Bool
+    fareRecomputePolicy: Maybe RecomputePolicy # THE recompute config: unified nested policy; absent fields fall back to code defaults (RecomputeDecision.mkRecomputeConfig). Legacy scattered columns are no longer read -- backfill before deploy (dev/sql-seed/fare-recompute-policy-backfill.sql)
     minLocationAccuracy: Double
     driverPaymentCycleBuffer: NominalDiffTime
     driverPaymentCycleDuration: NominalDiffTime
@@ -1401,9 +1386,6 @@ TransporterConfig:
     crossTravelCities: "[Kernel.Types.Beckn.City.City]"
     useSilentFCMForForwardBatch: Bool
     enableDriverPoolEnrichment: Maybe Bool
-    fareRecomputeDailyExtraKmsThreshold: HighPrecMeters
-    fareRecomputeWeeklyExtraKmsThreshold: HighPrecMeters
-    toNotifyDriverForExtraKmsLimitExceed: Bool
     payoutBatchLimit: Int
     updatePayoutStatusBatchSize: Int
     lastNdaysToCheckForPayoutOrderStatus: Int
@@ -1433,11 +1415,8 @@ TransporterConfig:
     issueBreachConfig: Maybe [IssueBreachConfig]
     gpsTollBehaviorWindowDays: Maybe Int
     enableGpsTollBehavior: Bool
-    enableEstimatedTollFallback: Bool # True ⇒ on distance-calc failure with no detected toll, charge the estimated toll (estimate-favoring). False ⇒ current rider-favoring behavior (no toll charged).
     recentScheduledBookingsSafeLimit: Int
     minDistanceForStopFcm: HighPrecMeters
-    recomputeDistanceThresholds: Maybe [DistanceRecomputeConfigs]
-    minThresholdForPassThroughDestination: Maybe Meters
     requiresOnboardingInspection: Maybe Bool
     requiresDriverOnboardingInspection: Maybe Bool
     separateDriverVehicleEnablement: Maybe Bool
@@ -1613,12 +1592,9 @@ TransporterConfig:
     issueBreachConfig: Maybe Value
     gpsTollBehaviorWindowDays: Maybe Int
     enableGpsTollBehavior: Maybe Bool
-    enableEstimatedTollFallback: Maybe Bool
     recentScheduledBookingsSafeLimit: Maybe Int
     minDistanceForStopFcm: Maybe HighPrecMeters
-    recomputeDistanceThresholds: Maybe Value
-    noRecomputeTripCategories: Maybe Value
-    minThresholdForPassThroughDestination: Maybe Meters
+    fareRecomputePolicy: Maybe Value
     allowedReferralEntities: "Maybe [Text]"
     enableOverchargingBlocker: Maybe Bool
     normalRideBulkLocUpdateBatchSize: Maybe Integer
@@ -1728,12 +1704,9 @@ TransporterConfig:
     issueBreachConfig: Kernel.Prelude.toJSON <$> issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     enableGpsTollBehavior: Just enableGpsTollBehavior|E
-    enableEstimatedTollFallback: Just enableEstimatedTollFallback|E
     recentScheduledBookingsSafeLimit: Just recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: Just minDistanceForStopFcm|E
-    recomputeDistanceThresholds: Kernel.Prelude.toJSON <$> recomputeDistanceThresholds|E
-    noRecomputeTripCategories: Kernel.Prelude.toJSON <$> noRecomputeTripCategories|E
-    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    fareRecomputePolicy: Kernel.Prelude.toJSON <$> fareRecomputePolicy|E
     allowedReferralEntities: Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities)|E
     bulkWaiveOffLimit: Just bulkWaiveOffLimit|E
     preProcessDocumentIdentifiers: Just preProcessDocumentIdentifiers|E
@@ -1851,14 +1824,10 @@ TransporterConfig:
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     gpsTollBehaviorWindowDays: gpsTollBehaviorWindowDays|E
     enableGpsTollBehavior: fromMaybe False enableGpsTollBehavior|E
-    enableEstimatedTollFallback: fromMaybe False enableEstimatedTollFallback|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
     minDistanceForStopFcm: fromMaybe 100 minDistanceForStopFcm|E
-    recomputeDistanceThresholds: |-
-      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< recomputeDistanceThresholds|E
-    noRecomputeTripCategories: |-
-      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< noRecomputeTripCategories|E
-    minThresholdForPassThroughDestination: minThresholdForPassThroughDestination|E
+    fareRecomputePolicy: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareRecomputePolicy|E
     allowedReferralEntities: maybe [] (mapMaybe (readMaybe . Data.Text.unpack))
       allowedReferralEntities|E
     bulkWaiveOffLimit: fromMaybe 200 bulkWaiveOffLimit|E
@@ -1927,9 +1896,6 @@ TransporterConfig:
     cancellationRatioWeightage: int
     acceptanceRatioWeightage: int
     availabilityTimeWeightage: int
-    actualRideDistanceDiffThreshold: double precision
-    upwardsRecomputeBuffer: double precision
-    downwardRecomputeDistanceThreshold: double precision
     minLocationAccuracy: double precision
     driverPaymentCycleDuration: int
     driverPaymentCycleStartTime: int
@@ -1965,12 +1931,11 @@ TransporterConfig:
     crossTravelCities: "text[]"
     arrivalTimeBufferOfVehicle: json
     demandHotspotsConfig: json
+    fareRecomputePolicy: json
     issueBreachConfig: json
     gpsTollBehaviorWindowDays: int
     enableGpsTollBehavior: boolean
     minDistanceForStopFcm: double precision
-    recomputeDistanceThresholds: json
-    minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
     pickupStallMonitoringConfig: json
@@ -2001,8 +1966,6 @@ TransporterConfig:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
     mediaFileSizeUpperLimit: "10000000"
-    actualRideDistanceDiffThreshold: "1200"
-    upwardsRecomputeBuffer: "2000"
     includeDriverCurrentlyOnRide: "true"
     dpGeoHashPercision: "5"
     areaPreferenceMinCells: "4"
@@ -2093,7 +2056,6 @@ TransporterConfig:
     fakeOtpMobileNumbers: "'{}'"
     arrivedStopThreshold: "900"
     canSuvDowngradeToHatchback: "false"
-    recomputeIfPickupDropNotOutsideOfThreshold: "true"
     arrivedPickupThreshold: "50"
     arrivingPickupThreshold: "100"
     pastDaysRideCounter: "3"
@@ -2111,9 +2073,6 @@ TransporterConfig:
     kaptureQueue: "''"
     orderAndNotificationStatusCheckFallBackTime: "43200"
     useSilentFCMForForwardBatch: "false"
-    fareRecomputeDailyExtraKmsThreshold: "5000"
-    fareRecomputeWeeklyExtraKmsThreshold: "20000"
-    toNotifyDriverForExtraKmsLimitExceed: "True"
     payoutBatchLimit: "10"
     updatePayoutStatusBatchSize: "20"
     lastNdaysToCheckForPayoutOrderStatus: "2"
@@ -2129,16 +2088,7 @@ TransporterConfig:
     recentScheduledBookingsSafeLimit: "50"
     minDistanceForStopFcm: "100"
     allowedReferralEntities: "'{DRIVER}'"
-    recomputeDistanceThresholds: '''[{"estimatedDistanceUpper":
-      5000,"minThresholdPercentage": 40,"minThresholdDistance":
-      1000},{"estimatedDistanceUpper": 10000,"minThresholdPercentage":
-      30,"minThresholdDistance": 1000},{"estimatedDistanceUpper":
-      15000,"minThresholdPercentage": 20,"minThresholdDistance":
-      1000},{"estimatedDistanceUpper": 9999999,"minThresholdPercentage":
-      10,"minThresholdDistance": 1000}]'' :: json'
-    minThreshildForPassThroughDestination: "1000"
     enableOverchargingBlocker: "false"
-    enableEstimatedTollFallback: "false"
     fleetUpiPayoutEnabled: "true"
     fleetBankPayoutEnabled: "true"
     generateReferralCodeForFleet: "false"

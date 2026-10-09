@@ -13,7 +13,6 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
-import qualified Domain.Types.Trip
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
@@ -33,8 +32,6 @@ data TransporterConfig = TransporterConfig
     aadhaarImageResizeConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.AadhaarImageResizeConfig,
     aadhaarVerificationRequired :: Kernel.Prelude.Bool,
     acStatusCheckGap :: Kernel.Prelude.Int,
-    actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
-    actualRideDurationDiffThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     addDriverCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     addDriverCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     airportEntryFeeCheckAtStartRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -138,7 +135,6 @@ data TransporterConfig = TransporterConfig
     distanceWeightage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dontAutoEnableDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    downwardRecomputeDistanceThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     dpBlackListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     dpGeoHashPercision :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dpWhiteListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -187,10 +183,8 @@ data TransporterConfig = TransporterConfig
     enableCourtRecordCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableDownwardRecomputeForDifferentDestination :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDriverHealthCheckDebug :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableDriverPoolEnrichment :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableEstimatedTollFallback :: Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableFareCalculatorV2 :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -214,8 +208,7 @@ data TransporterConfig = TransporterConfig
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
-    fareRecomputeDailyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
-    fareRecomputeWeeklyExtraKmsThreshold :: Kernel.Types.Common.HighPrecMeters,
+    fareRecomputePolicy :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.RecomputePolicy,
     favouriteDriverDailyCoinRideThreshold :: Kernel.Prelude.Int,
     fcmConfig :: Kernel.External.Notification.FCM.Types.FCMConfig,
     feedbackNotificationConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.FeedbackNotificationConfig,
@@ -227,7 +220,6 @@ data TransporterConfig = TransporterConfig
     fraudAuthCountThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     fraudAuthCountWindow :: Kernel.Prelude.Maybe Kernel.Types.SlidingWindowCounters.SlidingWindowOptions,
     freeTrialDays :: Kernel.Prelude.Int,
-    gateExtraTimeChargeByRecompute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gpsTollBehaviorWindowDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -276,7 +268,6 @@ data TransporterConfig = TransporterConfig
     minLocationAccuracy :: Kernel.Prelude.Double,
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    minThresholdForPassThroughDestination :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,
     missingMappingFallbackVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant,
     negativeFareAdjustmentCongestionThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -285,7 +276,6 @@ data TransporterConfig = TransporterConfig
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,
     nightSafetyStartTime :: Kernel.Types.Common.Seconds,
-    noRecomputeTripCategories :: Kernel.Prelude.Maybe [Domain.Types.Trip.TripCategory],
     normalRideBulkLocUpdateBatchSize :: Kernel.Prelude.Integer,
     notificationRetryCountThreshold :: Kernel.Prelude.Int,
     notificationRetryEligibleErrorCodes :: [Kernel.Prelude.Text],
@@ -317,9 +307,6 @@ data TransporterConfig = TransporterConfig
     rcExpiryChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcLimit :: Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
-    recomputeCongestionChargeOnEndRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    recomputeDistanceThresholds :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.DistanceRecomputeConfigs],
-    recomputeIfPickupDropNotOutsideOfThreshold :: Kernel.Prelude.Bool,
     reconciliationJobsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     referralLinkPassword :: Kernel.Prelude.Text,
     refillVehicleModel :: Kernel.Prelude.Bool,
@@ -362,7 +349,6 @@ data TransporterConfig = TransporterConfig
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
-    toNotifyDriverForExtraKmsLimitExceed :: Kernel.Prelude.Bool,
     trackingShortUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripEndGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     tripStartGeofenceRadius :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
@@ -373,8 +359,6 @@ data TransporterConfig = TransporterConfig
     updatePayoutStatusBatchSize :: Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
     upgradeTierDropRetentionTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    upwardsRecomputeBuffer :: Kernel.Types.Common.HighPrecMeters,
-    upwardsRecomputeBufferPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     useCategoryBasedVerificationPriorityList :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     useDBForAnalytics :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     useOfferListCache :: Kernel.Prelude.Bool,
@@ -484,15 +468,6 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     resultDurationMinutes :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
-
-data DistanceRecomputeConfigs = DistanceRecomputeConfigs
-  { estimatedDistanceUpper :: Kernel.Types.Common.Meters,
-    minThresholdDistance :: Kernel.Types.Common.Meters,
-    minThresholdDurationPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    minThresholdDurationSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    minThresholdPercentage :: Kernel.Prelude.Int
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data DriverWalletConfig = DriverWalletConfig
   { clubProjectFareInEarnings :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],

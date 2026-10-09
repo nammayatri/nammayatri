@@ -27,6 +27,103 @@ rides log `FailedOutsideUnknownApprox` and skip the numeric comparison; product
 flags are read from the quoted policy, which can differ from the latest policy
 on repriced branches; duration is not compared (levers are off by default).
 
+### Unified policy + studio view (2026-10-09)
+
+- **`fareRecomputePolicy`** (new nullable TransporterConfig column, typed
+  `RecomputePolicy` in `Domain.Types.Extra.TransporterConfig`): ONE nested
+  JSON — `upward{allowWithinThreshold,bands,smallOverageForgivenessMeters,
+  bufferMeters,bufferPercentage,dailyExtraKmsBudget,weeklyExtraKmsBudget}`,
+  `downward{allowForChangedDestination,forgivenessMeters,
+  passThroughMinEstimateMeters}`, `time{overageForgivenessSeconds,
+  gateExtraTimeOnEstimateBilled}`, `pinnedTripCategories` — superseding the 12
+  scattered recompute columns. `mkRecomputeConfig` resolves policy-first,
+  field-by-field, falling back to the legacy columns; the live ladder and the
+  shadow core both read only the resolved config, so NULL policy = today's
+  behavior exactly. Backfill (behavior-preserving, per city):
+  `dev/sql-seed/fare-recompute-policy-backfill.sql`. Legacy columns stay (no
+  drops); they go dormant per city after backfill.
+- **Fare Policy Studio "Recomputation" tab** (control-center repo):
+  `src/modules/config/FarePolicyStudio/components/recompute/RecomputeTab.tsx`
+  + `utils/recomputeConfig.ts` (+ tests). Reads the effective TransporterConfig
+  row via Config Pilot, shows every lever grouped by section with a
+  policy/legacy/default source badge, the raw policy JSON, and a suggestions
+  panel encoding the scenario-matrix recommendations (backfill nudge, 2-min
+  time floor, band duration criteria, gating sanity, buffer% ceiling).
+
+### Policy-only cutover + per-minute time billing (2026-10-09, later)
+
+- **Legacy columns removed from the spec** (13 recompute columns dropped from
+  Merchant.yaml incl. the DistanceRecomputeConfigs type; DB columns remain for
+  rollback). `mkRecomputeConfig` now resolves fareRecomputePolicy -> CODE
+  defaults only (defaults mirror the old column defaults, incl. the 4-band
+  40/30/20/10 table as `defaultRecomputeBands`). **DEPLOY ORDER: run the
+  backfill for every city with custom legacy values FIRST** — the SQL header
+  says the same.
+- **New time levers** (policy `time.*`, default off):
+  `billPerMinOnChargeableDuration` — perMinRateSections price the chargeable
+  duration at recompute (implemented by feeding chargeable duration into the
+  calculator's duration input; extra-time charge self-cancels on unfloored
+  rides, so no double counting); `floorAtEstimateWithinThreshold` — no time
+  refunds at the booked destination. Decision core mirrors both
+  (`TimeFlooredAtEstimate` modifier).
+- **Dead state removed**: `SnapToRoadState.distanceTravelledOutSideDropThreshold`
+  + `getTravelledDistanceOutsideThreshold` deleted from lib/location-updates
+  (tracked on every ride, read by nothing). Old Redis entries decode fine
+  (extra/missing Maybe key).
+- **Studio**: all seven time levers always listed (configured or not, incl.
+  the two fare-policy-level ones), scenario rows react to the new levers, and
+  the suggestions panel flags per-min-on-actual without a floor / without a
+  duration cap.
+
+### Adversarial audit outcome (2026-10-09, line-by-line re-verification)
+
+An independent audit of the full diff CONFIRMED: shadow/live branch-for-branch
+arithmetic parity, duration guard ordering and mutual exclusion, policy-only
+resolution with correct defaults, extra-time suppression completeness, and
+band edge cases (strict comparisons). It found and we FIXED:
+
+1. 5-min time forgiveness was cross-category — it would have zeroed rental
+   per-extra-minute and intercity extra-time billing for sub-5-min overruns.
+   Duration levers (forgiveness/gating) now bind only on city pricing
+   (Progressive/Slabs policies) via ProductFlags.timeLeversApplicable.
+2. Backfill hole: a city with NULL legacy bands (upward recompute disabled)
+   would have fallen to the default bands and silently re-enabled it. The
+   backfill now writes an explicit `bands: []` for NULL.
+3. Shadow could never evaluate the failed-distance ladder (approx distance
+   was not threaded; every such ride persisted FailedOutsideUnknownApprox).
+   The Directions-API approx is now returned by
+   calculateFinalValuesForFailedDistanceCalculations and fed to the shadow.
+4. ShadowRecord mislabeling: the downward floor overwrote the pass-through
+   override's UseEstimatedDuration with UseFlooredDuration; now preserved.
+
+ACCEPTED + DOCUMENTED (not bugs, but real semantics to know):
+- Per-min-sections override side effects: night-shift PRORATION
+  (pickupBufferInSecsForNightShiftCal path) runs over chargeable instead of
+  estimated minutes (small, capped); per-min CONGESTION uses chargeable
+  minutes only when no estimated congestion charge exists or on the
+  congestion-recompute path (estimate takes precedence at
+  FareCalculator.hs:618, and the component is capped).
+- Shadow reads product flags from the QUOTED policy; LatestPolicy branches
+  may use a different policy — known blind spot, mismatch-rate noise only.
+- Weekly extra-km budget boundary: live compares fractional pre-persist,
+  shadow reads the rounded window — divergence only exactly at the boundary.
+- A malformed fareRecomputePolicy JSON decodes to Nothing (fleet defaults)
+  with no error — same failure mode as every JSON config column here.
+- Pre-existing: per-min section minutes are FLOORED (`div 60` before
+  ceiling), so up to 59s of actual overage per ride is uncharged — relevant
+  now that sections bill actual minutes.
+
+### Scenario-matrix gaps (not yet expressible; follow-ups)
+
+| Gap | Scenarios | Needed |
+|---|---|---|
+| Enforceable TOTAL-fare recompute ceiling (e.g. 1.3x) | 6, 13 | `totalFareCapMultiplier` in policy, enforced in `checkRecomputedFareCeiling` (log-only today) |
+| Auto support ticket on decision reasons | 13, 14 | hook issue-management on `RecomputeReason` (large-deviation / anomaly) |
+| Destination-edit ">50% travelled -> no recompute" rule | 9 | new rule in edit flow keyed on travelled/estimate ratio |
+| Physical-anomaly detection (speed bounds) -> force estimate | 14 | pre-decision sanity check feeding a new reason |
+| Exact max(current, recomputed) fare | 4 | approximated today by estimate-floor + extra-time |
+| Force estimate (skip approx ladder) on failed+outside | 15 strict | policy flag short-circuiting the approx route |
+
 ### Config lever reference (complete)
 
 Decision ladder (TransporterConfig unless noted):

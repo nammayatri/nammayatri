@@ -115,6 +115,7 @@ import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeCalcJobCache)
+import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import Domain.Types
 import qualified Domain.Types.Alert.AlertRequestData as DAlertData
 import qualified Domain.Types.BecknConfig as DBC
@@ -378,7 +379,11 @@ getMerchantConfigCommon merchantShortId opCity = do
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
-mkMerchantCommonConfigRes DTC.TransporterConfig {..} =
+mkMerchantCommonConfigRes tc@DTC.TransporterConfig {..} = do
+  -- Recompute levers are reported at their EFFECTIVE values: resolved from
+  -- the unified fareRecomputePolicy (code defaults for absent fields),
+  -- exactly as end-ride billing resolves them. Legacy columns are not read.
+  let rcfg = RD.mkRecomputeConfig tc
   Common.MerchantCommonConfigRes
     { maxScheduledHoldsPerDriver = scheduledRideConfig.maxHoldsPerDriver,
       scheduledRideAvgSpeedKmph = scheduledRideConfig.avgSpeedKmph,
@@ -386,8 +391,11 @@ mkMerchantCommonConfigRes DTC.TransporterConfig {..} =
       scheduledRideMaxLeadTime = scheduledRideConfig.maxLeadTime,
       pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
       dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
-      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit actualRideDistanceDiffThreshold,
-      upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit upwardsRecomputeBuffer,
+      actualRideDistanceDiffThreshold = rcfg.cfgActualRideDistanceDiffThreshold,
+      upwardsRecomputeBuffer = rcfg.cfgUpwardsRecomputeBuffer,
+      upwardsRecomputeBufferPercentage = rcfg.cfgUpwardsRecomputeBufferPercentage,
+      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgActualRideDistanceDiffThreshold,
+      upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgUpwardsRecomputeBuffer,
       ..
     }
 

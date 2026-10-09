@@ -14,8 +14,9 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
+import qualified Domain.Types as DTC
 import GHC.Generics (Generic)
-import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Common (HighPrecMeters, HighPrecMoney, Meters, Seconds)
 import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
 
@@ -129,3 +130,104 @@ instance FromField KnowledgeCenterSopTypesConfig where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be KnowledgeCenterSopTypesConfig
 
 instance FromBackendRow Postgres KnowledgeCenterSopTypesConfig
+
+-- | The unified end-ride fare recomputation policy: THE one config the
+-- resolver ('Domain.Action.UI.Ride.EndRide.RecomputeDecision.mkRecomputeConfig')
+-- reads. Absent fields fall back to fleet code defaults (which mirror the old
+-- legacy-column DB defaults). The legacy scattered columns are no longer read
+-- by any code; they remain in the DB for rollback only. Cities with custom
+-- legacy values MUST be backfilled before this ships
+-- (dev/sql-seed/fare-recompute-policy-backfill.sql).
+--
+-- Backfill mapping (policy field <- old legacy column):
+--   upward.allowWithinThreshold          <- recomputeIfPickupDropNotOutsideOfThreshold
+--   upward.bands                         <- recomputeDistanceThresholds
+--   upward.smallOverageForgivenessMeters <- actualRideDistanceDiffThreshold
+--   upward.bufferMeters                  <- upwardsRecomputeBuffer
+--   upward.bufferPercentage              <- upwardsRecomputeBufferPercentage
+--   upward.dailyExtraKmsBudget           <- fareRecomputeDailyExtraKmsThreshold
+--   upward.weeklyExtraKmsBudget          <- fareRecomputeWeeklyExtraKmsThreshold
+--   downward.allowForChangedDestination  <- enableDownwardRecomputeForDifferentDestination
+--   downward.forgivenessMeters           <- downwardRecomputeDistanceThreshold
+--   downward.passThroughMinEstimateMeters <- minThresholdForPassThroughDestination
+--   time.overageForgivenessSeconds       <- actualRideDurationDiffThreshold
+--   time.gateExtraTimeOnEstimateBilled   <- gateExtraTimeChargeByRecompute
+--   pinnedTripCategories                 <- noRecomputeTripCategories
+--   upward.notifyDriverOnBudgetExceeded  <- toNotifyDriverForExtraKmsLimitExceed
+--   recomputeCongestionOnEndRide         <- recomputeCongestionChargeOnEndRide
+--   estimatedTollFallback                <- enableEstimatedTollFallback
+data RecomputePolicy = RecomputePolicy
+  { upward :: Maybe UpwardRecomputePolicy,
+    downward :: Maybe DownwardRecomputePolicy,
+    time :: Maybe TimeRecomputePolicy,
+    pinnedTripCategories :: Maybe [DTC.TripCategory],
+    -- | Re-run the congestion model at end ride with actual distance/duration
+    -- (was recomputeCongestionChargeOnEndRide). Default off.
+    recomputeCongestionOnEndRide :: Maybe Bool,
+    -- | On distance-calc failure with no detected toll, charge the estimated
+    -- toll (was enableEstimatedTollFallback). Default off (rider-favoring).
+    estimatedTollFallback :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | When and how far the billed distance may grow above the estimate.
+data UpwardRecomputePolicy = UpwardRecomputePolicy
+  { allowWithinThreshold :: Maybe Bool,
+    bands :: Maybe [RecomputeBand],
+    smallOverageForgivenessMeters :: Maybe HighPrecMeters,
+    bufferMeters :: Maybe HighPrecMeters,
+    bufferPercentage :: Maybe Int,
+    dailyExtraKmsBudget :: Maybe HighPrecMeters,
+    weeklyExtraKmsBudget :: Maybe HighPrecMeters,
+    -- | Overlay the driver when the extra-km budget is exhausted (was
+    -- toNotifyDriverForExtraKmsLimitExceed). Default on.
+    notifyDriverOnBudgetExceeded :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | When the billed distance may shrink below the estimate.
+data DownwardRecomputePolicy = DownwardRecomputePolicy
+  { allowForChangedDestination :: Maybe Bool,
+    forgivenessMeters :: Maybe HighPrecMeters,
+    passThroughMinEstimateMeters :: Maybe Meters
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | Time-overage billing controls.
+data TimeRecomputePolicy = TimeRecomputePolicy
+  { -- | Flat forgiveness: time overage strictly below this bills the
+    -- estimated duration (no time charge). Fleet default: 300s (5 min).
+    -- Ignored when 'forgivenessBands' is set.
+    overageForgivenessSeconds :: Maybe Seconds,
+    -- | Estimate-relative forgiveness, mirroring the distance bands: the band
+    -- whose estimatedDurationUpper is the tightest fit for the ride's
+    -- estimated duration supplies the forgiveness. Wins over the flat value.
+    forgivenessBands :: Maybe [TimeForgivenessBand],
+    gateExtraTimeOnEstimateBilled :: Maybe Bool,
+    -- | Rides ending within the pickup/drop threshold never bill BELOW the
+    -- estimated duration (no time refunds at the booked destination).
+    -- Default ON. Binds only when the fare policy bills time via
+    -- perMinRateSections (the time-billing MECHANISM is not a config: a
+    -- policy WITH perMinRateSections bills them on the chargeable/actual
+    -- minutes at recompute and the extra-time charge is disabled; a policy
+    -- WITHOUT them uses perMinuteRideExtraTimeCharge + grace as before).
+    floorAtEstimateWithinThreshold :: Maybe Bool
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | One time-forgiveness band: rides with estimated duration up to
+-- estimatedDurationUpper forgive overage below forgivenessSeconds.
+data TimeForgivenessBand = TimeForgivenessBand
+  { estimatedDurationUpper :: Seconds,
+    forgivenessSeconds :: Seconds
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)
+
+-- | One upward-recompute qualification band. Same JSON shape as the old
+-- legacy DistanceRecomputeConfigs rows, so the backfill copies them verbatim.
+data RecomputeBand = RecomputeBand
+  { estimatedDistanceUpper :: Meters,
+    minThresholdPercentage :: Int,
+    minThresholdDistance :: Meters
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON)

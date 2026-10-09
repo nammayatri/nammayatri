@@ -9,20 +9,18 @@ module FareRecomputeDecisionTests (tests) where
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import qualified Domain.Types as DTC
-import Domain.Types.TransporterConfig (DistanceRecomputeConfigs (..))
+import Domain.Types.Extra.TransporterConfig (RecomputeBand (..), TimeForgivenessBand (..))
 import Kernel.Prelude
 import Kernel.Types.Common
 import Test.Tasty
 import Test.Tasty.HUnit
 
-band :: DistanceRecomputeConfigs
+band :: RecomputeBand
 band =
-  DistanceRecomputeConfigs
+  RecomputeBand
     { estimatedDistanceUpper = 999999,
       minThresholdPercentage = 10,
-      minThresholdDistance = 1000,
-      minThresholdDurationSeconds = Nothing,
-      minThresholdDurationPercentage = Nothing
+      minThresholdDistance = 1000
     }
 
 baseCfg :: RD.RecomputeConfig
@@ -39,8 +37,15 @@ baseCfg =
       RD.cfgMinThresholdForPassThroughDestination = Nothing,
       RD.cfgDownwardRecomputeDistanceThreshold = Nothing,
       RD.cfgNoRecomputeTripCategories = RD.defaultNoRecomputeTripCategories,
-      RD.cfgActualRideDurationDiffThreshold = Nothing,
-      RD.cfgGateExtraTimeChargeByRecompute = False
+      -- empty = no forgiveness, so the distance-focused golden rows keep
+      -- billing actual duration; the fleet default (5-min catch-all band)
+      -- has its own dedicated test below
+      RD.cfgTimeForgivenessBands = [],
+      RD.cfgGateExtraTimeChargeByRecompute = False,
+      RD.cfgFloorTimeAtEstimateWithinThreshold = True,
+      RD.cfgRecomputeCongestionOnEndRide = False,
+      RD.cfgEstimatedTollFallback = False,
+      RD.cfgNotifyDriverOnBudgetExceeded = True
     }
 
 -- Estimated 10km / 30min ride that actually ran 12km; endpoints matched.
@@ -64,7 +69,7 @@ baseInput =
       RD.dropOutsideOfThreshold = False,
       RD.passedThroughDrop = False,
       RD.budgetState = Just (RD.ExtraKmBudgetState 2000 4000),
-      RD.productFlags = RD.ProductFlags False False,
+      RD.productFlags = cityFlags,
       RD.cfg = baseCfg
     }
 
@@ -73,6 +78,17 @@ summary d = (RD.reason d, RD.distanceSource d, RD.pricingSource d, RD.predictedC
 
 decide :: RD.RecomputeInput -> RD.RecomputeDecision
 decide = RD.decideRecompute
+
+-- A plain city (Progressive) fare policy: no kill switches, no per-min
+-- sections, duration levers applicable.
+cityFlags :: RD.ProductFlags
+cityFlags =
+  RD.ProductFlags
+    { RD.disableRecompute = False,
+      RD.disableDownwardRecompute = False,
+      RD.hasPerMinRateSections = False,
+      RD.timeLeversApplicable = True
+    }
 
 tests :: TestTree
 tests =
@@ -179,11 +195,11 @@ tests =
             RD.durationSource d @?= RD.UseEstimatedDuration
             RD.modifiers d @?= [RD.PassThroughDropOverride],
           testCase "disableRecompute bypasses everything" $ do
-            let d = decide baseInput {RD.productFlags = RD.ProductFlags True False}
+            let d = decide baseInput {RD.productFlags = cityFlags {RD.disableRecompute = True}}
             RD.predictedChargeableDistance d @?= Just 10000
             RD.modifiers d @?= [RD.DisableRecomputeBypass],
           testCase "disableDownwardRecompute floors a shorter ride at the estimate" $ do
-            let d = decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 8000, RD.productFlags = RD.ProductFlags False True}
+            let d = decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 8000, RD.productFlags = cityFlags {RD.disableDownwardRecompute = True}}
             RD.reason d @?= RD.OutsideThresholdShorterActual
             RD.predictedChargeableDistance d @?= Just 10000
             RD.durationSource d @?= RD.UseFlooredDuration
@@ -195,26 +211,50 @@ tests =
         ],
       testGroup
         "duration levers (opt-in)"
-        [ testCase "duration band criteria alone can qualify upward recompute" $ do
-            let durBand = band {minThresholdDurationSeconds = Just 600}
-                d =
+        [ testCase "time overage NEVER qualifies distance recompute: bands are distance-only" $ do
+            let d =
                   decide
                     baseInput
                       { RD.traveledDistance = 10000, -- zero distance diff
-                        RD.actualDuration = Just 3000, -- 20 min over the 30 min estimate
-                        RD.cfg = baseCfg {RD.cfgRecomputeThresholds = Just [durBand]}
+                        RD.actualDuration = Just 3000 -- 20 min over the 30 min estimate
                       }
-            RD.reason d @?= RD.WithinThresholdUpwardRecompute,
-          testCase "duration overage below forgiveness threshold bills estimated duration" $ do
+            RD.reason d @?= RD.WithinThresholdNoUpwardBand
+            RD.predictedChargeableDistance d @?= Just 10000,
+          testCase "duration overage below the matching forgiveness band bills estimated duration" $ do
             let d =
                   decide
                     baseInput
                       { RD.pickupDropOutsideOfThreshold = True,
-                        RD.actualDuration = Just 2100, -- 300s over, threshold 600s
-                        RD.cfg = baseCfg {RD.cfgActualRideDurationDiffThreshold = Just 600}
+                        RD.actualDuration = Just 2100, -- 300s over, band forgives 600s
+                        RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = [TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}]}
                       }
             RD.durationSource d @?= RD.UseEstimatedDuration
             RD.modifiers d @?= [RD.DurationOverageForgiven],
+          testCase "fleet default forgives up to 5 minutes of overage" $ do
+            let d =
+                  decide
+                    baseInput
+                      { RD.actualDuration = Just 2000, -- 200s over < 300s default
+                        RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = RD.defaultTimeForgivenessBands}
+                      }
+            RD.durationSource d @?= RD.UseEstimatedDuration
+            RD.modifiers d @?= [RD.DurationOverageForgiven],
+          testCase "forgiveness never touches contractual time billing (rental/intercity)" $ do
+            let d =
+                  decide
+                    baseInput
+                      { RD.actualDuration = Just 2000, -- 200s over, inside the default 5-min band
+                        RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = RD.defaultTimeForgivenessBands},
+                        RD.productFlags = cityFlags {RD.timeLeversApplicable = False}
+                      }
+            RD.durationSource d @?= RD.UseActualDuration
+            RD.modifiers d @?= [],
+          testCase "forgiveness bands pick the tightest estimate bracket" $ do
+            -- est 1800s matches the <=2400s band (forgive 120s), not the catch-all 600s
+            let bands = [TimeForgivenessBand {estimatedDurationUpper = 2400, forgivenessSeconds = 120}, TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}]
+                d = decide baseInput {RD.actualDuration = Just 2100, RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = bands}}
+            -- 300s overage > 120s band forgiveness -> NOT forgiven
+            RD.durationSource d @?= RD.UseActualDuration,
           testCase "extra-time gating pins estimate-billed rides to estimated duration" $ do
             let d =
                   decide
@@ -227,7 +267,31 @@ tests =
             RD.durationSource d @?= RD.UseEstimatedDuration
             RD.modifiers d @?= [RD.ExtraTimeGatedOnEstimateBilledRide],
           testCase "levers off: actual duration is billed" $
-            RD.durationSource (decide baseInput) @?= RD.UseActualDuration
+            RD.durationSource (decide baseInput) @?= RD.UseActualDuration,
+          testCase "time floor: faster ride within threshold bills estimated duration (policy has perMinRateSections)" $ do
+            let d =
+                  decide
+                    baseInput
+                      { RD.actualDuration = Just 1500, -- 25 min vs 30 min estimate
+                        RD.productFlags = cityFlags {RD.hasPerMinRateSections = True}
+                      }
+            RD.durationSource d @?= RD.UseEstimatedDuration
+            RD.modifiers d @?= [RD.TimeFlooredAtEstimate],
+          testCase "time floor is dormant when the policy has no perMinRateSections (rental safety)" $ do
+            let d = decide baseInput {RD.actualDuration = Just 1500}
+            RD.durationSource d @?= RD.UseActualDuration
+            RD.modifiers d @?= [],
+          testCase "time floor does not apply outside the threshold (early end bills actual time)" $ do
+            let d =
+                  decide
+                    baseInput
+                      { RD.pickupDropOutsideOfThreshold = True,
+                        RD.dropOutsideOfThreshold = True,
+                        RD.traveledDistance = 8000,
+                        RD.actualDuration = Just 1500,
+                        RD.productFlags = cityFlags {RD.hasPerMinRateSections = True}
+                      }
+            RD.durationSource d @?= RD.UseActualDuration
         ],
       testGroup
         "shadow record"

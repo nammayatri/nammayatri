@@ -26,6 +26,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Domain.Action.UI.Ride.EndRide.RecomputeDecision as RD
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -328,7 +329,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           ride <- maybe (QRide.getCurrentActiveByDriverId driverId) QRide.findById rideId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
       )
-      transportConfig.recomputeIfPickupDropNotOutsideOfThreshold
+      (RD.mkRecomputeConfig transportConfig).cfgRecomputeIfPickupDropNotOutsideOfThreshold
       snapToRoad'
       ( \driverId -> do
           person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

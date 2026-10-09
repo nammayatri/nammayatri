@@ -1253,3 +1253,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bpp_reallocation boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN fare_recompute_policy json ;
+
+--- Now DSL don't allow dropping tables instead we will drop not null constraint if any .Please be careful while running ---
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN upwards_recompute_buffer DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN to_notify_driver_for_extra_kms_limit_exceed DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN recompute_if_pickup_drop_not_outside_of_threshold DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN fare_recompute_weekly_extra_kms_threshold DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN fare_recompute_daily_extra_kms_threshold DROP NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_distance_diff_threshold DROP NOT NULL;
+--- Drop section ends. Please check before running ---
