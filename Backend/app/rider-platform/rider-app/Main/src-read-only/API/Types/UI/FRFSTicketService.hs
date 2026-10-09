@@ -10,6 +10,7 @@ import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
+import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -236,19 +237,23 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     categories :: [CategoryInfoResponse],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    frfsRouteDetails :: Data.Maybe.Maybe [Domain.Types.FRFSRouteDetails.FRFSRouteDetails],
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    providerRouteId :: Data.Maybe.Maybe Data.Text.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     routeDetails :: Data.Maybe.Maybe [Domain.Types.RouteDetailsAPI.RouteDetail],
+    routeGroupKey :: Data.Maybe.Maybe Data.Text.Text,
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
     serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
+    ticketTypeCode :: Data.Maybe.Maybe Data.Text.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
@@ -360,7 +365,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSSearchAPIRes = FRFSSearchAPIRes {quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
+data FRFSSearchAPIRes = FRFSSearchAPIRes {crisSdkToken :: Data.Maybe.Maybe Data.Text.Text, quotes :: [FRFSQuoteAPIRes], searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
