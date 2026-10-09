@@ -45,6 +45,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    roundTripAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,

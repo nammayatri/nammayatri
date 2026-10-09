@@ -81,3 +81,8 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN destination_stop_code te
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN max_overrideable_fare double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN round_trip_allowed boolean ;

@@ -92,6 +92,9 @@ types:
     maxDays: Maybe Int
     frfsOverrideConfig: Maybe FrfsOverrideConfigAPIEntity
     maximumPurchaseableTripCount: Int
+    selectableTripCounts: "Maybe [Int]"
+    selectableValidityDays: "Maybe [Int]"
+    roundTripSupported: Maybe Bool
     referenceServiceTier: ServiceTierType
     frfsCancelLimit: Maybe Int
     documentsRequired: "[PassDocumentType]"
@@ -132,11 +135,20 @@ types:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
     numberOfTrips: Maybe Int
+    roundTripAllowed: Maybe Bool
+    validityDays: Maybe Int
 
   PassCalculatePriceReq:
     sourceStopCode: Text
     destinationStopCode: Text
     numberOfTrips: Int
+    roundTripAllowed: Maybe Bool
+    validityDays: Maybe Int
+    derive: "Show"
+
+  PassRouteAPIEntity:
+    routeCode: Text
+    routeShortName: Maybe Text
     derive: "Show"
 
   PassCalculatePriceResp:
@@ -145,7 +157,9 @@ types:
     referenceFare: HighPrecMoney
     serviceTier: ServiceTierType
     numberOfTrips: Int
+    validTill: Day
     routesConsidered: Int
+    routes: "[PassRouteAPIEntity]"
     derive: "Show"
 
   PassSwitchDeviceIdReq:
@@ -177,6 +191,11 @@ types:
     futureRenewals: [PurchasedPassTransactionAPIEntity]
     overlappingPasses: [PurchasedPassTransactionAPIEntity]
     isPreferredSourceAndDestinationSet: Bool
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    roundTripAllowed: Bool
+    maxOverrideableFare: Maybe HighPrecMoney
+    isDynamicallyPriced: Bool
     derive: "Show"
 
   PassDetailsAPIEntity:
@@ -208,6 +227,11 @@ types:
     status: StatusType
     passType: Maybe PassEnum
     refunds: "[RefundAPIEntity]"
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    roundTripAllowed: Bool
+    maxOverrideableFare: Maybe HighPrecMoney
+    isDynamicallyPriced: Bool
     derive: "Show"
 
   SetPassPrefSrcAndDestReq:

@@ -43,6 +43,7 @@ module SharedLogic.FRFSPassOverride
     ConsumeResult (..),
     remainingTrips,
     benefitFromPass,
+    isDynamicallyPricedPayment,
     benefitForPayment,
     isOverridePayment,
     overrideConfigForPurchase,
@@ -67,7 +68,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
-import Data.List (nubBy)
+import Data.List (nub, nubBy, sort)
 import qualified Data.Time as T
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -192,7 +193,10 @@ data DynamicPricingConfig = DynamicPricingConfig
   { percentageSaving :: Maybe PercentageSaving,
     fixedSaving :: Maybe FixedSaving,
     primaryServiceTier :: Spec.ServiceTierType,
-    maximumPurchaseableTripCount :: Int
+    maximumPurchaseableTripCount :: Int,
+    selectableTripCounts :: Maybe [Int],
+    selectableValidityDays :: Maybe [Int],
+    roundTripSupported :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -201,6 +205,15 @@ instance FromJSON DynamicPricingConfig where
 
 instance ToJSON DynamicPricingConfig where
   toJSON = A.genericToJSON constructorsWithSnakeCase
+
+isDynamicallyPricedPayment :: DPPP.PurchasedPassPayment -> Bool
+isDynamicallyPricedPayment payment = case payment.overrideBenefitConfigJson of
+  Nothing -> False
+  Just configJson -> case parseOverrideBenefitConfig configJson of
+    Left _ -> False
+    Right config -> case listToMaybe config.overrideBenefits >>= entryPricing of
+      Just _ -> True
+      Nothing -> False
 
 data PassPricing
   = NotDynamicallyPriced
@@ -220,7 +233,17 @@ dynamicPricingFromPass pass = case pass.overrideBenefitConfigJson of
         Left reason -> do
           logError $ "FRFSPassOverride: invalid dynamic pricing config passId=" <> pass.id.getId <> " reason=" <> reason
           pure (DynamicPricingBroken reason)
-        Right valid -> pure (DynamicallyPriced valid)
+        Right valid
+          | not (sellsValidityWindow pass valid) -> do
+            let reason = "pass sells no validity window: set maxValidDays or selectable_validity_days"
+            logError $ "FRFSPassOverride: " <> reason <> " passId=" <> pass.id.getId
+            pure (DynamicPricingBroken reason)
+          | otherwise -> pure (DynamicallyPriced valid)
+
+-- Without either, the pass can only ever be dated to a single day, selling trips that expire the
+-- same night. Checked here so such a pass is never listed, not merely refused at select.
+sellsValidityWindow :: DPass.Pass -> DynamicPricingConfig -> Bool
+sellsValidityWindow pass pricing = maybe False (> 0) pass.maxValidDays || isJust pricing.selectableValidityDays
 
 applyPricingSaving :: DynamicPricingConfig -> HighPrecMoney -> HighPrecMoney
 applyPricingSaving config fare
@@ -248,6 +271,12 @@ validateDynamicPricing config
     Left $ "fixed_saving.applicable_value must be positive, got " <> show f.applicableValue
   | config.maximumPurchaseableTripCount <= 0 =
     Left $ "maximum_purchaseable_trip_count must be positive, got " <> show config.maximumPurchaseableTripCount
+  | Just tripCounts <- config.selectableTripCounts,
+    null tripCounts || any (<= 0) tripCounts || any (> config.maximumPurchaseableTripCount) tripCounts || tripCounts /= sort (nub tripCounts) =
+    Left "selectable_trip_counts must be non-empty, positive, <= maximum_purchaseable_trip_count, strictly ascending and unique"
+  | Just validities <- config.selectableValidityDays,
+    null validities || any (<= 0) validities || validities /= sort (nub validities) =
+    Left "selectable_validity_days must be non-empty, positive, strictly ascending and unique"
   | otherwise = Right config
   where
     percentageOn = maybe False ((== Just True) . (.enabled)) config.percentageSaving
@@ -414,6 +443,13 @@ toCandidate payment = case payment.passId of
           benefitForPayment payment pass >>= \case
             Nothing -> pure Nothing
             Just benefit -> do
+              -- Fails closed in coversLegStations, so without this the pass just silently never applies.
+              when (isJust payment.sourceStopCode /= isJust payment.destinationStopCode) $
+                logError $
+                  "FRFSPassOverride:toCandidate pass has only one of its stop codes set, it will cover no leg paymentId="
+                    <> payment.id.getId
+                    <> " stops="
+                    <> show (payment.sourceStopCode, payment.destinationStopCode)
               availableTripCount <- remainingTrips payment benefit
               pure . Just $ PassCandidate {payment = payment, pass = pass, benefit = benefit, availableTripCount = availableTripCount}
 
@@ -460,15 +496,21 @@ paymentLegStations paymentId resolve = do
   mbCandidate <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= maybe (pure Nothing) toCandidate
   legStationsFor (maybeToList mbCandidate) resolve
 
+-- A recorded choice is authoritative, including a declined one; the pass-level flag only covers
+-- purchases that never made a choice. Shared so diagnostics report what coversLegStations acted on.
+roundTripAllowedFor :: DPPP.PurchasedPassPayment -> OverrideBenefit -> Bool
+roundTripAllowedFor payment benefit = fromMaybe (benefit.allowRoundTrip == Just True) payment.roundTripAllowed
+
 coversLegStations :: DPPP.PurchasedPassPayment -> OverrideBenefit -> Maybe (Text, Text) -> Bool
 coversLegStations payment benefit mbLegStations
+  | isNothing payment.sourceStopCode && isNothing payment.destinationStopCode = True
   | benefit.allowOtherStopPairs == Just True = True
   | otherwise = fromMaybe False $ do
     (legFrom, legTo) <- mbLegStations
     source <- payment.sourceStopCode
     destination <- payment.destinationStopCode
     let onwards = legFrom == source && legTo == destination
-        backwards = benefit.allowRoundTrip == Just True && legFrom == destination && legTo == source
+        backwards = roundTripAllowedFor payment benefit && legFrom == destination && legTo == source
     pure (onwards || backwards)
 
 stationCodeForStop :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, CacheFlow m r, EsqDBFlow m r) => DIBC.IntegratedBPPConfig -> Text -> m Text
@@ -493,14 +535,15 @@ getFRFSOverrideApplicablePassesByPersonId ::
   UTCTime ->
   Maybe Bool ->
   m (Maybe (Text, Text)) ->
-  m [ApplicablePass]
+  m (Maybe (Text, Text), [ApplicablePass])
 getFRFSOverrideApplicablePassesByPersonId integratedBPPConfig person vehicleType tripTime mbClientHasPasses resolveStations
-  | integratedBPPConfig.passOverrideApplicable /= Just True = pure []
+  | integratedBPPConfig.passOverrideApplicable /= Just True = pure (Nothing, [])
   | otherwise = do
     tripDay <- localTripDay person tripTime
     candidates <- loadPassCandidates person mbClientHasPasses tripDay
+    -- Returned so callers can re-check stations when rendering options without resolving twice.
     mbLegStations <- legStationsFor candidates resolveStations
-    pure $ filterCandidatesForLeg candidates vehicleType tripDay mbLegStations
+    pure (mbLegStations, filterCandidatesForLeg candidates vehicleType tripDay mbLegStations)
 
 localTripDay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> UTCTime -> m T.Day
 localTripDay person tripTime = do
@@ -547,8 +590,8 @@ data PassOption = PassOption
   }
   deriving (Show, Generic)
 
-passOptionsForQuote :: DIBC.IntegratedBPPConfig -> [ApplicablePass] -> Maybe Spec.ServiceTierType -> Price -> [(Price, Int)] -> [PassOption]
-passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnitPrice priceItems =
+passOptionsForQuote :: DIBC.IntegratedBPPConfig -> [ApplicablePass] -> Maybe (Text, Text) -> Maybe Spec.ServiceTierType -> Price -> [(Price, Int)] -> [PassOption]
+passOptionsForQuote integratedBPPConfig applicablePasses mbLegStations mbServiceTier adultUnitPrice priceItems =
   [ PassOption
       { purchasedPassPaymentId = applicablePass.purchasedPassPayment.id,
         passId = applicablePass.pass.id,
@@ -561,6 +604,7 @@ passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnit
       }
     | applicablePass <- applicablePasses,
       coversTier applicablePass,
+      coversLegStations applicablePass.purchasedPassPayment applicablePass.benefit mbLegStations,
       withinMaxFare applicablePass,
       coversQuantity applicablePass,
       hasTripsForQuantity applicablePass,
@@ -1075,7 +1119,7 @@ resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTie
         logWarning $ "FRFSPassOverride: pass not applicable paymentId=" <> paymentId.getId
         pure Nothing
       Just applicablePass ->
-        case passOptionsForQuote integratedBPPConfig [applicablePass] mbServiceTier adultUnitPrice priceItems of
+        case passOptionsForQuote integratedBPPConfig [applicablePass] mbLegStations mbServiceTier adultUnitPrice priceItems of
           [] -> do
             logWarning $
               "FRFSPassOverride: no applicable option for pass paymentId="
@@ -1266,7 +1310,7 @@ spendTripForBooking person booking = case booking.overrideAppliedEntityId of
                         "booking runs " <> show mbLegStations <> ", pass was bought for "
                           <> show (candidate.payment.sourceStopCode, candidate.payment.destinationStopCode)
                           <> " roundTrip="
-                          <> show (candidate.benefit.allowRoundTrip == Just True)
+                          <> show (roundTripAllowedFor candidate.payment candidate.benefit)
                       | otherwise = "pass is for " <> show candidate.pass.vehicleType <> ", booking is " <> show booking.vehicleType
                 logError $ "FRFSPassOverride:spendTripForBooking pass cannot cover this booking (" <> why <> "), NOT debited paymentId=" <> entityId <> " bookingId=" <> booking.id.getId
                 pure TripPassExhausted
