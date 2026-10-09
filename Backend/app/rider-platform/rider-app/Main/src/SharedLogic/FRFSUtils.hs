@@ -41,7 +41,6 @@ import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
-import qualified Domain.Types.FRFSRouteDetails as FRFSRouteDetails
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
@@ -134,24 +133,6 @@ import qualified Tools.Wallet as TWallet
 
 frfsGtfsCacheKey :: Text -> Text
 frfsGtfsCacheKey ibcId = "frfs:gtfs:" <> ibcId
-
--- route details for metro and subway constructing from route station json
-mkFRFSQuoteRouteDetails :: Spec.VehicleCategory -> Maybe [APITypes.FRFSRouteStationsAPI] -> Maybe [FRFSRouteDetails.FRFSRouteDetails]
-mkFRFSQuoteRouteDetails vehicleType mbRouteStations
-  | vehicleType == Spec.METRO || vehicleType == Spec.SUBWAY = do
-    routeStations <- mbRouteStations
-    guard (not $ null routeStations)
-    forM routeStations $ \routeStation -> do
-      startStation <- listToMaybe routeStation.stations
-      endStation <- listToMaybe $ reverse routeStation.stations
-      pure
-        FRFSRouteDetails.FRFSRouteDetails
-          { startStationCode = startStation.code,
-            endStationCode = endStation.code,
-            routeCode = Just routeStation.code,
-            serviceTier = routeStation.vehicleServiceTier <&> (._type)
-          }
-  | otherwise = Nothing
 
 frfsGtfsPagesKey :: Text -> Text
 frfsGtfsPagesKey ibcId = "frfs:gtfs:pages:" <> ibcId
