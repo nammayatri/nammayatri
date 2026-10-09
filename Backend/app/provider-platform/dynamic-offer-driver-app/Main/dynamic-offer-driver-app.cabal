@@ -1142,6 +1142,7 @@ library
       Tools.Csv
       Tools.Dashcam
       Tools.DriverBackgroundVerification
+      Tools.DriverOnlineSessionEvent
       Tools.Encryption
       Tools.Error
       Tools.Event

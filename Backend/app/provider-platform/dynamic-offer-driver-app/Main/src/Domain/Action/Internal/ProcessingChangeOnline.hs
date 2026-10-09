@@ -16,7 +16,6 @@ import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Kernel.Utils.Logging (logDebug, logError, logInfo)
 import qualified SharedLogic.DriverIdleTime as DriverIdleTime
 import qualified SharedLogic.DriverOnlineHoursCache as DriverOnlineHoursCache
-import Tools.DriverOnlineSessionEvent (emitClosedSessionEvents)
 import qualified SharedLogic.FleetOperatorStats as FOS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDS
@@ -25,6 +24,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
+import Tools.DriverOnlineSessionEvent (emitClosedSessionEvents)
 import Tools.Error
 
 processingChangeOnline ::
