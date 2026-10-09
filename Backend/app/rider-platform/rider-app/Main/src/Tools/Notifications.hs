@@ -789,6 +789,38 @@ disableFollowRide personId = do
         CQFollowRide.clearFollowsRideCounter emPersonId
         Person.updateFollowsRide False emPersonId
 
+data CashbackPnParam = CashbackPnParam
+  { cashbackAmount :: Text
+  }
+  deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+-- | Cashback PN fired on ride start and ride end, only when the ride earned a
+--   cashback offer (payout > 0). Copy depends on whether the rider has added a
+--   payout VPA (UPI):
+--     has VPA -> CASHBACK_ON_ITS_WAY  ("cashback on its way")
+--     no VPA  -> ADD_UPI_FOR_CASHBACK ("add your UPI to receive cashback")
+notifyCashbackStatus ::
+  ServiceFlow m r =>
+  Person.Person ->
+  SRB.Booking ->
+  SRide.Ride ->
+  HighPrecMoney ->
+  m ()
+notifyCashbackStatus person booking ride payoutAmount = do
+  let notifKey = maybe "ADD_UPI_FOR_CASHBACK" (const "CASHBACK_ON_ITS_WAY") person.payoutVpa
+      entity = Notification.Entity Notification.Product ride.id.getId ()
+      cashbackAmountText = Price.showPriceWithRounding $ Price.mkPrice (Just booking.estimatedFare.currency) payoutAmount
+      dynamicParams = CashbackPnParam cashbackAmountText
+  dynamicNotifyPerson
+    person
+    (createNotificationReq notifKey (\r -> r))
+    dynamicParams
+    entity
+    booking.tripCategory
+    [("cashbackAmount", cashbackAmountText)]
+    (Just booking.configInExperimentVersions)
+    Nothing
+
 notifyOnExpiration ::
   (ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int]) =>
   SearchRequest ->

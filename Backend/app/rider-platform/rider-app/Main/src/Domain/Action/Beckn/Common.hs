@@ -871,6 +871,10 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
     Notify.notifyOnRideStarted booking ride
+    -- Cashback PN on ride start: only for rides that earned a cashback offer.
+    mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+    let bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
+    when (bookingPayoutAmount > 0) $ Notify.notifyCashbackStatus person booking ride bookingPayoutAmount
   case booking.bookingDetails of
     DRB.RentalDetails _ -> when (booking.isDashboardRequest == Just True) $ sendRideEndOTPMessage person
     DRB.InterCityDetails _ -> when (booking.isDashboardRequest == Just True) $ sendRideEndOTPMessage person
@@ -1220,6 +1224,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   -- Schedule the cashback-payout job after the ledger leg has been created above.
   SOffer.scheduleCashbackPayoutJob booking updRide person.id ridePayoutAmount
+
+  -- Cashback PN on ride end: only for rides that earned a cashback offer.
+  when (ridePayoutAmount > 0) $ Notify.notifyCashbackStatus person booking updRide ridePayoutAmount
 
   triggerRideEndEvent RideEventData {ride = updRide, personId = booking.riderId, merchantId = booking.merchantId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = DRB.COMPLETED}}
