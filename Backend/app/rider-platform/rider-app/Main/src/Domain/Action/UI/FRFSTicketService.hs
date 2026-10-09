@@ -887,6 +887,8 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 stations = fromMaybe [] stations,
                 observingFailures = Just observingFailures,
                 offer = mbOffer,
+                providerRouteId = quote.fareDetails <&> (.providerRouteId),
+                ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode),
                 ..
               }
       )

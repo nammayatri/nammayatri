@@ -89,6 +89,9 @@ types:
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
     applicablePasses: "[FRFSPassOptionAPIEntity]"
+    providerRouteId: Maybe Text
+    ticketTypeCode: Maybe Text
+
     derive: "Show"
 
   FRFSDiscountRes:

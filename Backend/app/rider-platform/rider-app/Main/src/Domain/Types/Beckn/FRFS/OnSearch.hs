@@ -63,8 +63,7 @@ data DQuote = DQuote
     stations :: [DStation],
     categories :: [DCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
-    _type :: Quote.FRFSQuoteType,
-    routeGroupKey :: Maybe Text
+    _type :: Quote.FRFSQuoteType
   }
   deriving (Show)
 
