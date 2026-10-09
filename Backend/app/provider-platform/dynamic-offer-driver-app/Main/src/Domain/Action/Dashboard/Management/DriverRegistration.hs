@@ -2784,7 +2784,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
       case newestApproved of
         Nothing -> pure Nothing
         Just img
-          | hasNoVersionId img && length docRowHoldingClickedImages > 1 -> pure Nothing -- uploaded before versioning: can't tell whether it has both sides
+          | hasNoVersionId img -> pure Nothing -- registered before versioning: its other side is unknown, so it never becomes current again
           | otherwise -> Just . versionImageIds img.id <$> QImage.findImageGroup img
       where
         approvedOthers = filter (\img -> img.verificationStatus == Just VALID && img.id `notElem` docRowHoldingClickedImages) images
