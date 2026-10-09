@@ -97,6 +97,12 @@ type API =
                     :> Post '[JSON] APISuccess
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
+                    :> "scheduled"
+                    :> "activate"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
                     :> "start"
                     :> ReqBody '[JSON] StartRideReq
                     :> Post '[JSON] APISuccess
@@ -194,6 +200,7 @@ handler =
     :<|> ( listDriverRides
              :<|> getDriverRideById
              :<|> arrivedAtPickup
+             :<|> activateScheduledRide
              :<|> startRide
              :<|> endRide
              :<|> cancelRide
@@ -209,6 +216,9 @@ handler =
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
 startRide (requestorId, merchantId, merchantOpCityId) rideId = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId . startRide' (requestorId, merchantId, merchantOpCityId) rideId
+
+activateScheduledRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+activateScheduledRide (requestorId, _, _) rideId = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo requestorId . DRide.activateScheduledRideAtPickup (DRide.DriverActivator requestorId) rideId
 
 startRide' :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> Flow APISuccess
 startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} = do
