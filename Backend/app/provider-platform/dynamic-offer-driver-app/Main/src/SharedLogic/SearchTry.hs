@@ -14,6 +14,7 @@
 
 module SharedLogic.SearchTry where
 
+import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -135,7 +136,8 @@ initiateDriverSearchBatch ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   DriverSearchBatchInput m ->
   m DST.SearchTry

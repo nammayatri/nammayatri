@@ -19,8 +19,7 @@ module Domain.Action.Beckn.Status
   )
 where
 
-import Data.Either.Extra (eitherToMaybe)
-import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as Aadhaar
+import qualified Beckn.OnDemand.Utils.Common as BUtils
 import Domain.Types.Beckn.Status
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
@@ -37,10 +36,8 @@ import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
-import Tools.Error
 
 handler ::
   Id DM.Merchant ->
@@ -111,10 +108,9 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
   where
     syncAssignedReq ride booking estimateId = do
       bookingDetails <- SyncRide.fetchBookingDetails ride booking
-      driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
       rideDetails <- runInReplica $ QRideDetails.findById ride.id >>= fromMaybeM (RideNotFound ride.id.getId)
-      resp <- withTryCatch "fetchAndCacheAadhaarImage" (Aadhaar.fetchAndCacheAadhaarImage bookingDetails.driver driverInfo)
-      let image = join (eitherToMaybe resp)
+      -- Same driver photo on_update (ride assigned) sends.
+      image <- BUtils.resolveDriverImageUrl bookingDetails.isValueAddNP Nothing bookingDetails.driver True
       let isDriverBirthDay = False
       let isFreeRide = False
       let driverAccountId = Nothing

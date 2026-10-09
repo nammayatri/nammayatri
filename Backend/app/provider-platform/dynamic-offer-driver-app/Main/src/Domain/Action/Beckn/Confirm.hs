@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Confirm where
 
+import qualified AWS.S3 as S3
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.UI.DriverReferral as DUR
@@ -315,7 +316,8 @@ validateRequest ::
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    Alloc.SchedulerJobFlow r
+    Alloc.SchedulerJobFlow r,
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->
