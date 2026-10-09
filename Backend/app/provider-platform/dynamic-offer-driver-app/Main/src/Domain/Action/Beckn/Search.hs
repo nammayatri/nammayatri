@@ -867,7 +867,7 @@ buildQuote merchantOpCityId searchRequest transporterId pickupTime isScheduled r
   quoteId <- Id <$> generateGUID
   void $
     if isScheduled
-      then cacheFarePolicyByScheduledQuoteId quoteId.getId pickupTime fullFarePolicy
+      then cacheFarePolicyByScheduledEstOrQuoteId quoteId.getId pickupTime returnTime fullFarePolicy
       else cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
   -- Keeping quote expiry as search request expiry. Slack discussion: https://juspay.slack.com/archives/C0139KHBFU1/p1683349807003679
@@ -987,7 +987,10 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
   let personalDiscount = if isJust fullFarePolicy.personalDiscountPercentage then fullFarePolicy.personalDiscountPercentage >>= computeRideDiscount maxFareParams.fareParametersDetails maxFareParams.baseFare maxFareParams.congestionCharge maxFareParams.nightShiftCharge maxFareParams.stopCharges else Nothing
   estimateId <- Id <$> generateGUID
   now <- getCurrentTime
-  void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
+  void $
+    if isScheduled
+      then cacheFarePolicyByScheduledEstOrQuoteId estimateId.getId startTime returnTime fullFarePolicy
+      else cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   rideCommissionCharges <- FC.calculateCommission minFareParams (Just fullFarePolicy)
   cancellationCommissionCharges <- FC.calculateCancellationCommission minFareParams (Just fullFarePolicy)
   -- The estimate carries ONE commission figure: ride + cancellation.
