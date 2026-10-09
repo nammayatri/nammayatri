@@ -176,9 +176,12 @@ getDriverFleetDriverAssociation a25 a24 a23 a22 a21 a20 a19 a18 a17 a16 a15 a14 
   Domain.Action.Dashboard.Fleet.Driver.getDriverFleetDriverAssociation a25 a24 a22 a21 a20 a19 a18 a17 a16 a15 a14 a13 a12 a11 (Kernel.Prelude.Just requestorId) hasFleetMemberHierarchy (Kernel.Prelude.Just isRequestorFleetOwner) a7 a6 a5 a4 a3 a2 a1
 
 getDriverFleetVehicleAssociation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Fleet.Driver.FleetVehicleStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Dashboard.Common.DocsVerificationStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.Flow API.Types.ProviderPlatform.Fleet.Driver.DrivertoVehicleAssociationResT)
-getDriverFleetVehicleAssociation a19 a18 a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = do
+getDriverFleetVehicleAssociation a19 a18 a17 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 _a6 _a5 _a4 a3 a2 a1 = do
   Tools.Auth.DashboardUserAuth.checkFleetOwnerVerification a17
-  Domain.Action.Dashboard.Fleet.Driver.getDriverFleetVehicleAssociation a19 a18 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+  let requestorId = Tools.Auth.DashboardUserAuth.dashboardRequestorId a17
+      isRequestorFleetOwner = Tools.Auth.DashboardUserAuth.requestorIsFleetOwner a17
+      hasFleetMemberHierarchy = Tools.Auth.DashboardUserAuth.requestorHasFleetMemberHierarchy a17
+  Domain.Action.Dashboard.Fleet.Driver.getDriverFleetVehicleAssociation a19 a18 a16 a15 a14 a13 a12 a11 a10 a9 a8 a7 (Kernel.Prelude.Just requestorId) hasFleetMemberHierarchy (Kernel.Prelude.Just isRequestorFleetOwner) a3 a2 a1
 
 postDriverFleetVehicleEdit :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> API.Types.ProviderPlatform.Fleet.Driver.EditVehicleReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetVehicleEdit a8 a7 a6 a5 a4 a3 a2 a1 = do

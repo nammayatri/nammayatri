@@ -11,6 +11,7 @@
 -- the spec, so this logic lives here and is never overwritten by the generator.
 module Domain.Action.DashboardAuth.Management.Account
   ( getAccountFetchUnverifiedAccounts,
+    postAccountVerifyAccount,
     putAccountUpdateRole,
   )
 where
@@ -38,3 +39,9 @@ putAccountUpdateRole _a5 _a4 _a3 a2 a1 = do
 
 getAccountFetchUnverifiedAccounts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Account.FleetOwnerStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.Flow API.Types.ProviderPlatform.Management.Account.UnverifiedAccountsResp)
 getAccountFetchUnverifiedAccounts _a9 _a8 _a7 a6 a5 a4 a3 a2 a1 = Tools.Auth.DashboardRegistration.listUnverifiedDashboardAccounts a6 a5 a4 a3 a2 a1
+
+postAccountVerifyAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Account.VerifyAccountReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postAccountVerifyAccount a4 a3 a2 a1 = do
+  res <- Domain.Action.Dashboard.Management.Account.postAccountVerifyAccount a4 a3 a1
+  Tools.Auth.DashboardUserAuth.applyDashboardAccountVerification a2 (Kernel.Types.Id.getId a1.fleetOwnerId) (a1.status Kernel.Prelude.== API.Types.ProviderPlatform.Management.Account.Approved) a1.reason
+  Kernel.Prelude.pure res
