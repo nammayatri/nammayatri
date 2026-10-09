@@ -47,6 +47,7 @@ data FRFSQuoteT f = FRFSQuoteT
     providerId :: B.C f Kernel.Prelude.Text,
     providerName :: B.C f Kernel.Prelude.Text,
     riderId :: B.C f Kernel.Prelude.Text,
+    routeGroupKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
     stationsJson :: B.C f Kernel.Prelude.Text,

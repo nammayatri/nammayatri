@@ -28,6 +28,7 @@ imports:
   LatLong: Kernel.External.Maps.Types
   RouteStopInfo: SharedLogic.FRFSUtils
   RouteDetail: Domain.Types.RouteDetailsAPI
+  FRFSRouteDetails: Domain.Types.FRFSRouteDetails
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
@@ -67,6 +68,7 @@ types:
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
     quotes: [FRFSQuoteAPIRes] # For Sync Search API, we return the quotes for the search.
+    crisSdkToken: Maybe Text
 
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
@@ -78,6 +80,7 @@ types:
     stations: [FRFSStationAPI]
     routeStations: "Maybe [FRFSRouteStationsAPI]"
     routeDetails: "Maybe [RouteDetail]" # Per-sub-leg transit route details for interchange journeys, in the same shape as the multimodal journey response; created alongside the journey/leg in the discovery flow.
+    frfsRouteDetails: "Maybe [FRFSRouteDetails]" # Ordered route skeleton for metro and subway quotes.
     validTill: UTCTime
     discountedTickets: Maybe Int
     eventDiscountAmount: Maybe HighPrecMoney
@@ -89,6 +92,9 @@ types:
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
     applicablePasses: "[FRFSPassOptionAPIEntity]"
+    providerRouteId: Maybe Text
+    ticketTypeCode: Maybe Text
+    routeGroupKey: Maybe Text # Quotes sharing this key are the service tier variants of one journey
 
     derive: "Show"
 

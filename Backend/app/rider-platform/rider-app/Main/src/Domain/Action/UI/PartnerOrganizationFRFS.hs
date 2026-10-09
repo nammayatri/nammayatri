@@ -589,6 +589,7 @@ mkQuoteRes :: (MonadFlow m) => (DFRFSQuote.FRFSQuote, [FRFSQuoteCategory.FRFSQuo
 mkQuoteRes (quote, quoteCategories) = do
   (stations :: [FRFSTypes.FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InvalidStationJson $ show quote.stationsJson)
   let routeStations :: Maybe [FRFSTypes.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+      frfsRouteDetails = Utils.mkFRFSQuoteRouteDetails quote.vehicleType routeStations
       mbFirstRouteStation = routeStations >>= KP.listToMaybe
       mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
       serviceTierType = mbVehicleServiceTier <&> (._type)
@@ -613,6 +614,9 @@ mkQuoteRes (quote, quoteCategories) = do
         observingFailures = Nothing,
         offer = Nothing,
         routeDetails = Nothing,
+        providerRouteId = quote.fareDetails <&> (.providerRouteId),
+        ticketTypeCode = quote.fareDetails <&> (.ticketTypeCode),
+        routeGroupKey = quote.routeGroupKey,
         ..
       }
 
@@ -705,7 +709,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.toStationName = Just toStation'.name,
                 DFRFSQuote.toStationPoint = Maps.LatLong <$> toStation'.lat <*> toStation'.lon,
                 DFRFSQuote.vehicleNumber = Nothing,
-                DFRFSQuote.offerSegment = Nothing
+                DFRFSQuote.offerSegment = Nothing,
+                DFRFSQuote.routeGroupKey = Nothing
               }
       quoteCategoryId <- generateGUID
       ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity ADULT fromStation'.vehicleType fromStation.merchantOperatingCityId
