@@ -19,6 +19,8 @@ module SharedLogic.Utils
   )
 where
 
+import Data.Char (isAlphaNum, isAscii)
+import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.Person as DP
 import EulerHS.Prelude
@@ -33,14 +35,19 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 -- Resolves to the customer's device id based on the client OS:
 --   iOS     -> person.deviceId
 --   Android -> person.androidId
--- Returns Nothing when the device/OS is unknown.
+-- Special characters are stripped (e.g. "BE93...4C3D$IOS" -> "BE93...4C3DIOS")
+-- since easebuzz gateway rejects them in udf fields.
+-- Returns Nothing when the device/OS is unknown or nothing remains after cleaning.
 getPersonUdf1 :: Applicative m => DP.Person -> m (Maybe Text)
 getPersonUdf1 person =
-  pure $ case person.clientDevice of
-    Just device -> case device.deviceType of
-      Version.IOS -> person.deviceId
-      Version.ANDROID -> person.androidId
-    Nothing -> Nothing
+  pure $
+    mfilter (not . T.null) . fmap (T.filter isAsciiAlphaNum) $ case person.clientDevice of
+      Just device -> case device.deviceType of
+        Version.IOS -> person.deviceId
+        Version.ANDROID -> person.androidId
+      Nothing -> Nothing
+  where
+    isAsciiAlphaNum c = isAscii c && isAlphaNum c
 
 -- | Pure version of static customer ID generation.
 -- Generates the ID deterministically from phone and merchantId without any config lookups.
