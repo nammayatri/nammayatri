@@ -25,6 +25,7 @@ where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as Common
+import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -82,6 +83,8 @@ onCancel ValidatedBookingCancelledReq {..} = do
   let castedCancellationSource = castCancellatonSource cancellationSource_
   riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let immediateCharge = isJust cancellationFee && resolveImmediateCapture riderConfig collectionMode castedCancellationSource
+  whenJust booking.bookingDepositAmount $ \_ ->
+    void $ withTryCatch "onCancel:reconcileDeposit" $ DPaymentAction.reconcileDepositPayment booking
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
   -- rider push for the cancellation consequence, keyed by the matrix row's notification key
   whenJust customerCancellationNotificationKey $ \pnKey ->
