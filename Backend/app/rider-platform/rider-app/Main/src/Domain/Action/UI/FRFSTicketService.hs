@@ -614,7 +614,14 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbHasPasses mbIntegratedBPPConfig
         <> show finalServiceTier
         <> ", routeCode="
         <> show req.routeCode
-    postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses -- the journey leg upsert function is not required here
+    frfsSearchResponse <- postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing Nothing (\_ -> pure ()) blacklistedServiceTiers blacklistedFareQuoteTypes True Nothing mbHasPasses -- the journey leg upsert function is not required here
+    mbCrisSdkToken <-
+      withTryCatch "getCrisSdkToken" (getCrisSdkToken personId merchantOperatingCity.id integratedBPPConfig vehicleType_ req.fromStationCode req.toStationCode frfsSearchResponse.quotes) >>= \case
+        Right token -> return token
+        Left err -> do
+          logError $ "Failed to get CRIS sdk token for search " <> frfsSearchResponse.searchId.getId <> ": " <> show err
+          return Nothing
+    return $ frfsSearchResponse {crisSdkToken = mbCrisSdkToken}
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -760,13 +767,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
       >>= \case
         Right frfsQuotes -> return frfsQuotes
         Left _ -> return []
-  mbCrisSdkToken <-
-    withTryCatch "getCrisSdkToken" (getCrisSdkToken personId merchantOperatingCity.id integratedBPPConfig vehicleType_ fromStationCode toStationCode quotes) >>= \case
-      Right token -> return token
-      Left err -> do
-        logError $ "Failed to get CRIS sdk token for search " <> searchReqId.getId <> ": " <> show err
-        return Nothing
-  return $ FRFSSearchAPIRes mbCrisSdkToken quotes searchReqId
+  return $ FRFSSearchAPIRes {crisSdkToken = Nothing, quotes = quotes, searchId = searchReqId}
 
 getCrisSdkToken :: (CallExternalBPP.FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> DIBC.IntegratedBPPConfig -> Spec.VehicleCategory -> Text -> Text -> [FRFSQuoteAPIRes] -> m (Maybe Text)
 getCrisSdkToken personId merchantOperatingCityId integratedBPPConfig vehicleType_ fromStationCode toStationCode quotes
