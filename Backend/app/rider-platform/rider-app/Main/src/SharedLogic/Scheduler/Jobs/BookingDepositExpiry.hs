@@ -111,6 +111,6 @@ bookingDepositExpiryJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ 
               let fulfillmentHandler resp =
                     DPaymentAction.bookingDepositOrderStatusHandler paymentOrder.id booking.merchantId resp
               void . withTryCatch "bookingDepositExpiry:syncPendingAttempt" $
-                SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder
+                SPayment.syncOrderStatus fulfillmentHandler booking.merchantId booking.riderId paymentOrder Nothing
       -- Never reschedules itself: one hold, one expiry decision.
       pure Complete

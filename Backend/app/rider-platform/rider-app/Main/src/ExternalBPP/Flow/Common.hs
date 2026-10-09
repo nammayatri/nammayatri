@@ -44,15 +44,19 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.JourneyModule.Types (mkRouteDetail)
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.FRFSLiveTrip as FRFSLiveTrip
 import SharedLogic.FRFSUtils
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSCancellationConfig as CQFRFSCancellationConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
 import qualified Storage.Queries.Location as QLocation
+import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.MultiModal as TMultiModal
@@ -569,13 +573,26 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
         Spec.CONFIRM_CANCEL -> Spec.CANCELLED
   let baseFare = fromMaybe booking.totalPrice.amount booking.overriddenAmount
       scheduledDepartureTime = fromMaybe booking.validTill booking.startTime
-      tieredCharges departureTime = calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare departureTime
+  mbBookingPayment <- QTBP.findTicketBookingPayment booking
+  mbPaymentOrder <- maybe (pure Nothing) (\bookingPayment -> QPaymentOrder.findById bookingPayment.paymentOrderId) mbBookingPayment
+  bookingsOnOrder <- maybe (pure []) (QTBP.findAllByOrderId . (.paymentOrderId)) mbBookingPayment
+  let paidAmount = case (mbPaymentOrder, bookingsOnOrder) of
+        (Just paymentOrder, [_]) -> fromMaybe paymentOrder.amount paymentOrder.effectAmount
+        _ -> baseFare
+      tieredCharges departureTime = calculateCancellationCharges merchantOperatingCity.id booking.vehicleType baseFare paidAmount departureTime
   (charges, refund) <- case mbLiveDecision of
     Just decision
       | not decision.canCancel -> throwError CancellationNotSupported
-      | decision.fullRefund -> pure (0, baseFare)
+      | decision.fullRefund -> pure (0, paidAmount)
       | otherwise -> tieredCharges decision.chargeAnchor
     Nothing -> tieredCharges scheduledDepartureTime
+  -- Single-leg: the whole refund is returned by the booking's vendor (its sub_mid in
+  -- vendor_split_details). A future split across vendors / marketplace belongs here, alongside the
+  -- charge calculation.
+  vendorIds <- map (.vendorId) <$> QVendorSplitDetails.findAllByIntegratedBPPConfigId booking.integratedBppConfigId
+  let vendorRefunds = case vendorIds of
+        [vendorId] -> Just [(vendorId, refund)]
+        _ -> Nothing
   return $
     DOnCancel.DOnCancel
       { providerId = bapConfig.uniqueKeyId,
@@ -589,7 +606,8 @@ cancel _merchant merchantOperatingCity integratedBPPConfig bapConfig cancellatio
         baseFare = baseFare,
         cancellationCharges = Just charges,
         cancelledBy = Nothing,
-        cancellationTime = Nothing
+        cancellationTime = Nothing,
+        vendorRefunds
       }
 
 calculateCancellationCharges ::
@@ -597,9 +615,10 @@ calculateCancellationCharges ::
   Id MerchantOperatingCity ->
   Spec.VehicleCategory ->
   HighPrecMoney ->
+  HighPrecMoney ->
   UTCTime ->
   m (HighPrecMoney, HighPrecMoney)
-calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departureTime = do
+calculateCancellationCharges merchantOpCityId vehicleCategory baseFare paidAmount departureTime = do
   configs <- CQFRFSCancellationConfig.findAllByMerchantOpCityAndVehicleCategory merchantOpCityId vehicleCategory
   now <- getCurrentTime
   let minutesBefore = floor (diffUTCTime departureTime now / 60) :: Int
@@ -607,14 +626,14 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
       mbMatchingTier = find (matchesTier minutesBefore) sortedConfigs
   case (configs, mbMatchingTier) of
     -- No cancellation config for this city/vehicle: feature not opted-in here, keep legacy full-refund behaviour.
-    ([], _) -> return (0, baseFare)
+    ([], _) -> return (0, paidAmount)
     -- Inside a configured (allowed) window: apply that tier's charge and refund the remainder.
     (_, Just tier) -> do
       let rawCharges = case tier.cancellationChargeType of
             DFRFSCancellationConfig.PERCENTAGE -> baseFare * tier.cancellationChargeValue / 100
             DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
           charges = min baseFare (max 0 rawCharges)
-          refund = baseFare - charges
+          refund = max 0 (paidAmount - charges)
       -- A fully pass-covered booking has baseFare 0, so a FLAT tier always clamps. The tier is
       -- fine; there is simply no fare to charge against. Only a real clamp is worth an error.
       when (rawCharges /= charges && baseFare > 0) $
