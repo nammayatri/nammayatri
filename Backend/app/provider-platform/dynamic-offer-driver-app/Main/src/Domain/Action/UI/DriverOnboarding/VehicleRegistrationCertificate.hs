@@ -296,7 +296,6 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
         deleteVehicleWithAllAssociations personId mbFleetOwnerId prevRcNo
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction && not isTtenCertificate)
-  groupRegisteredImages (req.imageId : maybeToList req.imageId2)
   withDocumentOperationLock "RC" personId.getId $ do
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
@@ -307,6 +306,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
               (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
         void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId req.imageId2 mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing True
       Nothing -> verifyRCFlow person merchantOpCityId (fromMaybe True transporterConfig.useCategoryBasedVerificationPriorityList) req.vehicleRegistrationCertNumber req.imageId req.imageId2 req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber req.engineNumber req.chassisNumber
+  -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
+  groupRegisteredImages (req.imageId : maybeToList req.imageId2)
   return Success
   where
     getImage :: Id Image.Image -> Flow Text

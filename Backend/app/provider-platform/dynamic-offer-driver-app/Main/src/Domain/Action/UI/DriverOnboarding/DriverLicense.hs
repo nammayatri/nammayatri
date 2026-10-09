@@ -261,8 +261,9 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
-  groupRegisteredImages (imageId1 : maybeToList imageId2)
   withDocumentOperationLock "DL" personId.getId runBody
+  -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
+  groupRegisteredImages (imageId1 : maybeToList imageId2)
   return Success
   where
     getImage imageId = do
