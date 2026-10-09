@@ -31,6 +31,8 @@ module Lib.Payment.Domain.Action
     createRefundService,
     chargePaymentIntentService,
     createPayoutService,
+    resendNeverSentPayoutService,
+    isNeverSentPayoutOrder,
     PayoutStatusServiceReq (..),
     mkPayoutOrderStatusReq,
     CreatePayoutServiceReq (..),
@@ -2716,11 +2718,7 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
 mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
 mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..} = PT.CreatePayoutOrderReq {mExternalAccountId = Nothing, ..}
 
-createPayoutService ::
-  ( EncFlow m r,
-    BeamFlow m r,
-    Finance.HasActorInfo m r
-  ) =>
+type CreatePayoutService m =
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
@@ -2732,12 +2730,35 @@ createPayoutService ::
   Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
   (Payment.PayoutOrder -> m ()) -> -- runs once the order is persisted (e.g. schedule a status check job)
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig afterPayoutOrderCreated = do
-  mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
-  case mbExistingPayoutOrder of
-    Nothing -> do
-      payoutOrder <- buildInitialPayoutOrder createPayoutServiceReq
-      QPayoutOrder.create payoutOrder
+
+createPayoutService :: (EncFlow m r, BeamFlow m r, Finance.HasActorInfo m r) => CreatePayoutService m
+createPayoutService = createPayoutServiceWith False
+
+-- | Like 'createPayoutService', but an existing order that never reached the PG (status API E09)
+--   is re-sent under the same order id. Only the payout retrigger flow may use this.
+resendNeverSentPayoutService :: (EncFlow m r, BeamFlow m r, Finance.HasActorInfo m r) => CreatePayoutService m
+resendNeverSentPayoutService = createPayoutServiceWith True
+
+createPayoutServiceWith :: (EncFlow m r, BeamFlow m r, Finance.HasActorInfo m r) => Bool -> CreatePayoutService m
+createPayoutServiceWith allowResendNeverSent merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig afterPayoutOrderCreated =
+  -- Held across the PG call: an in-flight order looks never-sent until the PG responds.
+  Redis.whenWithLockRedisAndReturnValue ("PayoutOrderCreate:" <> createPayoutServiceReq.orderId) 60 createOrResend >>= \case
+    Left () -> throwError $ InvalidRequest ("Payout order " <> createPayoutServiceReq.orderId <> " is already being created")
+    Right result -> pure result
+  where
+    createOrResend = do
+      mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
+      case mbExistingPayoutOrder of
+        Nothing -> do
+          buildInitialPayoutOrder Nothing createPayoutServiceReq >>= QPayoutOrder.create
+          sendPayoutOrder
+        Just existingPayoutOrder
+          | allowResendNeverSent && isNeverSentPayoutOrder existingPayoutOrder -> do
+            buildInitialPayoutOrder (Just existingPayoutOrder) createPayoutServiceReq >>= QPayoutOrder.updateByPrimaryKey
+            sendPayoutOrder
+          | otherwise -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
+
+    sendPayoutOrder = do
       createPayoutOrderResp <- createPayoutOrderCall createPayoutServiceReq -- api call
       -- Record PG fee ledger entries if configured
       mbFeeResult <- case mbPGFeeConfig of
@@ -2765,21 +2786,27 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       forM_ latestPayoutOrder $ \order ->
         void $ withTryCatch "afterPayoutOrderCreated" (afterPayoutOrderCreated order)
       return (Just createPayoutOrderResp, latestPayoutOrder)
-    Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
-  where
-    buildInitialPayoutOrder req = do
+
+    buildInitialPayoutOrder mbExisting req = do
       now <- getCurrentTime
-      uuid <- generateGUID
-      shortId <- generateShortId
+      uuid <- maybe generateGUID (pure . (.id)) mbExisting
+      shortId <- maybe (Just <$> generateShortId) (pure . (.shortId)) mbExisting
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
       let transferStatus = case createPayoutServiceReq.payoutServiceFlow of
             PT.JuspayFlow -> Nothing
             PT.StripeFlow -> Just Payout.TRANSFER_INITIATED
+          -- On a re-send, a caller that passes no entity ids keeps the order's existing links
+          -- (e.g. the ride id). A caller with its own ids replaces them: cashback settlement reads
+          -- the new PayoutRequest id from entityIds.
+          resendEntityIds = case (mbExisting, mbEntityIds) of
+            (Just existing, Nothing) -> existing.entityIds
+            (Just existing, Just []) -> existing.entityIds
+            _ -> mbEntityIds
       pure $
         Payment.PayoutOrder
           { id = uuid,
-            shortId = Just shortId,
+            shortId,
             customerId = req.customerId,
             orderId = req.orderId,
             merchantId = merchantId.getId,
@@ -2788,7 +2815,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             amount = mkPrice Nothing req.amount,
             transferAmount = Just req.transferAmount,
             idAssignedByServiceProvider = Nothing,
-            entityIds = mbEntityIds,
+            entityIds = resendEntityIds,
             entityName = mbEntityName,
             status = Payout.INITIATED,
             transferStatus,
@@ -2803,10 +2830,16 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             pgBaseFee = Nothing,
             pgGst = Nothing,
             merchantTopUpAmount = Nothing,
-            createdAt = now,
+            createdAt = maybe now (.createdAt) mbExisting,
             updatedAt = now,
-            merchantOperatingCityId = getId <$> mbMerchantOpCityId
+            merchantOperatingCityId = maybe (mbExisting >>= (.merchantOperatingCityId)) (Just . getId) mbMerchantOpCityId
           }
+
+isNeverSentPayoutOrder :: Payment.PayoutOrder -> Bool
+isNeverSentPayoutOrder order =
+  order.status == Payout.INITIATED
+    && isNothing order.idAssignedByServiceProvider
+    && isNothing order.responseCode
 
 data PayoutStatusServiceReq = PayoutStatusServiceReq
   { orderId :: Text,

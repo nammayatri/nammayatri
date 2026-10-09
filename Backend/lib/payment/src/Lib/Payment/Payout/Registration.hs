@@ -299,6 +299,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
                 coverageFrom = Nothing,
                 coverageTo = Nothing,
                 ledgerEntryIds = [],
+                reuseOrderId = Nothing,
                 payoutServiceFlow
               }
 
