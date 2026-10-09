@@ -115,6 +115,8 @@ data ReallocationEventItem = ReallocationEventItem
     becameCurrentAt :: Kernel.Prelude.UTCTime,
     cancelledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     cancellationSource :: Kernel.Prelude.Maybe CancellationSource,
+    cancellationReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverDistToPickupAtCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters
   }
   deriving stock (Generic)
@@ -170,7 +172,10 @@ data ScheduledBookingListItem = ScheduledBookingListItem
     estimatedFare :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
     vehicleServiceTier :: Dashboard.Common.ServiceTierType,
-    vehicleServiceTierName :: Kernel.Prelude.Text
+    vehicleServiceTierName :: Kernel.Prelude.Text,
+    cancellationSource :: Kernel.Prelude.Maybe CancellationSource,
+    cancellationReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationAdditionalInfo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
