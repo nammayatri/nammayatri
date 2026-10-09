@@ -67,7 +67,6 @@ types:
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
     quotes: [FRFSQuoteAPIRes] # For Sync Search API, we return the quotes for the search.
-    crisSdkToken: Maybe Text
 
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
@@ -90,10 +89,6 @@ types:
     serviceTierName: Maybe Text
     offer: Maybe CumulativeOfferResp
     applicablePasses: "[FRFSPassOptionAPIEntity]"
-    providerRouteId: Maybe Text
-    ticketTypeCode: Maybe Text
-    routeGroupKey: Maybe Text # Quotes sharing this key are the service tier variants of one journey
-
     derive: "Show"
 
   FRFSDiscountRes:
