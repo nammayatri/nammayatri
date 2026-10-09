@@ -259,7 +259,6 @@ searchImpl useMultimodalDiscovery merchant merchantOperatingCity integratedBPPCo
                       routeStations = routeStations,
                       fareDetails = fareDetails,
                       categories = map mkDCategory categories,
-                      routeGroupKey = Nothing,
                       ..
                     }
           )

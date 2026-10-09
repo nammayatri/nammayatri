@@ -78,17 +78,13 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
           True
       )
       ("crisViaRoutes:getFares search: " <> searchReq.id.getId)
-  -- map keyed on both unique via path and the service tier type
-  let bestFarePerPath = M.toList $ M.fromListWith mergeSamePath [((mkStopPath fd, fare.vehicleServiceTier.serviceTierType), (fare, fd.providerRouteId, [])) | fare <- fares, Just fd <- [fare.fareDetails]]
-      stopPaths = nub $ map (fst . fst) bestFarePerPath
-  logDebug $ "CRIS via routes for search " <> searchReq.id.getId <> ": " <> show (map (\(pathAndTier, (_, routeId, alternates)) -> (pathAndTier, routeId, alternates)) bestFarePerPath)
-  -- Serviceability depends only on the stop path, so it is resolved once per path and shared by its tiers.
-  segmentsPerPath <-
+  let bestFarePerPath = M.toList $ M.fromListWith mergeSamePath [(mkStopPath fd, (fare, fd.providerRouteId, [])) | fare <- fares, Just fd <- [fare.fareDetails]]
+  logDebug $ "CRIS via routes for search " <> searchReq.id.getId <> ": " <> show (map (\(stops, (_, routeId, alternates)) -> (stops, routeId, alternates)) bestFarePerPath)
+  resolvedPaths <-
     JMU.measureLatency
-      (M.fromList . catMaybes <$> mapConcurrently resolveIfServable stopPaths)
-      ("crisViaRoutes:resolvePaths search: " <> searchReq.id.getId <> " paths: " <> show (length stopPaths))
-  let resolvedPaths = [((segments, serviceTierType), fareEntry) | ((stopPath, serviceTierType), fareEntry) <- bestFarePerPath, Just segments <- [M.lookup stopPath segmentsPerPath]]
-      bestFarePerJourney = M.toList $ M.fromListWith mergeSamePath resolvedPaths
+      (catMaybes <$> mapConcurrently resolveIfServable bestFarePerPath)
+      ("crisViaRoutes:resolvePaths search: " <> searchReq.id.getId <> " paths: " <> show (length bestFarePerPath))
+  let bestFarePerJourney = M.toList $ M.fromListWith mergeSamePath resolvedPaths
   logDebug $ "CRIS journeys for search " <> searchReq.id.getId <> ": " <> show (length bestFarePerJourney) <> " from " <> show (length resolvedPaths) <> " servable of " <> show (length bestFarePerPath) <> " paths"
   JMU.measureLatency
     (concat <$> mapConcurrently buildRouteQuoteSafely (sortRoutes bestFarePerJourney))
@@ -130,13 +126,13 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
 
     routeDistance fare = fare.fareDetails <&> (.distance)
 
-    resolveIfServable stopPath = do
+    resolveIfServable (stopPath, fareEntry@(_, providerRouteId, _)) = do
       eSegments <- withTryCatch "CRIS:resolveSegments" (resolveSegments stopPath)
       case eSegments of
-        Right (Just segments) -> return (Just (stopPath, segments))
+        Right (Just segments) -> return (Just (segments, fareEntry))
         Right Nothing -> return Nothing
         Left err -> do
-          logError $ "Dropping CRIS via path " <> show stopPath <> ", serviceability check failed: " <> show err
+          logError $ "Dropping CRIS via route " <> providerRouteId <> ", serviceability check failed for " <> show stopPath <> ": " <> show err
           return Nothing
 
     resolveSegments stopPath = do
@@ -160,7 +156,7 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
           logError $ "Dropping CRIS via route " <> providerRouteId <> ", quote build failed: " <> show err
           return []
 
-    buildRouteQuote ((segments, _serviceTierType), (fare, providerRouteId, alternateRouteIds)) = do
+    buildRouteQuote (segments, (fare, providerRouteId, alternateRouteIds)) = do
       unless (null alternateRouteIds) $
         logInfo $ "CRIS route " <> providerRouteId <> " for search " <> searchReq.id.getId <> " shares its journey with " <> show alternateRouteIds <> ", quoting once"
       mbRoutes <- mapM (\segment -> OTPRest.getRouteByRouteId integratedBPPConfig segment.routeCode) segments
@@ -197,9 +193,7 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
                   [1 ..]
                   routes
                   stationsPerSegment
-          return [mkRouteQuote integratedBPPConfig searchReq.vehicleType providerRouteId (mkRouteGroupKey segments) routeStations (concat stationsPerSegment) fare]
-    -- used to group quotes with same serviceable path, but with different service tier types
-    mkRouteGroupKey segments = T.intercalate "|" $ map (\segment -> segment.routeCode <> ":" <> segment.fromStopCode <> "-" <> segment.toStopCode) segments
+          return [mkRouteQuote integratedBPPConfig searchReq.vehicleType providerRouteId routeStations (concat stationsPerSegment) fare]
 
 data CrisSegment = CrisSegment
   { fromStopCode :: Text,
@@ -208,8 +202,8 @@ data CrisSegment = CrisSegment
   }
   deriving (Eq, Ord, Show)
 
-mkRouteQuote :: IntegratedBPPConfig -> Spec.VehicleCategory -> Text -> Text -> [DRouteStation] -> [DStation] -> FRFSFare -> DQuote
-mkRouteQuote integratedBPPConfig vehicleType providerRouteId routeGroupKey routeStations stations FRFSFare {..} =
+mkRouteQuote :: IntegratedBPPConfig -> Spec.VehicleCategory -> Text -> [DRouteStation] -> [DStation] -> FRFSFare -> DQuote
+mkRouteQuote integratedBPPConfig vehicleType providerRouteId routeStations stations FRFSFare {..} =
   let mbAdultCategory = find (\category -> category.category == ADULT) categories
       adultBppItemId = maybe (CallAPI.getProviderName integratedBPPConfig) (.bppItemId) mbAdultCategory
    in DQuote
@@ -220,8 +214,7 @@ mkRouteQuote integratedBPPConfig vehicleType providerRouteId routeGroupKey route
           routeStations = routeStations,
           stations = stations,
           fareDetails = fareDetails,
-          categories = map mkDCategory categories,
-          routeGroupKey = Just routeGroupKey
+          categories = map mkDCategory categories
         }
 
 mkDVehicleServiceTier :: FRFSVehicleServiceTier -> DVehicleServiceTier
