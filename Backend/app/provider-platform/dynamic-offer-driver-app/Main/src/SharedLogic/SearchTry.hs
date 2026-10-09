@@ -326,7 +326,7 @@ initiateDriverSearchBatch searchBatchInput@DriverSearchBatchInput {..} = do
               -- A better-driver-search must never cancel the real, currently-assigned try -
               -- in practice this never fires for that case anyway, since the real try is
               -- already COMPLETED (not ACTIVE) by the time a rider can trigger one.
-              when (oldSearchTry.status == DST.ACTIVE && isNothing standInForBookingId) $ do
+              when (oldSearchTry.status == DST.ACTIVE && Kernel.Prelude.isNothing standInForBookingId) $ do
                 QST.updateStatus DST.CANCELLED oldSearchTry.id
                 void $ QDQ.setInactiveBySTId oldSearchTry.id
               _ <- QST.create searchTry
