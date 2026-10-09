@@ -281,22 +281,22 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcI
   vehicleLeftImgs <- whenMatch DVC.VehicleLeft $ getVehicleImages merchant.id DVC.VehicleLeft
   vehicleFrontInteriorImgs <- whenMatch DVC.VehicleFrontInterior $ getVehicleImages merchant.id DVC.VehicleFrontInterior
   vehicleBackInteriorImgs <- whenMatch DVC.VehicleBackInterior $ getVehicleImages merchant.id DVC.VehicleBackInterior
-  pucImages <- whenMatch DVC.VehiclePUC $ getDriverImages merchant.id DVC.VehiclePUC
-  permitImages <- whenMatch DVC.VehiclePermit $ getDriverImages merchant.id DVC.VehiclePermit
+  pucImages <- whenMatch DVC.VehiclePUC $ getVehicleDocImages merchant.id DVC.VehiclePUC
+  permitImages <- whenMatch DVC.VehiclePermit $ getVehicleDocImages merchant.id DVC.VehiclePermit
   dlImages <- if matches DVC.DriverLicense then runInReplica (findImagesByPersonAndType Nothing Nothing merchant.id (cast driverId) DVC.DriverLicense) else pure []
   let dlImgs = groupByTxnIdInHM dlImages
   vInspectionImgs <- whenMatch DVC.VehicleInspectionForm $ getDriverImages merchant.id DVC.VehicleInspectionForm
-  vehRegImgs <- whenMatch DVC.VehicleRegistrationCertificate $ getDriverImages merchant.id DVC.VehicleRegistrationCertificate
+  vehRegImgs <- whenMatch DVC.VehicleRegistrationCertificate $ getRcImages merchant.id
   uploadProfImgs <- whenMatch DVC.UploadProfile $ getDriverImages merchant.id DVC.UploadProfile
-  vehicleFitnessCertImgs <- whenMatch DVC.VehicleFitnessCertificate $ getDriverImages merchant.id DVC.VehicleFitnessCertificate
-  vehicleInsImgs <- whenMatch DVC.VehicleInsurance $ getDriverImages merchant.id DVC.VehicleInsurance
+  vehicleFitnessCertImgs <- whenMatch DVC.VehicleFitnessCertificate $ getVehicleDocImages merchant.id DVC.VehicleFitnessCertificate
+  vehicleInsImgs <- whenMatch DVC.VehicleInsurance $ getVehicleDocImages merchant.id DVC.VehicleInsurance
   profilePics <- whenMatch DVC.ProfilePhoto $ getDriverImages merchant.id DVC.ProfilePhoto
   gstImgs <- whenMatch DVC.GSTCertificate $ getDriverImages merchant.id DVC.GSTCertificate
   udyamImgs <- whenMatch DVC.UDYAMCertificate $ getDriverImages merchant.id DVC.UDYAMCertificate
   panImgs <- whenMatch DVC.PanCard $ getDriverImages merchant.id DVC.PanCard
   businessLicenseImgs <- whenMatch DVC.BusinessLicense $ getDriverImages merchant.id DVC.BusinessLicense
   aadhaarImgs <- whenMatch DVC.AadhaarCard $ getDriverImages merchant.id DVC.AadhaarCard
-  vehicleNOCImgs <- whenMatch DVC.VehicleNOC $ getDriverImages merchant.id DVC.VehicleNOC
+  vehicleNOCImgs <- whenMatch DVC.VehicleNOC $ getVehicleDocImages merchant.id DVC.VehicleNOC
   driverVehicleNOCImgs <- whenMatch DVC.DriverVehicleNOC $ getDriverImages merchant.id DVC.DriverVehicleNOC
   localResidenceProofImgs <- whenMatch DVC.LocalResidenceProof $ getDriverImages merchant.id DVC.LocalResidenceProof
   policeVerificationCertificateImgs <- whenMatch DVC.PoliceVerificationCertificate $ getDriverImages merchant.id DVC.PoliceVerificationCertificate
@@ -353,6 +353,26 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbDocType mbRcI
     getVehicleImages merchantId imageType = case mbRcId of
       Just rcId -> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing)
       Nothing -> pure []
+
+    -- Vehicle documents belong to the RC when the caller names one. Uploads from before rcId was
+    -- recorded carry none, so when the RC has no tagged images the person's uploads are listed.
+    getVehicleDocImages merchantId imageType = case mbRcId of
+      Just rcId ->
+        runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing) >>= \case
+          [] -> getDriverImages merchantId imageType
+          imagesTaggedWithRcId -> pure imagesTaggedWithRcId
+      Nothing -> getDriverImages merchantId imageType
+
+    -- The RC doc row's own front/back images are included even when they predate rcId tagging.
+    getRcImages merchantId = case mbRcId of
+      Nothing -> getDriverImages merchantId DVC.VehicleRegistrationCertificate
+      Just rcId -> do
+        imagesTaggedWithRcId <- runInReplica (findImagesByRCAndType merchantId (Just rcId) DVC.VehicleRegistrationCertificate Nothing)
+        mbRcDocRow <- runInReplica (QRC.findById (Id rcId))
+        let docRowImageIds = maybe [] (\rcDocRow -> rcDocRow.documentImageId : maybeToList rcDocRow.documentImageId2) mbRcDocRow
+            docRowImageIdsNotTagged = filter (`notElem` map (.id) imagesTaggedWithRcId) docRowImageIds
+        docRowImagesNotTagged <- if null docRowImageIdsNotTagged then pure [] else runInReplica (findImagesByIds docRowImageIdsNotTagged)
+        pure $ sortOn (Down . (.createdAt)) (imagesTaggedWithRcId <> docRowImagesNotTagged)
 
     getDriverImages merchantId imageType = runInReplica (findImagesByPersonAndType Nothing Nothing merchantId (cast driverId) imageType)
 
