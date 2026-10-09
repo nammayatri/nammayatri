@@ -2020,6 +2020,8 @@ types:
     - summary: Summary
   DrivertoVehicleAssociationResT:
     - fleetOwnerId: Text
+    - fleetOwnerName: Maybe Text
+    - fleetName: Maybe Text
     - listItem: [DriveVehicleAssociationListItemT]
     - summary: DriverSummary
   RCStatusReq:

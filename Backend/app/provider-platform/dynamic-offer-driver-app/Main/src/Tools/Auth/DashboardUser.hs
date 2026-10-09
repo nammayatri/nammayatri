@@ -38,6 +38,10 @@ module Tools.Auth.DashboardUser
     dashboardRequestorName,
     dashboardRequestorEmail,
     updateDashboardPersonVerified,
+    syncDashboardPersonVerified,
+    DashboardAccountVerification,
+    validateDashboardAccountVerification,
+    applyDashboardAccountVerification,
     FleetOwnerRegistration (..),
     beginFleetOwnerRegistration,
     completeFleetOwnerRegistration,
@@ -68,6 +72,7 @@ import qualified "lib-dashboard" Storage.Queries.AuditTransaction as QAudit
 import qualified "lib-dashboard" Storage.Queries.Merchant as QDashboardMerchant
 import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QDashboardAccess
 import qualified "lib-dashboard" Storage.Queries.Person as QDashboardPerson
+import qualified "lib-dashboard" Storage.Queries.RegistrationToken as QDashboardRegistrationToken
 import qualified "lib-dashboard" Storage.Queries.Role as QDashboardRole
 import "lib-dashboard" Tools.Auth.ApiAuth (dashboardApiHitsCountKey)
 import qualified "lib-dashboard" Tools.Auth.Common as DashboardCommon
@@ -264,6 +269,35 @@ dashboardRequestorIdForDriver dashboardUser driverId =
 updateDashboardPersonVerified :: (DashboardAuthFlow m r, BeamFlow m r) => Text -> Bool -> m ()
 updateDashboardPersonVerified personId verified =
   runInDashboardDb $ QDashboardPerson.updatePersonVerifiedStatus (Id personId) verified
+
+syncDashboardPersonVerified :: (DashboardAuthFlow m r, BeamFlow m r) => Text -> Bool -> m ()
+syncDashboardPersonVerified personId verified =
+  runInDashboardDb $ do
+    mbPerson <- QDashboardPerson.findById (Id personId)
+    whenJust mbPerson $ \person ->
+      when (person.verified /= Just verified) $
+        QDashboardPerson.updatePersonVerifiedStatus (Id personId) verified
+
+data DashboardAccountVerification
+  = ApproveDashboardAccount DDashboardPerson.Person
+  | RejectDashboardAccount (Id DDashboardPerson.Person) (Maybe Text)
+
+validateDashboardAccountVerification :: (DashboardAuthFlow m r, BeamFlow m r) => Text -> Bool -> Maybe Text -> m DashboardAccountVerification
+validateDashboardAccountVerification fleetOwnerId approved mbReason
+  | approved = ApproveDashboardAccount <$> (runInDashboardDb (QDashboardPerson.findById (Id fleetOwnerId)) >>= fromMaybeM (PersonDoesNotExist fleetOwnerId))
+  | otherwise = pure $ RejectDashboardAccount (Id fleetOwnerId) mbReason
+
+applyDashboardAccountVerification :: (DashboardAuthFlow m r, BeamFlow m r) => DashboardUser -> DashboardAccountVerification -> m ()
+applyDashboardAccountVerification dashboardUser =
+  runInDashboardDb . \case
+    ApproveDashboardAccount person -> do
+      unless (person.verified == Just True) $ QDashboardPerson.updatePersonVerifiedStatus person.id True
+      QDashboardPerson.updatePersonApprovedBy person.id dashboardUser.personId
+    RejectDashboardAccount personId mbReason -> do
+      DashboardCommon.cleanCachedTokens personId
+      QDashboardRegistrationToken.deleteAllByPersonId personId
+      QDashboardPerson.softDeletePerson personId mbReason
+      QDashboardPerson.updatePersonRejectedBy personId dashboardUser.personId
 
 -- | What the dashboard resolved before forwarding a fleet-owner registration.
 data FleetOwnerRegistration = FleetOwnerRegistration
