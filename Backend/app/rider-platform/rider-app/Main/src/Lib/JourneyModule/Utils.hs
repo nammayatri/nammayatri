@@ -1727,6 +1727,7 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     busConductorId :: Maybe Text,
     busDriverId :: Maybe Text,
     busTagNumber :: Maybe Text,
+    busVehicleVariant :: Maybe Spec.BusVehicleVariant,
     eligiblePassIds :: Maybe [Text],
     serviceSubTypes :: Maybe [Spec.ServiceSubType],
     seatLayoutId :: Maybe (Id SeatLayout.SeatLayout),
@@ -1846,7 +1847,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, waybillNo = result.waybill_no, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, busTagNumber = result.busTagNumber, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, seatLayoutId = Id <$> result.seatLayoutId, isHistoric = result.is_historic, scheduleBasedActiveTrip = result.schedule_based_active_trip, waybillStatus = result.waybill_status}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, waybillNo = result.waybill_no, scheduleNo = result.schedule_no, depot = result.depot, isActuallyValid = result.is_actually_valid, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number, busConductorId = result.conductor_id, busDriverId = result.driver_id, busTagNumber = result.busTagNumber, busVehicleVariant = result.vehicleVariant, eligiblePassIds = result.eligible_pass_ids, serviceSubTypes = result.service_sub_types, seatLayoutId = Id <$> result.seatLayoutId, isHistoric = result.is_historic, scheduleBasedActiveTrip = result.schedule_based_active_trip, waybillStatus = result.waybill_status}
                   )
               )
 
@@ -2215,7 +2216,8 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
           -- Never erase a stored tag with a null fetched one (new vehicle may be absent from the fleet-tag
           -- list): prefer the fetched tag, else keep the current one -- same fallback as the driver fields.
           effectiveBusTag = if canRefreshBus then (meta.busTagNumber <|> journeyLeg.busTagNumber) else journeyLeg.busTagNumber
-          busChanged = canRefreshBus && (effectiveBus /= journeyLeg.finalBoardedBusNumber || effectiveBusTag /= journeyLeg.busTagNumber)
+          effectiveBusVariant = if canRefreshBus then (meta.vehicleVariant <|> journeyLeg.busVehicleVariant) else journeyLeg.busVehicleVariant
+          busChanged = canRefreshBus && (effectiveBus /= journeyLeg.finalBoardedBusNumber || effectiveBusTag /= journeyLeg.busTagNumber || effectiveBusVariant /= journeyLeg.busVehicleVariant)
           alreadyBoarded = journeyLeg.finalBoardedBusNumberSource == Just DJourneyLeg.UserActivated
       when (busChanged && alreadyBoarded) $
         logError $
@@ -2225,7 +2227,7 @@ applyWaybillMetadataToTicket booking mbJourneyLeg meta = do
             <> " waybillNowReports="
             <> meta.vehicle_no
       when busChanged $ do
-        QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag journeyLeg.id
+        QJourneyLeg.updateFinalBoardedBusById effectiveBus effectiveBusTag effectiveBusVariant journeyLeg.id
         QFRFSTicketBooking.updateFRFSTicketBookingVehicleNumberById effectiveBus booking.id
       pure (effectiveBus, effectiveBusTag, busChanged)
   pure

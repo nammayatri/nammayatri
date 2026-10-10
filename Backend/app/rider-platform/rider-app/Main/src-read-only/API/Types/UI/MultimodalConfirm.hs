@@ -247,7 +247,8 @@ data LiveVehicleInfo = LiveVehicleInfo
     serviceSubTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceSubType],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
-    vehicleTagNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    vehicleTagNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleVariant :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.BusVehicleVariant
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -416,7 +417,8 @@ data ScheduledVehicleInfo = ScheduledVehicleInfo
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     tripId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNumber :: Kernel.Prelude.Text,
-    vehicleTagNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    vehicleTagNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleVariant :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.BusVehicleVariant
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

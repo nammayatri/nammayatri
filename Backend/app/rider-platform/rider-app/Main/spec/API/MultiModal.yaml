@@ -35,6 +35,7 @@ imports:
   VehiclePosition: Lib.JourneyModule.Types
   SDKPayloadDetails: Kernel.External.Payment.Juspay.Types
   ServiceTierType: BecknV2.FRFS.Enums
+  BusVehicleVariant: BecknV2.FRFS.Enums
   ServiceSubType: BecknV2.FRFS.Enums
   City: Kernel.Types.Beckn.Context
   SuggestedStations: Domain.Types.StationType
@@ -351,6 +352,7 @@ types:
   ScheduledVehicleInfo:
     vehicleNumber: Text
     vehicleTagNumber: Maybe Text
+    vehicleVariant: Maybe BusVehicleVariant
     tripId: Maybe Text
     isActiveTrip: Maybe Bool
     serviceTierType: ServiceTierType
@@ -365,6 +367,7 @@ types:
   LiveVehicleInfo:
     number: Text
     vehicleTagNumber: Maybe Text
+    vehicleVariant: Maybe BusVehicleVariant
     currentTripId: Maybe Text
     serviceTierType: ServiceTierType
     serviceTierName: Maybe Text

@@ -84,6 +84,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.busDriverId busDriverId,
       Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.busTagNumber busTagNumber,
+      Se.Set Beam.busVehicleVariant busVehicleVariant,
       Se.Set Beam.changedBusesInSequence changedBusesInSequence,
       Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
