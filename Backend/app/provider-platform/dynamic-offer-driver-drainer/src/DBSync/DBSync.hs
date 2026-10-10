@@ -119,16 +119,27 @@ parseDBCommand dbStreamKey entries =
 
 -- Add Retry Logic For Redis Drop
 dropDBCommand :: Text -> EL.KVDBStreamEntryID -> Flow ()
-dropDBCommand dbStreamKey entryId = do
-  count <- RQ.deleteStreamValue dbStreamKey [entryId]
-  case count of
-    Right 1 -> pure ()
-    Right n -> do
-      void $ publishDBSyncMetric Event.DropDBCommandError
-      EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Dropped : " :: Text) <> show n
-    Left e -> do
-      void $ publishDBSyncMetric Event.DropDBCommandError
-      EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
+dropDBCommand dbStreamKey entryId = go (3 :: Int)
+  where
+    go 0 = handleResult =<< RQ.deleteStreamValue dbStreamKey [entryId]
+    go n = do
+      result <- RQ.deleteStreamValue dbStreamKey [entryId]
+      case result of
+        Right 1 -> pure ()
+        _ -> do
+          EL.runIO $ delay 100000
+          go (n - 1)
+
+    handleResult count =
+      case count of
+        Right 0 -> pure ()
+        Right 1 -> pure ()
+        Right n -> do
+          void $ publishDBSyncMetric Event.DropDBCommandError
+          EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Dropped : " :: Text) <> show n
+        Left e -> do
+          void $ publishDBSyncMetric Event.DropDBCommandError
+          EL.logError ("DROP_DB_COMMAND_ERROR" :: Text) $ ("entryId : " :: Text) <> show entryId <> (", Error : " :: Text) <> show e
 
 runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
