@@ -45,6 +45,7 @@ data ResourceType
   | SPECIAL_LOCATION
   | TICKET_PLACE
   | CONFIG
+  | METRO_OPERATOR
   deriving (Show, Read, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''ResourceType)
