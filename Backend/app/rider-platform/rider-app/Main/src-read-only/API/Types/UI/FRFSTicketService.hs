@@ -10,7 +10,6 @@ import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategoryType
-import qualified Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -236,8 +235,9 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     applicablePasses :: [FRFSPassOptionAPIEntity],
     categories :: [CategoryInfoResponse],
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    distance :: Data.Maybe.Maybe Kernel.Types.Common.Meters,
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    frfsRouteDetails :: Data.Maybe.Maybe [Domain.Types.FRFSRouteDetails.FRFSRouteDetails],
+    frfsRouteDetails :: Data.Maybe.Maybe [FRFSRouteDetailsAPI],
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
@@ -325,6 +325,16 @@ data FRFSRouteAPI = FRFSRouteAPI
     timeBounds :: Data.Maybe.Maybe Kernel.Types.TimeBound.TimeBound,
     totalStops :: Data.Maybe.Maybe Kernel.Prelude.Int,
     waypoints :: Data.Maybe.Maybe [Kernel.External.Maps.Types.LatLong]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSRouteDetailsAPI = FRFSRouteDetailsAPI
+  { color :: Data.Maybe.Maybe Data.Text.Text,
+    endStationCode :: Data.Text.Text,
+    routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    serviceTier :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
+    startStationCode :: Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -41,7 +41,6 @@ import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSRecon as Recon
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
-import qualified Domain.Types.FRFSRouteDetails as FRFSRouteDetails
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
@@ -136,7 +135,7 @@ frfsGtfsCacheKey :: Text -> Text
 frfsGtfsCacheKey ibcId = "frfs:gtfs:" <> ibcId
 
 -- route details for metro and subway constructing from route station json
-mkFRFSQuoteRouteDetails :: Spec.VehicleCategory -> Maybe [APITypes.FRFSRouteStationsAPI] -> Maybe [FRFSRouteDetails.FRFSRouteDetails]
+mkFRFSQuoteRouteDetails :: Spec.VehicleCategory -> Maybe [APITypes.FRFSRouteStationsAPI] -> Maybe [APITypes.FRFSRouteDetailsAPI]
 mkFRFSQuoteRouteDetails vehicleType mbRouteStations
   | vehicleType == Spec.METRO || vehicleType == Spec.SUBWAY = do
     routeStations <- mbRouteStations
@@ -145,11 +144,12 @@ mkFRFSQuoteRouteDetails vehicleType mbRouteStations
       startStation <- listToMaybe routeStation.stations
       endStation <- listToMaybe $ reverse routeStation.stations
       pure
-        FRFSRouteDetails.FRFSRouteDetails
+        APITypes.FRFSRouteDetailsAPI
           { startStationCode = startStation.code,
             endStationCode = endStation.code,
             routeCode = Just routeStation.code,
-            serviceTier = routeStation.vehicleServiceTier <&> (._type)
+            serviceTier = routeStation.vehicleServiceTier <&> (._type),
+            color = routeStation.color
           }
   | otherwise = Nothing
 
