@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.DriverFee where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverFee
 import qualified Domain.Types.Plan
 import Kernel.Beam.Functions
@@ -13,6 +14,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.DriverFee as Beam
 import qualified Storage.Queries.Transformers.DriverFee
 
@@ -61,6 +63,7 @@ instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
             serviceName = fromMaybe Domain.Types.Plan.YATRI_SUBSCRIPTION serviceName,
             siblingFeeId = Kernel.Types.Id.Id <$> siblingFeeId,
             specialZoneAmount = specialZoneAmount,
+            specialZoneRideCharges = Kernel.Utils.JSON.valueToMaybe =<< specialZoneRideCharges,
             specialZoneRideCount = specialZoneRideCount,
             splitOfDriverFeeId = Kernel.Types.Id.Id <$> splitOfDriverFeeId,
             stageUpdatedAt = stageUpdatedAt,
@@ -117,6 +120,7 @@ instance ToTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
         Beam.serviceName = Just serviceName,
         Beam.siblingFeeId = Kernel.Types.Id.getId <$> siblingFeeId,
         Beam.specialZoneAmount = specialZoneAmount,
+        Beam.specialZoneRideCharges = Data.Aeson.toJSON <$> specialZoneRideCharges,
         Beam.specialZoneRideCount = specialZoneRideCount,
         Beam.splitOfDriverFeeId = Kernel.Types.Id.getId <$> splitOfDriverFeeId,
         Beam.stageUpdatedAt = stageUpdatedAt,

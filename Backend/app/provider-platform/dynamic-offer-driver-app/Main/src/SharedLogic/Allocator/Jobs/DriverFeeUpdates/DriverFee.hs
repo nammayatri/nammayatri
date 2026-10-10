@@ -386,6 +386,7 @@ createCancellationPenaltyDriverFee paymentMode parentFee amount mbSplitOfDriverF
             siblingFeeId = Nothing,
             specialZoneAmount = 0,
             specialZoneRideCount = 0,
+            specialZoneRideCharges = Nothing,
             stageUpdatedAt = Nothing,
             startTime = parentFee.startTime,
             totalEarnings = 0,

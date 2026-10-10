@@ -79,6 +79,7 @@ updateByPrimaryKeyP :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Ty
 updateByPrimaryKeyP (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
     [ Se.Set BeamP.airportRideSubscription airportRideSubscription,
+      Se.Set BeamP.airportRideSubscriptionByTier (toJSON <$> airportRideSubscriptionByTier),
       Se.Set BeamP.allowStrikeOff (Just allowStrikeOff),
       Se.Set BeamP.basedOnEntity basedOnEntity,
       Se.Set BeamP.billingType billingType,

@@ -93,6 +93,7 @@ mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount 
           numRides = 1,
           specialZoneAmount = 0,
           specialZoneRideCount = 0,
+          specialZoneRideCharges = Nothing,
           startTime = startTime,
           endTime = endTime,
           payBy = payBy,

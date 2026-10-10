@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Plan where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -11,6 +12,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.Plan as Beam
 import qualified Storage.Queries.Transformers.Plan
 
@@ -21,6 +23,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
       Just
         Domain.Types.Plan.Plan
           { airportRideSubscription = airportRideSubscription,
+            airportRideSubscriptionByTier = Kernel.Utils.JSON.valueToMaybe =<< airportRideSubscriptionByTier,
             allowStrikeOff = Kernel.Prelude.fromMaybe True allowStrikeOff,
             basedOnEntity = basedOnEntity,
             billingType = billingType,
@@ -59,6 +62,7 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
   toTType' (Domain.Types.Plan.Plan {..}) = do
     Beam.PlanT
       { Beam.airportRideSubscription = airportRideSubscription,
+        Beam.airportRideSubscriptionByTier = Data.Aeson.toJSON <$> airportRideSubscriptionByTier,
         Beam.allowStrikeOff = Kernel.Prelude.Just allowStrikeOff,
         Beam.basedOnEntity = basedOnEntity,
         Beam.billingType = billingType,

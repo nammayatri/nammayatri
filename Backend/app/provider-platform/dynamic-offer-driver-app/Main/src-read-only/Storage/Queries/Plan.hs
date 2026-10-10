@@ -4,6 +4,7 @@
 
 module Storage.Queries.Plan (module Storage.Queries.Plan, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Plan
@@ -122,6 +123,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
   updateWithKV
     [ Se.Set Beam.airportRideSubscription airportRideSubscription,
+      Se.Set Beam.airportRideSubscriptionByTier (Data.Aeson.toJSON <$> airportRideSubscriptionByTier),
       Se.Set Beam.allowStrikeOff (Kernel.Prelude.Just allowStrikeOff),
       Se.Set Beam.basedOnEntity basedOnEntity,
       Se.Set Beam.billingType billingType,
