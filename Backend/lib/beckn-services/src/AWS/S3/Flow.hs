@@ -42,6 +42,8 @@ import qualified Amazonka
 import qualified Amazonka.S3 as Amazonka
 import qualified Amazonka.S3.HeadObject as Amazonka
 import Control.Lens.Getter ((^.))
+import qualified Control.Exception.Safe as E
+import Control.Monad.Catch (throwM)
 import qualified Crypto.Hash.MD5 as MD5
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
@@ -167,10 +169,14 @@ get'' ::
 get'' bucketName path = withLogTag "S3" $ do
   let tmpPath = getTmpPath path
   let cmd = "aws s3api get-object --bucket " <> T.unpack bucketName <> " --key " <> path <> " " <> tmpPath
-  liftIO $ callCommand cmd
-  result <- liftIO $ readFile tmpPath
-  liftIO $ removeFile tmpPath
-  return result
+  eResult <- liftIO $ E.try @E.IOException $ do
+    callCommand cmd
+    content <- readFile tmpPath
+    removeFile tmpPath
+    return content
+  case eResult of
+    Left _ -> throwM S3ServerError
+    Right content -> return content
 
 -- | Like 'get''' but returns the object body as raw bytes (no text decoding), for
 -- binary objects stored with 'putRaw'''.
