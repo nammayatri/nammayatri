@@ -3,6 +3,7 @@ module SharedLogic.DriverPool.DriverPoolData
     getDriverPoolDataBatch,
     setDriverPoolData,
     setDriverPoolDataByCloud,
+    pickLatestPerDriver,
     driverPoolDataKey,
     defaultDriverPoolData,
     mkParallelSearchRequestKey,

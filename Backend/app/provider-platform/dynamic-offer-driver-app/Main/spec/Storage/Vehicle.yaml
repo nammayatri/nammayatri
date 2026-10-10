@@ -103,10 +103,6 @@ Vehicle:
       kvFunction: updateWithKV
       params: [model]
       where: driverId
-    updateAirConditioned:
-      kvFunction: updateWithKV
-      params: [airConditioned, downgradeReason]
-      where: driverId
     updateOxygen:
       kvFunction: updateWithKV
       params: [oxygen]
@@ -121,10 +117,6 @@ Vehicle:
     updateRuleBasedUpgradeTiers:
       kvFunction: updateOneWithKV
       params: [ruleBasedUpgradeTiers]
-      where: driverId
-    updateVehicleRatingAndRemark:
-      kvFunction: updateOneWithKV
-      params: [vehicleRating, vehicleRatingRemark]
       where: driverId
     updateVehicleImageId:
       kvFunction: updateOneWithKV

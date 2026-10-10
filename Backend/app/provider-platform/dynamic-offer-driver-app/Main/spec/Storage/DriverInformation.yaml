@@ -335,10 +335,6 @@ DriverInformation:
       kvFunction: updateOneWithKV
       params: [canDowngradeToHatchback, canDowngradeToTaxi]
       where: driverId
-    updateAirConditionScore:
-      kvFunction: updateOneWithKV
-      params: [airConditionScore]
-      where: driverId
     updateDriverAddress:
       kvFunction: updateOneWithKV
       params: [address, addressDocumentType]
@@ -402,10 +398,6 @@ DriverInformation:
     updatePayoutRegAmountRefunded:
       kvFunction: updateOneWithKV
       params: [payoutRegAmountRefunded]
-      where: driverId
-    updateTripEndLocation:
-      kvFunction: updateOneWithKV
-      params: [driverTripEndLocation]
       where: driverId
     updateIssueBreachCooldownTimes:
       kvFunction: updateOneWithKV
