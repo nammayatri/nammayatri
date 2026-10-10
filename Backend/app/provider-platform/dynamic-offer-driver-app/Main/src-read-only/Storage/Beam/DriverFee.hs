@@ -3,6 +3,7 @@
 
 module Storage.Beam.DriverFee where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.DriverFee
@@ -56,6 +57,7 @@ data DriverFeeT f = DriverFeeT
     serviceName :: B.C f (Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames),
     siblingFeeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    specialZoneRideCharges :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     specialZoneRideCount :: B.C f Kernel.Prelude.Int,
     splitOfDriverFeeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     stageUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

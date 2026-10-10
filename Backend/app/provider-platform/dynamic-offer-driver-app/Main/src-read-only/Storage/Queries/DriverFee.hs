@@ -4,6 +4,7 @@
 
 module Storage.Queries.DriverFee (module Storage.Queries.DriverFee, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverFee
 import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
@@ -131,6 +132,7 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.serviceName (Just serviceName),
       Se.Set Beam.siblingFeeId (Kernel.Types.Id.getId <$> siblingFeeId),
       Se.Set Beam.specialZoneAmount specialZoneAmount,
+      Se.Set Beam.specialZoneRideCharges (Data.Aeson.toJSON <$> specialZoneRideCharges),
       Se.Set Beam.specialZoneRideCount specialZoneRideCount,
       Se.Set Beam.splitOfDriverFeeId (Kernel.Types.Id.getId <$> splitOfDriverFeeId),
       Se.Set Beam.stageUpdatedAt stageUpdatedAt,

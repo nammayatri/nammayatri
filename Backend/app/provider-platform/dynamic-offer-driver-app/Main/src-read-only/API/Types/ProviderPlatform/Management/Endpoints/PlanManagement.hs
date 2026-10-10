@@ -30,6 +30,7 @@ data CreatePlanReq = CreatePlanReq
     registrationAmount :: Kernel.Types.Common.HighPrecMoney,
     originalRegistrationAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     airportRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    airportRideSubscriptionByTier :: Kernel.Prelude.Maybe [ServiceTierRideSubscriptionAPIEntity],
     mahilaShaktiRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -77,6 +78,7 @@ data PlanAPIEntity = PlanAPIEntity
     registrationAmount :: Kernel.Types.Common.HighPrecMoney,
     originalRegistrationAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     airportRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    airportRideSubscriptionByTier :: Kernel.Prelude.Maybe [ServiceTierRideSubscriptionAPIEntity],
     mahilaShaktiRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxCreditLimit :: Kernel.Types.Common.HighPrecMoney,
     maxMandateAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -139,6 +141,10 @@ data PlanType
   | SUBSCRIPTION
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data ServiceTierRideSubscriptionAPIEntity = ServiceTierRideSubscriptionAPIEntity {serviceTier :: Kernel.Prelude.Text, amount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 type API = ("planManagement" :> (PostPlanManagementCreate :<|> PostPlanManagementDeletePlan :<|> PostPlanManagementActivatePlan :<|> GetPlanManagementListPlans :<|> GetPlanManagementPlanTranslations))
 

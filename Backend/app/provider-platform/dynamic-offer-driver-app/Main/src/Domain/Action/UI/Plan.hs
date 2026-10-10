@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import qualified Data.Time as DT
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -120,6 +121,7 @@ data PlanEntity = PlanEntity
     bankErrors :: [ErrorEntity],
     cancellationPenalties :: [CancellationPenaltyInformation],
     airportRideSubscription :: Maybe HighPrecMoney,
+    airportRideSubscriptionByTier :: Maybe [ServiceTierRideSubscription],
     mahilaShaktiRideSubscription :: Maybe HighPrecMoney,
     remainingPlanCreditLimit :: Maybe HighPrecMoney,
     planBaseAmount :: HighPrecMoney
@@ -221,6 +223,7 @@ data DriverDuesEntity = DriverDuesEntity
     specialZoneRideCount :: Int,
     totalSpecialZoneCharges :: HighPrecMoney,
     totalSpecialZoneChargesWithCurrency :: PriceAPIEntity,
+    specialZoneRideCharges :: Maybe [DF.SpecialZoneRideCharge],
     driverFeeId :: Text,
     status :: DF.DriverFeeStatus
   }
@@ -348,10 +351,11 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId mbBalance queue
       PREPAID_SUBSCRIPTION
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show PREPAID_SUBSCRIPTION)
   now <- getCurrentTime
+  mbDriverServiceTiers <- getDriverServiceTiersIfNeeded driverId (maybeToList mPlan)
   currentPlanEntity <-
     maybe
       (pure Nothing)
-      (convertPlanToPlanEntity driverId now True (Just syntheticDriverPlan) (Just subscriptionConfig) PREPAID_SUBSCRIPTION >=> (pure . Just))
+      (convertPlanToPlanEntity driverId now True (Just syntheticDriverPlan) (Just subscriptionConfig) PREPAID_SUBSCRIPTION mbDriverServiceTiers >=> (pure . Just))
       mPlan
   (orderId, lastPaymentType) <-
     if purchase.status == DSP.PENDING
@@ -654,12 +658,13 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
   (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
+  mbDriverServiceTiers <- getDriverServiceTiersIfNeeded personId plans
   plansList <-
     mapM
       ( \plan' ->
           if isAutoPayActive
-            then do convertPlanToPlanEntity personId mandateSetupDate False Nothing Nothing serviceName plan'
-            else do convertPlanToPlanEntity personId now False Nothing Nothing serviceName plan'
+            then do convertPlanToPlanEntity personId mandateSetupDate False Nothing Nothing serviceName mbDriverServiceTiers plan'
+            else do convertPlanToPlanEntity personId now False Nothing Nothing serviceName mbDriverServiceTiers plan'
       )
       $ sortOn (.listingPriority) plans
   return $
@@ -710,7 +715,7 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   now <- getCurrentTime
   let mbMandateSetupDate = mDriverPlan >>= (.mandateSetupDate)
   let mandateSetupDate = maybe now (\date -> if checkIFActiveStatus autoPayStatus then date else now) mbMandateSetupDate
-  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True mDriverPlan (Just subscriptionConfig) serviceName >=> (pure . Just)) mPlan
+  currentPlanEntity <- maybe (pure Nothing) (convertPlanToPlanEntity driverId mandateSetupDate True mDriverPlan (Just subscriptionConfig) serviceName ((.selectedServiceTiers) <$> vehicleCategory) >=> (pure . Just)) mPlan
   (orderId, lastPaymentType) <-
     case serviceName of
       PREPAID_SUBSCRIPTION -> do
@@ -1053,6 +1058,7 @@ mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency mbCur
         amountPaidByCoin = Nothing,
         specialZoneRideCount = 0,
         specialZoneAmount = 0,
+        specialZoneRideCharges = Nothing,
         planId = Just $ plan.id,
         planMode = Just plan.paymentMode,
         notificationRetryCount = 0,
@@ -1381,8 +1387,13 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       let intersectionOfDriverFeeIds = oldLinkedDriverFeeIds `intersect` newDriverFeeIds
       return $ length oldLinkedDriverFeeIds == length intersectionOfDriverFeeIds && length newDriverFeeIds == length intersectionOfDriverFeeIds
 
-convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Maybe DriverPlan -> Maybe SubscriptionConfig -> ServiceNames -> Plan -> Flow PlanEntity
-convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan subscriptionConfig serviceNameParam plan@Plan {..} = do
+getDriverServiceTiersIfNeeded :: Id SP.Person -> [Plan] -> Flow (Maybe [DTC.ServiceTierType])
+getDriverServiceTiersIfNeeded driverId plans
+  | any (isJust . (.airportRideSubscriptionByTier)) plans = fmap (.selectedServiceTiers) <$> B.runInReplica (QVehicle.findById driverId)
+  | otherwise = pure Nothing
+
+convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Maybe DriverPlan -> Maybe SubscriptionConfig -> ServiceNames -> Maybe [DTC.ServiceTierType] -> Plan -> Flow PlanEntity
+convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan subscriptionConfig serviceNameParam mbDriverServiceTiers plan@Plan {..} = do
   (dueDriverFees, pendingRegistrationDfee) <- case serviceNameParam of
     PREPAID_SUBSCRIPTION -> do
       pure ([], [])
@@ -1421,6 +1432,9 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
   let dueBoothCharges = roundToHalf currency $ sum $ map (.specialZoneAmount) (nubBy (\x y -> (x.startTime == y.startTime) && (x.endTime == y.endTime)) dueDriverFees)
   cancellationPenalties <- getCancellationPenalties (cast driverId) serviceNameParam
   let validInDays = fromMaybe 0 validityInDays
+  let driverTierAirportCharges =
+        airportRideSubscriptionByTier <&> \tierCharges ->
+          maybe tierCharges (\tiers -> filter (\c -> c.serviceTier `elem` tiers) tierCharges) mbDriverServiceTiers
   return
     PlanEntity
       { id = plan.id.getId,
@@ -1439,6 +1453,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         coinEntity = CoinEntity <$> coinDiscountUpto <*> (PriceAPIEntity <$> coinDiscountUpto <*> pure currency),
         remainingPlanCreditLimit = Nothing,
         planBaseAmount = getPlanAmount plan.planBaseAmount,
+        airportRideSubscriptionByTier = driverTierAirportCharges,
         ..
       }
   where
@@ -1642,6 +1657,7 @@ mkDueDriverFeeInfoEntity serviceName driverFees transporterConfig = do
               specialZoneRideCount = driverFee.specialZoneRideCount,
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
               totalSpecialZoneChargesWithCurrency = PriceAPIEntity driverFee.specialZoneAmount driverFee.currency,
+              specialZoneRideCharges = driverFee.specialZoneRideCharges,
               totalEarningsWithCurrency = PriceAPIEntity driverFee.totalEarnings driverFee.currency,
               driverFeeId = driverFee.id.getId,
               status = driverFee.status

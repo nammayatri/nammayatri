@@ -23,6 +23,14 @@ import Storage.Queries.OrphanInstances.DriverFee ()
 
 -- Extra code goes here --
 
+addSpecialZoneRideCharge :: HighPrecMoney -> Maybe [SpecialZoneRideCharge] -> [SpecialZoneRideCharge]
+addSpecialZoneRideCharge charge mbCharges =
+  let rounded = HighPrecMoney $ fromIntegral (round (getHighPrecMoney charge * 100) :: Integer) / 100
+      charges = fromMaybe [] mbCharges
+   in if any (\c -> c.platformFee == rounded) charges
+        then map (\c -> if c.platformFee == rounded then c {rideCount = c.rideCount + 1} else c) charges
+        else charges <> [SpecialZoneRideCharge {platformFee = rounded, rideCount = 1}]
+
 -- | Driver fees created in the given time range for a merchant / operating city.
 --   Used by the postpaid recon recipe framework — filters purely on time,
 --   status is applied downstream in the recipe.
@@ -482,6 +490,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst isRideEnd _bookin
           ]
             <> [Se.Set BeamDF.specialZoneRideCount $ specialZoneRideCount' + 1 | isSpecialZoneCharge]
             <> [Se.Set BeamDF.specialZoneAmount $ specialZoneAmount' + totalDriverFee | isSpecialZoneCharge]
+            <> [Se.Set BeamDF.specialZoneRideCharges $ Just $ toJSON $ addSpecialZoneRideCharge totalDriverFee df.specialZoneRideCharges | isSpecialZoneCharge]
         )
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()

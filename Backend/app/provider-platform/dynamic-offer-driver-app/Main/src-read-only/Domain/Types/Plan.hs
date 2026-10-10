@@ -5,6 +5,7 @@
 module Domain.Types.Plan (module Domain.Types.Plan, module ReExport) where
 
 import Data.Aeson
+import qualified Domain.Types.Common
 import Domain.Types.Extra.Plan as ReExport
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.Merchant
@@ -20,6 +21,7 @@ import qualified Tools.Beam.UtilsTH
 
 data Plan = Plan
   { airportRideSubscription :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    airportRideSubscriptionByTier :: Kernel.Prelude.Maybe [Domain.Types.Plan.ServiceTierRideSubscription],
     allowStrikeOff :: Kernel.Prelude.Bool,
     basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
     billingType :: Kernel.Prelude.Maybe Domain.Types.Plan.BillingType,
@@ -64,6 +66,9 @@ data Frequency = DAILY | WEEKLY | MONTHLY | FLEXIBLE deriving (Show, (Eq), (Ord)
 data PaymentMode = MANUAL | AUTOPAY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
 data PlanType = DEFAULT | SUBSCRIPTION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+
+data ServiceTierRideSubscription = ServiceTierRideSubscription {amount :: Kernel.Types.Common.HighPrecMoney, serviceTier :: Domain.Types.Common.ServiceTierType}
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMode))
 

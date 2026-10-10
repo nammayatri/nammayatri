@@ -7,6 +7,7 @@ imports:
   ServiceNames: Domain.Types.Plan
   PlatformFee: Domain.Types.DriverFee
   VehicleCategory : Domain.Types.VehicleCategory
+  Value: Data.Aeson
 DriverFee:
   tableName: driver_fee
 
@@ -43,6 +44,10 @@ DriverFee:
       status: Maybe DriverFeeStatus
       derive': "Generic, Eq, Show"
 
+    SpecialZoneRideCharge:
+      platformFee: HighPrecMoney
+      rideCount: Int
+      derive': "Generic, Eq, Show, ToJSON, FromJSON, ToSchema"
 
   fields:
     id : Id DriverFee
@@ -77,6 +82,7 @@ DriverFee:
     overlaySent : Bool
     specialZoneRideCount : Int
     specialZoneAmount : HighPrecMoney
+    specialZoneRideCharges : Maybe [SpecialZoneRideCharge]
     planId : Maybe (Id Plan)
     planMode : Maybe PaymentMode
     serviceName : ServiceNames
@@ -109,6 +115,7 @@ DriverFee:
     merchantOperatingCityId: Maybe Text
     serviceName: Maybe ServiceNames
     vehicleCategory: Maybe VehicleCategory
+    specialZoneRideCharges: Maybe Value
 
   beamFields:
     platformFee:
@@ -135,6 +142,7 @@ DriverFee:
     totalEarnings: Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings|E
     currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
     vehicleCategory : Storage.Queries.Transformers.DriverFee.getCategoryFromPlanOrSubscriptionConfig vehicleCategory planId planMode merchantOperatingCityId serviceName id driverId|EM
+    specialZoneRideCharges: Kernel.Utils.JSON.valueToMaybe =<< specialZoneRideCharges|E
 
   toTType:
     platformFee: ((.fee) platformFee)|E
@@ -148,6 +156,7 @@ DriverFee:
     govtChargesAmount:  Kernel.Prelude.Just|I
     totalEarningsAmount:  Kernel.Prelude.Just|I
     currency: Kernel.Prelude.Just|I
+    specialZoneRideCharges: Data.Aeson.toJSON <$> specialZoneRideCharges|E
 
   constraints:
     id: PrimaryKey
@@ -163,6 +172,7 @@ DriverFee:
     offerId: character varying(100)
     planId: text
     merchantOperatingCityId: text
+    specialZoneRideCharges: json
 
   default:
     serviceName: "'YATRI_SUBSCRIPTION'"
