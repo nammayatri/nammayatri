@@ -113,6 +113,11 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN mahila_shakti_ride_subscripti
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN airport_ride_subscription_by_tier json ;
+
+
+------- SQL updates -------
+
 
 
 

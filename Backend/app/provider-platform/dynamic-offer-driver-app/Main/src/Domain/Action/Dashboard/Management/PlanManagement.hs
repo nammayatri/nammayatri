@@ -83,6 +83,7 @@ postPlanManagementCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   planId <- generateGUID
+  airportRideSubscriptionByTier <- forM req.airportRideSubscriptionByTier $ mapM toServiceTierRideSubscription
   let plan =
         DPlan.Plan
           { id = planId,
@@ -97,6 +98,7 @@ postPlanManagementCreate merchantShortId opCity req = do
             registrationAmount = req.registrationAmount,
             originalRegistrationAmount = req.originalRegistrationAmount,
             airportRideSubscription = req.airportRideSubscription,
+            airportRideSubscriptionByTier = airportRideSubscriptionByTier,
             mahilaShaktiRideSubscription = req.mahilaShaktiRideSubscription,
             maxCreditLimit = req.maxCreditLimit,
             maxMandateAmount = req.maxMandateAmount,
@@ -181,6 +183,11 @@ toPlanTranslationAPIEntity planTranslation =
 
 -- Conversion helpers
 
+toServiceTierRideSubscription :: Common.ServiceTierRideSubscriptionAPIEntity -> Flow DPlan.ServiceTierRideSubscription
+toServiceTierRideSubscription entity = do
+  serviceTier <- fromMaybeM (InvalidRequest $ "Invalid service tier: " <> entity.serviceTier) (readMaybe (toString entity.serviceTier))
+  pure DPlan.ServiceTierRideSubscription {serviceTier = serviceTier, amount = entity.amount}
+
 toPlanAPIEntity :: DPlan.Plan -> Common.PlanAPIEntity
 toPlanAPIEntity plan =
   Common.PlanAPIEntity
@@ -196,6 +203,7 @@ toPlanAPIEntity plan =
       registrationAmount = plan.registrationAmount,
       originalRegistrationAmount = plan.originalRegistrationAmount,
       airportRideSubscription = plan.airportRideSubscription,
+      airportRideSubscriptionByTier = map (\c -> Common.ServiceTierRideSubscriptionAPIEntity {serviceTier = show c.serviceTier, amount = c.amount}) <$> plan.airportRideSubscriptionByTier,
       mahilaShaktiRideSubscription = plan.mahilaShaktiRideSubscription,
       maxCreditLimit = plan.maxCreditLimit,
       maxMandateAmount = plan.maxMandateAmount,
