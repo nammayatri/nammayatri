@@ -187,7 +187,7 @@ behind a compiled-in switch, the config knob is not the integration point.**
 it.** The Movin DZ rider app is React Native (Expo), in its own private repo,
 cloned alongside this one:
 
-    ~/ny-algeria-passenger      github.com/nammayatri-algeria/namma-yatri-frontend
+    ~/ny-algeria-passenger      github.com/nammayatri-algeria/movin_application_frontend
 
 Anything about screens, the APK, the signing key or the map UI belongs there.
 
