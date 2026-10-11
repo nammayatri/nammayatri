@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format (defaultTimeLocale, formatTime, parseTimeM)
+import Data.Time.LocalTime (TimeZone (..), localTimeToUTC)
 import qualified Data.UUID as UU
 import Domain.Types.Extra.IntegratedBPPConfig
 import Domain.Types.FRFSQuoteCategory
@@ -290,8 +291,11 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
       let qrPayload = ticketResp.qR_Payload
           qrData = "#" <> qrPayload.qR_Signature <> "#" <> qrPayload.qR_SVC <> "#" <> qrPayload.qR_Tkt_Block <> "#"
 
-      validityTime <- case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S" (T.unpack ticketResp.ticket_Validity_Time) of
-        Just time -> return time
+      -- CDAC sends Ticket_Validity_Time as a bare IST wall clock with no offset, so it must be
+      -- parsed as a LocalTime and anchored to IST. Parsing it straight into a UTCTime keeps the
+      -- digits and silently relabels them UTC, putting valid_till 5h30m past the real expiry.
+      validityTime <- case parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S" (T.unpack ticketResp.ticket_Validity_Time) :: Maybe LocalTime of
+        Just istTime -> return $ localTimeToUTC operatorTimeZone istTime
         Nothing -> throwError $ InternalError $ "Failed to parse ticket validity time: " <> ticketResp.ticket_Validity_Time
 
       return $
@@ -307,6 +311,11 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
           }
 
   return ProviderOrder {..}
+
+-- | The zone CDAC's ticket timestamps are already in. It anchors a parsed wall clock; it is
+-- never added to one.
+operatorTimeZone :: TimeZone
+operatorTimeZone = TimeZone (5 * 60 + 30) False "IST"
 
 getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
 getBppOrderId booking = do
