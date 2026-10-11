@@ -24,6 +24,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
+import Tools.DriverOnlineSessionEvent (emitClosedSessionEvents)
 import Tools.Error
 
 processingChangeOnline ::
@@ -34,10 +35,16 @@ processingChangeOnline ::
   Maybe DriverInfo.DriverMode ->
   m ()
 processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
-  when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $
-    DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
-  when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $
+  let wentOffline = mbOldMode == Just DriverInfo.ONLINE && maybe False (/= DriverInfo.ONLINE) mbNewMode
+      cameOnline = mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE
+  mbClosedSession <-
+    if wentOffline
+      then DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+      else pure Nothing
+  when cameOnline $
     DriverOnlineHoursCache.markOnlineToday driverId transporterConfig.timeDiffFromUtc
+  -- Analytics: emit the just-closed online session interval(s) to Kafka (-> ClickHouse).
+  emitClosedSessionEvents driverId transporterConfig.merchantId transporterConfig.merchantOperatingCityId transporterConfig.timeDiffFromUtc mbClosedSession
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
     when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $ do
       updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
