@@ -143,7 +143,7 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
   let toPayReferredByReward = personStats.referredByEarnings > 0 && isNothing personStats.referredByEarningsPayoutStatus
       toPayBacklogAmount = personStats.backlogPayoutAmount > 0 && isNothing personStats.backlogPayoutStatus
   when (toPayReferredByReward || toPayBacklogAmount) $ do
-    Redis.withWaitOnLockRedisWithExpiry (Common.payoutProcessingLockKey personId.getId) 3 3 $ do
+    Redis.withWaitAndLockRedisWithTimeout (Common.payoutProcessingLockKey personId.getId) 3 3 50000 $ do
       let amount = (bool 0 personStats.backlogPayoutAmount toPayBacklogAmount) + (bool 0 personStats.referredByEarnings toPayReferredByReward)
           entityName = getEntityName toPayReferredByReward toPayBacklogAmount
       case entityName of

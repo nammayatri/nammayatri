@@ -84,7 +84,7 @@ upsertOfferFrequencyStats offerId entities timeDiffFromUtc discountAmount payout
       let window = Frequency.windowOf frequency timeDiffFromUtc now
       forM_ (filter ((`elem` countedEntityTypes) . fst) entities) $ \(entityType, entityId) -> do
         let lockKey = "UpsertOfferStats:Frequency:" <> show entityType <> ":" <> entityId <> ":OfferId:" <> offerId.getId
-        Redis.withWaitOnLockRedisWithExpiry lockKey 10 20 $ do
+        Redis.withWaitAndLockRedisWithTimeout lockKey 10 20 50000 $ do
           upsertCurrent window entityType entityId
           upsertHistory frequency window entityType entityId
   where

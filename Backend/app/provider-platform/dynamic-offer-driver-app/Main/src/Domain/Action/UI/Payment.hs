@@ -555,7 +555,7 @@ processWalletTopupWebhook driver order transactionStatus = do
   QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
   when (transactionStatus == Payment.CHARGED) $ do
     let lockKey = "wallet:topup:lock:" <> order.id.getId
-    Redis.withLockRedis lockKey 60 $ do
+    Redis.withWaitAndLockRedis lockKey 60 50000 $ do
       existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
       when (null existing) $ do
         transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
@@ -656,7 +656,7 @@ processNonClearedDriverFees ::
   m ()
 processNonClearedDriverFees merchantId person driverFee = do
   when (driverFee.feeType == PREPAID_RECHARGE) $
-    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
+    Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 50000 $ do
       _ <- updatePrepaidBalanceAndExpiry merchantId person driverFee
       pure ()
 
@@ -691,7 +691,7 @@ processSubscriptionPurchasePayment ::
   m ()
 processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
   when (subscriptionPurchase.status == DSP.PENDING) $
-    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
+    Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 50000 $ do
       latestPurchase <-
         QSP.findByPrimaryKey subscriptionPurchase.id
           >>= fromMaybeM (InternalError $ "Subscription purchase not found: " <> subscriptionPurchase.id.getId)
@@ -1116,7 +1116,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   let isWebhookEventEnabled = WT.MANDATE `elem` subsConfig.eventsEnabledForWebhook
   when (mandateStatus == Payment.ACTIVE) $ do
-    Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
+    Redis.withWaitAndLockRedisWithTimeout (mandateProcessingLockKey driverId.getId) 60 60 50000 $ do
       --- do not update payer vpa from euler for older active mandates also we update only when autopayStatus not suspended because on suspend we make the mandate inactive in table
       (autoPayStatus, mbDriverPlan) <- ADPlan.getSubcriptionStatusWithPlan serviceName driverId
       let toUpdatePayerVpa = checkToUpdatePayerVpa mbExistingMandate autoPayStatus
@@ -1133,7 +1133,7 @@ processMandate (serviceName, subsConfig) (driverId, merchantId, merchantOpCityId
       when (serviceName == DP.YATRI_SUBSCRIPTION) $ QDI.updatPayerVpa payerVpa' (cast driverId)
       when (isWebhookEventEnabled) $ callWebhookInFork driver mandateData
   when (mandateStatus `elem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]) $ do
-    Redis.withWaitOnLockRedisWithExpiry (mandateProcessingLockKey driverId.getId) 60 60 $ do
+    Redis.withWaitAndLockRedisWithTimeout (mandateProcessingLockKey driverId.getId) 60 60 50000 $ do
       QM.updateMandateDetails mandateId DM.INACTIVE Nothing payerApp Nothing mandatePaymentFlow --- should we store driver Id in mandate table ?
       mbDriverPlan <- QDP.findByMandateIdAndServiceName (Just mandateId) serviceName
       case mbDriverPlan of

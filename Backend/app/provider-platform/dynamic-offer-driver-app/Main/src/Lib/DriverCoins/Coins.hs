@@ -93,7 +93,7 @@ import Tools.Utils
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
-getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
+getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withWaitAndLockRedis driverId.getId 60 50000 $ do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
   let currentDate = show $ utctDay istTime

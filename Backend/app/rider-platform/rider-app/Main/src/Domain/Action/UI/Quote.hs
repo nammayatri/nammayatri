@@ -295,7 +295,7 @@ getQuotes searchRequestId mbAllowMultiple = do
     whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
   logDebug $ "search Request is : " <> show searchRequest
   let lockKey = estimateBuildLockKey searchRequestId.getId
-  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+  Redis.withWaitAndLockRedis lockKey 5 50000 $ do
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
     quoteList <- QQuote.findAllBySRId searchRequest.id
     estimateList <- QEstimate.findAllBySRId searchRequest.id

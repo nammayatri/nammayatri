@@ -78,7 +78,7 @@ consumeCancellationRideCredit booking ride consumeAmount transporterConfig
             else Nothing
     (ownerType, ownerId, counterpartyType) <- resolveOwner
     markPrepaidSettlementPending ownerId ride.id.getId
-    Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+    Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 50000 $ do
       allActivePurchases <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
       nowForExpiry <- getCurrentTime
       let expiredPurchases = filter (\p -> maybe False (<= nowForExpiry) p.expiryDate) allActivePurchases

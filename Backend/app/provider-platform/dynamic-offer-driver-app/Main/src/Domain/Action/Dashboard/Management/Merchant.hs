@@ -3123,7 +3123,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 fromMaybe [] (find (not . null) (map (\(_, _, _, _, _, _, _, _, fp) -> fp.conditionalCharges) (x : xs)))
               case finalFarePolicy.farePolicyDetails of
                 FarePolicy.AmbulanceDetails details ->
-                  Hedis.withLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 $ do
+                  Hedis.withWaitAndLockRedis (ambulanceSlabsCreateLockKey merchantOpCity.id.getId) 60 50000 $ do
                     QueriesFPAD.delete finalFarePolicy.id
                     forM_ (NE.toList details.slabs) $ \slab ->
                       QueriesFPAD.create (finalFarePolicy.id, slab)

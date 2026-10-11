@@ -166,7 +166,7 @@ postPricingAdjustmentStatus merchantShortId opCity reqAdjustmentId req = do
   -- serialize transitions per city: concurrent activations could otherwise
   -- interleave the overlap scan and the status writes and leave two live
   -- adjustments intersecting the same slice
-  Redis.withWaitOnLockRedisWithExpiry (adjustmentStatusLockKey merchantOpCity.id) 10 60 $ do
+  Redis.withWaitAndLockRedisWithTimeout (adjustmentStatusLockKey merchantOpCity.id) 10 60 50000 $ do
     adjustment <- findScopedAdjustment merchantOpCity (cast reqAdjustmentId)
     now <- getCurrentTime
     let newStatus = fromApiStatus req.status

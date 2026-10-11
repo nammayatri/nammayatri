@@ -235,7 +235,7 @@ dispatchConsequence ctx driverId = \case
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let remainingTags = filter ((/= Just (LYT.TagName "AutoAssign")) . Yudhishthira.parseTagName) (fromMaybe [] driver.driverTag)
     QPerson.updateDriverTag (Just remainingTags) driverId
-    Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
+    Redis.withWaitAndLockRedisWithTimeout (selectedServiceTiersLockKey driverId) 5 10 50000 $ do
       mbVehicle <- QVehicle.findById driverId
       whenJust mbVehicle $ \(vehicle :: DVeh.Vehicle) -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId ctx.merchantOperatingCityId Nothing

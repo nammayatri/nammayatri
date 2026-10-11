@@ -1667,7 +1667,7 @@ upsertOfferStats offerId statsInput discountAmount payoutAmount payoutCurr merch
               }
   -- Upsert PersonDailyOfferStats (keyed by personId, not per entity)
   let dailyLockKey = "UpsertOfferStats:Daily:PersonId:" <> statsInput.personId <> ":OfferId:" <> offerId.getId
-  Redis.withWaitOnLockRedisWithExpiry dailyLockKey 10 20 $ do
+  Redis.withWaitAndLockRedisWithTimeout dailyLockKey 10 20 50000 $ do
     let today = utctDay now
     mbDailyStats <- QPersonDailyOfferStats.findByPersonIdAndDate statsInput.personId today
     case mbDailyStats of
