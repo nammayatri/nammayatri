@@ -19,5 +19,5 @@ CREATE INDEX CONCURRENTLY policy_and_compliance_document_idx_created_at_enabled_
 
 ALTER TABLE atlas_app.policy_and_compliance_document ADD COLUMN entity_type text ;
 ALTER TABLE atlas_app.policy_and_compliance_document ADD COLUMN effective_date timestamp with time zone ;
-DROP INDEX policy_and_compliance_document_idx_created_at_enabled_merchant_id_policy_type;
+DROP INDEX atlas_app.policy_and_compliance_document_idx_created_at_enabled_merchant_id_policy_type;
 CREATE INDEX CONCURRENTLY policy_and_compliance_document_idx_enabled_entity_type_merchant_id_policy_type ON atlas_app.policy_and_compliance_document USING btree (enabled, entity_type, merchant_id, policy_type);
