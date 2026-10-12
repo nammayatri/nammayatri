@@ -35,6 +35,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
 import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -66,6 +67,7 @@ import qualified Kernel.External.Maps.Types as KEMT
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
+import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -74,11 +76,18 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction ()
+import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as FinanceDirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FinanceIndirectTax
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
+import Lib.GateInfo.Geometry (pointInPolygon)
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as SL
+import qualified Safety.Storage.Queries.Sos as QSafetySos
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -87,7 +96,11 @@ import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
+import Storage.Beam.Sos ()
+import Storage.Beam.SpecialZone ()
+import qualified Storage.CachedQueries.BapMetadata as CQBapMetadata
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Clickhouse.BppTransactionJoin as BppT
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -133,10 +146,13 @@ getRideList ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Common.PaymentCollector ->
+  Maybe Bool ->
+  [Common.RideDetailGroup] ->
   Text ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode requestorId = do
-  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode mbPaymentCollectedBy mbHasSos detailGroups requestorId = do
+  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbPaymentCollectedBy mbHasSos detailGroups mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -153,7 +169,7 @@ getRideAgentList ::
   Maybe Text ->
   Flow Common.RideListRes
 getRideAgentList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo =
-  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset Nothing Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
+  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset Nothing Nothing Nothing [] Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
 
 -- | Common parameters resolved during ride-list setup (shared by V1 and V2).
 data RideListCommonParams = RideListCommonParams
@@ -263,6 +279,9 @@ getRideListUtil ::
   Maybe Int ->
   Maybe Int ->
   Maybe Common.PaymentMode ->
+  Maybe Common.PaymentCollector ->
+  Maybe Bool ->
+  [Common.RideDetailGroup] ->
   Maybe (Id Common.Ride) ->
   Maybe (ShortId Common.Ride) ->
   Maybe UTCTime ->
@@ -273,15 +292,18 @@ getRideListUtil ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Flow Common.RideListRes
-getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode False $ \RideListCommonParams {..} -> do
+getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbPaymentCollectedBy mbHasSos detailGroups mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode (isJust mbPaymentCollectedBy || isJust mbHasSos) $ \RideListCommonParams {..} -> do
     (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbRequestorId mbFleetOwnerId
+    mbPaymentMethodIds <- forM mbPaymentCollectedBy $ \collector ->
+      map (getId . (.id)) . filter (\paymentMethod -> paymentMethod.collectedBy == castPaymentCollector collector)
+        <$> CQMPM.findAllByMerchantOpCityId merchantOpCity.id
     rideItems <-
       if useClickhouse
-        then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
-        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount mbPaymentMethodIds mbHasSos
+        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount mbPaymentMethodIds mbHasSos
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
-    rideListItems <- traverse buildRideListItem rideItems
+    rideListItems <- enrichRideListItems detailGroups . zip rideItems =<< traverse buildRideListItem rideItems
     let rideListItems' :: [Common.RideListItem]
         rideListItems' =
           if shouldShowCustomerInfo
@@ -390,8 +412,106 @@ buildRideListItem QRide.RideItem {..} = do
         vehicleManufacturer = vehicleManufacturer,
         vehicleModel = vehicleModel,
         rideTags = rideTags,
-        invoiceId = financeInvoiceId
+        invoiceId = financeInvoiceId,
+        fleetOwnerId = Nothing,
+        fleetOwnerName = Nothing,
+        driverId = Nothing,
+        driverDeviatedFromRoute = Nothing,
+        hasSos = Nothing,
+        sosStatus = Nothing,
+        safetyAlertTriggered = Nothing,
+        gstAmount = Nothing,
+        tdsAmount = Nothing
       }
+
+-- | Fills the list fields behind the requested detail groups; each group runs only its own lookups.
+enrichRideListItems :: [Common.RideDetailGroup] -> [(QRide.RideItem, Common.RideListItem)] -> Flow [Common.RideListItem]
+enrichRideListItems [] rows = pure $ map snd rows
+enrichRideListItems detailGroups rows = do
+  let hasGroup = (`elem` detailGroups)
+      rideItems = map fst rows
+      bookingIds = map getId $ mapMaybe (.rideBookingId) rideItems
+  gstByBookingId <-
+    if hasGroup Common.TAX
+      then HM.fromList . map (\txn -> (txn.referenceId, txn.totalGstAmount)) <$> QIndirectTaxExtra.findByReferenceIdsAndTransactionType bookingIds FinanceIndirectTax.RideFare
+      else pure HM.empty
+  tdsByBookingId <-
+    if hasGroup Common.TAX
+      then HM.fromList . map (\txn -> (txn.referenceId, txn.tdsAmount)) <$> QDirectTaxExtra.findByReferenceIdsAndTransactionType bookingIds FinanceDirectTax.RideFare
+      else pure HM.empty
+  sosStatusById <-
+    if hasGroup Common.SAFETY
+      then HM.fromList . map (\sos -> (sos.id.getId, sos.status)) <$> QSafetySos.findAllByIds (mapMaybe (.rideSosId) rideItems)
+      else pure HM.empty
+  let inGroup :: Common.RideDetailGroup -> Maybe a -> Maybe a
+      inGroup group value = if hasGroup group then value else Nothing
+      enrich (rideItem, item) =
+        let bookingKey = getId <$> rideItem.rideBookingId
+         in ( item
+                { MGMT.driverId = inGroup Common.DRIVER_INFO $ cast @DP.Person @Common.Driver <$> rideItem.rideDriverId,
+                  MGMT.fleetOwnerId = inGroup Common.FLEET_INFO $ getId <$> rideItem.fleetOwnerId,
+                  MGMT.fleetOwnerName = inGroup Common.FLEET_INFO rideItem.fleetOwnerName,
+                  MGMT.driverDeviatedFromRoute = inGroup Common.SAFETY rideItem.rideDriverDeviatedFromRoute,
+                  MGMT.hasSos = inGroup Common.SAFETY $ Just (isJust rideItem.rideSosId),
+                  MGMT.sosStatus = inGroup Common.SAFETY $ rideItem.rideSosId >>= \sosId -> HM.lookup sosId.getId sosStatusById,
+                  MGMT.safetyAlertTriggered = inGroup Common.SAFETY rideItem.rideSafetyAlertTriggered,
+                  MGMT.gstAmount = inGroup Common.TAX $ bookingKey >>= (`HM.lookup` gstByBookingId),
+                  MGMT.tdsAmount = inGroup Common.TAX $ bookingKey >>= (`HM.lookup` tdsByBookingId)
+                } ::
+                Common.RideListItem
+            )
+  pure $ map enrich rows
+
+-- | Display name the BAP registered with us (bap_metadata), if any.
+getBapName :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m (Maybe Text)
+getBapName bapId = fmap (.name) <$> CQBapMetadata.findBySubscriberIdAndDomain (Id bapId) Context.MOBILITY
+
+-- | Who collects the fare (BAP/BPP), from the merchant payment method matched at /init.
+getPaymentCollectedBy :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m (Maybe Common.PaymentCollector)
+getPaymentCollectedBy booking = do
+  mbPaymentMethod <- join <$> mapM CQMPM.findById booking.paymentMethodId
+  pure $ castPaymentCollectorToCommon . (.collectedBy) <$> mbPaymentMethod
+
+castPaymentCollector :: Common.PaymentCollector -> DMPM.PaymentCollector
+castPaymentCollector = \case
+  Common.BAP -> DMPM.BAP
+  Common.BPP -> DMPM.BPP
+
+castPaymentCollectorToCommon :: DMPM.PaymentCollector -> Common.PaymentCollector
+castPaymentCollectorToCommon = \case
+  DMPM.BAP -> Common.BAP
+  DMPM.BPP -> Common.BPP
+
+getFleetOwnerContact :: (MonadFlow m, EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Maybe (Id DP.Person) -> m (Maybe Text, Maybe Text, Maybe Text)
+getFleetOwnerContact Nothing = pure (Nothing, Nothing, Nothing)
+getFleetOwnerContact (Just fleetOwnerId) = do
+  (fleetOwnerInfoMap, fleetOwnerPersonMap) <- QRide.findFleetOwnerDetails [fleetOwnerId]
+  let mbFleetOwnerInfo = HM.lookup fleetOwnerId fleetOwnerInfoMap
+      mbFleetOwner = HM.lookup fleetOwnerId fleetOwnerPersonMap
+  fleetOwnerPhoneNo <- mapM decrypt (mbFleetOwner >>= (.mobileNumber))
+  pure (QRide.personFullName <$> mbFleetOwner, mbFleetOwnerInfo >>= (.fleetName), fleetOwnerPhoneNo)
+
+-- | (planned pickup, planned drop, actual pickup, actual drop) special location names for the SPECIAL_LOCATIONS detail group.
+getRideSpecialLocations :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => SRB.Booking -> DRide.Ride -> m (Maybe Text, Maybe Text, Maybe Text, Maybe Text)
+getRideSpecialLocations booking ride = do
+  specialLocations <- QSpecialLocation.getAllEnabledSpecialLocationsWithGeom
+  let specialLocationOf = findSpecialLocationName specialLocations ride.merchantOperatingCityId
+      locationLatLong location = KEMT.LatLong location.lat location.lon
+  pure
+    ( specialLocationOf (locationLatLong booking.fromLocation),
+      specialLocationOf . locationLatLong =<< booking.toLocation,
+      specialLocationOf =<< ride.tripStartPos,
+      specialLocationOf =<< ride.tripEndPos
+    )
+
+findSpecialLocationName :: [(SL.SpecialLocation, [[[KEMT.LatLong]]])] -> Id DMOC.MerchantOperatingCity -> KEMT.LatLong -> Maybe Text
+findSpecialLocationName specialLocations merchantOpCityId point =
+  listToMaybe
+    [ specialLocation.locationName
+      | (specialLocation, polygons) <- specialLocations,
+        (getId <$> specialLocation.merchantOperatingCityId) == Just merchantOpCityId.getId,
+        any (pointInPolygon point) polygons
+    ]
 
 buildRideListItemV2 :: EncFlow m r => [(Id DRide.Ride, DRide.Ride)] -> [(Id DRide.Ride, DBCReason.BookingCancellationReason)] -> QRide.RideItemV2 -> m Common.RideListItemV2
 buildRideListItemV2 rideById bcrByRideId QRide.RideItemV2 {..} = do
@@ -432,7 +552,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
   case (mbShortId, mbPhoneNumber) of
     (Just shortId, _) -> do
       ride <- QRide.findRideByRideShortId shortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
-      rideDetail <- rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing
+      rideDetail <- rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing []
       let ticketRideDetail = makeRequiredRideDetail ride.driverId (ride, rideDetail)
       return Common.TicketRideListRes {rides = [ticketRideDetail]}
     (Nothing, Just number) -> do
@@ -441,7 +561,7 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
       person <- runInReplica $ QPerson.findByMobileNumberAndMerchantAndRole code no merchant.id DP.DRIVER >>= fromMaybeM (PersonWithPhoneNotFound number)
       ridesAndBooking <- QRide.findAllByDriverId person.id (Just totalRides) (Just 0) Nothing Nothing Nothing Nothing
       let lastNRides = map fst ridesAndBooking
-      ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing) lastNRides
+      ridesDetail <- mapM (\ride -> rideInfo merchant.id merchantOpCityId (cast ride.id) Nothing []) lastNRides
       let rdList = zipWith (curry (makeRequiredRideDetail person.id)) lastNRides ridesDetail
       return Common.TicketRideListRes {rides = rdList}
     (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
@@ -523,6 +643,8 @@ rideInfo ::
     CacheFlow m r,
     EsqDBFlow m r,
     BeamFlow m r,
+    Transactionable m,
+    EsqDBReplicaFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     CH.HasClickhouseEnv CH.ATLAS_KAFKA m,
@@ -532,8 +654,10 @@ rideInfo ::
   Id DMOC.MerchantOperatingCity ->
   Id Common.Ride ->
   Maybe Bool ->
+  [Common.RideDetailGroup] ->
   m Common.RideInfoRes
-rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
+rideInfo merchantId merchantOpCityId reqRideId mbFinanceData detailGroups = do
+  let hasGroup = (`elem` detailGroups)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideDetails <- runInReplica $ QRideDetails.findById rideId >>= fromMaybeM (RideNotFound rideId.getId) -- FIXME RideDetailsNotFound
@@ -584,7 +708,8 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
   let stopInformation = Just $ mkStopInformation <$> stopInformationDomain
   -- Finance data (populated only when financeData=true)
   (grossRideValue, subscriptionOffsetAmount, cancellationCharges, gstApplicableFlag, gstRate, gstAmount, cgstAmount, sgstAmount, igstAmount, tdsApplicableFlag, tdsRate, tdsAmount, netPayableToDriver, paymentMode, paymentStatus, paymentReferenceInternal, walletTransactions, invoiceIds) <-
-    if mbFinanceData == Just True
+    -- the FINANCE group is the detail-group equivalent of financeData=true
+    if mbFinanceData == Just True || hasGroup Common.FINANCE
       then do
         let bookingIdStr = booking.id.getId
         -- All ledger entries for this booking
@@ -691,6 +816,14 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
 
   feedbacks <- runInReplica $ QFeedback.findFeedbackFromRatings [ride.id]
   let mbFeedback = listToMaybe feedbacks
+  mbBapName <- if hasGroup Common.BUYER_APP then getBapName booking.bapId else pure Nothing
+  mbPaymentCollectedBy <- if hasGroup Common.PAYMENT then getPaymentCollectedBy booking else pure Nothing
+  (mbFleetOwnerName, mbFleetName, mbFleetOwnerPhoneNo) <- if hasGroup Common.FLEET_INFO then getFleetOwnerContact ride.fleetOwnerId else pure (Nothing, Nothing, Nothing)
+  mbSos <- if hasGroup Common.SAFETY then maybe (pure Nothing) QSafetySos.findById ride.sosId else pure Nothing
+  (mbPlannedPickupSpecialLocation, mbPlannedDropSpecialLocation, mbActualPickupSpecialLocation, mbActualDropSpecialLocation) <-
+    if hasGroup Common.SPECIAL_LOCATIONS then getRideSpecialLocations booking ride else pure (Nothing, Nothing, Nothing, Nothing)
+  let inGroup :: Common.RideDetailGroup -> Maybe a -> Maybe a
+      inGroup group value = if hasGroup group then value else Nothing
 
   pure
     Common.RideInfoRes
@@ -787,7 +920,24 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         badge = map (.badge) feedbacks,
         rating = mbFeedback >>= (.rating),
         estimatedTollInfo = mkTollInfoEntities ride.estimatedTollIds ride.estimatedTollNames,
-        actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames
+        actualTollInfo = mkTollInfoEntities ride.tollIds ride.tollNames,
+        actualPickupLocation = inGroup Common.TRIP ride.tripStartPos,
+        isScheduled = inGroup Common.TRIP $ Just booking.isScheduled,
+        bapId = inGroup Common.BUYER_APP $ Just booking.bapId,
+        bapName = mbBapName,
+        paymentCollectedBy = mbPaymentCollectedBy,
+        fleetOwnerName = mbFleetOwnerName,
+        fleetName = mbFleetName,
+        fleetOwnerPhoneNo = mbFleetOwnerPhoneNo,
+        sosId = (.id.getId) <$> mbSos,
+        sosStatus = (.status) <$> mbSos,
+        sosCreatedAt = (.createdAt) <$> mbSos,
+        sosTicketId = mbSos >>= (.ticketId),
+        safetyAlertTriggered = inGroup Common.SAFETY $ Just ride.safetyAlertTriggered,
+        plannedPickupSpecialLocation = mbPlannedPickupSpecialLocation,
+        plannedDropSpecialLocation = mbPlannedDropSpecialLocation,
+        actualPickupSpecialLocation = mbActualPickupSpecialLocation,
+        actualDropSpecialLocation = mbActualDropSpecialLocation
       }
 
 mkTollInfoEntities :: Maybe [Text] -> Maybe [Text] -> Maybe [Common.TollInfoAPIEntity]
