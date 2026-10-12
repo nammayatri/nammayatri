@@ -96,6 +96,7 @@ import qualified SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssigned
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.FleetEngine as FleetEngine
 import SharedLogic.Ride
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
@@ -212,7 +213,7 @@ newtype DriverRideListRes = DriverRideListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 listDriverRides ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Maybe Integer ->
@@ -248,7 +249,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
   pure . DriverRideListRes $ sortOn (Down . (.bookingType)) filteredRides
 
 getDriverRideById ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Id DRide.Ride ->
@@ -269,7 +270,7 @@ getDriverRideById driverId mocId rideId mbFinanceData = do
   buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking)
 
 buildDriverRideResItem ::
-  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   DDI.DriverInformation ->
   L.Language ->
@@ -290,7 +291,7 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   let goHomeReqId = ride.driverGoHomeRequestId
   RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (transporterConfig >>= DTC.showRoutePerRequest)
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> ArrivedAtPickupReq -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> ArrivedAtPickupReq -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("The ride has already started." <> Text.pack (show ride.status))

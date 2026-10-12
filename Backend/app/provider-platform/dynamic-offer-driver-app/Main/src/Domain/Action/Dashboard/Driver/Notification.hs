@@ -44,6 +44,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Subscription.BillingModel (isPrepaidDriverWithCatalogueFallback)
@@ -89,7 +90,8 @@ triggerDummyRideRequest ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->

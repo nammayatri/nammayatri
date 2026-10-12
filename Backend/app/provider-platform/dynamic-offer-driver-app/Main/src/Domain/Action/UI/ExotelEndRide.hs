@@ -37,6 +37,7 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler.Environment (JobCreator)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.PersonExtra as QPerson
@@ -59,6 +60,7 @@ callBasedEndRide ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     JobCreator r m,

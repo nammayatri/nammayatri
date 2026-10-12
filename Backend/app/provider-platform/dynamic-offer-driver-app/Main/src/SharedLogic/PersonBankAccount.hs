@@ -32,6 +32,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverBankAccount as QDBA
@@ -229,7 +230,8 @@ getPersonRegisterBankAccountStatus ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
     Kernel.Storage.Hedis.HedisFlow m r,
-    Kernel.Storage.Hedis.HedisLTSFlowEnv r
+    Kernel.Storage.Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Maybe Bool ->
   Id Domain.Types.Person.Person ->

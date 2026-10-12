@@ -25,6 +25,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
@@ -36,7 +37,8 @@ softBlockNotifyDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'SoftBlockNotifyDriver ->
   m ExecutionResult

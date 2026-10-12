@@ -149,6 +149,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import Servant (JSON, Post, ReqBody, (:>))
 import qualified SharedLogic.Allocator as Alloc
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.FleetEngine as FleetEngine
@@ -793,7 +794,8 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -829,7 +831,8 @@ sendRideEnroutePickupStatusToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -857,7 +860,8 @@ notifyDriverOnScheduledRideAssigned ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -889,6 +893,7 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Alloc.SchedulerJobFlow r
   ) =>
   DRB.Booking ->
@@ -930,7 +935,8 @@ sendRideEstimatedEndTimeRangeUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->

@@ -32,6 +32,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Allocator as Alloc
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -71,6 +72,7 @@ cancelBooking ::
     HasShortDurationRetryCfg r c,
     Alloc.SchedulerJobFlow r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     BeamFlow m r
   ) =>
@@ -99,6 +101,7 @@ cancelBooking' ::
     HasShortDurationRetryCfg r c,
     Alloc.SchedulerJobFlow r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     BeamFlow m r
   ) =>

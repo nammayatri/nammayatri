@@ -19,6 +19,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -43,6 +44,7 @@ notificationAndOrderStatusUpdate ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->

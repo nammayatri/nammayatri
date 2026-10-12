@@ -41,6 +41,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -64,7 +65,8 @@ retryDocumentVerificationJob ::
     ServiceFlow m r,
     HasField "blackListedJobs" r [Text],
     HasSchemaName SchedulerJobT,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -89,7 +91,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
           IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
       verifyRes <-

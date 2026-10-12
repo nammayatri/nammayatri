@@ -31,6 +31,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HasShortDurationRetryCfg, logTagInfo)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -47,7 +48,8 @@ startRideTransaction ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "minDistanceBetweenTwoPoints" r Int,
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id SP.Person ->
   SRide.Ride ->

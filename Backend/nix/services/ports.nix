@@ -66,6 +66,8 @@
   driver-offer-allocator-metrics = 8056;
   rider-app-scheduler-metrics = 8057;
   kafka-ride-events-consumer-metrics = 9995;
+  kafka-driver-pool-state-writer-metrics = 9987;
+  kafka-sessionizer-metrics = 9988;
   kafka-fleet-analytics-consumer-metrics = 9989;
 
   # Dev tools

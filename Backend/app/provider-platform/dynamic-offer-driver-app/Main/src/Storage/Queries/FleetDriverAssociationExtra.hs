@@ -27,6 +27,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverBankAccount as BeamDBA
@@ -65,7 +66,7 @@ effectiveEnableCashRide now driverFlag mbFda fleetOwnerFlag = case mfilter (isAc
   Nothing -> fromMaybe True driverFlag
 
 createFleetDriverAssociationIfNotExists ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id Person ->
   Id Person ->
   Maybe (Id Person) ->
@@ -161,7 +162,7 @@ createFleetDriverAssociationWithLTSSync driverId fleetOwnerId onboardedOperatorI
 -- | Pushes a driver's fleet link to the driver pool: the fleet owner, the fleet owner's bank
 -- account (used for online-payment rides) and the effective cash-ride flag.
 syncFleetLinkToLTS ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   UTCTime ->
   Id Person ->
   Id Person ->
@@ -179,6 +180,13 @@ syncFleetLinkToLTS now driverId fleetOwnerId mbDriverCashRide mbAssociation = do
         LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
         LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
       }
+  publishDriverPoolData
+    (cast driverId)
+    [ poolField "fleetOwnerId" (Just fleetOwnerId.getId),
+      poolField "chargesEnabled" (maybe False (.chargesEnabled) mbFleetBa),
+      poolField "bankAccountPaymentMode" ((.paymentMode) =<< mbFleetBa),
+      poolField "enableCashRide" (Just cashRideEffective)
+    ]
 
 findAllActiveByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [FleetDriverAssociation]
 findAllActiveByFleetOwnerIds [] = pure []
@@ -198,7 +206,7 @@ fleetOwnerEnableCashRideFlags assocs =
     <$> FOI.findAllByPrimaryKeys (KTI.Id <$> M.keys (M.fromList [(a.fleetOwnerId, ()) | a <- assocs]))
 
 syncEnableCashRideToLTS ::
-  (MonadFlow m, Forkable m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, Forkable m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Int ->
   [(Id Person, Bool)] ->
   m ()
@@ -206,14 +214,15 @@ syncEnableCashRideToLTS batchSize xs =
   forM_ (chunksOf batchSize xs) $ \chunk ->
     void $
       mapConcurrently
-        ( \(driverId, effective) ->
+        ( \(driverId, effective) -> do
             LTSSync.syncDriverPoolDataToLTS (cast driverId) $
               LTSSync.emptyUpdate {LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+            publishDriverPoolData (cast driverId) [poolField "enableCashRide" (Just effective)]
         )
         chunk
 
 updateEnableCashRideForFleetOwnersWithSync ::
-  (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Maybe Bool ->
   Int ->
   [Id Person] ->
@@ -228,7 +237,7 @@ updateEnableCashRideForFleetOwnersWithSync enableCashRide batchSize fleetOwnerPe
     [(a.driverId, effectiveEnableCashRide now Nothing (Just a) enableCashRide) | a <- assocs]
 
 updateEnableCashRideForAssociations ::
-  (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Maybe Bool ->
   Int ->
   [FleetDriverAssociation] ->
@@ -245,7 +254,7 @@ updateEnableCashRideForAssociations enableCashRide batchSize assocs = do
     [(a.driverId, effectiveEnableCashRide now Nothing (Just a {DFDA.enableCashRide = enableCashRide}) (join $ M.lookup a.fleetOwnerId ownerFlag)) | a <- assocs]
 
 updateEnableCashRideForDriversWithSync ::
-  (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, Forkable m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Maybe Bool ->
   Int ->
   [Id Person] ->
@@ -628,7 +637,7 @@ findActiveDriverByFleetOwnerId fleetOwnerId = do
       (Just 1)
       Nothing
 
-endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Text -> Id Person -> m ()
+endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Text -> Id Person -> m ()
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   now <- getCurrentTime
   Redis.withWaitAndLockRedisWithTimeout (driverFleetLockKey driverId fleetOwnerId) 10 10 50000 $ do
@@ -639,6 +648,11 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
     let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
     LTSSync.syncDriverPoolDataToLTS (Id driverId) $
       LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+    publishDriverPoolData
+      (Id driverId)
+      [ poolField "fleetOwnerId" (Nothing :: Maybe Text),
+        poolField "enableCashRide" (Just effective)
+      ]
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
@@ -1021,7 +1035,7 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
             Left _ -> pure []
 
 approveFleetDriverAssociation ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id Person ->
   Id Person ->
   Maybe Text ->
@@ -1055,7 +1069,7 @@ rejectFleetDriverAssociation driverId fleetOwnerId responseReason = do
     [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
 
 revokeFleetDriverAssociation ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id Person ->
   Id Person ->
   m ()
@@ -1072,6 +1086,11 @@ revokeFleetDriverAssociation driverId fleetOwnerId = do
     let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
     LTSSync.syncDriverPoolDataToLTS (cast driverId) $
       LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+    publishDriverPoolData
+      (cast driverId)
+      [ poolField "fleetOwnerId" (Nothing :: Maybe Text),
+        poolField "enableCashRide" (Just effective)
+      ]
 
 -- Mark the association ended (isActive=false, associatedTill=now). This UPDATE
 -- streams to ClickHouse (drainer -> Kafka) as the terminal history event; the

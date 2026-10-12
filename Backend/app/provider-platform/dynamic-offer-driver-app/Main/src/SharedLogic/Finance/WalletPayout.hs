@@ -50,6 +50,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import SharedLogic.Finance.PostActions (runFinance)
 import qualified SharedLogic.Finance.Rails as Rails
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletAccount (makeWalletOfferHoldsKey)
 import qualified SharedLogic.Payment as SPayment
@@ -99,6 +100,7 @@ type WalletPayoutFlow m r =
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
   )

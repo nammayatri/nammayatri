@@ -27,6 +27,7 @@ import qualified Lib.Yudhishthira.Event.KaalChakra as Event
 import qualified Lib.Yudhishthira.Event.KaalChakra.JobControl as JobControl
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.KaalChakra.Actions as Actions
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.Yudhishthira ()
@@ -44,7 +45,7 @@ type ChakraJobs m r =
   )
 
 mkKaalChakraHandle ::
-  (ChakraJobs m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (ChakraJobs m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Event.Handle m Actions.Action
@@ -64,7 +65,8 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
 createFetchUserDataJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
@@ -87,7 +89,8 @@ createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData schedul
 createUpdateUserTagDataJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
@@ -114,7 +117,8 @@ createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData sch
 runDailyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'Daily ->
   m ExecutionResult
@@ -127,7 +131,8 @@ runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} 
 runWeeklyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'Weekly ->
   m ExecutionResult
@@ -140,7 +145,8 @@ runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt}
 runQuarterlyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'Quarterly ->
   m ExecutionResult
@@ -153,7 +159,8 @@ runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduled
 runMonthlyJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'Monthly ->
   m ExecutionResult
@@ -166,7 +173,8 @@ runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt
 runDailyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
@@ -179,7 +187,8 @@ runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, sche
 runWeeklyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
@@ -192,7 +201,8 @@ runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, sch
 runQuarterlyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
@@ -205,7 +215,8 @@ runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, 
 runMonthlyUpdateTagJob ::
   ( ChakraJobs m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult

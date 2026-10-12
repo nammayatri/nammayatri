@@ -28,6 +28,7 @@ import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import qualified Storage.Queries.Person as QP
@@ -39,7 +40,7 @@ findPerson personId = do
   QP.findById personId
     >>= fromMaybeM (PersonNotFound personId.getId)
 
-blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Hedis.HedisLTSFlowEnv r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text -> Int -> BlockReasonFlag -> m ()
+blockDriverTemporarily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text -> Int -> BlockReasonFlag -> m ()
 blockDriverTemporarily merchantId merchantOperatingCityId driverId blockedReason blockTimeInHours blockReasonFlag = do
   now <- getCurrentTime
   logInfo $ "Temporarily blocking driver, driverId: " <> driverId.getId

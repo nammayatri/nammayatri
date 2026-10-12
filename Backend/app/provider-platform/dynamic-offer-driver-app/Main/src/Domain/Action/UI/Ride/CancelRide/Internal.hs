@@ -79,6 +79,7 @@ import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.DriverFyEarnings as SDFE
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -161,6 +162,7 @@ cancelRideImpl ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,
@@ -262,6 +264,7 @@ cancelRideTransaction ::
     HasShortDurationRetryCfg r c,
     EncFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Metrics.HasBPPMetrics m r,
     Finance.HasActorInfo m r
   ) =>
@@ -311,6 +314,7 @@ createCancellationLedgerEntries ::
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "maxShards" r Int,
@@ -509,7 +513,8 @@ applyCancellationLedgerAction ::
     EncFlow m r,
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   SRB.Booking ->
   DRide.Ride ->
