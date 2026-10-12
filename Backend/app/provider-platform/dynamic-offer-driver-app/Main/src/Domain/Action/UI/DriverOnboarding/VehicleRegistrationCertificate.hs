@@ -207,13 +207,14 @@ isRCNumberFormatValid transporterConfig documentVerificationConfig normalizedRCN
 
 verifyRC ::
   Bool ->
+  Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverRCReq ->
   Bool ->
   Maybe (Id Person.Person) ->
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload mbFleetOwnerId = do
+verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req bulkUpload mbFleetOwnerId = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyRCHitsCountKey req.vehicleRegistrationCertNumber) externalServiceRateLimitOptions
 
@@ -304,7 +305,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
             |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
         let mbVehicleVariant =
               (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId req.imageId2 mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing True
+        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId req.imageId2 mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing (not autoApproved)
       Nothing -> verifyRCFlow person merchantOpCityId (fromMaybe True transporterConfig.useCategoryBasedVerificationPriorityList) req.vehicleRegistrationCertNumber req.imageId req.imageId2 req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber req.engineNumber req.chassisNumber
   -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
   groupRegisteredImages (req.imageId : maybeToList req.imageId2)

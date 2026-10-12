@@ -951,6 +951,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.Reg
           else (Nothing, Nothing, Nothing)
   verifyRC
     True
+    False
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     ( DriverRCReq
@@ -997,7 +998,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
                 dateOfExpiry = Nothing
               }
         Common.RCData rcReq -> do
-          void $ registerRC merchant merchantOpCityId rcReq
+          void $ registerRC merchant merchantOpCityId autoApprove rcReq
           pure . Just . Common.RC $
             Common.RCApproveDetails
               { documentImageId = rcReq.imageId,
@@ -1054,7 +1055,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
             ..
           }
 
-    registerRC merchant merchantOpCityId req@Common.RegisterRCReq {..} = do
+    registerRC merchant merchantOpCityId autoApprove req@Common.RegisterRCReq {..} = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
       let isDashboard = defaultVerifyBy /= DPan.FRONTEND_SDK
@@ -1064,6 +1065,7 @@ postDriverRegistrationDocumentRegisterWithVerifiedBy defaultVerifyBy merchantSho
               else (Nothing, Nothing, Nothing)
       verifyRC
         isDashboard
+        autoApprove
         (Just merchant)
         (cast driverId_, cast merchant.id, merchantOpCityId)
         ( DriverRCReq

@@ -119,7 +119,7 @@ runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity
             chassisNumber = Nothing,
             previousRcNumber = req.previousRcNumber
           }
-  void $ DomainRC.verifyRC ((not isFleet) || skipFleetChecks) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
+  void $ DomainRC.verifyRC ((not isFleet) || skipFleetChecks) False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload mbFleetOwnerId
 
 notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do
