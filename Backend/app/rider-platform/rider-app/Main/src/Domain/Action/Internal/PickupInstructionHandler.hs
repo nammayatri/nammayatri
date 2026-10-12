@@ -14,7 +14,6 @@
 
 module Domain.Action.Internal.PickupInstructionHandler where
 
-import qualified AWS.S3.Flow as S3Flow
 import qualified AWS.S3.Types as S3
 import Data.Aeson (Result (Success), fromJSON)
 import qualified Data.Aeson as Aeson
@@ -69,23 +68,14 @@ handlePickupInstruction ride booking driverIdValue = do
           case mbMediaFile of
             Just mediaFile -> case mediaFile.s3FilePath of
               Just s3Path -> do
-                logInfo $ "PickupInstructionHandler: Generating signed URL for audio in S3 (key from DB): " <> s3Path
-                -- Use AWS bucket from dhall config and treat DB field as the object key
-                s3Cfg <- asks (.s3Config)
-                case s3Cfg of
-                  S3.S3AwsConf a -> do
-                    let bucketName = a.bucketName
-                    -- Generate a signed URL with 1 hour expiration (3600 seconds)
-                    result <- withTryCatch "generateDownloadUrl:handlePickupInstruction" $ S3Flow.generateDownloadUrl' bucketName (T.unpack s3Path) 3600
-                    case result of
-                      Right signedUrl -> do
-                        logInfo "PickupInstructionHandler: Successfully generated signed URL for audio"
-                        return (Just signedUrl)
-                      Left err -> do
-                        logError $ "PickupInstructionHandler: Failed to generate signed URL: " <> show err
-                        return Nothing
-                  _ -> do
-                    logError "PickupInstructionHandler: Non-AWS S3 config; skipping signed URL generation"
+                logInfo $ "PickupInstructionHandler: Generating signed URL for audio (key from DB): " <> s3Path
+                result <- withTryCatch "generateDownloadUrl:handlePickupInstruction" $ S3.generateDownloadUrl (T.unpack s3Path) 3600
+                case result of
+                  Right signedUrl -> do
+                    logInfo "PickupInstructionHandler: Successfully generated signed URL for audio"
+                    return (Just signedUrl)
+                  Left err -> do
+                    logError $ "PickupInstructionHandler: Failed to generate signed URL: " <> show err
                     return Nothing
               Nothing -> do
                 logInfo "PickupInstructionHandler: No S3 path found for media file"
