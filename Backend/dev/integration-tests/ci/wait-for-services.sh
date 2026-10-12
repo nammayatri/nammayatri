@@ -61,12 +61,15 @@ failing_migration() { awk -F'\t' '/^Executing:/ { f = $2 } /^Executed:/ && $2 ==
 
 commits_for() { # <path> <count>
   local path=$1 n=$2
+  local out=""
   if [ -n "${GH_TOKEN:-}" ] && [ -n "${GITHUB_REPOSITORY:-}" ]; then
-    curl -sf -H "Authorization: Bearer $GH_TOKEN" \
+    out=$(curl -sf --max-time 10 -H "Authorization: Bearer $GH_TOKEN" \
       "https://api.github.com/repos/$GITHUB_REPOSITORY/commits?path=$path&sha=${GITHUB_SHA:-HEAD}&per_page=$n" \
-      | jq -r '.[] | "\(.sha[0:10]) · \(.commit.author.name) · \(.commit.author.date[0:10]) · \(.commit.message | split("\n")[0])"' && return
+      | jq -r '.[] | "\(.sha[0:10]) · \(.commit.author.name) · \(.commit.author.date[0:10]) · \(.commit.message | split("\n")[0])"' 2>/dev/null)
   fi
-  git log -n "$n" --date=short --format='%h · %an · %ad · %s' -- "$path" 2>/dev/null
+  # API unavailable or empty answer: fall back to local history (the CI checkout only has HEAD)
+  [ -n "$out" ] || out=$(git log -n "$n" --date=short --format='%h · %an · %ad · %s' -- "$path" 2>/dev/null)
+  printf '%s\n' "${out:-unknown}"
 }
 
 ready_json() { curl -sf --max-time 5 "$CONTEXT_API/api/services-ready" 2>/dev/null; }
