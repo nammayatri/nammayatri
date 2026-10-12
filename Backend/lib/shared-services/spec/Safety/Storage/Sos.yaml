@@ -76,6 +76,10 @@ Sos:
     findById:
       kvFunction: findOneWithKV
       where: id
+    findAllByIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [id]
     findByRideId:
       kvFunction: findOneWithKV
       where: rideId
