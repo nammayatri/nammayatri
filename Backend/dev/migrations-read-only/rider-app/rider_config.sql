@@ -913,3 +913,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN push_consent_to_bpp boolean  defau
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_distance_source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN manual_charge_approval_min_customer_version text ;

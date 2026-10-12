@@ -27,6 +27,7 @@ import qualified API.Internal.SendEmailOTP as SendEmailOTP
 import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.Sos as Sos
 import qualified API.Internal.StopEvents as StopEvents
+import qualified API.Internal.TollChargeApproval as TollChargeApproval
 import qualified API.Internal.UpdateCancellationFeeStatus as UpdateCancellationFeeStatus
 import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
@@ -55,6 +56,7 @@ type API =
            :<|> Sos.API
            :<|> UpdateCancellationFeeStatus.API
            :<|> OfferDiscount.API
+           :<|> TollChargeApproval.API
            :<|> SendSMS.API
            :<|> SendEmailOTP.API
            :<|> VerifyEmailUpdate.API
@@ -88,6 +90,7 @@ handler =
     :<|> Sos.handler
     :<|> UpdateCancellationFeeStatus.handler
     :<|> OfferDiscount.handler
+    :<|> TollChargeApproval.handler
     :<|> SendSMS.handler
     :<|> SendEmailOTP.handler
     :<|> VerifyEmailUpdate.handler

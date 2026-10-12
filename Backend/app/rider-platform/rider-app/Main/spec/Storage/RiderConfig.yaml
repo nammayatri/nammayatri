@@ -349,6 +349,7 @@ RiderConfig:
     alwaysAllowedNotificationCategories: "[NotificationCategory]"
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
+    manualChargeApprovalMinCustomerVersion: Maybe Text
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

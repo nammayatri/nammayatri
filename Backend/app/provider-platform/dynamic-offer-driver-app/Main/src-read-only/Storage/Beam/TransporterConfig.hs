@@ -250,6 +250,7 @@ data TransporterConfigT f = TransporterConfigT
     mandateExecutionRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateNotificationRescheduleInterval :: B.C f Kernel.Types.Common.Seconds,
     mandateValidity :: B.C f Kernel.Prelude.Int,
+    manualTollChargeConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     maxAllowedDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxAllowedVideoDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxNumberOfLuggages :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

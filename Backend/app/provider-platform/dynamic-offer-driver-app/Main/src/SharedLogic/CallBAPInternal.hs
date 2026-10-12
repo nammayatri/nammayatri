@@ -553,3 +553,81 @@ notifyFrfsTripStarted apiKey internalUrl tripId = do
   logInfo $ "CallBAPInternal: Notifying FRFS trip started for tripId: " <> tripId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsNotifyTripStartedClient tripId (Just apiKey)) "NotifyFrfsTripStarted" frfsNotifyTripStartedAPI
+
+-- Toll charge approval (BPP -> BAP): the BAP owns the rider, so it decides whether the rider's app can
+-- show the approval prompt and it delivers the prompt.
+
+type GetTollChargeApprovalModeAPI =
+  "internal"
+    :> "tollChargeApproval"
+    :> "mode"
+    :> Header "token" Text
+    :> Capture "bppBookingId" Text
+    :> Get '[JSON] TollChargeApprovalModeRes
+
+newtype TollChargeApprovalModeRes = TollChargeApprovalModeRes
+  { customerApprovalSupported :: Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+getTollChargeApprovalModeClient :: Maybe Text -> Text -> EulerClient TollChargeApprovalModeRes
+getTollChargeApprovalModeClient = client (Proxy @GetTollChargeApprovalModeAPI)
+
+getTollChargeApprovalModeAPI :: Proxy GetTollChargeApprovalModeAPI
+getTollChargeApprovalModeAPI = Proxy
+
+getTollChargeApprovalMode ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m TollChargeApprovalModeRes
+getTollChargeApprovalMode apiKey internalUrl bppBookingId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getTollChargeApprovalModeClient (Just apiKey) bppBookingId) "GetTollChargeApprovalMode" getTollChargeApprovalModeAPI
+
+type RequestTollChargeApprovalAPI =
+  "internal"
+    :> "tollChargeApproval"
+    :> "request"
+    :> Header "token" Text
+    :> Capture "bppBookingId" Text
+    :> ReqBody '[JSON] RequestTollChargeApprovalReq
+    :> Post '[JSON] APISuccess
+
+data RequestTollChargeApprovalReq = RequestTollChargeApprovalReq
+  { bppRideId :: Text,
+    tollNames :: Maybe [Text],
+    amount :: HighPrecMoney,
+    currency :: Currency,
+    approvalTimeoutSeconds :: Int,
+    requestId :: Text,
+    requestedAt :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+requestTollChargeApprovalClient :: Maybe Text -> Text -> RequestTollChargeApprovalReq -> EulerClient APISuccess
+requestTollChargeApprovalClient = client (Proxy @RequestTollChargeApprovalAPI)
+
+requestTollChargeApprovalAPI :: Proxy RequestTollChargeApprovalAPI
+requestTollChargeApprovalAPI = Proxy
+
+requestTollChargeApproval ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  RequestTollChargeApprovalReq ->
+  m APISuccess
+requestTollChargeApproval apiKey internalUrl bppBookingId req = do
+  logInfo $ "CallBAPInternal: Requesting toll charge approval for bppBookingId: " <> bppBookingId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (requestTollChargeApprovalClient (Just apiKey) bppBookingId req) "RequestTollChargeApproval" requestTollChargeApprovalAPI

@@ -133,6 +133,7 @@ data RiderConfig = RiderConfig
     kaptureQueue :: Kernel.Prelude.Text,
     localPoliceNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     makeMultiModalSearch :: Kernel.Prelude.Bool,
+    manualChargeApprovalMinCustomerVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     maxAllowedPublicTransportLegs :: Kernel.Prelude.Int,
     maxAlternateRouteVehicles :: Kernel.Prelude.Int,
     maxLiveVehiclesPerRoute :: Kernel.Prelude.Int,

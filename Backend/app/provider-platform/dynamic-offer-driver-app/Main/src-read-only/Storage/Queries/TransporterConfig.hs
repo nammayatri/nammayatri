@@ -102,6 +102,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.metricsDistanceBucketsKm metricsDistanceBucketsKm,
       Se.Set Beam.driverCoolOffPeriod driverCoolOffPeriod,
       Se.Set Beam.enableBppReallocation enableBppReallocation,
+      Se.Set Beam.manualTollChargeConfig (Kernel.Prelude.toJSON <$> manualTollChargeConfig),
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
@@ -335,6 +336,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.mandateExecutionRescheduleInterval (Kernel.Utils.Common.nominalDiffTimeToSeconds mandateExecutionRescheduleInterval),
       Se.Set Beam.mandateNotificationRescheduleInterval (Kernel.Utils.Common.nominalDiffTimeToSeconds mandateNotificationRescheduleInterval),
       Se.Set Beam.mandateValidity mandateValidity,
+      Se.Set Beam.manualTollChargeConfig (Kernel.Prelude.toJSON <$> manualTollChargeConfig),
       Se.Set Beam.maxAllowedDocSizeInMB maxAllowedDocSizeInMB,
       Se.Set Beam.maxAllowedVideoDocSizeInMB maxAllowedVideoDocSizeInMB,
       Se.Set Beam.maxNumberOfLuggages maxNumberOfLuggages,

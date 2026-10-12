@@ -550,6 +550,7 @@ data CalculateFareParametersParams = CalculateFareParametersParams
     estimatedDistance :: Maybe Meters,
     timeDiffFromUtc :: Maybe Seconds,
     tollCharges :: Maybe HighPrecMoney,
+    isManualTollCharge :: Bool,
     noOfStops :: Int,
     currency :: Currency,
     distanceUnit :: DistanceUnit,
@@ -664,7 +665,7 @@ calculateFareParametersHandler params = do
       parkingChargeResult = capComponentMb ParkingChargeComponent fp.parkingCharge
       customerExtraFeeResult = capComponentMb CustomerExtraFeeComponent params.customerExtraFee
       customerCancellationDuesResult = capComponentMb CustomerCancellationChargeComponent params.customerCancellationDues
-      tollChargesResult = capComponentMb TollChargesComponent $ addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing)
+      tollChargesResult = if params.isManualTollCharge then addMaybes fp.tollCharges params.tollCharges else capComponentMb TollChargesComponent $ addMaybes fp.tollCharges (if isTollApplicableForTrip fp.vehicleServiceTier fp.tripCategory then params.tollCharges else Nothing)
       fullCompleteRideCost =
         {- without platformFee -}
         fullRideCostN
