@@ -377,19 +377,30 @@ jobs:
           " > stack.log 2>&1 &
           echo $! > stack.pid
 
-      - name: Wait for services
+      # log-cleaner empties any *.log over 10 MB every second, so failures lost their logs. Copy the full
+      # driver/rider/allocator/API-access logs into ci-logs/*.txt.gz in the background (stopped before upload).
+      - name: Capture service logs
+        timeout-minutes: 1
         run: |
-          for i in $(seq 1 120); do          # 120 x 15s = 30 min
-            if curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null; then
-              echo "Services ready"; exit 0
-            fi
-            echo "waiting for services... ($((i*15))s)"; sleep 15
+          mkdir -p ci-logs
+          # <source>|<lines already there to keep: 0 = only new (shared /tmp logs), +1 = whole file>
+          for spec in /tmp/dynamic-offer-driver-app.log\|0 /tmp/rider-app.log\|0 \
+                      driver-offer-allocator-exe.log\|+1 driver-proxy.log\|+1; do
+            src=${spec%|*}; from=${spec#*|}; name=$(basename "$src" .log)
+            nohup bash -c "{ tail -n $from -F '$src' 2>/dev/null & echo \$! > ci-logs/$name.pid; wait; } | gzip > ci-logs/$name.txt.gz" >/dev/null 2>&1 &
           done
-          echo "Services not ready after 30 min"; tail -100 stack.log; exit 1
+
+      # Fails fast (and names the app, error and culprit commit) when a startup process crashes.
+      - name: Wait for services
+        timeout-minutes: 21
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: Backend/dev/integration-tests/ci/wait-for-services.sh 20 "Wait for services"
 
       # Same path as the dashboard's Sync button: fetch master data -> import -> local-testing-data
       # -> feature migrations -> restart rider/driver.
       - name: Sync master config
+        timeout-minutes: 22
         run: |
           curl -sf -X POST "$CONTEXT_API/api/config-sync/import" \
                -H 'Content-Type: application/json' \
@@ -406,29 +417,28 @@ jobs:
           done
           echo "Config sync timed out"; exit 1
 
+      # Sync restarts rider/driver; same fail-fast check (replaces the temporary diagnostics block).
       - name: Wait for services after sync
+        timeout-minutes: 16
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           sleep 30
-          for i in $(seq 1 60); do
-            curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null && { echo "Ready"; exit 0; }
-            sleep 15
-          done
-          # TEMPORARY: show which service is down and whether mock-registry is stuck (alive) or gone after the post-sync kill.
-          echo "Services not ready after sync"
-          curl -s "$CONTEXT_API/api/services-ready" | jq . || true
-          ps -eo pid,ppid,stat,etime,args | grep -E 'mock-registr[y]|rider-app-ex[e]|dynamic-offer-driver-app-ex[e]' || echo "no matching processes"
-          exit 1
+          Backend/dev/integration-tests/ci/wait-for-services.sh 15 "Wait for services after sync"
 
       # Runs every working collection. Doesn't stop at the first failure: runs all,
       # prints a summary, and fails the job if any failed.
+      # -d (debug-runner.py): prints every step's request/response (tokens masked) and keeps each
+      # step's service logs in data/test-logs/; failed steps also show the service ERROR lines.
       - name: Run collections
+        timeout-minutes: 30
         run: |
           nix develop .#backend --command bash -s <<'EOF'
           cd Backend/dev/integration-tests
           FAILED=()
           run() {
             echo "::group::$*"
-            ./run-tests.sh "$@" || FAILED+=("$*")
+            ./run-tests.sh -d "$@" || FAILED+=("$*")
             echo "::endgroup::"
           }
           run auto    NY_Bangalore     # AutoRideFlow 01-03
@@ -443,7 +453,26 @@ jobs:
           echo "FAILED:"; printf '  - %s\n' "${FAILED[@]}"; exit 1
           EOF
 
-      # Only on failure: attach all service logs + newman reports so the failure can be debugged.
+      # Driver-cancel -> reallocation timeline for Auto 03 / Taxi 06 on every run (pass or fail), so the
+      # intermittent D2-accept 409 can be compared across runs. Also written to the job summary.
+      - name: Reallocation timeline
+        if: always()
+        timeout-minutes: 2
+        run: |
+          cd Backend/dev/integration-tests
+          OUT=$(python3 ci/flow-timeline.py data/test-logs/03-AutoDriverCancellation-* data/test-logs/06-CabDriverCancellation-* 2>&1 || true)
+          echo "$OUT"
+          { echo "### Reallocation timeline (Auto 03 / Taxi 06)"; echo '```'; echo "$OUT"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      # Stop the background log copies so the .gz files are complete before upload.
+      - name: Stop log capture
+        if: always()
+        timeout-minutes: 1
+        run: |
+          for p in ci-logs/*.pid; do [ -f "$p" ] && kill "$(cat "$p")" 2>/dev/null || true; done
+          sleep 2; ls -la ci-logs/ 2>/dev/null || true
+
+      # Only on failure: attach all service logs, full captured logs, per-step logs and newman reports.
       - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v4
@@ -452,8 +481,22 @@ jobs:
           path: |
             stack.log
             *.log
+            ci-logs/*.txt.gz
             Backend/dev/integration-tests/reports/
+            Backend/dev/integration-tests/data/test-logs/
           retention-days: 5
+
+      # Always (small): Auto 03 / Taxi 06 step logs, so passing runs can be compared with failing ones.
+      - name: Upload reallocation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reallocation-logs
+          path: |
+            Backend/dev/integration-tests/data/test-logs/03-AutoDriverCancellation-*/
+            Backend/dev/integration-tests/data/test-logs/06-CabDriverCancellation-*/
+          if-no-files-found: ignore
+          retention-days: 14
 
       # Always: stop the stack and free the ports for the next run.
       - name: Stop mobility stack
