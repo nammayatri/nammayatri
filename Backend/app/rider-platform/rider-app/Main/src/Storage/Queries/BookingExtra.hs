@@ -395,15 +395,6 @@ updateStop booking mbStopLoc isBookingUpdated = do
     )
     [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
 
-updateHasStops :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
-updateHasStops bookingId hasStops = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamB.hasStops hasStops,
-      Se.Set BeamB.updatedAt now
-    ]
-    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
-
 findAllByPersonIdLimitOffset :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
 findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
   let limit' = fmap fromIntegral $ mlimit <|> Just 100

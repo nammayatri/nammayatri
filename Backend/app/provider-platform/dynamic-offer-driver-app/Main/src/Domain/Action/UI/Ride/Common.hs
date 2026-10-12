@@ -70,6 +70,7 @@ import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeter
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
+import Kernel.Utils.Common (fromMaybeM)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -92,6 +93,7 @@ import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Translations as QTranslations
 import Tools.DynamicLogic (getAppDynamicLogic)
+import Tools.Error (LocationMappingError (..))
 import qualified Tools.Utils as Tools
 import Prelude hiding (id)
 
@@ -546,6 +548,15 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
     DTC.IntercityRental _ _ -> calculateLocations booking.id booking.stopLocationId
     _ -> return (Nothing, Nothing)
+  -- Rental stops come from the ride, fixed at assignment, which is also what stopAction checks.
+  -- The booking's list picks up destinations reached and replaced mid-ride, which have no stop record.
+  let rideStopLocations =
+        QLM.getLatestStopsByEntityId ride.id.getId
+          >>= mapM (\stopMapping -> QLoc.findById stopMapping.locationId >>= fromMaybeM (StopsLocationNotFound stopMapping.locationId.getId))
+  rideStops <- case booking.tripCategory of
+    DTC.Rental _ -> rideStopLocations
+    DTC.IntercityRental _ _ -> rideStopLocations
+    _ -> pure booking.stops
   cancellationReason <- if ride.status == DRide.CANCELLED then runInReplica (QBCR.findByRideId (Just ride.id)) else pure Nothing
 
   -- Lookup pickup zone gate info for entry fee
@@ -626,7 +637,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         status = ride.status,
         fromLocation = DLocUI.makeLocationAPIEntity booking.fromLocation,
         toLocation = DLocUI.makeLocationAPIEntity <$> booking.toLocation,
-        stops = map (makeStop stopsInfo) booking.stops,
+        stops = map (makeStop stopsInfo) rideStops,
         driverName = rideDetails.driverName,
         driverNumber,
         vehicleNumber = rideDetails.vehicleNumber,

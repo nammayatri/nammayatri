@@ -737,7 +737,6 @@ processStop bookingId loc merchantId isEdit = do
       rideLocationMapping <- SLM.buildLocationMapping' location.id ride.id.getId DLM.RIDE ride.merchantId ride.merchantOperatingCityId locationMapping.order
       QLM.create rideLocationMapping
   QRB.updateStop booking (Just location) (Just True)
-  QRB.updateHasStops booking.id (Just True)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let details =
         if isEdit
