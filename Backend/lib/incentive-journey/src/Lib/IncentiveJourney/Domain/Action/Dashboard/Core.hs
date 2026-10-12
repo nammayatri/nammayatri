@@ -316,7 +316,12 @@ assignUser handle merchantShortId opCity personId cjmId enabled validTill notFou
   cjm <- QCJMExtra.findCohortJourneyMappingById cjmId >>= fromMaybeM (InvalidRequest "Cohort journey mapping not found")
   unless (cjm.merchantId == ID.cast merchant.id && cjm.merchantOperatingCityId == ID.cast merchantOpCityId) $
     throwError (InvalidRequest "Cohort journey mapping does not belong to this merchant/city")
-  void $ QJourney.findById cjm.journeyId >>= fromMaybeM (InvalidRequest "Incentive journey not found")
+  journey <- QJourney.findById cjm.journeyId >>= fromMaybeM (InvalidRequest "Incentive journey not found")
+  timeDiffFromUtc <- handle.getTimeDiffFromUtc merchantOpCityId
+  localTime <- getLocalCurrentTime timeDiffFromUtc
+  let endDate = IJ.computeStreakEndDate cjm.startDate cjm.streakRange journey.journeyType
+  when (localTime >= endDate) $
+    throwError (InvalidRequest "Cohort journey mapping has expired")
   void $ QUCMExtra.upsertUserCohortMapping personId cjmId enabled validTill
   handle.clearAssignmentCacheByPersonId personId
 
