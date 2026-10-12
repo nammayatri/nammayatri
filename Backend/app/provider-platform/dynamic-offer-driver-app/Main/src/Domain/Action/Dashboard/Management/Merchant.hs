@@ -5271,8 +5271,8 @@ applyVehicleServiceTierUpdate existing req =
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
 getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  void $ CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  geoms <- QGEO.findAllGeometries opCity mbLimit mbOffset
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  geoms <- QGEO.findAllGeometriesByCityAndState merchantOpCity.city merchantOpCity.state mbLimit mbOffset
   return $ map toResponse geoms
   where
     toResponse :: DGEO.Geometry -> Common.GeometryAPIEntity

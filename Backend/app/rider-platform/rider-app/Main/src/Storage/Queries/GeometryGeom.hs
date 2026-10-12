@@ -15,6 +15,7 @@
 
 module Storage.Queries.GeometryGeom
   ( findAllGeometries,
+    findAllGeometriesByCityAndState,
     findAllGeometriesForMerchant,
     updateGeometry,
   )
@@ -41,6 +42,11 @@ findAllGeometries :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City
 findAllGeometries cityParam mbLimit mbOffset = do
   cached <- getAllGeometriesWithPolygons
   pure $ paginate mbLimit mbOffset $ map fst $ filter (\(g, _) -> g.city == cityParam) cached
+
+findAllGeometriesByCityAndState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> Maybe Int -> Maybe Int -> m [Geometry]
+findAllGeometriesByCityAndState cityParam stateParam mbLimit mbOffset = do
+  cached <- getAllGeometriesWithPolygons
+  pure $ paginate mbLimit mbOffset $ map fst $ filter (\(g, _) -> g.city == cityParam && g.state == stateParam) cached
 
 -- | All geometries across cities (allCities=true dashboard listing), from the cache.
 findAllGeometriesForMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id merchant -> Maybe Int -> Maybe Int -> m [Geometry]

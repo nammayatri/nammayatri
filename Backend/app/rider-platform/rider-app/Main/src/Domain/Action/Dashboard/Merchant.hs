@@ -2244,12 +2244,12 @@ postMerchantConfigOperatingCityWhiteList _ _ req = do
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Bool -> Flow Common.GeometryResp
 getMerchantConfigGeometryList merchantShortId opCity mbLimit mbOffset mbAllCities = do
   merchant <- findMerchantByShortId merchantShortId
-  void $ CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
 
   -- Fetch rider geometries (for all cities if allCities=true)
   riderGeoms <- case mbAllCities of
     Just True -> QGEO.findAllGeometriesForMerchant merchant.id mbLimit mbOffset
-    _ -> QGEO.findAllGeometries opCity mbLimit mbOffset
+    _ -> QGEO.findAllGeometriesByCityAndState merchantOpCity.city merchantOpCity.state mbLimit mbOffset
   let riderResponse = map (toResponseFromGeom Common.Rider) riderGeoms
 
   -- Fetch driver geometries via internal API
