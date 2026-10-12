@@ -34,6 +34,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWCTypes
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
+import Lib.Yudhishthira.Event.KaalChakra.Metrics (withChakraQueryMetric)
 import qualified Lib.Yudhishthira.Event.KaalChakra.Parse as Parse
 import qualified Lib.Yudhishthira.Event.KaalChakra.Template as Template
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
@@ -229,14 +230,15 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
   let offset = Yudhishthira.QOffset $ batchNumber * req.usersInBatch
   let template = Template.Template {limit, offset, usersSet = req.usersSet}
 
-  clickhouseResults <- forM clickhouseQueries $ \chakraQuery -> do
-    queryResults <- runQueryRequestTemplate chakraQuery template
-    if req.parseQueryResults
-      then do
-        let notParsedObjects = queryResults.queryResultObjects
-        parsedObjects <- Parse.parseQueryResult chakraQuery notParsedObjects
-        pure $ queryResults{queryResultObjects = parsedObjects}
-      else pure queryResults
+  clickhouseResults <- forM clickhouseQueries $ \chakraQuery ->
+    withChakraQueryMetric req.chakra chakraQuery isEmptyQueryResult $ do
+      queryResults <- runQueryRequestTemplate chakraQuery template
+      if req.parseQueryResults
+        then do
+          let notParsedObjects = queryResults.queryResultObjects
+          parsedObjects <- Parse.parseQueryResult chakraQuery notParsedObjects
+          pure $ queryResults{queryResultObjects = parsedObjects}
+        else pure queryResults
 
   -- 3. Extract userIds from ClickHouse results
   let userIds = S.toList $ extractUserIdsFromClickHouseResults clickhouseResults
@@ -244,24 +246,25 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
     logError "No ClickHouse queries: Redis queries will run with 0 userIds; need at least one ClickHouse query to define cohort"
 
   -- 4. Execute Redis queries using extracted userIds
-  redisResults <- forM redisQueries $ \chakraQuery -> do
-    redisObjects <- runRedisQueryRequest chakraQuery userIds
-    if req.parseQueryResults
-      then do
-        parsedObjects <- Parse.parseQueryResult chakraQuery redisObjects
-        pure
-          ChakraQueryResult
-            { queryName = chakraQuery.queryName,
-              queryText = chakraQuery.queryText,
-              queryResultObjects = parsedObjects
-            }
-      else
-        pure
-          ChakraQueryResult
-            { queryName = chakraQuery.queryName,
-              queryText = chakraQuery.queryText,
-              queryResultObjects = redisObjects
-            }
+  redisResults <- forM redisQueries $ \chakraQuery ->
+    withChakraQueryMetric req.chakra chakraQuery isEmptyQueryResult $ do
+      redisObjects <- runRedisQueryRequest chakraQuery userIds
+      if req.parseQueryResults
+        then do
+          parsedObjects <- Parse.parseQueryResult chakraQuery redisObjects
+          pure
+            ChakraQueryResult
+              { queryName = chakraQuery.queryName,
+                queryText = chakraQuery.queryText,
+                queryResultObjects = parsedObjects
+              }
+        else
+          pure
+            ChakraQueryResult
+              { queryName = chakraQuery.queryName,
+                queryText = chakraQuery.queryText,
+                queryResultObjects = redisObjects
+              }
 
   -- 5. Combine ClickHouse and Redis results
   let allResults = clickhouseResults ++ redisResults
@@ -578,6 +581,9 @@ data ChakraQueryResult = ChakraQueryResult
     queryText :: Text,
     queryResultObjects :: [A.Object]
   }
+
+isEmptyQueryResult :: ChakraQueryResult -> Bool
+isEmptyQueryResult queryResult = null queryResult.queryResultObjects
 
 runQueryRequestTemplate ::
   (CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
