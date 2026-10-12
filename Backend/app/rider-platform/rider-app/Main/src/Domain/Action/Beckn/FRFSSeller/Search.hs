@@ -108,7 +108,7 @@ buildCatalog operator merchantId transactionId self req = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant:" <> merchantId.getId <> " city:" <> show city)
   mbJourney <- traverse originAndDestination (intentStops req)
   integratedBPPConfig <-
-    SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id BecknSpec.METRO DIBC.MULTIMODAL
+    SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id BecknSpec.METRO DIBC.MULTIMODAL Nothing
   cfg <- either (throwError . InternalError) pure (Common.operatorConfig integratedBPPConfig.operatorConfig)
   stations <- ExternalCallAPI.getStationList integratedBPPConfig
   operatingHours <- ExternalCallAPI.getOperatingHoursTags integratedBPPConfig
@@ -202,6 +202,7 @@ journeyCatalog operator merchantId merchantOperatingCity integratedBPPConfig sta
           integratedBPPConfig
           (ExternalCallAPI.BasicRouteDetail {routeCode = "", startStopCode = fromStop, endStopCode = toStop, color = Nothing} :| [])
           SpecEnums.METRO
+          Nothing
           Nothing
           Nothing
           (Just journeyType.quoteType)

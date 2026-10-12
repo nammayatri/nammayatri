@@ -72,7 +72,7 @@ sellerContext operator = do
   igmCity <-
     IssueCasts.castMOCityById (cast moCity.id)
       >>= fromMaybeM (MerchantOperatingCityNotFound moCity.id.getId)
-  mbSelfOperatorConfig <- (.operatorConfig) <$> SIBC.findIntegratedBPPConfig Nothing moCity.id BecknSpec.METRO DIBC.MULTIMODAL
+  mbSelfOperatorConfig <- (.operatorConfig) <$> SIBC.findIntegratedBPPConfig Nothing moCity.id BecknSpec.METRO DIBC.MULTIMODAL Nothing
   pure
     SellerContext
       { merchant,

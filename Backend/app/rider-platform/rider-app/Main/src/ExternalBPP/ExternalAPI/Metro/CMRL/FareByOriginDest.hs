@@ -73,7 +73,8 @@ getFareByOriginDest integrationBPPConfig config fareReq = do
                 Nothing -> offeredPrice
         return $
           [ FRFSUtils.FRFSFare
-              { categories =
+              { providerServiceDetails = Nothing,
+                categories =
                   [ FRFSUtils.FRFSTicketCategory
                       { category = ADULT,
                         price =

@@ -14,7 +14,7 @@ import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Kernel.Utils.TH
+import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data IntegratedBPPConfig = IntegratedBPPConfig
@@ -33,11 +33,14 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
     providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sortQuotesByRouteServiceTiers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    tripCategory :: Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.FRFSTripCategory,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+data FRFSTripCategory = INTRACITY | INTERCITY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -49,7 +52,12 @@ data ProviderConfig
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
   | KMRL Domain.Types.Extra.IntegratedBPPConfig.KMRLConfig
+  | TNSTC Domain.Types.Extra.IntegratedBPPConfig.TNSTCConfig
   deriving (Generic, FromJSON, ToJSON, Eq, Show)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTripCategory)
+
+$(mkHttpInstancesForEnum ''FRFSTripCategory)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 

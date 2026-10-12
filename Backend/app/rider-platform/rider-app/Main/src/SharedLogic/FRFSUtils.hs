@@ -182,6 +182,7 @@ getProviderName integrationBPPConfig =
     (_, DIBC.ONDC _) -> "ONDC Services"
     (_, DIBC.CRIS _) -> "CRIS Subway"
     (_, DIBC.KMRL _) -> "Kochi Metro Rail Limited"
+    (_, DIBC.TNSTC _) -> "TNSTC"
 
 getQREncoding :: DIBC.IntegratedBPPConfig -> Maybe DIBC.QREncoding
 getQREncoding integratedBPPConfig = case integratedBPPConfig.providerConfig of
@@ -404,8 +405,23 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+data ProviderServiceDetails = ProviderServiceDetails
+  { providerServiceId :: Text,
+    providerLayoutId :: Text,
+    providerClassId :: Text,
+    providerTripCode :: Text,
+    departureTime :: Text,
+    arrivalTime :: Text,
+    arrivalDate :: Text,
+    availableSeats :: Maybe Int,
+    stopBookingTime :: Maybe UTCTime
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
 data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
+    providerServiceDetails :: Maybe ProviderServiceDetails,
     categories :: [FRFSTicketCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     vehicleServiceTier :: FRFSVehicleServiceTier,
@@ -489,7 +505,8 @@ buildFRFSFare _riderId _vehicleType _merchantId _merchantOperatingCityId routeCo
           ]
   return $
     FRFSFare
-      { farePolicyId = Just farePolicy.id,
+      { providerServiceDetails = Nothing,
+        farePolicyId = Just farePolicy.id,
         categories = categories,
         fareDetails = Nothing,
         vehicleServiceTier =
@@ -625,7 +642,8 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
                 let price = Price {amountInt = roundToIntegral (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
                 return $
                   FRFSFare
-                    { farePolicyId = Nothing,
+                    { providerServiceDetails = Nothing,
+                      farePolicyId = Nothing,
                       categories =
                         [ FRFSTicketCategory
                             { category = ADULT,
@@ -713,7 +731,7 @@ data VehicleInfo = VehicleInfo
 trackVehicles :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], Redis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c, HasKafkaProducer r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Maybe LatLong -> Maybe (Id DIBC.IntegratedBPPConfig) -> m [VehicleTracking]
 trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platformType mbRiderPosition mbIntegratedBPPConfigId = do
   now <- getCurrentTime
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType Nothing
   case vehicleType of
     Spec.BUS -> do
       case platformType of
@@ -1511,6 +1529,8 @@ getQuantityTagFromCategory categoryType = case categoryType of
   STUDENT -> FRFSCategorySpec.STUDENT_QUANTITY
   FEMALE -> FRFSCategorySpec.FEMALE_QUANTITY
   MALE -> FRFSCategorySpec.MALE_QUANTITY
+  ADULT_SLEEPER -> FRFSCategorySpec.ADULT_QUANTITY
+  CHILD_SLEEPER -> FRFSCategorySpec.CHILD_QUANTITY
 
 getPriceTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getPriceTagFromCategory categoryType = case categoryType of
@@ -1520,6 +1540,8 @@ getPriceTagFromCategory categoryType = case categoryType of
   STUDENT -> FRFSCategorySpec.STUDENT_PRICE
   FEMALE -> FRFSCategorySpec.FEMALE_PRICE
   MALE -> FRFSCategorySpec.MALE_PRICE
+  ADULT_SLEEPER -> FRFSCategorySpec.ADULT_PRICE
+  CHILD_SLEEPER -> FRFSCategorySpec.CHILD_PRICE
 
 getTotalPriceTagFromCategory :: FRFSQuoteCategoryType -> FRFSCategorySpec.FRFSCategoryTag
 getTotalPriceTagFromCategory categoryType = case categoryType of
@@ -1529,6 +1551,8 @@ getTotalPriceTagFromCategory categoryType = case categoryType of
   STUDENT -> FRFSCategorySpec.TOTAL_STUDENT_PRICE
   FEMALE -> FRFSCategorySpec.TOTAL_FEMALE_PRICE
   MALE -> FRFSCategorySpec.TOTAL_MALE_PRICE
+  ADULT_SLEEPER -> FRFSCategorySpec.TOTAL_ADULT_PRICE
+  CHILD_SLEEPER -> FRFSCategorySpec.TOTAL_CHILD_PRICE
 
 data QuoteCategorySelection = QuoteCategorySelection
   { qcQuoteCategoryId :: Id DFRFSQuoteCategory.FRFSQuoteCategory,

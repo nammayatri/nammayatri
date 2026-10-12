@@ -16,6 +16,7 @@ data SeatT f = SeatT
     directionDegrees :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     id :: B.C f Kernel.Prelude.Text,
     isBookable :: B.C f Kernel.Prelude.Bool,
+    isDifferentlyAbled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isLadiesOnly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

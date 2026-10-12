@@ -439,6 +439,7 @@ library
       Domain.Types.Extra.CancellationReason
       Domain.Types.Extra.FeedbackForm
       Domain.Types.Extra.FRFSCachedQuote
+      Domain.Types.Extra.FRFSTicketService
       Domain.Types.Extra.IntegratedBPPConfig
       Domain.Types.Extra.InterCityDetails
       Domain.Types.Extra.MerchantMessage
@@ -489,6 +490,14 @@ library
       ExternalBPP.ExternalAPI.Bus.EBIX.Order
       ExternalBPP.ExternalAPI.Bus.EBIX.Payment
       ExternalBPP.ExternalAPI.Bus.EBIX.Status
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Booking
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Client
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Error
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Layout
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Order
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Place
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Services
+      ExternalBPP.ExternalAPI.Bus.TNSTC.Types
       ExternalBPP.ExternalAPI.CallAPI
       ExternalBPP.ExternalAPI.Direct.Order
       ExternalBPP.ExternalAPI.Direct.Status
@@ -1290,12 +1299,14 @@ library
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
       Domain.Types.FRFSPassTicketStatistics
+      Domain.Types.FRFSPassengerDetail
       Domain.Types.FRFSQuote
       Domain.Types.FRFSQuoteBreakup
       Domain.Types.FRFSQuoteCategory
       Domain.Types.FRFSRecon
       Domain.Types.FRFSRouteFareProduct
       Domain.Types.FRFSRouteStopStageFare
+      Domain.Types.FRFSSavedPassenger
       Domain.Types.FRFSSearch
       Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
@@ -1467,12 +1478,14 @@ library
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
       Storage.Beam.FRFSPassTicketStatistics
+      Storage.Beam.FRFSPassengerDetail
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSQuoteBreakup
       Storage.Beam.FRFSQuoteCategory
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSRouteFareProduct
       Storage.Beam.FRFSRouteStopStageFare
+      Storage.Beam.FRFSSavedPassenger
       Storage.Beam.FRFSSearch
       Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
@@ -1649,12 +1662,14 @@ library
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare
       Storage.Queries.FRFSPassTicketStatistics
+      Storage.Queries.FRFSPassengerDetail
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSQuoteBreakup
       Storage.Queries.FRFSQuoteCategory
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSRouteFareProduct
       Storage.Queries.FRFSRouteStopStageFare
+      Storage.Queries.FRFSSavedPassenger
       Storage.Queries.FRFSSearch
       Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket
@@ -1976,6 +1991,7 @@ library
     , shared-services
     , singletons
     , singletons-th
+    , soap
     , special-zone-a
     , split
     , string-conversions
@@ -2000,6 +2016,7 @@ library
     , x509-store
     , x509-system
     , xml-conduit
+    , xml-conduit-writer
     , xmlbf
     , yudhishthira
     , zlib
@@ -2124,6 +2141,7 @@ executable rider-app-exe
     , servant-xml
     , singletons
     , singletons-th
+    , soap
     , split
     , string-conversions
     , template-haskell
@@ -2146,6 +2164,7 @@ executable rider-app-exe
     , x509-store
     , x509-system
     , xml-conduit
+    , xml-conduit-writer
     , xmlbf
     , yudhishthira
     , zlib
@@ -2272,6 +2291,7 @@ test-suite rider-app-test
     , servant-xml
     , singletons
     , singletons-th
+    , soap
     , split
     , string-conversions
     , tasty
@@ -2297,6 +2317,7 @@ test-suite rider-app-test
     , x509-store
     , x509-system
     , xml-conduit
+    , xml-conduit-writer
     , xmlbf
     , yudhishthira
     , zlib

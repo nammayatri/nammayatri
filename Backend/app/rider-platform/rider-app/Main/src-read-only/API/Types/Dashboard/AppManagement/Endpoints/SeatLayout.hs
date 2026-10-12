@@ -24,6 +24,7 @@ data SeatDef = SeatDef
     directionDegrees :: Data.Maybe.Maybe Kernel.Prelude.Int,
     id :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.Seat.Seat),
     isBookable :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    isDifferentlyAbled :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     isLadiesOnly :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     label :: Data.Maybe.Maybe Data.Text.Text,
     minStopsRequired :: Data.Maybe.Maybe Kernel.Prelude.Int,
