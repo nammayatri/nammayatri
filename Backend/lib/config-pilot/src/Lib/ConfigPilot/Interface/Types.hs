@@ -28,6 +28,7 @@ module Lib.ConfigPilot.Interface.Types
     ConfigDimensions (..),
     ToMaybeOne (..),
     getOneConfig,
+    getOneFromDB,
 
     -- * Singleton GADT
     SConfigType (..),
@@ -42,6 +43,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import GHC.Generics (C, D, Generic (from), K1 (..), M1 (..), Rep, S, (:*:) (..))
+import Kernel.Beam.Functions (runInMasterDbAndRedis)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (incrementConfigPilotFailureCounter, incrementConfigPilotSuccessCounter)
 import Kernel.Types.Error
@@ -192,6 +194,28 @@ class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
           logDebug $ "getConfig:exit table=" <> tableName <> " dims=" <> show dims
           pure result
 
+  -- | Direct table read for these dimensions: the generated @Storage.Queries@
+  -- query (@findOneWithKV@ / @findAllWithKV@ -- KV first, Postgres fallback),
+  -- with no ConfigPilot caching and no dynamic-logic patch applied.
+  -- Deliberately distinct from 'configFallback', which may point at a
+  -- @Storage.CachedQueries@ query and so carries its own Redis layer.
+  configDBFetch ::
+    (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+    a ->
+    Maybe (m (ConfigValueTypeOf a))
+  configDBFetch _ = Nothing
+
+  getConfigFromDB ::
+    (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+    a ->
+    m (ConfigValueTypeOf a)
+  getConfigFromDB dims =
+    case configDBFetch dims of
+      Nothing -> throwError $ InvalidRequest $ "DB read not implemented for table: " <> show (getConfigType dims)
+      Just fetch -> withLogTag "CONFIG_PILOT_DB:" $ do
+        logDebug $ "getConfigFromDB:entry table=" <> show (getConfigType dims) <> " dims=" <> show dims
+        filterByDimensions dims <$> runInMasterDbAndRedis fetch
+
   setConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
   setConfig _ = throwError $ InvalidRequest "setConfig not implemented for this dimension"
 
@@ -222,6 +246,13 @@ getOneConfig ::
   Maybe (m (ConfigValueTypeOf a)) ->
   m (Maybe (ElemOf (ConfigValueTypeOf a)))
 getOneConfig dims mbFallback = getConfig dims mbFallback >>= toMaybeOne (show dims)
+
+-- | 'getOneConfig' against the table instead of the effective config.
+getOneFromDB ::
+  (ConfigDimensions a, ToMaybeOne (ConfigValueTypeOf a), Show a, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  a ->
+  m (Maybe (ElemOf (ConfigValueTypeOf a)))
+getOneFromDB dims = getConfigFromDB dims >>= toMaybeOne (show dims)
 
 -- -----------------------------------------------------------------------------
 -- Generic machinery: extract non-Maybe field values as cache key parts

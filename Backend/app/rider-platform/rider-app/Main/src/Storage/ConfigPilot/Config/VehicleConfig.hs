@@ -30,6 +30,7 @@ instance ConfigDimensions VehicleConfigDimensions where
   type ConfigTypeOf VehicleConfigDimensions = 'VehicleConfig
   type ConfigValueTypeOf VehicleConfigDimensions = [DVC.VehicleConfig]
   getConfigType _ = VehicleConfig
+  configDBFetch a = Just (QVC.findAllByBecknConfigId (Id a.becknConfigId))
   getConfigList a =
     LCP.resolveConfigList
       a

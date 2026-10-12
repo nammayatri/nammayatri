@@ -31,6 +31,7 @@ instance ConfigDimensions TranslationDimensions where
   type ConfigTypeOf TranslationDimensions = 'TranslationRider
   type ConfigValueTypeOf TranslationDimensions = Maybe DT.Translations
   getConfigType _ = TranslationRider
+  configDBFetch a = Just (listToMaybe <$> SQ.findAllByMerchantOperatingCityId (Id (fromMaybe "" a.merchantOperatingCityId)))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

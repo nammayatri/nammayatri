@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as SQ
+import qualified Storage.Queries.MerchantServiceUsageConfig as QMerchantServiceUsageConfig
 
 data MerchantServiceUsageConfigDimensions = MerchantServiceUsageConfigDimensions
   { merchantOperatingCityId :: Text
@@ -28,6 +29,7 @@ instance ConfigDimensions MerchantServiceUsageConfigDimensions where
   type ConfigTypeOf MerchantServiceUsageConfigDimensions = 'MerchantServiceUsageConfigDriver
   type ConfigValueTypeOf MerchantServiceUsageConfigDimensions = Maybe DT.MerchantServiceUsageConfig
   getConfigType _ = MerchantServiceUsageConfigDriver
+  configDBFetch a = Just (QMerchantServiceUsageConfig.findByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

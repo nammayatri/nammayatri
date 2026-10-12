@@ -32,6 +32,7 @@ instance ConfigDimensions MerchantPushNotificationDimensions where
   type ConfigTypeOf MerchantPushNotificationDimensions = 'MerchantPushNotificationRider
   type ConfigValueTypeOf MerchantPushNotificationDimensions = [DT.MerchantPushNotification]
   getConfigType _ = MerchantPushNotificationRider
+  configDBFetch a = Just (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a

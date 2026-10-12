@@ -15,6 +15,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as SQ
+import qualified Storage.Queries.MerchantServiceConfig as QMerchantServiceConfig
 import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 
 data MerchantServiceConfigDimensions = MerchantServiceConfigDimensions
@@ -33,6 +34,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   type ConfigTypeOf MerchantServiceConfigDimensions = 'MerchantServiceConfigDriver
   type ConfigValueTypeOf MerchantServiceConfigDimensions = [DMSC.MerchantServiceConfig]
   getConfigType _ = MerchantServiceConfigDriver
+  configDBFetch a = Just (QMerchantServiceConfig.findAllMerchantOpCityId (Id a.merchantOperatingCityId))
   configFallback a = (\svc -> maybeToList <$> SQ.findByServiceAndCity svc (Id a.merchantOperatingCityId)) <$> a.serviceName
   getConfigList a =
     LCP.resolveConfigList

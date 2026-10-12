@@ -18,6 +18,7 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as SQ
 import qualified Storage.Queries.DocumentVerificationConfig as QDVC
+import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as QFODVC
 
 data FleetOwnerDocumentVerificationConfigDimensions = FleetOwnerDocumentVerificationConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -35,6 +36,14 @@ instance ConfigDimensions FleetOwnerDocumentVerificationConfigDimensions where
   type ConfigTypeOf FleetOwnerDocumentVerificationConfigDimensions = 'FleetOwnerDocumentVerificationConfig
   type ConfigValueTypeOf FleetOwnerDocumentVerificationConfigDimensions = [DT.FleetOwnerDocumentVerificationConfig]
   getConfigType _ = FleetOwnerDocumentVerificationConfig
+  configDBFetch a =
+    Just $ do
+      let cityId = Id a.merchantOperatingCityId
+      fleetCfgs <- QFODVC.findAllByMerchantOpCityId Nothing Nothing cityId
+      -- Same fleet-rows-else-project-driver-rows shape as 'getConfigList'.
+      if null fleetCfgs
+        then projectDriverConfigs <$> QDVC.findAllByMerchantOpCityId Nothing Nothing cityId
+        else pure fleetCfgs
   getConfigList a =
     LCP.resolveConfigList
       a

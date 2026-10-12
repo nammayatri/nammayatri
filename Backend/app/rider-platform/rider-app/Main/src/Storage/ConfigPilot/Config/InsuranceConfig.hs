@@ -34,6 +34,7 @@ instance ConfigDimensions InsuranceConfigDimensions where
   type ConfigTypeOf InsuranceConfigDimensions = 'InsuranceConfig
   type ConfigValueTypeOf InsuranceConfigDimensions = Maybe DIC.InsuranceConfig
   getConfigType _ = InsuranceConfig
+  configDBFetch a = Just (QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory (Id a.merchantId) (Id a.merchantOperatingCityId) a.tripCategory a.vehicleCategory)
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

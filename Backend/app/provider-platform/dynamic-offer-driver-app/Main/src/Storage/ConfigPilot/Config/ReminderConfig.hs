@@ -30,6 +30,7 @@ instance ConfigDimensions ReminderConfigDimensions where
   type ConfigTypeOf ReminderConfigDimensions = 'ReminderConfig
   type ConfigValueTypeOf ReminderConfigDimensions = [DT.ReminderConfig]
   getConfigType _ = ReminderConfig
+  configDBFetch a = Just (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a

@@ -14,6 +14,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Exophone as SQ
+import qualified Storage.Queries.Exophone as QExophone
 
 data ExophoneDimensions = ExophoneDimensions
   { merchantOperatingCityId :: Text,
@@ -32,6 +33,7 @@ instance ConfigDimensions ExophoneDimensions where
   type ConfigTypeOf ExophoneDimensions = 'Exophone
   type ConfigValueTypeOf ExophoneDimensions = [DT.Exophone]
   getConfigType _ = Exophone
+  configDBFetch a = Just (QExophone.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     let fetch = case a.phoneNumber of
           Just pn -> maybeToList <$> SQ.findByPrimaryPhone pn

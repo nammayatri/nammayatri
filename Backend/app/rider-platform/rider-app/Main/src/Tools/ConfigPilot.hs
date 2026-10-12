@@ -16,7 +16,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
-import Lib.ConfigPilot.Interface.Types (getConfig, getConfigList)
+import Lib.ConfigPilot.Interface.Types (getConfig, getConfigFromDB, getConfigList)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
@@ -120,6 +120,69 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbUiConfigInfo <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList (fst <$> mbUiConfigInfo))}
+    _ -> throwError $ InvalidRequest "Unsupported config type."
+
+-- | Table-level sibling of 'returnConfigs': the rows the config table actually
+-- holds, read through @Storage.Queries@ (@findOneWithKV@ / @findAllWithKV@) with
+-- no ConfigPilot in-mem/Redis caching and no dynamic-logic patch applied.
+returnDBConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.LogicDomain -> Id LYTU.MerchantOperatingCity -> Id LYTU.Merchant -> Kernel.Types.Beckn.Context.City -> m LYTU.TableDataResp
+returnDBConfigs cfgType merchantOpCityId merchantId opCity = do
+  case cfgType of
+    LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
+      riderCfg <- getConfigFromDB (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList riderCfg)}
+    LYTU.RIDER_CONFIG LYTU.PayoutConfigRider -> do
+      payoutCfg <- getConfigFromDB (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON payoutCfg}
+    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfigRider -> do
+      rideRelatedNotificationCfg <- getConfigFromDB (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, timeDiffEvent = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON rideRelatedNotificationCfg}
+    LYTU.RIDER_CONFIG LYTU.MerchantConfig -> do
+      merchantCfg <- getConfigFromDB (MerchantConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON merchantCfg}
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceUsageConfigRider -> do
+      msucCfg <- getConfigFromDB (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList msucCfg)}
+    LYTU.RIDER_CONFIG LYTU.MerchantServiceConfig -> do
+      mscCfgs <- getConfigFromDB (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON mscCfgs}
+    LYTU.RIDER_CONFIG LYTU.BecknConfig -> do
+      bcCfgs <- getConfigFromDB (BecknConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, domain = Nothing, vehicleCategory = Nothing, becknProtocol = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON bcCfgs}
+    LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
+      mpnCfgs <- getConfigFromDB (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId, key = Nothing, tripCategory = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON mpnCfgs}
+    LYTU.RIDER_CONFIG LYTU.ExophoneRider -> do
+      exoCfgs <- getConfigFromDB (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON exoCfgs}
+    LYTU.RIDER_CONFIG LYTU.FRFSConfig -> do
+      frfsConfig <- getConfigFromDB (FRFSConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList frfsConfig)}
+    LYTU.RIDER_CONFIG LYTU.HotSpotConfig -> do
+      hsCfg <- getConfigFromDB (HotSpotConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList hsCfg)}
+    LYTU.RIDER_CONFIG LYTU.MerchantPaymentMethod -> do
+      mpmCfgs <- getConfigFromDB (MerchantPaymentMethodDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON mpmCfgs}
+    LYTU.RIDER_CONFIG LYTU.CancellationReason -> do
+      crCfgs <- getConfigFromDB (CancellationReasonDimensions {merchantOperatingCityId = merchantOpCityId.getId, cancellationStage = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON crCfgs}
+    LYTU.RIDER_CONFIG LYTU.Translation -> do
+      tlCfg <- getConfigFromDB (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "", language = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList tlCfg)}
+    LYTU.RIDER_CONFIG LYTU.IntegratedBPPConfig -> do
+      ibcCfgs <- getConfigFromDB (IntegratedBPPConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing, agencyKey = Nothing, domain = Nothing, vehicleCategory = Nothing, platformType = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON ibcCfgs}
+    LYTU.RIDER_CONFIG LYTU.IssueConfig -> do
+      icCfg <- getConfigFromDB (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""})
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList icCfg)}
+    LYTU.RIDER_CONFIG LYTU.PassCategory -> do
+      pcCfgs <- getConfigFromDB (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
+      return LYTU.TableDataResp {configs = map A.toJSON pcCfgs}
+    LYTU.UI_RIDER dt pt -> do
+      let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+      mbUiConfig <- SQU.getUiConfig uiConfigReq (cast merchantOpCityId)
+      return LYTU.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYTU.MerchantOperatingCity -> LYTU.ConcludeReq -> [A.Value] -> Maybe (Id LYTU.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()

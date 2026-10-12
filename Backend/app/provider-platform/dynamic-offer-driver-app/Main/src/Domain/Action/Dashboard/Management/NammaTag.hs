@@ -37,6 +37,7 @@ module Domain.Action.Dashboard.Management.NammaTag
     getNammaTagConfigPilotAllConfigs,
     getNammaTagConfigPilotConfigDetails,
     getNammaTagConfigPilotGetTableData,
+    getNammaTagConfigPilotGetTableDataFromDB,
     getNammaTagConfigPilotAlwaysOnList,
     postNammaTagConfigPilotActionChange,
     getNammaTagConfigPilotAllUiConfigs,
@@ -978,6 +979,15 @@ getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let domain = LYT.DRIVER_CONFIG configType
   TC.returnConfigs domain (cast merchantOpCityId) (cast merchant.id) _opCity
+
+-- | Same shape as 'getNammaTagConfigPilotGetTableData', but reads the config
+-- table directly instead of the effective (in-mem + Redis + rollout) value.
+getNammaTagConfigPilotGetTableDataFromDB :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ConfigType -> Environment.Flow LYT.TableDataResp
+getNammaTagConfigPilotGetTableDataFromDB _merchantShortId _opCity configType = do
+  merchant <- findMerchantByShortId _merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
+  let domain = LYT.DRIVER_CONFIG configType
+  TC.returnDBConfigs domain (cast merchantOpCityId) (cast merchant.id) _opCity
 
 postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do

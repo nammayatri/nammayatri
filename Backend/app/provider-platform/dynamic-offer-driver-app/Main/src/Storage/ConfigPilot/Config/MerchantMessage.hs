@@ -16,6 +16,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as SQ
+import qualified Storage.Queries.MerchantMessage as QMerchantMessage
 
 data MerchantMessageDimensions = MerchantMessageDimensions
   { merchantOperatingCityId :: Text,
@@ -33,12 +34,13 @@ instance ConfigDimensions MerchantMessageDimensions where
   type ConfigTypeOf MerchantMessageDimensions = 'MerchantMessage
   type ConfigValueTypeOf MerchantMessageDimensions = [DT.MerchantMessage]
   getConfigType _ = MerchantMessage
+  configDBFetch a = Just (QMerchantMessage.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG MerchantMessage)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      (QMerchantMessage.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.messageKey) (Just . (.messageKey)) (==),
         LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==)
       ]

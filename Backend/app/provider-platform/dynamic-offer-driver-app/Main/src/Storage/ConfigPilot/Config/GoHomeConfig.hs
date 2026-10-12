@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.GoHomeConfig as SQ
+import qualified Storage.Queries.GoHomeConfig as QGoHomeConfig
 
 data GoHomeConfigDimensions = GoHomeConfigDimensions
   { merchantOperatingCityId :: Text
@@ -28,6 +29,7 @@ instance ConfigDimensions GoHomeConfigDimensions where
   type ConfigTypeOf GoHomeConfigDimensions = 'GoHomeConfig
   type ConfigValueTypeOf GoHomeConfigDimensions = Maybe DT.GoHomeConfig
   getConfigType _ = GoHomeConfig
+  configDBFetch a = Just (QGoHomeConfig.findByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

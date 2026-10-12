@@ -16,6 +16,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as SQ
+import qualified Storage.Queries.PayoutConfig as QPayoutConfig
 
 data PayoutConfigDimensions = PayoutConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -34,12 +35,13 @@ instance ConfigDimensions PayoutConfigDimensions where
   type ConfigTypeOf PayoutConfigDimensions = 'PayoutConfigRider
   type ConfigValueTypeOf PayoutConfigDimensions = [DT.PayoutConfig]
   getConfigType _ = PayoutConfigRider
+  configDBFetch a = Just (QPayoutConfig.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.RIDER_CONFIG PayoutConfigRider)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      (QPayoutConfig.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),
         LCP.DimMatcher (.isPayoutEnabled) (Just . (.isPayoutEnabled)) (==),
         LCP.DimMatcher (.payoutEntity) (Just . (.payoutEntity)) (==)

@@ -16,6 +16,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.Overlay as SQ
+import qualified Storage.Queries.Overlay as QOverlay
 
 data OverlayDimensions = OverlayDimensions
   { merchantOperatingCityId :: Text,
@@ -35,12 +36,13 @@ instance ConfigDimensions OverlayDimensions where
   type ConfigTypeOf OverlayDimensions = 'Overlay
   type ConfigValueTypeOf OverlayDimensions = [DT.Overlay]
   getConfigType _ = Overlay
+  configDBFetch a = Just (QOverlay.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG Overlay)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      (QOverlay.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.overlayKey) (Just . (.overlayKey)) (==),
         LCP.DimMatcher (.language) (Just . (.language)) (==),
         LCP.DimMatcher (.udf1) (.udf1) (==),

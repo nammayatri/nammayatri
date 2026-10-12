@@ -33,12 +33,13 @@ instance ConfigDimensions DocumentVerificationConfigDimensions where
   type ConfigTypeOf DocumentVerificationConfigDimensions = 'DocumentVerificationConfig
   type ConfigValueTypeOf DocumentVerificationConfigDimensions = [DT.DocumentVerificationConfig]
   getConfigType _ = DocumentVerificationConfig
+  configDBFetch a = Just (QDVC.findAllByMerchantOpCityId Nothing Nothing (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG DocumentVerificationConfig)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      (QDVC.findAllByMerchantOpCityId Nothing Nothing (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.documentType) (Just . (.documentType)) (==),
         LCP.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
       ]

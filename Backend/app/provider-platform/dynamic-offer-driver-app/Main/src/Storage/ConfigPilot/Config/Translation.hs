@@ -31,6 +31,7 @@ instance ConfigDimensions TranslationDimensions where
   type ConfigTypeOf TranslationDimensions = 'TranslationDriver
   type ConfigValueTypeOf TranslationDimensions = Maybe DT.Translations
   getConfigType _ = TranslationDriver
+  configDBFetch a = Just (listToMaybe <$> SQ.findAllByMessageKey a.messageKey)
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

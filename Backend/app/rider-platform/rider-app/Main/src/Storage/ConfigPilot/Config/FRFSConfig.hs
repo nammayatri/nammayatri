@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSConfig as SQ
+import qualified Storage.Queries.FRFSConfig as QFRFSConfig
 
 data FRFSConfigDimensions = FRFSConfigDimensions
   { merchantOperatingCityId :: Text
@@ -28,6 +29,7 @@ instance ConfigDimensions FRFSConfigDimensions where
   type ConfigTypeOf FRFSConfigDimensions = 'FRFSConfig
   type ConfigValueTypeOf FRFSConfigDimensions = Maybe DT.FRFSConfig
   getConfigType _ = FRFSConfig
+  configDBFetch a = Just (QFRFSConfig.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

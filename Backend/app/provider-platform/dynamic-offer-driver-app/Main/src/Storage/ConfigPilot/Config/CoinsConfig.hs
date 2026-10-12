@@ -16,6 +16,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.CoinsConfig as SQ
+import qualified Storage.Queries.Coins.CoinsConfig as QCoinsConfig
 
 data CoinsConfigDimensions = CoinsConfigDimensions
   { merchantOptCityId :: Text,
@@ -39,12 +40,13 @@ instance ConfigDimensions CoinsConfigDimensions where
   type ConfigTypeOf CoinsConfigDimensions = 'CoinsConfig
   type ConfigValueTypeOf CoinsConfigDimensions = [DT.CoinsConfig]
   getConfigType _ = CoinsConfig
+  configDBFetch a = Just (QCoinsConfig.findAllByMerchantOptCityId (Id a.merchantOptCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG CoinsConfig)
       (Id a.merchantOptCityId)
-      (SQ.findAllByMerchantOptCityId (Id a.merchantOptCityId))
+      (QCoinsConfig.findAllByMerchantOptCityId (Id a.merchantOptCityId))
       [ LCP.DimMatcher (.eventFunction) (Just . (.eventFunction)) (==),
         LCP.DimMatcher (.merchantId) (Just . (.merchantId)) (==),
         LCP.DimMatcher (.active) (Just . (.active)) (==),
