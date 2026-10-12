@@ -15,6 +15,7 @@
 module API.UI.FeedbackForm where
 
 import qualified Domain.Action.UI.FeedbackForm as DF
+import qualified Domain.Types.Booking as Booking
 import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -33,6 +34,7 @@ type API =
     :> ( "form"
            :> TokenAuth
            :> QueryParam "rating" Int
+           :> QueryParam "bookingId" (Id Booking.Booking)
            :> Get '[JSON] FeedbackFormList
            :<|> "submit"
              :> TokenAuth
@@ -45,8 +47,8 @@ handler =
   getFeedbackForm
     :<|> submitFeedbackForm
 
-getFeedbackForm :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> FlowHandler FeedbackFormList
-getFeedbackForm (personId, _) rating = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DF.feedbackForm personId rating
+getFeedbackForm :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe (Id Booking.Booking) -> FlowHandler FeedbackFormList
+getFeedbackForm (personId, _) rating mbBookingId = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DF.feedbackForm personId rating mbBookingId
 
 submitFeedbackForm :: (Id Person.Person, Id Merchant.Merchant) -> FeedbackFormReq -> FlowHandler APISuccess
 submitFeedbackForm (personId, _) feedbackFormReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DF.submitFeedback feedbackFormReq

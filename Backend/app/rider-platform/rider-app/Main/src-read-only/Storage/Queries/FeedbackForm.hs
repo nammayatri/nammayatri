@@ -51,8 +51,10 @@ updateByPrimaryKey (Domain.Types.FeedbackForm.FeedbackForm {..}) = do
       Se.Set Beam.badges (Data.Aeson.toJSON <$> badges),
       Se.Set Beam.categoryName categoryName,
       Se.Set Beam.question question,
+      Se.Set Beam.questionKey questionKey,
       Se.Set Beam.questionTranslations (Data.Aeson.toJSON <$> questionTranslations),
       Se.Set Beam.rating rating,
+      Se.Set Beam.shouldDefault shouldDefault,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]

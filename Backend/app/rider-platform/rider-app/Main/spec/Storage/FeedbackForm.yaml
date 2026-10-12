@@ -27,6 +27,7 @@ FeedbackForm:
       key: Text
       priority: Maybe Int
       contentWithTranslations: Maybe [Translation]
+      shouldDefault: Maybe Bool
       derive: Eq
 
     AnswerType:
@@ -70,6 +71,8 @@ FeedbackForm:
     answer: '[Text]'
     answerType: AnswerType
     badges: Maybe [BadgeDetail]
+    questionKey: Maybe Text
+    shouldDefault: Maybe Bool
 
   beamType:
     questionTranslations: Maybe Value
@@ -85,6 +88,8 @@ FeedbackForm:
     merchantId: character varying(36)
     questionTranslations: json
     badges: jsonb
+    questionKey: character varying(255)
+    shouldDefault: boolean
 
   toTType:
     questionTranslations: Data.Aeson.toJSON <$> questionTranslations|E

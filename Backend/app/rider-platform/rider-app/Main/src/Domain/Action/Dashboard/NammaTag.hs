@@ -120,6 +120,7 @@ import qualified Lib.Yudhishthira.Types as LYTU
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.TypesTH as YTH
+import qualified SharedLogic.FeedbackForm as FeedbackFormLogic
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import SharedLogic.Offer
@@ -444,6 +445,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
       logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) req logicData
+    LYTU.FEEDBACK_FORM -> do
+      logicData :: FeedbackFormLogic.FeedbackFormLogicInput <- YudhishthiraFlow.createLogicData FeedbackFormLogic.defaultFeedbackFormLogicInput (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy FeedbackFormLogic.FeedbackFormLogicOutput) req logicData
     LYTU.PASS_PURCHASE_ELIGIBILITY -> do
       logicData :: SLE.PassEligibilityData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy SLE.PassEligibilityResult) req logicData
@@ -720,6 +724,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultInput,
             LYTU.schema = toInlinedSchemaValue (Proxy @CancelLogic.CancellationReasonInput)
+          }
+    LYTU.FEEDBACK_FORM ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON FeedbackFormLogic.defaultFeedbackFormLogicInput,
+            LYTU.schema = toInlinedSchemaValue (Proxy @FeedbackFormLogic.FeedbackFormLogicInput)
           }
     LYTU.PASS_PURCHASE_ELIGIBILITY ->
       return $

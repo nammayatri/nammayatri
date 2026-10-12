@@ -594,6 +594,7 @@ library
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
       SharedLogic.FareBreakupInfo
+      SharedLogic.FeedbackForm
       SharedLogic.Finance.CashbackPayout
       SharedLogic.Finance.RidePayment
       SharedLogic.FRFSCancel
