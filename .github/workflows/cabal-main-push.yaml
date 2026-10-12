@@ -5,6 +5,13 @@ on:
     branches:
       - "main"
   workflow_dispatch:
+    inputs:
+      # Manual check that the Xyne failure alerts work (secrets, runner network, script): when ticked,
+      # both notify steps post a "TEST" message even though nothing failed.
+      alert_test:
+        description: "Send a test Xyne alert from the build and integration-test jobs"
+        type: boolean
+        default: false
 
 concurrency:
   group: cabal-build-${{ github.ref_name }}
@@ -179,6 +186,44 @@ jobs:
         if: always()
         run: rm -rf $HOME/ny-staging/${{ github.run_id }}
 
+      # Post build failures on main to #ny-main-builds via the Main-Build-Alerts Xyne bot (failures only;
+      # alert_test sends a test message). Never changes the job result.
+      - name: Notify build failure (Xyne)
+        if: (failure() && github.event_name == 'push' && github.ref == 'refs/heads/main') || (always() && inputs.alert_test)
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          XYNE_BOT_TOKEN: ${{ secrets.XYNE_MAIN_BUILD_ALERTS_TOKEN }}
+          # commit text via env, never inline in the script (commit messages are untrusted input)
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          AUTHOR: ${{ github.event.head_commit.author.name }}
+          COMPARE: ${{ github.event.compare }}
+          ALERT_TEST: ${{ inputs.alert_test }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          REPO_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          [ -n "$COMMIT_MSG" ] || COMMIT_MSG=$(git log -1 --format=%s)
+          [ -n "$AUTHOR" ] || AUTHOR=$(git log -1 --format=%an)
+          SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -1)
+          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1)
+          if [ "$ALERT_TEST" = "true" ]; then
+            TITLE="🧪 TEST alert from $GITHUB_REF_NAME, please ignore (build job: $JOB_STATUS)"
+          else
+            TITLE="🔴 main build FAILED"
+          fi
+          {
+            echo "Commit: ${GITHUB_SHA::10} · $AUTHOR · $SUBJECT"
+            [ -n "$PR" ] && echo "PR: $REPO_URL/pull/$PR"
+            echo "Commit link: $REPO_URL/commit/$GITHUB_SHA"
+            [ -n "$COMPARE" ] && echo "Changes in this push: $COMPARE"
+            # first compile errors (master-build-log.txt lines are prefixed with a timestamp)
+            ERRS=$(grep -E ': error:|^[^ ]+ Error:' -A4 master-build-log.txt 2>/dev/null | cut -d' ' -f2- | head -25)
+            [ -n "$ERRS" ] && printf 'Error:\n```\n%s\n```\n' "$ERRS"
+            echo "Run: $REPO_URL/actions/runs/$GITHUB_RUN_ID"
+          } > xyne-alert.txt
+          python3 Backend/dev/integration-tests/ci/xyne-bot-trigger.py \
+            --channel cmv5eelin01y09nfh8wy8u1o2 --title "$TITLE" --message-file xyne-alert.txt
+
   minio-push:
     name: Push Build Caches to MinIO
     needs: [check-conditions, cabal-build]
@@ -340,6 +385,8 @@ jobs:
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
       CONTEXT_API: http://localhost:7082
+      # wait-for-services.sh / debug-runner.py append a short "what broke" summary here for the Xyne alert
+      CI_FAILURE_FILE: ${{ github.workspace }}/ci-failure.txt
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -497,6 +544,45 @@ jobs:
             Backend/dev/integration-tests/data/test-logs/06-CabDriverCancellation-*/
           if-no-files-found: ignore
           retention-days: 14
+
+      # Post integration-test failures on main to #ny-integration-tests via the Integration-Test-Alerts
+      # Xyne bot (failures only; alert_test sends a test message). Never changes the job result.
+      - name: Notify integration test failure (Xyne)
+        if: (failure() && github.event_name == 'push' && github.ref == 'refs/heads/main') || (always() && inputs.alert_test)
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          XYNE_BOT_TOKEN: ${{ secrets.XYNE_INTEGRATION_TEST_ALERTS_TOKEN }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          AUTHOR: ${{ github.event.head_commit.author.name }}
+          COMPARE: ${{ github.event.compare }}
+          ALERT_TEST: ${{ inputs.alert_test }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          REPO_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          [ -n "$COMMIT_MSG" ] || COMMIT_MSG=$(git log -1 --format=%s)
+          [ -n "$AUTHOR" ] || AUTHOR=$(git log -1 --format=%an)
+          SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -1)
+          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1)
+          if [ "$ALERT_TEST" = "true" ]; then
+            TITLE="🧪 TEST alert from $GITHUB_REF_NAME, please ignore (integration job: $JOB_STATUS)"
+          else
+            TITLE="🔴 main integration tests FAILED"
+          fi
+          {
+            if [ -s "$CI_FAILURE_FILE" ]; then
+              printf 'What broke:\n```\n%s\n```\n' "$(head -40 "$CI_FAILURE_FILE")"
+            elif [ "$ALERT_TEST" != "true" ]; then
+              echo "Failed in a setup step (cache, bucket access, stack start or config sync), see the run."
+            fi
+            echo "Commit: ${GITHUB_SHA::10} · $AUTHOR · $SUBJECT"
+            [ -n "$PR" ] && echo "PR: $REPO_URL/pull/$PR"
+            echo "Commit link: $REPO_URL/commit/$GITHUB_SHA"
+            [ -n "$COMPARE" ] && echo "Changes in this push: $COMPARE"
+            echo "Run (per-step request/response + reallocation timeline in Summary): $REPO_URL/actions/runs/$GITHUB_RUN_ID"
+          } > xyne-alert.txt
+          python3 Backend/dev/integration-tests/ci/xyne-bot-trigger.py \
+            --channel cmv58kurt035tczc9m49iyomu --title "$TITLE" --message-file xyne-alert.txt
 
       # Always: stop the stack and free the ports for the next run.
       - name: Stop mobility stack

@@ -4,6 +4,7 @@
 # Usage (from the repo root, where process-compose writes <process>.log):
 #   Backend/dev/integration-tests/ci/wait-for-services.sh <timeout-minutes> [label]
 # Env: CONTEXT_API (default http://localhost:7082), STACK_PID_FILE (default stack.pid), LOG_DIR (default .),
+#      CI_FAILURE_FILE (optional; a short failure summary is appended here for the Xyne alert),
 #      GH_TOKEN + GITHUB_REPOSITORY + GITHUB_SHA (optional; culprit-commit lookup via the GitHub API).
 set -uo pipefail
 
@@ -88,6 +89,8 @@ annotate() { # <title> <body>; GitHub annotations need %, CR and LF escaped
 fail() { # <title> <error text> <culprit text> <log file or empty>
   local title=$1 err=$2 culprit=$3 log=$4 elapsed=$(( SECONDS )) f
   annotate "$title" "$err${culprit:+$'\n'$culprit}"
+  # Short plain-text version for the Xyne failure alert (the notify step reads $CI_FAILURE_FILE).
+  { echo "$title"; echo "$err" | head -6; [ -n "$culprit" ] && echo "$culprit" | tr -d '*`'; } >> "${CI_FAILURE_FILE:-/dev/null}"
   {
     echo "## ❌ $LABEL — failed after $((elapsed / 60))m $((elapsed % 60))s"
     echo; echo "**$title**"; echo

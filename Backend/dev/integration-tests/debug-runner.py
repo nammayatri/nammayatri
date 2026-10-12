@@ -249,6 +249,11 @@ def report_step(suite, idx, total, step, req, resp, api_dir, failed, details=Tru
 
     if not failed:
         return
+    # One line per failed step for the Xyne failure alert (the CI notify step reads $CI_FAILURE_FILE).
+    failure_file = os.environ.get("CI_FAILURE_FILE")
+    if failure_file:
+        with open(failure_file, "a") as f:
+            f.write(f"{suite} · {step} → {status} {code}".rstrip() + "\n")
     if os.environ.get("GITHUB_ACTIONS") == "true":
         print(f"::error title={suite} · {step}::" + gh_escape(f"{method} {url} → {status} {code}".strip()), flush=True)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
