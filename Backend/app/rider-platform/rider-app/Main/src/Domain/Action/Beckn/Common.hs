@@ -367,8 +367,10 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
   let fromLocation = booking.fromLocation
       (toLocation, stops) = case booking.bookingDetails of
         DRB.OneWayDetails details -> (Just details.toLocation, details.stops)
-        DRB.RentalDetails _ -> (Nothing, [])
-        -- EasyBooking is destination-less like Rental: no toLocation, no stops.
+        -- The drop must be written whenever stops are: stops are read back as every non-pickup
+        -- mapping except the last, so without a drop the last stop would be taken as the drop.
+        DRB.RentalDetails details -> (details.stopLocation, details.stops)
+        -- EasyBooking is destination-less: no toLocation, no stops.
         DRB.EasyBookingDetails _ -> (Nothing, [])
         DRB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
         DRB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)

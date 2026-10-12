@@ -289,8 +289,8 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
   let fromLocation = booking.fromLocation
       (toLocation, stops) = case booking.bookingDetails of
         DB.OneWayDetails details -> (Just details.toLocation, details.stops)
-        DB.RentalDetails _ -> (Nothing, [])
-        -- EasyBooking is destination-less like Rental: no toLocation, no stops.
+        DB.RentalDetails details -> (details.stopLocation, details.stops)
+        -- EasyBooking is destination-less: no toLocation, no stops.
         DB.EasyBookingDetails _ -> (Nothing, [])
         DB.DriverOfferDetails details -> (Just details.toLocation, details.stops)
         DB.OneWaySpecialZoneDetails details -> (Just details.toLocation, details.stops)

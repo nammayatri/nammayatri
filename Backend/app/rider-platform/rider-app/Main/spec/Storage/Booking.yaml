@@ -142,8 +142,8 @@ Booking:
   types:
     BPPBooking: {}
     BookingDetails:
-      # EasyBookingDetails reuses RentalBookingDetails's shape (stopLocation only) — both are
-      # destination-less bookings, so no new booking-details type/table was needed.
+      # EasyBookingDetails reuses RentalBookingDetails's shape (its stops are always empty) — both
+      # are destination-less bookings, so no new booking-details type/table was needed.
       enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails, DeliveryDetails DeliveryBookingDetails, MeterRideDetails MeterRideBookingDetails, EasyBookingDetails RentalBookingDetails
       derive': Generic,Show,FromJSON,ToJSON
     OneWayBookingDetails:
@@ -154,6 +154,7 @@ Booking:
       derive': Generic,Show,FromJSON,ToJSON
     RentalBookingDetails:
       stopLocation: Maybe Location
+      stops: "[Location]"
       otpCode: Maybe Text
       derive': Generic,Show,FromJSON,ToJSON
     OneWaySpecialZoneBookingDetails:
