@@ -162,3 +162,5 @@ getConfigNameFromConsumertype = \case
   RIDE_EVENTS_CONSUMER -> pure "ride-events-consumer"
   FLEET_ANALYTICS_REALTIME -> pure "fleet-analytics-realtime"
   IJ_BEHAVIOR_TICK_CONSUMER -> pure "ij-behavior-tick-consumer"
+  DRIVER_POOL_STATE -> pure "driver-pool-state-writer"
+  SESSIONIZER -> pure "sessionizer"

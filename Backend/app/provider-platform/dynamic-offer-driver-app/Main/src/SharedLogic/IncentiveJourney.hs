@@ -105,6 +105,7 @@ import qualified SharedLogic.IncentiveJourney.CampaignBehaviorBump as CampaignBe
 import SharedLogic.IncentiveJourney.CampaignControlsCache (CampaignControls (..), getCampaignControls)
 import qualified SharedLogic.IncentiveJourney.MetricBag as MetricBag
 import qualified SharedLogic.IncentiveJourney.MgCampaign as MgCampaignSync
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
@@ -239,7 +240,7 @@ loadJourneyMilestones ::
 loadJourneyMilestones = CQMilestone.findByJourneyId IJ.DriverActor
 
 sendMilestoneCompletedOverlay ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   DIJ.IncentiveJourney ->
@@ -273,7 +274,7 @@ sendMilestoneCompletedOverlay merchantOpCityId driverId journey milestone journe
     sendOverlay merchantOpCityId driver $ mkOverlayReq overlay'
 
 sendMilestoneWaivedOverlay ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   DIJ.IncentiveJourney ->
@@ -360,7 +361,7 @@ mkDriverEvaluateHandle driverId merchantId merchantOpCityId transporterConfig ve
 
 -- | Kafka RIDE_EVENTS journey evaluation (not HTTP EndRide).
 evaluateDriverJourney ::
-  JourneyRewardDispatchFlow m r =>
+  (JourneyRewardDispatchFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1526,7 +1527,7 @@ planBaseAmountPerDay = \case
 
 -- | Dashboard waive-off for one driver milestone period row.
 waiveDriverMilestone ::
-  JourneyRewardDispatchFlow m r =>
+  (JourneyRewardDispatchFlow m r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

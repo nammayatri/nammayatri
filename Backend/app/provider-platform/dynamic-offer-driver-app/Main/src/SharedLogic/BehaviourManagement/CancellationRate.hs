@@ -34,6 +34,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -166,7 +167,7 @@ getCancellationRateOfDaysStandalone driverId period windowSize = do
 -- Uses Redis to track last update time to ensure it runs only once per day per driver
 -- Takes pre-calculated cancellation rates to avoid redundant calculations
 updateDriverCancellationPercentageTagsDaily ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   CancellationPercentageTags ->
@@ -205,7 +206,7 @@ updateDriverCancellationPercentageTagsDaily mocId driverId cancellationRates = d
       logDebug $ "Updated cancellation percentage tags for driver " <> driverId.getId
 
 nudgeOrBlockDriver ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   TransporterConfig ->
   DP.Person ->
   DI.DriverInformation ->

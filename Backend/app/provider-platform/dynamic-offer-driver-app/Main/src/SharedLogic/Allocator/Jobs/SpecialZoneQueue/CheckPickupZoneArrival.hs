@@ -21,6 +21,7 @@ import Lib.Scheduler
 import qualified Lib.Types.GateInfo as Fields
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Fields
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import SharedLogic.SpecialZoneDriverDemand (mkSpecialZoneQueueRequestLockKey)
@@ -41,7 +42,8 @@ checkPickupZoneArrival ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'CheckPickupZoneArrival ->
   m ExecutionResult
@@ -69,7 +71,8 @@ runArrivalCheckForRequest ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DSZQR.SpecialZoneQueueRequest ->
   Id DP.Person ->

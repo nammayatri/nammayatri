@@ -59,6 +59,7 @@ import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.CallBAPInternal
 import SharedLogic.CancellationConsequence (cityHasDriverCancelMoneyPenalty)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -114,6 +115,7 @@ checkDriverPickupProgress ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,

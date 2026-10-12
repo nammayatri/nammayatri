@@ -37,6 +37,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.DriverFlowStatus as SDF
 import Storage.Beam.IncentiveJourney ()
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
@@ -267,7 +268,8 @@ updateDriverModeAndFlowStatus ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
@@ -297,7 +299,8 @@ forceDriverOfflineOnVehicleChange ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DP.Person ->
   DTC.TransporterConfig ->

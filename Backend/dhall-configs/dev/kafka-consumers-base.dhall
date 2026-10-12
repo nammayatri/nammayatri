@@ -144,6 +144,17 @@ in  { hedisCfg
       , { hedisCloud = common.CloudType.GCP, hedisCloudCfg = hedisCfg }
       ]
     , ltsReplicaRedisCfg = Some hedisCfg
+    , driverStateRedisCfg =
+        None
+          { connectHost : Text
+          , connectPort : Natural
+          , connectAuth : Optional Text
+          , connectDatabase : Integer
+          , connectMaxConnections : Integer
+          , connectMaxIdleTime : Integer
+          , connectTimeout : Optional Integer
+          , connectReadOnly : Bool
+          }
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , esqDBCfg
@@ -176,6 +187,7 @@ in  { hedisCfg
     , kafkaClickhouseCfg
     , serviceClickhouseCfg
     , kafkaProducerCfg
+    , driverPoolStateTopic = Some "driver-pool-state"
     , secondaryKafkaProducerCfg
     , kafkaReadBatchDelay = +10
     , kafkaReadBatchSize = +10

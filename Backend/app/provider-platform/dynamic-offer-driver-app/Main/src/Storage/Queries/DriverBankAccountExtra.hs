@@ -18,6 +18,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverBankAccount as Beam
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
@@ -58,7 +59,7 @@ updateBankVerificationDetails mbAccountNumber ifscCode nameAtBank driverId = do
 -- Wrapper for src-read-only function with LTS sync
 
 updateAccountStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Bool ->
   Bool ->
@@ -85,7 +86,7 @@ updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted requirements 
   syncBankAccountToPool driverId chargesEnabled Nothing
 
 updateFromWebhook ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Bool ->
   Bool ->
@@ -108,7 +109,7 @@ updateFromWebhook chargesEnabled payoutsEnabled detailsSubmitted requirements fu
   syncBankAccountToPool driverId chargesEnabled Nothing
 
 syncBankAccountToPool ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Bool ->
   Maybe DMPM.PaymentMode ->
@@ -132,3 +133,9 @@ syncBankAccountToPool ownerId chargesEnabled mbPaymentMode = do
           }
   forM_ (chunksOf 100 driverIds) $ \chunk ->
     void $ mapConcurrently (\driverId -> LTSSync.syncDriverPoolDataToLTS (cast driverId) update) chunk
+  forM_ driverIds $ \driverId ->
+    publishDriverPoolData
+      (cast driverId)
+      ( [poolField "chargesEnabled" chargesEnabled]
+          <> [poolField "bankAccountPaymentMode" mbPaymentMode | isJust mbPaymentMode]
+      )

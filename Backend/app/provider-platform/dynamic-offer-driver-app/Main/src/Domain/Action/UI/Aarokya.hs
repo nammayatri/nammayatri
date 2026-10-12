@@ -28,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformationExtra as QDI
@@ -63,7 +64,8 @@ generateToken ::
     CacheFlow m r,
     EncFlow m r,
     MonadFlow m,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m AarokyaTokenRes
@@ -295,7 +297,7 @@ normalizeGender raw = case T.toUpper (T.strip raw) of
 -- we extract from the Idfy response and persist it for next time. Optional
 -- throughout — never fails the token call.
 resolveDriverAddress ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

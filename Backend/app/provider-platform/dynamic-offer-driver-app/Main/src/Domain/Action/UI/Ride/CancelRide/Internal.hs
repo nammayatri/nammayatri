@@ -89,6 +89,7 @@ import SharedLogic.Cancel
 import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.CancellationOrchestrator
 import qualified SharedLogic.DriverFyEarnings as SDFE
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -175,6 +176,7 @@ cancelRideImpl ::
     HasField "enableLtsPoolDataForPooling" r Bool,
     HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,
@@ -279,6 +281,7 @@ cancelRideTransaction ::
     HasShortDurationRetryCfg r c,
     EncFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Metrics.HasBPPMetrics m r,
     Finance.HasActorInfo m r
   ) =>
@@ -331,6 +334,7 @@ createCancellationLedgerEntries ::
     PostActionsEnv r,
     IJBeamFlow.BeamFlow m r,
     CoreMetrics m,
+    DriverPoolStateEnv r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
@@ -581,7 +585,8 @@ settleCancellationLedger ::
     PostActionsEnv r,
     BeamFlow m r,
     IJBeamFlow.BeamFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   SRB.Booking ->
   DRide.Ride ->

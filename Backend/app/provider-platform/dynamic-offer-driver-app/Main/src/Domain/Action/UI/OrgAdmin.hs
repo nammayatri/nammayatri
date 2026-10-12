@@ -32,6 +32,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.PersonExtra as QPerson
 import Tools.Error
@@ -65,7 +66,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =

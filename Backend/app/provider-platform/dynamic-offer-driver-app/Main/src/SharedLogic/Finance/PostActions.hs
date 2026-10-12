@@ -36,6 +36,7 @@ import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.IncentiveJourney.Storage.Beam.BeamFlow as IJBeamFlow
 import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.IncentiveJourney ()
@@ -60,7 +61,8 @@ runFinance ::
     Redis.HedisLTSFlowEnv r,
     PostActionsEnv r,
     IJBeamFlow.BeamFlow m r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   Finance.FinanceCtx ->
   Finance.FinanceM m a ->
@@ -84,7 +86,8 @@ runPostActions ::
     Redis.HedisLTSFlowEnv r,
     PostActionsEnv r,
     IJBeamFlow.BeamFlow m r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   Bool ->
   Finance.FinanceState ->
@@ -115,7 +118,8 @@ runPostActionsForAccount ::
     Redis.HedisLTSFlowEnv r,
     PostActionsEnv r,
     IJBeamFlow.BeamFlow m r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
   Maybe DTC.TransporterConfig -> -- the city's config when it has driverWalletConfig.enableDriverWallet

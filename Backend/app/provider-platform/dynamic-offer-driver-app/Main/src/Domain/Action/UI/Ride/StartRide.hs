@@ -78,6 +78,7 @@ import qualified SharedLogic.ActiveDriversList as ADL
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator (AllocatorJobType (..), SpecialZonePayoutJobData (..))
 import SharedLogic.CallBAP (sendRideStartedUpdateToBAP)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -153,7 +154,7 @@ buildStartRideHandle merchantId merchantOpCityId rideId = do
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
-type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r, TMetrics.HasBPPMetrics m r)
+type StartRideFlow m r = (MonadThrow m, Log m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, MonadTime m, CoreMetrics m, MonadReader r m, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool, LT.HasLocationService m r, ServiceFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r, TMetrics.HasBPPMetrics m r)
 
 driverStartRide ::
   ( StartRideFlow m r,
@@ -205,7 +206,8 @@ startRide ::
     IJBeamFlow.BeamFlow m r,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    DriverPoolStateEnv r
   ) =>
   ServiceHandle m ->
   Id DRide.Ride ->
@@ -235,7 +237,8 @@ startRideHandler ::
     IJBeamFlow.BeamFlow m r,
     HasField "blackListedJobs" r [Text],
     HasField "activeDriversListKeyShards" r Int,
-    Finance.HasActorInfo m r
+    Finance.HasActorInfo m r,
+    DriverPoolStateEnv r
   ) =>
   ServiceHandle m ->
   Id DRide.Ride ->

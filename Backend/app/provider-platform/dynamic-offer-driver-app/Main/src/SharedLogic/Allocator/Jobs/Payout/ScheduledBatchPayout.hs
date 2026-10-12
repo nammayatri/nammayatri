@@ -57,6 +57,7 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.WalletPayout (PayoutContext (..), WalletPayoutParams (..), runWalletPayout)
 import SharedLogic.Payout.Bulk.Driver (runBulkPayoutCycle)
@@ -85,7 +86,8 @@ sendScheduledBatchPayout ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'ScheduledBatchPayout ->
   m ExecutionResult
@@ -121,7 +123,8 @@ processCategory ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DSPC.ScheduledPayoutConfig ->
   ScheduledBatchPayoutJobData ->
@@ -153,7 +156,8 @@ processWalletPayouts ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DSPC.ScheduledPayoutConfig ->
   ScheduledBatchPayoutJobData ->
@@ -325,6 +329,7 @@ processOneWalletPayout ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
     PostActionsEnv r

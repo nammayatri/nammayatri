@@ -90,6 +90,7 @@ data HandlerEnv = HandlerEnv
     peerLTSHedisEnvs :: [(CloudType, HedisEnv)],
     ltsReplicaHedisEnv :: Maybe HedisEnv,
     kafkaProducerTools :: KafkaProducerTools,
+    driverPoolStateTopic :: Maybe Text,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,

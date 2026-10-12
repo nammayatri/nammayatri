@@ -45,6 +45,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Fields
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import Storage.Beam.IncentiveJourney ()
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
@@ -73,7 +74,8 @@ retryDocumentVerificationJob ::
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r,
     Metrics.CoreMetrics m,
-    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)
+    HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
+    DriverPoolStateEnv r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -98,7 +100,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
           IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, BeamFlow m r, Metrics.CoreMetrics m, HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg)) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, BeamFlow m r, Metrics.CoreMetrics m, HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg), DriverPoolStateEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
       verifyRes <-

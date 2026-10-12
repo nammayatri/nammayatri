@@ -47,6 +47,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
 import qualified Lib.Finance.Core.Types as Finance
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
@@ -79,6 +80,7 @@ bulkUpdateByDriverId ::
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
@@ -152,6 +154,7 @@ bulkUpdateByDriverIdV2 ::
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->

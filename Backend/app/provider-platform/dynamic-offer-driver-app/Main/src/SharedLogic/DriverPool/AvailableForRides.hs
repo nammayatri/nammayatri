@@ -76,6 +76,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as Notify
@@ -160,6 +161,7 @@ type AvailableForRidesEndFlow m r =
     MonadFlow m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   )
 

@@ -73,6 +73,7 @@ import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import SharedLogic.Finance.WalletFloor (WalletFloorOfflineFlow)
 import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.IncentiveJourney ()
@@ -106,6 +107,7 @@ calculateDriverFeeForDrivers ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
     Finance.HasActorInfo m r,
+    DriverPoolStateEnv r,
     HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->

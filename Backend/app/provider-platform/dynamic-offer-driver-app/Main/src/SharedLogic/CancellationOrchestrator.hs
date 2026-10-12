@@ -111,6 +111,7 @@ import qualified SharedLogic.CancellationSignals as CancellationSignals
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -261,6 +262,7 @@ applyImmediateConsequences ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     IJBeamFlow.BeamFlow m r,

@@ -36,6 +36,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, HasShortDurationRetryCfg, fromMaybeM, logTagInfo)
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import Storage.Beam.IncentiveJourney ()
@@ -58,7 +59,8 @@ startRideTransaction ::
     HasField "minDistanceBetweenTwoPoints" r Int,
     HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id SP.Person ->
   SRide.Ride ->

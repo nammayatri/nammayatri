@@ -30,6 +30,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import SharedLogic.BehaviourManagement.IssueBreach
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import Storage.Beam.SchedulerJob ()
@@ -96,7 +97,7 @@ updateIssueBreachCooldownTimes driverInfo cooldownTime = do
   QDriverInformation.updateIssueBreachCooldownTimes (pure updateCooldownTimes) driverInfo.driverId
 
 issueBreachMitigation ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   IssueBreachType ->
   TransporterConfig ->
   DI.DriverInformation ->
@@ -154,7 +155,7 @@ issueBreachMitigation issueType transporterConfig driverInfo = when (isJust tran
       let ibRate = (ibCount * 100) `div` max 1 completedBookingCount
       return (ibRate, completedBookingCount)
 
-    tryBlockDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r) => Int -> [ServiceTierType] -> IssueBreachBlockType -> Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> BlockReasonFlag -> m Bool
+    tryBlockDriver :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Int -> [ServiceTierType] -> IssueBreachBlockType -> Int -> Int -> Int -> Int -> Int -> Maybe UTCTime -> UTCTime -> BlockReasonFlag -> m Bool
     tryBlockDriver ibNotifyInMins allowedSTiers ibBlockType issueBreachRateThreshold minCompletedBookingsRequired ibRate completedBookingCount blockTimeInHours cooldownTime now blockReasonFlag = do
       let rule = ibRate >= issueBreachRateThreshold && completedBookingCount >= minCompletedBookingsRequired
           canApplyBlock = rule && maybe True (<= now) cooldownTime

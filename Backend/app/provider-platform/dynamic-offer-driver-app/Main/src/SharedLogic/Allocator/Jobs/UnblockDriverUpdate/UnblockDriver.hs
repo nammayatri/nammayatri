@@ -32,6 +32,7 @@ import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Fields
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -45,7 +46,8 @@ unblockDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'UnblockDriver ->
   m ExecutionResult
@@ -73,7 +75,8 @@ unblockAirportDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'UnblockAirportDriver ->
   m ExecutionResult
@@ -103,7 +106,8 @@ unblockSoftBlockedDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'UnblockSoftBlockedDriver ->
   m ExecutionResult

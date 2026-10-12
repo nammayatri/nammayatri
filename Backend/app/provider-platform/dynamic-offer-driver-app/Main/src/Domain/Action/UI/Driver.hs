@@ -310,6 +310,7 @@ import SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified SharedLogic.DriverPool.AvailableForRides as AvailableForRides
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.EventTracking as ET
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -990,6 +991,7 @@ getInformationV2 ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType),
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -1025,6 +1027,7 @@ getInformation ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType),
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -1121,6 +1124,7 @@ setActivity ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     HasKafkaProducer r
   ) =>
@@ -1284,7 +1288,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
     buildActivateGoHomeKey :: Id SP.Person -> Text
     buildActivateGoHomeKey driverId' = "Driver:GoHome:Activate:" <> show driverId'
 
-deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
+deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
 deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
   goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1344,7 +1348,7 @@ isHomeLocationInBlockedSpecialLocation blockedIds position
     mbSpecialLoc <- QSpecialLocation.findSpecialLocationByLatLong' position
     pure $ maybe False (\specialLoc -> specialLoc.id.getId `elem` blockedIds) mbSpecialLoc
 
-updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
+updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
 updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req = do
   goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1381,7 +1385,7 @@ getHomeLocations (driverId, _, _) = do
   driverHomeLocations <- QDHL.findAllByDriverId driverId
   return . GetHomeLocationsRes $ DDHL.makeDriverHomeLocationAPIEntity <$> driverHomeLocations
 
-deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
+deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
 deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1402,6 +1406,7 @@ buildDriverEntityRes ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     EsqDBFlow m r,
     Finance.HasActorInfo m r
   ) =>
@@ -1602,6 +1607,7 @@ updateDriver ::
     HasField "cloudType" r (Maybe CloudType),
     Redis.HedisLTSFlowEnv r,
     Forkable m,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     SOnboardingFlags.OnboardingFlow m r
   ) =>
@@ -3501,7 +3507,8 @@ getDummyRideRequest ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m DummyRideRequestRes

@@ -54,6 +54,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import qualified SharedLogic.Finance.Wallet as Wallet
@@ -153,7 +154,7 @@ isAirportPickupArea mbArea =
     Nothing -> pure False
 
 ensureDriverEnabledForAirportPickup ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Maybe SL.Area ->
   UTCTime ->
   DI.DriverInformation ->
@@ -196,7 +197,8 @@ deductAirportEntryFeeAtStartRide ::
     Redis.HedisLTSFlowEnv r,
     PostActionsEnv r,
     IJBeamFlow.BeamFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   Bool ->
   DRide.Ride ->

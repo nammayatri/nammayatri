@@ -24,6 +24,7 @@ import Lib.Scheduler
 import qualified SharedLogic.ActiveDriversList as ADL
 import qualified SharedLogic.Allocator as SAllocator
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -41,16 +42,16 @@ acUsageRestrictionLiftedKey = "AC_USAGE_RESTRICTION_LIFTED"
 acUsageWarningKey :: Text
 acUsageWarningKey = "AC_USAGE_WARNING"
 
-sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> m ()
+sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r, DriverPoolStateEnv r) => DP.Person -> m ()
 sendACUsageRestrictionLiftedOverlay = sendACOverlay acUsageRestrictionLiftedKey
 
-sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> m ()
+sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r, DriverPoolStateEnv r) => DP.Person -> m ()
 sendACUsageRestrictionOverlay = sendACOverlay acUsageRestrictionKey
 
-sendACUsageWarningOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> m ()
+sendACUsageWarningOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r, DriverPoolStateEnv r) => DP.Person -> m ()
 sendACUsageWarningOverlay = sendACOverlay acUsageWarningKey
 
-sendACOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => Text -> DP.Person -> m ()
+sendACOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing Nothing Nothing
   whenJust mOverlay $ \overlay -> do
@@ -65,7 +66,8 @@ sendOverlayToDriver ::
     Esq.Transactionable m,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
-    HedisFlow.HedisLTSFlowEnv r
+    HedisFlow.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'SAllocator.SendOverlay ->
   m ExecutionResult
@@ -150,7 +152,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-sendOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> Maybe DVC.VehicleCategory -> m ()
+sendOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r, DriverPoolStateEnv r) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> Maybe DVC.VehicleCategory -> m ()
 sendOverlay driver overlayKey udf1 amount mbVehicle = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) udf1 mbVehicle Nothing
   whenJust mOverlay $ \overlay -> do

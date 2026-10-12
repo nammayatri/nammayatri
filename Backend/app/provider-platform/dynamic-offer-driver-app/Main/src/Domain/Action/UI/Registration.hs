@@ -111,6 +111,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SMS.OtpCountryRestriction (validateSmsOtpCountryCode)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.SocialLogin as SSL
@@ -841,7 +842,8 @@ verify ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
-    SSL.SocialLoginFlowM m r
+    SSL.SocialLoginFlowM m r,
+    DriverPoolStateEnv r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -1000,7 +1002,8 @@ logout ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "ijBehaviorTickPublisherCfg" r (Maybe Environment.RideEventsPublisherCfg),
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess

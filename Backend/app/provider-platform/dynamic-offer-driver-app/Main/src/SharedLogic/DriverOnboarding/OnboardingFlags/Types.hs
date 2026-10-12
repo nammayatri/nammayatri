@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Lib.IncentiveJourney.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.DocumentVault (DocumentVault)
 
 -- | Includes IJ BeamFlow + behavior-tick publisher because RC/vehicle force-offline must call
@@ -43,6 +44,7 @@ type OnboardingFlow m r =
     EncFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ServiceFlow m r,
     BeamFlow m r,
     Metrics.CoreMetrics m,

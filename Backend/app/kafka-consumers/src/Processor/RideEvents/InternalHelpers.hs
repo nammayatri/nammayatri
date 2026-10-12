@@ -73,6 +73,7 @@ import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Coins as DC
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntryMetadata (..))
+import "dynamic-offer-driver-app" SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
 import "dynamic-offer-driver-app" SharedLogic.Finance.PostActions (PostActionsEnv)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
@@ -111,7 +112,8 @@ sendReferralFCM ::
     CHConfig.ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -262,7 +264,8 @@ sendDriverToDriverReferralReward ::
     Esq.EsqDBReplicaFlow m r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -387,7 +390,8 @@ creditReferralWallet ::
     Esq.EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
     Finance.HasActorInfo m r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   HighPrecMoney ->
   Id DP.Person ->

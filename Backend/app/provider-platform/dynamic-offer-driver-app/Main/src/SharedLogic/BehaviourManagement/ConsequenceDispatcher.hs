@@ -62,6 +62,7 @@ import qualified Lib.Yudhishthira.Types.NammaTagV2 as Fields
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
@@ -103,6 +104,7 @@ handleConsequences ::
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     CoreMetrics m,
     HasLocationService m r,
     JobCreator r m,
@@ -131,7 +133,8 @@ dispatchConsequence ::
     HasLocationService m r,
     JobCreator r m,
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -346,7 +349,8 @@ sendOverlayByKey ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -386,7 +390,8 @@ handleCommunications ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -410,7 +415,8 @@ dispatchCommunicationAction ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DispatchContext ->
   Id DP.Person ->

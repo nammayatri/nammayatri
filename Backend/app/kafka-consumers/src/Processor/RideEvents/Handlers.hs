@@ -94,6 +94,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Processor.RideEvents.InternalHelpers as IH
 import qualified "dynamic-offer-driver-app" SharedLogic.Analytics as Analytics
 import qualified "dynamic-offer-driver-app" SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
+import "dynamic-offer-driver-app" SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.Finance.PostActions (PostActionsEnv)
 import qualified "dynamic-offer-driver-app" SharedLogic.FleetOperatorStats as SFleetOperatorStats
@@ -254,6 +255,7 @@ handleGpsTollBehavior ::
     MonadFlow m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     CoreMetrics.CoreMetrics m,
     CHConfig.ClickhouseFlow m r,
     HasYudhishthiraTablesSchema,
@@ -416,7 +418,8 @@ handleReferral ::
     CHConfig.ClickhouseFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     Redis.HedisLTSFlowEnv r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   RideEndedEvent ->
   m ()
@@ -450,7 +453,8 @@ handleDriverCityMigration ::
     Esq.EsqDBFlow m r,
     MonadFlow m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   RideEndedEvent ->
   m ()
@@ -546,7 +550,8 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
         Esq.EsqDBFlow m r,
         MonadFlow m,
         Redis.HedisFlow m r,
-        Redis.HedisLTSFlowEnv r
+        Redis.HedisLTSFlowEnv r,
+        DriverPoolStateEnv r
       ) =>
       DP.Person ->
       Id DMOC.MerchantOperatingCity ->
@@ -564,7 +569,8 @@ handleDriverCityMigration ev = withRideAndBooking ev $ \ride booking -> do
         Esq.EsqDBFlow m r,
         MonadFlow m,
         Redis.HedisFlow m r,
-        Redis.HedisLTSFlowEnv r
+        Redis.HedisLTSFlowEnv r,
+        DriverPoolStateEnv r
       ) =>
       DP.Person ->
       Id DMOC.MerchantOperatingCity ->
@@ -606,6 +612,7 @@ handleDriverCoinsAndJourney ::
     CHConfig.ClickhouseFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     PaymentBeamFlow.BeamFlow m r,

@@ -103,6 +103,7 @@ import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
 import SharedLogic.Allocator.Jobs.Payout.ScheduledBatchPayout (findKernelSweepRule)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv, runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner, tdsReimbursementReferenceType)
 import qualified SharedLogic.Finance.Rails as Rails
@@ -1400,7 +1401,8 @@ recordAirportCashRecharge ::
     Redis.HedisLTSFlowEnv r,
     Redis.HedisFlow m r,
     Finance.HasActorInfo m r,
-    PostActionsEnv r
+    PostActionsEnv r,
+    DriverPoolStateEnv r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   HighPrecMoney ->

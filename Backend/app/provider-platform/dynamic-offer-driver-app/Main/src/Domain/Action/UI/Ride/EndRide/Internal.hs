@@ -118,6 +118,7 @@ import qualified SharedLogic.CancellationDues as SCD
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr)
 import qualified SharedLogic.DriverFyEarnings as SDFE
 import SharedLogic.DriverOnboarding
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
@@ -199,7 +200,8 @@ endRideTransaction ::
     Redis.HedisLTSFlowEnv r,
     CoreMetrics m,
     BeamFlow m r,
-    IJBeamFlow.BeamFlow m r
+    IJBeamFlow.BeamFlow m r,
+    DriverPoolStateEnv r
   ) =>
   Id DP.Driver ->
   SRB.Booking ->
@@ -339,7 +341,8 @@ processEndRideFinance ::
     Redis.HedisLTSFlowEnv r,
     BeamFlow m r,
     IJBeamFlow.BeamFlow m r,
-    CoreMetrics m
+    CoreMetrics m,
+    DriverPoolStateEnv r
   ) =>
   Merchant ->
   Ride.Ride ->
@@ -555,6 +558,7 @@ createDriverWalletTransaction ::
     BeamFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
@@ -1112,7 +1116,8 @@ createDriverFee ::
     HasField "activeDriversListKeyShards" r Int,
     HasField "enableDriverFeeShardedFanOut" r Bool,
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->

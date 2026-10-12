@@ -16,6 +16,7 @@ import qualified Lib.Dashcam.Domain.Types as Dashcam
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.Queries.DriverPlan
@@ -28,6 +29,7 @@ installationStatus ::
     MonadFlow m,
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,

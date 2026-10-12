@@ -56,6 +56,7 @@ import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool (getBatchingMode, getNextBatchScheduleTime)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
@@ -176,6 +177,7 @@ initiateDriverSearchBatch ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     Analytics.PublishesFleetAnalytics m
   ) =>

@@ -70,6 +70,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Types as SOnboardingFlags
 import qualified SharedLogic.DriverOnboarding.Status as DriverOnboardingStatus (ResponseStatus (..), checkLMSTrainingStatus)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Reminder.Helper as ReminderHelper
 import Storage.Beam.SchedulerJob ()
@@ -161,7 +162,8 @@ disableDriverForMandatoryReminder ::
     CacheFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DTC.TransporterConfig ->
   Id DP.Person ->
@@ -194,6 +196,7 @@ processReminder ::
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     SchedulerFlow r,
@@ -240,6 +243,7 @@ processReminderByType ::
     CacheFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
@@ -354,6 +358,7 @@ processInspectionReminder ::
     CacheFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
@@ -418,7 +423,8 @@ processDocumentExpiryReminder ::
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
     HasSchemaName SchedulerJobT,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -583,7 +589,8 @@ sendDriverNotifications ::
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
     ServiceFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -671,7 +678,8 @@ sendDocumentExpiryNotification ::
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
     ServiceFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -701,7 +709,8 @@ sendVehicleDocumentExpiryNotification ::
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
     ServiceFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -742,7 +751,8 @@ sendInspectionOrTrainingNotification ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
     ServiceFlow m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DR.Reminder ->
   DP.Person ->

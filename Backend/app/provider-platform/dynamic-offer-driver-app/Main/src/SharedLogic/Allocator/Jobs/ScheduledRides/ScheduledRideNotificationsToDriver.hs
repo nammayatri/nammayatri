@@ -44,6 +44,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -66,7 +67,8 @@ type ScheduleNotificationFlow m r =
     EsqDBFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     SchedulerFlow r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   )
 
 sendScheduledRideNotificationsToDriver ::
@@ -142,7 +144,7 @@ data SendCommunicationToDriverReq = SendCommunicationToDriverReq
   }
 
 sendCommunicationToDriver ::
-  (ScheduleNotificationFlow m r, HasKafkaProducer r, Hedis.HedisLTSFlowEnv r) =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   SendCommunicationToDriverReq ->
   m ()
 sendCommunicationToDriver SendCommunicationToDriverReq {..} = do

@@ -91,6 +91,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.External.LocationTrackingService.Types as Fields
@@ -709,6 +710,7 @@ runDemandCheckForVariants ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -775,6 +777,7 @@ checkAndNotifyDriverDemand ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -856,6 +859,7 @@ forceNotifyDriverDemand ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -910,6 +914,7 @@ notifyDrivers ::
     ServiceFlow m r,
     CacheFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -1065,7 +1070,8 @@ filterInBatches ::
     HasRequestId r,
     Forkable m,
     HasField "gateNotifiedKeyShards" r Int,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Int -> -- batch size
   Int -> -- needed count
@@ -1102,7 +1108,8 @@ filterEligibleDrivers ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasField "gateNotifiedKeyShards" r Int,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DM.Merchant -> -- merchant (for manualQueueRemove of on-ride/offline drivers)
   Text -> -- specialLocationId

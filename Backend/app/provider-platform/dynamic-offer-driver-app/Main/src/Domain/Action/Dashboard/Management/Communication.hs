@@ -54,6 +54,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (isFleetRole)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
@@ -743,7 +744,8 @@ processFleetCommunicationDeliveryPayload ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasKafkaProducer r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   CommunicationDeliveryDispatchPayload ->
   m ()
@@ -766,7 +768,8 @@ dispatchFromPayload ::
     HasField "requestId" r (Maybe Text),
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasKafkaProducer r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   CommunicationDeliveryDispatchPayload ->
   m ()

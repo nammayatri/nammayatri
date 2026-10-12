@@ -149,6 +149,7 @@ import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import qualified SharedLogic.PassengerLuggage as SPL
@@ -852,7 +853,8 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     HasKafkaProducer r,
     Redis.HedisLTSFlowEnv r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    DriverPoolStateEnv r
   ) =>
   [NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -1124,6 +1126,7 @@ calculateDriverPool ::
     HasKafkaProducer r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   CalculateDriverPoolReq a ->
@@ -1215,6 +1218,7 @@ calculateDriverPoolWithActualDist ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   CalculateDriverPoolReq a ->

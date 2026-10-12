@@ -76,6 +76,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (PostActionsEnv)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
@@ -94,7 +95,7 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
 import Tools.Utils
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r)
+type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withWaitAndLockRedis driverId.getId 60 50000 $ do
@@ -323,7 +324,7 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
 -- from the consequence-matrix row's CoinDeduction/CoinAddition.
 -- The event function is derived from the sign of the delta purely for history/notification
 -- labelling. The direct-wallet-incentive mode keeps its own (wallet-config) path.
-handleCancellationCoinsFromMatrix :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m ()
+handleCancellationCoinsFromMatrix :: (EventFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m ()
 handleCancellationCoinsFromMatrix driverId merchantId merchantOpCityId eventType transporterConfig combinedBlacklist entityId vehCategory mbServiceTierType =
   case eventType of
     DCT.Cancellation {consequenceCoins, consequenceRowId} -> do
@@ -383,7 +384,7 @@ calculateCoins eventType driverId merchantId merchantOpCityId coinsConfig mbexpi
     DCT.LMSBonus -> hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory mbServiceTierType
     _ -> pure 0
 
-hLms :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+hLms :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
 hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins _ entityId vehCategory mbServiceTierType = do
   logDebug $ "Driver Coins Handle LMS Event Triggered - " <> show eventFunction
   case eventFunction of
@@ -552,7 +553,7 @@ runActionWhenValidConditions conditions action = do
       isValid <- condition
       if isValid then checkAllConditions xs else pure False
 
-updateEventAndGetCoinsvalue :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+updateEventAndGetCoinsvalue :: (EventFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType = do
   numCoins' <-
     updateEventAndGetCoinsvalueWithoutNotification
@@ -578,7 +579,7 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
   pure numCoins'
 
 updateEventAndGetCoinsvalueWithoutNotification ::
-  (EventFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (EventFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -621,7 +622,7 @@ updateEventAndGetCoinsvalueWithoutNotification driverId merchantId merchantOpCit
   pure numCoins
 
 awardJourneyMilestoneCoins ::
-  (EventFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (EventFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -640,7 +641,7 @@ awardJourneyMilestoneCoins driverId merchantId merchantOpCityId journeyName =
     (DCT.IncentiveJourneyMilestoneCompleted journeyName)
 
 -- This function is to be removed after next apk deployment
-sendCoinsNotificationV3 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotificationV3 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
 sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompleted metroRideType _) =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
@@ -658,7 +659,7 @@ sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompl
     replaceCoinsValue = T.replace "{#pointsValue#}" (T.pack $ show coinsValue)
 sendCoinsNotificationV3 _merchantOpCityId _driverId _coinsValue _eventFunction = pure ()
 
-sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
 sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUploadFunctionV2 messageKey) = do
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
@@ -677,7 +678,7 @@ sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUpl
     replaceAmountValue amount' = T.replace "{#amountValue#}" (T.pack $ show amount')
 sendCoinsNotificationV2 _merchantOpCityId _driverId _amount _coinsValue _eventFunction = pure ()
 
-sendCoinsNotification :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotification :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
 sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
