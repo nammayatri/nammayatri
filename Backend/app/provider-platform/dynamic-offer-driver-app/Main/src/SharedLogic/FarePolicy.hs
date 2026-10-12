@@ -196,7 +196,7 @@ getFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDista
               return fp
   where
     getFareProduct' areaName serviceTierName = do
-      FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTierName areaName
+      FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTierName areaName mbBookingStartTime
         |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTierName areaName
     searchSources = FareProduct.getSearchSources isDashboard
     getFarePolicyWithArea areaName fareProduct = do
@@ -224,10 +224,10 @@ isDynamicPricingTripCategory :: DTC.TripCategory -> Bool
 isDynamicPricingTripCategory (DTC.OneWay v) = v /= MeterRide
 isDynamicPricingTripCategory _ = False
 
-getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> Maybe DpInputsSharing -> m FarePoliciesProduct
-getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory configsInExperimentVersions mbDpInputsSharing = do
+getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r, HasField "enableAPILatencyLogging" r Bool, HasField "enableAPIPrometheusMetricLogging" r Bool) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> Maybe DpInputsSharing -> Maybe UTCTime -> m FarePoliciesProduct
+getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory configsInExperimentVersions mbDpInputsSharing mbRideTime = do
   let searchSources = FareProduct.getSearchSources isDashboard
-  allFareProducts <- withTimeAPI "farePolicy" "getAllFareProducts" $ FareProduct.getAllFareProducts merchantId merchantOpCityId searchSources fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId tripCategory
+  allFareProducts <- withTimeAPI "farePolicy" "getAllFareProducts" $ FareProduct.getAllFareProducts merchantId merchantOpCityId searchSources fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId tripCategory mbRideTime
   let mbResolvedSpecialZoneId = ((.getId) <$> mbFromSpecialLocationId) <|> SL.pickupSpecialZoneIdFromArea allFareProducts.area
   (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <-
     return . getFareProduct allFareProducts
