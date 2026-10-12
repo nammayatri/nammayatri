@@ -301,6 +301,7 @@ library
       Domain.Action.DashboardAuth.Management.Merchant
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
+      Domain.Action.DashboardAuth.Management.RadarTickets
       Domain.Action.DashboardAuth.Operator.FleetManagement
       Domain.Action.DashboardAuth.Operator.Registration
       Domain.Action.DashboardAuth.RideBooking.Driver

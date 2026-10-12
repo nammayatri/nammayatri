@@ -30,7 +30,7 @@ data RadarConversationRes = RadarConversationRes {messages :: [RadarMessage], ha
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RadarCreateTicketReq = RadarCreateTicketReq
+data RadarCreateTicketByUserReq = RadarCreateTicketByUserReq
   { category :: Kernel.Prelude.Text,
     subCategory :: Kernel.Prelude.Text,
     title :: Kernel.Prelude.Text,
@@ -41,8 +41,26 @@ data RadarCreateTicketReq = RadarCreateTicketReq
     body :: Kernel.Prelude.Text,
     context :: [RadarKV],
     attachmentFileIds :: [Kernel.Prelude.Text],
-    senderEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    senderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    senderEmail :: Kernel.Prelude.Text,
+    senderName :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RadarCreateTicketByUserReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data RadarCreateTicketReq = RadarCreateTicketReq
+  { category :: Kernel.Prelude.Text,
+    subCategory :: Kernel.Prelude.Text,
+    title :: Kernel.Prelude.Text,
+    citiesAffected :: [Kernel.Prelude.Text],
+    whereSeen :: Kernel.Prelude.Text,
+    stillHappening :: Kernel.Prelude.Text,
+    urgency :: Kernel.Prelude.Text,
+    body :: Kernel.Prelude.Text,
+    context :: [RadarKV],
+    attachmentFileIds :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -75,7 +93,14 @@ data RadarMessage = RadarMessage
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RadarReplyReq = RadarReplyReq {body :: Kernel.Prelude.Text, senderEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text, senderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data RadarReplyByUserReq = RadarReplyByUserReq {body :: Kernel.Prelude.Text, senderEmail :: Kernel.Prelude.Text, senderName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RadarReplyByUserReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data RadarReplyReq = RadarReplyReq {body :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -164,7 +189,7 @@ data RadarUploadRes = RadarUploadRes {fileId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("radarTickets" :> (GetRadarTicketsList :<|> GetRadarTicketsSummary :<|> GetRadarTicketsReporters :<|> GetRadarTicketsTicket :<|> GetRadarTicketsTicketConversation :<|> GetRadarTicketsTicketAttachment :<|> PostRadarTicketsTicketReply :<|> PostRadarTicketsUpload :<|> PostRadarTicketsCreate :<|> PostRadarTicketsTicketUpdateStatus :<|> PostRadarTicketsTicketCsat))
+type API = ("radarTickets" :> (GetRadarTicketsList :<|> GetRadarTicketsSummary :<|> GetRadarTicketsReporters :<|> GetRadarTicketsTicket :<|> GetRadarTicketsTicketConversation :<|> GetRadarTicketsTicketAttachment :<|> PostRadarTicketsTicketReplyHelper :<|> PostRadarTicketsUpload :<|> PostRadarTicketsCreateHelper :<|> PostRadarTicketsTicketUpdateStatus :<|> PostRadarTicketsTicketCsat))
 
 type GetRadarTicketsList =
   ( "list" :> QueryParam "pageSize" Kernel.Prelude.Int :> QueryParam "cursor" Kernel.Prelude.Text :> QueryParam "priority" Kernel.Prelude.Text
@@ -187,9 +212,13 @@ type GetRadarTicketsTicketAttachment = ("ticket" :> Capture "ticketId" Kernel.Pr
 
 type PostRadarTicketsTicketReply = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "reply" :> ReqBody ('[JSON]) RadarReplyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
+type PostRadarTicketsTicketReplyHelper = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "reply" :> ReqBody ('[JSON]) RadarReplyByUserReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
 type PostRadarTicketsUpload = ("upload" :> ReqBody ('[JSON]) RadarUploadReq :> Post ('[JSON]) RadarUploadRes)
 
 type PostRadarTicketsCreate = ("create" :> ReqBody ('[JSON]) RadarCreateTicketReq :> Post ('[JSON]) RadarCreateTicketRes)
+
+type PostRadarTicketsCreateHelper = ("create" :> ReqBody ('[JSON]) RadarCreateTicketByUserReq :> Post ('[JSON]) RadarCreateTicketRes)
 
 type PostRadarTicketsTicketUpdateStatus =
   ( "ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "updateStatus" :> ReqBody ('[JSON]) RadarUpdateStatusReq
@@ -207,9 +236,9 @@ data RadarTicketsAPIs = RadarTicketsAPIs
     getRadarTicketsTicket :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarTicketDetailRes),
     getRadarTicketsTicketConversation :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarConversationRes),
     getRadarTicketsTicketAttachment :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarAttachmentUrlRes),
-    postRadarTicketsTicketReply :: (Kernel.Prelude.Text -> RadarReplyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postRadarTicketsTicketReply :: (Kernel.Prelude.Text -> RadarReplyByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRadarTicketsUpload :: (RadarUploadReq -> EulerHS.Types.EulerClient RadarUploadRes),
-    postRadarTicketsCreate :: (RadarCreateTicketReq -> EulerHS.Types.EulerClient RadarCreateTicketRes),
+    postRadarTicketsCreate :: (RadarCreateTicketByUserReq -> EulerHS.Types.EulerClient RadarCreateTicketRes),
     postRadarTicketsTicketUpdateStatus :: (Kernel.Prelude.Text -> RadarUpdateStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRadarTicketsTicketCsat :: (Kernel.Prelude.Text -> RadarCsatReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
   }
