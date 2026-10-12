@@ -500,17 +500,6 @@ jobs:
           echo "FAILED:"; printf '  - %s\n' "${FAILED[@]}"; exit 1
           EOF
 
-      # Driver-cancel -> reallocation timeline for Auto 03 / Taxi 06 on every run (pass or fail), so the
-      # intermittent D2-accept 409 can be compared across runs. Also written to the job summary.
-      - name: Reallocation timeline
-        if: always()
-        timeout-minutes: 2
-        run: |
-          cd Backend/dev/integration-tests
-          OUT=$(python3 ci/flow-timeline.py data/test-logs/03-AutoDriverCancellation-* data/test-logs/06-CabDriverCancellation-* 2>&1 || true)
-          echo "$OUT"
-          { echo "### Reallocation timeline (Auto 03 / Taxi 06)"; echo '```'; echo "$OUT"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-
       # Stop the background log copies so the .gz files are complete before upload.
       - name: Stop log capture
         if: always()
@@ -532,18 +521,6 @@ jobs:
             Backend/dev/integration-tests/reports/
             Backend/dev/integration-tests/data/test-logs/
           retention-days: 5
-
-      # Always (small): Auto 03 / Taxi 06 step logs, so passing runs can be compared with failing ones.
-      - name: Upload reallocation logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: reallocation-logs
-          path: |
-            Backend/dev/integration-tests/data/test-logs/03-AutoDriverCancellation-*/
-            Backend/dev/integration-tests/data/test-logs/06-CabDriverCancellation-*/
-          if-no-files-found: ignore
-          retention-days: 14
 
       # Post integration-test failures on main to #ny-integration-tests via the Integration-Test-Alerts
       # Xyne bot (failures only; alert_test sends a test message). Never changes the job result.
@@ -579,7 +556,7 @@ jobs:
             [ -n "$PR" ] && echo "PR: $REPO_URL/pull/$PR"
             echo "Commit link: $REPO_URL/commit/$GITHUB_SHA"
             [ -n "$COMPARE" ] && echo "Changes in this push: $COMPARE"
-            echo "Run (per-step request/response + reallocation timeline in Summary): $REPO_URL/actions/runs/$GITHUB_RUN_ID"
+            echo "Run (per-step request/response in the log, all logs under Artifacts): $REPO_URL/actions/runs/$GITHUB_RUN_ID"
           } > xyne-alert.txt
           python3 Backend/dev/integration-tests/ci/xyne-bot-trigger.py \
             --channel cmv58kurt035tczc9m49iyomu --title "$TITLE" --message-file xyne-alert.txt
