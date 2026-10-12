@@ -942,3 +942,25 @@ updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   updateOneWithKV [Se.Set BeamDI.forwardBatchingEnabled (Just forwardBatchingEnabled), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.forwardBatchingEnabled = LTSSync.Set forwardBatchingEnabled}
+
+-- | Hand-written rather than generated: pool data in LTS carries airConditionScore, so the write must sync there.
+updateAirConditionScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe Double -> Id Person.Person -> m ()
+updateAirConditionScore airConditionScore driverId = do
+  now <- getCurrentTime
+  updateOneWithKV [Se.Set BeamDI.airConditionScore airConditionScore, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.airConditionScore = LTSSync.Set airConditionScore}
+
+-- | Hand-written rather than generated: forward batching reads driverTripEndLocation from LTS pool data,
+-- so a mid-ride destination edit must sync there or the old drop keeps being used.
+updateTripEndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe Maps.LatLong -> Id Person.Person -> m ()
+updateTripEndLocation driverTripEndLocation driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.driverTripEndLocationLat (fmap (.lat) driverTripEndLocation),
+      Se.Set BeamDI.driverTripEndLocationLon (fmap (.lon) driverTripEndLocation),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.driverTripEndLocation = LTSSync.Set driverTripEndLocation}

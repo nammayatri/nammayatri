@@ -343,3 +343,24 @@ updateFleetVehicleFromDashboardRcEdit driverId oldRegistrationNo newRegistration
       ]
     LTSSync.syncDriverPoolDataToLTS (cast driverId) $
       LTSSync.emptyUpdate {LTSSync.mYManufacturing = LTSSync.Set mYManufacturing, LTSSync.registrationNo = LTSSync.Set newRegistrationNo}
+
+-- | Hand-written rather than generated: pool data in LTS carries airConditioned, so the write must sync there.
+updateAirConditioned :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe Bool -> Maybe Text -> Id Person -> m ()
+updateAirConditioned airConditioned downgradeReason driverId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set BeamV.airConditioned airConditioned, Se.Set BeamV.downgradeReason downgradeReason, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.airConditioned = LTSSync.Set airConditioned}
+
+-- | Hand-written rather than generated: pool data in LTS carries vehicleRating, so the write must sync there.
+updateVehicleRatingAndRemark :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe Double -> Maybe Text -> Id Person -> m ()
+updateVehicleRatingAndRemark vehicleRating vehicleRatingRemark driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamV.vehicleRating vehicleRating,
+      Se.Set BeamV.vehicleRatingRemark vehicleRatingRemark,
+      Se.Set BeamV.updatedAt _now
+    ]
+    [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.vehicleRating = LTSSync.Set vehicleRating}
