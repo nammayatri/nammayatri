@@ -353,6 +353,15 @@ apis:
       response:
         type: TableDataResp
   - GET:
+      endpoint: /configPilot/{tableName}/getTableDataFromDB
+      auth: ApiAuthV2
+      params:
+        tableName: ConfigType
+      response:
+        type: TableDataResp
+      migrate:
+        capability: system-config.config_pilot.read
+  - GET:
       endpoint: /configPilot/allUiConfigs
       auth: ApiAuthV2
       query:

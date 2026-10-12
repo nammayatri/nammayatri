@@ -14,6 +14,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SQ
+import qualified Storage.Queries.RideRelatedNotificationConfig as QRRNC
 
 data RideRelatedNotificationConfigDimensions = RideRelatedNotificationConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -30,15 +31,16 @@ instance ConfigDimensions RideRelatedNotificationConfigDimensions where
   type ConfigTypeOf RideRelatedNotificationConfigDimensions = 'RideRelatedNotificationConfig
   type ConfigValueTypeOf RideRelatedNotificationConfigDimensions = [DT.RideRelatedNotificationConfig]
   getConfigType _ = RideRelatedNotificationConfig
+  configDBFetch a = Just (QRRNC.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG RideRelatedNotificationConfig)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+      (QRRNC.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.timeDiffEvent) (Just . (.timeDiffEvent)) (==)
       ]
       Nothing
   configFallback a = Just $ case a.timeDiffEvent of
-    Just e -> SQ.findAllByMerchantOperatingCityIdAndTimeDiffEvent (Id a.merchantOperatingCityId) e (Just [])
-    Nothing -> SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just [])
+    Just e -> QRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEvent (Id a.merchantOperatingCityId) e
+    Nothing -> QRRNC.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)

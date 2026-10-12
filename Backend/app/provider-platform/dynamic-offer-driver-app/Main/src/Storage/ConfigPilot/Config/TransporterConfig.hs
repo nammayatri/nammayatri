@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SQ
+import qualified Storage.Queries.TransporterConfig as QTransporterConfig
 
 data TransporterConfigDimensions = TransporterConfigDimensions
   { merchantOperatingCityId :: Text
@@ -28,6 +29,7 @@ instance ConfigDimensions TransporterConfigDimensions where
   type ConfigTypeOf TransporterConfigDimensions = 'TransporterConfig
   type ConfigValueTypeOf TransporterConfigDimensions = Maybe DT.TransporterConfig
   getConfigType _ = TransporterConfig
+  configDBFetch a = Just (QTransporterConfig.findByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

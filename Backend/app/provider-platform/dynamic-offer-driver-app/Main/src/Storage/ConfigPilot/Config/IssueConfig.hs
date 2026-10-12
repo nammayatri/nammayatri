@@ -28,6 +28,7 @@ instance ConfigDimensions IssueConfigDimensions where
   type ConfigTypeOf IssueConfigDimensions = 'IssueConfigDriver
   type ConfigValueTypeOf IssueConfigDimensions = Maybe DT.IssueConfig
   getConfigType _ = IssueConfigDriver
+  configDBFetch a = Just (Queries.findByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList

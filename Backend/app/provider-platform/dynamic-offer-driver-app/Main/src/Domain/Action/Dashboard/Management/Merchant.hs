@@ -603,7 +603,7 @@ getMerchantConfigDriverPool merchantShortId opCity reqTripDistance reqTripDistan
         distanceToMeters <$> (Distance <$> reqTripDistanceValue <*> reqDistanceUnit)
           <|> reqTripDistance
   configs <- case mbTripDistance of
-    Nothing -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing))
+    Nothing -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) Nothing
     Just tripDistance -> getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Just tripDistance, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance (Just []) Nothing))
   pure $ mkDriverPoolConfigRes <$> configs
 
@@ -626,7 +626,7 @@ getMerchantConfigDriverPoolList :: ShortId DM.Merchant -> Context.City -> Flow C
 getMerchantConfigDriverPoolList merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) (Just (CQDPC.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing))
+  configs <- getConfig (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing}) Nothing
   pure $ mkDriverPoolConfigListItem <$> configs
 
 mkDriverPoolConfigListItem :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigListItem

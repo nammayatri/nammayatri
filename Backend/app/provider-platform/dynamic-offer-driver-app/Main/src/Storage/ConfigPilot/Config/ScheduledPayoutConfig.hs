@@ -33,6 +33,7 @@ instance ConfigDimensions ScheduledPayoutConfigDimensions where
   type ConfigTypeOf ScheduledPayoutConfigDimensions = 'ScheduledPayoutConfig
   type ConfigValueTypeOf ScheduledPayoutConfigDimensions = [DT.ScheduledPayoutConfig]
   getConfigType _ = ScheduledPayoutConfig
+  configDBFetch a = Just (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a

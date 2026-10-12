@@ -11,6 +11,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as SQ
+import qualified Storage.Queries.MerchantPaymentMethod as QMerchantPaymentMethod
 
 data MerchantPaymentMethodDimensions = MerchantPaymentMethodDimensions
   { merchantOperatingCityId :: Text,
@@ -27,6 +28,10 @@ instance ConfigDimensions MerchantPaymentMethodDimensions where
   type ConfigTypeOf MerchantPaymentMethodDimensions = 'MerchantPaymentMethod
   type ConfigValueTypeOf MerchantPaymentMethodDimensions = [DT.MerchantPaymentMethod]
   getConfigType _ = MerchantPaymentMethod
+  configDBFetch a =
+    Just $ case a.configId of
+      Just cId -> maybeToList <$> QMerchantPaymentMethod.findById (Id cId)
+      Nothing -> QMerchantPaymentMethod.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId)
   getConfigList a =
     let fetch = case a.configId of
           Just cId -> maybeToList <$> SQ.findById (Id cId)

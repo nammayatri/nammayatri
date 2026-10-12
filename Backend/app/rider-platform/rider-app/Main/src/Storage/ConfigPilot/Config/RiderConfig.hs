@@ -13,6 +13,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as SQ
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 
 data RiderConfigDimensions = RiderConfigDimensions
   { merchantOperatingCityId :: Text
@@ -28,13 +29,14 @@ instance ConfigDimensions RiderConfigDimensions where
   type ConfigTypeOf RiderConfigDimensions = 'RiderConfig
   type ConfigValueTypeOf RiderConfigDimensions = Maybe DT.RiderConfig
   getConfigType _ = RiderConfig
+  configDBFetch a = Just (QRiderConfig.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList
         a
         (LYT.RIDER_CONFIG RiderConfig)
         (Id a.merchantOperatingCityId)
-        (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
+        (maybeToList <$> QRiderConfig.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher RiderConfigDimensions DT.RiderConfig]))
         Nothing
   configFallback a = Just (SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))

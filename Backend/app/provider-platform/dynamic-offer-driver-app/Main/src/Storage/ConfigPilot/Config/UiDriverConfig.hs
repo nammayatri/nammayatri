@@ -32,6 +32,7 @@ instance ConfigDimensions UiDriverConfigDimensions where
   type ConfigTypeOf UiDriverConfigDimensions = 'UiDriverConfig
   type ConfigValueTypeOf UiDriverConfigDimensions = [DT.UiDriverConfig]
   getConfigType _ = UiDriverConfig
+  configDBFetch a = Just (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a

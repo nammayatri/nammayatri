@@ -36,6 +36,7 @@ module Domain.Action.Dashboard.NammaTag
     getNammaTagConfigPilotAllConfigs,
     getNammaTagConfigPilotConfigDetails,
     getNammaTagConfigPilotGetTableData,
+    getNammaTagConfigPilotGetTableDataFromDB,
     getNammaTagConfigPilotAlwaysOnList,
     addCustomerTag,
     removeCustomerTag,
@@ -914,6 +915,16 @@ getNammaTagConfigPilotGetTableData _merchantShortId _opCity configType = do
   let merchantOpCityId = merchantOperatingCity.id
   let domain = LYTU.RIDER_CONFIG configType
   TC.returnConfigs domain (cast merchantOpCityId) (cast merchant.id) _opCity
+
+-- | Same shape as 'getNammaTagConfigPilotGetTableData', but reads the config
+-- table directly instead of the effective (in-mem + Redis + rollout) value.
+getNammaTagConfigPilotGetTableDataFromDB :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ConfigType -> Environment.Flow LYTU.TableDataResp
+getNammaTagConfigPilotGetTableDataFromDB _merchantShortId _opCity configType = do
+  merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity _merchantShortId _opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show _opCity)
+  merchant <- findMerchantByShortId _merchantShortId
+  let merchantOpCityId = merchantOperatingCity.id
+  let domain = LYTU.RIDER_CONFIG configType
+  TC.returnDBConfigs domain (cast merchantOpCityId) (cast merchant.id) _opCity
 
 postNammaTagConfigPilotActionChange :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ActionChangeRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagConfigPilotActionChange _merchantShortId _opCity req = do

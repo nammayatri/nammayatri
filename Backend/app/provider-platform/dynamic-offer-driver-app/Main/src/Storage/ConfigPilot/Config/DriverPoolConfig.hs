@@ -17,6 +17,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as SQ
+import qualified Storage.Queries.DriverPoolConfig as QDriverPoolConfig
 
 data DriverPoolConfigDimensions = DriverPoolConfigDimensions
   { merchantOperatingCityId :: Text,
@@ -36,12 +37,13 @@ instance ConfigDimensions DriverPoolConfigDimensions where
   type ConfigTypeOf DriverPoolConfigDimensions = 'DriverPoolConfig
   type ConfigValueTypeOf DriverPoolConfigDimensions = [DT.DriverPoolConfig]
   getConfigType _ = DriverPoolConfig
+  configDBFetch a = Just (QDriverPoolConfig.findAllByMerchantOpCityId Nothing Nothing (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG DriverPoolConfig)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []) Nothing)
+      (QDriverPoolConfig.findAllByMerchantOpCityId Nothing Nothing (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.tripDistance) (Just . (.tripDistance)) (==),
         LCP.DimMatcher (.area) (Just . (.area)) (==),
         LCP.DimMatcher (.vehicleVariant) (.vehicleVariant) (==),

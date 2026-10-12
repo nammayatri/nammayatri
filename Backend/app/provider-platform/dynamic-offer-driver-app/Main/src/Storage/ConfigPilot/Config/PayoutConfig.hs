@@ -33,12 +33,13 @@ instance ConfigDimensions PayoutConfigDimensions where
   type ConfigTypeOf PayoutConfigDimensions = 'PayoutConfig
   type ConfigValueTypeOf PayoutConfigDimensions = [DT.PayoutConfig]
   getConfigType _ = PayoutConfig
+  configDBFetch a = Just (QPC.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a
       (LYT.DRIVER_CONFIG PayoutConfig)
       (Id a.merchantOperatingCityId)
-      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      (QPC.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==),
         LCP.DimMatcher (.isPayoutEnabled) (Just . (.isPayoutEnabled)) (==)
       ]

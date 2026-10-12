@@ -13,7 +13,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getConfig, getConfigList)
+import Lib.ConfigPilot.Interface.Types (getConfig, getConfigFromDB, getConfigList)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYTBF
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as LTSCADLE
@@ -136,6 +136,81 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbConfigInfo <- SCU.findUIConfig uiConfigReq (cast merchantOpCityId) True
       return LYT.TableDataResp {configs = map A.toJSON (maybeToList (fst <$> mbConfigInfo))}
+    _ -> throwError $ InvalidRequest "Unsupported config type."
+
+-- | Table-level sibling of 'returnConfigs': the rows the config table actually
+-- holds, read through @Storage.Queries@ (@findOneWithKV@ / @findAllWithKV@) with
+-- no ConfigPilot in-mem/Redis caching and no dynamic-logic patch applied.
+returnDBConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.LogicDomain -> Id LYT.MerchantOperatingCity -> Id LYT.Merchant -> Kernel.Types.Beckn.Context.City -> m LYT.TableDataResp
+returnDBConfigs logicDomain merchantOpCityId merchantId opCity = do
+  case logicDomain of
+    LYT.DRIVER_CONFIG LYT.DriverPoolConfig -> do
+      driverPoolCfg <- getConfigFromDB (DriverPoolConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, tripDistance = Nothing, area = Nothing, vehicleVariant = Nothing, tripCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON driverPoolCfg}
+    LYT.DRIVER_CONFIG LYT.TransporterConfig -> do
+      transporterCfg <- getConfigFromDB (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList transporterCfg)}
+    LYT.DRIVER_CONFIG LYT.PayoutConfig -> do
+      payoutCfg <- getConfigFromDB (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON payoutCfg}
+    LYT.DRIVER_CONFIG LYT.RideRelatedNotificationConfig -> do
+      rideRelatedNotificationCfg <- getConfigFromDB (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, timeDiffEvent = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON rideRelatedNotificationCfg}
+    LYT.DRIVER_CONFIG LYT.MerchantMessage -> do
+      merchantMessage <- getConfigFromDB (MerchantMessageDimensions {merchantOperatingCityId = merchantOpCityId.getId, messageKey = Nothing, vehicleCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON merchantMessage}
+    LYT.DRIVER_CONFIG LYT.MerchantPushNotification -> do
+      merchantPushNotification <- getConfigFromDB (MerchantPushNotificationDimensions {merchantOperatingCityId = merchantOpCityId.getId, key = Nothing, tripCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON merchantPushNotification}
+    LYT.DRIVER_CONFIG LYT.MerchantServiceUsageConfigDriver -> do
+      msuc <- getConfigFromDB (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList msuc)}
+    LYT.DRIVER_CONFIG LYT.DocumentVerificationConfig -> do
+      dvCfg <- getConfigFromDB (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON dvCfg}
+    LYT.DRIVER_CONFIG LYT.DocumentVerificationStagesConfig -> do
+      dvsCfg <- getConfigFromDB (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing, documentCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON dvsCfg}
+    LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
+      goHomeCfg <- getConfigFromDB (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList goHomeCfg)}
+    LYT.DRIVER_CONFIG LYT.LeaderBoardConfig -> do
+      lbCfg <- getConfigFromDB (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON lbCfg}
+    LYT.DRIVER_CONFIG LYT.ReminderConfig -> do
+      reminderCfg <- getConfigFromDB (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON reminderCfg}
+    LYT.DRIVER_CONFIG LYT.ScheduledPayoutConfig -> do
+      spCfg <- getConfigFromDB (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, isEnabled = Nothing, payoutCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON spCfg}
+    LYT.DRIVER_CONFIG LYT.TagActionNotificationConfig -> do
+      tanCfg <- getConfigFromDB (TagActionNotificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, notificationKey = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON tanCfg}
+    LYT.DRIVER_CONFIG LYT.FleetOwnerDocumentVerificationConfig -> do
+      fodvCfg <- getConfigFromDB (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, role = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON fodvCfg}
+    LYT.DRIVER_CONFIG LYT.CoinsConfig -> do
+      coinsCfg <- getConfigFromDB (CoinsConfigDimensions {merchantOptCityId = merchantOpCityId.getId, eventFunction = Nothing, merchantId = Nothing, active = Nothing, vehicleCategory = Nothing, serviceTierType = Nothing, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON coinsCfg}
+    LYT.DRIVER_CONFIG LYT.MerchantServiceConfig -> do
+      mscCfg <- getConfigFromDB (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON mscCfg}
+    LYT.DRIVER_CONFIG LYT.Exophone -> do
+      exoCfg <- getConfigFromDB (ExophoneDimensions {merchantOperatingCityId = merchantOpCityId.getId, phoneNumber = Nothing, callService = Nothing, exophoneType = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON exoCfg}
+    LYT.DRIVER_CONFIG LYT.Overlay -> do
+      overlayCfg <- getConfigFromDB (OverlayDimensions {merchantOperatingCityId = merchantOpCityId.getId, overlayKey = Nothing, language = Nothing, udf1 = Nothing, vehicleCategory = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON overlayCfg}
+    LYT.DRIVER_CONFIG LYT.Translation -> do
+      translationCfg <- getConfigFromDB (TranslationDimensions {merchantOperatingCityId = Just merchantOpCityId.getId, messageKey = "", language = Nothing})
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList translationCfg)}
+    LYT.DRIVER_CONFIG LYT.IssueConfig -> do
+      issueCfg <- getConfigFromDB (IssueConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, identifier = ""})
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList issueCfg)}
+    LYT.UI_DRIVER dt pt -> do
+      let uiConfigReq = LYT.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
+      mbUiConfig <- SQU.findUIConfig uiConfigReq (cast merchantOpCityId)
+      return LYT.TableDataResp {configs = map A.toJSON (maybeToList mbUiConfig)}
     _ -> throwError $ InvalidRequest "Unsupported config type."
 
 handleConfigDBUpdate :: (BeamFlow m r, EsqDBFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.ConcludeReq -> [A.Value] -> Maybe (Id LYT.Merchant) -> Kernel.Types.Beckn.Context.City -> m ()

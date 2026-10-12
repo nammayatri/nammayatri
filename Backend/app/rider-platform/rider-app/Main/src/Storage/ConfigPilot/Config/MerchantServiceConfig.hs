@@ -55,6 +55,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
   type ConfigTypeOf MerchantServiceConfigDimensions = 'MerchantServiceConfig
   type ConfigValueTypeOf MerchantServiceConfigDimensions = [DMSC.MerchantServiceConfig]
   getConfigType _ = MerchantServiceConfig
+  configDBFetch a = Just (SQMSC.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId))
   configFallback a = (\svc -> maybeToList <$> CQMSC.findByMerchantOpCityIdAndService (Id a.merchantId) (Id a.merchantOperatingCityId) svc) <$> a.serviceName
   getConfigList a =
     CR.resolveConfigList

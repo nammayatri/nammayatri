@@ -29,6 +29,7 @@ instance ConfigDimensions TagActionNotificationConfigDimensions where
   type ConfigTypeOf TagActionNotificationConfigDimensions = 'TagActionNotificationConfig
   type ConfigValueTypeOf TagActionNotificationConfigDimensions = [DT.TagActionNotificationConfig]
   getConfigType _ = TagActionNotificationConfig
+  configDBFetch a = Just (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId))
   getConfigList a =
     LCP.resolveConfigList
       a

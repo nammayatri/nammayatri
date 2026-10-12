@@ -35,6 +35,7 @@ instance ConfigDimensions BecknConfigDimensions where
   type ConfigTypeOf BecknConfigDimensions = 'BecknConfig
   type ConfigValueTypeOf BecknConfigDimensions = [DBC.BecknConfig]
   getConfigType _ = BecknConfig
+  configDBFetch a = Just (SQBC.findAllByMerchantOperatingCityId (Just (Id a.merchantOperatingCityId)))
   getConfigList a =
     CR.resolveConfigList
       a
