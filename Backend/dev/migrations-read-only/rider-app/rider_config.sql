@@ -918,3 +918,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN better_point_walk_distance_source 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN manual_charge_approval_min_customer_version text ;
+------- SQL updates -------
+
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN send_legal_policy_update_email boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN legal_policy_notification_batch_size integer ;

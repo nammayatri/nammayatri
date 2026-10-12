@@ -23,6 +23,7 @@ import qualified API.DashboardInternalAuth as DashboardInternalAuth
 import qualified API.DashboardLogin as DashboardLogin
 import qualified API.DirectDashboard as DirectDashboard
 import qualified API.IGM as IGM
+import qualified API.Action.UI.LegalPublishInternal as LegalPublishInternal
 import qualified API.Internal as Internal
 import qualified API.Internal.SyncSearch as InternalSyncSearch
 import qualified API.OnixBppWebhook as OnixBppWebhook
@@ -141,6 +142,7 @@ type MainAPI =
                 )
          )
     :<|> Internal.API
+    :<|> LegalPublishInternal.API
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -174,6 +176,7 @@ mainServer env =
              :<|> DashboardDriverInfo.handler
          )
     :<|> Internal.handler env
+    :<|> LegalPublishInternal.handler
 
 driverOfferServer :: AppEnv -> FlowServer DriverOfferAPI
 driverOfferServer env =

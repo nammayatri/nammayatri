@@ -366,6 +366,7 @@ library
       Domain.Action.UI.InterCityDetails
       Domain.Action.UI.Invoice
       Domain.Action.UI.InvoiceGeneration
+      Domain.Action.UI.LegalPublishInternal
       Domain.Action.UI.Location
       Domain.Action.UI.Loyalty
       Domain.Action.UI.Maps
@@ -618,6 +619,7 @@ library
       SharedLogic.IntegratedBPPConfig
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
+      SharedLogic.LegalPolicyEmail
       SharedLogic.LocationAddressEnrichment
       SharedLogic.LocationMapping
       SharedLogic.Merchant
@@ -675,6 +677,7 @@ library
       SharedLogic.Scheduler.Jobs.SafetyIVR
       SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
       SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+      SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
       SharedLogic.Scheduler.Jobs.SettlementReportIngestion
       SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
       SharedLogic.Scheduler.Jobs.UnblockCustomer
@@ -1049,6 +1052,7 @@ library
       API.Action.UI.Insurance
       API.Action.UI.InsuranceInternal
       API.Action.UI.Invoice
+      API.Action.UI.LegalPublishInternal
       API.Action.UI.Loyalty
       API.Action.UI.MeterRideInternal
       API.Action.UI.Metrics
@@ -1208,6 +1212,7 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Insurance
       API.Types.UI.Invoice
+      API.Types.UI.LegalPublishInternal
       API.Types.UI.Loyalty
       API.Types.UI.MeterRideInternal
       API.Types.UI.Metrics

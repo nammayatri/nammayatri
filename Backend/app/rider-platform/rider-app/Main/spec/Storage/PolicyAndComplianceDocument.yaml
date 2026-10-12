@@ -2,6 +2,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   PolicyType: Dashboard.Common
+  LegalEntityType: Dashboard.Common
 
 PolicyAndComplianceDocument:
   tableName: policy_and_compliance_document
@@ -10,6 +11,7 @@ PolicyAndComplianceDocument:
   fields:
     id: Id PolicyAndComplianceDocument
     policyType: PolicyType
+    entityType: Maybe LegalEntityType
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     version: Text
@@ -17,6 +19,7 @@ PolicyAndComplianceDocument:
     isMandatory: Bool
     enabled: Bool
     metadata: Maybe Text
+    effectiveDate: Maybe UTCTime
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -41,11 +44,11 @@ PolicyAndComplianceDocument:
 
     updateFields:
       kvFunction: updateOneWithKV
-      params: [url, isMandatory, enabled, metadata, updatedAt]
+      params: [url, isMandatory, enabled, metadata, effectiveDate, updatedAt]
       where: id
 
   extraIndexes:
-    - columns: [merchantId, policyType, enabled, createdAt]
+    - columns: [merchantId, entityType, policyType, enabled]
 
   extraOperations:
     - EXTRA_QUERY_FILE

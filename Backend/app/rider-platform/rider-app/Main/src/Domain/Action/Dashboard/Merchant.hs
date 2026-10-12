@@ -140,7 +140,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), ExecuteCashRideCashbackPayoutJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, ExecuteCashRideCashbackPayout, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster))
+import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), ExecuteCashRideCashbackPayoutJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, ExecuteCashRideCashbackPayout, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster, SendLegalPolicyNotification), SendLegalPolicyNotificationJobData (..))
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.TollDashboard
 import qualified SharedLogic.TollUpsert as TU
@@ -2179,6 +2179,12 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           person <- QPerson.findById jobData.personId >>= fromMaybeM (PersonDoesNotExist jobData.personId.getId)
           unless (person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist jobData.personId.getId)
           createJobIn @_ @'ExecuteCashRideCashbackPayout (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
+          pure Success
+        Just Common.SendLegalPolicyNotificationTrigger -> do
+          jobData :: SendLegalPolicyNotificationJobData <-
+            JSON.decodeStrict (TE.encodeUtf8 jobDataText)
+              & fromMaybeM (InvalidRequest "jobData must be {\"merchantId\":..,\"merchantOperatingCityId\":..,\"policyDocId\":..,\"batchId\":..,\"pageOffset\":0}")
+          createJobIn @_ @'SendLegalPolicyNotification (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Nothing -> throwError $ InternalError "invalid job name"
 

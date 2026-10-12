@@ -73,6 +73,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+import "rider-app" SharedLogic.Scheduler.Jobs.SendLegalPolicyNotification
 import "rider-app" SharedLogic.Scheduler.Jobs.SettlementReportIngestion
 import "rider-app" SharedLogic.Scheduler.Jobs.SilentReallocationExpiry
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
@@ -152,6 +153,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env runSettlementReportIngestionJob
           & putJobHandlerInListWrapper flowRt env reconcileRewardInflight
           & putJobHandlerInListWrapper flowRt env bookingDepositExpiryJob
+          & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
     }
 
 runRiderAppScheduler ::
