@@ -281,11 +281,11 @@ getRadarTicketsTicketAttachment merchantShortId opCity _ticketId attachmentId = 
   url <- S3.generateDownloadUrl (T.unpack filePath) attachmentUrlExpiry
   pure Common.RadarAttachmentUrlRes {url = url}
 
-postRadarTicketsTicketReply :: ShortId DM.Merchant -> Context.City -> Text -> Common.RadarReplyReq -> Environment.Flow APISuccess.APISuccess
+postRadarTicketsTicketReply :: ShortId DM.Merchant -> Context.City -> Text -> Common.RadarReplyByUserReq -> Environment.Flow APISuccess.APISuccess
 postRadarTicketsTicketReply merchantShortId opCity ticketId req = do
   cfg <- resolveRadarCfg merchantShortId opCity
-  senderEmail <- requireSenderEmail req.senderEmail
-  let body' = T.strip req.body
+  let senderEmail = req.senderEmail
+      body' = T.strip req.body
   when (T.null body') $ throwError $ InvalidRequest "Write a message before sending."
   when (T.length body' > maxReplyChars) $ throwError $ InvalidRequest ("Keep the message under " <> show maxReplyChars <> " characters.")
   checkSlidingWindowLimitWithOptions ("radar:reply:rateLimit:" <> senderEmail) writeRateLimitOptions
@@ -306,7 +306,7 @@ postRadarTicketsTicketReply merchantShortId opCity ticketId req = do
             -- desk's bodies) — we never compose markup, so nothing to escape.
             body = body',
             externalId = Nothing,
-            senderName = (nonBlank =<< req.senderName) <|> Just senderEmail,
+            senderName = Just req.senderName,
             senderEmail = Just senderEmail,
             additionalFormFields = Nothing
           }
@@ -334,10 +334,10 @@ postRadarTicketsUpload merchantShortId opCity req = do
   Redis.setExp (uploadStagingKey fileId) (StagedUpload {fileName = fileName, mimeType = mimeType, contentBase64 = req.fileBase64}) uploadStagingTtl
   pure Common.RadarUploadRes {fileId = fileId}
 
-postRadarTicketsCreate :: ShortId DM.Merchant -> Context.City -> Common.RadarCreateTicketReq -> Environment.Flow Common.RadarCreateTicketRes
+postRadarTicketsCreate :: ShortId DM.Merchant -> Context.City -> Common.RadarCreateTicketByUserReq -> Environment.Flow Common.RadarCreateTicketRes
 postRadarTicketsCreate merchantShortId opCity req = do
   cfg <- resolveRadarCfg merchantShortId opCity
-  senderEmail <- requireSenderEmail req.senderEmail
+  let senderEmail = req.senderEmail
   title <- fromMaybeM (InvalidRequest "Give the issue a title.") (nonBlank req.title)
   category <- fromMaybeM (InvalidRequest "category is required.") (nonBlank req.category)
   subCategory <- fromMaybeM (InvalidRequest "subCategory is required.") (nonBlank req.subCategory)
@@ -352,7 +352,7 @@ postRadarTicketsCreate merchantShortId opCity req = do
   uuid <- generateGUID
   token <- decrypt cfg.token
   let threadId = "radar-" <> uuid
-      senderName = fromMaybe senderEmail (nonBlank =<< req.senderName)
+      senderName = req.senderName
       cities = T.intercalate ", " (filter (not . T.null . T.strip) req.citiesAffected)
       subject = urgencyTag <> " [Control Center] " <> category <> " › " <> subCategory <> ": " <> title <> (if T.null cities then "" else " — " <> cities)
       formFields =
@@ -408,12 +408,6 @@ postRadarTicketsTicketCsat merchantShortId opCity ticketId req = do
   pure APISuccess.Success
 
 -- * Request builders and helpers
-
-requireSenderEmail :: Maybe Text -> Environment.Flow Text
-requireSenderEmail mbEmail =
-  -- Filled by the dashboard proxy from the verified session; absent means the
-  -- session has no email, and desk writes must be attributable.
-  fromMaybeM (InvalidRequest "Your session has no email; this action requires one.") (nonBlank =<< mbEmail)
 
 mkListReq :: XyneCfg.XyneSpacesCfg -> Int -> Maybe Text -> Maybe XyneTypes.XyneListFilters -> Maybe Text -> XyneTypes.XyneListTicketsReq
 mkListReq cfg pageLimit cursor filters senderEmail =

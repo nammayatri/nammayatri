@@ -67,6 +67,9 @@ apis:
 
   - POST: # RadarTicketsTicketReplyAPI
       endpoint: /ticket/{ticketId}/reply
+      # Sender is the verified session's person, filled by the hand-written
+      # DashboardAuth handler -- never taken from the request.
+      appServerHandler: custom
       auth: ApiAuthV2
       params:
         ticketId: Text
@@ -76,9 +79,21 @@ apis:
         type: APISuccess
       migrate:
         capability: support.radar.write
+      helperApi:
+        - POST: # RadarTicketsTicketReplyByUserAPI
+            endpoint: /ticket/{ticketId}/reply
+            auth: ApiAuthV2
+            params:
+              ticketId: Text
+            request:
+              type: RadarReplyByUserReq
+            response:
+              type: APISuccess
 
   - POST: # RadarTicketsUploadAPI
       endpoint: /upload
+      # The body is a base64 file of up to 10 MB; keep it out of the audit row.
+      auditRequestBody: false
       auth: ApiAuthV2
       request:
         type: RadarUploadReq
@@ -89,6 +104,9 @@ apis:
 
   - POST: # RadarTicketsCreateAPI
       endpoint: /create
+      # Sender is the verified session's person, filled by the hand-written
+      # DashboardAuth handler -- never taken from the request.
+      appServerHandler: custom
       auth: ApiAuthV2
       request:
         type: RadarCreateTicketReq
@@ -96,6 +114,14 @@ apis:
         type: RadarCreateTicketRes
       migrate:
         capability: support.radar.write
+      helperApi:
+        - POST: # RadarTicketsCreateByUserAPI
+            endpoint: /create
+            auth: ApiAuthV2
+            request:
+              type: RadarCreateTicketByUserReq
+            response:
+              type: RadarCreateTicketRes
 
   - POST: # RadarTicketsTicketUpdateStatusAPI
       endpoint: /ticket/{ticketId}/updateStatus
@@ -194,8 +220,13 @@ types:
     - url: Text
   RadarReplyReq:
     - body: Text
-    - senderEmail: Maybe Text
-    - senderName: Maybe Text
+    - derive: "'HideSecrets"
+  # RadarReplyReq plus the sender, filled from the verified session by the
+  # DashboardAuth handler (see appServerHandler: custom).
+  RadarReplyByUserReq:
+    - body: Text
+    - senderEmail: Text
+    - senderName: Text
     - derive: "'HideSecrets"
   RadarKV:
     - key: Text
@@ -211,8 +242,22 @@ types:
     - body: Text
     - context: [RadarKV]
     - attachmentFileIds: [Text]
-    - senderEmail: Maybe Text
-    - senderName: Maybe Text
+    - derive: "'HideSecrets"
+  # RadarCreateTicketReq plus the sender, filled from the verified session by
+  # the DashboardAuth handler (see appServerHandler: custom).
+  RadarCreateTicketByUserReq:
+    - category: Text
+    - subCategory: Text
+    - title: Text
+    - citiesAffected: [Text]
+    - whereSeen: Text
+    - stillHappening: Text
+    - urgency: Text
+    - body: Text
+    - context: [RadarKV]
+    - attachmentFileIds: [Text]
+    - senderEmail: Text
+    - senderName: Text
     - derive: "'HideSecrets"
   RadarCreateTicketRes:
     - ticketId: Text

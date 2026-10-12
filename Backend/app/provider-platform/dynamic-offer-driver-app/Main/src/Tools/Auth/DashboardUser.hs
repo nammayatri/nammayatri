@@ -36,6 +36,7 @@ module Tools.Auth.DashboardUser
     updateDashboardPersonRole,
     dashboardRequestorIdForDriver,
     dashboardRequestorName,
+    dashboardRequestorEmail,
     updateDashboardPersonVerified,
     FleetOwnerRegistration (..),
     beginFleetOwnerRegistration,
@@ -355,6 +356,13 @@ completeFleetOwnerRegistration fleetOwnerId mbNormalizedEmail firstName lastName
 dashboardRequestorName :: DashboardUser -> Text
 dashboardRequestorName dashboardUser =
   dashboardUser.person.firstName <> " " <> dashboardUser.person.lastName
+
+-- | The caller's email, decrypted; 'Nothing' when the dashboard person has none.
+--
+-- RADAR desk writes are attributed to it; provider-dashboard decrypted
+-- @person.email@ from its session and passed it along with the name.
+dashboardRequestorEmail :: EncFlow m r => DashboardUser -> m (Maybe Text)
+dashboardRequestorEmail dashboardUser = traverse decrypt dashboardUser.person.email
 
 -- | Which of @cities@ the caller may act on for the merchant with this short
 -- id, as @merchant_access@ records it. 'Nothing' when no such merchant exists.
