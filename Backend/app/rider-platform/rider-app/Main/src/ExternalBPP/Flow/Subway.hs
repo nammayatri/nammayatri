@@ -76,6 +76,7 @@ buildCrisViaRouteQuotes merchant merchantOperatingCity integratedBPPConfig searc
           blacklistedFareQuoteTypes
           True
           True
+          Nothing
       )
       ("crisViaRoutes:getFares search: " <> searchReq.id.getId)
   -- map keyed on both unique via path and the service tier type
@@ -221,7 +222,17 @@ mkRouteQuote integratedBPPConfig vehicleType providerRouteId routeGroupKey route
           stations = stations,
           fareDetails = fareDetails,
           categories = map mkDCategory categories,
-          routeGroupKey = Just routeGroupKey
+          routeGroupKey = Just routeGroupKey,
+          tripCategory = Just INTRACITY,
+          providerServiceId = Nothing,
+          providerLayoutId = Nothing,
+          providerClassId = Nothing,
+          providerTripCode = Nothing,
+          departureTime = Nothing,
+          arrivalTime = Nothing,
+          arrivalDate = Nothing,
+          availableSeats = Nothing,
+          stopBookingTime = Nothing
         }
 
 mkDVehicleServiceTier :: FRFSVehicleServiceTier -> DVehicleServiceTier

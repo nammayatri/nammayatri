@@ -118,7 +118,7 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
 
   let vehicleType = fromMaybe Spec.METRO req.vehicleType
   merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG Nothing
   fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   let merchantId = fromStation.merchantId
@@ -155,7 +155,7 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
     getFareHitsCountKey = "BAP:FRFS:PartnerOrgId:" <> getId partnerOrg.orgId <> ":GetFare:hitsCount"
 
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> DFRFSTypes.FRFSSearchAPIReq
-    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, searchAsParentStops = Nothing, serviceTier = Nothing, busLocationData = Nothing, vehicleNumber = Nothing, platformType = Nothing, tripTime = Nothing, ..}
+    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, searchAsParentStops = Nothing, serviceTier = Nothing, busLocationData = Nothing, vehicleNumber = Nothing, platformType = Nothing, tripTime = Nothing, journeyDate = Nothing, tripCategory = Nothing, travellerGroup = Nothing, ..}
 
 getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Maybe (Id DIBC.IntegratedBPPConfig) -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPPConfigId =
@@ -224,7 +224,7 @@ getFareV2 partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogT
 
   let vehicleType = fromMaybe Spec.METRO req.vehicleType
   merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG Nothing
   fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   let merchantId = fromStation.merchantId

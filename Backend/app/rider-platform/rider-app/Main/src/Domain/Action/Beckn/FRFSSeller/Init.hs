@@ -188,7 +188,7 @@ sellerIntegratedBPPConfigForCity merchantId mbCityCode = do
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchantId city
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant:" <> merchantId.getId <> " city:" <> show city)
-  SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id BecknSpec.METRO DIBC.MULTIMODAL
+  SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id BecknSpec.METRO DIBC.MULTIMODAL Nothing
 
 sellerEnrichment :: Id DM.Merchant -> Spec.Context -> Flow (Maybe Common.OperatorConfig, [(Text, Text)], Maybe (UTCTime, UTCTime), [CMRLStationList.Station])
 sellerEnrichment merchantId ctx = do

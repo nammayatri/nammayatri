@@ -215,7 +215,7 @@ castFindFRFSTicketBookingById ticketBookingId = do
 
 castFindStationByIdWithContext :: Id Common.MerchantOperatingCity -> Common.VehicleCategory -> Text -> Flow (Maybe Common.Station)
 castFindStationByIdWithContext merchantOpCityId vehicleType stationId = do
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing (cast merchantOpCityId) (castVehicleCategoryToOnDemand vehicleType) DIBC.APPLICATION
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing (cast merchantOpCityId) (castVehicleCategoryToOnDemand vehicleType) DIBC.APPLICATION Nothing
   mbStation <- OTPRest.getStationByGtfsIdAndStopCode stationId integratedBPPConfig
 
   case mbStation of

@@ -19,3 +19,4 @@ getProviderConfigJson = \case
   Domain.ONDC cfg -> toJSON cfg
   Domain.CRIS cfg -> toJSON cfg
   Domain.KMRL cfg -> toJSON cfg
+  Domain.TNSTC cfg -> toJSON cfg

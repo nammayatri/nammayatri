@@ -230,7 +230,7 @@ issue operator transactionId bookingSearchId merchant becknConfig req order mbEx
     lift (CQMOC.findByMerchantIdAndCity merchant.id city)
       >>= maybe (throwE (Unprocessable $ "No operating city " <> show city <> " for " <> operator)) pure
   integratedBPPConfig <-
-    lift (SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id BecknSpec.METRO DIBC.MULTIMODAL)
+    lift (SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id BecknSpec.METRO DIBC.MULTIMODAL Nothing)
 
   cfg <- either (throwE . Unprocessable) pure (Common.operatorConfig integratedBPPConfig.operatorConfig)
   let maxTickets = Common.maxTicketsPerOrder cfg journeyType.code
@@ -593,6 +593,7 @@ mkQuoteCategory bookingId merchant merchantOperatingCity quote unitPrice quantit
       merchantOperatingCityId = merchantOperatingCity.id,
       offeredPrice = price,
       price = price,
+      providerBlockIds = Nothing,
       quoteId = Id bookingId.getId,
       seatIds = Nothing,
       seatLabels = Nothing,

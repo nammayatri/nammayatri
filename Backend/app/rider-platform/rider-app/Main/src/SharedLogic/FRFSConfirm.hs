@@ -8,6 +8,8 @@ import Control.Monad.Extra hiding (fromMaybeM)
 import qualified Data.Hashable as Hashable
 import Data.List (nub)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
+import qualified Data.Text as T
+import Data.Time (Day, UTCTime (..), secondsToDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -34,6 +36,8 @@ import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM
 import qualified ExternalBPP.CallAPI.Confirm as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Init as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Booking as TNSTCBooking
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Place as TNSTCPlace
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
@@ -71,6 +75,7 @@ import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.FRFSPassengerDetail as QFRFSPassengerDetail
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -102,103 +107,104 @@ data RescheduleCtx = RescheduleCtx
 confirmAndUpsertBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Id Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking, FRFSUtils.FRFSFareParameters, [FRFSQuoteCategory.FRFSQuoteCategory], Bool)
 confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse isSingleMode mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
   Metrics.withTimeFRFSMerchant "frfsConfirm" "confirmLockTotal" quote.merchantId.getId $
-    Hedis.withWaitAndLockMasterCloudCrossAppRedis "frfsConfirm" "waitForConfirmLock" (mkConfirmLockKey quote.searchId.getId) confirmLockTtlSec confirmLockRetryDelayMicros $ do
-      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-      mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
-      riderConfig <-
-        getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId}) Nothing
-          >>= fromMaybeM
-            (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
-      isMultiInitAllowed <-
-        case mbBooking of
-          Just booking -> do
-            case integratedBppConfig.providerConfig of
-              DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
-                return $
-                  multiInitAllowed == Just True
-                    && booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-              _ -> return $ booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
-          Nothing -> return True
-      let mbConfirmVehicleNumber = quote.vehicleNumber <|> mbVehicleNumber
-      mbSeatLayoutMapping <- case mbConfirmVehicleNumber of
-        Just vNo -> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
-        Nothing -> pure Nothing
-      let seatSelectionType = mbSeatLayoutMapping >>= (.seatSelectionType)
-          shouldAutoAssignBusSeats = quote.vehicleType == Spec.BUS && isJust mbTripId && seatSelectionType == Just DVSLM.AUTO_ASSIGNED
-      (selectedQuoteCategoriesFinal, mbHoldCtxForAll) <-
-        if shouldAutoAssignBusSeats
-          then do
-            tripId <- mbTripId & fromMaybeM (InvalidRequest "TripId not found for bus auto-seat flow")
-            let requiredSeatCount = Kernel.Prelude.sum ((.quantity) <$> selectedQuoteCategories)
-            if requiredSeatCount <= 0
-              then pure (clearSeatIds selectedQuoteCategories, Nothing)
-              else do
-                logInfo $ "FRFSConfirm:confirmAndUpsertBooking bus auto-seat flow personId=" <> personId.getId <> " tripId=" <> tripId <> " requiredSeatCount=" <> show requiredSeatCount
-                mbSeatHoldParams <- getSeatHoldParams tripId riderConfig
-                case mbSeatHoldParams of
-                  Nothing -> pure (clearSeatIds selectedQuoteCategories, Nothing)
-                  Just params -> do
-                    let maxAttempts = 3
-                    orderedSeatIds <- getOrderedSeatIds tripId params.shpFromIdx params.shpToIdx mbSeatLayoutMapping
-                    (chosenSeatIds, holdId) <- Metrics.withTimeFRFSMerchant "frfsConfirm" "selectAndHoldWithRetries" quote.merchantId.getId $ selectAndHoldWithRetries tripId orderedSeatIds params.shpFromIdx params.shpToIdx params.shpDefaultTtl params.shpSeatBitMapTtl requiredSeatCount maxAttempts
-                    let selectedQuoteCategories' = assignSeatsToCategories chosenSeatIds selectedQuoteCategories
-                    pure (selectedQuoteCategories', Just (holdId, params.shpFromIdx, params.shpToIdx))
-          else do
-            let allSeatIds = nub $ concatMap (\categoryReq -> fromMaybe [] categoryReq.seatIds) selectedQuoteCategories
-            mbHoldCtx <-
-              case (mbTripId, allSeatIds) of
-                (Just tripId, _ : _) -> do
-                  logInfo $
-                    "FRFSConfirm:confirmAndUpsertBooking seatHold flow personId=" <> personId.getId <> " tripId=" <> tripId <> " seatCount=" <> show (length allSeatIds)
+    Hedis.withWaitAndLockMasterCloudCrossAppRedis "frfsConfirm" "waitForConfirmLock" (mkConfirmLockKey quote.searchId.getId) confirmLockTtlSec confirmLockRetryDelayMicros $
+      do
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+        mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
+        riderConfig <-
+          getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId}) Nothing
+            >>= fromMaybeM
+              (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
+        isMultiInitAllowed <-
+          case mbBooking of
+            Just booking -> do
+              case integratedBppConfig.providerConfig of
+                DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
+                  return $
+                    multiInitAllowed == Just True
+                      && booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+                _ -> return $ booking.status `elem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+            Nothing -> return True
+        let mbConfirmVehicleNumber = quote.vehicleNumber <|> mbVehicleNumber
+        mbSeatLayoutMapping <- case mbConfirmVehicleNumber of
+          Just vNo -> CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vNo integratedBppConfig.feedKey
+          Nothing -> pure Nothing
+        let seatSelectionType = mbSeatLayoutMapping >>= (.seatSelectionType)
+            shouldAutoAssignBusSeats = quote.vehicleType == Spec.BUS && isJust mbTripId && seatSelectionType == Just DVSLM.AUTO_ASSIGNED
+        (selectedQuoteCategoriesFinal, mbHoldCtxForAll) <-
+          if shouldAutoAssignBusSeats
+            then do
+              tripId <- mbTripId & fromMaybeM (InvalidRequest "TripId not found for bus auto-seat flow")
+              let requiredSeatCount = Kernel.Prelude.sum ((.quantity) <$> selectedQuoteCategories)
+              if requiredSeatCount <= 0
+                then pure (clearSeatIds selectedQuoteCategories, Nothing)
+                else do
+                  logInfo $ "FRFSConfirm:confirmAndUpsertBooking bus auto-seat flow personId=" <> personId.getId <> " tripId=" <> tripId <> " requiredSeatCount=" <> show requiredSeatCount
                   mbSeatHoldParams <- getSeatHoldParams tripId riderConfig
                   case mbSeatHoldParams of
-                    Nothing -> pure Nothing
+                    Nothing -> pure (clearSeatIds selectedQuoteCategories, Nothing)
                     Just params -> do
-                      holdId <- generateGUID
-                      seats <- mapM QSeat.findById allSeatIds
-                      case mapM_ (validateQuota params.shpFromIdx params.shpToIdx) seats of
-                        Left err -> throwError err
-                        Right () -> pure ()
-                      success <- SeatBooking.holdSeats tripId allSeatIds params.shpFromIdx params.shpToIdx holdId params.shpDefaultTtl params.shpSeatBitMapTtl
-                      unless success $ throwError (SeatsNotFound (map (.getId) allSeatIds))
-                      pure $ Just (holdId, params.shpFromIdx, params.shpToIdx)
-                _ -> pure Nothing
-            pure (selectedQuoteCategories, mbHoldCtx)
-      quoteCategorySelections <-
-        if isMultiInitAllowed
-          then mapM processCategorySelection selectedQuoteCategoriesFinal
-          else return $ quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity Nothing Nothing)
-      let mbHoldId = mbHoldCtxForAll <&> (\(h, _, _) -> h)
-      updatedQuoteCategories <-
-        if isMultiInitAllowed
-          then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
-          else return quoteCategories
-      let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
-      -- The hold is taken above but only tracked against a booking below, so a throw in between leaves
-      -- those seats held until their TTL, and repeated attempts block the trip.
-      -- Scoped to requests that supplied a pass, because that is the throw this PR adds:
-      -- resolvePassOverride rejects an inapplicable pass with InvalidRequest, after the hold exists.
-      -- A non-pass booking keeps main's behaviour exactly -- the hold still leaks on an unrelated
-      -- throw, which is pre-existing and filed separately rather than fixed inside a pass PR.
-      confirmResult <- try @_ @SomeException $ confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId seatSelectionType isSpotBooking
-      (rider, dConfirmRes) <- case confirmResult of
-        Right res -> pure res
-        Left err -> do
-          when (isJust mbPurchasedPassPaymentId || isJust mbRescheduleCtx) $ do
-            void $
-              withTryCatch "FRFSConfirm:restoreQuoteCategoriesOnFailure" $
-                FRFSUtils.updateQuoteCategoriesWithSelections
-                  Nothing
-                  (quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity qc.seatIds qc.seatLabels))
-                  updatedQuoteCategories
-            whenJust ((,) <$> mbTripId <*> mbHoldId) $ \(tripId, holdId) -> do
-              logWarning $ "FRFSConfirm:confirmAndUpsertBooking releasing hold after a pass failure holdId=" <> holdId <> " tripId=" <> tripId <> " err=" <> show err
-              void $ withTryCatch "FRFSConfirm:releaseHoldOnFailure" (SeatBooking.releaseHold tripId holdId)
-          throwM err
-      whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
-        logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
-        SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
-      return (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed)
+                      let maxAttempts = 3
+                      orderedSeatIds <- getOrderedSeatIds tripId params.shpFromIdx params.shpToIdx mbSeatLayoutMapping
+                      (chosenSeatIds, holdId) <- Metrics.withTimeFRFSMerchant "frfsConfirm" "selectAndHoldWithRetries" quote.merchantId.getId $ selectAndHoldWithRetries tripId orderedSeatIds params.shpFromIdx params.shpToIdx params.shpDefaultTtl params.shpSeatBitMapTtl requiredSeatCount maxAttempts
+                      let selectedQuoteCategories' = assignSeatsToCategories chosenSeatIds selectedQuoteCategories
+                      pure (selectedQuoteCategories', Just (holdId, params.shpFromIdx, params.shpToIdx))
+            else do
+              let allSeatIds = nub $ concatMap (\categoryReq -> fromMaybe [] categoryReq.seatIds) selectedQuoteCategories
+              mbHoldCtx <-
+                case (mbTripId, allSeatIds) of
+                  (Just tripId, _ : _) -> do
+                    logInfo $
+                      "FRFSConfirm:confirmAndUpsertBooking seatHold flow personId=" <> personId.getId <> " tripId=" <> tripId <> " seatCount=" <> show (length allSeatIds)
+                    mbSeatHoldParams <- getSeatHoldParams tripId riderConfig
+                    case mbSeatHoldParams of
+                      Nothing -> pure Nothing
+                      Just params -> do
+                        holdId <- generateGUID
+                        seats <- mapM QSeat.findById allSeatIds
+                        case mapM_ (validateQuota params.shpFromIdx params.shpToIdx) seats of
+                          Left err -> throwError err
+                          Right () -> pure ()
+                        success <- SeatBooking.holdSeats tripId allSeatIds params.shpFromIdx params.shpToIdx holdId params.shpDefaultTtl params.shpSeatBitMapTtl
+                        unless success $ throwError (SeatsNotFound (map (.getId) allSeatIds))
+                        pure $ Just (holdId, params.shpFromIdx, params.shpToIdx)
+                  _ -> pure Nothing
+              pure (selectedQuoteCategories, mbHoldCtx)
+        quoteCategorySelections <-
+          if isMultiInitAllowed
+            then mapM processCategorySelection selectedQuoteCategoriesFinal
+            else return $ quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity Nothing Nothing)
+        let mbHoldId = mbHoldCtxForAll <&> (\(h, _, _) -> h)
+        updatedQuoteCategories <-
+          if isMultiInitAllowed
+            then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
+            else return quoteCategories
+        let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
+        -- The hold is taken above but only tracked against a booking below, so a throw in between leaves
+        -- those seats held until their TTL, and repeated attempts block the trip.
+        -- Scoped to requests that supplied a pass, because that is the throw this PR adds:
+        -- resolvePassOverride rejects an inapplicable pass with InvalidRequest, after the hold exists.
+        -- A non-pass booking keeps main's behaviour exactly -- the hold still leaks on an unrelated
+        -- throw, which is pre-existing and filed separately rather than fixed inside a pass PR.
+        confirmResult <- try @_ @SomeException $ confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId seatSelectionType isSpotBooking
+        (rider, dConfirmRes) <- case confirmResult of
+          Right res -> pure res
+          Left err -> do
+            when (isJust mbPurchasedPassPaymentId || isJust mbRescheduleCtx) $ do
+              void $
+                withTryCatch "FRFSConfirm:restoreQuoteCategoriesOnFailure" $
+                  FRFSUtils.updateQuoteCategoriesWithSelections
+                    Nothing
+                    (quoteCategories <&> (\qc -> FRFSUtils.QuoteCategorySelection qc.id qc.selectedQuantity qc.seatIds qc.seatLabels))
+                    updatedQuoteCategories
+              whenJust ((,) <$> mbTripId <*> mbHoldId) $ \(tripId, holdId) -> do
+                logWarning $ "FRFSConfirm:confirmAndUpsertBooking releasing hold after a pass failure holdId=" <> holdId <> " tripId=" <> tripId <> " err=" <> show err
+                void $ withTryCatch "FRFSConfirm:releaseHoldOnFailure" (SeatBooking.releaseHold tripId holdId)
+            throwM err
+        whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
+          logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
+          SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
+        return (rider, dConfirmRes, fareParameters, updatedQuoteCategories, isMultiInitAllowed)
   where
     confirmLockTtlSec :: Int
     confirmLockTtlSec = 60
@@ -325,7 +331,10 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               if isMultiInitAllowed
                 then do
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
-                      totalPrice = fareParameters.totalPrice
+                      -- Booking-level charges (e.g. TNSTC reservation/service fees) are not
+                      -- attributable to any one category, so they live on the quote and are
+                      -- added once here.
+                      totalPrice = modifyPrice fareParameters.totalPrice (+ fromMaybe 0 quote.extraFees)
                       mbNewServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson quote.routeStationsJson
                   let passResolutionTime = case booking.startTime of
                         Just startTime | startTime > now -> startTime
@@ -452,10 +461,12 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             if isJust mbPurchasedPassPaymentId'
               then mfilter (> now) (mbJourneyLeg >>= (.fromDepartureTime))
               else Nothing
+      mbTnstcBoardingTime <- getTnstcBoardingTime quote' integratedBppConfig
       -- One fetch for both bounds; the single-bound helpers issue the same schedule call.
       (mbScheduledStartTime, mbScheduledEndTime) <-
-        case (firstTripId, mbRouteCode) of
-          (Just tripId, Just routeCode) ->
+        case (mbTnstcBoardingTime, firstTripId, mbRouteCode) of
+          (Just tnstcTime, _, _) -> pure (Just tnstcTime, Nothing)
+          (Nothing, Just tripId, Just routeCode) ->
             FRFSUtils.getScheduledTripWindow tripId routeCode quote'.fromStationCode quote'.toStationCode integratedBppConfig
           _ -> pure (Nothing, Nothing)
 
@@ -503,7 +514,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 createdAt = now,
                 updatedAt = now,
                 merchantId = quote'.merchantId,
-                totalPrice = fareParameters.totalPrice,
+                totalPrice = modifyPrice fareParameters.totalPrice (+ fromMaybe 0 quote'.extraFees),
                 -- Reschedule pin: reuse the old payment (findTicketBookingPayment resolves it); Nothing on the normal path.
                 frfsTicketBookingPaymentIdForTicketGeneration = (.getId) <$> (mbRescheduleCtx >>= (.oldFrfsPaymentId)),
                 paymentTxnId = Nothing,
@@ -619,6 +630,51 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 bufferTime + max 0 timeUntilTripSec
           logInfo $ "Dynamic TTL calculated: tripStart=" <> show tripStartTime <> " ttl=" <> show finalTtl
           pure finalTtl
+
+    -- TNSTC's departure is the time of the boarding point the rider chose at select, which is
+    -- held on the passenger rows (keyed by quoteId -- bookingId is stamped later, so keying on
+    -- it here would race the fork). Resolved off the same 1h-cached point list that /seats and
+    -- the fare call used, so this is normally a cache hit and no extra vendor round trip.
+    getTnstcBoardingTime ::
+      ( MonadFlow m,
+        ServiceFlow m r,
+        HasShortDurationRetryCfg r c
+      ) =>
+      DFRFSQuote.FRFSQuote ->
+      DIBC.IntegratedBPPConfig ->
+      m (Maybe UTCTime)
+    getTnstcBoardingTime quote' ibppConfig =
+      case ibppConfig.providerConfig of
+        DIBC.TNSTC tnstcConfig -> do
+          res <- withTryCatch "getTnstcBoardingTime" $ do
+            paxRows <- QFRFSPassengerDetail.findAllByQuoteId quote'.id
+            search <- QFRFSSearch.findById quote'.searchId >>= fromMaybeM (InvalidRequest "Search not found for quote")
+            case ( listToMaybe (mapMaybe (.pickupPointPlaceId) paxRows),
+                   quote'.providerServiceId,
+                   search.journeyDate
+                 ) of
+              (Just placeId, Just serviceId, Just journeyDate) -> do
+                let tripCode = fromMaybe "" quote'.providerTripCode
+                placeCode <- TNSTCPlace.tnstcPlaceCode ibppConfig (T.take 3 (T.drop 4 tripCode)) search.fromStationCode
+                points <- TNSTCBooking.boardingPointsAt tnstcConfig ibppConfig.id.getId journeyDate serviceId placeCode
+                return $ find (\p -> p.tppPlaceId == placeId) points >>= (.tppTime) >>= istTimeOn journeyDate
+              _ -> return Nothing
+          case res of
+            Right t -> return t
+            Left err -> do
+              logError $ "getTnstcBoardingTime failed, falling back to booking time: " <> show err
+              return Nothing
+        _ -> return Nothing
+
+    -- TNSTC returns wall-clock "HH:MM" in IST against the journey date.
+    istTimeOn :: Day -> Text -> Maybe UTCTime
+    istTimeOn day raw = case T.splitOn ":" (T.strip raw) of
+      (hh : mm : _) -> do
+        h <- readMaybe (T.unpack (T.strip hh)) :: Maybe Integer
+        m <- readMaybe (T.unpack (T.strip mm)) :: Maybe Integer
+        guard (h >= 0 && h < 24 && m >= 0 && m < 60)
+        return $ addUTCTime (negate 19800) (UTCTime day (secondsToDiffTime (h * 3600 + m * 60)))
+      _ -> Nothing
 
 postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> DFRFSQuote.FRFSQuote -> [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> Maybe Bool -> DIBC.IntegratedBPPConfig -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe RescheduleCtx -> Maybe (Id DPPP.PurchasedPassPayment) -> Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quote selectedQuoteCategories crisSdkResponse isSingleMode mbEnableOffer mbIsMockPayment integratedBppConfig mbTripId isSpotBooking mbVehicleNumber mbRescheduleCtx mbPurchasedPassPaymentId passSelectionAuthoritative = do
@@ -1099,10 +1155,10 @@ buildJourneyAndLeg booking fareParameters = do
               duration = duration,
               agency = Just $ MultiModalAgency {name = integratedBppConfig.agencyKey, gtfsId = Just integratedBppConfig.feedKey},
               fromArrivalTime = Nothing,
-              fromDepartureTime = Just booking.createdAt,
+              fromDepartureTime = Just (fromMaybe booking.createdAt booking.startTime),
               toArrivalTime =
                 duration >>= \duration' ->
-                  Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                  Just $ addUTCTime (fromIntegral $ getSeconds duration') (fromMaybe booking.createdAt booking.startTime),
               toDepartureTime = Nothing,
               fromStopDetails = Just fromStopDetail,
               toStopDetails = Just toStopDetail,
@@ -1118,17 +1174,17 @@ buildJourneyAndLeg booking fareParameters = do
                           endLocationLon = subLeg.toLon,
                           frequency = Nothing,
                           fromArrivalTime = Nothing,
-                          fromDepartureTime = Just booking.createdAt,
+                          fromDepartureTime = Just (fromMaybe booking.createdAt booking.startTime),
                           fromStopCode = Just subLeg.fromCode,
                           fromStopGtfsId = Just subLeg.fromCode,
                           fromStopName = subLeg.fromName,
                           fromStopPlatformCode = subLeg.fromPlatform,
                           id = subLeg.subLegId,
                           journeyLegId = journeyLegGuid.getId,
-                          legStartTime = Just booking.createdAt,
+                          legStartTime = Just (fromMaybe booking.createdAt booking.startTime),
                           legEndTime =
                             duration >>= \duration' ->
-                              Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                              Just $ addUTCTime (fromIntegral $ getSeconds duration') (fromMaybe booking.createdAt booking.startTime),
                           routeCode = subLeg.mbStation <&> (.code),
                           routeColorCode = subLeg.mbStation >>= (.color),
                           routeColorName = subLeg.mbStation >>= (.color),
@@ -1141,7 +1197,7 @@ buildJourneyAndLeg booking fareParameters = do
                           subLegOrder = Just subLeg.sequenceNo,
                           toArrivalTime =
                             duration >>= \duration' ->
-                              Just $ addUTCTime (fromIntegral $ getSeconds duration') booking.createdAt,
+                              Just $ addUTCTime (fromIntegral $ getSeconds duration') (fromMaybe booking.createdAt booking.startTime),
                           toDepartureTime = Nothing,
                           toStopCode = Just subLeg.toCode,
                           toStopGtfsId = Just subLeg.toCode,

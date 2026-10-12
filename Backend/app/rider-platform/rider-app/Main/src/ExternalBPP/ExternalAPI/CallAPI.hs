@@ -1,13 +1,16 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Control.Applicative ((<|>))
 import Data.List (nub, sortOn)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
+import Data.Time (Day)
 import Data.Time.Format (defaultTimeLocale, formatTime)
 import Domain.Types hiding (ONDC)
 import Domain.Types.Beckn.FRFS.OnSearch
 import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSQuoteCategory
 import Domain.Types.FRFSQuoteCategoryType
@@ -20,6 +23,9 @@ import Domain.Types.RouteStopMapping
 import Domain.Types.StationType
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Order as EBIXOrder
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Status as EBIXStatus
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Order as TNSTCOrder
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Services as TNSTCServices
+import qualified ExternalBPP.ExternalAPI.Bus.TNSTC.Types as TNSTCTypes
 import qualified ExternalBPP.ExternalAPI.Direct.Order as DIRECTOrder
 import qualified ExternalBPP.ExternalAPI.Direct.Status as DIRECTStatus
 import qualified ExternalBPP.ExternalAPI.Direct.Utils as DirectUTILS
@@ -78,6 +84,7 @@ getProviderName integrationBPPConfig =
     (_, ONDC _) -> "ONDC Services"
     (_, CRIS _) -> "CRIS Subway"
     (_, KMRL _) -> "Kochi Metro Rail Limited"
+    (_, TNSTC _) -> "TNSTC"
 
 data BasicRouteDetail = BasicRouteDetail
   { routeCode :: Text,
@@ -93,6 +100,12 @@ data FareRoute = FareRoute
   }
   deriving (Show)
 
+data TnstcSearchDetail = TnstcSearchDetail
+  { journeyDate :: Day,
+    quantity :: Int
+  }
+  deriving (Show)
+
 data SubwayFareDetail = SubwayFareDetail
   { viaPoints :: Text,
     changeOver :: Text,
@@ -101,12 +114,12 @@ data SubwayFareDetail = SubwayFareDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
-getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail =
-  getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail Nothing
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> Maybe TnstcSearchDetail -> m [FRFSUtils.FRFSFare]
+getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail tnstcSearchDetail =
+  getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail tnstcSearchDetail Nothing
 
-getFaresForJourneyType :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> Maybe DQuote.FRFSQuoteType -> m [FRFSUtils.FRFSFare]
-getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail mbJourneyType = do
+getFaresForJourneyType :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, Metrics.HasBAPMetrics m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> Maybe TnstcSearchDetail -> Maybe DQuote.FRFSQuoteType -> m [FRFSUtils.FRFSFare]
+getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail tnstcSearchDetail mbJourneyType = do
   let journeyCode = show @Text $ FRFSSellerCommon.metroJourneyCode (fromMaybe DQuote.SingleJourney mbJourneyType)
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   case integrationBPPConfig.providerConfig of
@@ -155,6 +168,23 @@ getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPP
           )
           fares
     DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode
+    TNSTC config' -> do
+      searchDetail <-
+        tnstcSearchDetail
+          & fromMaybeM (InvalidRequest "journeyDate is required for TNSTC search")
+      services <-
+        TNSTCServices.getAvailableServiceDetails config' $
+          TNSTCServices.GetAvailableServiceDetailsReq
+            { rqStartPlaceId = startStopCode,
+              rqEndPlaceId = endStopCode,
+              rqJourneyDate = searchDetail.journeyDate,
+              rqCounterCode = config'.counterCode,
+              rqTotalSeats = searchDetail.quantity,
+              rqUserName = config'.username,
+              rqUserId = riderId.getId
+            }
+      now <- getCurrentTime
+      return $ mapMaybe (mkTnstcFare now) services
     CRIS config' -> do
       SubwayFareDetail {viaPoints, changeOver, rawChangeOver, getAllFares} <- subwayFareDetail & fromMaybeM (InternalError "SubwayFareDetail not found")
       callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares
@@ -181,6 +211,7 @@ getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPP
                       bppItemId = FRFSUtils.getProviderName integrationBPPConfig
                     }
                 ],
+              providerServiceDetails = Nothing,
               fareDetails = Nothing,
               farePolicyId = Nothing,
               vehicleServiceTier =
@@ -214,6 +245,104 @@ getFaresForJourneyType riderId merchantId merchantOperatingCityId integrationBPP
       let startStopCode = firstFareRouteDetail.startStopCode
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
+
+mkTnstcFare :: UTCTime -> TNSTCTypes.TnstcServiceVO -> Maybe FRFSUtils.FRFSFare
+mkTnstcFare now svc = do
+  adult <- svc.svcAdultFare
+  let mbStopBooking = svc.svcStopBookingTime >>= TNSTCTypes.parseTnstcTimestamp
+  case mbStopBooking of
+    Just cutoff | cutoff <= now -> Nothing
+    _ -> mkTnstcFare' now svc adult mbStopBooking
+
+mkTnstcFare' :: UTCTime -> TNSTCTypes.TnstcServiceVO -> Double -> Maybe UTCTime -> Maybe FRFSUtils.FRFSFare
+mkTnstcFare' _now svc adult mbStopBooking = do
+  let parts = svc.svcParts
+      bppItemId = parts.sipServiceId
+      toPrice v = mkPrice (Just INR) (HighPrecMoney (toRational v))
+      mkCategory cat v =
+        FRFSUtils.FRFSTicketCategory
+          { category = cat,
+            price = toPrice v,
+            offeredPrice = toPrice v,
+            bppItemId = bppItemId,
+            eligibility = True
+          }
+  pure
+    FRFSUtils.FRFSFare
+      { farePolicyId = Nothing,
+        providerServiceDetails =
+          Just
+            FRFSUtils.ProviderServiceDetails
+              { providerServiceId = parts.sipServiceId,
+                providerLayoutId = parts.sipLayoutId,
+                providerClassId = parts.sipClassId,
+                providerTripCode = svc.svcTripCode,
+                departureTime = parts.sipDepartureTime,
+                arrivalTime = svc.svcArrivalTime,
+                arrivalDate = svc.svcArrivalDate,
+                availableSeats = parts.sipAvailableSeats,
+                stopBookingTime = mbStopBooking
+              },
+        categories =
+          mkCategory ADULT adult :
+          catMaybes
+            [ mkCategory CHILD <$> nonZeroFare svc.svcChildFare,
+              mkCategory ADULT_SLEEPER <$> nonZeroFare svc.svcAdultSlpFare,
+              -- TNSTC leaves childSLPFare empty on sleeper services because a child
+              -- occupying a berth is charged the adult sleeper fare; without this
+              -- fallback the category is missing and child-on-berth cannot be booked.
+              mkCategory CHILD_SLEEPER <$> (nonZeroFare svc.svcChildSlpFare <|> nonZeroFare svc.svcAdultSlpFare)
+            ],
+        fareDetails = Nothing,
+        vehicleServiceTier =
+          FRFSUtils.FRFSVehicleServiceTier
+            { serviceTierType = tnstcClassToTier parts.sipClassId svc.svcServiceClass,
+              serviceTierProviderCode = parts.sipClassId,
+              serviceTierShortName = svc.svcServiceClass,
+              serviceTierDescription = svc.svcServiceClass,
+              serviceTierLongName = svc.svcServiceClass,
+              isAirConditioned = Just (tnstcClassToTier parts.sipClassId svc.svcServiceClass `elem` acTiers)
+            },
+        fareQuoteType = Just DFRFSQuote.SingleJourney,
+        fareQuoteId = Nothing
+      }
+
+nonZeroFare :: Maybe Double -> Maybe Double
+nonZeroFare = mfilter (> 0)
+
+tnstcClassToTier :: Text -> Text -> Spec.ServiceTierType
+tnstcClassToTier classId classDesc =
+  case T.strip classId of
+    "2" -> Spec.ULTRA_DELUXE
+    "40" -> Spec.DELUXE
+    "80" -> Spec.AC
+    "121" -> Spec.ORDINARY
+    "141" -> Spec.AC_SLEEPER
+    "160" -> Spec.CLASSIC
+    "161" -> Spec.AC_SLEEPER_SEATER
+    "162" -> Spec.NON_AC_SLEEPER
+    "163" -> Spec.NON_AC_SLEEPER_SEATER
+    "166" -> Spec.DELUXE_3X2
+    "169" -> Spec.MULTI_AXLE_AC_SEMI_SLEEPER
+    _ -> byName
+  where
+    upper = T.toUpper classDesc
+    byName
+      | "NON AC SLEEPER SEATER" `T.isInfixOf` upper = Spec.NON_AC_SLEEPER_SEATER
+      | "NON AC SLEEPER" `T.isInfixOf` upper = Spec.NON_AC_SLEEPER
+      | "NON AC" `T.isInfixOf` upper || "NON-AC" `T.isInfixOf` upper = Spec.NON_AC
+      | "AC SLEEPER SEATER" `T.isInfixOf` upper = Spec.AC_SLEEPER_SEATER
+      | "AC SLEEPER" `T.isInfixOf` upper = Spec.AC_SLEEPER
+      | "SEMI SLEEPER" `T.isInfixOf` upper = Spec.MULTI_AXLE_AC_SEMI_SLEEPER
+      | "AIR CONDITION" `T.isInfixOf` upper || "A/C" `T.isInfixOf` upper = Spec.AC
+      | "ULTRA DELUXE" `T.isInfixOf` upper = Spec.ULTRA_DELUXE
+      | "DELUXE" `T.isInfixOf` upper = Spec.DELUXE
+      | "CLASSIC" `T.isInfixOf` upper = Spec.CLASSIC
+      | "EXPRESS" `T.isInfixOf` upper || "LUXURY" `T.isInfixOf` upper = Spec.EXPRESS
+      | otherwise = Spec.ORDINARY
+
+acTiers :: [Spec.ServiceTierType]
+acTiers = [Spec.AC, Spec.AC_SLEEPER, Spec.AC_SLEEPER_SEATER, Spec.MULTI_AXLE_AC_SEMI_SLEEPER]
 
 getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Text -> Id Person -> Bool -> m CRISTypes.CRISFareRequest
 getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints personId useDummy = do
@@ -318,6 +447,7 @@ createOrderForJourneyType integrationBPPConfig qrTtl (_mRiderName, mRiderNumber)
                         commencingHours = Nothing
                       }
               }
+        TNSTC config' -> TNSTCOrder.createOrder config' integrationBPPConfig booking quoteCategories (_mRiderName, mRiderNumber)
         _ -> throwError $ InternalError "Unimplemented!"
   let countOrder = Metrics.incrementFRFSExternalBppCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (getProviderTag integrationBPPConfig) Metrics.FRFSBppOrder
   case eResp of
@@ -347,6 +477,7 @@ getTicketStatus integrationBPPConfig booking = do
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
     CRIS _config' -> return []
+    TNSTC _config' -> return []
     _ -> throwError $ InternalError "Unimplemented!"
 
 softCancelTicket :: (MonadFlow m, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Text -> m (Maybe KMRLCancel.SoftCancelQuote)
