@@ -34,6 +34,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.CancellationFault as CancellationFault
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import Tools.DynamicLogic (getAppDynamicLogic)
 
@@ -56,6 +57,7 @@ recordAutoAcceptCancellation ::
     HasLocationService m r,
     JobCreator r m,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasShortDurationRetryCfg r c,
     ClickhouseFlow m r
   ) =>

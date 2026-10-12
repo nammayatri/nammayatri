@@ -63,6 +63,7 @@ import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -72,7 +73,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.MerchantClientConfig as QMCC
 import qualified Storage.Queries.Person as QPerson
 
-clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) => Id Person -> m ()
+clearDeviceToken :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id Person -> m ()
 clearDeviceToken = QPerson.clearDeviceTokenByPersonId
 
 templateText :: Text -> Text
@@ -176,7 +177,8 @@ dynamicFCMNotifyPerson ::
     EsqDBFlow m r,
     ToJSON a,
     FromJSON a,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -212,7 +214,8 @@ notifyOnNewSearchRequestAvailable ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -251,7 +254,7 @@ data FeedbackBadgeEntityData = FeedbackBadgeEntityData
   }
   deriving (Generic, ToJSON, Eq, FromJSON, Show)
 
-notifySoftBlocked :: (CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r) => Person -> IssueBreachEntityData -> m ()
+notifySoftBlocked :: (CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Person -> IssueBreachEntityData -> m ()
 notifySoftBlocked person entity = do
   dynamicFCMNotifyPerson
     person.merchantOperatingCityId
@@ -274,7 +277,8 @@ sendFeedbackBadgeNotification ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -318,7 +322,8 @@ notifyOnCancel ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DRide.Ride ->
@@ -402,7 +407,8 @@ notifyOnRegistration ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   RegistrationToken ->
@@ -434,7 +440,8 @@ notifyOnRegistration merchantOpCityId regToken personId lang mbToken = do
 notifyDriver ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMNotificationType ->
@@ -482,7 +489,8 @@ notifyDriverWithProviders ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     ToJSON a,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
@@ -522,7 +530,8 @@ notifyOnIssueChatMessage ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Person ->
   IMCommon.ChatNotifPayload ->
@@ -558,7 +567,8 @@ driverScheduledRideAcceptanceAlert ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
@@ -591,7 +601,8 @@ driverScheduledRideAcceptanceAlert merchantOpCityId category title body driver m
 notifyDevice ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMNotificationType ->
@@ -605,7 +616,8 @@ notifyDevice merchantOpCityId = sendNotificationToDriver merchantOpCityId FCM.DO
 sendNotificationToDriver ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMShowNotification ->
@@ -640,7 +652,8 @@ sendMessageToDriver ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   FCM.FCMShowNotification ->
@@ -675,7 +688,8 @@ notifyDriverNewAllocation ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Booking ->
@@ -769,7 +783,8 @@ notifyDriverClearedFare ::
     EsqDBFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -822,7 +837,8 @@ notifyOnCancelSearchRequest ::
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -874,7 +890,8 @@ notifyPaymentFailed ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -904,7 +921,8 @@ notifyPaymentFailed merchantOpCityId person mbDeviceToken orderId = do
 notifyPaymentPending ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -935,7 +953,8 @@ notifyPaymentSuccess ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -977,7 +996,8 @@ notifyPaymentModeManualOnCancel ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1009,7 +1029,8 @@ notifyPaymentModeManualOnPause ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1041,7 +1062,8 @@ notifyPaymentModeManualOnSuspend ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1070,7 +1092,8 @@ notifyPaymentModeManualOnSuspend merchantOpCityId person = do
 sendOverlay ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1114,7 +1137,8 @@ sendUpdateLocOverlay ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1147,7 +1171,8 @@ sendPickupLocationChangedOverlay ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Person ->
   FCM.FCMOverlayReq ->
@@ -1176,7 +1201,8 @@ sendCancellationRateNudgeOverlay ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1206,7 +1232,8 @@ drunkAndDriveViolationWarningOverlay ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1245,7 +1272,8 @@ unhygienicVehicleWarningNotify ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1274,7 +1302,8 @@ vehicleUnsafeWarningNotify ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -1305,7 +1334,8 @@ driverStopDetectionAlert ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Notification.Category ->
@@ -1397,7 +1427,8 @@ sendSearchRequestToDriverNotification ::
     ToJSON EmptyDynamicParam,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -1425,7 +1456,8 @@ notifyStopModification ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DRide.RideStatus ->
   Person ->
@@ -1481,7 +1513,8 @@ notifyOnRideStarted ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DRide.Ride ->
   DBooking.Booking ->
@@ -1517,7 +1550,8 @@ notifyWmbOnRide ::
     CacheFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     ToJSON a,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Person ->
   Id DMOC.MerchantOperatingCity ->
@@ -1561,7 +1595,8 @@ data NotifReq = NotifReq
 notifyDriverOnEvents ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1633,6 +1668,7 @@ notifyDriverOnMerchantPN ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
     Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ToJSON a
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -1806,7 +1842,8 @@ data CoinsNotificationData = CoinsNotificationData
 sendCoinsNotification ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Text ->
@@ -1839,7 +1876,8 @@ requestRejectionNotification ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Text ->
@@ -1873,7 +1911,8 @@ sendCoinsNotificationV3 ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Text ->
@@ -1911,7 +1950,8 @@ sendCoinsNotificationV3 merchantOpCityId notificationTitle message driver mbToke
 sendDriverEKDLiveFCM ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1936,7 +1976,8 @@ sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language entityData
 notifyEditDestination ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -1971,7 +2012,8 @@ data PickupInstructionEntityData = PickupInstructionEntityData
 sendPickupInstructionNotification ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -2022,7 +2064,8 @@ maxSystemChatSuggestions = 3
 sendSystemChatMessage ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Person ->
@@ -2083,7 +2126,8 @@ notifyPickupZoneRequest ::
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->
@@ -2125,7 +2169,8 @@ notifyPickupNoShow ::
     CacheFlow m r,
     EsqDBFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id Person ->

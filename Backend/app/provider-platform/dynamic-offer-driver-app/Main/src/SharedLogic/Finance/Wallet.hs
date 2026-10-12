@@ -235,6 +235,7 @@ import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance, runPostActionsForAccount)
 import SharedLogic.Finance.WalletAccount (cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
@@ -719,7 +720,7 @@ counterpartyFromRole _ = DRIVER
 -- Wallet entry delta (for topup/payout)
 
 createWalletEntryDelta ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
@@ -734,7 +735,7 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
   fmap fst <$> createWalletEntryDeltaWithEntryIds counterpartyType ownerId delta currency merchantId merchantOperatingCityId referenceType referenceId metadata
 
 createWalletEntryDeltaWithEntryIds ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   CounterpartyType ->
   Text -> -- Owner ID
   HighPrecMoney -> -- Delta (positive credit, negative debit)
@@ -831,7 +832,7 @@ data StripeChargeFunder = FundByPlatform | FundByCustomer | FundByDriver
 --   The ctx MUST carry a DRIVER/FLEET_OWNER counterparty so the driver funding leg
 --   hits the driver's OwnerLiability account (Seller*/Buyer* roles are hardwired).
 recordStripeChargeLedger ::
-  (MonadFlow m, BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   FinanceCtx ->
   StripeChargeFunder ->
   HighPrecMoney ->
@@ -932,7 +933,7 @@ makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 createWalletHold ::
-  (BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Lib.Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   CounterpartyType ->
   Text -> -- Owner ID: driver or fleet owner depending on counterparty, hence untyped
   HighPrecMoney ->
@@ -1056,7 +1057,7 @@ removeOfferHolds ownerId searchTryId = do
 --   statutory deductions (net of other outstanding offer holds), create the
 --   authoritative PENDING ledger hold, and release this search try's offer hold.
 reserveWalletForCashRide ::
-  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m, Lib.Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, CacheFlow m r, EsqDBFlow m r, MonadFlow m, Lib.Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DTC.TransporterConfig ->
   DP.Person ->
   SRB.Booking ->
@@ -1170,7 +1171,7 @@ settleWalletEntries = markEntriesAsPaidOut
 --   OwnerPayoutLiability account, stamped PROCESSING until the PG confirms or fails it.
 --   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
 postOwnerPayoutLiability ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   FinanceCtx ->
   HighPrecMoney ->
   Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
@@ -1188,7 +1189,7 @@ walletPayoutLedgerRefs =
 
 -- | Apply a payout outcome to the driver wallet ledger; re-runnable, see 'settlePayoutLedger'.
 settleWalletPayoutLedger ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   FinanceCtx ->
   HighPrecMoney ->
   Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->

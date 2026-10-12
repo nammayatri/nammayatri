@@ -58,6 +58,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import SharedLogic.MerchantPaymentMethod (mkPaymentMethodInfo)
@@ -210,6 +211,7 @@ type SendSearchRequestJobFlow m r c =
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool,
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,
@@ -379,6 +381,7 @@ sendSearchRequestToDrivers' ::
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisFlow m r,
     BeamFlow m r,

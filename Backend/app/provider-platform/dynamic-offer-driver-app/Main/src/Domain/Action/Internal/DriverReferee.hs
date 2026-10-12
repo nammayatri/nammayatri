@@ -41,6 +41,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant as QM
@@ -79,7 +80,8 @@ linkReferee ::
     EncFlow m r,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id Merchant ->
   Maybe Text ->

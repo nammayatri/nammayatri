@@ -142,6 +142,7 @@ import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -2876,7 +2877,7 @@ isDashboardSmsEnabled merchantOpCityId =
     >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     <&> (.enableDashboardSms)
 
-sendDocumentDecisionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Text -> DocumentDecision -> DP.Person -> m ()
+sendDocumentDecisionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DMOC.MerchantOperatingCity -> Text -> DocumentDecision -> DP.Person -> m ()
 sendDocumentDecisionNotification merchantOpCityId docType decision driver = do
   let (messageKey, fcmType, reason) = case decision of
         DocumentRejected r -> (DMM.DOCUMENT_INVALID, FCM.DOCUMENT_INVALID, r)

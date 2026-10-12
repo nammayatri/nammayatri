@@ -664,6 +664,7 @@ library
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
       SharedLogic.DriverPool.DriverPoolMigrations
+      SharedLogic.DriverPool.DriverPoolStateEvent
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
       SharedLogic.DriverSupplyCounter

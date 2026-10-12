@@ -136,6 +136,7 @@ import qualified SharedLogic.Beckn.Common as DST
 import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
@@ -804,7 +805,8 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     CoreMetrics m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   [NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -1030,6 +1032,7 @@ calculateDriverPool ::
     HasKafkaProducer r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   CalculateDriverPoolReq a ->
@@ -1119,6 +1122,7 @@ calculateDriverPoolWithActualDist ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   CalculateDriverPoolReq a ->

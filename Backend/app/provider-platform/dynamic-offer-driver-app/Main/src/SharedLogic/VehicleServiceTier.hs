@@ -37,6 +37,7 @@ import Lib.Finance (CounterpartyType (..))
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import SharedLogic.Finance.WalletAccount (getWalletBalanceByOwner)
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -155,7 +156,8 @@ recomputeSelectedServiceTiers ::
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Maybe DI.DriverInformation ->
   Maybe DV.Vehicle ->
@@ -268,7 +270,8 @@ backfillSelectedServiceTiers ::
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   [DTC.ServiceTierType] ->
   DV.Vehicle ->
@@ -295,6 +298,7 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         logInfo $ "backfillSelectedServiceTiers: LTS selectedServiceTiers empty for driver " <> vehicle.driverId.getId <> ", pushing DB tiers"
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
+        publishDriverPoolData driverId [poolField "selectedServiceTiers" inputTiers]
 
 -- | Serializes checkAndAutoDisableWalletGatedTiers's own concurrent invocations for one driver, since two can otherwise race and undo each other's write.
 selectedServiceTiersLockKey :: Id DP.Person -> Text
@@ -302,7 +306,7 @@ selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> dri
 
 -- | Re-checks every wallet-gated tier a driver holds and drops any they can no longer afford.
 --   Called automatically after every wallet debit via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.
-checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
+checkAndAutoDisableWalletGatedTiers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
 checkAndAutoDisableWalletGatedTiers driverId merchantOpCityId =
   Redis.withWaitOnLockRedisWithExpiry (selectedServiceTiersLockKey driverId) 5 10 $ do
     mbVehicle <- QVehicle.findById driverId

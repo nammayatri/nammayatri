@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import Lib.Finance hiding (runFinance)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Wallet
@@ -152,6 +153,7 @@ accumulateCancellationPenalty ::
     HasShortDurationRetryCfg r c,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasShortDurationRetryCfg r c,

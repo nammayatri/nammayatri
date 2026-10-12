@@ -66,6 +66,8 @@
   driver-offer-allocator-metrics = 8056;
   rider-app-scheduler-metrics = 8057;
   kafka-ride-events-consumer-metrics = 9995;
+  kafka-driver-pool-state-writer-metrics = 9989;
+  kafka-sessionizer-metrics = 9988;
 
   # Dev tools
   caddy-reverse-proxy = 9090;

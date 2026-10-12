@@ -39,6 +39,7 @@ import Kernel.Utils.Version
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -397,7 +398,7 @@ updatePersonName (Id personId) mbFirstName mbLastName = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Person -> m ()
+updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -439,6 +440,17 @@ updatePersonRec (Id personId) person = do
         LTSSync.clientDevice = LTSSync.Set person.clientDevice,
         LTSSync.cloudType = LTSSync.Set person.cloudType
       }
+  publishDriverPoolData
+    (Id personId)
+    [ poolField "language" person.language,
+      poolField "gender" person.gender,
+      poolField "deviceToken" person.deviceToken,
+      poolField "clientSdkVersion" person.clientSdkVersion,
+      poolField "clientBundleVersion" person.clientBundleVersion,
+      poolField "clientConfigVersion" person.clientConfigVersion,
+      poolField "clientDevice" person.clientDevice,
+      poolField "cloudType" person.cloudType
+    ]
 
 updateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> KET.Language -> m ()
 updateLanguage personId lang = do
@@ -450,7 +462,7 @@ updateLanguage personId lang = do
     [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
 updatePersonVersionsAndMerchantOperatingCity ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Person ->
   Maybe Version ->
   Maybe Version ->
@@ -501,8 +513,16 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
           LTSSync.clientDevice = LTSSync.Set (mbDevice <|> person.clientDevice),
           LTSSync.cloudType = LTSSync.Set cloudType
         }
+    publishDriverPoolData
+      (cast person.id)
+      [ poolField "clientSdkVersion" (mbClientVersion <|> person.clientSdkVersion),
+        poolField "clientBundleVersion" (mbBundleVersion <|> person.clientBundleVersion),
+        poolField "clientConfigVersion" (mbConfigVersion <|> person.clientConfigVersion),
+        poolField "clientDevice" (mbDevice <|> person.clientDevice),
+        poolField "cloudType" cloudType
+      ]
 
-updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe CloudType -> Id Person -> m ()
+updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Maybe CloudType -> Id Person -> m ()
 updateCloudType cloudType (Id personId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -512,6 +532,7 @@ updateCloudType cloudType (Id personId) = do
     [Se.Is BeamP.id (Se.Eq personId)]
   LTSSync.syncDriverPoolDataToLTS (Id personId) $
     LTSSync.emptyUpdate {LTSSync.cloudType = LTSSync.Set cloudType}
+  publishDriverPoolData (Id personId) [poolField "cloudType" cloudType]
 
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do
@@ -612,7 +633,7 @@ updateFleetOwnerDetails (Id personId) req = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> m ()
+clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id Person -> m ()
 clearDeviceTokenByPersonId personId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -623,6 +644,7 @@ clearDeviceTokenByPersonId personId = do
     ]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.deviceToken = LTSSync.Set Nothing}
+  publishDriverPoolData (cast personId) [poolField "deviceToken" (Nothing :: Maybe Text)]
 
 updateMobileNumberByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> EncryptedHashedField 'AsEncrypted Text -> DbHash -> Text -> m ()
 updateMobileNumberByPersonId (Id personId) encMobile mobileNumberHash mobileCountryCode = do
@@ -707,19 +729,21 @@ findByMobileNumberAndMerchantWithCountryCode mobileCountryCode mobileNumberHash 
 
 -- Wrapper for src-read-only function with LTS sync
 
-updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe FCM.FCMRecipientToken -> Id Person -> m ()
+updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Maybe FCM.FCMRecipientToken -> Id Person -> m ()
 updateDeviceToken token personId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamP.deviceToken token, Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.deviceToken = LTSSync.Set token}
+  publishDriverPoolData (cast personId) [poolField "deviceToken" token]
 
-updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
+updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
 updateDriverTag driverTag personId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set driverTag}
+  publishDriverPoolData (cast personId) [poolField "driverTag" driverTag]
   CQCoinsConfig.clearDriverIncentiveConfigHashForDriver personId
 
 findByOperatorBadgeTokenAndMerchantId ::

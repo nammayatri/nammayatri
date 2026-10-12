@@ -37,6 +37,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 
 -- | Input data for GPS toll behavior evaluation
@@ -169,7 +170,8 @@ blockDriverForTollRoutes ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id DP.Person ->
   Int -> -- Block duration in hours

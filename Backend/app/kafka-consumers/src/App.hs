@@ -40,13 +40,16 @@ import Kernel.Utils.Shutdown
 import Lib.Scheduler.InMemManagement (inMemManagementApp)
 import Network.Wai.Handler.Warp
 import qualified Processor.BroadcastMessage.Processor as BMProcessor
+import qualified Processor.DriverPoolState.Processor as DPSProcessor
 import qualified Processor.FleetCommunication.Processor as FCProcessor
 import qualified Processor.LocationUpdate.Processor as LCProcessor
 import qualified Processor.LocationUpdate.Types as LU
 import qualified Processor.RideEvents.Processor as RideEventsProcessor
+import qualified Processor.Sessionizer.Processor as SessionizerProcessor
 import Servant
 import System.Environment (lookupEnv)
 import SystemConfigsOverride as QSC hiding (id)
+import qualified Transporter.Kafka.Committing as KafkaCommitting
 import qualified Transporter.Kafka.Flow as KafkaFlow
 import qualified Transporter.RedisStream.Flow as RSFlow
 
@@ -120,6 +123,10 @@ startKafkaTransport flowRt appEnv = do
     FLEET_COMMUNICATION_DISPATCH ->
       KafkaFlow.runPerEvent flowRt appEnv kc $ \payload _key ->
         FCProcessor.processFleetCommunicationDelivery payload
+    DRIVER_POOL_STATE ->
+      KafkaCommitting.runOrderedCommitting flowRt appEnv kc (\ev -> ev.ts) DPSProcessor.processDriverPoolState DPSProcessor.publishWriterWatermark
+    SESSIONIZER ->
+      SessionizerProcessor.runSessionizer flowRt appEnv kc
     LOCATION_UPDATE -> do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
           batchSize = maybe 100 (fromIntegral . (.batchSize)) appEnv.healthCheckAppCfg
@@ -144,6 +151,10 @@ startRedisStreamTransport flowRt appEnv = do
         BMProcessor.broadcastMessage messageDict driverId
     FLEET_COMMUNICATION_DISPATCH ->
       RSFlow.run flowRt appEnv cfg instanceName FCProcessor.processFleetCommunicationDelivery
+    DRIVER_POOL_STATE ->
+      error "DRIVER_POOL_STATE runs on the Kafka transport only"
+    SESSIONIZER ->
+      error "SESSIONIZER runs on the Kafka transport only"
     LOCATION_UPDATE -> do
       let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
       RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->

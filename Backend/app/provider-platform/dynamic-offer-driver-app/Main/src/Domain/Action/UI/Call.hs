@@ -87,6 +87,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBAP as CallBAP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -491,7 +492,8 @@ type CallBAPConstraints m r c =
     EsqDBReplicaFlow m r,
     HasField "esqDBReplicaEnv" r EsqDBEnv,
     EventStreamFlow m r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   )
 
 getCallTwillioAccessToken ::

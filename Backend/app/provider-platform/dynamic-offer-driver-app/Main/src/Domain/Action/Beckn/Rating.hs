@@ -45,6 +45,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.LowRating as LowRating
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.VehicleServiceTier (recomputeSelectedServiceTiers)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -166,7 +167,7 @@ handler merchantId req ride = do
     LowRating.recordDriverRating transporterConfig driverId ride.merchantOperatingCityId ride.id ratingValue shouldIncrementCount newRating newRatingCount
 
 syncServiceTiersOnRatingChange ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DDriverStats.DriverStats ->
   Maybe Centesimal ->
   Id DP.Person ->

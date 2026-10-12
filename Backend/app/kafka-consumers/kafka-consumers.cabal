@@ -32,6 +32,8 @@ library
       DriverTrackingHealthCheck.Service.Runner
       Environment
       Processor.BroadcastMessage.Processor
+      Processor.DriverPoolState.Processor
+      Processor.DriverPoolState.Types
       Processor.FleetCommunication.Processor
       Processor.LocationUpdate.Processor
       Processor.LocationUpdate.Types
@@ -39,7 +41,9 @@ library
       Processor.RideEvents.Idempotency
       Processor.RideEvents.InternalHelpers
       Processor.RideEvents.Processor
+      Processor.Sessionizer.Processor
       SystemConfigsOverride
+      Transporter.Kafka.Committing
       Transporter.Kafka.Flow
       Transporter.RedisStream.Flow
       Transporter.RedisStream.Types
