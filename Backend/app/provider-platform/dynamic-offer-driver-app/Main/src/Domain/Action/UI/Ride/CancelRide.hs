@@ -65,6 +65,7 @@ import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
 import SharedLogic.DriverOnboarding (isFleetRole)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -124,6 +125,7 @@ cancelRideHandle ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,

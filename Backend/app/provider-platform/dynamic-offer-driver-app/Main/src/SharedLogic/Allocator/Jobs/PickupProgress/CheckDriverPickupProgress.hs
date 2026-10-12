@@ -55,6 +55,7 @@ import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (
 import SharedLogic.BehaviourManagement.PickupStall as PickupStall
 import SharedLogic.CallBAPInternal
 import SharedLogic.CancellationConsequence (cityHasDriverCancelMoneyPenalty)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -108,6 +109,7 @@ checkDriverPickupProgress ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     CH.ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     BeamFlow m r,

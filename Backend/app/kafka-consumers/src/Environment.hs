@@ -79,7 +79,7 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER | DRIVER_POOL_STATE | SESSIONIZER deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -88,6 +88,8 @@ instance Show ConsumerType where
   show LOCATION_UPDATE = "location-update"
   show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
   show RIDE_EVENTS_CONSUMER = "ride-events-consumer"
+  show DRIVER_POOL_STATE = "driver-pool-state-writer"
+  show SESSIONIZER = "sessionizer"
 
 -- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
 -- file picks one; switching is a config change, not a code change.
@@ -102,6 +104,8 @@ data AppCfg = AppCfg
     ltsRedisCfg :: HedisCfg,
     secondaryLTSRedisCfg :: Maybe HedisCfg,
     ltsReplicaRedisCfg :: Maybe HedisCfg,
+    -- | The sessionizer's own state store (DRIVER_POOL_STATE / SESSIONIZER only).
+    driverStateRedisCfg :: Maybe HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisSecondaryClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
@@ -121,6 +125,7 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
+    driverPoolStateTopic :: Maybe Text,
     secondaryKafkaProducerCfg :: Maybe KafkaProducerCfg,
     serviceClickhouseCfg :: ClickhouseCfg,
     kafkaClickhouseCfg :: ClickhouseCfg,
@@ -153,6 +158,7 @@ data AppEnv = AppEnv
     ltsHedisEnv :: HedisEnv,
     secondaryLTSHedisEnv :: Maybe HedisEnv,
     ltsReplicaHedisEnv :: Maybe HedisEnv,
+    driverStateHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -179,6 +185,7 @@ data AppEnv = AppEnv
     httpClientOptions :: HttpClientOptions,
     encTools :: EncTools,
     kafkaProducerTools :: KafkaProducerTools,
+    driverPoolStateTopic :: Maybe Text,
     serviceClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     serviceClickhouseCfg :: ClickhouseCfg,
@@ -250,6 +257,7 @@ buildAppEnv AppCfg {..} consumerType = do
             putStrLn $ "ERROR: Failed to connect to LTS replica hedis: " ++ Kernel.Prelude.show e
             pure Nothing
           Right env -> pure (Just env)
+  driverStateHedisEnv <- traverse (`connectHedis` id) driverStateRedisCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -293,4 +301,5 @@ releaseAppEnv AppEnv {..} = do
   disconnectHedis ltsHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis ltsReplicaHedisEnv
+  Kernel.Prelude.maybe (pure ()) disconnectHedis driverStateHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv

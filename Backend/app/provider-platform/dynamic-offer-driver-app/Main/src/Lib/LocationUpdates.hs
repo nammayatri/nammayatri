@@ -56,6 +56,7 @@ import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
 import Storage.Beam.Toll ()
@@ -85,6 +86,7 @@ type LocationUpdateFlow m r c =
     ClickhouseFlow m r,
     EncFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     MonadMask m,
     HasBPPMetrics m r,
     HasPrettyLogger m r,

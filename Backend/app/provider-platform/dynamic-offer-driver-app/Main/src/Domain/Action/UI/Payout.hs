@@ -90,6 +90,7 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding (isFleetRole)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -135,6 +136,7 @@ type PayoutSettlementFlow m r =
     FinanceBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ClickhouseFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig]
   )

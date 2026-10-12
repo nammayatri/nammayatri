@@ -74,6 +74,7 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
@@ -766,6 +767,7 @@ recordAirportCashRecharge ::
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->

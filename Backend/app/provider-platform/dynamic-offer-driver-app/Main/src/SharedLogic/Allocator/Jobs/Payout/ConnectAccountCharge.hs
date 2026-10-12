@@ -28,6 +28,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import SharedLogic.Allocator
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet
   ( buildDriverChargeCtx,
     connectBearerToFunder,
@@ -55,7 +56,8 @@ sendConnectAccountCharge ::
     HasKafkaProducer r,
     HasField "blackListedJobs" r [Text],
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'ConnectAccountChargeDeduction ->
   m ExecutionResult

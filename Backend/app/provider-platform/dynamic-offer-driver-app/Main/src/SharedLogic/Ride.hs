@@ -62,6 +62,7 @@ import SharedLogic.Allocator (AllocatorJobType (..), CheckDriverPickupProgressJo
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as FC
@@ -725,6 +726,7 @@ pullExistingRideRequests ::
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
@@ -787,7 +789,7 @@ editDestinationUpdatedLocGeohashKey driverId = "Driver:EditDes:GeoHash:DId-" <> 
 offerQuoteLockKeyWithCoolDown :: Id Person -> Text
 offerQuoteLockKeyWithCoolDown driverId = "Driver:OffQuote:CD:DId-" <> driverId.getId
 
-updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Maybe DRide.Ride -> m ()
+updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id Person -> Maybe DRide.Ride -> m ()
 updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
   lockAcquired <- case mbRide of
     Just ride -> Redis.tryLockRedis (lockRide (ride.id.getId)) 10

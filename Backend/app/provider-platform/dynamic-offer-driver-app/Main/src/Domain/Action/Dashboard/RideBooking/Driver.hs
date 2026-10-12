@@ -88,6 +88,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -462,7 +463,7 @@ getDriverFeedbackList merchantShortId opCity mbPersonId mbMobileNumber mbMobileC
 
 buildDriverInfoRes ::
   forall m r.
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->

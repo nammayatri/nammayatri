@@ -45,6 +45,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.Finance.Wallet
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
@@ -89,6 +90,7 @@ type WalletPayoutFlow m r =
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text]
   )

@@ -54,6 +54,7 @@ import SharedLogic.Booking
 import SharedLogic.Cancel
 import qualified SharedLogic.CancellationOrchestrator as Orchestrator
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverSupplyCounter as DSC
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -268,6 +269,7 @@ cancelSearch ::
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Esq.EsqDBReplicaFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv

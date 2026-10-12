@@ -97,6 +97,7 @@ import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..), GimsEmployeeRole (..
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import Storage.CachedQueries.Merchant as QMerchant
@@ -748,7 +749,8 @@ verify ::
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -881,7 +883,8 @@ logout ::
     CacheFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess

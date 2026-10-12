@@ -51,6 +51,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.AddOn as SAddOn
 import SharedLogic.Cancel
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
@@ -143,6 +144,7 @@ handler ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DM.Merchant ->

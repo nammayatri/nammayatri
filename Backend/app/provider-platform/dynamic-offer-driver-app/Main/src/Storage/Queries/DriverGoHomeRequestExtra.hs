@@ -10,6 +10,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import Storage.Beam.DriverGoHomeRequest as BeamDHR
 import Storage.Queries.OrphanInstances.DriverGoHomeRequest ()
@@ -19,7 +20,7 @@ import Storage.Queries.OrphanInstances.DriverGoHomeRequest ()
 -- | Wrapper for src-read-only finishWithStatus with LTS sync.
 -- Takes driverId as extra parameter so we can sync to the driver's LTS key.
 finishWithStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   DDGR.DriverGoHomeRequestStatus ->
   Maybe Bool ->
   Id DDGR.DriverGoHomeRequest ->
@@ -30,6 +31,7 @@ finishWithStatus status mbReachedHome goHomeReqId driverId = do
   updateOneWithKV [Se.Set BeamDHR.status status, Se.Set BeamDHR.reachedHome mbReachedHome, Se.Set BeamDHR.updatedAt _now] [Se.Is BeamDHR.id $ Se.Eq (getId goHomeReqId)]
   LTSSync.syncDriverPoolDataToLTS driverId $
     LTSSync.emptyUpdate {LTSSync.goHomeStatus = LTSSync.Set (Just status)}
+  publishDriverPoolData driverId [poolField "goHomeStatus" (Just status)]
 
 todaySuccessCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m Int
 todaySuccessCount driverId = do

@@ -52,6 +52,7 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.DriverPool.Types as SDT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FarePolicy
@@ -111,6 +112,7 @@ reAllocateBookingIfPossible ::
     HasField "blackListedJobs" r [Text],
     HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     ClickhouseFlow m r,
     Finance.HasActorInfo m r,
     Redis.HedisFlow m r,

@@ -13,6 +13,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv, poolField, publishDriverPoolData)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverBankAccount as Beam
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
@@ -51,7 +52,7 @@ updateBankVerificationDetails mbAccountNumber ifscCode nameAtBank driverId = do
 -- Wrapper for src-read-only function with LTS sync
 
 updateAccountStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Bool ->
   Bool ->
@@ -78,7 +79,7 @@ updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted requirements 
   syncBankAccountToPool driverId chargesEnabled Nothing
 
 updateFromWebhook ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Bool ->
   Bool ->
@@ -101,14 +102,19 @@ updateFromWebhook chargesEnabled payoutsEnabled detailsSubmitted requirements fu
   syncBankAccountToPool driverId chargesEnabled Nothing
 
 syncBankAccountToPool ::
-  (MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Bool ->
   Maybe DMPM.PaymentMode ->
   m ()
-syncBankAccountToPool ownerId chargesEnabled mbPaymentMode =
+syncBankAccountToPool ownerId chargesEnabled mbPaymentMode = do
   LTSSync.syncDriverPoolDataToLTS (cast ownerId) $
     LTSSync.emptyUpdate
       { LTSSync.chargesEnabled = LTSSync.Set chargesEnabled,
         LTSSync.bankAccountPaymentMode = maybe LTSSync.Unchanged (LTSSync.Set . Just) mbPaymentMode
       }
+  publishDriverPoolData
+    (cast ownerId)
+    ( [poolField "chargesEnabled" chargesEnabled]
+        <> [poolField "bankAccountPaymentMode" mbPaymentMode | isJust mbPaymentMode]
+    )

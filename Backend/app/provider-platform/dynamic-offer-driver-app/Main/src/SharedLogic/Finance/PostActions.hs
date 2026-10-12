@@ -28,12 +28,13 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.VehicleServiceTier as SVST
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
 --   Reads ctx.enableWalletGatedTierCheck (caller-resolved) to gate the recheck below.
 runFinance ::
-  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (BeamFlow m r, Finance.HasActorInfo m r, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Finance.FinanceCtx ->
   Finance.FinanceM m a ->
   m (Either Finance.FinanceError (a, [Id Finance.LedgerEntry]))
@@ -48,7 +49,7 @@ runFinance ctx action = do
 
 -- | Runs 'runPostActionsForAccount' against every account a runFinance call touched.
 runPostActions ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Finance.FinanceState ->
   m ()
@@ -60,7 +61,7 @@ runPostActions walletGateEnabled finalState =
 -- | Like 'runPostActions' but for a single, already-known account -- the entry point for
 --   SharedLogic.Finance.Wallet.createWalletEntryDelta, which never goes through runFinance.
 runPostActionsForAccount ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Bool ->
   Finance.AffectedAccount ->
   m ()

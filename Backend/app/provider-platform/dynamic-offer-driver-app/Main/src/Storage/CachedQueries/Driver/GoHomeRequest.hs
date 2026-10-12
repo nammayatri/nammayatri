@@ -23,6 +23,7 @@ import Kernel.Utils.Common (addUTCTime, fromMaybeM, getLocalCurrentTime)
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.SlidingWindowCounters (incrementPeriod)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverGoHomeRequest as QDGR
@@ -32,7 +33,7 @@ import Tools.Error (GenericError (..))
 makeGoHomeReqKey :: Id DP.Driver -> Text
 makeGoHomeReqKey = pack . ("CachedQueries:GoHomeRequest-driverId:" <>) . show
 
-getDriverGoHomeRequestInfo :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Maybe GoHomeConfig -> m CachedGoHomeRequest
+getDriverGoHomeRequestInfo :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Maybe GoHomeConfig -> m CachedGoHomeRequest
 getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
   ghCfg <- maybe (getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)) return goHomeCfg
   let initCnt = ghCfg.startCnt
@@ -54,7 +55,7 @@ getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
         withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
         return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
-getDriversGoHomeRequestInfoBatch :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => [Id DP.Driver] -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> m [(Id DP.Driver, CachedGoHomeRequest)]
+getDriversGoHomeRequestInfoBatch :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => [Id DP.Driver] -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> m [(Id DP.Driver, CachedGoHomeRequest)]
 getDriversGoHomeRequestInfoBatch [] _ _ = pure []
 getDriversGoHomeRequestInfoBatch driverIds merchantOpCityId goHomeCfg = do
   currTime <- getLocalCurrentTime =<< ((getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
@@ -69,7 +70,7 @@ getDriversGoHomeRequestInfoBatch driverIds merchantOpCityId goHomeCfg = do
       maybe False (\validTill -> validTill > currTime || ghrData.isOnRide) ghrData.validTill
         || (isNothing ghrData.validTill && ghrData.goHomeReferenceTime > currTime)
 
-checkInvalidReqData :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> Int -> m CachedGoHomeRequest
+checkInvalidReqData :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> Int -> m CachedGoHomeRequest
 checkInvalidReqData ghrData currTime ghkey driverId merchantOpCityId goHomeCfg expTime = do
   let initCnt = goHomeCfg.startCnt
   if ghrData.goHomeReferenceTime > currTime
@@ -133,7 +134,7 @@ activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLoc g
             ..
           }
 
-deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> Maybe Bool -> m ()
+deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> Maybe Bool -> m ()
 deactivateDriverGoHomeRequest merchantOpCityId driverId stat ghInfo mbReachedHome = do
   currTime <- getLocalCurrentTime =<< ((getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   let ghKey = makeGoHomeReqKey driverId
@@ -149,7 +150,7 @@ resetDriverGoHomeRequest merchantOpCityId driverId goHomeConfig ghInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt (Just $ addUTCTime (fromIntegral goHomeConfig.activeTime) currTime) ghInfo.driverGoHomeRequestId False (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
-increaseDriverGoHomeRequestCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> m ()
+increaseDriverGoHomeRequestCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> m ()
 increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
   currTime <- getLocalCurrentTime =<< ((getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   let ghKey = makeGoHomeReqKey driverId
@@ -157,7 +158,7 @@ increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status (ghInfo.cnt + 1) ghInfo.validTill ghInfo.driverGoHomeRequestId ghInfo.isOnRide (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
-setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
+setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
 setDriverGoHomeIsOnRideStatus driverId merchantOpCityId status = do
   ghCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   if ghCfg.enableGoHome

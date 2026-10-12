@@ -54,6 +54,7 @@ import qualified Lib.IncentiveJourney.Storage.CachedQueries.IncentiveJourneyMile
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.PayoutStatusCheck (afterPayoutOrderCreated)
 import Storage.Beam.IncentiveJourney ()
 import Storage.Beam.Payment ()
@@ -132,7 +133,7 @@ loadJourneyMilestones ::
 loadJourneyMilestones = CQMilestone.findByJourneyId IJ.DriverActor
 
 sendMilestoneCompletedOverlay ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   DIJ.IncentiveJourney ->
@@ -166,7 +167,7 @@ sendMilestoneCompletedOverlay merchantOpCityId driverId journey milestone journe
     sendOverlay merchantOpCityId driver $ mkOverlayReq overlay'
 
 sendMilestoneWaivedOverlay ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   DIJ.IncentiveJourney ->
@@ -199,7 +200,7 @@ sendMilestoneWaivedOverlay merchantOpCityId driverId journey milestone journeyMi
 
 -- | EndRide journey evaluation. Call when driver has user_cohort_mapping rows.
 evaluateDriverJourney ::
-  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -565,7 +566,7 @@ defaultSubscriptionWaiveOff =
 
 -- | Dashboard waive-off for one driver milestone period row.
 waiveDriverMilestone ::
-  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r) =>
+  (JourneyRewardDispatchFlow m r, EsqDBReplicaFlow m r, HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

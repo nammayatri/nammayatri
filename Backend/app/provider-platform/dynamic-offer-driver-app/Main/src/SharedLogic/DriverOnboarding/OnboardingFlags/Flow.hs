@@ -49,6 +49,7 @@ import SharedLogic.DriverOnboarding.Common
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Checks as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
@@ -561,7 +562,7 @@ data SimplePayload = SimplePayload
   deriving (Show, Generic)
 
 markBlockFlags ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   BlockChange ->
   m ()

@@ -98,6 +98,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -270,6 +271,7 @@ type EndRideFlow m r =
     JobCreator r m,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Esq.EsqDBReplicaFlow m r,
     Finance.HasActorInfo m r
   )
@@ -343,7 +345,7 @@ endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
     mkLockKey = "EndTransaction:RID:-" <> rideId.getId
 
 endRideHandler ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -1142,7 +1144,7 @@ getChargeableDistanceAndDuration disableDownwardRecompute rcfg sectionsBillCharg
       | otherwise = baseDuration
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals

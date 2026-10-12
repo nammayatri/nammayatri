@@ -106,6 +106,7 @@ import Servant (BasicAuthData)
 import SharedLogic.Allocator
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.GstBreakdown
 import SharedLogic.Finance.PostActions (runFinance)
@@ -208,6 +209,7 @@ getStatus ::
     MonadFlow m,
     JobCreatorEnv r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
@@ -342,6 +344,7 @@ getStatusV2 ::
     EventStreamFlow m r,
     MonadFlow m,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -545,7 +548,8 @@ processWalletTopupWebhook ::
     CacheFlow m r,
     EsqDBFlow m r,
     Finance.HasActorInfo m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   DP.Person ->
   DOrder.PaymentOrder ->
@@ -593,6 +597,7 @@ processPayment ::
     EncFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Finance.HasActorInfo m r
@@ -648,6 +653,7 @@ processNonClearedDriverFees ::
     EsqDBFlow m r,
     EncFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
@@ -680,6 +686,7 @@ processSubscriptionPurchasePayment ::
     Redis.HedisFlow m r,
     JobCreatorEnv r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
@@ -829,6 +836,7 @@ updatePrepaidBalanceAndExpiry ::
     EsqDBFlow m r,
     EncFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r
   ) =>
   Id DM.Merchant ->
@@ -907,6 +915,7 @@ updatePaymentStatus ::
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     Finance.HasActorInfo m r
@@ -938,7 +947,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
               dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
         )
 
-notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
+notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key 86400 $ do
@@ -948,7 +957,7 @@ shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
 notifyAndUpdateInvoiceStatusIfPaymentFailed ::
-  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r, DriverPoolStateEnv r) =>
   Id DP.Person ->
   Id DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
@@ -1081,6 +1090,7 @@ processMandate ::
     EventStreamFlow m r,
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,

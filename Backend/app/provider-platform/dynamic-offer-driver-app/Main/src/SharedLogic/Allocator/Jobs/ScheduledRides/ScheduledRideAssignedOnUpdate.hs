@@ -50,6 +50,7 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.CallBAP
 import SharedLogic.CallBAPInternal
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -97,6 +98,7 @@ type ScheduledRideAssignedOnUpdateFlow m r c =
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EventStreamFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
@@ -363,6 +365,7 @@ cancelOrReallocate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     EventStreamFlow m r,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,

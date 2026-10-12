@@ -25,6 +25,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -36,7 +37,8 @@ sendFeedbackPN ::
     EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "kafkaProducerTools" ::: KafkaProducerTools],
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   Job 'SendFeedbackPN ->
   m ExecutionResult

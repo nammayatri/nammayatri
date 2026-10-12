@@ -14,6 +14,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, HasFlowEnv, HasRequestId, from
 import Kernel.Utils.Error.Throwing hiding (fromMaybeM)
 import Kernel.Utils.Logging
 import SharedLogic.CallBAPInternal as CallBAPInternal
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import qualified Storage.Queries.CallStatus as CallStatus
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -34,7 +35,8 @@ prodLoopStatus ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasRequestId r,
-    Hedis.HedisLTSFlowEnv r
+    Hedis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r
   ) =>
   ProdLoopStatusReq ->
   m APISuccess

@@ -49,6 +49,7 @@ import qualified SharedLogic.AddOn as SAddOn
 import qualified SharedLogic.Allocator as Alloc
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers')
 import qualified SharedLogic.Booking as SBooking
+import SharedLogic.DriverPool.DriverPoolStateEvent (DriverPoolStateEnv)
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.MerchantPaymentMethod
@@ -314,6 +315,7 @@ validateRequest ::
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     Redis.HedisLTSFlowEnv r,
+    DriverPoolStateEnv r,
     Finance.HasActorInfo m r,
     Alloc.SchedulerJobFlow r
   ) =>
