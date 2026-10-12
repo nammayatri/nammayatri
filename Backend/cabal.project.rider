@@ -12,6 +12,7 @@ packages:
   app/alchemist
   lib/passetto-lib
   lib/beckn-spec
+  lib/ride-finance
   lib/beckn-services
   lib/payment
   lib/shared-services

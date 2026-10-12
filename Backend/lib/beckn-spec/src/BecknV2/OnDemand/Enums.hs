@@ -190,6 +190,7 @@ data QuoteBreakupTitle
   | CGST
   | RIDE_VAT
   | TOLL_VAT
+  | PARKING_TAX
   | PLATFORM_FEE -- should this be in quote breakup?
   | TIME_BASED_FARE
   | DIST_BASED_FARE
@@ -199,6 +200,7 @@ data QuoteBreakupTitle
   | CARD_CHARGES_ON_FARE
   | CARD_CHARGES_FIXED
   | PAYMENT_CHARGE -- Stripe payment-gateway charge shown as a customer-visible fare line (when the rider bears it)
+  | PAYMENT_CHARGE_TAX_AMOUNT
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
   | RIDE_STOP_CHARGES
@@ -223,12 +225,14 @@ data QuoteBreakupTitle
   | TOLL_FARE_TAX_EXCLUSIVE
   | -- Canonical fare-breakup contract: every BPP fare sum partitions into
     -- categories × {tax-exclusive, tax}. The ride portion is split by whether
-    -- the customer offer discount applies. Ten fare slots, plus the two
-    -- payment-charge slots below; the twelve sum to what the customer pays.
+    -- the customer offer discount applies. Twelve fare slots (taxed pairs plus untaxed ride parts), plus the two
+    -- payment-charge slots below; the fourteen sum to what the customer pays.
     RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
   | RIDE_FARE_DISCOUNT_APPLICABLE_TAX
   | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE
   | RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX
+  | RIDE_FARE_DISCOUNT_APPLICABLE_UNTAXED
+  | RIDE_FARE_NON_DISCOUNT_APPLICABLE_UNTAXED
   | TOLL_FARE_TAX
   | CANCELLATION_FEE_TAX_EXCLUSIVE
   | CANCELLATION_TAX

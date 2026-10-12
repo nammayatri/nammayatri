@@ -33,7 +33,9 @@ import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FITxn
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.Interface (InvoiceLineItem, ItemType (..), LineItemDescription)
+import Lib.Finance.Invoice.VatClubbing (clubInvoiceLineItems)
 import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
+import qualified RideFinance.Core.Types as RF
 import Text.Printf (printf)
 
 data InvoiceContext = InvoiceContext
@@ -234,7 +236,8 @@ data BuildInvoiceContextInput = BuildInvoiceContextInput
     categoryOfServices :: Maybe Text,
     signatureImageUrl :: Maybe Text,
     cityState :: Maybe Text,
-    qrImageDataUri :: Maybe Text
+    qrImageDataUri :: Maybe Text,
+    vatClubbedComponents :: RF.ClubPolicy
   }
 
 buildInvoiceContext :: BuildInvoiceContextInput -> InvoiceContext
@@ -294,7 +297,7 @@ buildInvoiceContext BuildInvoiceContextInput {..} =
       categoryOfServices = categoryOfServices,
       signatureImageUrl = signatureImageUrl,
       cityState = cityState,
-      lineItems = stampLanguage language (attachTaxToFares lineItems)
+      lineItems = stampLanguage language (attachTaxToFares (clubInvoiceLineItems vatClubbedComponents lineItems))
     }
   where
     currencyText :: Currency -> Text

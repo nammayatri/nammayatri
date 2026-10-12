@@ -199,6 +199,7 @@ library:
     - beckn-services
     - shared-services
     - finance-kernel
+    - ride-finance
     - utils
     - external
     - communication-engine

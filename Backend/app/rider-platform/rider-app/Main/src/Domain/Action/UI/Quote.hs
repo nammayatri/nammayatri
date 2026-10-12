@@ -580,7 +580,7 @@ mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDeta
           ( quoteList <&> \q ->
               let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
                   offerBaseAmount = case mbBreakup of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Just b -> RD.discountApplicableBase b
                     Nothing -> q.estimatedFare.amount
                   offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
                in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
@@ -644,7 +644,7 @@ getEstimates searchRequest _enableRideHailingOffers isReferredRide providerLooku
           ( \e ->
               let mbBreakup = RD.parseProjectFareParamsBreakup $ (\eb -> (eb.title, eb.price.value.amount)) <$> e.estimateBreakupList
                   offerBaseAmount = case mbBreakup of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Just b -> RD.discountApplicableBase b
                     Nothing -> e.estimatedFare.amount
                   offerBasePrice = mkPrice (Just e.estimatedFare.currency) offerBaseAmount
                in (e, mbBreakup, offerBasePrice)

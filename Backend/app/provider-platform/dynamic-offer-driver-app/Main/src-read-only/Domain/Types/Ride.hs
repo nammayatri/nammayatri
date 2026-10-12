@@ -31,7 +31,9 @@ import qualified SharedLogic.Type
 import qualified Tools.Beam.UtilsTH
 
 data Ride = Ride
-  { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { amountCollectedInCash :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    amountSettledOnline :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
@@ -70,6 +72,7 @@ data Ride = Ride
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
     driverGpsTurnedOff :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    driverNetBeforeTds :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     enableFrequentLocationUpdates :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOtpLessRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     endOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
@@ -164,9 +167,9 @@ data ScheduledAcceptanceMode = AcceptedAsScheduled | AcceptedFromBroadcast | Ass
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
 $(mkHttpInstancesForEnum ''RideStatus)
 

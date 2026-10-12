@@ -58,6 +58,8 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
   let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
       ledgerCtx = RidePaymentFinance.applyBookingProviderFieldsToCtx booking $ RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
       cancellationTotal = cancellationBase + cancellationTax
+      isVat = RidePaymentFinance.isVatBooking booking
+      paymentChargeBorneByCustomer = RidePaymentFinance.customerBearsPaymentCharge booking ride
   (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking personD
   driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
   -- The gateway charges on this capture too, so the cancellation fee carries the
@@ -86,7 +88,7 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
   void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
   -- Step 2: Create pending cancellation ledger AFTER cancel so it isn't voided
   logDebug $ "[CancellationSettlement] Creating pending cancellation ledger for rideId=" <> ride.id.getId
-  ledgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax (cancellationChargeNet, cancellationChargeVat)
+  ledgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger isVat paymentChargeBorneByCustomer ledgerCtx cancellationBase cancellationTax (cancellationChargeNet, cancellationChargeVat)
   let mbCancelInvoiceId = case ledgerResp of
         Right (inv, _) -> inv
         _ -> Nothing
@@ -108,6 +110,9 @@ settleCancellationFeeViaStripe booking ride personD cancellationBase cancellatio
             rideVatAbsorbedOnDiscount = 0,
             cancellationCharge = cancellationBase,
             cancellationTax = cancellationTax,
+            isVat = isVat,
+            tipAmount = 0,
+            paymentChargeBorneByCustomer = paymentChargeBorneByCustomer,
             financeCtx = ledgerCtx
           }
   eitherMbIntent <-

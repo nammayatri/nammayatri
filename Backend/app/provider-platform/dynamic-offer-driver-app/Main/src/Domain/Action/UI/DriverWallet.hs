@@ -30,6 +30,7 @@ where
 import qualified API.Types.UI.DriverWallet as DriverWallet
 import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
@@ -74,11 +75,14 @@ import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutRequestExtra
+import qualified RideFinance.Core.Types as RF
+import qualified RideFinance.Display.Club as RFClub
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
 import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensurePayoutsEnabled, loadPayoutContext, runWalletPayout)
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.RideFinance as SRF
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
@@ -160,8 +164,12 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAgg
       dbHoldBalance <- getWalletHoldBalanceByOwner counterparty ownerId
       offerHoldBalance <- getWalletOfferHoldTotal ownerId
       let holdBalance = dbHoldBalance + offerHoldBalance
-          (additions, deductions, netEarningsBalance) =
-            aggregateWalletRows (isVatMerchant transporterConfig) accountIds cutoff rows
+          isVat = isVatMerchant transporterConfig
+          clubPolicy = SRF.walletSummaryClubPolicy transporterConfig
+          (separateAdditions, separateDeductions, netEarningsBalance) =
+            aggregateWalletRows isVat accountIds cutoff rows
+          additions = clubWalletItemGroup isVat clubPolicy separateAdditions
+          deductions = clubWalletItemGroup isVat clubPolicy separateDeductions
           -- PENDING ride holds are still inside the wallet balance; Redis offer holds are too.
           redeemableBalance = max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance)
           agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
@@ -307,6 +315,32 @@ aggregateWalletRows isVat accountIds cutoff entries =
         netEarnings
       )
 
+clubWalletItemGroup :: Bool -> RF.ClubPolicy -> DriverWallet.WalletItemGroup -> DriverWallet.WalletItemGroup
+clubWalletItemGroup isVat clubPolicy itemGroup =
+  DriverWallet.WalletItemGroup {totalAmount = itemGroup.totalAmount, items = RFClub.clubRows walletKeys walletRowOps clubPolicy itemGroup.items}
+  where
+    walletRowOps =
+      RFClub.RowOps
+        { rowKey = Just . (.itemReference),
+          rowGroup = const Nothing,
+          addAmounts = \anchor item ->
+            DriverWallet.WalletItem
+              { itemReference = anchor.itemReference,
+                itemName = anchor.itemName,
+                itemValue = anchor.itemValue + item.itemValue,
+                redeemableBalance = anchor.redeemableBalance + item.redeemableBalance,
+                nonRedeemableBalance = anchor.nonRedeemableBalance + item.nonRedeemableBalance
+              },
+          withKey = \reference item ->
+            DriverWallet.WalletItem
+              { itemReference = reference,
+                itemName = if reference == item.itemReference then item.itemName else referenceTypeToItemName isVat reference,
+                itemValue = item.itemValue,
+                redeemableBalance = item.redeemableBalance,
+                nonRedeemableBalance = item.nonRedeemableBalance
+              }
+        }
+
 -- | Group the already-fetched window rows into per-bucket aggregates without
 --   touching the database again. Sorts rows by timestamp once and walks
 --   buckets/rows together in O(R log R + R + B).
@@ -401,7 +435,9 @@ referenceTypeToItemName :: Bool -> Text -> Text
 referenceTypeToItemName isVat ref
   | ref == walletReferenceBaseRide = "Ride Earnings"
   | ref == walletReferenceTollCharges = "Toll Charges"
+  | ref == walletReferenceTollChargesVAT = "Toll Charges " <> taxLabel
   | ref == walletReferenceParkingCharges = "Parking Charges"
+  | ref == walletReferenceParkingChargesVAT = "Parking Charges " <> taxLabel
   | ref == walletReferenceTopup = "Wallet Top-up"
   | ref == walletReferenceGSTOnline = "GST (Online)"
   | ref == walletReferenceGSTCash = "GST (Cash)"
@@ -436,7 +472,7 @@ referenceTypeToItemName isVat ref
     taxLabel = if isVat then "VAT" else "GST"
 
 isVatMerchant :: DTConf.TransporterConfig -> Bool
-isVatMerchant transporterConfig = isJust transporterConfig.taxConfig.serviceVatPercentage
+isVatMerchant transporterConfig = transporterConfig.taxConfig.taxRegime == Just RF.VAT
 
 -- | Per-row item name. A gate DriverFeeItem is booked under one shared reference
 --   type but is configured per gate, so its own name is carried on the ledger entry

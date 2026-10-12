@@ -5,6 +5,7 @@ module Storage.Beam.Ride where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.RefundRequest
 import qualified Domain.Types.Ride
 import qualified Domain.Types.RideStatus
@@ -89,7 +90,7 @@ data RideT f = RideT
     onlinePayment :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     otp :: (B.C f Kernel.Prelude.Text),
     paymentCharge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    paymentChargeBearer :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    paymentChargeBearer :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Booking.ChargeBearer)),
     paymentStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.PaymentStatus)),
     pickupEtaLogicVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     pickupRouteCallCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),

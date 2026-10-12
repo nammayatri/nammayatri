@@ -591,3 +591,14 @@ ALTER TABLE atlas_app.booking ADD COLUMN booking_deposit_amount double precision
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN pickup_area text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN tax_regime text ;
+ALTER TABLE atlas_app.booking ADD COLUMN issued_by_vat_no text ;
+ALTER TABLE atlas_app.booking ADD COLUMN issued_by_gstin text ;
+
+
+------- SQL updates -------
+

@@ -752,6 +752,7 @@ library
       SharedLogic.Ride
       SharedLogic.RideEvents.DriverCoinsAndJourney
       SharedLogic.RideEvents.Publisher
+      SharedLogic.RideFinance
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
@@ -2301,6 +2302,7 @@ library
     , record-hasfield
     , regex-posix
     , resource-pool
+    , ride-finance
     , scheduler
     , scientific
     , sequelize

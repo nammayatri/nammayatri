@@ -156,6 +156,9 @@ Ride:
     paymentCharge: Maybe HighPrecMoney
     paymentChargeBearer: Maybe Text
     discountAmount: Maybe HighPrecMoney
+    driverNetBeforeTds: Maybe HighPrecMoney
+    amountCollectedInCash: Maybe HighPrecMoney
+    amountSettledOnline: Maybe HighPrecMoney
     driverGpsTurnedOff: Maybe Bool
     finalFarePolicyId: Maybe (Id FarePolicy)
     subscriptionPurchaseIds: Maybe [Id SubscriptionPurchase]

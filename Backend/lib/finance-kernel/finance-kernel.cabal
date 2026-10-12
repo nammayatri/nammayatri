@@ -42,6 +42,7 @@ library
       Lib.Finance.Invoice.PdfService
       Lib.Finance.Invoice.RenderTemplate
       Lib.Finance.Invoice.Service
+      Lib.Finance.Invoice.VatClubbing
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.PayoutSettlement
       Lib.Finance.Ledger.Service
@@ -213,6 +214,7 @@ library
     , process
     , record-dot-preprocessor
     , record-hasfield
+    , ride-finance
     , sequelize
     , servant-server
     , text

@@ -36,6 +36,7 @@ import Data.OpenApi hiding (name)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
+import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Booking
 import Domain.Types.BookingStatus
 import Domain.Types.Common
@@ -81,9 +82,11 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.LocationAddressEnrichment as LAE
 import SharedLogic.MerchantPaymentMethod
+import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.Quote
 import SharedLogic.Type
@@ -228,7 +231,8 @@ data DSelectRes = DSelectRes
     emailDomain :: Maybe Text,
     customerRating :: Maybe Centesimal,
     customerTotalRatings :: Int,
-    customerGender :: DPerson.Gender
+    customerGender :: DPerson.Gender,
+    offerDiscountAmount :: Maybe HighPrecMoney
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -353,6 +357,17 @@ select2 personId estimateId req@DSelectReq {..} mbJourneyLegData = do
   whenJust mbUpdatedJourneyData $ \(journey, journeyLeg) -> do
     QJourney.updateByPrimaryKey journey
     QJourneyLeg.updateByPrimaryKey journeyLeg
+  offerDiscountAmount <- case selectedOfferId of
+    Just offerId
+      | maybe False (.enableRideHailingOffers) riderConfig -> do
+        let fareCtx = RD.parseProjectFareParamsBreakup $ (\eb -> (eb.title, eb.price.value.amount)) <$> estimate.estimateBreakupList
+            offerBasePrice = mkPrice (Just estimate.estimatedFare.currency) (maybe estimate.estimatedFare.amount RD.discountApplicableBase fareCtx)
+        withTryCatch "select:offerDiscountAmount" (SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId personId merchantOperatingCityId DOrder.RideHailing (show estimate.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing Nothing (Just searchRequest)) >>= \case
+          Right mbOffer -> pure ((.discountAmount) . snd <$> mbOffer)
+          Left err -> do
+            logError $ "Offer discount lookup failed at select for estimate " <> estimateId.getId <> ", offer " <> offerId <> ": " <> show err
+            pure Nothing
+    _ -> pure Nothing
   let emailToUse = if billingCategory == Just BUSINESS then person.businessEmail else person.email
   decryptedEmail <- mapM decrypt emailToUse
   let emailDomain = T.strip . snd <$> (decryptedEmail >>= (\e -> if T.isInfixOf "@" e then Just (T.breakOn "@" e) else Nothing))

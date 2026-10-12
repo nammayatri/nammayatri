@@ -68,6 +68,7 @@ buildSelectReqV2 subscriber req = do
       customerExtraFeeFromBreakup = getCustomerSelectedFareFromBreakup order.orderQuote
       customerExtraFee = customerExtraFeeFromTag <|> customerExtraFeeFromBreakup
       negativeFareAdjustment = getNegativeFareAdjustmentV2 item.itemTags
+      offerDiscountAmount = Utils.getTagV2 Tag.OFFER_INFO Tag.DISCOUNT_AMOUNT item.itemTags >>= readMaybe . T.unpack
       autoAssignEnabled = getAutoAssignEnabledV2 item.itemTags
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
@@ -110,6 +111,7 @@ buildSelectReqV2 subscriber req = do
         negotiatedFare = Nothing,
         addOns = [],
         negativeFareAdjustment = negativeFareAdjustment,
+        discountAmount = offerDiscountAmount,
         estimateIds = [Id estimateIdText] <> maybe [] (map Id) bookAnyEstimates,
         customerPhoneNum = customerPhoneNum,
         customerName = customerName,

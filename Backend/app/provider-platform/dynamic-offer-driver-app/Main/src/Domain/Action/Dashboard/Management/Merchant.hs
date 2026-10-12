@@ -3289,7 +3289,10 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
         Nothing -> return Nothing
         Just text -> case A.eitherDecode (LBS.fromStrict $ TEnc.encodeUtf8 text) of
           Left err -> throwError $ InvalidRequest ("VAT Charge Config parsing failed :: " <> T.pack err)
-          Right config -> return (Just config)
+          Right config -> do
+            unless ("%" `T.isSuffixOf` T.strip config.value) $
+              throwError $ InvalidRequest "VAT Charge Config value must be a percentage, e.g. \"13.5%\""
+            return (Just config)
 
       let commissionChargeConfigText = cleanMaybeCSVField idx row.commissionChargeConfig "Commission Charge Config"
       commissionChargeConfig <- case commissionChargeConfigText of

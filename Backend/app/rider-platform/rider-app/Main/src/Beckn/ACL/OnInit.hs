@@ -47,7 +47,7 @@ buildOnInitReqV2 req = do
     let fareBreakups = mapMaybe ACL.mkDFareBreakup fareParamsQuotationBreakup
         commission = extractCommissionFromPaymentTags order.orderPayments
         paymentCharge = extractHighPrecTagFromPaymentTags Tags.PAYMENT_CHARGE order.orderPayments
-        paymentChargeBearer = extractTextTagFromPaymentTags Tags.PAYMENT_CHARGE_BEARER order.orderPayments
+        paymentChargeBearer = readMaybe . T.unpack =<< extractTextTagFromPaymentTags Tags.PAYMENT_CHARGE_BEARER order.orderPayments
     case parsedData of
       Left err -> throwError . InvalidBecknSchema $ "on_init req," <> "on_init error: " <> show err
       Right (bookingId, bppBookingId, estimatedFare, paymentId, currency) -> do

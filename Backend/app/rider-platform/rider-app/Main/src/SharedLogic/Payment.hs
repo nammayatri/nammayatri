@@ -60,6 +60,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
 import qualified Lib.Payment.Wallet.Types as WalletSummary
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified RideFinance.Core.Types as RFTypes
 import qualified SharedLogic.BookingDepositLedger as BookingDepositLedger
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -836,6 +837,9 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
     rideVatAbsorbedOnDiscount :: HighPrecMoney,
     cancellationCharge :: HighPrecMoney, -- cancellation fee without tax (0 for normal ride)
     cancellationTax :: HighPrecMoney, -- GST/VAT on cancellation fee (0 for normal ride)
+    isVat :: Bool,
+    tipAmount :: HighPrecMoney,
+    paymentChargeBorneByCustomer :: Bool,
     financeCtx :: FinanceCtx
   }
   deriving (Show, Generic)
@@ -861,9 +865,12 @@ mkRidePaymentLedgerInfo ::
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
   HighPrecMoney -> -- cancellationCharge (0 for normal ride)
   HighPrecMoney -> -- cancellationTax (0 for normal ride)
+  Bool ->
+  HighPrecMoney ->
+  Bool ->
   FinanceCtx ->
   RidePaymentLedgerInfo
-mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee paymentCharge paymentChargeVat offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax financeCtx =
+mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee paymentCharge paymentChargeVat offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax isVat tipAmount paymentChargeBorneByCustomer financeCtx =
   RidePaymentLedgerInfo
     { rideFare,
       gstAmount,
@@ -879,6 +886,9 @@ mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge 
       rideVatAbsorbedOnDiscount,
       cancellationCharge,
       cancellationTax,
+      isVat,
+      tipAmount,
+      paymentChargeBorneByCustomer,
       financeCtx
     }
 
@@ -897,10 +907,11 @@ buildLedgerInfoFromBreakups ::
   HighPrecMoney -> -- cashbackPayoutAmount (0 for DISCOUNT or no offer)
   HighPrecMoney -> -- applicationFeeAmount (platform commission + payment charge)
   HighPrecMoney -> -- paymentChargeAmount (the payment-charge share of appFee)
-  HighPrecMoney -> -- tipAmount (0 when tip is a separate PI add-on)
+  Bool ->
+  HighPrecMoney ->
   FinanceCtx ->
   m (Maybe RidePaymentLedgerInfo)
-buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOverride _tip ctx =
+buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOverride isVat tipAmount ctx =
   case RD.parseProjectFareParamsBreakup (breakupToPair <$> breakups) of
     Nothing -> pure Nothing
     Just b -> do
@@ -914,7 +925,7 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOve
               else (breakupPostDiscount.paymentChargeTaxExclusive, breakupPostDiscount.paymentChargeTax)
           info =
             mkRidePaymentLedgerInfo
-              (breakupPostDiscount.discountApplicableRideFareTaxExclusive + breakupPostDiscount.nonDiscountApplicableRideFareTaxExclusive - appFee)
+              (breakupPostDiscount.discountApplicableRideFareTaxExclusive + breakupPostDiscount.discountApplicableRideFareUntaxed + breakupPostDiscount.nonDiscountApplicableRideFareTaxExclusive + breakupPostDiscount.nonDiscountApplicableRideFareUntaxed - appFee)
               (breakupPostDiscount.discountApplicableRideFareTax + breakupPostDiscount.nonDiscountApplicableRideFareTax)
               breakupPostDiscount.tollFareTaxExclusive
               breakupPostDiscount.tollFareTax
@@ -926,11 +937,11 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee mbPaymentChargeOve
               r.clampedDiscount
               cashback
               r.rideVatAbsorbedOnDiscount
-              -- A cancelled ride's own fee arrives as a base+tax pair. A due carried into a LATER
-              -- ride's fare arrives gross in the tax-exclusive slot with cancellationTax = 0, since
-              -- the BPP tracks such dues as one running total.
               breakupPostDiscount.cancellationFeeTaxExclusive
               breakupPostDiscount.cancellationTax
+              isVat
+              tipAmount
+              (b.paymentChargeTaxExclusive + b.paymentChargeTax > 0)
               ctx
       pure (Just info)
   where
@@ -1052,7 +1063,7 @@ splitGrossPaymentCharge mbRate gross =
 --   rider pays only the amount and the driver funds the fee out of it; under
 --   PAYMENT_PLATFORM the platform absorbs it. So a tip or cancellation fee is
 --   not silently cheaper to process than a fare of the same size.
-levyPaymentChargeOn :: Maybe RD.PaymentChargeRate -> Maybe Text -> HighPrecMoney -> LeviedPaymentCharge
+levyPaymentChargeOn :: Maybe RD.PaymentChargeRate -> Maybe RFTypes.ChargeBearer -> HighPrecMoney -> LeviedPaymentCharge
 levyPaymentChargeOn mbRate mbBearer amount =
   case (mbRate, mbBearer) of
     (Just rate, Just bearer)
@@ -1062,18 +1073,18 @@ levyPaymentChargeOn mbRate mbBearer amount =
             vat = net * rate.vatPct / 100
             gross = net + vat
          in case bearer of
-              "PAYMENT_CUSTOMER" -> LeviedPaymentCharge net vat gross gross
-              "PAYMENT_DRIVER" -> LeviedPaymentCharge net vat 0 gross
-              _ -> none
+              RFTypes.PAYMENT_CUSTOMER -> LeviedPaymentCharge net vat gross gross
+              RFTypes.PAYMENT_DRIVER -> LeviedPaymentCharge net vat 0 gross
+              RFTypes.PAYMENT_PLATFORM -> none
     _ -> none
   where
     none = LeviedPaymentCharge 0 0 0 0
 
-paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe Text -> HighPrecMoney
+paymentChargeForAppFee :: Maybe HighPrecMoney -> Maybe RFTypes.ChargeBearer -> HighPrecMoney
 paymentChargeForAppFee mbCharge mbBearer =
   case mbBearer of
     Just bearer
-      | bearer `elem` ["PAYMENT_CUSTOMER", "PAYMENT_DRIVER"] -> fromMaybe 0 mbCharge
+      | bearer `elem` [RFTypes.PAYMENT_CUSTOMER, RFTypes.PAYMENT_DRIVER] -> fromMaybe 0 mbCharge
     _ -> 0
 
 makePaymentIntent ::
@@ -1178,6 +1189,9 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
       whenJust mbLedgerInfo $ \ledgerInfo ->
         void $
           RidePaymentFinance.upsertCoreRidePaymentLedger
+            ledgerInfo.isVat
+            ledgerInfo.paymentChargeBorneByCustomer
+            ledgerInfo.tipAmount
             ledgerInfo.financeCtx
             ledgerInfo.rideFare
             ledgerInfo.gstAmount
@@ -1590,6 +1604,9 @@ clearDuesForPerson person duesResp currency paymentMethodId = do
             0
             0
             0
+            (RidePaymentFinance.isVatBooking booking)
+            (maybe 0 (.amount) ride.tipAmount)
+            (RidePaymentFinance.customerBearsPaymentCharge booking ride)
             debtLedgerCtx
     -- Creating the intent can fail at the gateway (card, network, or a restricted counterparty
     -- account). That must surface as a FAILED response the app can render, not an unhandled
@@ -1794,6 +1811,9 @@ zeroEffectivePaymentDueToOffer merchantId merchantOperatingCityId rideId person 
   whenJust mbOfferId $ \offerId -> do
     result <-
       RidePaymentFinance.createFullyDiscountedRidePaymentLedger
+        li.isVat
+        li.paymentChargeBorneByCustomer
+        li.tipAmount
         li.financeCtx
         li.rideFare
         li.gstAmount

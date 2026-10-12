@@ -76,7 +76,10 @@ buildOnConfirmReqV2 req isValueAddNP = do
                 supplierAddress = BecknV2Utils.getTag Tag.SUPPLIER_ADDRESS orderTagGroups,
                 supplierGSTIN = BecknV2Utils.getTag Tag.SUPPLIER_GSTIN orderTagGroups,
                 supplierTaxNo = BecknV2Utils.getTag Tag.SUPPLIER_TAX_NO orderTagGroups,
-                supplierId = BecknV2Utils.getTag Tag.SUPPLIER_ID orderTagGroups
+                supplierId = BecknV2Utils.getTag Tag.SUPPLIER_ID orderTagGroups,
+                issuedByGSTIN = BecknV2Utils.getTag Tag.ISSUED_BY_GSTIN orderTagGroups,
+                issuedByVatNo = BecknV2Utils.getTag Tag.ISSUED_BY_VAT_NO orderTagGroups,
+                taxRegime = readMaybe . T.unpack =<< BecknV2Utils.getTag Tag.TAX_REGIME orderTagGroups
               }
 
       let isDriverDetailsPresent = fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & isJust

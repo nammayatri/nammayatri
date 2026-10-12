@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.BehaviourManagement.CancellationRate as CR
 import qualified SharedLogic.DriverOnboarding as SD
+import qualified SharedLogic.RideFinance as SRF
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as BQ
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -105,8 +106,8 @@ getDriverProfileSummary (driverId, _, mocId) fleetInfo = do
         driverSelectedFare <- B.runInReplica $ FPQ.findDriverSelectedFareEarnings farePramIds
         customerExtraFee <- B.runInReplica $ FPQ.findCustomerExtraFees farePramIds
         deadKmFare <- B.runInReplica $ FPPDQ.findDeadKmFareEarnings farePramIds
+        let totalEarnings = SRF.sumDriverNetBeforeTds completedRides
         let bonusEarnings = driverSelectedFare + customerExtraFee + deadKmFare
-            totalEarnings = sum $ map (fromMaybe 0 . (.fare)) completedRides
         incrementTotalEarningsAndBonusEarnedAndLateNightTrip (cast person.id) totalEarnings bonusEarnings lateNightTripsCount
         setMissedEarnings (cast person.id) missedEarnings
         QDriverStats.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)

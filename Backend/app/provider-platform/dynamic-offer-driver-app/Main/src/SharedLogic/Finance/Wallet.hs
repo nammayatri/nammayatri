@@ -84,10 +84,15 @@
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Finance.Wallet
-  ( walletReferenceBaseRide,
+  ( walletKeys,
+    PostingRefs (..),
+    rideEndPosting,
+    walletReferenceBaseRide,
     walletReferenceGSTOnline,
     walletReferenceTollCharges,
+    walletReferenceTollChargesVAT,
     walletReferenceParkingCharges,
+    walletReferenceParkingChargesVAT,
     walletReferenceTDSDeductionOnline,
     walletReferenceGSTCash,
     walletReferenceTDSDeductionCash,
@@ -130,6 +135,8 @@ module SharedLogic.Finance.Wallet
     todayRangeUTC,
     financeCtxFromRide,
     buildFinanceCtx,
+    customerInvoiceCtx,
+    customerPaymentMode,
     resolveIsOnlineFromBooking,
     walletReferenceCommissionOnline,
     walletReferenceCommissionCash,
@@ -235,6 +242,8 @@ import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Finance.TempBalanceHold (addOfferHoldAtKey, getOfferHoldTotalAtKey, removeOfferHoldAtKey)
+import qualified RideFinance.Core.Types as RF
+import RideFinance.Display.Club (Keys (..))
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.Finance.PostActions (runFinance, runPostActionsForAccount)
 import SharedLogic.Finance.WalletAccount (cashWalletCheckEnabled, computeTdsRateReason, estimateBufferedStatutoryDeductions, estimateOfferDeductions, estimateWalletDeductions, getControlAccountByOwner, getControlBalanceByOwner, getPrepaidOfferHoldTotalExcluding, getWalletAccountByOwner, getWalletAndControlAccountsByOwner, getWalletAvailableBalanceByOwner, getWalletBalanceByOwner, getWalletHoldBalanceByOwner, getWalletOfferHoldTotalExcluding, hasMinWalletBalance, makePrepaidOfferHoldsKey, makeWalletOfferHoldsKey, shouldCheckCashWallet, validateWalletDebitAmount, walletReferenceStatutoryHold)
@@ -256,8 +265,14 @@ walletReferenceGSTOnline = "GSTOnline"
 walletReferenceTollCharges :: Text
 walletReferenceTollCharges = "TollCharges"
 
+walletReferenceTollChargesVAT :: Text
+walletReferenceTollChargesVAT = "TollChargesVAT"
+
 walletReferenceParkingCharges :: Text
 walletReferenceParkingCharges = "ParkingCharges"
+
+walletReferenceParkingChargesVAT :: Text
+walletReferenceParkingChargesVAT = "ParkingChargesVAT"
 
 walletReferenceTDSDeductionOnline :: Text
 walletReferenceTDSDeductionOnline = "TDSDeductionOnline"
@@ -456,7 +471,9 @@ walletCreditRefs =
     walletReferenceGSTOnline,
     walletReferenceGSTCash,
     walletReferenceTollCharges,
+    walletReferenceTollChargesVAT,
     walletReferenceParkingCharges,
+    walletReferenceParkingChargesVAT,
     walletReferenceTDSDeductionOnline,
     walletReferenceTDSDeductionCash,
     walletReferenceTDSDeductionCancellation,
@@ -634,6 +651,48 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
         buyerCounterpartyId = Just (normaliseBuyerCounterpartyId booking.bapId)
       }
+
+walletKeys :: RF.FareComponent -> Keys Text
+walletKeys = \case
+  RF.RIDE_FARE -> Keys {taxExclusiveKeys = [walletReferenceBaseRide], taxKeys = [walletReferenceVATOnline, walletReferenceVATCash, walletReferenceGSTOnline, walletReferenceGSTCash], clubbedKey = Just walletReferenceBaseRide}
+  RF.TOLL_FARE -> Keys {taxExclusiveKeys = [walletReferenceTollCharges], taxKeys = [walletReferenceTollChargesVAT], clubbedKey = Just walletReferenceTollCharges}
+  RF.PARKING_CHARGE -> Keys {taxExclusiveKeys = [walletReferenceParkingCharges], taxKeys = [walletReferenceParkingChargesVAT], clubbedKey = Just walletReferenceParkingCharges}
+  RF.CANCELLATION_FARE -> Keys {taxExclusiveKeys = [walletReferenceCustomerCancellationCharges, walletReferenceOverdueCancellationCharge, walletReferenceCancellationOverdueBenefit], taxKeys = [walletReferenceCustomerCancellationGST, walletReferenceOverdueCancellationTax, walletReferenceCancellationOverdueBenefitTax], clubbedKey = Just walletReferenceCustomerCancellationCharges}
+  RF.PAYMENT_CHARGE -> Keys {taxExclusiveKeys = [walletReferencePGPaymentCharges, walletReferencePaymentChargePaidByCustomer], taxKeys = [walletReferencePGPaymentChargesVAT, walletReferencePaymentChargeVatPaidByCustomer], clubbedKey = Just walletReferencePGPaymentCharges}
+  RF.COMMISSION -> Keys {taxExclusiveKeys = [walletReferenceCommissionOnline, walletReferenceCommissionCash], taxKeys = [walletReferenceCommissionVATOnline, walletReferenceCommissionVATCash], clubbedKey = Just walletReferenceCommissionOnline}
+  RF.CANCELLATION_COMMISSION -> Keys {taxExclusiveKeys = [walletReferenceCancellationCommission], taxKeys = [walletReferenceCancellationCommissionVAT], clubbedKey = Just walletReferenceCancellationCommission}
+  RF.AIRPORT_ENTRY_FEE -> Keys {taxExclusiveKeys = [walletReferenceAirportEntryFee], taxKeys = [walletReferenceAirportEntryFeeGST], clubbedKey = Just walletReferenceAirportEntryFee}
+
+data PostingRefs = PostingRefs
+  { exclusiveRef :: Text,
+    onlineTaxRef :: Text,
+    cashTaxRef :: Text
+  }
+  deriving (Show, Eq, Generic)
+
+rideEndPosting :: RF.FareComponent -> Maybe PostingRefs
+rideEndPosting = \case
+  RF.RIDE_FARE -> Just baseRidePosting
+  RF.CANCELLATION_FARE -> Just baseRidePosting
+  RF.TOLL_FARE -> Just PostingRefs {exclusiveRef = walletReferenceTollCharges, onlineTaxRef = walletReferenceTollChargesVAT, cashTaxRef = walletReferenceTollChargesVAT}
+  RF.PARKING_CHARGE -> Just PostingRefs {exclusiveRef = walletReferenceParkingCharges, onlineTaxRef = walletReferenceParkingChargesVAT, cashTaxRef = walletReferenceParkingChargesVAT}
+  _ -> Nothing
+  where
+    baseRidePosting = PostingRefs {exclusiveRef = walletReferenceBaseRide, onlineTaxRef = walletReferenceVATOnline, cashTaxRef = walletReferenceVATCash}
+
+customerInvoiceCtx :: DRide.Ride -> FinanceCtx -> FinanceCtx
+customerInvoiceCtx ride ctx
+  | isJust ride.fleetOwnerId = ctx
+  | otherwise =
+    ctx{supplierName = ctx.merchantName,
+        supplierAddress = ctx.issuedByAddress,
+        supplierGSTIN = ctx.merchantGstin,
+        supplierVatNumber = ctx.merchantVatNumber,
+        supplierId = Just ctx.merchantId
+       }
+
+customerPaymentMode :: SRB.Booking -> Text
+customerPaymentMode booking = if booking.paymentInstrument == Just DMPM.Cash then "CASH" else "ONLINE"
 
 normaliseBuyerCounterpartyId :: Text -> Text
 normaliseBuyerCounterpartyId raw =

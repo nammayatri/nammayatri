@@ -125,6 +125,8 @@ buildDriversExhaustedMarker searchReq searchTry batchNumber = do
         customerCancellationDues = 0,
         baseFare = Nothing,
         commissionCharges = Nothing,
+        netBaseFare = Nothing,
+        taxRemitted = Nothing,
         driverMinExtraFee = Nothing,
         driverMaxExtraFee = Nothing,
         driverStepFee = Nothing,
@@ -270,7 +272,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
               let mbDriverExtraFeeBounds = ((,) <$> searchReq.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> quote.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
                   driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
                   driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
-              SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False quote.fareParams.congestionCharge searchTry.petCharges quote.fareParams.priorityCharges Nothing quote.fareParams.tollCharges quote.fareParams.govtCharges quote.fareParams.driverCancellationNotAllowed quote.fareParams.bufferedFare
+              SST.buildTripQuoteDetail searchReq quote.tripCategory quote.vehicleServiceTier quote.vehicleServiceTierName (quote.estimatedFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False quote.fareParams.congestionCharge searchTry.petCharges quote.fareParams.priorityCharges Nothing quote.fareParams.tollCharges quote.fareParams.govtCharges quote.fareParams.driverCancellationNotAllowed quote.fareParams.bufferedFare (Just quote.fareParams)
 
       tripQuoteDetails <-
         case tripQuoteDetailsWithoutUpgrades of
@@ -296,6 +298,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
                 tripQuoteDetails,
                 customerExtraFee = searchTry.customerExtraFee,
                 negativeFareAdjustment = searchTry.negativeFareAdjustment,
+                discountAmount = searchTry.discountAmount,
                 messageId = searchTry.messageId,
                 isRepeatSearch = False,
                 isAllocatorBatch = True,
@@ -339,7 +342,7 @@ processSendSearchRequestJob jobId jobData = withLogTag ("JobId-" <> jobId) $ do
           driverAdditionalCharges = filterChargesByApplicability (fromMaybe [] $ (.conditionalCharges) <$> estimate.farePolicy) searchReq
           businessDiscount = if searchTry.billingCategory == SLT.BUSINESS then fromMaybe 0.0 estimate.businessDiscount else 0.0
           personalDiscount = if searchTry.billingCategory == SLT.PERSONAL then fromMaybe 0.0 estimate.personalDiscount else 0.0
-      SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges estimate.eligibleForUpgrade ((.congestionCharge) =<< estimate.fareParams) searchTry.petCharges (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed)) (estimate.fareParams >>= (.bufferedFare))
+      SST.buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 searchTry.customerExtraFee + fromMaybe 0 searchTry.petCharges - businessDiscount - personalDiscount) Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges estimate.eligibleForUpgrade ((.congestionCharge) =<< estimate.fareParams) searchTry.petCharges (estimate.fareParams >>= (.priorityCharges)) estimate.commissionCharges (estimate.fareParams >>= (.tollCharges)) (estimate.fareParams >>= (.govtCharges)) (estimate.fareParams >>= (.driverCancellationNotAllowed)) (estimate.fareParams >>= (.bufferedFare)) estimate.fareParams
     filterChargesByApplicability conditionalCharges sReq = do
       let safetyCharges = if sReq.preferSafetyPlus then find (\ac -> (ac.chargeCategory) == DAC.SAFETY_PLUS_CHARGES) conditionalCharges else Nothing
           nyregularCharges = if fromMaybe False sReq.isReserveRide then find (\ac -> (ac.chargeCategory) == DAC.NYREGULAR_SUBSCRIPTION_CHARGE) conditionalCharges else Nothing

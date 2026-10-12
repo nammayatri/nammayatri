@@ -115,6 +115,8 @@ SearchRequestForDriver:
     conditionalCharges: "[ConditionalChargesCategories]"
     coinsRewardedOnGoldTierRide: Maybe Int
     commissionCharges: Maybe HighPrecMoney
+    netBaseFare: Maybe HighPrecMoney
+    taxRemitted: Maybe HighPrecMoney
     driverCancellationNotAllowed: Maybe Bool
     isAutoAccepted: Maybe Bool
     # True when the driver held a live "AvailableForRides" tag at the moment this

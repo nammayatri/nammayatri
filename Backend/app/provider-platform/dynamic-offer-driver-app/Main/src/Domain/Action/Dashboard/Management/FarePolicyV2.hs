@@ -1105,6 +1105,9 @@ data PolicyCtx
 
 fromApiPolicy :: PolicyCtx -> Maybe (Id DCFP.CancellationFarePolicy) -> UTCTime -> Common.FPV2Policy -> Flow FarePolicyD.FarePolicy
 fromApiPolicy ctx mbCancellationId now p = do
+  whenJust p.vatChargeConfig $ \config ->
+    unless ("%" `T.isSuffixOf` T.strip config.value) $
+      throwError $ InvalidRequest "vatChargeConfig value must be a percentage, e.g. \"13.5%\""
   let (policyId, currency, distanceUnit, mbMerchantId, mbMocId, createdAt, mbCapConfig) = case ctx of
         ExistingPolicyCtx i c d m moc created cap -> (i, c, d, m, moc, created, cap)
         NewPolicyCtx i c d m moc -> (i, c, d, Just m, Just moc, now, Nothing)

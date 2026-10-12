@@ -51,7 +51,7 @@ getOfferDiscount ::
 getOfferDiscount _token bppBookingId req = do
   booking <- B.runInReplica $ QBooking.findByBPPBookingId (Id bppBookingId) >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId)
   let mbOfferBase = case req.projectFareParamsBreakup of
-        Just b -> Just (b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax)
+        Just b -> Just (RD.discountApplicableBase b)
         Nothing -> req.fareAmount
   case (booking.selectedOfferId, mbOfferBase) of
     (Just offerId, Just offerBase) -> do

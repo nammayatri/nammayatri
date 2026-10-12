@@ -55,6 +55,8 @@ populateTipAmount rideId tipAmount apiKey = ActorInfo.withRequestIdActorInfo $ d
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
+  when (ride.status == COMPLETED) $
+    throwError $ RideInvalidStatus "Cannot add a tip after the ride is completed"
 
   -- ride was read before the overwrite below, so this is the tip the rider had set previously.
   -- The rider can edit or remove the tip while the ride runs, so this endpoint is called more

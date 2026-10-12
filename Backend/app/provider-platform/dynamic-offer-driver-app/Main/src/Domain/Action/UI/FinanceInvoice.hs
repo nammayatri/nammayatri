@@ -10,6 +10,7 @@ import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (head, listToMaybe)
@@ -19,12 +20,14 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
+import qualified Lib.Finance.Invoice.VatClubbing as FVC
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import Lib.Finance.Utils.GstBreakdown (mkComponentRateFromTxn)
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified SharedLogic.Finance.InvoiceDocument as InvoiceDocument
+import qualified SharedLogic.RideFinance as SRF
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -44,7 +47,8 @@ getSubscriptionInvoices ::
   Maybe Int ->
   Maybe UTCTime ->
   Flow API.FinanceInvoiceListRes
-getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset mbTo = do
+getSubscriptionInvoices (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset mbTo = do
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   _driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
@@ -77,7 +81,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
   -- Hide Voided/Cancelled (incl. 0-amount AggregatedCommission markers).
   let invoices = filter (\i -> i.status `notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
-  items <- mapM buildInvoiceItem invoices
+  items <- mapM (buildInvoiceItem mbTransporterConfig) invoices
 
   pure $
     API.FinanceInvoiceListRes
@@ -85,8 +89,8 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
         totalItems = length items
       }
   where
-    buildInvoiceItem :: FinanceInvoice.Invoice -> Flow API.FinanceInvoiceItem
-    buildInvoiceItem invoice = do
+    buildInvoiceItem :: Maybe DTC.TransporterConfig -> FinanceInvoice.Invoice -> Flow API.FinanceInvoiceItem
+    buildInvoiceItem mbListTransporterConfig invoice = do
       indirectTaxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just invoice.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe indirectTaxTxns
 
@@ -132,7 +136,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             merchantGstin = invoice.merchantGstin,
             gstinOfParty = mbTaxTxn >>= (.gstinOfParty),
             sacCode = mbTaxTxn >>= (.sacCode),
-            lineItems = Just invoice.lineItems,
+            lineItems = Just (FVC.clubInvoiceLineItemsValue (SRF.invoiceClubPolicy mbListTransporterConfig (show invoice.issuedToType) (show invoice.invoiceType)) invoice.lineItems),
             totalCredit = mbTotalCredit,
             taxRate = mbTaxTxn >>= (.taxRate),
             issuedToTaxNo = mbTaxTxn >>= (.issuedToTaxNo),

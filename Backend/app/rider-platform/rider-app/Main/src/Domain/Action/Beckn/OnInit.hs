@@ -32,6 +32,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified RideFinance.Core.Types as RFTypes
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.BookingDeposit as BookingDeposit
@@ -58,7 +59,7 @@ data OnInitReq = OnInitReq
     fareBreakups :: [DCommon.DFareBreakup],
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text
+    paymentChargeBearer :: Maybe RFTypes.ChargeBearer
   }
   deriving (Show, Generic)
 

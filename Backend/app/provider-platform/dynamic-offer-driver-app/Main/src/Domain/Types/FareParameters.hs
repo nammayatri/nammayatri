@@ -73,16 +73,10 @@ data FareParameters = FareParameters
     shouldApplyBusinessDiscount :: Bool,
     shouldApplyPersonalDiscount :: Bool,
     driverCancellationNotAllowed :: Maybe Bool,
-    -- | Payment processing fee (blended or method-specific)
-    -- TODO: Will be enhanced when payment context is available
-    paymentProcessingFee :: Maybe HighPrecMoney,
-    -- | VAT on the payment charge. 'Nothing' on rows priced before the split,
-    --   where 'paymentProcessingFee' still holds the VAT-inclusive blend.
-    paymentProcessingFeeVat :: Maybe HighPrecMoney,
     isVatTaxType :: Maybe Bool,
     -- | Canonical fare-breakup partition, populated by
     --   'SharedLogic.FareCalculator.calculateFareParameters'. Sum of
-    --   the 10, plus the payment charge and its VAT above, equals the fare sum. Ride is split by whether the
+    --   the 10, plus the payment charge and its VAT below, equals the fare sum. Ride is split by whether the
     --   customer offer discount applies; toll and cancellation are
     --   separate buckets. Each slot is 'Maybe' so pure GST mode
     --   (no V2 classification) can leave them 'Nothing'.
@@ -90,12 +84,24 @@ data FareParameters = FareParameters
     discountApplicableRideFareTax :: Maybe HighPrecMoney,
     nonDiscountApplicableRideFareTaxExclusive :: Maybe HighPrecMoney,
     nonDiscountApplicableRideFareTax :: Maybe HighPrecMoney,
+    discountApplicableRideFareUntaxed :: Maybe HighPrecMoney,
+    nonDiscountApplicableRideFareUntaxed :: Maybe HighPrecMoney,
     tollFareTaxExclusive :: Maybe HighPrecMoney,
     tollFareTax :: Maybe HighPrecMoney,
     cancellationFeeTaxExclusive :: Maybe HighPrecMoney,
     cancellationTax :: Maybe HighPrecMoney,
     parkingChargeTaxExclusive :: Maybe HighPrecMoney,
     parkingChargeTax :: Maybe HighPrecMoney,
+    -- | Payment processing fee (blended or method-specific)
+    -- TODO: Will be enhanced when payment context is available
+    paymentProcessingFee :: Maybe HighPrecMoney,
+    paymentProcessingFeeVat :: Maybe HighPrecMoney,
+    commissionTaxExclusive :: Maybe HighPrecMoney,
+    commissionTax :: Maybe HighPrecMoney,
+    cancellationCommissionTaxExclusive :: Maybe HighPrecMoney,
+    cancellationCommissionTax :: Maybe HighPrecMoney,
+    driverPaymentChargeTaxExclusive :: Maybe HighPrecMoney,
+    driverPaymentChargeTax :: Maybe HighPrecMoney,
     fareSettlementType :: Maybe SL.FareSettlementType,
     -- | The BAP-negotiated fare's delta from the estimated fare at
     -- /select (ONDC v2.1.0 Pre-Order Bid, ONDC scheduled-ride pilot only) -- kept as its

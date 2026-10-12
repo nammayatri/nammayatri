@@ -118,6 +118,7 @@ dependencies:
   - stm
   - unix
   - record-hasfield
+  - ride-finance
   - record-dot-preprocessor
   - openapi3
   - fast-logger

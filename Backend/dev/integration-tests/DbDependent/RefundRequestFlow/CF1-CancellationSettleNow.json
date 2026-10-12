@@ -1437,7 +1437,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"invoice_config\": \"{\\\"logoUrl\\\":null,\\\"emitLedgerEntries\\\":true,\\\"driverInvoiceLineItemsVatInclusive\\\":false,\\\"commissionAggregationEnabled\\\":true}\"}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{helsinki_moc_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"invoice_config\": \"{\\\"logoUrl\\\":null,\\\"emitLedgerEntries\\\":true,\\\"commissionAggregationEnabled\\\":true}\"}, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{helsinki_moc_id}}\", \"op\": \"=\"}]}"
         },
         "description": "Also (re)sets invoice_config.commissionAggregationEnabled=true (whole-JSON overwrite of the existing config; jsonb decode is all-or-nothing so every key must be present) - required or the AggregatedCommission job Terminates."
       },

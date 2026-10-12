@@ -89,10 +89,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             paymentChargeBearer = Nothing,
             paymentChargeRate = Nothing,
             paymentChargeVat = Nothing,
-            clubProjectFareInRideInvoice = Nothing,
-            clubProjectFareInRefundsInvoice = Nothing,
-            clubProjectFareInEarnings = Nothing,
-            clubProjectFareInPayouts = Nothing,
+            clubTaxInEarnings = Nothing,
+            clubTaxInWalletSummary = Nothing,
             connectAccountCharge = Nothing,
             connectAccountChargeFrequency = Nothing,
             connectAccountChargeBearer = Nothing,
@@ -119,8 +117,8 @@ parseTaxConfig merchantOperatingCityId mbVal = do
             individualLinked = Nothing,
             individualNotLinked = Nothing,
             businessTds = Nothing,
-            serviceVatPercentage = Nothing,
-            commissionVatPercentage = Nothing
+            commissionVatPercentage = Nothing,
+            taxRegime = Nothing
           }
   -- Legacy flat-number TDS fields are tolerated by TdsConfig's hand-written
   -- FromJSON (Domain.Types.Extra.TransporterConfig), so no post-parse backfill

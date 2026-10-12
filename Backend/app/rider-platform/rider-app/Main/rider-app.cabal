@@ -1963,6 +1963,7 @@ library
     , regex-compat
     , regex-posix
     , resource-pool
+    , ride-finance
     , scheduler
     , scientific
     , sequelize

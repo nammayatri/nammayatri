@@ -51,6 +51,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as YudhishthiraBeamFlow
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
+import qualified SharedLogic.RideFinance as SRF
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -141,7 +142,8 @@ renderInvoicePdfBase64 inv = do
               categoryOfServices = mbTransporterConfig >>= (.invoiceConfig) >>= (.categoryOfServices),
               signatureImageUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.signatureImageUrl) <&> showBaseUrl,
               cityState = mbTransporterConfig >>= (.invoiceConfig) >>= (.cityState),
-              qrImageDataUri = mbQrDataUri
+              qrImageDataUri = mbQrDataUri,
+              vatClubbedComponents = SRF.invoiceClubPolicy mbTransporterConfig (show inv.issuedToType) (show inv.invoiceType)
             }
       mbInvType = case inv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission

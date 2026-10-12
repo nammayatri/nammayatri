@@ -58,6 +58,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified RideFinance.Core.Types as RFTypes
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.DisplayBookingId as DBI
 import SharedLogic.JobScheduler
@@ -108,7 +109,7 @@ data OneShotConfirmDetails = OneShotConfirmDetails
   { bppBookingId :: Id DRB.BPPBooking,
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text
+    paymentChargeBearer :: Maybe RFTypes.ChargeBearer
   }
 
 data DConfirmRes = DConfirmRes
@@ -223,7 +224,7 @@ confirm DConfirmReq {..} = do
       Just offerId -> do
         let fareCtx = RD.parseProjectFareParamsBreakup $ (\qb -> (qb.title, qb.price.amount)) <$> quote.quoteBreakupList
             offerBaseAmount = case fareCtx of
-              Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+              Just b -> RD.discountApplicableBase b
               Nothing -> booking0.estimatedTotalFare.amount
             offerBasePrice = mkPrice (Just booking0.estimatedTotalFare.currency) offerBaseAmount
         mbOfferDetails <- SOffer.getSelectedOfferDetailsWithBasket searchRequest.merchantId person.id merchantOperatingCityId DOrder.RideHailing (show quote.vehicleServiceTierType) offerBasePrice offerId fareCtx Nothing (Just booking0) (Just searchRequest)
@@ -585,6 +586,9 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           supplierGSTIN = Nothing,
           supplierTaxNo = Nothing,
           supplierId = Nothing,
+          issuedByGSTIN = Nothing,
+          issuedByVatNo = Nothing,
+          taxRegime = Nothing,
           ..
         },
       bookingParties

@@ -239,6 +239,7 @@ mkDummyNotificationEntityData mbMerchantId mbMerchantOpCityId now driverVehicle 
           coinsRewardedOnGoldTierRide = Nothing,
           cancellationCharges = Nothing,
           commissionCharges = Nothing,
+          taxRemittedWithCurrency = Nothing,
           isPaymentOnline = Nothing,
           driverCancellationNotAllowed = Nothing,
           ..

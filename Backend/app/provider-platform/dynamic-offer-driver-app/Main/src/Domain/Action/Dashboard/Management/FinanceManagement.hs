@@ -46,6 +46,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Types (Language (ENGLISH))
@@ -77,6 +78,7 @@ import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import qualified Lib.Finance.Domain.Types.SapJournalEntry as SJE
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
+import qualified Lib.Finance.Invoice.VatClubbing as FVC
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Reconciliation.Job as ReconJob
 import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
@@ -115,6 +117,7 @@ import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
+import qualified SharedLogic.RideFinance as SRF
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -536,6 +539,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
       offset = mkPageOffset mbOffset
 
   invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
+  mbListTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
 
   -- Default (no status filter): hide Voided/Cancelled. Caller can request
   -- explicitly via ?status=Voided / ?status=Cancelled.
@@ -543,7 +547,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
         Just _ -> invoicesAll
         Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
-  items <- mapM buildInvoiceItem invoices
+  items <- mapM (buildInvoiceItem mbListTransporterConfig) invoices
 
   let totalItems = length items
       summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
@@ -555,8 +559,8 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
         invoices = items
       }
   where
-    buildInvoiceItem :: FinanceInvoice.Invoice -> Flow API.InvoiceListItem
-    buildInvoiceItem invoice = do
+    buildInvoiceItem :: Maybe DTC.TransporterConfig -> FinanceInvoice.Invoice -> Flow API.InvoiceListItem
+    buildInvoiceItem mbListTransporterConfig invoice = do
       -- Get GST details from indirect tax transaction
       indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
 
@@ -646,7 +650,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             sacCode = sacCode,
             paymentMethod = mbPaymentMethod,
             taxableValueOfServiceSupplied = Just invoice.subtotal,
-            lineItems = invoice.lineItems,
+            lineItems = FVC.clubInvoiceLineItemsValue (SRF.invoiceClubPolicy mbListTransporterConfig (show invoice.issuedToType) (show invoice.invoiceType)) invoice.lineItems,
             generatedAt = invoice.createdAt,
             taxRate = mbTaxRate,
             issuedToTaxNo = mbIssuedToTaxNo,
@@ -1873,7 +1877,8 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
               categoryOfServices = transporterConfig.invoiceConfig >>= (.categoryOfServices),
               signatureImageUrl = transporterConfig.invoiceConfig >>= (.signatureImageUrl) <&> showBaseUrl,
               cityState = transporterConfig.invoiceConfig >>= (.cityState),
-              qrImageDataUri = mbQrDataUri
+              qrImageDataUri = mbQrDataUri,
+              vatClubbedComponents = SRF.invoiceClubPolicy (Just transporterConfig) (show chosenInv.issuedToType) (show chosenInv.invoiceType)
             }
       mbInvType = case chosenInv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission

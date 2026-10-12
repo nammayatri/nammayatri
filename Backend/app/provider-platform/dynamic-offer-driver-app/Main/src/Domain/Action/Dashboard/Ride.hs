@@ -35,6 +35,7 @@ import qualified "this" API.Types.ProviderPlatform.Management.Ride as MGMT
 import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Common as DCommon
@@ -79,6 +80,9 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
+import qualified RideFinance.Calculations.Totals as RFT
+import qualified RideFinance.Core.Types as RF
+import qualified RideFinance.Display.Present as RFPresent
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -86,6 +90,7 @@ import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified SharedLogic.RideFinance as SRF
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.BppTransactionJoin as BppT
@@ -1026,16 +1031,17 @@ fareBreakUp merchantShortId opCity reqRideId = do
   actualFareBreakUp <- case ride.fareParametersId of
     Just fareParamsId -> runInReplica $ SQFP.findById fareParamsId
     Nothing -> pure Nothing
+  mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   return
     Common.FareBreakUpRes
-      { estimatedFareBreakUp = Just $ buildFareBreakUp booking.discountAmount booking.fareParams,
+      { estimatedFareBreakUp = Just $ buildFareBreakUp (SRF.earningsPolicy mbTransporterConfig False) (SRF.estimatedRideFinance booking) booking.discountAmount booking.fareParams,
         actualFareBreakUp = case actualFareBreakUp of
-          Just fareParams -> Just $ buildFareBreakUp ride.discountAmount fareParams
+          Just fareParams -> Just $ buildFareBreakUp (SRF.earningsPolicy mbTransporterConfig True) (SRF.finalRideFinance booking ride fareParams) ride.discountAmount fareParams
           Nothing -> Nothing
       }
 
-buildFareBreakUp :: Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
-buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
+buildFareBreakUp :: RF.ClubPolicy -> RF.RideFinance -> Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
+buildFareBreakUp earningsClubPolicy finance mbDiscount fp@DFP.FareParameters {..} = do
   let mbProjectedBreakup = FC.projectFareParamsBreakup fp
       discountAmount = fromMaybe 0 mbDiscount
       mbApplied = mbProjectedBreakup <&> \b -> RD.applyRideDiscount b discountAmount
@@ -1066,8 +1072,26 @@ buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
       tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
       discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
       discountTaxWithCurrency = flip PriceAPIEntity currency <$> postDiscountTax,
+      taxRegime = Just (show finance.regime),
+      customerFareLines = Just (map toFareComponentLine (RFPresent.presentCustomer RFPresent.defaultKeys Set.empty finance)),
+      driverEarningLines = Just (map toFareComponentLine (RFPresent.presentEarnings SRF.earningsLayout earningsClubPolicy finance)),
+      customerFareTotalWithCurrency = Just (PriceAPIEntity (RFT.customerFareTotal finance) currency),
+      customerPayableWithCurrency = Just (PriceAPIEntity (RFT.customerPayable finance) currency),
+      driverNetBeforeTdsWithCurrency = Just (PriceAPIEntity (RFT.driverNetBeforeTds finance) currency),
+      tdsWithCurrency = flip PriceAPIEntity currency <$> finance.tds,
+      amountCollectedInCashWithCurrency = flip PriceAPIEntity currency <$> (RFT.cashOnlineSplit finance).collectInCash,
+      amountSettledOnlineWithCurrency = flip PriceAPIEntity currency <$> (RFT.cashOnlineSplit finance).settledOnline,
       ..
     }
+  where
+    toFareComponentLine line =
+      Common.FareComponentLine
+        { code = line.code,
+          kind = maybe "Adjustment" show line.part,
+          component = show <$> line.component,
+          role = show line.role,
+          amountWithCurrency = PriceAPIEntity line.amount currency
+        }
 
 buildFareParametersDetails :: DFP.FareParametersDetails -> Common.FareParametersDetails
 buildFareParametersDetails = makeFareParam

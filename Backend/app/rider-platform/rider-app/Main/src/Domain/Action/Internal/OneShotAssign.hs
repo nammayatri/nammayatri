@@ -35,6 +35,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified RideFinance.Core.Types as RFTypes
 import qualified SharedLogic.Confirm as SConfirm
 import SharedLogic.Type (BillingCategory)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -59,7 +60,7 @@ data OneShotAssignReq = OneShotAssignReq
     estimatedFare :: HighPrecMoney,
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text,
+    paymentChargeBearer :: Maybe RFTypes.ChargeBearer,
     fareBreakups :: [OneShotFareBreakupItem],
     quoteValidTill :: UTCTime,
     otp :: Text,

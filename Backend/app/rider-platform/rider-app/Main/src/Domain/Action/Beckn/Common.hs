@@ -101,6 +101,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified RideFinance.Core.Types as RFTypes
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
@@ -284,7 +285,7 @@ data RideCompletedReq = RideCompletedReq
     isValidRide :: Maybe Bool,
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text
+    paymentChargeBearer :: Maybe RFTypes.ChargeBearer
   }
 
 data ValidatedRideCompletedReq = ValidatedRideCompletedReq
@@ -306,7 +307,7 @@ data ValidatedRideCompletedReq = ValidatedRideCompletedReq
     isValidRide :: Maybe Bool,
     commission :: Maybe HighPrecMoney,
     paymentCharge :: Maybe HighPrecMoney,
-    paymentChargeBearer :: Maybe Text
+    paymentChargeBearer :: Maybe RFTypes.ChargeBearer
   }
 
 data ValidatedFarePaidReq = ValidatedFarePaidReq
@@ -518,7 +519,10 @@ rideAssignedReqHandler req = do
             DRB.supplierAddress = bppInfo.supplierAddress <|> req.booking.supplierAddress,
             DRB.supplierGSTIN = bppInfo.supplierGSTIN <|> req.booking.supplierGSTIN,
             DRB.supplierTaxNo = bppInfo.supplierTaxNo <|> req.booking.supplierTaxNo,
-            DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId
+            DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId,
+            DRB.issuedByGSTIN = bppInfo.issuedByGSTIN <|> req.booking.issuedByGSTIN,
+            DRB.issuedByVatNo = bppInfo.issuedByVatNo <|> req.booking.issuedByVatNo,
+            DRB.taxRegime = bppInfo.taxRegime <|> req.booking.taxRegime
           }
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
@@ -654,7 +658,7 @@ rideAssignedReqHandler req = do
                       supplierAddress = assignedInvCfg >>= (.supplierAddress),
                       supplierVatNumber = assignedInvCfg >>= (.supplierVatNumber)
                     }
-          mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
+          mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount (RidePaymentFinance.isVatBooking booking) (maybe 0 (.amount) ride.tipAmount) ledgerCtx
           -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
           -- the two halves, so reverse the rate the ride was priced at.
           let (bookingChargeNet, bookingChargeVat) =
@@ -676,6 +680,9 @@ rideAssignedReqHandler req = do
                       rideVatAbsorbedOnDiscount = 0,
                       cancellationCharge = 0,
                       cancellationTax = 0,
+                      isVat = RidePaymentFinance.isVatBooking booking,
+                      tipAmount = maybe 0 (.amount) ride.tipAmount,
+                      paymentChargeBorneByCustomer = RidePaymentFinance.customerBearsPaymentCharge booking ride,
                       financeCtx = ledgerCtx
                     }
                   mbLedgerInfo
@@ -711,7 +718,7 @@ rideAssignedReqHandler req = do
           -- swallowed inline (logged, assignment proceeds), so forking loses nothing.
           deferPostAssignmentWork "assign:cashRideLedger" $ do
             estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
-            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount 0 ledgerCtx
+            mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount bookingPaymentChargeAmount (RidePaymentFinance.isVatBooking booking) (maybe 0 (.amount) ride.tipAmount) ledgerCtx
             -- booking.paymentCharge is stored VAT-inclusive; the fallback record needs
             -- the two halves, so reverse the rate the ride was priced at.
             let (bookingChargeNet, bookingChargeVat) =
@@ -733,10 +740,13 @@ rideAssignedReqHandler req = do
                         rideVatAbsorbedOnDiscount = 0,
                         cancellationCharge = 0,
                         cancellationTax = 0,
+                        isVat = RidePaymentFinance.isVatBooking booking,
+                        tipAmount = maybe 0 (.amount) ride.tipAmount,
+                        paymentChargeBorneByCustomer = RidePaymentFinance.customerBearsPaymentCharge booking ride,
                         financeCtx = ledgerCtx
                       }
                     mbLedgerInfo
-            result <- RidePaymentFinance.createRidePaymentLedger ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
+            result <- RidePaymentFinance.createRidePaymentLedger ledgerInfo.isVat ledgerInfo.paymentChargeBorneByCustomer ledgerInfo.tipAmount ledgerCtx ledgerInfo.rideFare ledgerInfo.gstAmount ledgerInfo.tollFare ledgerInfo.tollVatAmount ledgerInfo.parkingCharge ledgerInfo.parkingChargeVat ledgerInfo.platformFee ledgerInfo.offerDiscountAmount ledgerInfo.cashbackPayoutAmount ledgerInfo.rideVatAbsorbedOnDiscount (ledgerInfo.paymentCharge, ledgerInfo.paymentChargeVat)
             case result of
               Right _ -> logInfo $ "Cash ride assigned: created PENDING BAP ledger + invoice for ride: " <> ride.id.getId
               Left err -> logError $ "Cash ride ledger create failed at assign: " <> show err
@@ -1020,7 +1030,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- the ten-tag summary.
   let fareCtx = RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> breakups
       discountApplicableFareAmountTaxIncl = case fareCtx of
-        Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+        Just b -> RD.discountApplicableBase b
         Nothing -> totalFare.amount
       offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
   -- A tip added while the ride was running is not part of the fare (it never enters the BPP's
@@ -1109,7 +1119,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   supplierAddress = mbInvCfg >>= (.supplierAddress),
                   supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
                 }
-      mbCashLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ridePaymentChargeAmount 0 cashLedgerCtx
+      mbCashLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ridePaymentChargeAmount (RidePaymentFinance.isVatBooking booking) (maybe 0 (.amount) ride.tipAmount) cashLedgerCtx
       let cashLedgerInfo =
             fromMaybe
               SPayment.RidePaymentLedgerInfo
@@ -1127,11 +1137,17 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   rideVatAbsorbedOnDiscount = 0,
                   cancellationCharge = 0,
                   cancellationTax = 0,
+                  isVat = RidePaymentFinance.isVatBooking booking,
+                  tipAmount = maybe 0 (.amount) ride.tipAmount,
+                  paymentChargeBorneByCustomer = RidePaymentFinance.customerBearsPaymentCharge booking ride,
                   financeCtx = cashLedgerCtx
                 }
               mbCashLedgerInfo
       upsertRes <-
         RidePaymentFinance.upsertCoreRidePaymentLedger
+          cashLedgerInfo.isVat
+          cashLedgerInfo.paymentChargeBorneByCustomer
+          cashLedgerInfo.tipAmount
           cashLedgerCtx
           cashLedgerInfo.rideFare
           cashLedgerInfo.gstAmount
@@ -1168,7 +1184,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
                   supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
                 }
-      mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ridePaymentChargeAmount 0 ledgerCtx
+      mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' ridePaymentChargeAmount (RidePaymentFinance.isVatBooking booking) (maybe 0 (.amount) ride.tipAmount) ledgerCtx
       let ledgerInfo =
             fromMaybe
               SPayment.RidePaymentLedgerInfo
@@ -1186,6 +1202,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   rideVatAbsorbedOnDiscount = 0,
                   cancellationCharge = 0,
                   cancellationTax = 0,
+                  isVat = RidePaymentFinance.isVatBooking booking,
+                  tipAmount = maybe 0 (.amount) ride.tipAmount,
+                  paymentChargeBorneByCustomer = RidePaymentFinance.customerBearsPaymentCharge booking ride,
                   financeCtx = ledgerCtx
                 }
               mbLedgerInfo
@@ -1575,6 +1594,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
               cancellationBaseFull = fee.amount
               cancellationBase = max 0 (cancellationBaseFull - depositApplied)
               cancellationTax = max 0 (cancellationTaxFull - max 0 (depositApplied - cancellationBaseFull))
+              cancellationIsVat = RidePaymentFinance.isVatBooking booking
+              cancellationPaymentChargeBorneByCustomer = RidePaymentFinance.customerBearsPaymentCharge booking ride
           if cancellationBase + cancellationTax <= 0
             then do
               logInfo $ "[CancellationSettlement] cancellation charge fully covered by booking deposit for rideId=" <> ride.id.getId
@@ -1594,7 +1615,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                     -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
                     void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
                     -- Create pending cancellation entries then mark as DUE for later collection
-                    cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax (0, 0)
+                    cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger cancellationIsVat cancellationPaymentChargeBorneByCustomer ledgerCtx cancellationBase cancellationTax (0, 0)
                     case cashLedgerResp of
                       Right (_mbInvoiceId, pendingEntryIds) ->
                         RidePaymentFinance.markEntriesAsDue pendingEntryIds
@@ -1607,7 +1628,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                   if ride.onlinePayment
                     then void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
                     else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
-                  dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax (0, 0)
+                  dueLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger cancellationIsVat cancellationPaymentChargeBorneByCustomer ledgerCtx cancellationBase cancellationTax (0, 0)
                   case dueLedgerResp of
                     Right (_mbInvoiceId, pendingEntryIds) ->
                       RidePaymentFinance.markEntriesAsDue pendingEntryIds

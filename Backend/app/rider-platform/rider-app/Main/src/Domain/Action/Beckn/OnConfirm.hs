@@ -48,6 +48,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import Lib.SessionizerMetrics.Types.Event
+import qualified RideFinance.Core.Types as RFTypes
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -77,7 +78,10 @@ data BPPInvoiceProviderInfo = BPPInvoiceProviderInfo
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    issuedByGSTIN :: Maybe Text,
+    issuedByVatNo :: Maybe Text,
+    taxRegime :: Maybe RFTypes.TaxRegime
   }
 
 bppInvoiceProviderInfoToFields :: BPPInvoiceProviderInfo -> QRBE.BPPInvoiceProviderFields
@@ -90,7 +94,10 @@ bppInvoiceProviderInfoToFields info =
       supplierAddress = info.supplierAddress,
       supplierGSTIN = info.supplierGSTIN,
       supplierTaxNo = info.supplierTaxNo,
-      supplierId = info.supplierId
+      supplierId = info.supplierId,
+      issuedByGSTIN = info.issuedByGSTIN,
+      issuedByVatNo = info.issuedByVatNo,
+      taxRegime = info.taxRegime
     }
 
 data BookingConfirmedInfo = BookingConfirmedInfo

@@ -19,7 +19,9 @@ import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data RideT f = RideT
-  { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { amountCollectedInCash :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    amountSettledOnline :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
     bookingId :: B.C f Kernel.Prelude.Text,
@@ -61,6 +63,7 @@ data RideT f = RideT
     driverGoHomeRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverGpsTurnedOff :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     driverId :: B.C f Kernel.Prelude.Text,
+    driverNetBeforeTds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     enableFrequentLocationUpdates :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOtpLessRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     endOdometerReadingFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -152,4 +155,4 @@ type Ride = RideT Identity
 
 $(enableKVPG ''RideT ['id] [['bookingId], ['driverGoHomeRequestId], ['driverId], ['fleetOwnerId], ['shortId]])
 
-$(mkTableInstances ''RideT "ride")
+$(mkTableInstances (''RideT) "ride")

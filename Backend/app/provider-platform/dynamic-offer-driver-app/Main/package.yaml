@@ -191,6 +191,7 @@ library:
     - mobility-core
     - haskell-cac
     - beckn-spec
+    - ride-finance
     - location-updates
     - special-zone-a
     - payment

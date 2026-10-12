@@ -254,7 +254,8 @@ parseRideCompletedEvent order msgId txnId = do
       paymentChargeBearer = do
         payment <- order.orderPayments >>= listToMaybe
         tags <- payment.paymentTags
-        Utils.getTag Tag.PAYMENT_CHARGE_BEARER (Just tags)
+        txt <- Utils.getTag Tag.PAYMENT_CHARGE_BEARER (Just tags)
+        readMaybe (T.unpack txt)
   pure $
     Common.RideCompletedReq
       { bookingDetails,

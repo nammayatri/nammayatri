@@ -1,6 +1,7 @@
 module Domain.Action.UI.FinanceInvoice (getFinanceInvoicePdf, renderFinanceInvoicePdf) where
 
 import qualified API.Types.UI.FinanceInvoice as API
+import qualified Data.Set as Set
 import qualified Data.Time as DT
 import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DM
@@ -148,7 +149,8 @@ renderFinanceInvoicePdf merchantOperatingCityId lang invoices = do
               categoryOfServices = Nothing,
               signatureImageUrl = Nothing,
               cityState = Nothing,
-              qrImageDataUri = Nothing
+              qrImageDataUri = Nothing,
+              vatClubbedComponents = Set.empty
             }
       mbInvType = case chosenInv.invoiceType of
         AggregatedCommission -> Just AggregatedCommission

@@ -25,6 +25,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified RideFinance.Core.Types as RFTypes
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -171,7 +172,10 @@ data BPPInvoiceProviderFields = BPPInvoiceProviderFields
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    issuedByGSTIN :: Maybe Text,
+    issuedByVatNo :: Maybe Text,
+    taxRegime :: Maybe RFTypes.TaxRegime
   }
 
 updateBPPBookingIdAndProviderUrl ::
@@ -196,6 +200,9 @@ updateBPPBookingIdAndProviderUrl rbId bppRbId mbProviderUrl BPPInvoiceProviderFi
         <> maybe [] (\v -> [Se.Set BeamB.supplierGSTIN (Just v)]) supplierGSTIN
         <> maybe [] (\v -> [Se.Set BeamB.supplierTaxNo (Just v)]) supplierTaxNo
         <> maybe [] (\v -> [Se.Set BeamB.supplierId (Just v)]) supplierId
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByGSTIN (Just v)]) issuedByGSTIN
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByVatNo (Just v)]) issuedByVatNo
+        <> maybe [] (\v -> [Se.Set BeamB.taxRegime (Just v)]) taxRegime
     )
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 

@@ -613,6 +613,9 @@ data BecknTag
   | SUPPLIER_GSTIN -- BPP_INVOICE_INFO: supplier GSTIN
   | SUPPLIER_TAX_NO -- BPP_INVOICE_INFO: supplier VAT/tax registration number
   | SUPPLIER_ID -- BPP_INVOICE_INFO: supplier (fleet owner / merchant) id
+  | ISSUED_BY_GSTIN -- BPP_INVOICE_INFO: BPP merchant GSTIN
+  | ISSUED_BY_VAT_NO -- BPP_INVOICE_INFO: BPP merchant VAT number
+  | TAX_REGIME -- BPP_INVOICE_INFO: tax regime of the ride fare (VAT / GST)
   | -- Change service tier tags
     NEW_VEHICLE_SERVICE_TIER -- CHANGE_SERVICE_TIER_DETAILS: target tier type
   | -- Tier upgrade tags (within-family, post-assignment upgrade signal at on_update / ride_assigned)
@@ -968,6 +971,9 @@ instance CompleteTag BecknTag where
     SUPPLIER_GSTIN -> BPP_INVOICE_INFO
     SUPPLIER_TAX_NO -> BPP_INVOICE_INFO
     SUPPLIER_ID -> BPP_INVOICE_INFO
+    ISSUED_BY_GSTIN -> BPP_INVOICE_INFO
+    ISSUED_BY_VAT_NO -> BPP_INVOICE_INFO
+    TAX_REGIME -> BPP_INVOICE_INFO
 
 convertToSentence :: Show a => a -> Text
 convertToSentence = T.pack . toSentence . show

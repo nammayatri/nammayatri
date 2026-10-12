@@ -763,7 +763,7 @@ postRidePayoutOfferSync merchantShortId _ _mbRequestorId req = withDynamicLogLev
               breakups <- QFareBreakup.findAllByEntityIdAndEntityType ride.id.getId DFareBreakup.RIDE
               let fareCtx = RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> breakups
                   discountApplicableFareAmountTaxIncl = case fareCtx of
-                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Just b -> RD.discountApplicableBase b
                     Nothing -> totalFare.amount
                   offerBasePrice = mkPrice (Just totalFare.currency) discountApplicableFareAmountTaxIncl
               offerStatsInput <- SPayment.buildOfferStatsInput person

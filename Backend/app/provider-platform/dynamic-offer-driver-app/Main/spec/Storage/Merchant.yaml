@@ -1,4 +1,7 @@
 imports:
+  FareComponent: RideFinance.Core.Types
+  TaxRegime: RideFinance.Core.Types
+  VatClubRule: RideFinance.Display.Config
   City: Kernel.Types.Beckn.Context
   IndianState: Kernel.Types.Beckn.Context
   Country: Kernel.Types.Beckn.Context
@@ -1058,11 +1061,6 @@ TransporterConfig:
       enum: "PERCENTAGE, FIXED"
     PaymentChargeBearer:
       enum: "PAYMENT_CUSTOMER, PAYMENT_DRIVER, PAYMENT_PLATFORM"
-    # The components of the ten-slot fare partition, plus the payment charge, that
-    # a surface may club together rather than itemise. Listing a component means
-    # "show it as one row"; omitting it means "show its parts separately".
-    ProjectFareParamsComponent:
-      enum: "RIDE_FARE, TOLL_FARE, CANCELLATION_FARE, PARKING_CHARGE, PAYMENT_CHARGE"
     PayoutChargeBearer:
       enum: "DRIVER_BEARER, PLATFORM_BEARER"
     ConnectChargeBearer:
@@ -1098,10 +1096,8 @@ TransporterConfig:
       paymentChargeBearer: Maybe PaymentChargeBearer
       paymentChargeRate: Maybe Double
       paymentChargeVat: Maybe Double
-      clubProjectFareInRideInvoice: Maybe [ProjectFareParamsComponent]
-      clubProjectFareInRefundsInvoice: Maybe [ProjectFareParamsComponent]
-      clubProjectFareInEarnings: Maybe [ProjectFareParamsComponent]
-      clubProjectFareInPayouts: Maybe [ProjectFareParamsComponent]
+      clubTaxInEarnings: Maybe [FareComponent]
+      clubTaxInWalletSummary: Maybe [FareComponent]
       connectAccountCharge: Maybe HighPrecMoney
       connectAccountChargeFrequency: Maybe ChargeFrequency
       connectAccountChargeBearer: Maybe ConnectChargeBearer
@@ -1130,15 +1126,13 @@ TransporterConfig:
       individualLinked: Maybe TdsConfig
       individualNotLinked: Maybe TdsConfig
       businessTds: Maybe TdsConfig
-      serviceVatPercentage: Maybe Double
       commissionVatPercentage: Maybe Double
+      taxRegime: Maybe TaxRegime
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
       enum: "DAILY, WEEKLY, MONTHLY"
     InvoiceConfig:
-      driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
-      showVatInputLineItem: Maybe Bool
       logoUrl: Maybe BaseUrl
       commissionAggregationEnabled: Maybe Bool
       commissionAggregationFrequency: Maybe CommissionAggregationFrequency
@@ -1160,6 +1154,7 @@ TransporterConfig:
       cityState: Maybe Text # City, State line shown in the invoice footer (place of issue)
       enableDriverInvoice: Maybe Bool # Nothing/True = also emit the standalone driver/FO copy of the ride invoice (default); False = skip it (e.g. MSIL — the compliant invoice is rider-facing, driver is the supplier not a recipient)
       enableB2CUnsignedQR: Maybe Bool # Nothing/False = no self-generated B2C QR (default); True = persist + render it on customer invoices. Keep off until payee UPI/bank details are sourced — the QR is not payable without them
+      vatClubRules: Maybe [VatClubRule]
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

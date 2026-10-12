@@ -33,6 +33,7 @@ import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
+import qualified Lib.Finance.Invoice.VatClubbing as FVC
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import SharedLogic.Finance.PostActions (runFinance)
@@ -118,7 +119,7 @@ refundLedger rideId req apiKey = do
             postLegs ctx Settled legs req.refundRequestId
         -- the fleet/driver-visible refund invoice + (if driver-deducted) the negative Commission invoice, once per refund
         unless alreadyDone $ do
-          createRefundInvoice ctx booking req.refundRequestId (fromMaybe [] req.refundComponents)
+          createRefundInvoice (Wallet.customerInvoiceCtx ride ctx) booking req.refundRequestId (fromMaybe [] req.refundComponents)
           when deductFromDriver $ createCommissionRefundInvoice ctx req ride booking transporterConfig cancellationCommissionGross
       FAILED ->
         -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
@@ -255,11 +256,15 @@ createRefundInvoice ::
 createRefundInvoice ctx booking refundsRequestId comps = do
   let referenceId = ctx.referenceId -- booking.id
       lineItems = concatMap mkRefundInvoiceLineItems comps
-      anyVat = any (\c -> c.vatAmount > 0) comps
+      isVat = fromMaybe False booking.fareParams.isVatTaxType
   -- Parent = the ride's CUSTOMER invoice (keyed by bookingId); Nothing if none found.
+  let findParentInvoice invoiceType =
+        listToMaybe
+          <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just invoiceType) (Just CUSTOMER) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
   mbParentRideInvoice <-
-    listToMaybe
-      <$> QFinanceInvoiceExtra.findByReferenceIdWithOptions referenceId (Just BeckInvoice.Ride) (Just CUSTOMER) [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid] (Just 1) (Just 0)
+    findParentInvoice BeckInvoice.Ride >>= \case
+      Just inv -> pure (Just inv)
+      Nothing -> findParentInvoice BeckInvoice.RideCancellation
   createRes <-
     InvoiceSvc.createInvoice
       InvoiceI.InvoiceInput
@@ -275,9 +280,9 @@ createRefundInvoice ctx booking refundsRequestId comps = do
           issuedByName = ctx.merchantName,
           issuedByAddress = ctx.issuedByAddress,
           supplierName = ctx.supplierName,
-          supplierAddress = ctx.issuedByAddress,
+          supplierAddress = ctx.supplierAddress,
           supplierGSTIN = ctx.supplierGSTIN,
-          supplierTaxNo = Nothing,
+          supplierTaxNo = if isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
           supplierId = ctx.supplierId,
           merchantGstin = ctx.merchantGstin,
           referenceId = Just referenceId,
@@ -296,10 +301,10 @@ createRefundInvoice ctx booking refundsRequestId comps = do
           merchantId = ctx.merchantId,
           merchantOperatingCityId = ctx.merchantOpCityId,
           merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
-          isVat = anyVat,
+          isVat = isVat,
           issuedToTaxNo = Nothing,
           issuedByTaxNo = Nothing,
-          paymentMode = Nothing
+          paymentMode = (mbParentRideInvoice >>= (.paymentMode)) <|> Just (Wallet.customerPaymentMode booking)
         }
       []
   case createRes of
@@ -314,10 +319,9 @@ createRefundInvoice ctx booking refundsRequestId comps = do
 mkRefundInvoiceLineItems :: RefundLedgerComponent -> [InvoiceI.InvoiceLineItem]
 mkRefundInvoiceLineItems c =
   let (fareDesc, fareType, taxDesc, taxType, gId) = refundInvoiceLineMeta c.component
-      isExt = case c.component of RIDE_FARE -> False; CANCELLATION_FEE -> False; _ -> True
       mkNeg desc dtype amt typ =
         if amt > 0
-          then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = isExt, groupId = Just gId, itemType = Just typ}
+          then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = FVC.isExternalLine dtype, groupId = Just gId, itemType = Just typ}
           else Nothing
    in catMaybes [mkNeg fareDesc fareType c.fareAmount InvoiceI.Fare, mkNeg taxDesc taxType c.vatAmount InvoiceI.Tax]
 
@@ -349,7 +353,7 @@ createCommissionRefundInvoice ctx req ride booking transporterConfig cancellatio
         issuedToId' = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
         mkNegLine gId desc dtype amt typ =
           if amt > 0
-            then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False, groupId = Just gId, itemType = Just typ}
+            then Just InvoiceI.InvoiceLineItem {description = desc, descriptionType = Just dtype, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = FVC.isExternalLine dtype, groupId = Just gId, itemType = Just typ}
             else Nothing
         commissionRefundLines =
           catMaybes

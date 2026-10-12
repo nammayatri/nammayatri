@@ -93,6 +93,7 @@ import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
+import qualified SharedLogic.RideFinance as SRF
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.Subscription.BillingModel (isExemptFromPostpaidDuesFlag)
 import qualified SharedLogic.Type as SLT
@@ -280,7 +281,7 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
     let holdOwnerId = fromMaybe dPoolRes.driverPoolResult.driverId.getId dPoolRes.driverPoolResult.fleetOwnerId
     addOfferHoldsForSearchTry transporterConfig isPrepaidEnabled holdOwnerId searchTry.id.getId searchTry.paymentInstrument searchTry.baseFare tripQuoteDetail.govtCharges tripQuoteDetail.tollCharges tripQuoteDetail.driverParkingCharge tripQuoteDetail.bufferedFare validTill
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
-    let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges (Just transporterConfig.driverWalletConfig)
+    let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges tripQuoteDetail.tollCharges
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
     let otherMerchantIds = [Just (Id "840327a8-f17c-4d7c-8199-a583cfaadc5f"), Just (Id "7e6a2982-f8b5-4c67-b8af-bf41f1b4a2c9"), Just (Id "8c91f173-a0e3-4c5b-b3a1-2a58d00f29b2")] :: [Maybe (Id DM.Merchant)] -- Array Contents are : [Dev/Master , UAT , Prod]
@@ -423,6 +424,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
       farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId))) searchReq.configInExperimentVersions searchReq.specialLocationName
       getBaseFare searchTry searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
     _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
+  let quoteNet = tripQuoteDetail.fareParams <&> \fp -> SRF.quoteDriverNet currency searchTry.paymentInstrument searchTry.discountAmount fp (baseFare - tripQuoteDetail.baseFare - sum (map (.charge) fp.conditionalCharges))
   deploymentVersion <- asks (.version)
   isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
   let searchRequestForDriver =
@@ -511,6 +513,8 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             isSafetyPlus = Just isEligibleForSafetyPlusCharge,
             coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
             commissionCharges = tripQuoteDetail.commissionCharges,
+            netBaseFare = fst <$> quoteNet,
+            taxRemitted = snd <$> quoteNet,
             driverCancellationNotAllowed = tripQuoteDetail.driverCancellationNotAllowed,
             isAutoAccepted = Just isAutoAccepted,
             hasAvailableForRidesTag = Just $ AvailableForRides.hasAvailableForRidesTag dpRes.driverTags,

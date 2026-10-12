@@ -28,6 +28,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FareParameters as DFareParams
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
@@ -475,7 +476,8 @@ data TripQuoteDetail = TripQuoteDetail
     eligibleForUpgrade :: Bool,
     commissionCharges :: Maybe HighPrecMoney,
     driverCancellationNotAllowed :: Maybe Bool,
-    bufferedFare :: Maybe HighPrecMoney
+    bufferedFare :: Maybe HighPrecMoney,
+    fareParams :: Maybe DFareParams.FareParameters
   }
 
 data DriverSearchBatchInput m = DriverSearchBatchInput
@@ -485,6 +487,7 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     tripQuoteDetails :: [TripQuoteDetail],
     customerExtraFee :: Maybe HighPrecMoney,
     negativeFareAdjustment :: Maybe HighPrecMoney,
+    discountAmount :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool,
     isAllocatorBatch :: Bool,

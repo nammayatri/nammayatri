@@ -245,8 +245,8 @@ WHERE id = '<merchant_id>';
 -- Enable driver wallet + invoice config
 UPDATE atlas_driver_offer_bpp.transporter_config
 SET driver_wallet_config = '{"enableDriverWallet":true,"enableWalletPayout":true,"enableWalletTopup":false,"driverWalletPayoutThreshold":0,"forceOnlineLedger":true,"gstPercentage":0,"minimumWalletPayoutAmount":0,"payoutCutOffDays":0,"maxWalletPayoutsPerDay":null,"minWalletAmountForCashRides":null,"payoutFee":null}',
-    -- true = single "Cancellation Fee (Incl. VAT)" line; false = separate "Fee" + "GST" lines
-    invoice_config = '{"driverInvoiceLineItemsVatInclusive":true,"emitLedgerEntries":true}'
+    -- vatClubRules: CANCELLATION_FARE listed = single VAT-inclusive line; omitted = separate "Fee" + "GST" lines
+    invoice_config = '{"vatClubRules":[{"issuedToType":"CUSTOMER","invoiceType":"RideCancellation","components":["CANCELLATION_FARE"]}],"emitLedgerEntries":true}'
 WHERE merchant_operating_city_id = '<city_id>';
 ```
 
@@ -294,10 +294,10 @@ Follow `0034-cancellation-fee-consolidated.sql` as the template. The pieces:
 
 ### BPP Invoice Line Items
 
-With `driverInvoiceLineItemsVatInclusive = true`:
-- "Cancellation Fee (Incl. VAT)" = fee + tax combined
+With a `vatClubRules` entry listing `CANCELLATION_FARE` for the invoice:
+- One line with descriptionType `CancellationFeeInclVat` = fee + tax combined
 
-With `driverInvoiceLineItemsVatInclusive = false`:
+Without one (default):
 - "Customer Cancellation Fee" = base fee
 - "GST on Cancellation Fee" = tax
 

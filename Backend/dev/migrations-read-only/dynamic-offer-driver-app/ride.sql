@@ -348,3 +348,10 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN recompute_reason text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancelled_by text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_reason_code text ;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_additional_info text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_net_before_tds double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN amount_settled_online double precision ;
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN amount_collected_in_cash double precision ;

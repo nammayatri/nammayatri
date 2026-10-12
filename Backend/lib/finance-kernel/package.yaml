@@ -123,3 +123,4 @@ library:
     - base64-bytestring
     - unix
     - beckn-spec
+    - ride-finance

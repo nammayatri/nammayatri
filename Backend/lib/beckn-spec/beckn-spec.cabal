@@ -347,6 +347,7 @@ library
     , relude
     , resource-pool
     , resourcet
+    , ride-finance
     , safe-exceptions
     , safe-money
     , scientific
@@ -388,6 +389,7 @@ test-suite beckn-spec-test
   main-is: Main.hs
   other-modules:
       BecknV2.OnDemand.EnumsSpec
+      BecknV2.OnDemand.ProjectedTagsSpec
       BecknV2.OnDemand.TagsSpec
       BecknV2.OnDemand.TypesSpec
       BecknV2.UtilsSpec
@@ -483,6 +485,7 @@ test-suite beckn-spec-test
     , relude
     , resource-pool
     , resourcet
+    , ride-finance
     , safe-exceptions
     , safe-money
     , scientific

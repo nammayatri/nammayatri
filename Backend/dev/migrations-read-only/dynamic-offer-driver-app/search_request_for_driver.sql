@@ -274,3 +274,15 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN auto_ass
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN driver_net_fare double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN tax_remitted double precision ;
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN net_base_fare double precision ;

@@ -6,6 +6,7 @@ module Domain.Types.Ride where
 import Data.Aeson
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Client
+import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -86,7 +87,7 @@ data RideE e = Ride
     onlinePayment :: Kernel.Prelude.Bool,
     otp :: Kernel.Prelude.Text,
     paymentCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    paymentChargeBearer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentChargeBearer :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.ChargeBearer,
     paymentStatus :: Domain.Types.Ride.PaymentStatus,
     pickupEtaLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupRouteCallCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

@@ -19,6 +19,8 @@ imports:
   Quote: Domain.Types.Quote
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   PaymentStatus: Domain.Types.Extra.Booking
+  TaxRegime: Domain.Types.Extra.Booking
+  ChargeBearer: Domain.Types.Extra.Booking
   BaseUrl: Kernel.Types.Common
   FareProductType: Domain.Types.FarePolicy.FareProductType
   TripCategory: Domain.Types.Common
@@ -268,7 +270,7 @@ Booking:
     multimodalSearchRequestId: Maybe Text
     commission: Maybe HighPrecMoney
     paymentCharge: Maybe HighPrecMoney
-    paymentChargeBearer: Maybe Text
+    paymentChargeBearer: Maybe ChargeBearer
     paymentMode: Maybe PaymentMode
     dashboardAgentId: Maybe Text
     displayBookingId: Maybe Text
@@ -283,6 +285,9 @@ Booking:
     supplierGSTIN: Maybe Text
     supplierTaxNo: Maybe Text
     supplierId: Maybe Text
+    issuedByGSTIN: Maybe Text
+    issuedByVatNo: Maybe Text
+    taxRegime: Maybe TaxRegime
 
   beamFields:
     estimatedDistance:

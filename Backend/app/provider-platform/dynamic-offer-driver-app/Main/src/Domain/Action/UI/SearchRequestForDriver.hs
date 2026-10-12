@@ -29,14 +29,12 @@ import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.Price ()
-import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.Type
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity
@@ -120,6 +118,7 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     coinsRewardedOnGoldTierRide :: Maybe Int,
     safetyPlusCharges :: Maybe HighPrecMoney,
     commissionCharges :: Maybe HighPrecMoney,
+    taxRemittedWithCurrency :: Maybe PriceAPIEntity,
     isPaymentOnline :: Maybe Bool,
     driverCancellationNotAllowed :: Maybe Bool,
     isScheduled :: Bool,
@@ -130,8 +129,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
 
 $(deriveJSON defaultOptions {omitNothingFields = True} ''SearchRequestForDriverAPIEntity)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe DTConf.DriverWalletConfig -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges mbDriverWalletConfig = do
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Maybe HighPrecMoney -> Seconds -> DVST.ServiceTierType -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration mbDriverDefaultExtraForSpecialLocation keepHiddenForSeconds requestedVehicleServiceTier isTranslated isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharge safetyCharges congestionCharges petCharges priorityCharges tollCharges = do
   let isTollApplicable = DTC.isTollApplicableForTrip requestedVehicleServiceTier searchTry.tripCategory
       specialZoneExtraTip = (\a -> if a == 0 then Nothing else Just a) =<< min nearbyReq.driverMaxExtraFee mbDriverDefaultExtraForSpecialLocation
       driverDefaultStepFee = specialZoneExtraTip <|> nearbyReq.driverDefaultStepFee
@@ -140,8 +139,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       cCharges = roundToIntegral <$> congestionCharges
       pCharges = roundToIntegral <$> priorityCharges
       rawBaseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare
-      paymentChargeDeduction = FC.paymentChargeFromFareTotal mbDriverWalletConfig rawBaseFare
-      netBaseFare = rawBaseFare - fromMaybe 0 nearbyReq.commissionCharges - paymentChargeDeduction
+      driverNetBaseFare = fromMaybe (rawBaseFare - fromMaybe 0 nearbyReq.commissionCharges) nearbyReq.netBaseFare
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
@@ -155,8 +153,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           distanceToPickup = nearbyReq.actualDistanceToPickup,
           distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit nearbyReq.actualDistanceToPickup,
           durationToPickup = nearbyReq.durationToPickup,
-          baseFare = roundToIntegral netBaseFare, -- net fare = gross fare - commission
-          baseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' nearbyReq.currency netBaseFare) nearbyReq.currency,
+          baseFare = roundToIntegral driverNetBaseFare, -- net fare = gross fare - commission
+          baseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' nearbyReq.currency driverNetBaseFare) nearbyReq.currency,
           customerExtraFee = roundToIntegral <$> searchTry.customerExtraFee,
           customerExtraFeeWithCurrency = flip PriceAPIEntity searchTry.currency <$> searchTry.customerExtraFee,
           fromLocation = convertDomainType searchRequest.fromLocation,
@@ -215,6 +213,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           coinsRewardedOnGoldTierRide = nearbyReq.coinsRewardedOnGoldTierRide,
           safetyPlusCharges = Just safetyCharges,
           commissionCharges = nearbyReq.commissionCharges,
+          taxRemittedWithCurrency = flip PriceAPIEntity nearbyReq.currency <$> nearbyReq.taxRemitted,
           isPaymentOnline = deriveIsPaymentOnline searchTry.paymentInstrument,
           driverCancellationNotAllowed = nearbyReq.driverCancellationNotAllowed,
           ..

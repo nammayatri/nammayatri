@@ -35,6 +35,8 @@ import qualified Kernel.External.Payment.Stripe.Types as Stripe
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified RideFinance.Core.Types as RF
+import qualified SharedLogic.RideFinance as SRF
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -47,11 +49,14 @@ data BPPInvoiceInfo = BPPInvoiceInfo
     supplierAddress :: Maybe Text,
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
-    supplierId :: Maybe Text
+    supplierId :: Maybe Text,
+    issuedByGSTIN :: Maybe Text,
+    issuedByVatNo :: Maybe Text,
+    taxRegime :: Maybe RF.TaxRegime
   }
 
 emptyBPPInvoiceInfo :: BPPInvoiceInfo
-emptyBPPInvoiceInfo = BPPInvoiceInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+emptyBPPInvoiceInfo = BPPInvoiceInfo Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 formatStripeAddress :: Stripe.Address -> Text
 formatStripeAddress addr =
@@ -77,6 +82,8 @@ resolveBPPInvoiceInfo res = do
         Just assoc -> QFOI.findByPrimaryKey (Id assoc.fleetOwnerId :: Id DP.Person)
         Nothing -> pure Nothing
     Nothing -> pure Nothing
+  let merchantGstinNo = (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin
+      fareTaxRegime = Just (SRF.taxRegime res.booking.fareParams)
   pure $ case mbFleetInfo of
     Just fleetInfo ->
       BPPInvoiceInfo
@@ -87,7 +94,10 @@ resolveBPPInvoiceInfo res = do
           supplierAddress = fleetInfo.stripeAddress <&> formatStripeAddress,
           supplierGSTIN = fleetInfo.gstNumberDec,
           supplierTaxNo = fleetInfo.vatNumber <|> fleetInfo.gstNumberDec,
-          supplierId = Just fleetInfo.fleetOwnerPersonId.getId
+          supplierId = Just fleetInfo.fleetOwnerPersonId.getId,
+          issuedByGSTIN = merchantGstinNo,
+          issuedByVatNo = merchant.vatNumber,
+          taxRegime = fareTaxRegime
         }
     Nothing ->
       BPPInvoiceInfo
@@ -96,9 +106,12 @@ resolveBPPInvoiceInfo res = do
           issuedByAddress = merchantAddress,
           supplierName = Just mName,
           supplierAddress = merchantAddress,
-          supplierGSTIN = (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin,
-          supplierTaxNo = merchant.vatNumber <|> (mbMerchantOpCity >>= (.gstin)) <|> merchant.gstin,
-          supplierId = Just mid
+          supplierGSTIN = merchantGstinNo,
+          supplierTaxNo = merchant.vatNumber <|> merchantGstinNo,
+          supplierId = Just mid,
+          issuedByGSTIN = merchantGstinNo,
+          issuedByVatNo = merchant.vatNumber,
+          taxRegime = fareTaxRegime
         }
 
 mkBPPInvoiceInfoTagGroup :: BPPInvoiceInfo -> Maybe [Spec.TagGroup]
@@ -111,7 +124,10 @@ mkBPPInvoiceInfoTagGroup info =
       (Tags.SUPPLIER_ADDRESS, info.supplierAddress),
       (Tags.SUPPLIER_GSTIN, info.supplierGSTIN),
       (Tags.SUPPLIER_TAX_NO, info.supplierTaxNo),
-      (Tags.SUPPLIER_ID, info.supplierId)
+      (Tags.SUPPLIER_ID, info.supplierId),
+      (Tags.ISSUED_BY_GSTIN, info.issuedByGSTIN),
+      (Tags.ISSUED_BY_VAT_NO, info.issuedByVatNo),
+      (Tags.TAX_REGIME, show <$> info.taxRegime)
     ]
 
 bookingStatusCode :: DConfirm.ValidatedQuote -> Maybe Enum.FulfillmentState

@@ -365,7 +365,8 @@ computeExpected booking mbRide mbFareParams indirectTaxTxns directTaxTxns =
       tollCharges = fromMaybe 0 $ (mbRide >>= (.tollCharges)) <|> booking.tollCharges
       parkingCharges = fromMaybe 0 fareParams.parkingCharge
       govtCharges = fromMaybe 0 fareParams.govtCharges
-      expectedGross = Just (baseFare - tollCharges - parkingCharges - govtCharges)
+      separatelyPostedTax = fromMaybe 0 fareParams.tollFareTax + fromMaybe 0 fareParams.parkingChargeTax
+      expectedGross = Just (baseFare - tollCharges - parkingCharges - govtCharges - separatelyPostedTax)
       expectedToll = Just tollCharges
       expectedParking = Just parkingCharges
       expectedCust = mbRide >>= (.cancellationChargesOnCancel)

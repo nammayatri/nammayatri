@@ -26,45 +26,45 @@ import Tools.Auth.DashboardUserAuth
 
 type API = ("ride" :> (GetRideAgentList :<|> GetRideList :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty :<|> GetRideNearby :<|> GetRideCallCount :<|> GetRideFlowDebug))
 
-type GetRideAgentList = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_AGENT_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideAgentList)
+type GetRideAgentList = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_AGENT_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideAgentList)
 
-type GetRideList = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideList)
+type GetRideList = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideList)
 
-type GetRideListV2 = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_LIST_V2" :> API.Types.ProviderPlatform.Management.Ride.GetRideListV2)
+type GetRideListV2 = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_LIST_V2" :> API.Types.ProviderPlatform.Management.Ride.GetRideListV2)
 
-type PostRideEndMultiple = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_END_MULTIPLE" :> API.Types.ProviderPlatform.Management.Ride.PostRideEndMultiple)
+type PostRideEndMultiple = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_END_MULTIPLE" :> API.Types.ProviderPlatform.Management.Ride.PostRideEndMultiple)
 
 type PostRideCancelMultiple =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_CANCEL_MULTIPLE"
       :> API.Types.ProviderPlatform.Management.Ride.PostRideCancelMultiple
   )
 
-type GetRideInfo = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_INFO" :> API.Types.ProviderPlatform.Management.Ride.GetRideInfo)
+type GetRideInfo = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_INFO" :> API.Types.ProviderPlatform.Management.Ride.GetRideInfo)
 
-type PostRideSync = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC" :> API.Types.ProviderPlatform.Management.Ride.PostRideSync)
+type PostRideSync = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC" :> API.Types.ProviderPlatform.Management.Ride.PostRideSync)
 
-type PostRideSyncMultiple = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC_MULTIPLE" :> API.Types.ProviderPlatform.Management.Ride.PostRideSyncMultiple)
+type PostRideSyncMultiple = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_SYNC_MULTIPLE" :> API.Types.ProviderPlatform.Management.Ride.PostRideSyncMultiple)
 
-type PostRideRoute = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_ROUTE" :> API.Types.ProviderPlatform.Management.Ride.PostRideRoute)
+type PostRideRoute = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_ROUTE" :> API.Types.ProviderPlatform.Management.Ride.PostRideRoute)
 
-type GetRideKaptureList = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_KAPTURE_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideKaptureList)
+type GetRideKaptureList = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_KAPTURE_LIST" :> API.Types.ProviderPlatform.Management.Ride.GetRideKaptureList)
 
-type GetRideFareBreakUp = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FARE_BREAK_UP" :> API.Types.ProviderPlatform.Management.Ride.GetRideFareBreakUp)
+type GetRideFareBreakUp = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FARE_BREAK_UP" :> API.Types.ProviderPlatform.Management.Ride.GetRideFareBreakUp)
 
 type PostRideWaiverRideCancellationPenalty =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/RIDE/POST_RIDE_WAIVER_RIDE_CANCELLATION_PENALTY"
       :> API.Types.ProviderPlatform.Management.Ride.PostRideWaiverRideCancellationPenalty
   )
 
-type GetRideNearby = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_NEARBY" :> API.Types.ProviderPlatform.Management.Ride.GetRideNearby)
+type GetRideNearby = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_NEARBY" :> API.Types.ProviderPlatform.Management.Ride.GetRideNearby)
 
-type GetRideCallCount = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_CALL_COUNT" :> API.Types.ProviderPlatform.Management.Ride.GetRideCallCount)
+type GetRideCallCount = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_CALL_COUNT" :> API.Types.ProviderPlatform.Management.Ride.GetRideCallCount)
 
-type GetRideFlowDebug = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FLOW_DEBUG" :> API.Types.ProviderPlatform.Management.Ride.GetRideFlowDebug)
+type GetRideFlowDebug = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/RIDE/GET_RIDE_FLOW_DEBUG" :> API.Types.ProviderPlatform.Management.Ride.GetRideFlowDebug)
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
 handler merchantId city = getRideAgentList merchantId city :<|> getRideList merchantId city :<|> getRideListV2 merchantId city :<|> postRideEndMultiple merchantId city :<|> postRideCancelMultiple merchantId city :<|> getRideInfo merchantId city :<|> postRideSync merchantId city :<|> postRideSyncMultiple merchantId city :<|> postRideRoute merchantId city :<|> getRideKaptureList merchantId city :<|> getRideFareBreakUp merchantId city :<|> postRideWaiverRideCancellationPenalty merchantId city :<|> getRideNearby merchantId city :<|> getRideCallCount merchantId city :<|> getRideFlowDebug merchantId city

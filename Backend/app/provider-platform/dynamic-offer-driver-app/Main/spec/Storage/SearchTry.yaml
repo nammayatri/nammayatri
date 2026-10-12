@@ -40,6 +40,7 @@ SearchTry:
     baseFare : HighPrecMoney
     customerExtraFee : Maybe HighPrecMoney
     negativeFareAdjustment : Maybe HighPrecMoney
+    discountAmount : Maybe HighPrecMoney
     petCharges : Maybe HighPrecMoney
     currency: Currency
     status: SearchTryStatus

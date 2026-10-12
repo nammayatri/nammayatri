@@ -29,6 +29,7 @@ data SearchTryT f = SearchTryT
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     customerExtraFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    discountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     driverPreference :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     emailDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     estimateId :: B.C f Kernel.Prelude.Text,
@@ -66,6 +67,6 @@ instance B.Table SearchTryT where
 
 type SearchTry = SearchTryT Identity
 
-$(enableKVPG ''SearchTryT ['id] [['estimateId], ['requestId]])
+$(enableKVPG (''SearchTryT) [('id)] [[('estimateId)], [('requestId)]])
 
-$(mkTableInstances ''SearchTryT "search_try")
+$(mkTableInstances (''SearchTryT) "search_try")

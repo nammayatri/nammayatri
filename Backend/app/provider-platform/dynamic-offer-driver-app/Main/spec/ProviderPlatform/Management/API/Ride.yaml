@@ -586,6 +586,21 @@ types:
     - discountWithCurrency: Maybe PriceAPIEntity
     - discountTaxWithCurrency: Maybe PriceAPIEntity
     - updatedAt: UTCTime
+    - taxRegime: Maybe Text
+    - customerFareLines: Maybe [FareComponentLine]
+    - driverEarningLines: Maybe [FareComponentLine]
+    - customerFareTotalWithCurrency: Maybe PriceAPIEntity
+    - customerPayableWithCurrency: Maybe PriceAPIEntity
+    - driverNetBeforeTdsWithCurrency: Maybe PriceAPIEntity
+    - tdsWithCurrency: Maybe PriceAPIEntity
+    - amountCollectedInCashWithCurrency: Maybe PriceAPIEntity
+    - amountSettledOnlineWithCurrency: Maybe PriceAPIEntity
+  FareComponentLine:
+    - code: Text
+    - kind: Text
+    - component: Maybe Text
+    - role: Text
+    - amountWithCurrency: PriceAPIEntity
   FareParametersDetails:
     - enum: "ProgressiveDetails FParamsProgressiveDetails, SlabDetails FParamsSlabDetails, RentalDetails FParamsRentalDetails, InterCityDetails FParamsInterCityDetails, AmbulanceDetails FParamsAmbulanceDetails"
   FParamsProgressiveDetails:

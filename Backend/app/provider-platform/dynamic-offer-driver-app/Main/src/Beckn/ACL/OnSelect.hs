@@ -199,6 +199,7 @@ mkQuoteBreakupInner isValueAddNP quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_TAX)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.SAFETY_PLUS_CHARGES)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
@@ -217,6 +218,8 @@ mkQuoteBreakupInner isValueAddNP quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_UNTAXED)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_UNTAXED)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_TAX)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE)
@@ -226,6 +229,7 @@ mkQuoteBreakupInner isValueAddNP quote = do
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_RATE)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_VAT_PCT)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE)
+        || breakup.quotationBreakupInnerTitle == Just (show Enums.PAYMENT_CHARGE_TAX_AMOUNT)
         || breakup.quotationBreakupInnerTitle == Just (show Enums.CONGESTION_CHARGE)
 
 mkQuotationPrice :: DQuote.DriverQuote -> Maybe Spec.Price
