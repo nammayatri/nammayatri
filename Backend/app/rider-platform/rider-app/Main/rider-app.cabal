@@ -246,6 +246,7 @@ library
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Customer
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.FeedbackForm
       Domain.Action.Dashboard.FRFSAlerts
       Domain.Action.Dashboard.FRFSTicket
       Domain.Action.Dashboard.IncentiveJourney.IncentiveJourney
@@ -996,6 +997,7 @@ library
       API.Action.DashboardAuth.Management.AlertIncident
       API.Action.DashboardAuth.Management.Booking
       API.Action.DashboardAuth.Management.Customer
+      API.Action.DashboardAuth.Management.FeedbackForm
       API.Action.DashboardAuth.Management.FRFSAlerts
       API.Action.DashboardAuth.Management.FRFSTicket
       API.Action.DashboardAuth.Management.Invoice
@@ -1158,6 +1160,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.AlertIncident
       API.Types.RiderPlatform.Management.Endpoints.Booking
       API.Types.RiderPlatform.Management.Endpoints.Customer
+      API.Types.RiderPlatform.Management.Endpoints.FeedbackForm
       API.Types.RiderPlatform.Management.Endpoints.FRFSAlerts
       API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
       API.Types.RiderPlatform.Management.Endpoints.Invoice
@@ -1174,6 +1177,7 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Sos
       API.Types.RiderPlatform.Management.Endpoints.SosMedia
       API.Types.RiderPlatform.Management.Endpoints.System
+      API.Types.RiderPlatform.Management.FeedbackForm
       API.Types.RiderPlatform.Management.FRFSAlerts
       API.Types.RiderPlatform.Management.FRFSTicket
       API.Types.RiderPlatform.Management.Invoice

@@ -137,6 +137,18 @@ FeedbackForm:
       dbQueryParams:
         - (Kernel.Prelude.Just merchantOperatingCityId)|CIM
         - (Kernel.Prelude.Just rating)|CIM
+    clearAllFeedbackCache:
+      keyParams: []
+    clearFeedbackByRatingCache:
+      keyParams:
+        - rating: Int
+    clearFeedbackByMerchantOpCityIdCache:
+      keyParams:
+        - merchantOperatingCityId: Id MerchantOperatingCity
+    clearFeedbackByMerchantOpCityIdAndRatingCache:
+      keyParams:
+        - merchantOperatingCityId: Id MerchantOperatingCity
+        - rating: Int
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE

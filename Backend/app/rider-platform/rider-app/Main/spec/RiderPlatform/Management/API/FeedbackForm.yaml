@@ -1,0 +1,107 @@
+imports:
+  Translation: IssueManagement.Common
+  Merchant: Dashboard.Common
+  MerchantOperatingCity: Dashboard.Common
+
+module: FeedbackForm
+
+apis:
+  - GET: # GetFeedbackFormListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[FeedbackFormRes]"
+      migrate:
+        capability: system-config.merchant.read
+
+  - POST: # CreateFeedbackFormAPI
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateFeedbackFormReq
+      response:
+        type: CreateFeedbackFormRes
+      migrate:
+        capability: system-config.merchant.write
+
+  - PUT: # UpdateFeedbackFormAPI
+      endpoint: /{feedbackFormId}/update
+      auth: ApiAuthV2
+      params:
+        feedbackFormId: Text
+      request:
+        type: UpdateFeedbackFormReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.merchant.write
+
+  - DELETE: # DeleteFeedbackFormAPI
+      endpoint: /{feedbackFormId}/delete
+      auth: ApiAuthV2
+      params:
+        feedbackFormId: Text
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.merchant.write
+
+  - GET: # GetFeedbackFormAPI
+      endpoint: /{feedbackFormId}
+      auth: ApiAuthV2
+      params:
+        feedbackFormId: Text
+      response:
+        type: FeedbackFormRes
+      migrate:
+        capability: system-config.merchant.read
+
+types:
+  Category:
+    - enum: "RIDE,DRIVER,VEHICLE"
+    - derive: "Kernel.Prelude.ToParamSchema"
+
+  CreateFeedbackFormReq:
+    - categoryName: Category
+    - rating: Maybe Int
+    - questionKey: Text
+    - shouldDefault: Bool
+    - question: Text
+    - questionTranslations: Maybe [Translation]
+    - badges: Maybe [BadgeDetail]
+    - derive: "'HideSecrets"
+
+  CreateFeedbackFormRes:
+    - feedbackFormId: Text
+
+  UpdateFeedbackFormReq:
+    - categoryName: Maybe Category
+    - rating: Maybe Int
+    - questionKey: Maybe Text
+    - shouldDefault: Maybe Bool
+    - question: Maybe Text
+    - questionTranslations: Maybe [Translation]
+    - badges: Maybe [BadgeDetail]
+    - derive: "'HideSecrets"
+
+  FeedbackFormRes:
+    - id: Text
+    - categoryName: Category
+    - rating: Maybe Int
+    - questionKey: Maybe Text
+    - shouldDefault: Bool
+    - question: Text
+    - questionTranslations: Maybe [Translation]
+    - badges: Maybe [BadgeDetail]
+    - merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    - merchantId: Maybe (Id Merchant)
+
+  BadgeDetail:
+    - sendPN: Bool
+    - key: Text
+    - priority: Maybe Int
+    - contentWithTranslations: Maybe [Translation]
+    - shouldDefault: Bool
