@@ -40,6 +40,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorTracker.ActiveConsequences as BAC
 import qualified Lib.BehaviorTracker.BlockTracker as BT
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Types as BTT
@@ -54,6 +55,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
+import SharedLogic.BehaviourManagement.Conduct (activeFromAction, parseBlockReasonFlag)
 import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
@@ -66,7 +68,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
-import Tools.Error
 import Tools.Metrics (CoreMetrics)
 import qualified Tools.Notifications as Notify
 
@@ -75,7 +76,9 @@ data DispatchContext = DispatchContext
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     counterConfig :: Maybe BTT.CounterConfig,
-    actionEvent :: Maybe BTT.ActionEvent
+    actionEvent :: Maybe BTT.ActionEvent,
+    -- | Behaviour domain whose rules produced these consequences (shown to the driver).
+    programme :: Maybe LYT.LogicDomain
   }
 
 -- | Dispatch all consequence directives for a driver.
@@ -100,8 +103,21 @@ handleConsequences ctx driverId directives = do
   forM_ actions $ \action -> do
     result <- try @_ @SomeException $ dispatchConsequence ctx driverId action
     case result of
-      Right () -> logDebug $ "Consequence executed for driver " <> driverId.getId <> ": " <> show action
+      Right () -> do
+        logDebug $ "Consequence executed for driver " <> driverId.getId <> ": " <> show action
+        recordForDriver ctx driverId action
       Left err -> logError $ "Consequence failed for driver " <> driverId.getId <> ": " <> show err
+
+-- | Remember an applied consequence so the driver can be shown it (GET /driver/conduct/current).
+-- Display-only: a failure here never affects the consequence itself.
+recordForDriver :: (MonadFlow m, Redis.HedisFlow m r) => DispatchContext -> Id DP.Person -> CET.ConsequenceAction -> m ()
+recordForDriver ctx driverId action = do
+  now <- getCurrentTime
+  whenJust (activeFromAction now ctx.programme action) $ \active -> do
+    res <- try @_ @SomeException $ BAC.recordActive BTT.DRIVER driverId.getId active
+    case res of
+      Left err -> logError $ "Failed to record active consequence for driver " <> driverId.getId <> ": " <> show err
+      Right () -> pure ()
 
 -- | Dispatch a single parsed consequence action.
 dispatchConsequence ::
@@ -250,22 +266,6 @@ autoAcceptOnlyTierTypes cityServiceTiers =
       Just cfg <- [tier.autoAcceptanceConfig],
       cfg.enabled && cfg.mode == DC.AutoAcceptOnly
   ]
-
--- | Map blockReasonTag text to BlockReasonFlag enum
-parseBlockReasonFlag :: Maybe Text -> BlockReasonFlag
-parseBlockReasonFlag = \case
-  Just "CancellationRateDaily" -> CancellationRateDaily
-  Just "CancellationRateWeekly" -> CancellationRateWeekly
-  Just "CancellationRate" -> CancellationRate
-  Just "ExtraFareDaily" -> ExtraFareDaily
-  Just "ExtraFareWeekly" -> ExtraFareWeekly
-  Just "DrunkAndDriveViolation" -> DrunkAndDriveViolation
-  Just "DocumentExpiry" -> DocumentExpiry
-  Just "PickupStall" -> PickupStall
-  Just "LOW_RATING_BLOCK" -> LowRating
-  Just "ByDashboard" -> ByDashboard
-  Just other -> fromMaybe ByDashboard (readMaybe $ toString other)
-  Nothing -> ByDashboard
 
 -- | Send an overlay notification to a driver using a PNKey
 sendOverlayByKey ::

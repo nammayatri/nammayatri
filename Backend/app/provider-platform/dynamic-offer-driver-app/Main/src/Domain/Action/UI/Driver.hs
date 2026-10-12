@@ -2075,7 +2075,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
                   { merchantId = merchantId,
                     merchantOperatingCityId = merchantOpCityId,
                     counterConfig = Nothing,
-                    actionEvent = Nothing
+                    actionEvent = Nothing,
+                    programme = Just LYT.QUOTE_RESPONSE_BEHAVIOR
                   }
           BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
           BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications

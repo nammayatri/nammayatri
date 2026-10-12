@@ -116,7 +116,8 @@ recordPickupStall transporterConfig driverId merchantOpCityId rideId stallCase s
             { merchantId = transporterConfig.merchantId,
               merchantOperatingCityId = merchantOpCityId,
               counterConfig = Just pickupStallCounterConfig,
-              actionEvent = Just actionEvent
+              actionEvent = Just actionEvent,
+              programme = Just LYT.PICKUP_STALL_BEHAVIOR
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications

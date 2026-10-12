@@ -296,7 +296,8 @@ handleGpsTollBehavior ev = withRideAndBooking ev $ \ride booking -> do
               { merchantId = booking.providerId,
                 merchantOperatingCityId = booking.merchantOperatingCityId,
                 counterConfig = Just counterConfig,
-                actionEvent = Just actionEvent
+                actionEvent = Just actionEvent,
+                programme = Just LYT.GPS_TOLL_BEHAVIOR
               }
       BehaviorDispatch.handleConsequences dispatchCtx (cast ride.driverId) output.consequences
       BehaviorDispatch.handleCommunications dispatchCtx (cast ride.driverId) output.communications

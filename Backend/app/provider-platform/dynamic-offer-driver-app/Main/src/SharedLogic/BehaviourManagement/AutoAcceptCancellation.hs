@@ -98,7 +98,8 @@ recordAutoAcceptCancellation transporterConfig driverId merchantOpCityId rideId 
             { merchantId = transporterConfig.merchantId,
               merchantOperatingCityId = merchantOpCityId,
               counterConfig = Just autoAcceptCancellationCounterConfig,
-              actionEvent = Just actionEvent
+              actionEvent = Just actionEvent,
+              programme = Just LYT.AUTO_ACCEPT_CANCELLATION_BEHAVIOR
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications

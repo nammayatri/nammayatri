@@ -103,7 +103,8 @@ recordDriverRating transporterConfig driverId merchantOpCityId rideId ratingValu
             { merchantId = transporterConfig.merchantId,
               merchantOperatingCityId = merchantOpCityId,
               counterConfig = Just lowRatingCounterConfig,
-              actionEvent = Just actionEvent
+              actionEvent = Just actionEvent,
+              programme = Just LYT.RATING_BEHAVIOR
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications

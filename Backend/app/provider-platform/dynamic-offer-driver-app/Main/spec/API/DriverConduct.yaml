@@ -1,0 +1,25 @@
+module: DriverConduct
+
+types:
+  # The single consequence the driver should see right now, chosen by priority
+  # (block > soft block > feature block > fee > warning). Copy comes from the
+  # CONDUCT_* overlay templates, already in the driver's language with
+  # placeholders filled; title/description are null when no template exists.
+  CurrentConsequence:
+    consequenceType: Text
+    programme: Maybe Text
+    appliedAt: UTCTime
+    validTill: Maybe UTCTime
+    title: Maybe Text
+    description: Maybe Text
+    imageUrl: Maybe Text
+    okButtonText: Maybe Text
+  DriverConductCurrentRes:
+    current: Maybe CurrentConsequence
+
+apis:
+  - GET:
+      endpoint: /driver/conduct/current
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.DriverConduct.DriverConductCurrentRes

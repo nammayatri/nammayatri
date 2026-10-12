@@ -297,7 +297,8 @@ runBehaviorPipeline transporterConfig driverId merchantOpCityId counterConfig ac
             { merchantId = transporterConfig.merchantId,
               merchantOperatingCityId = merchantOpCityId,
               counterConfig = Just counterConfig,
-              actionEvent = Just actionEvent
+              actionEvent = Just actionEvent,
+              programme = Just domain
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications dispatchCtx driverId output.communications
