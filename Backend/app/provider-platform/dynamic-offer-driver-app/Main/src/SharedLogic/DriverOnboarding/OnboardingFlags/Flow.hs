@@ -35,6 +35,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleRegistrationCertificate as RC
 import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -50,10 +51,12 @@ import SharedLogic.DriverOnboarding.VehicleDocs
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
+import qualified Storage.Queries.DriverRCAssociationExtra as DAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCEQuery
 import Tools.Error (BlockReasonFlag (..))
@@ -211,15 +214,9 @@ recomputeDriverFlagsArm merchantOpCityId merchantId person allDocVerificationCon
           then driverDocuments <> maybe unavailableVehicleDocs (.documents) (mbValidVehicleDoc ForEnabling)
           else driverDocuments
       derivedApproved = computeApprovedFromDocs (Just isFleetDriver) allDocVerificationConfigs person.role approvalDocs
-  vehicleApproved <-
-    if includeVehicleDocs
-      then case mbValidVehicleDoc ForEnabling of
-        Just item -> maybe True (\rc -> rc.approved == Just True) <$> RCQuery.findLastVehicleRCWrapper item.registrationNo
-        Nothing -> pure True
-      else pure True
-  let newApproved =
+      newApproved =
         case derivedApproved of
-          Just True | not allMandatoryDocsValid || not vehicleApproved -> Nothing
+          Just True | not allMandatoryDocsValid -> Nothing
           other -> other
       holdEnabledWithoutDocsVerifiedEnabledOrApproved = not approvalSupported && (driverInfo.verified || driverInfo.enabled)
       verifiedToWrite =
@@ -399,6 +396,8 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
         VRCEQuery.updateApprovedAndVerifiedById newApproved newVerified rc.id
       when (approvalSupported && rc.approved /= Just True && newApproved == Just True) $
         ApprovalComms.notifyVehicleApproved rc registrationNo
+      when (useUnifiedOnboardingFlagsRecompute && rc.approved /= Just True && newApproved == Just True) $
+        activateRcForSoleLinkedEnabledDriver rc.id registrationNo
       -- A vehicle has no `enabled` flag, so that bucket is always False on both sides.
       when (useUnifiedOnboardingFlagsRecompute && rc.isNew /= Just False) $ RCQuery.updateIsNew (Just False) rc.id
       whenJust rc.merchantOperatingCityId $ \rcMerchantOpCityId ->
@@ -410,6 +409,17 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
           (asAlreadyCounted rc.isNew $ bucketsOfFlags (fromMaybe False rc.verified) rc.approved False)
           (bucketsOfFlags (fromMaybe False newVerified) newApproved False)
     Nothing -> RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
+
+activateRcForSoleLinkedEnabledDriver :: OnboardingFlow m r => Id RC.VehicleRegistrationCertificate -> Text -> m ()
+activateRcForSoleLinkedEnabledDriver rcId registrationNo =
+  DAQuery.findAllActiveAssociationByRCId rcId >>= \case
+    [assoc] | not assoc.isRcActive -> do
+      mbDriverInfo <- DIQuery.findById (cast assoc.driverId)
+      mbVehicle <- QVehicle.findById assoc.driverId
+      when (maybe False (.enabled) mbDriverInfo && isNothing mbVehicle) $ do
+        mbPerson <- QPerson.findById assoc.driverId
+        whenJust mbPerson $ \person -> void $ withTryCatch "activateRCAutomatically:vehicleApproved" (activateRCAutomatically person.id person.merchantId person.merchantOperatingCityId registrationNo)
+    _ -> pure ()
 
 -- | Which entity's onboarding counters a write belongs to.
 data OnboardingCounterEntity = CounterDriver | CounterFleetOwner | CounterVehicle
