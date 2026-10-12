@@ -30,6 +30,7 @@ library
       Lib.Yudhishthira.Event.KaalChakra
       Lib.Yudhishthira.Event.KaalChakra.Internal
       Lib.Yudhishthira.Event.KaalChakra.Jobs
+      Lib.Yudhishthira.Event.KaalChakra.Metrics
       Lib.Yudhishthira.Event.KaalChakra.Parse
       Lib.Yudhishthira.Event.KaalChakra.Template
       Lib.Yudhishthira.Flow.Dashboard
