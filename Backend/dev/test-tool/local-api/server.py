@@ -984,6 +984,9 @@ _SSH_KEY_CANDIDATES = [
 ]
 BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
+# Devbox front desk (nix-the-builder scripts/frontdesk): one Caddy per dev-box that
+# routes /<workspace-id>/* to that workspace's own Caddy, so the URL survives port changes.
+FRONTDESK_PORT = os.environ.get("FRONTDESK_PORT", "8888")
 
 
 def _find_ssh_key() -> str | None:
@@ -1221,6 +1224,19 @@ def _tcp_open(host: str, port: int = 22, timeout: float = 3.0) -> bool:
         return False
 
 
+def _frontdesk_ok(host: str) -> bool:
+    """True when the dev-box front desk answers its health check — i.e. the
+    stable http://<host>:FRONTDESK_PORT/<workspace-id> URL is usable."""
+    if not host:
+        return False
+    try:
+        with urllib.request.urlopen(
+                f"http://{host}:{FRONTDESK_PORT}/__frontdesk_health", timeout=1.5) as r:
+            return r.read().strip() == b"ok"
+    except Exception:
+        return False
+
+
 def _devbox_state_rehost(dev_id: str, ssh_user: str, old_host: str, new_host: str) -> None:
     """Carry this checkout's per-target state across a dev-box IP change.
 
@@ -1401,6 +1417,8 @@ def _devbox_resolve(force_new: bool = False) -> dict:
         "localSubnet": local_subnet,
         "vpnHost": vpn_host,
         "vpnSubnet": vpn_subnet,
+        "workspaceUrl": f"http://{host}:{FRONTDESK_PORT}/{dev_id}",
+        "frontdeskOk": _frontdesk_ok(host),
         "message": message,
     }
 

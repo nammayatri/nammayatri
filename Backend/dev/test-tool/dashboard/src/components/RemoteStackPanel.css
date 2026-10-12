@@ -162,6 +162,9 @@
   min-height: 20px;
 }
 .rsp-devbox-ids dd .rsp-btn-ghost { margin-left: 0; gap: 6px; flex: 0 0 auto; }
+/* Workspace URL row: URL + Copy + links wrap on narrow cards; links look like the buttons. */
+.rsp-devbox-ids dd.rsp-ws-url { flex-wrap: wrap; }
+.rsp-devbox-ids dd.rsp-ws-url a.rsp-btn-ghost { text-decoration: none; }
 
 /* ── Deploy freshness readout ── */
 .rsp-sync {

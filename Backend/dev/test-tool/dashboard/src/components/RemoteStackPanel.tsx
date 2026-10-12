@@ -184,6 +184,23 @@ export const RemoteStackPanel: React.FC = () => {
   const [resolving, setResolving] = useState(false);
   const [sshStatus, setSshStatus] = useState<{ ok: boolean; message?: string } | null>(null);
   const [editorOk, setEditorOk] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
+
+  // Same clipboard + textarea fallback as ServicePortsModal's CopyButton.
+  const copyWorkspaceUrl = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setUrlCopied(true);
+    window.setTimeout(() => setUrlCopied(false), 1200);
+  };
 
   // ── Log viewer ── (contents live in RemoteLogsModal)
   const [logsOpen, setLogsOpen] = useState(false);
@@ -726,6 +743,46 @@ export const RemoteStackPanel: React.FC = () => {
                     >
                       <VSCodeIcon /> Open Remote SSH
                     </button>
+                  )}
+                </dd>
+                <dt>Workspace URL</dt>
+                <dd className="rsp-ws-url">
+                  {devbox.frontdeskOk && devbox.workspaceUrl ? (
+                    <>
+                      <code>{devbox.workspaceUrl}</code>
+                      <button
+                        className="rsp-btn-ghost"
+                        onClick={() => copyWorkspaceUrl(devbox.workspaceUrl!)}
+                        title="Copy this workspace's stable URL (dev-box front desk) — it stays the same when ports change"
+                      >
+                        {urlCopied ? '✓ Copied' : '⧉ Copy'}
+                      </button>
+                      <a
+                        className="rsp-btn-ghost"
+                        href={`${devbox.workspaceUrl}/rider-app/v2/`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="rider-app health through the front desk"
+                      >
+                        rider-app ↗
+                      </a>
+                      <a
+                        className="rsp-btn-ghost"
+                        href={`${devbox.workspaceUrl}/dynamic-offer-driver-app/ui/`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="driver-app health through the front desk"
+                      >
+                        driver-app ↗
+                      </a>
+                    </>
+                  ) : (
+                    <span
+                      className="rsp-sync-checked"
+                      title="Install it on the dev-box: python3 scripts/frontdesk/setup.py (nix-the-builder)"
+                    >
+                      front desk not installed on this dev-box
+                    </span>
                   )}
                 </dd>
               </dl>

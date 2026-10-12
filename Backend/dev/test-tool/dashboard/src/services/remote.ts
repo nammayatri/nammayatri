@@ -62,6 +62,11 @@ export interface DevboxAssignment {
   previousHost?: string;
   /** Pinned machine answered on neither address, so it was re-assigned. */
   lostRoute?: boolean;
+  /** http://<host>:8888/<id> — this workspace through the dev-box front desk;
+   *  stays the same when the workspace's own ports change. */
+  workspaceUrl?: string;
+  /** Whether the dev-box front desk answered its health check. */
+  frontdeskOk?: boolean;
   /** Human-readable explanation of whichever recovery path was taken. */
   message?: string;
   error?: string;
