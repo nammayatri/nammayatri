@@ -759,7 +759,9 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     locationType :: Maybe Text,
     -- Platform label for a boarding stop (for buses, the direction services leave
     -- the kerb in). Absent on stations and on stops the feed gives no label.
-    platform :: Maybe Text
+    platform :: Maybe Text,
+    stageNumber :: Maybe Int,
+    isStageStop :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

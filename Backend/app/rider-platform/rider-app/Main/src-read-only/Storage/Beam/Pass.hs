@@ -45,6 +45,8 @@ data PassT f = PassT
     purchaseEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: B.C f [Data.Aeson.Value],
     timeOverlappingFrfsBookingsLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    validityDaysRecommendations :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
+    variableValidityDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     vehicleType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory),
     verificationValidity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
