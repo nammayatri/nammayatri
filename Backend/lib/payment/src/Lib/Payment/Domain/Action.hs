@@ -71,6 +71,7 @@ module Lib.Payment.Domain.Action
     -- Offer computation and application
     ComputedOfferAmount (..),
     computeOfferAmount,
+    meetsMinimumAmount,
     floorToTwoDecimalPlaces,
     OfferStatsInput (..),
     applyOfferService,
@@ -1253,8 +1254,9 @@ listDomainOffers merchantId merchantOperatingCityId orderAmount _currency mbDoma
   buildDomainOfferList orderAmount <$> eligibleDomainOffers merchantId merchantOperatingCityId mbDomainContext mbRider
 
 buildDomainOfferList :: HighPrecMoney -> [(DOffer.Offer, Maybe Int)] -> PInterface.OfferListResp
-buildDomainOfferList orderAmount eligible =
-  let offers = map fst eligible
+buildDomainOfferList orderAmount eligibleOffers =
+  let eligible = filter (meetsMinimumAmount orderAmount . fst) eligibleOffers
+      offers = map fst eligible
       offerResps = map (buildOfferResp orderAmount) eligible
    in PInterface.OfferListResp
         { bestOfferCombination = buildBestOfferCombination orderAmount offerResps offers,
@@ -1471,13 +1473,14 @@ data ComputedOfferAmount = ComputedOfferAmount
   }
   deriving (Show, Generic)
 
+meetsMinimumAmount :: HighPrecMoney -> DOffer.Offer -> Bool
+meetsMinimumAmount amount offer = maybe True (amount >=) offer.minimumAmount
+
 -- | Compute offer amounts for a single Offer.
 computeOfferAmount :: DOffer.Offer -> HighPrecMoney -> ComputedOfferAmount
 computeOfferAmount offer amount =
-  let -- below minimumAmount the offer stays listed but is worth nothing
-      meetsMinimum = maybe True (amount >=) offer.minimumAmount
-      offerAmount
-        | not meetsMinimum = 0
+  let offerAmount
+        | not (meetsMinimumAmount amount offer) = 0
         | otherwise = case offer.discountType of
           DOffer.FLAT -> min offer.discountValue amount
           DOffer.PERCENTAGE ->

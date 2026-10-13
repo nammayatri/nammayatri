@@ -10,6 +10,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time (utctDay)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as Merchant
@@ -131,11 +132,51 @@ data OfferEligibilityInput = OfferEligibilityInput
     searchReq :: Maybe Y.SearchRequestData,
     hasTakenValidRide :: Bool,
     totalRidesCount :: Maybe Int,
-    personTags :: [Text]
+    personTags :: [Text],
+    -- epoch seconds; nowEpoch is the booking's creation time when there is a booking
+    nowEpoch :: Int,
+    registeredAtEpoch :: Int,
+    lastRideEndEpoch :: Maybe Int,
+    lastRideRating :: Maybe Int,
+    priorCompletedRidesCount :: Int -- before nowEpoch, capped at priorRidesCountCap
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 $(YTH.generateGenericDefault ''OfferEligibilityInput)
+
+data OfferTimeContext = OfferTimeContext
+  { referenceTime :: UTCTime,
+    nowEpoch :: Int,
+    registeredAtEpoch :: Int,
+    lastRideEndEpoch :: Maybe Int,
+    lastRideRating :: Maybe Int,
+    priorCompletedRidesCount :: Int
+  }
+
+priorRidesCountCap :: Int
+priorRidesCountCap = 10
+
+mkOfferTimeContext :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Maybe DRB.Booking -> m OfferTimeContext
+mkOfferTimeContext person mbBooking = do
+  now <- getCurrentTime
+  let referenceTime = maybe now (.createdAt) mbBooking
+  priorBookings <-
+    if person.totalRidesCount == Just 0
+      then pure []
+      else QBooking.findLatestCompletedByRiderIdBefore person.id referenceTime priorRidesCountCap
+  mbLastRide <- maybe (pure Nothing) (QRide.findOneByBookingId . (.id)) (listToMaybe priorBookings)
+  pure
+    OfferTimeContext
+      { referenceTime,
+        nowEpoch = toEpochSeconds referenceTime,
+        registeredAtEpoch = toEpochSeconds person.createdAt,
+        lastRideEndEpoch = toEpochSeconds <$> (mbLastRide >>= (.rideEndTime)),
+        lastRideRating = mbLastRide >>= (.rideRating),
+        priorCompletedRidesCount = length priorBookings
+      }
+  where
+    toEpochSeconds :: UTCTime -> Int
+    toEpochSeconds = floor . utcTimeToPOSIXSeconds
 
 -------------------------------------------------------------------------------------------------------
 ----------------------------------- Fetch Offers List With Caching ------------------------------------
@@ -179,6 +220,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
               today <- utctDay <$> getCurrentTime
               mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
               mbPersonStats <- QPersonStats.findByPersonId personId
+              timeCtx <- mkOfferTimeContext person Nothing
               let domainContext =
                     Just $
                       A.toJSON
@@ -192,7 +234,12 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             searchReq = Nothing,
                             hasTakenValidRide = person.hasTakenValidRide,
                             totalRidesCount = person.totalRidesCount,
-                            personTags = offerEligibilityTags person.customerNammaTags
+                            personTags = offerEligibilityTags timeCtx.referenceTime person.customerNammaTags,
+                            nowEpoch = timeCtx.nowEpoch,
+                            registeredAtEpoch = timeCtx.registeredAtEpoch,
+                            lastRideEndEpoch = timeCtx.lastRideEndEpoch,
+                            lastRideRating = timeCtx.lastRideRating,
+                            priorCompletedRidesCount = timeCtx.priorCompletedRidesCount
                           }
               DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext (Just rider)
         DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
@@ -448,8 +495,8 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx mb
 autoApplyOfferTagName :: Text
 autoApplyOfferTagName = "AutoApplyOffer"
 
-offerEligibilityTags :: Maybe [LYT.TagNameValueExpiry] -> [Text]
-offerEligibilityTags = maybe [] (map ((.getTagNameValue) . LYTUtils.removeTagExpiry))
+offerEligibilityTags :: UTCTime -> Maybe [LYT.TagNameValueExpiry] -> [Text]
+offerEligibilityTags validAt = map ((.getTagNameValue) . LYTUtils.removeTagExpiry) . LYTUtils.filterExpiredTags' validAt . fromMaybe []
 
 getAutoApplyOfferCodes :: (MonadTime m) => Maybe [LYT.TagNameValueExpiry] -> m [Text]
 getAutoApplyOfferCodes mbTags = do
@@ -727,6 +774,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           _ -> pure []
         today <- utctDay <$> getCurrentTime
         mbPersonDailyOfferStats <- QPersonDailyOfferStats.findByPersonIdAndDate personId.getId today
+        timeCtx <- mkOfferTimeContext person mbBooking
         -- RideHailing product ids are service tiers (show vehicleServiceTierType), so each
         -- product's eligibility runs with its own serviceTierType for tier-specific offer rules.
         let domainContextFor productId =
@@ -742,7 +790,12 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       searchReq = mbSearchReqData,
                       hasTakenValidRide = person.hasTakenValidRide,
                       totalRidesCount = person.totalRidesCount,
-                      personTags = offerEligibilityTags person.customerNammaTags
+                      personTags = offerEligibilityTags timeCtx.referenceTime person.customerNammaTags,
+                      nowEpoch = timeCtx.nowEpoch,
+                      registeredAtEpoch = timeCtx.registeredAtEpoch,
+                      lastRideEndEpoch = timeCtx.lastRideEndEpoch,
+                      lastRideRating = timeCtx.lastRideRating,
+                      priorCompletedRidesCount = timeCtx.priorCompletedRidesCount
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
         offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
