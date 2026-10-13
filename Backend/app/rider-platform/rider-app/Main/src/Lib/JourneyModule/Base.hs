@@ -723,8 +723,9 @@ addAllLegs ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Maybe Bool ->
+  Maybe Bool ->
   m ()
-addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
+addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass = do
   oldLegs <- maybe (QJourneyLeg.getJourneyLegs journey.id) pure mbOldJourneyLegs
   let filteredOldLegs = filter (\leg1 -> all (\leg2 -> leg1.sequenceNumber /= leg2.sequenceNumber) newJourneyLegs) oldLegs
   let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
@@ -739,13 +740,13 @@ addAllLegs journey mbOldJourneyLegs newJourneyLegs blacklistedServiceTiers black
           let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
           void $ addTaxiLeg journey snappedLeg originAddress destinationAddress (upsertJourneyLegAction journeyLeg)
         DTrip.Metro -> do
-          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
+          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass
         DTrip.Subway -> do
-          void $ measureLatency (addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) ("addSubwayLeg leg: " <> show journeyLeg.sequenceNumber)
+          void $ measureLatency (addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass) ("addSubwayLeg leg: " <> show journeyLeg.sequenceNumber)
         DTrip.Walk ->
           upsertJourneyLegAction journeyLeg journeyLeg.id.getId
         DTrip.Bus -> do
-          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses
+          void $ addBusLeg journey journeyLeg journeyLeg.userBookedBusServiceTierType (upsertJourneyLegAction journeyLeg) blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass
   where
     upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
     upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
@@ -906,8 +907,9 @@ addMetroLeg ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Maybe Bool ->
+  Maybe Bool ->
   m JL.SearchResponse
-addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
+addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city
   JL.search metroSearchReq
@@ -926,7 +928,8 @@ addMetroLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers bl
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
             blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            mbHasPasses
+            mbHasPasses,
+            mbEnforceFRFSPass
           }
 
 addSubwayLeg ::
@@ -937,8 +940,9 @@ addSubwayLeg ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Maybe Bool ->
+  Maybe Bool ->
   m JL.SearchResponse
-addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
+addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let subwaySearchReq = mkSubwayLegReq merchantOperatingCity.city
   JL.search subwaySearchReq
@@ -957,7 +961,8 @@ addSubwayLeg journey journeyLeg upsertJourneyLegAction blacklistedServiceTiers b
             upsertJourneyLegAction,
             blacklistedServiceTiers = blacklistedServiceTiers,
             blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            mbHasPasses
+            mbHasPasses,
+            mbEnforceFRFSPass
           }
 
 addBusLeg ::
@@ -969,8 +974,9 @@ addBusLeg ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Maybe Bool ->
+  Maybe Bool ->
   m JL.SearchResponse
-addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
+addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let busSearchReq = mkBusLegReq merchantOperatingCity.city
   JL.search busSearchReq
@@ -990,7 +996,8 @@ addBusLeg journey journeyLeg mbServiceTier upsertJourneyLegAction blacklistedSer
             serviceTier = mbServiceTier,
             blacklistedServiceTiers = blacklistedServiceTiers,
             blacklistedFareQuoteTypes = blacklistedFareQuoteTypes,
-            mbHasPasses
+            mbHasPasses,
+            mbEnforceFRFSPass
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
@@ -1215,7 +1222,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         forM_ legsToCancel $ \currLeg -> deleteLeg currLeg (SCR.CancellationReasonCode "") False Nothing
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing
+        addAllLegs journey Nothing [journeyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing Nothing
     -- check this code
     JL.StartLocation startlocation -> do
       currentLeg <- find (\leg -> leg.sequenceNumber == startlocation.legOrder) allLegs & fromMaybeM (InvalidRequest $ "Cannot find leg with order: " <> show startlocation.legOrder)
@@ -1475,7 +1482,7 @@ switchLeg journeyId _ req filterServiceAndJrnyType mbNewServiceTiers = do
     deleteLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
     newJourneyLeg <- updateJourneyLeg journeyLeg req.newMode startLocation newDistance newDuration
     journey <- getJourney journeyId
-    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing
+    addAllLegs journey Nothing [newJourneyLeg] blacklistedServiceTiers blacklistedFareQuoteTypes Nothing Nothing
   where
     updateJourneyLeg ::
       ( CacheFlow m r,
