@@ -19,6 +19,7 @@ import qualified Tools.Beam.UtilsTH
 
 data IntegratedBPPConfig = IntegratedBPPConfig
   { agencyKey :: Kernel.Prelude.Text,
+    autoEnforceFRFSPass :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     domain :: Kernel.Prelude.Text,
     feedKey :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,

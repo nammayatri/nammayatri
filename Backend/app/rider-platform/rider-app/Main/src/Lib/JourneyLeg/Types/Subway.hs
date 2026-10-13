@@ -32,7 +32,8 @@ data SubwayLegRequestSearchData = SubwayLegRequestSearchData
     blacklistedServiceTiers :: [Spec.ServiceTierType],
     blacklistedFareQuoteTypes :: [DFRFSQuote.FRFSQuoteType],
     isSingleMode :: Bool,
-    mbHasPasses :: Maybe Bool
+    mbHasPasses :: Maybe Bool,
+    mbEnforceFRFSPass :: Maybe Bool
   }
 
 data SubwayLegRequestUpdateData = SubwayLegRequestUpdateData
