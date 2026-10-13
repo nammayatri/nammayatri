@@ -1,0 +1,93 @@
+imports:
+  Text: Data.Text
+  APISuccess: Kernel.Types.APISuccess
+
+module: Dispatcher
+
+types:
+  ScheduleUpdateReasons:
+    enum: "BreakDown,OtherReason Text"
+  DispatcherReq:
+    sourceFleetId: Text
+    updatedFleetId: Text
+    reason: ScheduleUpdateReasons
+  DispatcherRes:
+    depotName: Text
+    scheduleNo: Text
+    driverCode: Text
+    conductorCode: Text
+  DepotVehicle:
+    fleet_no: Text
+    status: Maybe Text
+    vehicle_no: Maybe Text
+    service_type: Maybe Text
+  DepotOption:
+    depotId: Text
+    depotName: Text
+  UserDepotRes:
+    depotName: Maybe Text
+    depot: Maybe Text
+  DispatcherHistoryRes:
+    id: Text
+    dispatcherId: Text
+    currentVehicle: Text
+    replacedVehicle: Text
+    historyDriverCode: Text
+    historyConductorCode: Text
+    depotId: Text
+    reasonTag: Text
+    reasonContent: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    waybillNo: Text
+
+# rider-app also exposes depotIds and a name-keyed getVehiclesFrom; not cloned because the app wraps
+# only these six, and depot reads here go through the gtfs_id-scoped GIMS v2 endpoints.
+apis:
+  - GET:
+      endpoint: /dispatcher/{fleetId}/getFleetInfo
+      params:
+        fleetId: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.Dispatcher.DispatcherRes
+
+  - POST:
+      endpoint: /dispatcher/updateFleetSchedule
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: API.Types.UI.Dispatcher.DispatcherReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /dispatcher/depots
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[DepotOption]"
+
+
+  - GET:
+      endpoint: /dispatcher/getVehiclesByDepotId/{depotId}
+      params:
+        depotId: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[DepotVehicle]"
+
+
+
+  - GET:
+      endpoint: /dispatcher/getUserDepot
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.Dispatcher.UserDepotRes
+
+  - GET:
+      endpoint: /dispatcher/history
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[DispatcherHistoryRes]"
