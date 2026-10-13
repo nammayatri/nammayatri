@@ -495,7 +495,7 @@ postFleetConsentDecline (mbDriverId, _merchantId, merchantOperatingCityId) = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetDriverAssociation.fleetOwnerId) (cast driverId)) SGuard.DeactivateFromFleet (SGuard.TargetDriver (cast driverId)) $
     FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
-  SOnboardingComms.clearOnboardingAsIfNoFleet transporterConfig driverId
+  SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig driverId
   fork "Driver fleet unlink notification" $ do
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     SOnboardingComms.notifyOnDriverFleetUnlink merchantOperatingCityId driver fleetDriverAssociation.fleetOwnerId SOnboardingComms.ByDriverConsentDecline

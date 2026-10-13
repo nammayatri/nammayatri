@@ -1270,3 +1270,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN actual_ride_d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_charge_config json ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN looking_for_fleet_supported boolean ;

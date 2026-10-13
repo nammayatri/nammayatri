@@ -13,7 +13,7 @@
 -}
 module SharedLogic.DriverOnboarding.OnboardingComms
   ( setOnboardingAs,
-    clearOnboardingAsIfNoFleet,
+    resetOnboardingAsIfNoFleet,
     notifyOnFleetOwnerChange,
     UnlinkInitiator (..),
     notifyOnDriverFleetUnlink,
@@ -103,12 +103,15 @@ setOnboardingAs transporterConfig driver onboardingAs = do
               fork "Driver fleet unlink notification" $
                 notifyOnDriverFleetUnlink driver.merchantOperatingCityId driver association.fleetOwnerId ByDriver
 
-clearOnboardingAsIfNoFleet :: OnboardingFlow m r => DTC.TransporterConfig -> Id DP.Person -> m ()
-clearOnboardingAsIfNoFleet transporterConfig driverId = do
+-- | Once a driver has no fleet link left, they stay a fleet driver where the city lets fleet
+-- drivers look for a fleet, and become self-employed everywhere else.
+resetOnboardingAsIfNoFleet :: (OnboardingFlow m r, Forkable m) => DTC.TransporterConfig -> Id DP.Person -> m ()
+resetOnboardingAsIfNoFleet transporterConfig driverId = do
   associations <- QFDA.findAllByDriverIdWithStatus driverId
-  when (null associations) $
-    SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.SetOnboardingAs (SGuard.TargetDriver driverId) $
-      QDIExtra.updateOnboardingAs Nothing (cast driverId)
+  when (null associations && transporterConfig.lookingForFleetSupported /= Just True) $ do
+    mbDriver <- QPerson.findById driverId
+    whenJust mbDriver $ \driver ->
+      setOnboardingAs transporterConfig driver DI.INDIVIDUAL
 
 notifyOnOnboardingAsChange :: OnboardingFlow m r => DP.Person -> DI.OnboardingAs -> m ()
 notifyOnOnboardingAsChange driver onboardingAs = do

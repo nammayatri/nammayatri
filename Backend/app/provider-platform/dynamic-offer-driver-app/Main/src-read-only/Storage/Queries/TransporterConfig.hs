@@ -333,6 +333,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.liveEKD liveEKD,
       Se.Set Beam.localAmbulanceNumbers localAmbulanceNumbers,
       Se.Set Beam.localPoliceNumbers localPoliceNumbers,
+      Se.Set Beam.lookingForFleetSupported lookingForFleetSupported,
       Se.Set Beam.mandateEmailVerification mandateEmailVerification,
       Se.Set Beam.mandateExecutionRescheduleInterval (Kernel.Utils.Common.nominalDiffTimeToSeconds mandateExecutionRescheduleInterval),
       Se.Set Beam.mandateNotificationRescheduleInterval (Kernel.Utils.Common.nominalDiffTimeToSeconds mandateNotificationRescheduleInterval),
