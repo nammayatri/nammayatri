@@ -47,6 +47,8 @@ data Pass = Pass
     purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: [Data.Aeson.Value],
     timeOverlappingFrfsBookingsLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    validityDaysRecommendations :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
+    variableValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,

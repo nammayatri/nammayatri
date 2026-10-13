@@ -658,6 +658,7 @@ library
       SharedLogic.RideFeedback.Actions
       SharedLogic.RideFeedback.Types
       SharedLogic.RiderConsentPush
+      SharedLogic.RoutePassPricing
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi

@@ -28,6 +28,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     isDashboard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -44,8 +45,11 @@ data PurchasedPassPayment = PurchasedPassPayment
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    referenceFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
+    validityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
