@@ -160,6 +160,10 @@ PurchasedPassPayment:
     passPhotoChangeCount: Maybe Int
     activatedAt: Maybe UTCTime
     overrideBenefitConfigJson: Maybe OverrideBenefitConfig
+    sourceStopCode: Maybe Text
+    destinationStopCode: Maybe Text
+    maximumOverrideableFarePerTicket: Maybe HighPrecMoney
+    validityDays: Maybe Int
 
   beamType:
     benefitDescription: Maybe Text
