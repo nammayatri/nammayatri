@@ -27,7 +27,11 @@ data PassPricingConfig = PassPricingConfig
   { percentageSaving :: Maybe PercentageSaving,
     fixedSaving :: Maybe FixedSaving,
     primaryServiceTier :: Spec.ServiceTierType,
-    maximumPurchaseableTripCount :: Int
+    maximumPurchaseableTripCount :: Int,
+    variableTripCount :: Maybe Bool,
+    tripCountRecommendations :: Maybe [Int],
+    unlimitedPricedTripCount :: Maybe Int,
+    allowRoundTripPurchase :: Maybe Bool
   }
   deriving (Generic, Show, Eq, ToSchema)
 

@@ -126,9 +126,12 @@ validateEntry :: OverrideBenefitEntry -> Either Text OverrideBenefit
 validateEntry (TicketBenefit benefit) = validateBenefitWith True benefit
 validateEntry (PassTicketBenefit config) = do
   void $ validatePricing config.pricing
-  when (isUnlimitedBenefit config.benefit) $
-    Left "a route priced pass cannot have unlimited_trip_count"
-  validateBenefitWith False config.benefit
+  when (isUnlimitedBenefit config.benefit) $ do
+    when (config.pricing.variableTripCount == Just True) $
+      Left "an unlimited route priced pass cannot have variable_trip_count"
+    unless (maybe False (> 0) config.pricing.unlimitedPricedTripCount) $
+      Left "an unlimited route priced pass needs a positive pricing.unlimited_priced_trip_count"
+  validateBenefitWith (config.pricing.variableTripCount /= Just True) config.benefit
 
 validatePricing :: PassPricingConfig -> Either Text PassPricingConfig
 validatePricing pricing
