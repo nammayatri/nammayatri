@@ -67,7 +67,7 @@ data PaymentMode = MANUAL | AUTOPAY deriving (Show, (Eq), (Ord), (Read), (Generi
 
 data PlanType = DEFAULT | SUBSCRIPTION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data ServiceTierRideSubscription = ServiceTierRideSubscription {amount :: Kernel.Types.Common.HighPrecMoney, serviceTier :: Domain.Types.Common.ServiceTierType}
+data ServiceTierRideSubscription = ServiceTierRideSubscription {amount :: Kernel.Types.Common.HighPrecMoney, serviceTier :: Domain.Types.Common.ServiceTierType, serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentMode))
