@@ -19,8 +19,17 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Utils.Common
 import Servant
 
+-- | Inbound @DESK_REPLY@ webhook.
+--
+-- @mocId@ identifies which Xyne app is calling: each app issues its own
+-- signing secret, but a deployment has only one of these URLs, so the app is
+-- named in the query string and its secret read from that city's
+-- @XyneSpacesCfg@. Omitted, the deployment-wide env secret is used — the shape
+-- every caller used before separate Xyne apps existed. The param is safe to
+-- add: the HMAC covers the request body only, not the URL.
 type API =
   "xyne" :> "webhook"
+    :> QueryParam "mocId" Kernel.Prelude.Text
     :> Header "X-Xyne-Signature" Kernel.Prelude.Text
     :> ReqBody '[RawJson, OctetStream] RawByteString
     :> Post '[JSON] XyneShared.XyneWebhookAck
@@ -28,8 +37,8 @@ type API =
 handler :: FlowServer API
 handler = postXyneWebhook
   where
-    postXyneWebhook mbSig rawBody =
-      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.postXyneWebhook mbSig rawBody
+    postXyneWebhook mbMocId mbSig rawBody =
+      withFlowHandlerAPI $ Domain.Action.UI.XyneWebhook.postXyneWebhook mbMocId mbSig rawBody
 
 type BearerAPI =
   "xyne" :> "webhook" :> "bearer"

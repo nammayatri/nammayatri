@@ -18,7 +18,11 @@
 --
 -- The handler is shared between rider-app and driver-app. Each app supplies:
 --
---   * the global @signingSecret@ (env var, paired with the @/internal/xyne/webhook@ URL),
+--   * the @signingSecret@ for the Xyne app this request came from — the
+--     per-app secret from @XyneSpacesCfg@ when the URL carries @mocId@, else
+--     the deployment-wide env var,
+--   * @mbExpectedMerchantId@: the merchant owning that Xyne app, or 'Nothing'
+--     on the legacy param-less URL (see 'assertXyneMerchantScope'),
 --   * a @lookupXyneCfg@ that resolves the per-merchant @XyneSpacesCfg@ from
 --     @MerchantServiceConfig@ (used for the fallback agent id and the
 --     @convertHtmlToPlainText@ flag),
@@ -89,6 +93,53 @@ dedupTtlSeconds = 7 * 24 * 60 * 60
 dedupKey :: Text -> Text
 dedupKey externalId = "xyne:webhook:dedup:" <> externalId
 
+-- | Authorize an inbound @DESK_REPLY@ against the Xyne app it authenticated as.
+--
+-- Signature verification only proves the caller holds /some/ secret this
+-- deployment accepts; the ticket is then found by @threadId@, which is
+-- attacker-supplied. With one shared secret those were equivalent. With a
+-- secret per Xyne app they are not, so two independent things must hold.
+--
+-- 1. If the URL named an app, the ticket must belong to that app's merchant.
+--    Otherwise one merchant's valid signature plus another's @threadId@ would
+--    write into that other merchant's chat.
+--
+-- 2. If the ticket's own operating city has a configured secret, the request
+--    must have authenticated with a configured secret rather than the env
+--    fallback. Checking only (1) left a hole: a merchant with city A seeded
+--    and city B not could be reached at @?mocId=B@ with the env secret, which
+--    resolves to the fallback, passes (1) because the merchant matches, and
+--    then writes to a ticket in A. Anyone holding the env secret — including
+--    the legacy Xyne app — could bypass A's own secret that way.
+--
+-- (2) subsumes the legacy param-less URL, which always uses the fallback, so
+-- seeding a city closes the old door for it with no extra config. Scope is
+-- deliberately per merchant, not per city: one Xyne app registers a single
+-- anchor @mocId@ but receives replies for tickets in every city of that
+-- merchant, so comparing city ids would reject legitimate traffic from any
+-- non-anchor city. The invariant that makes that safe is that all rows of a
+-- merchant carry the same secret.
+assertXyneMerchantScope ::
+  (Log m, MonadThrow m) =>
+  -- | Merchant named by the URL, 'Nothing' on the legacy param-less URL.
+  Maybe (Id Common.Merchant) ->
+  -- | Whether the request authenticated with a configured per-app secret
+  -- rather than the deployment-wide env fallback.
+  Bool ->
+  -- | Merchant owning the ticket.
+  Id Common.Merchant ->
+  -- | Whether the ticket's own operating city has a configured secret.
+  Bool ->
+  m ()
+assertXyneMerchantScope mbExpectedMerchantId usedConfiguredSecret merchantId ticketCityHasConfiguredSecret = do
+  whenJust mbExpectedMerchantId $ \expectedMerchantId ->
+    unless (merchantId == expectedMerchantId) $ do
+      logError $ "Xyne webhook: merchant scope mismatch, expected=" <> expectedMerchantId.getId <> " actual=" <> merchantId.getId
+      throwError (InvalidRequest "INVALID_XYNE_SIGNATURE")
+  when (ticketCityHasConfiguredSecret && not usedConfiguredSecret) $ do
+    logError $ "Xyne webhook: fallback secret rejected, ticket city of merchant=" <> merchantId.getId <> " has its own secret"
+    throwError (InvalidRequest "INVALID_XYNE_SIGNATURE")
+
 processXyneWebhook ::
   ( Esq.EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -96,8 +147,15 @@ processXyneWebhook ::
     Redis.HedisFlow m r,
     HasField "s3Env" r (S3.S3Env m)
   ) =>
-  -- | Global signing secret paired with the @/internal/xyne/webhook@ URL.
+  -- | Signing secret for the calling Xyne app: its own from @XyneSpacesCfg@
+  -- when the URL carries @mocId@, else the deployment-wide env value.
   Text ->
+  -- | Merchant owning the Xyne app this request authenticated as; 'Nothing' on
+  -- the legacy param-less URL.
+  Maybe (Id Common.Merchant) ->
+  -- | Whether 'signingSecret' is that app's configured secret rather than the
+  -- deployment-wide env fallback.
+  Bool ->
   -- | Resolve the per-merchant Xyne config (token, agent fallback id, html-strip flag).
   (Id Common.Merchant -> Id Common.MerchantOperatingCity -> m Xyne.XyneSpacesCfg) ->
   -- | The app's dashboard service handle (same one used by @sendDashboardChatMessage@).
@@ -109,7 +167,7 @@ processXyneWebhook ::
   -- | Raw bytes of the request body.
   RawByteString ->
   m XyneWebhookAck
-processXyneWebhook signingSecret lookupXyneCfg issueHandle identifier mbSigHeader rawBody =
+processXyneWebhook signingSecret mbExpectedMerchantId usedConfiguredSecret lookupXyneCfg issueHandle identifier mbSigHeader rawBody =
   withLogTag "xyneWebhook" $ do
     sigHeader <- mbSigHeader & fromMaybeM (InvalidRequest "X-Xyne-Signature header missing")
     verifyXyneSignature signingSecret sigHeader rawBody
@@ -119,7 +177,7 @@ processXyneWebhook signingSecret lookupXyneCfg issueHandle identifier mbSigHeade
         logError $ "Xyne webhook: body parse failed: " <> T.pack err
         throwError (InvalidRequest "XYNE_WEBHOOK_PARSE_FAILED")
     case event.eventType of
-      "DESK_REPLY" -> handleDeskReply lookupXyneCfg issueHandle identifier event.payload
+      "DESK_REPLY" -> handleDeskReply mbExpectedMerchantId usedConfiguredSecret lookupXyneCfg issueHandle identifier event.payload
       other -> do
         logError $ "Xyne webhook: ignoring unsupported eventType=" <> other
         -- 2xx so Xyne does not retry; nothing to correlate.
@@ -132,12 +190,14 @@ handleDeskReply ::
     Redis.HedisFlow m r,
     HasField "s3Env" r (S3.S3Env m)
   ) =>
+  Maybe (Id Common.Merchant) ->
+  Bool ->
   (Id Common.Merchant -> Id Common.MerchantOperatingCity -> m Xyne.XyneSpacesCfg) ->
   DUI.ServiceHandle m ->
   Common.Identifier ->
   Xyne.XyneDeskReplyPayload ->
   m XyneWebhookAck
-handleDeskReply lookupXyneCfg issueHandle identifier payload = do
+handleDeskReply mbExpectedMerchantId usedConfiguredSecret lookupXyneCfg issueHandle identifier payload = do
   let key = dedupKey payload.externalId
   mbCached <- Redis.safeGet key
   case mbCached of
@@ -165,6 +225,7 @@ handleDeskReply lookupXyneCfg issueHandle identifier payload = do
             issueReport.merchantOperatingCityId
               & fromMaybeM (InternalError $ "IssueReport " <> payload.threadId <> " has no merchantOperatingCityId")
           cfg <- lookupXyneCfg merchantId mocId
+          assertXyneMerchantScope mbExpectedMerchantId usedConfiguredSecret merchantId (isJust cfg.webhookSigningSecret)
           merchant <-
             issueHandle.findByMerchantId merchantId
               >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
