@@ -156,7 +156,8 @@ computeBetterDriverSearchRadiusOverride searchTry
                         <$> lastMaybe driverLocationResp.loc
   where
     lastMaybe [] = Nothing
-    lastMaybe xs = Just (last xs)
+    lastMaybe [x] = Just x
+    lastMaybe (_ : xs) = lastMaybe xs
 
 initiateDriverSearchBatch ::
   ( EncFlow m r,

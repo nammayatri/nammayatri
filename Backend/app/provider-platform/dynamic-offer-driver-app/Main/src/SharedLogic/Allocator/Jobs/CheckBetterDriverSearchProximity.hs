@@ -146,4 +146,5 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                       else reschedule
   where
     lastMaybe [] = Nothing
-    lastMaybe xs = Just (last xs)
+    lastMaybe [x] = Just x
+    lastMaybe (_ : xs) = lastMaybe xs

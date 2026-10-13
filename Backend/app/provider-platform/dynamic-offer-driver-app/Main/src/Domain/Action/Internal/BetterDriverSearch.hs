@@ -67,4 +67,5 @@ betterDriverSearch req = do
   pure Success
   where
     lastMaybe [] = Nothing
-    lastMaybe xs = Just (last xs)
+    lastMaybe [x] = Just x
+    lastMaybe (_ : xs) = lastMaybe xs
