@@ -352,6 +352,7 @@ let AllocatorJobType =
       | DeleteUnreferencedFarePolicies
       | GenerateInvoicePdf
       | SendLegalPolicyNotification
+      | RegistrySync
       >
 
 let jobRetryOnExceptionMapx =
