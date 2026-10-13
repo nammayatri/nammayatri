@@ -2574,3 +2574,19 @@ instance IsHTTPError PublicTransportBlockError where
     BusBlockLimitExceeded _ -> E403
 
 instance IsAPIError PublicTransportBlockError
+
+-- Passes upstream rider-app status + APIError envelope through unchanged.
+data BapProxyError = BapProxyResponseError HttpCode Text (Maybe Text) Value
+  deriving (Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''BapProxyError
+
+instance IsBaseError BapProxyError where
+  toMessage (BapProxyResponseError _ _ msg _) = msg
+
+instance IsHTTPError BapProxyError where
+  toErrorCode (BapProxyResponseError _ code _ _) = code
+  toHttpCode (BapProxyResponseError code _ _ _) = code
+
+instance IsAPIError BapProxyError where
+  toPayload (BapProxyResponseError _ _ _ payload) = payload
