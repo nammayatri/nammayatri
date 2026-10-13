@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.PurchasedPassPayment where
 
+import qualified Data.Aeson
 import qualified Data.Text
 import qualified Domain.Types.PurchasedPassPayment
 import Kernel.Beam.Functions
@@ -12,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.PurchasedPassPayment as Beam
 
@@ -34,6 +36,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             orderId = Kernel.Types.Id.Id orderId,
+            overrideBenefitConfigJson = overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe,
             passCode = passCode,
             passEnum = passEnum,
             passId = Kernel.Types.Id.Id <$> passId,
@@ -65,6 +68,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.orderId = Kernel.Types.Id.getId orderId,
+        Beam.overrideBenefitConfigJson = Data.Aeson.toJSON <$> overrideBenefitConfigJson,
         Beam.passCode = passCode,
         Beam.passEnum = passEnum,
         Beam.passId = Kernel.Types.Id.getId <$> passId,
