@@ -43,7 +43,10 @@ data FRFSPassTicketStatisticsResp = FRFSPassTicketStatisticsResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FrfsOverrideConfigAPIEntity = FrfsOverrideConfigAPIEntity
-  { fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+  { allowCheaperStopPairs :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    allowRoundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    enforceStopPair :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maximumTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     percentageApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,

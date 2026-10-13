@@ -78,6 +78,9 @@ types:
     maximumTripCount: Maybe Int
     unlimitedTripCount: Bool
     maxTicketQuantityPerOverride: Maybe Int
+    enforceStopPair: Maybe Bool
+    allowRoundTrip: Maybe Bool
+    allowCheaperStopPairs: Maybe Bool
     derive: "Show"
 
   PassAPIEntity:
