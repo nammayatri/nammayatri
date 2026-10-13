@@ -59,6 +59,7 @@ import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.Aarokya as Aarokya
 import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
+import qualified API.UI.BetterDriverSearch as BetterDriverSearch
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
@@ -131,6 +132,7 @@ type API =
            :<|> Booking.API
            :<|> CancellationReasons.API
            :<|> Cancel.API
+           :<|> BetterDriverSearch.API
            :<|> CancelSearch.API
            :<|> Ride.API
            :<|> Call.API
@@ -271,6 +273,7 @@ handler =
     :<|> Booking.handler
     :<|> CancellationReasons.handler
     :<|> Cancel.handler
+    :<|> BetterDriverSearch.handler
     :<|> CancelSearch.handler
     :<|> Ride.handler
     :<|> Call.handler

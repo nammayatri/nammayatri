@@ -159,6 +159,7 @@ import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import System.Random (randomRIO)
 import Tools.Constants
 import Tools.Error
 import Tools.Event
@@ -191,6 +192,9 @@ data BookingDetails = BookingDetails
     assignedVehicleVariant :: Maybe DV.VehicleVariant,
     otp :: Text,
     isInitiatedByCronJob :: Bool,
+    -- | Better-driver swap: the customer notification says "better driver found",
+    -- not "driver assigned". False on every other path.
+    isBetterDriverSwap :: Bool,
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text
   }
@@ -754,6 +758,27 @@ rideAssignedReqHandler req = do
       if req'.bookingPrePersisted
         then QRB.addActiveBookingAvailableInCache booking.riderId booking.id
         else QRB.updateStatus booking.riderId booking.id DRB.TRIP_ASSIGNED
+      -- "find a better driver" rollout gate: rolled once per booking at assignment time and
+      -- never re-rolled (Domain.Action.UI.BetterDriverSearch enforces the persisted value).
+      -- Gated on the city switch too, not just the probability: this value is what the app
+      -- shows the button from, so marking a booking eligible in a disabled city would show a
+      -- button whose trigger always errors.
+      -- A swap does NOT re-roll - one search per original booking, so a rider cannot chain
+      -- swaps and cancel a driver on each hop. To allow repeats later, drop this branch.
+      eligibleForBetterDriverSearch <-
+        if isBetterDriverSwap
+          then pure False
+          else do
+            riderConfigForBetterDriverSearch <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+            let mbEnabledProbability = case riderConfigForBetterDriverSearch of
+                  Just riderConfig' | riderConfig'.betterDriverSearchEnabled == Just True -> riderConfig'.betterDriverSearchEligibilityProbability
+                  _ -> Nothing
+            case mbEnabledProbability of
+              Nothing -> pure False
+              Just probability -> do
+                draw <- randomRIO (0 :: Double, 1)
+                pure (draw < probability)
+      QRBE.updateEligibleForBetterDriverSearch booking.id eligibleForBetterDriverSearch now
       QRide.createRide ride
       QPFS.clearCache booking.riderId
       fork "Increment assigned count for customer cancellation rate" $ do
@@ -764,7 +789,12 @@ rideAssignedReqHandler req = do
         -- config/DB reads plus a possible synchronous APNS call. Best-effort already:
         -- the app also learns of the assignment by polling the TRIP_ASSIGNED booking.
         deferPostAssignmentWork "assign:customerNotify" $ do
-          if rideStatus == DRide.UPCOMING then Notify.notifyOnScheduledRideAccepted booking ride else Notify.notifyOnRideAssigned booking ride
+          if isBetterDriverSwap
+            then Notify.notifyOnBetterDriverAssigned booking ride
+            else
+              if rideStatus == DRide.UPCOMING
+                then Notify.notifyOnScheduledRideAccepted booking ride
+                else Notify.notifyOnRideAssigned booking ride
           when req'.isDriverBirthDay $ do
             Notify.notifyDriverBirthDay booking.riderId booking.tripCategory driverName
       -- One-shot already carries the BPP tracking URL in its payload (set on the ride at

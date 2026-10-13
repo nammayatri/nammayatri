@@ -4,7 +4,6 @@
 
 module Storage.Queries.SearchTry (module Storage.Queries.SearchTry, module ReExport) where
 
-import qualified Domain.Types.AddOnConfig
 import qualified Domain.Types.SearchTry
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -65,6 +64,7 @@ updateByPrimaryKey (Domain.Types.SearchTry.SearchTry {..}) = do
       Se.Set Beam.searchRepeatCounter searchRepeatCounter,
       Se.Set Beam.searchRepeatType searchRepeatType,
       Se.Set Beam.serviceTierArray (Kernel.Prelude.Just serviceTierArray),
+      Se.Set Beam.standInForBookingId standInForBookingId,
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status status,
       Se.Set Beam.tripCategory (Kernel.Prelude.Just tripCategory),

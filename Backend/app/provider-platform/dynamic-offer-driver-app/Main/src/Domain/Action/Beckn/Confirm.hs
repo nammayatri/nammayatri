@@ -226,7 +226,8 @@ handler merchant req validatedQuote = do
                 emailDomain = booking.emailDomain,
                 businessEmailDomain = booking.businessEmailDomain,
                 driverPreference = req.driverPreference,
-                addOnData = booking.addOnData
+                addOnData = booking.addOnData,
+                betterDriverSearchForBookingId = Nothing
               }
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput
       QRB.updateSearchTryId booking.id searchTry.id

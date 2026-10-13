@@ -193,7 +193,7 @@ validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId _isValueAddN
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
 validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP = do
-  let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
+  let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, isBetterDriverSwap = False, ..}
   booking <-
     if isValueAddNP
       then QRB.findByBPPBookingId bppBookingId |<|>| QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)

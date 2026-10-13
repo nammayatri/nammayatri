@@ -113,6 +113,9 @@ data BookingAPIEntity = BookingAPIEntity
     riderName :: Maybe Text,
     estimatedFare :: Money,
     isBookingUpdated :: Bool,
+    eligibleForBetterDriverSearch :: Maybe Bool,
+    -- Set after a better-driver swap: the new Booking to switch polling to.
+    supersededByBookingId :: Maybe (Id Booking),
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     estimatedFareWithCurrency :: PriceAPIEntity,
@@ -271,7 +274,10 @@ data BookingStatusAPIEntity = BookingStatusAPIEntity
     bookingDepositAmount :: Maybe HighPrecMoney,
     pickupSpecialZoneInfo :: Maybe SpecialZoneGateInfo,
     isSilentReallocation :: Maybe Bool,
-    tollChargeApproval :: Maybe TollChargeApprovalRequestRes
+    tollChargeApproval :: Maybe TollChargeApprovalRequestRes,
+    eligibleForBetterDriverSearch :: Maybe Bool,
+    -- Set after a better-driver swap: the new Booking to switch polling to.
+    supersededByBookingId :: Maybe (Id Booking)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -452,6 +458,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         hasDisability = (Just . isJust) booking.disabilityTag,
         sosStatus = mbSosStatus,
         isBookingUpdated = booking.isBookingUpdated,
+        eligibleForBetterDriverSearch = booking.eligibleForBetterDriverSearch,
+        supersededByBookingId = Id <$> booking.supersededByBookingId,
         isValueAddNP,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         isPetRide = booking.isPetRide,
@@ -738,7 +746,7 @@ buildBookingStatusAPIEntity booking = do
         Nothing -> pure ()
       pure mbPending
     _ -> pure Nothing
-  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval
+  return $ BookingStatusAPIEntity booking.id booking.isBookingUpdated booking.status rideStatus talkedWithDriver estimatedEndTimeRange driverArrivalTime destinationReachedTime returnStartedAt sosStatus driversPreviousRideDropLocLat driversPreviousRideDropLocLon stopsInfo batchConfig isSafetyPlus (makeCancellationReasonAPIEntity <$> mbCancellationReason) tipAmount booking.bookingDepositAmount (mkSpecialZoneGateInfo booking.pickupArea) Nothing tollChargeApproval booking.eligibleForBetterDriverSearch (Id <$> booking.supersededByBookingId)
 
 favouritebuildBookingAPIEntity :: DRide.Ride -> FavouriteBookingAPIEntity
 favouritebuildBookingAPIEntity ride = makeFavouriteBookingAPIEntity ride
