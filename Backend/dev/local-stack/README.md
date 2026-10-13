@@ -205,6 +205,7 @@ local-stack/
 │   ├── movin-bot.py         the owner's bot (systemd: movin-bot)
 │   ├── backup.sh            the nightly backup (systemd: movin-backup, runs this file)
 │   ├── restore.sh           put a backup back, or rehearse it in a throwaway copy
+│   ├── key-rotation/        new keys and salt for stored numbers: prepared, not yet run
 │   ├── systemd/             units a release installs: movin-backup.service/.timer
 │   ├── setup.sh             bring a stack up from nothing (what CI runs)
 │   └── apply-*.sh, *-prepare.sh, enrol-driver.sh, install-moosyl-key.sh,
