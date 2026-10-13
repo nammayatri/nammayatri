@@ -30,6 +30,7 @@ module SharedLogic.FRFSPassOverride
     paymentForOverrideAppliedEntity,
     isFullyPassCovered,
     fullyCoveredByPass,
+    passCoveredBankRef,
     PassCandidate (..),
     loadPassCandidates,
     filterCandidatesForLeg,
@@ -94,6 +95,11 @@ fullyCoveredByPass booking =
   booking.overrideType == Just DFRFSTicketBooking.PassOverride
     && isJust booking.overrideAppliedEntityId
     && isFullyPassCovered booking.overriddenAmount
+
+passCoveredBankRef :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text
+passCoveredBankRef booking
+  | fullyCoveredByPass booking = booking.overrideAppliedEntityId
+  | otherwise = Nothing
 
 withinQuantityCap :: Int -> Maybe Int -> Bool
 withinQuantityCap totalQuantity mbCap = totalQuantity <= fromMaybe 1 mbCap
