@@ -85,6 +85,7 @@ FRFSSearch:
     vehicleNumber: Maybe Text
     isSingleMode: Maybe Bool
     hasApplicablePass: Maybe Bool
+    enforceFRFSPass: Maybe Bool
     cloudType : Maybe CloudType
     clientSdkVersion: Maybe Version
     clientBundleVersion: Maybe Version
