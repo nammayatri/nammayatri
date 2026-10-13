@@ -63,7 +63,7 @@ findLocationById id createdAt = do
         CH.filter_
           ( \location ->
               location.id CH.==. id
-                CH.&&. location.createdAt >=. addUTCTime (-120) createdAt -- locations are created before booking, so 2 mins buffer is added here
+                CH.&&. location.createdAt >=. addUTCTime (-604800) createdAt
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE locationTTable)
   return $ listToMaybe location
