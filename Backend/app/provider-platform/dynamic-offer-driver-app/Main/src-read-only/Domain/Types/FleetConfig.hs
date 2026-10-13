@@ -4,6 +4,7 @@
 module Domain.Types.FleetConfig where
 
 import Data.Aeson
+import qualified Domain.Types.FleetPoolingPriority
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -15,12 +16,17 @@ import qualified Tools.Beam.UtilsTH
 
 data FleetConfig = FleetConfig
   { allowAutomaticRoundTripAssignment :: Kernel.Prelude.Bool,
+    allowCancellationByDriver :: Kernel.Prelude.Bool,
+    allowDriverToToggleAutoAssign :: Kernel.Prelude.Bool,
     allowEndingMidRoute :: Kernel.Prelude.Bool,
     allowStartRideFromQR :: Kernel.Prelude.Bool,
+    autoAssignDefaultOn :: Kernel.Prelude.Bool,
     blacklistCoinEvents :: Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType],
     directlyStartFirstTripAssignment :: Kernel.Prelude.Bool,
     endRideDistanceThreshold :: Kernel.Types.Common.HighPrecMeters,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority,
+    ignoreDriverAreaAndDistancePreference :: Kernel.Prelude.Bool,
     rideEndApproval :: Kernel.Prelude.Bool,
     unlinkDriverAndVehicleOnTripTermination :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

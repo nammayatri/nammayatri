@@ -296,6 +296,17 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
 
+-- | Wallet gate for enabling auto-acceptance on a tier: True when the tier sets no
+--   minWalletBalance, else whether the driver's wallet balance meets it (missing wallet => False).
+--   Shared by the driver path (postDriverUpdateServiceTiers) and the fleet path (SharedLogic.FleetFeatures).
+hasMinWalletBalanceForTier :: BeamFlow m r => DVST.VehicleServiceTier -> Id DP.Person -> m Bool
+hasMinWalletBalanceForTier serviceTier driverId =
+  case serviceTier.autoAcceptanceConfig >>= (.minWalletBalance) of
+    Nothing -> pure True
+    Just minBalance -> do
+      mbBalance <- getWalletBalanceByOwner DRIVER driverId.getId
+      pure $ maybe False (>= minBalance) mbBalance
+
 -- | Serializes checkAndAutoDisableWalletGatedTiers's own concurrent invocations for one driver, since two can otherwise race and undo each other's write.
 selectedServiceTiersLockKey :: Id DP.Person -> Text
 selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId

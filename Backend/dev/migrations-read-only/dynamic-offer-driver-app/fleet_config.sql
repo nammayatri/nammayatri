@@ -32,3 +32,12 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_config ALTER COLUMN unlink_driver_and_v
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN blacklist_coin_events text[]  default '{}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN ignore_driver_area_and_distance_preference boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN fleet_pooling_priority jsonb ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN auto_assign_default_on boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN allow_driver_to_toggle_auto_assign boolean  default true;
+ALTER TABLE atlas_driver_offer_bpp.fleet_config ADD COLUMN allow_cancellation_by_driver boolean  default true;

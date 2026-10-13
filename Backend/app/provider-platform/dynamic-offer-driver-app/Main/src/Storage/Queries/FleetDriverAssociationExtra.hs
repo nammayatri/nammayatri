@@ -512,6 +512,32 @@ findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset = 
     (Just limit)
     (Just offset)
 
+-- | Keyset page of the fleet's ACTIVE (isActive, associatedTill in the future) driver ids,
+-- ordered by driverId and starting after the given one. Unlike offset paging over
+-- updatedAt, rows changing while the caller walks the pages cannot shift drivers out
+-- of the walk.
+findActiveDriverIdsByFleetOwnerIdAfter ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  Maybe Text ->
+  Int ->
+  m [Id Person]
+findActiveDriverIdsByFleetOwnerIdAfter fleetOwnerId mbLastDriverId limit = do
+  now <- getCurrentTime
+  associations <-
+    findAllWithOptionsKV
+      [ Se.And $
+          [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
+            Se.Is BeamFDVA.isActive $ Se.Eq True,
+            Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+            <> [Se.Is BeamFDVA.driverId (Se.GreaterThan lastDriverId) | Just lastDriverId <- [mbLastDriverId]]
+      ]
+      (Se.Asc BeamFDVA.driverId)
+      (Just limit)
+      Nothing
+  pure $ map (.driverId) associations
+
 findActiveDriverByFleetOwnerId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Text ->

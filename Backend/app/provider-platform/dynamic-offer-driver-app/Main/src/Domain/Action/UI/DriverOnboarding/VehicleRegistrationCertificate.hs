@@ -92,6 +92,7 @@ import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -698,7 +699,10 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                    let updatedVehicle = (makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing) {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
+                    let rebuiltVehicle = (makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing) {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
+                        -- Re-verification updates the existing vehicle: keep its auto-accept state
+                        -- (driver's or fleet owner's choice) instead of resetting or re-defaulting it.
+                        updatedVehicle = carryOverAutoAcceptTiers vehicle rebuiltVehicle
                     when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
@@ -910,14 +914,23 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       throwError (InvalidRequest "Vehicle is not approved")
   mbOldVehicle <- VQuery.findById driverInfo.driverId
   deactivateCurrentRC transporterConfig driverInfo.driverId
-  newVehicle <- addVehicleToDriver
+  newVehicle <- addVehicleToDriver mbOldVehicle
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
   when (maybe False (\oldVehicle -> oldVehicle.category /= newVehicle.category) mbOldVehicle) $
     forceDriverOffline driverInfo.driverId
+  -- Apply the fleet's auto-assign default only to a driver's first vehicle, or when a
+  -- vehicle of another variant replaces one that had auto-accept on (its tiers cannot be
+  -- carried over). A same-variant replacement already carries the previous auto-accept
+  -- state, so an owner's per-driver OFF is never overridden. Guarded: never fails RC activation.
+  let shouldApplyFleetDefault = case mbOldVehicle of
+        Nothing -> True
+        Just oldVehicle -> oldVehicle.variant /= newVehicle.variant && not (null (fromMaybe [] oldVehicle.selectedAutoAcceptTiers))
+  when shouldApplyFleetDefault $
+    SFleetFeatures.applyFleetAutoAssignOnVehicleCreation driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
-    addVehicleToDriver = do
+    addVehicleToDriver mbPreviousVehicle = do
       rcNumber <- decrypt rc.certificateNumber
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == DV.SUV) $
@@ -925,9 +938,24 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
+      let rebuiltVehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
+          vehicle = maybe rebuiltVehicle (`carryOverAutoAcceptTiers` rebuiltVehicle) mbPreviousVehicle
       VQuery.create vehicle
       pure vehicle
+
+-- | Keeps the previous vehicle's auto-accept tiers (and their base tiers in
+-- selectedServiceTiers) on a vehicle rebuilt from an RC, when the variant is unchanged.
+-- Another variant has different tiers, so nothing is carried over then.
+carryOverAutoAcceptTiers :: DVeh.Vehicle -> DVeh.Vehicle -> DVeh.Vehicle
+carryOverAutoAcceptTiers oldVehicle rebuiltVehicle
+  | oldVehicle.variant /= rebuiltVehicle.variant || null previousAutoAcceptTiers = rebuiltVehicle
+  | otherwise =
+    rebuiltVehicle
+      { DVeh.selectedAutoAcceptTiers = Just previousAutoAcceptTiers,
+        DVeh.selectedServiceTiers = DL.nub (rebuiltVehicle.selectedServiceTiers <> previousAutoAcceptTiers)
+      }
+  where
+    previousAutoAcceptTiers = fromMaybe [] oldVehicle.selectedAutoAcceptTiers
 
 deactivateCurrentRC :: OnboardingFlow m r => DTC.TransporterConfig -> Id Person.Person -> m ()
 deactivateCurrentRC transporterConfig driverId = do

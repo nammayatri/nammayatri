@@ -234,6 +234,7 @@ library
       Domain.Types.EstimateStatus
       Domain.Types.FareProductType
       Domain.Types.FleetBadgeType
+      Domain.Types.FleetPoolingPriority
       Domain.Types.FRFSQuoteCategorySpec
       Domain.Types.FRFSQuoteCategoryType
       Domain.Types.FRFSRouteDetails

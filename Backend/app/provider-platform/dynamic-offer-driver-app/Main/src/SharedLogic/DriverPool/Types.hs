@@ -19,6 +19,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as A
 import Data.Default.Class
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.AddOnConfig as DAddOnConfig
@@ -28,6 +29,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import Domain.Types.FleetPoolingPriority (FleetPoolingPriority (..), PoolingPriorityLevel (..), defaultKey, dropKey, pickupKey)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
@@ -308,7 +310,21 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     preferenceMatchScore :: Double,
     -- Whether any preference dimension applied to this driver/search. The score above is 1.0
     -- when none applies (right for ranking), so display code must gate on this flag.
-    hasApplicablePreferences :: Bool
+    hasApplicablePreferences :: Bool,
+    -- The driver's active fleet's pooling priority map as stored on fleet_config, e.g.
+    -- {"default":"LOW","Drop_<id>":"HIGH","Pickup_<id>":"MEDIUM"};
+    -- Nothing (null) when the driver has no active fleet or the fleet set none. Stamped by
+    -- makeTaggedDriverPool.
+    -- The three fleetPoolingPriority* fields are Maybe so that ruleset output without them
+    -- still decodes (see TaggedDriverPoolInput).
+    fleetPoolingPriority :: Maybe FleetPoolingPriority,
+    -- The level that applies to this search: the highest level among the map's entries for
+    -- Pickup_<pickupId> and Drop_<dropId> (ids from searchReq.area; tie -> Pickup), else its
+    -- "default" entry.
+    -- Nothing (null) = NO_PRIORITY.
+    fleetPoolingPriorityLevel :: Maybe PoolingPriorityLevel,
+    -- The map key fleetPoolingPriorityLevel came from (a special-location key or "default"); Nothing when no level applies.
+    fleetPoolingPriorityKey :: Maybe Text
   }
   deriving (Generic, Show, ToJSON)
 
@@ -335,8 +351,22 @@ instance Default DriverPoolWithActualDistResult where
         searchReqDriverStatsCounters = Nothing,
         idleTimeSeconds = Nothing,
         preferenceMatchScore = 1.0,
-        hasApplicablePreferences = False
+        hasApplicablePreferences = False,
+        -- Shows the shape in rule verification (a search from the example pickup to the example drop);
+        -- live pools carry Nothing in all three for non-fleet drivers.
+        fleetPoolingPriority =
+          Just . FleetPoolingPriority $
+            Map.fromList
+              [ (defaultKey, LOW),
+                (dropKey exampleDropId, HIGH),
+                (pickupKey examplePickupId, MEDIUM)
+              ],
+        fleetPoolingPriorityLevel = Just HIGH,
+        fleetPoolingPriorityKey = Just (dropKey exampleDropId)
       }
+    where
+      examplePickupId = "6c1f0e9a-3b5d-4f2a-9e7c-1d2b3a4c5e6f"
+      exampleDropId = "b4365d87-1242-475b-b615-ce25d1172b5b"
 
 -- | One preference dimension's outcome for a single driver/ride pairing.
 -- `isApplicable = False` means this dimension has nothing to say about this ride

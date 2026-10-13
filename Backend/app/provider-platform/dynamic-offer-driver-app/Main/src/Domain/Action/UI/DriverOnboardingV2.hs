@@ -93,8 +93,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
-import qualified SharedLogic.Finance.Prepaid as SFPrepaid
-import qualified SharedLogic.Finance.Wallet as SFWallet
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.PersonBankAccount as SPBA
@@ -644,6 +643,9 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  -- A fleet that disallows driver toggling owns auto-assign: the driver's request is ignored for
+  -- auto-accept-enabled tiers, whose current selected/auto-accept membership is preserved as-is.
+  fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggleAutoAssign) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver personId
 
   -- Same lock checkAndAutoDisableWalletGatedTiers takes: a concurrent wallet-debit revoke must not
   -- interleave its strip between this read and these writes.
@@ -674,20 +676,27 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
             -- runs in the debit-driven auto-revoke either (PostActions.runPostActionsForAccount
             -- gates the call on the same flag). Dispatch time never wallet-checks (see attemptPriorityDirectAssign).
             walletGateEnabled = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
-        if not isUsageRestricted && isSelected
-          then do
-            -- Only call checkMinWalletBalance (a real DB query) when its result actually matters:
-            -- an AutoAcceptOptional tier the driver isn't requesting auto-accept for never consults it.
-            let walletCheckNeeded = walletGateEnabled && (isAutoAcceptOnlyTier || wantsAutoAccept)
-            hasSufficientWalletBalance <- if walletCheckNeeded then checkMinWalletBalance driverServiceTier personId else pure True
-            -- AutoAcceptOnly has no non-priority existence, so insufficient wallet drops the base tier too.
-            -- AutoAcceptOptional base-tier eligibility stays wallet-independent, matching checkAndAutoDisableWalletGatedTiers.
-            let baseTierSurvivesWalletCheck = hasSufficientWalletBalance || not isAutoAcceptOnlyTier
-            pure
-              ( if baseTierSurvivesWalletCheck then Just driverServiceTier.serviceTierType else Nothing,
-                if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing
-              )
-          else pure (Nothing, Nothing)
+            isFleetLockedTier = fleetLocksAutoAssign && maybe False (.enabled) driverServiceTier.autoAcceptanceConfig
+            keepIfPreviously tierTypes = if driverServiceTier.serviceTierType `elem` tierTypes then Just driverServiceTier.serviceTierType else Nothing
+        if
+            | isUsageRestricted -> pure (Nothing, Nothing)
+            | isFleetLockedTier -> do
+              when (isJust mbServiceTierDriverRequest) $
+                logInfo $ "Ignoring driver service tier request for fleet-managed auto-assign tier " <> show driverServiceTier.serviceTierType <> " for driver " <> personId.getId
+              pure (keepIfPreviously vehicle.selectedServiceTiers, keepIfPreviously (fromMaybe [] vehicle.selectedAutoAcceptTiers))
+            | isSelected -> do
+              -- Only call hasMinWalletBalanceForTier (a real DB query) when its result actually matters:
+              -- an AutoAcceptOptional tier the driver isn't requesting auto-accept for never consults it.
+              let walletCheckNeeded = walletGateEnabled && (isAutoAcceptOnlyTier || wantsAutoAccept)
+              hasSufficientWalletBalance <- if walletCheckNeeded then hasMinWalletBalanceForTier driverServiceTier personId else pure True
+              -- AutoAcceptOnly has no non-priority existence, so insufficient wallet drops the base tier too.
+              -- AutoAcceptOptional base-tier eligibility stays wallet-independent, matching checkAndAutoDisableWalletGatedTiers.
+              let baseTierSurvivesWalletCheck = hasSufficientWalletBalance || not isAutoAcceptOnlyTier
+              pure
+                ( if baseTierSurvivesWalletCheck then Just driverServiceTier.serviceTierType else Nothing,
+                  if hasSufficientWalletBalance && wantsAutoAccept then Just driverServiceTier.serviceTierType else Nothing
+                )
+            | otherwise -> pure (Nothing, Nothing)
     -- Rating-gated tiers (vehicleRating threshold set) are eligibility-driven, not
     -- opt-in: the driver's toggle cannot remove one the vehicle qualifies for — an
     -- automated recompute would re-add it on the next rating/AC event anyway.
@@ -726,15 +735,6 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     QDI.updateAirportSwitch enableForAirport Nothing Nothing personId
 
   return Success
-  where
-    -- Tiers with no minWalletBalance set are unaffected.
-    checkMinWalletBalance :: VehicleServiceTier -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
-    checkMinWalletBalance serviceTier driverId =
-      case serviceTier.autoAcceptanceConfig >>= (.minWalletBalance) of
-        Nothing -> pure True
-        Just minBalance -> do
-          mbBalance <- SFWallet.getWalletBalanceByOwner SFPrepaid.counterpartyDriver driverId.getId
-          pure $ maybe False (>= minBalance) mbBalance
 
 postDriverRegisterSsn ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

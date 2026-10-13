@@ -44,6 +44,8 @@ module SharedLogic.DriverPool.AreaPreference
     matchesRadius,
     isAreaPreferenceEnabled,
     isAreaPreferenceEnabledJson,
+    distancePreferenceEnabledTagName,
+    isDistancePreferenceEnabledJson,
   )
 where
 
@@ -182,6 +184,23 @@ isAreaPreferenceEnabledJson (A.Object tagsObj) =
       KM.member (A.fromText areaPreferenceRadiusTagName) tagsObj
         || any (T.isPrefixOf areaPreferenceCellTagPrefix . A.toText) (KM.keys tagsObj)
 isAreaPreferenceEnabledJson _ = False
+
+-- | Tag that switches off the driver's trip-distance preference (set to "false"
+-- for fleet drivers whose fleet has 'ignoreDriverAreaAndDistancePreference'). Same "one value per
+-- tag name" boolean convention as 'areaPreferenceEnabledTagName'.
+distancePreferenceEnabledTagName :: Text
+distancePreferenceEnabledTagName = "DistancePreferenceEnabled"
+
+-- | Whether the driver's min/max ride-distance preference should be honoured,
+-- read from the raw (JSON-decoded) driver tag object. Absent or unparseable
+-- tag means enabled -- today's behaviour; only an explicit false disables it.
+isDistancePreferenceEnabledJson :: A.Value -> Bool
+isDistancePreferenceEnabledJson (A.Object tagsObj) =
+  case KM.lookup (A.fromText distancePreferenceEnabledTagName) tagsObj of
+    Just (A.Bool enabled) -> enabled
+    Just (A.String value) -> fromMaybe True (parseEnabledTagValue value)
+    _ -> True
+isDistancePreferenceEnabledJson _ = True
 
 -- | Every tag name that must be cleared before writing a new selection --
 -- both the radius tag and every existing cell tag, regardless of which

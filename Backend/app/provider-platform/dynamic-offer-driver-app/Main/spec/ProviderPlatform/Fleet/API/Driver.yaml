@@ -23,6 +23,7 @@ imports:
   TimeBound: Kernel.Types.TimeBound
   ActionSource: Dashboard.Common
   FleetBadgeType: Domain.Types.FleetBadgeType
+  FleetPoolingPriority: Domain.Types.FleetPoolingPriority
   Role: Dashboard.Common
   GetRoutesResp: Kernel.External.Maps
   StripeAddress: Dashboard.Common.Driver
@@ -409,6 +410,100 @@ apis:
               - fleetOwnerId: Text
             request:
               type: UpdateCashRideReq
+            response:
+              type: APISuccess
+
+  - GET: # FleetDriverControlsConfigAPI
+      endpoint: /fleet/config
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: FleetDriverControlsConfigRes
+      migrate:
+        capability: fleet.profile.read
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/fleet/config
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+            response:
+              type: FleetDriverControlsConfigRes
+
+  - POST: # UpdateFleetDriverControlsConfigAPI
+      endpoint: /fleet/config/update
+      auth: ApiAuthV2
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: UpdateFleetDriverControlsConfigReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: city-operations.driver.write
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/fleet/config/update
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+            request:
+              type: UpdateFleetDriverControlsConfigReq
+            response:
+              type: APISuccess
+
+  - GET: # FleetDriverAutoAssignStatusAPI
+      endpoint: /fleet/driver/{driverId}/autoAssign
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: DriverAutoAssignStatusRes
+      migrate:
+        capability: fleet.driver.read
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/fleet/driver/{driverId}/autoAssign
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            query:
+              - fleetOwnerId: Text
+            response:
+              type: DriverAutoAssignStatusRes
+
+  - POST: # FleetDriverAutoAssignUpdateAPI
+      endpoint: /fleet/driver/{driverId}/autoAssign
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fleetOwnerId: Text
+      request:
+        type: FleetDriverAutoAssignReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: fleet.driver.write
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/fleet/driver/{driverId}/autoAssign
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            query:
+              - fleetOwnerId: Text
+            request:
+              type: FleetDriverAutoAssignReq
             response:
               type: APISuccess
 
@@ -2213,6 +2308,35 @@ types:
     - allowStartRideFromQR: Bool
     - endRideDistanceThreshold: HighPrecMeters
     - rideEndApproval: Bool
+    - autoAssignDefaultOn: Maybe Bool
+    - allowDriverToToggleAutoAssign: Maybe Bool
+    - allowCancellationByDriver: Maybe Bool
+    - ignoreDriverAreaAndDistancePreference: Maybe Bool
+    - derive: "'HideSecrets"
+  FleetDriverControlsConfigRes:
+    - autoAssignDefaultOn: Bool
+    - allowDriverToToggleAutoAssign: Bool
+    - allowCancellationByDriver: Bool
+    - ignoreDriverAreaAndDistancePreference: Bool
+    - fleetPoolingPriority: Maybe FleetPoolingPriority
+    - derive: "'HideSecrets"
+  UpdateFleetDriverControlsConfigReq:
+    - autoAssignDefaultOn: Maybe Bool
+    - allowDriverToToggleAutoAssign: Maybe Bool
+    - allowCancellationByDriver: Maybe Bool
+    - ignoreDriverAreaAndDistancePreference: Maybe Bool
+    - fleetPoolingPriority: Maybe FleetPoolingPriority
+    - derive: "'HideSecrets"
+  DriverAutoAssignStatusRes:
+    - enabled: Bool
+    - enabledTiers: "[ServiceTierType]"
+    - eligibleTiers: "[ServiceTierType]"
+    - autoAcceptOnlyTiers: "[ServiceTierType]"
+    - hasAutoAssignTag: Bool
+    - allowDriverToToggle: Bool
+    - derive: "'HideSecrets"
+  FleetDriverAutoAssignReq:
+    - enable: Bool
     - derive: "'HideSecrets"
   VerifyFleetJoiningOtpReq:
     - mobileCountryCode: Text

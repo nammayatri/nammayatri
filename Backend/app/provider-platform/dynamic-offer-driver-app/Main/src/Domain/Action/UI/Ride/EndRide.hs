@@ -737,7 +737,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                         numberType = DUIRideCommon.ANONYMOUS
                       }
                 }
-        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling
+        -- The ride has just ended, so the fleet's driver-cancellation lock is moot; skip the lookup.
+        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo endRideCalling False
 
   return $
     EndRideResp

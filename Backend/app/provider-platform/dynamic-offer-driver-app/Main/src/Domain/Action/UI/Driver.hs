@@ -290,6 +290,7 @@ import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.FleetEngine as FleetEngine
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
@@ -1559,11 +1560,22 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               }
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  -- A fleet with ignoreDriverAreaAndDistancePreference ignores trip-distance preferences, so the driver may not change them.
+  -- Only looked up when the request actually touches the thresholds.
+  let touchesTripDistance = isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold
+  fleetDisablesDistancePreference <-
+    if touchesTripDistance
+      then maybe False ((.ignoreDriverAreaAndDistancePreference) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver personId
+      else pure False
+  when fleetDisablesDistancePreference $
+    logInfo $ "Ignoring trip distance threshold update for driver " <> personId.getId <> ": disabled by fleet (ignoreDriverAreaAndDistancePreference)"
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
       tripDistanceMaxThreshold = case req.tripDistanceMaxThreshold of
+        _ | fleetDisablesDistancePreference -> driverInfo.tripDistanceMaxThreshold
         Nothing -> driverInfo.tripDistanceMaxThreshold
         Just val -> if val.getMeters < 0 then Nothing else Just val
       tripDistanceMinThreshold = case req.tripDistanceMinThreshold of
+        _ | fleetDisablesDistancePreference -> driverInfo.tripDistanceMinThreshold
         Nothing -> driverInfo.tripDistanceMinThreshold
         Just val -> if val.getMeters < 0 then Nothing else Just val
       maxPickupRadius = case req.maxPickupRadius of
@@ -1662,7 +1674,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let petTag = Yudhishthira.TagNameValue "PetDriver#\"true\""
   when (isPetModeEnabled && maybe False (Yudhishthira.elemTagNameValue petTag) person.driverTag) $
     logInfo "Tag already exists, update expiry"
-  tag <-
+  petUpdatedTag <-
     if isPetModeEnabled
       then do
         mbNammTag <- YudhishthiraFlow.verifyTag (cast merchantOpCityId) petTag
@@ -1670,6 +1682,9 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
         let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
         return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
       else return $ Yudhishthira.removeTagName person.driverTag petTag
+  -- A DistancePreferenceEnabled#false left by a fleet that no longer disables
+  -- preferences would silently ignore the thresholds the driver just saved.
+  let tag = if touchesTripDistance && not fleetDisablesDistancePreference then SFleetFeatures.clearDistancePreferenceOffTag petUpdatedTag else petUpdatedTag
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
     QPerson.updateDriverTag (Just tag) personId
 

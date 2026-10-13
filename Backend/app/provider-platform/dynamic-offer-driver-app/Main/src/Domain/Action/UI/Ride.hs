@@ -223,7 +223,8 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
     (False, Just True) -> return []
     _ -> QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays
 
-  driverRideLis <- forM rides $ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig
+  fleetFeaturesByOwner <- RideCommon.fetchFleetFeaturesByOwner (fst <$> rides)
+  driverRideLis <- forM rides $ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig fleetFeaturesByOwner
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -251,7 +252,8 @@ getDriverRideById driverId mocId rideId mbFinanceData = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.driverId == driverId) $ throwError (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking)
+  fleetFeaturesByOwner <- RideCommon.fetchFleetFeaturesByOwner [ride]
+  buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig fleetFeaturesByOwner (ride, booking)
 
 buildDriverRideResItem ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r, Hedis.HedisLTSFlowEnv r) =>
@@ -260,9 +262,10 @@ buildDriverRideResItem ::
   L.Language ->
   Maybe RideCommon.EarningsLabels ->
   Maybe DTC.TransporterConfig ->
+  RideCommon.FleetFeaturesByOwner ->
   (DRide.Ride, DRB.Booking) ->
   m RideCommon.DriverRideRes
-buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig (ride, booking) = do
+buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels transporterConfig fleetFeaturesByOwner (ride, booking) = do
   rideDetail <- runInReplica $ QRD.findById ride.id >>= fromMaybeM (VehicleNotFound driverId.getId)
   rideRating <- runInReplica $ QR.findRatingForRide ride.id
   driverNumber <- RD.getDriverNumber rideDetail
@@ -272,7 +275,7 @@ buildDriverRideResItem driverId driverInfo driverLanguage mbEarningsLabels trans
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   let goHomeReqId = ride.driverGoHomeRequestId
-  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling
+  RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo resolvedCalling (RideCommon.isDriverCancellationDisallowedByFleet fleetFeaturesByOwner ride)
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig], HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl], Hedis.HedisLTSFlowEnv r, Alloc.SchedulerJobFlow r) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
@@ -406,7 +409,8 @@ otpRideCreate driver otpCode booking clientId = do
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
   resolvedCalling <- resolveCallingNumber booking ride (DTC.driverCallingOption transporterConfig) (fromMaybe False transporterConfig.forceDirectCalling) (RideCommon.mkExoPhone mbExophone booking)
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling
+  fleetDisallowsCancellation <- RideCommon.fleetDisallowsDriverCancellation ride
+  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo resolvedCalling fleetDisallowsCancellation
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc

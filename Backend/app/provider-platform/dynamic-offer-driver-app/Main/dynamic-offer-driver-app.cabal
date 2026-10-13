@@ -720,7 +720,9 @@ library
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
+      SharedLogic.FleetDriverLink
       SharedLogic.FleetEngine
+      SharedLogic.FleetFeatures
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GatewayDispatch

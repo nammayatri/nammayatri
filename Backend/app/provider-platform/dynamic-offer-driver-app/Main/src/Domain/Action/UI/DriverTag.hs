@@ -2,7 +2,8 @@
 --
 -- Tags written here never expire; anything that needs a TTL (AvailableForRides, area
 -- preference) keeps its own purpose-built endpoint. ADD_TAG replaces any existing tag with
--- the same name, so a tag holds at most one value per driver.
+-- the same name, so a tag holds at most one value per driver. System-owned tags (fleet
+-- auto-assign, area/distance preference switches) are reserved and cannot be written here.
 module Domain.Action.UI.DriverTag (postDriverTagUpdate) where
 
 import qualified API.Types.UI.DriverTag as APIT
@@ -17,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -31,6 +33,8 @@ postDriverTagUpdate ::
 postDriverTagUpdate (mbPersonId, _, _) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   tagName <- validateTagPart "tagName" req.tagName
+  when (SFleetFeatures.isReservedSystemTagName tagName) $
+    throwError (InvalidRequest $ "tagName " <> tagName <> " is reserved and cannot be updated")
   mbTagValue <- traverse (validateTagPart "tagValue") req.tagValue
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updatedTags = case req.action of

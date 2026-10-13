@@ -23,6 +23,10 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetGetAllDriver,
     postDriverFleetUnlink,
     postDriverFleetCashRideUpdate,
+    getDriverFleetConfig,
+    postDriverFleetConfigUpdate,
+    getDriverFleetDriverAutoAssign,
+    postDriverFleetDriverAutoAssign,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -158,6 +162,7 @@ import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.FleetPoolingPriority as DFPP
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -213,6 +218,8 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
 import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoMerchantBased)
+import qualified SharedLogic.FleetDriverLink as SFleetDriverLink
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
@@ -1285,7 +1292,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         mbActiveAssociation <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
         SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id entityId) personId) SGuard.UnlinkFromFleet (SGuard.TargetDriver personId) $ do
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
-          FDV.endFleetDriverAssociation entityId personId
+          SFleetDriverLink.endFleetDriverAssociationWithCleanup entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
         SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig personId
         -- Only decrement analytics if there was an active association
@@ -2843,7 +2850,11 @@ getFleetOrOperatorInfo person = do
                   allowEndingMidRoute = fleetConfig'.allowEndingMidRoute,
                   allowStartRideFromQR = fleetConfig'.allowStartRideFromQR,
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
-                  rideEndApproval = fleetConfig'.rideEndApproval
+                  rideEndApproval = fleetConfig'.rideEndApproval,
+                  autoAssignDefaultOn = Just fleetConfig'.autoAssignDefaultOn,
+                  allowDriverToToggleAutoAssign = Just fleetConfig'.allowDriverToToggleAutoAssign,
+                  allowCancellationByDriver = Just fleetConfig'.allowCancellationByDriver,
+                  ignoreDriverAreaAndDistancePreference = Just fleetConfig'.ignoreDriverAreaAndDistancePreference
                 }
       gstNumber' <- decryptWithDefault gstNumber gstNumberDec
       panNumber' <- decryptWithDefault panNumber panNumberDec
@@ -3035,6 +3046,7 @@ linkExistingDriverToFleet merchant merchantOpCityId transporterConfig fleetOwner
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
     assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
     QFDV.create assoc
+    SFleetFeatures.applyFleetJoinDefaults person.id (Id fleetOwnerId)
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -4782,6 +4794,8 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
           ( \driverInfo ->
               DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
           )
+      -- After the onboarding block: overwriteAssociation may have removed the vehicle above.
+      SFleetFeatures.applyFleetJoinDefaults driverId (Id fleetOwnerId)
       pure ("FLEET_REQUEST_APPROVED", \pn -> pn.body)
     _ -> do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.UnlinkFromFleet (SGuard.TargetDriver driverId) $
@@ -4828,7 +4842,7 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
     -- system total drifts down on every reassignment. Guarded on linkAsActive because an
     -- inactive row is not part of ACTIVE_DRIVER_COUNT, and hung off onCreated so a pre-existing
     -- link cannot double-count.
-    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
+    SFleetDriverLink.createFleetDriverAssociationWithJoinDefaults personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
       when (linkAsActive && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $
         Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just newFleetOwner.id.getId) personId
   fork "Fleet owner change notification" $
@@ -5553,3 +5567,186 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
                     Common.fleetOwnerMobileNumber = mbFleetOwnerMobile
                   }
       }
+
+---------------------------------------------------------------------
+-- Fleet driver controls (auto-assign, cancellation, preferences)
+
+-- | Who is calling a fleet-driver-controls endpoint, resolved once per request.
+data FleetControlsRequestor
+  = FleetOwnerRequestor DP.Person
+  | FleetMemberRequestor
+  | OperatorRequestor DP.Person
+  | AdminRequestor
+
+-- | Classifies the requestor, failing closed:
+-- * a BPP person with a fleet-owner role is a fleet owner, OPERATOR an operator; any
+--   other non-ADMIN BPP role (driver, bus staff, ...) is rejected;
+-- * otherwise a requestor with an enabled fleet_member_association is a fleet member,
+--   and one whose associations are all disabled is rejected (it must not fall
+--   through to the admin path);
+-- * only a requestor with neither is treated as an admin.
+classifyFleetControlsRequestor :: Text -> Flow FleetControlsRequestor
+classifyFleetControlsRequestor requestorId = do
+  mbRequestor <- QPerson.findById (Id requestorId)
+  case mbRequestor of
+    Just requestor
+      | DCommon.checkFleetOwnerRole requestor.role -> pure (FleetOwnerRequestor requestor)
+      | requestor.role == DP.OPERATOR -> pure (OperatorRequestor requestor)
+      | requestor.role /= DP.ADMIN -> throwError AccessDenied
+    _ -> do
+      memberAssociations <- FMA.findAllByfleetMemberId requestorId
+      if
+          | any (.enabled) memberAssociations -> pure FleetMemberRequestor
+          | not (null memberAssociations) -> throwError AccessDenied
+          | otherwise -> pure AdminRequestor
+
+-- | Resolves the fleet owner a fleet-driver-controls request acts on.
+-- A fleet owner requestor acts on its own fleet (fleetOwnerId, if passed, must match).
+-- A fleet member acts only on a fleet it is an active member of (resolved like the
+-- sibling fleet endpoints via 'getFleetOwnerId'). Admins and operators must pass
+-- fleetOwnerId; operators must also manage that fleet. The fleet config update is
+-- admin-only and rejects every other requestor before calling this.
+-- In every case the fleet owner must be in the same merchant and operating city and
+-- pass the merchant's fleet-owner enabled check.
+resolveFleetControlsContext ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  FleetControlsRequestor ->
+  Maybe Text ->
+  Flow (DM.Merchant, Id DMOC.MerchantOperatingCity, DP.Person)
+resolveFleetControlsContext merchantShortId opCity requestorId requestor mbFleetOwnerId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  fleetOwnerId <- case requestor of
+    FleetOwnerRequestor owner -> do
+      whenJust mbFleetOwnerId $ \foid ->
+        unless (foid == owner.id.getId) $ throwError AccessDenied
+      pure owner.id.getId
+    FleetMemberRequestor -> getFleetOwnerId requestorId mbFleetOwnerId
+    OperatorRequestor operator -> do
+      foid <- requireFleetOwnerId
+      validateOperatorToFleetAssoc operator.id.getId foid
+      pure foid
+    AdminRequestor -> requireFleetOwnerId
+  fleetOwner <- QPerson.findById (Id fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
+  unless (DCommon.checkFleetOwnerRole fleetOwner.role) $ throwError (FleetOwnerNotFound fleetOwnerId)
+  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
+    throwError (FleetOwnerNotFound fleetOwnerId)
+  DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
+  pure (merchant, merchantOpCityId, fleetOwner)
+  where
+    requireFleetOwnerId = mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId is required")
+
+-- | Classifies the requestor and resolves the fleet it acts on.
+resolveFleetControlsRequest ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Flow (DM.Merchant, Id DMOC.MerchantOperatingCity, DP.Person)
+resolveFleetControlsRequest merchantShortId opCity requestorId mbFleetOwnerId = do
+  requestor <- classifyFleetControlsRequestor requestorId
+  resolveFleetControlsContext merchantShortId opCity requestorId requestor mbFleetOwnerId
+
+-- | Validates the driver belongs to the merchant/op city and is actively linked to the fleet owner.
+validateFleetControlsDriver :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.Person -> Id Common.Driver -> Flow (Id DP.Person)
+validateFleetControlsDriver merchant merchantOpCityId fleetOwner driverId = do
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  validateFleetDriverAssociation fleetOwner.id.getId personId
+  pure personId
+
+getDriverFleetConfig ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Flow Common.FleetDriverControlsConfigRes
+getDriverFleetConfig merchantShortId opCity requestorId mbFleetOwnerId = do
+  (_, _, fleetOwner) <- resolveFleetControlsRequest merchantShortId opCity requestorId mbFleetOwnerId
+  fleetFeatures <- SFleetFeatures.getFleetFeaturesByFleetOwnerId fleetOwner.id
+  pure $
+    Common.FleetDriverControlsConfigRes
+      { autoAssignDefaultOn = fleetFeatures.autoAssignDefaultOn,
+        allowDriverToToggleAutoAssign = fleetFeatures.allowDriverToToggleAutoAssign,
+        allowCancellationByDriver = fleetFeatures.allowCancellationByDriver,
+        ignoreDriverAreaAndDistancePreference = fleetFeatures.ignoreDriverAreaAndDistancePreference,
+        fleetPoolingPriority = fleetFeatures.fleetPoolingPriority
+      }
+
+postDriverFleetConfigUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Common.UpdateFleetDriverControlsConfigReq ->
+  Flow APISuccess
+postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId req = do
+  -- Fleet config is changed only by admins: fleet owners, fleet members and operators
+  -- just act according to it.
+  requestor <- classifyFleetControlsRequestor requestorId
+  case requestor of
+    AdminRequestor -> pure ()
+    _ -> throwError AccessDenied
+  (merchant, merchantOpCityId, fleetOwner) <- resolveFleetControlsContext merchantShortId opCity requestorId requestor mbFleetOwnerId
+  whenJust req.fleetPoolingPriority $ \priority -> do
+    let invalidKeys = DFPP.invalidPoolingPriorityKeys priority
+    unless (null invalidKeys) $
+      throwError $
+        InvalidRequest $
+          "Invalid fleetPoolingPriority keys: " <> T.intercalate ", " invalidKeys
+            <> ". Expected \"default\", \"Pickup_<specialLocationId>\" or \"Drop_<specialLocationId>\"."
+  let featuresUpdate =
+        SFleetFeatures.FleetFeaturesUpdate
+          { autoAssignDefaultOn = req.autoAssignDefaultOn,
+            allowDriverToToggleAutoAssign = req.allowDriverToToggleAutoAssign,
+            allowCancellationByDriver = req.allowCancellationByDriver,
+            ignoreDriverAreaAndDistancePreference = req.ignoreDriverAreaAndDistancePreference,
+            fleetPoolingPriority = req.fleetPoolingPriority
+          }
+  (oldFeatures, newFeatures) <- SFleetFeatures.upsertFleetConfig fleetOwner.id merchant.id merchantOpCityId featuresUpdate
+  logTagInfo "dashboard -> postDriverFleetConfigUpdate" ("requestorId: " <> requestorId <> ", fleetOwnerId: " <> fleetOwner.id.getId)
+  -- Changed autoAssignDefaultOn / ignoreDriverAreaAndDistancePreference are pushed to every current driver in the background.
+  -- The lock flags and fleetPoolingPriority are read at request / pool-build time, so changing only those starts no sync.
+  when (SFleetFeatures.needsDriverSync oldFeatures newFeatures) $
+    fork "fleetFeaturesSync" $ SFleetFeatures.syncFleetFeaturesToDrivers fleetOwner.id oldFeatures newFeatures
+  pure Success
+
+getDriverFleetDriverAutoAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Maybe Text ->
+  Flow Common.DriverAutoAssignStatusRes
+getDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId = do
+  (merchant, merchantOpCityId, fleetOwner) <- resolveFleetControlsRequest merchantShortId opCity requestorId mbFleetOwnerId
+  personId <- validateFleetControlsDriver merchant merchantOpCityId fleetOwner driverId
+  autoAssignStatus <- SFleetFeatures.getDriverAutoAssignStatus personId
+  pure $
+    Common.DriverAutoAssignStatusRes
+      { enabled = autoAssignStatus.enabled,
+        enabledTiers = autoAssignStatus.enabledTiers,
+        eligibleTiers = autoAssignStatus.eligibleTiers,
+        autoAcceptOnlyTiers = autoAssignStatus.autoAcceptOnlyTiers,
+        hasAutoAssignTag = autoAssignStatus.hasAutoAssignTag,
+        allowDriverToToggle = autoAssignStatus.allowDriverToToggle
+      }
+
+postDriverFleetDriverAutoAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Maybe Text ->
+  Common.FleetDriverAutoAssignReq ->
+  Flow APISuccess
+postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
+  (merchant, merchantOpCityId, fleetOwner) <- resolveFleetControlsRequest merchantShortId opCity requestorId mbFleetOwnerId
+  personId <- validateFleetControlsDriver merchant merchantOpCityId fleetOwner driverId
+  void $ SFleetFeatures.setFleetAutoAssign personId req.enable
+  logTagInfo "dashboard -> postDriverFleetDriverAutoAssign" ("requestorId: " <> requestorId <> ", driverId: " <> personId.getId <> ", enable: " <> show req.enable)
+  pure Success

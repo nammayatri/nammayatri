@@ -71,6 +71,7 @@ import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
@@ -190,13 +191,18 @@ mkDriverPreferenceChecks searchReq driver =
   [rideDistanceCheck, petModeCheck, areaCheck]
   where
     dpr = driver.driverPoolResult
-    rideDistanceCheck =
-      binaryCheck
-        (isJust dpr.minRideDistance || isJust dpr.maxRideDistance)
-        ( case driver.tripDistance of
-            Nothing -> True -- ride distance unknown yet, don't penalize
-            Just rideDistance -> maybe True (rideDistance >=) dpr.minRideDistance && maybe True (rideDistance <=) dpr.maxRideDistance
-        )
+    -- Fleets with 'ignoreDriverAreaAndDistancePreference' tag their drivers with
+    -- DistancePreferenceEnabled=false, which switches this dimension off entirely
+    -- (mirrors the AreaPreferenceEnabled handling in areaCheck below).
+    rideDistanceCheck
+      | not (AreaPref.isDistancePreferenceEnabledJson dpr.driverTags) = notApplicable
+      | otherwise =
+        binaryCheck
+          (isJust dpr.minRideDistance || isJust dpr.maxRideDistance)
+          ( case driver.tripDistance of
+              Nothing -> True -- ride distance unknown yet, don't penalize
+              Just rideDistance -> maybe True (rideDistance >=) dpr.minRideDistance && maybe True (rideDistance <=) dpr.maxRideDistance
+          )
     petModeCheck =
       -- Only relevant when this search is itself a pet ride; an ordinary ride never
       -- counts against (or for) a driver's pet-mode setting.
@@ -272,11 +278,18 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
         <> ")"
   logInfo $ "POOLING version applied: " <> show mbVersion <> " batchNum=" <> show batchNum <> " isOnRidePool=" <> show isOnRidePool
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
+  let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
+  -- Pooling priority map of each driver's ACTIVE fleet: one batched association read for
+  -- all drivers of the batch plus one batched fleet_config read; never throws. Skipped when
+  -- no POOLING logic is loaded, since nothing would read it.
+  fleetPriorityMap <-
+    if null allLogics
+      then pure Map.empty
+      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriorities" $ SFleetFeatures.getFleetPoolingPrioritiesForDrivers personIds
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
   enrichedDrivers <- withTimeAPI "driverPooling" "enrichingDriversWithRealTimeData" $ do
-    let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
     (countersMap, idleMap) <-
       if fromMaybe True transporterCfg.enableDriverPoolEnrichment
         then (,) <$> getSrdStatsCountersBulk driverPoolCfg.srdCountersBulkChunkSize personIds <*> DriverIdleTime.getIdleTimeSecondsBulk driverPoolCfg.idleBulkChunkSize personIds
@@ -286,11 +299,17 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
         ( \driver ->
             let personId = cast driver.driverPoolResult.driverId
                 preferenceChecks = mkDriverPreferenceChecks searchReq driver
+                mbFleetPriority = Map.lookup personId fleetPriorityMap
+                -- Highest level among the keys for the search's pickup / drop special location, else "default".
+                mbResolvedPriority = mbFleetPriority >>= SFleetFeatures.resolveFleetPoolingPriorityForArea searchReq.area
              in driver
                   { searchReqDriverStatsCounters = Map.lookup personId countersMap,
                     idleTimeSeconds = Map.lookup personId idleMap,
                     preferenceMatchScore = computePreferenceMatchScore preferenceChecks,
-                    hasApplicablePreferences = any (.isApplicable) preferenceChecks
+                    hasApplicablePreferences = any (.isApplicable) preferenceChecks,
+                    fleetPoolingPriority = mbFleetPriority,
+                    fleetPoolingPriorityLevel = fst <$> mbResolvedPriority,
+                    fleetPoolingPriorityKey = snd <$> mbResolvedPriority
                   }
         )
         onlyNewDriversWithCustomerInfo

@@ -29,6 +29,7 @@ import Kernel.Utils.Common (fromMaybeM, throwError)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import qualified Storage.CachedQueries.GeohashArea as CQGA
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
@@ -45,7 +46,8 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
-  pure $ buildInfoRes minCells person.driverTag
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet personId
+  pure $ buildInfoRes fleetDisablesPreference minCells person.driverTag
 
 postDriverAreaPreferenceUpdateInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -57,6 +59,9 @@ postDriverAreaPreferenceUpdateInfo ::
   )
 postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet personId
+  when (fleetDisablesPreference && req.enabled == Just True) $
+    throwError (InvalidRequest "Area preference is disabled by your fleet")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
   mbPref <- mapM (validateSelection merchantOpCityId minCells) req.selection
@@ -68,9 +73,12 @@ postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
               retained = filter (\t -> maybe True (`notElem` clearedNames) (tagNameOf t)) existingTags
               newTags = [LYT.TagNameValueExpiry (name <> "#" <> value) | (name, value) <- AreaPref.tagNamesForSelection pref]
            in retained <> newTags
-      updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) req.enabled
+      -- While the fleet disables preferences, always persist the "off" switch so a
+      -- selection written without `enabled` cannot turn it on in dispatch.
+      effectiveEnabled = if fleetDisablesPreference then Just False else req.enabled
+      updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) effectiveEnabled
   QPerson.updateDriverTag (if null updatedTags then Nothing else Just updatedTags) personId
-  pure $ buildInfoRes minCells (Just updatedTags)
+  pure $ buildInfoRes fleetDisablesPreference minCells (Just updatedTags)
   where
     tagNameOf (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
       (name : _) -> Just name
@@ -89,6 +97,11 @@ getDriverAreaPreferenceList ::
 getDriverAreaPreferenceList (_, _, merchantOpCityId) = do
   areas <- CQGA.findAllByMerchantOperatingCity merchantOpCityId
   pure [APIT.GeohashAreaItem {geohash = a.geohash, areaName = a.areaName} | a <- areas]
+
+-- | The driver's active fleet ignores area/trip-distance preferences (ignoreDriverAreaAndDistancePreference).
+isAreaPreferenceDisabledByFleet :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
+isAreaPreferenceDisabledByFleet personId =
+  maybe False ((.ignoreDriverAreaAndDistancePreference) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver personId
 
 getMinCells ::
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -123,9 +136,10 @@ validateSelection merchantOpCityId minCells = \case
 -- | Reconstruct the response purely from the driver's tag list -- no DB lookup
 -- needed at read time, since cell tags already carry their area name as the
 -- tag value. minCells is threaded in rather than refetched here, since both
--- callers already have it (from getMinCells).
-buildInfoRes :: Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
-buildInfoRes minCells mbTags =
+-- callers already have it (from getMinCells). A fleet with ignoreDriverAreaAndDistancePreference
+-- forces enabled=False regardless of the driver's own tag.
+buildInfoRes :: Bool -> Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
+buildInfoRes fleetDisablesPreference minCells mbTags =
   case AreaPref.driverAreaPreferenceFromTags (fromMaybe [] mbTags) of
     Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled}
     Just (AreaPref.PreferredRadius center radiusMeters) ->
@@ -143,4 +157,4 @@ buildInfoRes minCells mbTags =
           enabled = enabled
         }
   where
-    enabled = AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)
+    enabled = not fleetDisablesPreference && AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)

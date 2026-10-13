@@ -67,6 +67,7 @@ import SharedLogic.CallBAPInternal
 import SharedLogic.DriverOnboarding (isFleetRole)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
@@ -246,6 +247,10 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           -- Fare-params snapshot of the service-tier/fare-policy config; dashboard and system requestors stay exempt.
           when (booking.fareParams.driverCancellationNotAllowed == Just True) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
+          -- Fleet-level lock: the ride's fleet owner can forbid its drivers from cancelling assigned rides.
+          whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
+            fleetFeatures <- SFleetFeatures.getFleetFeaturesByFleetOwnerId fleetOwnerId
+            unless fleetFeatures.allowCancellationByDriver $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
           goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
           (cancellationCount, isGoToDisabled, driverGoHomeRequestId) <-

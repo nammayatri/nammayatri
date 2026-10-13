@@ -13,6 +13,10 @@ module Domain.Action.UI.Ride.Common
     EarningsLabels (..),
     fetchEarningsLabels,
     mkDriverRideRes,
+    FleetFeaturesByOwner,
+    fetchFleetFeaturesByOwner,
+    isDriverCancellationDisallowedByFleet,
+    fleetDisallowsDriverCancellation,
     CallingNumberType (..),
     CallingNumberAPIEntity (..),
     ResolvedCalling (..),
@@ -33,6 +37,7 @@ import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map.Strict as M
 import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Scientific as Sci
@@ -56,6 +61,7 @@ import qualified Domain.Types.FarePolicy.Common as DFPC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
@@ -69,7 +75,7 @@ import qualified Kernel.External.Types as KET
 import Kernel.Prelude (readMaybe, roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Minutes, MonadFlow, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -85,6 +91,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (driverBorneAppFee, fareSum)
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Wallet (splitGrossByVatPct)
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import SharedLogic.ManualTollCharge (isManualTollChargeEnabled)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
@@ -501,6 +508,24 @@ mkExoPhone mbExophone booking =
     (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone)
     mbExophone
 
+-- | Resolved fleet features keyed by fleet owner.
+type FleetFeaturesByOwner = M.Map (Id DP.Person) SFleetFeatures.FleetFeatures
+
+-- | Resolves fleet features once per distinct fleet owner of the given rides.
+fetchFleetFeaturesByOwner :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DRide.Ride] -> m FleetFeaturesByOwner
+fetchFleetFeaturesByOwner rides = do
+  let fleetOwnerIds = nub $ mapMaybe (.fleetOwnerId) rides
+  M.fromList <$> mapM (\fleetOwnerId -> (fleetOwnerId,) <$> SFleetFeatures.getFleetFeaturesByFleetOwnerId fleetOwnerId) fleetOwnerIds
+
+-- | True when the ride belongs to a fleet that forbids its drivers from cancelling assigned rides.
+isDriverCancellationDisallowedByFleet :: FleetFeaturesByOwner -> DRide.Ride -> Bool
+isDriverCancellationDisallowedByFleet featuresByOwner ride =
+  maybe False (not . (.allowCancellationByDriver)) (ride.fleetOwnerId >>= (`M.lookup` featuresByOwner))
+
+-- | Single-ride variant of 'isDriverCancellationDisallowedByFleet'.
+fleetDisallowsDriverCancellation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DRide.Ride -> m Bool
+fleetDisallowsDriverCancellation ride = (`isDriverCancellationDisallowedByFleet` ride) <$> fetchFleetFeaturesByOwner [ride]
+
 mkDriverRideRes ::
   ( EncFlow m r,
     LYBF.BeamFlow m r,
@@ -520,8 +545,10 @@ mkDriverRideRes ::
   Bool ->
   [DSI.StopInformation] ->
   ResolvedCalling ->
+  -- | Whether the ride's fleet owner forbids driver cancellation (pre-resolved by the caller to avoid N+1 lookups).
+  Bool ->
   m DriverRideRes
-mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling fleetDisallowsCancellation = do
   let estimatedFareParams = booking.fareParams
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe DTConf.PaymentChargeBearer
@@ -697,7 +724,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fromMaybe 0 estimatedFareParams.customerCancellationDues,
-        driverCancellationNotAllowed = estimatedFareParams.driverCancellationNotAllowed,
+        driverCancellationNotAllowed = if fleetDisallowsCancellation then Just True else estimatedFareParams.driverCancellationNotAllowed,
         estimatedTollCharges = estimatedFareParams.tollCharges,
         parkingCharge = displayParkingCharge,
         tollCharges = ride.tollCharges,
