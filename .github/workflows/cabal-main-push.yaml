@@ -205,7 +205,7 @@ jobs:
           [ -n "$COMMIT_MSG" ] || COMMIT_MSG=$(git log -1 --format=%s)
           [ -n "$AUTHOR" ] || AUTHOR=$(git log -1 --format=%an)
           SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -1)
-          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1)
+          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1 || true)   # no "(#N)" in the title is fine
           if [ "$ALERT_TEST" = "true" ]; then
             TITLE="🧪 TEST alert from $GITHUB_REF_NAME, please ignore (build job: $JOB_STATUS)"
           else
@@ -217,7 +217,7 @@ jobs:
             echo "Commit link: $REPO_URL/commit/$GITHUB_SHA"
             [ -n "$COMPARE" ] && echo "Changes in this push: $COMPARE"
             # first compile errors (master-build-log.txt lines are prefixed with a timestamp)
-            ERRS=$(grep -E ': error:|^[^ ]+ Error:' -A4 master-build-log.txt 2>/dev/null | cut -d' ' -f2- | head -25)
+            ERRS=$(grep -E ': error:|^[^ ]+ Error:' -A4 master-build-log.txt 2>/dev/null | cut -d' ' -f2- | head -25 || true)
             [ -n "$ERRS" ] && printf 'Error:\n```\n%s\n```\n' "$ERRS"
             echo "Run: $REPO_URL/actions/runs/$GITHUB_RUN_ID"
           } > xyne-alert.txt
@@ -558,7 +558,7 @@ jobs:
           [ -n "$COMMIT_MSG" ] || COMMIT_MSG=$(git log -1 --format=%s)
           [ -n "$AUTHOR" ] || AUTHOR=$(git log -1 --format=%an)
           SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -1)
-          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1)
+          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1 || true)   # no "(#N)" in the title is fine
           if [ "$ALERT_TEST" = "true" ]; then
             TITLE="🧪 TEST alert from $GITHUB_REF_NAME, please ignore (integration job: $JOB_STATUS)"
           else
