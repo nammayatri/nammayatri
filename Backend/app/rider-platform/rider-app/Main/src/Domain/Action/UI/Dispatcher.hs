@@ -11,6 +11,7 @@ module Domain.Action.UI.Dispatcher
     getDispatcherHistory,
     getFleetOverrideInfo,
     delFleetOverrideInfo,
+    FleetOverrideScope (..),
   )
 where
 
@@ -109,14 +110,30 @@ postDispatcherUpdateFleetSchedule (mbPersonId, _merchantId) req = do
   Redis.setExp (fleetOverrideKey req.updatedFleetId) (req.sourceFleetId, sourceWaybillNo) 86400
   pure $ Kernel.Types.APISuccess.Success
 
-getFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m (Maybe (Text, Text))
-getFleetOverrideInfo sourceFleetId = Redis.safeGet (fleetOverrideKey sourceFleetId)
+-- | Which key an override was read from. While both apps' dispatchers are live the two keys can
+-- hold overrides for the same fleet, so the origin has to travel with the value: deleting both
+-- would let whichever one was read as Finished wipe the other app's newer override.
+data FleetOverrideScope = SharedFleetOverride | LegacyFleetOverride
+  deriving (Show, Eq)
 
-delFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m ()
-delFleetOverrideInfo sourceFleetId = Redis.del (fleetOverrideKey sourceFleetId)
+-- Dual-read, shared key first: driver-app's override is the authoritative one during cutover.
+getFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => Text -> m (Maybe (FleetOverrideScope, (Text, Text)))
+getFleetOverrideInfo sourceFleetId =
+  Redis.withCrossAppRedis (Redis.safeGet (sharedFleetOverrideKey sourceFleetId)) >>= \case
+    Just info -> pure (Just (SharedFleetOverride, info))
+    Nothing -> fmap ((,) LegacyFleetOverride) <$> Redis.safeGet (fleetOverrideKey sourceFleetId)
+
+delFleetOverrideInfo :: (MonadFlow m, Redis.HedisFlow m r) => FleetOverrideScope -> Text -> m ()
+delFleetOverrideInfo scope sourceFleetId = case scope of
+  SharedFleetOverride -> Redis.withCrossAppRedis $ Redis.del (sharedFleetOverrideKey sourceFleetId)
+  LegacyFleetOverride -> Redis.del (fleetOverrideKey sourceFleetId)
 
 fleetOverrideKey :: Text -> Text
 fleetOverrideKey sourceFleetId = "fleetOverride:sourceFleetId:" <> sourceFleetId
+
+-- Cross-app key written by driver-app, which can't address our Hedis prefix.
+sharedFleetOverrideKey :: Text -> Text
+sharedFleetOverrideKey sourceFleetId = "shared:fleetOverride:sourceFleetId:" <> sourceFleetId
 
 getDispatcherDepotNames ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
