@@ -24,6 +24,7 @@ import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
+import qualified API.Action.UI.Dispatcher as Dispatcher
 import qualified API.Action.UI.DriverAreaPreference as DriverAreaPreference
 import qualified API.Action.UI.DriverDocument as DriverDocument
 import qualified API.Action.UI.DriverFyEarnings as DriverFyEarnings
@@ -212,6 +213,7 @@ type API =
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
            :<|> SearchRoute.API
+           :<|> Dispatcher.API
        )
 
 handler :: FlowServer API
@@ -303,3 +305,4 @@ handler =
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
     :<|> SearchRoute.handler
+    :<|> Dispatcher.handler
