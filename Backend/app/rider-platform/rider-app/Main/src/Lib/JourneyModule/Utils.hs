@@ -2084,12 +2084,12 @@ getLiveRouteInfo' integratedBPPConfig userPassedVehicleNumber userPassedRouteCod
   mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo userPassedVehicleNumber
   mbRouteLiveInfo <-
     case mbVehicleOverrideInfo of
-      Just (sourceVehicleNumber, overrideWaybillNo) -> do
+      Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
         mbSourceRouteInfo <- getVehicleLiveRouteInfo [integratedBPPConfig] sourceVehicleNumber Nothing
         case classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
           FleetOverrideUsable -> pure mbSourceRouteInfo
           FleetOverrideFinished -> do
-            Dispatcher.delFleetOverrideInfo userPassedVehicleNumber
+            Dispatcher.delFleetOverrideInfo overrideScope userPassedVehicleNumber
             getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
           FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
       Nothing -> getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber Nothing
