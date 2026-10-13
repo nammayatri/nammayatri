@@ -241,13 +241,11 @@ getPersonRegisterBankAccountStatus mbForceRefresh personId merchantOpCityId = do
       forceRefresh = fromMaybe False mbForceRefresh
       currentlyDue = fromMaybe [] (bankAccount.requirements >>= (.currentlyDue))
       isBankAccountSuccessfullyLinked = bankAccount.chargesEnabled && null currentlyDue
-      -- A driver linked before bank details were stored would otherwise never refresh, since
-      -- the guard below stops asking Stripe once the account is healthy. Ask once more while
-      -- the details are missing so existing drivers backfill themselves; the sliding-window
-      -- limit still caps how often an account with no bank attached retries.
-      needsBankDetails = isNothing bankAccount.bankName || isNothing bankAccount.bankAccountLast4
+      -- Plain reads also ask Stripe for linked accounts missing bank details, so accounts linked before
+      -- those were stored backfill. Not during onboarding: there is no bank yet.
+      needsBankDetails = isBankAccountSuccessfullyLinked && (isNothing bankAccount.bankName || isNothing bankAccount.bankAccountLast4)
   bankAccount' <-
-    if (not forceRefresh || isBankAccountSuccessfullyLinked) && not needsBankDetails
+    if not forceRefresh && not needsBankDetails
       then pure bankAccount
       else do
         rateLimitOpts <- getRateLimitOpts merchantOpCityId
