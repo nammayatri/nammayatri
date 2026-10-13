@@ -39,6 +39,8 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PurchasedPass as DPurchasedPass
+import qualified Domain.Types.PurchasedPassPayment
 import qualified Domain.Types.Route as Route
 import Domain.Types.RouteDetailsAPI (mkRouteDetail)
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
@@ -118,6 +120,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Seat as CQSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
@@ -134,6 +137,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import qualified Storage.Queries.SeatLayout as QSeatLayout
 import Tools.Error
 import Tools.Maps as Maps
@@ -2317,3 +2321,129 @@ postFrfsFleetOperatorCurrentOperation' (merchantId, merchantOperatingCityId) req
         current = fmap toTripInfo resp.current,
         upcoming = map toTripInfo resp.upcoming
       }
+
+postFrfsPassInstantBook ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  API.Types.UI.FRFSTicketService.FRFSPassInstantBookReq ->
+  Environment.Flow API.Types.UI.FRFSTicketService.FRFSPassInstantBookResp
+postFrfsPassInstantBook (mbPersonId, merchantId) mbForceBook req = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  payment <- QPurchasedPassPayment.findByPrimaryKey req.purchasedPassPaymentId >>= fromMaybeM (InvalidRequest $ "Purchased pass not found: " <> req.purchasedPassPaymentId.getId)
+  unless (payment.personId == personId && payment.merchantId == merchantId) $ throwError AccessDenied
+  unless (payment.status `elem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $
+    throwError (InvalidRequest "This pass is not active")
+  passId <- payment.passId & fromMaybeM (InvalidRequest "This purchase is not linked to a pass")
+  passRow <- CQPass.findById passId >>= fromMaybeM (InvalidRequest $ "Pass not found: " <> passId.getId)
+  let quantity = fromMaybe 1 req.quantity
+  when (quantity <= 0) $ throwError (InvalidRequest "quantity must be positive")
+  merchantOperatingCity <- CQMOC.findById payment.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist payment.merchantOperatingCityId.getId)
+  let platformType = fromMaybe DIBC.MULTIMODAL req.platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory passRow.vehicleType) platformType
+  when (FRFSPassOverride.isOndcConfig integratedBPPConfig) $
+    throwError (InvalidRequest "Instant booking on a pass is not available for this operator")
+  mbConfirmedBooking <-
+    if mbForceBook == Just True
+      then pure Nothing
+      else
+        Hedis.safeGet (passInstantBookConfirmedKey req.purchasedPassPaymentId)
+          >>= maybe (pure Nothing) (fmap (mfilter isLiveBooking) . QFRFSTicketBooking.findById)
+  case mbConfirmedBooking of
+    Just confirmedBooking -> do
+      bookingStatus <- getFrfsBookingStatus (Just personId, merchantId) confirmedBooking.id
+      pure $ instantBookResp (Just bookingStatus) True False
+    Nothing -> do
+      isSearching <- isJust <$> (Hedis.safeGet (passInstantBookSearchingKey req.purchasedPassPaymentId) :: Environment.Flow (Maybe Bool))
+      if isSearching
+        then pure $ instantBookResp Nothing False True
+        else
+          Hedis.whenWithLockRedisAndReturnValue (passInstantBookLockKey personId) 120 (instantBook personId merchantOperatingCity.city passRow.vehicleType quantity integratedBPPConfig) >>= \case
+            Left _ -> pure $ instantBookResp Nothing False True
+            Right res -> pure res
+  where
+    instantBookResp booking isRecentBooking inProgress = FRFSTicketService.FRFSPassInstantBookResp {booking, isRecentBooking, inProgress}
+
+    instantBook personId city vehicleType quantity integratedBPPConfig = do
+      let searchingKey = passInstantBookSearchingKey req.purchasedPassPaymentId
+      Hedis.setExp searchingKey True 120
+      result <- withTryCatch "postFrfsPassInstantBook:bookNew" (bookNew personId city vehicleType quantity integratedBPPConfig)
+      void $ Hedis.del searchingKey
+      case result of
+        Left err -> throwM err
+        Right bookingStatus -> pure $ instantBookResp (Just bookingStatus) False False
+
+    isLiveBooking booking =
+      booking.status
+        `notElem` [ DFRFSTicketBooking.FAILED,
+                    DFRFSTicketBooking.CANCELLED,
+                    DFRFSTicketBooking.COUNTER_CANCELLED,
+                    DFRFSTicketBooking.CANCEL_INITIATED,
+                    DFRFSTicketBooking.RESCHEDULED
+                  ]
+
+    bookNew personId city vehicleType quantity integratedBPPConfig = do
+      mbServiceTier <- case (req.serviceTier, req.vehicleNumber) of
+        (Nothing, Just vehicleNumber) -> fmap ((.serviceType) . snd) <$> JMU.getVehicleMetadataFromInMem [integratedBPPConfig] vehicleNumber
+        _ -> pure req.serviceTier
+      let searchReq =
+            FRFSSearchAPIReq
+              { fromStationCode = req.sourceStopCode,
+                toStationCode = req.destinationStopCode,
+                routeCode = req.routeCode,
+                serviceTier = mbServiceTier,
+                quantity = quantity,
+                platformType = Just integratedBPPConfig.platformType,
+                searchAsParentStops = Nothing,
+                recentLocationId = Nothing,
+                busLocationData = Nothing,
+                vehicleNumber = req.vehicleNumber,
+                tripTime = Nothing
+              }
+      searchRes <- postFrfsSearch (Just personId, merchantId) (Just city) (Just True) (Just integratedBPPConfig.id) (pure <$> mbServiceTier) vehicleType searchReq
+      quoteRes <- pickPassCoveredQuote mbServiceTier searchRes.quotes
+      quote <- QFRFSQuote.findById quoteRes.quoteId >>= fromMaybeM (InvalidRequest $ "Invalid quote id: " <> quoteRes.quoteId.getId)
+      quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+      let selections =
+            [ FRFSTicketService.FRFSCategorySelectionReq
+                { quoteCategoryId = quoteCategory.id,
+                  quantity = if isAdult then quantity else 0,
+                  seatIds = if isAdult then req.seatIds else Nothing
+                }
+              | quoteCategory <- quoteCategories,
+                let isAdult = quoteCategory.category == ADULT
+            ]
+      eConfirmRes <- withTryCatch "postFrfsPassInstantBook:confirm" (postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quote selections Nothing (Just True) Nothing Nothing integratedBPPConfig req.tripId Nothing req.vehicleNumber Nothing (Just req.purchasedPassPaymentId) True)
+      confirmRes <- case eConfirmRes of
+        Right res -> pure res
+        Left err -> do
+          mbBooking <- QFRFSTicketBooking.findBySearchId searchRes.searchId
+          whenJust (mfilter ((`elem` [DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.CONFIRMED]) . (.status)) mbBooking) $ \booking ->
+            Hedis.setExp (passInstantBookConfirmedKey req.purchasedPassPaymentId) booking.id 300
+          throwM err
+      Hedis.setExp (passInstantBookConfirmedKey req.purchasedPassPaymentId) confirmRes.bookingId 300
+      getFrfsBookingStatus (Just personId, merchantId) confirmRes.bookingId
+
+    pickPassCoveredQuote mbServiceTier quotes = do
+      let passOptions quote = filter (\option -> option.purchasedPassPaymentId == req.purchasedPassPaymentId) quote.applicablePasses
+          fullyCovers quote = any (\option -> option.overriddenTotalPrice.amount <= 0) (passOptions quote)
+          tierMatches quote = maybe True (\tier -> quote.serviceTierType == Just tier) mbServiceTier
+          routeMatches quote = maybe True (\routeCode -> quote.routeCode == Just routeCode) req.routeCode
+          candidates = filter (\quote -> tierMatches quote && routeMatches quote) quotes
+          covered = filter fullyCovers candidates
+      case covered of
+        (quote : _) -> pure quote
+        []
+          | null candidates -> throwError (InvalidRequest "No fare found for this trip")
+          | any (not . null . passOptions) candidates -> throwError (InvalidRequest "This pass covers this trip only partially, book it with payment instead")
+          | otherwise -> throwError (InvalidRequest "This pass cannot be used for this trip")
+
+passInstantBookLockKey :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Text
+passInstantBookLockKey personId = "FRFS:PassInstantBook:" <> personId.getId
+
+passInstantBookConfirmedKey :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Text
+passInstantBookConfirmedKey purchasedPassPaymentId = "FRFS:PassInstantBook:Confirmed:" <> purchasedPassPaymentId.getId
+
+passInstantBookSearchingKey :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> Text
+passInstantBookSearchingKey purchasedPassPaymentId = "FRFS:PassInstantBook:Searching:" <> purchasedPassPaymentId.getId
