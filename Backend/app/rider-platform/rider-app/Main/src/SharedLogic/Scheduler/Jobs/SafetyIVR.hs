@@ -122,7 +122,7 @@ sendSafetyIVR Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             Call.InitiateCallReq
               { fromPhoneNum = phoneNumber,
                 toPhoneNum = Nothing,
-                attachments = Call.Attachments $ DCall.CallAttachments {callStatusId = callStatusId, rideId = ride.id},
+                attachments = Call.Attachments $ DCall.CallAttachments {callStatusId = callStatusId, rideId = Just ride.id},
                 appletId = maybeAppId
               }
       exotelResponse <- Call.initiateCall person.merchantId person.merchantOperatingCityId callReq
