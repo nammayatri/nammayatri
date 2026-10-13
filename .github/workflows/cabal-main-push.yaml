@@ -205,7 +205,7 @@ jobs:
           [ -n "$COMMIT_MSG" ] || COMMIT_MSG=$(git log -1 --format=%s)
           [ -n "$AUTHOR" ] || AUTHOR=$(git log -1 --format=%an)
           SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -1)
-          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1)
+          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1 || true)   # no "(#N)" in the title is fine
           if [ "$ALERT_TEST" = "true" ]; then
             TITLE="🧪 TEST alert from $GITHUB_REF_NAME, please ignore (build job: $JOB_STATUS)"
           else
@@ -217,7 +217,7 @@ jobs:
             echo "Commit link: $REPO_URL/commit/$GITHUB_SHA"
             [ -n "$COMPARE" ] && echo "Changes in this push: $COMPARE"
             # first compile errors (master-build-log.txt lines are prefixed with a timestamp)
-            ERRS=$(grep -E ': error:|^[^ ]+ Error:' -A4 master-build-log.txt 2>/dev/null | cut -d' ' -f2- | head -25)
+            ERRS=$(grep -E ': error:|^[^ ]+ Error:' -A4 master-build-log.txt 2>/dev/null | cut -d' ' -f2- | head -25 || true)
             [ -n "$ERRS" ] && printf 'Error:\n```\n%s\n```\n' "$ERRS"
             echo "Run: $REPO_URL/actions/runs/$GITHUB_RUN_ID"
           } > xyne-alert.txt
@@ -385,7 +385,7 @@ jobs:
     env:
       CACHE_RUNNER: ${{ needs.cabal-build.outputs.runner-name }}
       CONTEXT_API: http://localhost:7082
-      # wait-for-services.sh / debug-runner.py append a short "what broke" summary here for the Xyne alert
+      # the wait steps / debug-runner.py append a short "what broke" summary here for the Xyne alert
       CI_FAILURE_FILE: ${{ github.workspace }}/ci-failure.txt
     steps:
       - name: Checkout repository
@@ -437,12 +437,22 @@ jobs:
             nohup bash -c "{ tail -n $from -F '$src' 2>/dev/null & echo \$! > ci-logs/$name.pid; wait; } | gzip > ci-logs/$name.txt.gz" >/dev/null 2>&1 &
           done
 
-      # Fails fast (and names the app, error and culprit commit) when a startup process crashes.
+      # Simple health check: fail if the services aren't healthy within 5 min (service logs are uploaded on
+      # failure). The DOWN list goes to $CI_FAILURE_FILE for the Xyne alert.
       - name: Wait for services
-        timeout-minutes: 21
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: Backend/dev/integration-tests/ci/wait-for-services.sh 20 "Wait for services"
+        timeout-minutes: 6
+        run: |
+          for i in $(seq 1 30); do          # 30 x 10s = 5 min
+            if curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null; then
+              echo "Services ready after $((i*10))s"; exit 0
+            fi
+            echo "waiting for services... ($((i*10))s)"; sleep 10
+          done
+          # one line per service (up / DOWN); empty answer = test-context-api itself is down
+          STATUS=$(curl -s --max-time 5 "$CONTEXT_API/api/services-ready" \
+            | jq -r '.services[] | "  \(.name): \(if .up then "up" else "DOWN" end)"' 2>/dev/null || true)
+          printf '%s\n%s\n' "Services not healthy after 5 min:" "${STATUS:-  test-context-api not responding}" | tee -a "$CI_FAILURE_FILE"
+          exit 1
 
       # Same path as the dashboard's Sync button: fetch master data -> import -> local-testing-data
       # -> feature migrations -> restart rider/driver.
@@ -464,14 +474,22 @@ jobs:
           done
           echo "Config sync timed out"; exit 1
 
-      # Sync restarts rider/driver; same fail-fast check (replaces the temporary diagnostics block).
+      # Sync restarts rider/driver; same 5-min health check.
       - name: Wait for services after sync
-        timeout-minutes: 16
-        env:
-          GH_TOKEN: ${{ github.token }}
+        timeout-minutes: 6
         run: |
           sleep 30
-          Backend/dev/integration-tests/ci/wait-for-services.sh 15 "Wait for services after sync"
+          for i in $(seq 1 30); do          # 30 x 10s = 5 min
+            if curl -sf "$CONTEXT_API/api/services-ready" | jq -e '.ready == true' >/dev/null; then
+              echo "Services ready after sync ($((i*10))s)"; exit 0
+            fi
+            echo "waiting for services after sync... ($((i*10))s)"; sleep 10
+          done
+          # one line per service (up / DOWN); empty answer = test-context-api itself is down
+          STATUS=$(curl -s --max-time 5 "$CONTEXT_API/api/services-ready" \
+            | jq -r '.services[] | "  \(.name): \(if .up then "up" else "DOWN" end)"' 2>/dev/null || true)
+          printf '%s\n%s\n' "Services not healthy 5 min after config sync:" "${STATUS:-  test-context-api not responding}" | tee -a "$CI_FAILURE_FILE"
+          exit 1
 
       # Runs every working collection. Doesn't stop at the first failure: runs all,
       # prints a summary, and fails the job if any failed.
@@ -540,7 +558,7 @@ jobs:
           [ -n "$COMMIT_MSG" ] || COMMIT_MSG=$(git log -1 --format=%s)
           [ -n "$AUTHOR" ] || AUTHOR=$(git log -1 --format=%an)
           SUBJECT=$(printf '%s\n' "$COMMIT_MSG" | head -1)
-          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1)
+          PR=$(printf '%s' "$SUBJECT" | grep -o '(#[0-9]*)' | tr -d '(#)' | tail -1 || true)   # no "(#N)" in the title is fine
           if [ "$ALERT_TEST" = "true" ]; then
             TITLE="🧪 TEST alert from $GITHUB_REF_NAME, please ignore (integration job: $JOB_STATUS)"
           else
