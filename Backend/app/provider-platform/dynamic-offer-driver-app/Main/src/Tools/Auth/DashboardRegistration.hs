@@ -25,6 +25,7 @@
 module Tools.Auth.DashboardRegistration
   ( issueFleetOwnerAuthToken,
     dashboardPersonIdByMobile,
+    fleetLoginDashboardPersonId,
     createFleetOwnerDashboardPerson,
     markDashboardPersonVerifiedOnOnboarding,
     adminApprovalRequiredForDriver,
@@ -119,6 +120,16 @@ dashboardPersonIdByMobile :: RegistrationFlow m r => Text -> Text -> m (Maybe Te
 dashboardPersonIdByMobile mobileNumber mobileCountryCode =
   runInDashboardDb $
     fmap (.id.getId) <$> QDashboardPerson.findByMobileNumber mobileNumber mobileCountryCode
+
+-- | 'dashboardPersonIdByMobile' for the fleet login. The app server reuses this id for the fleet owner, so a
+-- number held by a dashboard user who is neither fleet owner nor operator (an admin, say) is refused.
+fleetLoginDashboardPersonId :: RegistrationFlow m r => Text -> Text -> m (Maybe Text)
+fleetLoginDashboardPersonId mobileNumber mobileCountryCode = runInDashboardDb $ do
+  mbPerson <- QDashboardPerson.findByMobileNumber mobileNumber mobileCountryCode
+  whenJust mbPerson $ \person ->
+    unless (DDashboardPerson.isFleetOwner person || DDashboardPerson.isOperator person) $
+      throwError (InvalidRequest "A user with this mobile number already exists with a different role.")
+  pure $ (.id.getId) <$> mbPerson
 
 -- | Create the dashboard-side fleet owner, mirroring
 -- @createFleetOwnerDashboardOnly@ as provider-dashboard called it after the

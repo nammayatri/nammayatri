@@ -38,7 +38,7 @@ import Tools.Auth.DashboardUserAuth
 
 postRegistrationV2LoginOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLoginReqV2 -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postRegistrationV2LoginOtp a3 a2 a1 = do
-  mbDashboardPersonId <- Tools.Auth.DashboardRegistration.dashboardPersonIdByMobile a1.mobileNumber a1.mobileCountryCode
+  mbDashboardPersonId <- Tools.Auth.DashboardRegistration.fleetLoginDashboardPersonId a1.mobileNumber a1.mobileCountryCode
   enabled <- Tools.Auth.DashboardRegistration.verifyFleetWhileLogin a3.getShortId a2
   res <- Domain.Action.Dashboard.Fleet.RegistrationV2.postRegistrationV2LoginOtp a3 a2 mbDashboardPersonId enabled a1
   Kernel.Prelude.when (Kernel.Prelude.isNothing mbDashboardPersonId) $
