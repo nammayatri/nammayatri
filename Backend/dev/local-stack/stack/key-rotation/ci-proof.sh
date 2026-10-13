@@ -76,7 +76,7 @@ PY
 master=$(sed -n 's/^MASTER_PASSWORD=//p' "$SECRETS/passetto-master.env")
 
 log "the new key database, its schema (no demo keys) and new keys"
-docker compose $KEYS up -d passetto-keys-db
+docker compose $KEYS up -d --no-deps passetto-keys-db
 for _ in $(seq 1 60); do docker exec ny-passetto-keys-db pg_isready -q -h 127.0.0.1 && break; sleep 1; done
 docker run --rm --entrypoint cat juspayin/passetto-hs:0b18530 /opt/app/create_schema.sql | grep -v '^INSERT' \
   | docker exec -i ny-passetto-keys-db psql -U passetto -d passetto -q -v ON_ERROR_STOP=1
@@ -91,6 +91,7 @@ docker run -d --name ny-passetto-new --network "$net" -p 127.0.0.1:8022:8012 \
   juspayin/passetto-hs:0b18530 server >/dev/null
 up 8022 /
 
+pg_started=$(docker inspect ny-postgres -f '{{.State.StartedAt}}')
 log "the window: backends stopped, every value converted"
 docker stop ny-rider ny-driver >/dev/null
 docker run --rm --network host -v "$PWD/key-rotation":/code:ro -v "$WORK":/work \
@@ -101,7 +102,11 @@ docker run --rm --network host -v "$PWD/key-rotation":/code:ro -v "$WORK":/work 
 docker rm -f ny-passetto-new >/dev/null
 
 log "switched: passetto on the new keys, the backends on the new salt"
-docker compose $KEYS up -d passetto rider-app driver-app
+# --no-deps: only these three. Without it compose also recreated ny-postgres
+# (first proof run, 2026-10-13) -- harmless here, a database restart on the day.
+docker compose $KEYS up -d --no-deps passetto rider-app driver-app
+recreated=$(docker inspect ny-postgres -f '{{.State.StartedAt}}')
+[ "$recreated" = "$pg_started" ] || die "the switch restarted the database"
 docker exec ny-redis sh -c "redis-cli --scan --pattern '*Person*' | grep -v DriverLocation | xargs -r redis-cli del" >/dev/null || true
 up 8014 /v2/auth/channels
 up 8017 /openapi

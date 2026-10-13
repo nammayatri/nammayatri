@@ -56,7 +56,9 @@ photograph to rename. What it taught, now in the scripts:
    passetto's database on its own volume, initialised.
 3. **The window** (~10 minutes; the owner's OK and a time): a fresh backup;
    stop what reads or writes numbers; `rotate.js apply`; switch passetto to the
-   new keys, mount the two dhall files with `MOVIN_HASH_SALT`, update
+   new keys, mount the two dhall files with `MOVIN_HASH_SALT` (`up -d
+   --no-deps passetto rider-app driver-app`: without `--no-deps` compose also
+   recreates Postgres, seen in the first CI proof), update
    `NUMBER_HASH_SALT`; drop the cached people in Redis (a cached row holds the
    old ciphertext); start again; prove sign-in on both sides and both countries.
 4. **Rollback**, if any proof fails: restore the window's backup with the old
