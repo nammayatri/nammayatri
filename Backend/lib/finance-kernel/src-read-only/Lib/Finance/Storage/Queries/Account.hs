@@ -23,6 +23,18 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.Account.Account] -> m ())
 createMany = traverse_ create
 
+findAllByCounterpartyIdsAndType ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  ([Kernel.Prelude.Maybe Kernel.Prelude.Text] -> Lib.Finance.Domain.Types.Account.AccountType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.Account.Account])
+findAllByCounterpartyIdsAndType counterpartyId accountType subLedger = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.counterpartyId $ Se.In counterpartyId,
+          Se.Is Beam.accountType $ Se.Eq accountType,
+          Se.Is Beam.subLedger $ Se.Eq subLedger
+        ]
+    ]
+
 findByCounterpartyAndTypeAndSubLedger ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Finance.Domain.Types.Account.AccountType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Account.Account))

@@ -35,12 +35,22 @@ module SharedLogic.Finance.WalletAccount
     getWalletOfferHoldTotalExcluding,
     getPrepaidOfferHoldTotalExcluding,
     getWalletAvailableBalanceByOwner,
+    isWalletSubscriptionCity,
+    isMinBalanceEnforced,
+    walletMinBalanceExemptTagName,
+    isWalletMinBalanceExempt,
+    tierMinimum,
+    tierAutopayTrigger,
+    findWalletAccountsByOwners,
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Types.DriverPanCard as DPanCard
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Documents as Documents
@@ -48,7 +58,24 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.Account as QFAccount
 import Lib.Finance.TempBalanceHold (getOfferHoldTotalExcludingAtKey)
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
+
+-- | Wallet (Liability, pooled) accounts of one owner type for many owners, in one query.
+--   The query matches on counterparty id only, so results are narrowed to the given type: a
+--   person holding both a DRIVER and a FLEET_OWNER wallet must not have one overwrite the other.
+--   Statutory holds are not subtracted: they only exist with the cash-ride gate on, which
+--   wallet-subscription cities keep off.
+findWalletAccountsByOwners ::
+  (BeamFlow m r) =>
+  CounterpartyType ->
+  [Text] ->
+  m [Account]
+findWalletAccountsByOwners counterpartyType ownerIds
+  | null ownerIds = pure []
+  | otherwise = filter ((== Just counterpartyType) . (.counterpartyType)) <$> QFAccount.findAllByCounterpartyIdsAndType (Just <$> ownerIds) Liability Nothing
 
 getWalletAccountByOwner ::
   (BeamFlow m r) =>
@@ -161,6 +188,32 @@ walletReferenceStatutoryHold = "StatutoryDeductionHold"
 
 cashWalletCheckEnabled :: DTC.DriverWalletConfig -> Bool
 cashWalletCheckEnabled dwc = dwc.enableDriverWallet && isJust dwc.minWalletAmountForCashRides
+
+isWalletSubscriptionCity :: DTC.DriverWalletConfig -> Bool
+isWalletSubscriptionCity dwc = dwc.enableDriverWallet && dwc.subscriptionFromWallet == Just True
+
+isMinBalanceEnforced :: DTC.DriverWalletConfig -> Bool
+isMinBalanceEnforced dwc = isWalletSubscriptionCity dwc && dwc.enforceMinWalletBalance == Just True
+
+walletMinBalanceExemptTagName :: Text
+walletMinBalanceExemptTagName = "WalletMinBalanceExempt"
+
+isWalletMinBalanceExempt :: UTCTime -> Maybe [LYT.TagNameValueExpiry] -> Bool
+isWalletMinBalanceExempt now mbTags =
+  any ((== Just (LYT.TagName walletMinBalanceExemptTagName)) . Yudhishthira.parseTagName) $
+    Yudhishthira.filterExpiredTags' now (fromMaybe [] mbTags)
+
+-- | Balance at or below which an Autopay recharge is scheduled, for the driver's default service
+--   tier: its own trigger value, else the blocking minimum (so a city that sets only the minimum
+--   behaves as before), else nothing. Normally higher than the minimum, so the driver is topped up
+--   before they reach the level at which they are blocked from going online.
+tierAutopayTrigger :: [DVST.VehicleServiceTier] -> DV.VehicleVariant -> Maybe HighPrecMoney
+tierAutopayTrigger cityServiceTiers variant =
+  find (\vst -> variant `elem` vst.defaultForVehicleVariant) cityServiceTiers >>= \vst -> vst.autopayTriggerBalance <|> vst.minWalletBalanceToGoOnline
+
+tierMinimum :: [DVST.VehicleServiceTier] -> DV.VehicleVariant -> Maybe HighPrecMoney
+tierMinimum cityServiceTiers variant =
+  find (\vst -> variant `elem` vst.defaultForVehicleVariant) cityServiceTiers >>= (.minWalletBalanceToGoOnline)
 
 -- | Statutory deductions (GST + TDS) the driver would owe if the fare grew to
 --   its ceiling. 'mbBufferedFare' is 'FareParameters.bufferedFare', computed

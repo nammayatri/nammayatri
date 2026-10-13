@@ -290,6 +290,8 @@ import qualified SharedLogic.FareCalculator as FC
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidAvailableBalanceByOwner, hasPrepaidCreditsValidAt)
 import qualified SharedLogic.Finance.Wallet as FWallet
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -1119,6 +1121,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless isPrepaidDriver $
             unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+          unless isPrepaidDriver $
+            WalletFloor.checkWalletGoOnlineEligibility transporterConfig person (mbVehicle <&> (.variant))
           when isPrepaidEnabled $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
@@ -2919,6 +2923,11 @@ clearDriverDues ::
   Maybe SPayment.DeepLinkData ->
   m ClearDuesRes
 clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq mbDeepLinkData = do
+  when (serviceName == YATRI_SUBSCRIPTION) $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
+    -- Wallet cities: dues are paid by recharging the wallet, not by a payment link.
+    when (isWalletSubscriptionCity transporterConfig.driverWalletConfig) $
+      throwError $ InvalidRequest "Subscription is paid from your wallet. Recharge your wallet to clear dues."
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
@@ -3054,7 +3063,7 @@ getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit 
   let defaultLimit = 20
       limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-      manualInvoiceModes = [INV.MANUAL_INVOICE, INV.MANDATE_SETUP_INVOICE, INV.CASH_COLLECTED_INVOICE]
+      manualInvoiceModes = [INV.MANUAL_INVOICE, INV.MANDATE_SETUP_INVOICE, INV.CASH_COLLECTED_INVOICE, INV.WALLET_INVOICE]
       modes = maybe manualInvoiceModes (\mode -> if mode == INV.AUTOPAY_INVOICE then [INV.AUTOPAY_INVOICE] else manualInvoiceModes) mPaymentMode
   invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId modes limit offset serviceName
   driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
@@ -3185,7 +3194,7 @@ getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId serviceNa
   now <- getCurrentTime
   let amount = sum $ mapToAmount allDriverFeeForInvoice
       invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
-      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
+      createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Just INV.WALLET_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
       mbAutoPayStage = listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)
       mbStageUpdatedAt = listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt)
       executionAt =

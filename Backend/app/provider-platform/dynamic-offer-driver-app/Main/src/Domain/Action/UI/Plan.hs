@@ -63,6 +63,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -124,7 +125,9 @@ data PlanEntity = PlanEntity
     airportRideSubscriptionByTier :: Maybe [ServiceTierRideSubscription],
     mahilaShaktiRideSubscription :: Maybe HighPrecMoney,
     remainingPlanCreditLimit :: Maybe HighPrecMoney,
-    planBaseAmount :: HighPrecMoney
+    planBaseAmount :: HighPrecMoney,
+    -- | Payments and dues live on the Wallet page (the subscription is collected from the wallet).
+    isWalletManaged :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -943,6 +946,16 @@ planSuspendGeneric serviceName isDashboard (driverId, _merchantId, merchantOpCit
     (_, _) -> throwError $ NoCurrentPlanForDriver driverId.getId
   return Success
 
+-- | "Subscribe" on a suspended Autopay plan resumes it and then clears the dues by payment link. In a
+--   wallet city dues are paid from the wallet and clearing by link is refused, so refuse up front --
+--   otherwise the resume would already have changed the mandate and plan by the time the error comes.
+rejectResumeAndClearDuesInWalletCity :: ServiceNames -> Id DMOC.MerchantOperatingCity -> Flow ()
+rejectResumeAndClearDuesInWalletCity serviceName merchantOpCityId =
+  when (serviceName == YATRI_SUBSCRIPTION) $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    when (isWalletSubscriptionCity transporterConfig.driverWalletConfig) $
+      throwError $ InvalidRequest "Subscription is paid from your wallet. Recharge your wallet to clear dues."
+
 -- This API is to make Mandate Active and switch to Autopay plan type. If an only if an Auto Pay plan was paused/cancelled by driver from App.
 planResumeGeneric :: ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
 planResumeGeneric serviceName (driverId, _merchantId, _merchantOpCityId) = do
@@ -1331,7 +1344,7 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
   let currentDues = calculateDues driverManualDuesFees
   now <- getCurrentTime
   (driverRegisterationFee, invoice) <- getLatestMandateRegistrationFeeAndCheckIfEligible driverId serviceName currentDues now
-  let maxMandateAmount = max plan.maxMandateAmount currentDues
+  let maxMandateAmount = mandateCapFor transporterConfig currentDues
   case (driverRegisterationFee, invoice) of
     (Just registerFee, Just inv) -> do
       isReusableInvoice <- checkIfInvoiceIsReusable inv (registerFee : driverManualDuesFees)
@@ -1349,16 +1362,24 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
       QDF.create driverFee
       createOrderForDriverFee driverManualDuesFees driverFee currentDues now transporterConfig.mandateValidity Nothing paymentServiceName subscriptionConfig
   where
-    mandateOrder currentDues now mandateValidity =
+    -- Wallet cities: Autopay only recharges the wallet, so the mandate must cover one recharge.
+    mandateCapFor transporterConfig currentDues =
+      let walletRechargeAmount =
+            if isWalletSubscriptionCity transporterConfig.driverWalletConfig
+              then fromMaybe 0 transporterConfig.driverWalletConfig.autopayRechargeAmount
+              else 0
+       in max plan.maxMandateAmount (max currentDues walletRechargeAmount)
+    mandateOrder transporterConfig currentDues now mandateValidity =
       SPayment.MandateOrder
-        { maxAmount = max plan.maxMandateAmount currentDues,
+        { maxAmount = mandateCapFor transporterConfig currentDues,
           _type = Payment.REQUIRED,
           frequency = Payment.ASPRESENTED,
           mandateStartDate = T.pack $ show $ utcTimeToPOSIXSeconds now,
           mandateEndDate = T.pack $ show $ utcTimeToPOSIXSeconds $ addUTCTime (secondsToNominalDiffTime (fromIntegral (60 * 60 * 24 * 365 * mandateValidity))) now
         }
     createOrderForDriverFee driverManualDuesFees driverFee currentDues now mandateValidity mbInvoiceIdTuple paymentServiceName subscriptionConfig = do
-      let mbMandateOrder = Just $ mandateOrder currentDues now mandateValidity
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let mbMandateOrder = Just $ mandateOrder transporterConfig currentDues now mandateValidity
           splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
       if not (null driverManualDuesFees)
         then do
@@ -1454,6 +1475,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         remainingPlanCreditLimit = Nothing,
         planBaseAmount = getPlanAmount plan.planBaseAmount,
         airportRideSubscriptionByTier = driverTierAirportCharges,
+        isWalletManaged = Just (serviceNameParam == YATRI_SUBSCRIPTION && isWalletSubscriptionCity transporterConfig_.driverWalletConfig),
         ..
       }
   where
