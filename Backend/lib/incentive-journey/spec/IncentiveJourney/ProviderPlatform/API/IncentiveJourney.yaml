@@ -328,7 +328,9 @@ types:
     - statsId: Text
     - driverId: Id Driver
     - journeyId: Id IncentiveJourney
+    - journeyName: Text
     - milestoneId: Id IncentiveJourneyMilestone
+    - milestoneName: Maybe Text
     - periodKey: Text
     - conditionType: MilestoneConditionType
     - conditionValue: Int
