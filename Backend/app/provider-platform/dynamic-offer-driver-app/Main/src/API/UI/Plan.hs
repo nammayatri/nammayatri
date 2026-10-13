@@ -107,6 +107,7 @@ planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = wi
       autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) personId
       if autoPayStatus == Just DI.SUSPENDED
         then do
+          DPlan.rejectResumeAndClearDuesInWalletCity (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) merchantOpCityId
           void $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (personId, merchantId, merchantOpCityId)
           Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) Nothing Nothing
           return $ DPlan.PlanSubscribeRes {..}

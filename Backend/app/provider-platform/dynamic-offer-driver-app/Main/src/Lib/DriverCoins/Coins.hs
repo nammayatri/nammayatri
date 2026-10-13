@@ -76,6 +76,7 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
@@ -193,7 +194,9 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
       blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
   let incentiveCohortFunctions = maybe [] (extractDriverIncentiveCohortFunctions . (.driverTag)) mbDriver
-  if fromMaybe False transporterConfig.enableDirectWalletIncentives
+  -- Wallet-subscription cities: rewards stay coins (which can pay the subscription only); cash
+  -- straight into the wallet would end up paying GST.
+  if fromMaybe False transporterConfig.enableDirectWalletIncentives && not (isWalletSubscriptionCity transporterConfig.driverWalletConfig)
     then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
     else case eventType of
       DCT.Cancellation {} ->

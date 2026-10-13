@@ -675,6 +675,23 @@ apis:
       migrate:
         capability: system-config.merchant.write
 
+  # ----- Driver wallet (GST collection via wallet) -----
+  # Read-only view; the wallet config itself is edited through ConfigPilot (TransporterConfig).
+  - GET: # DriverWalletConfigAPI
+      endpoint: /config/driverWallet
+      auth: ApiAuthV2
+      response:
+        type: DriverWalletConfigRes
+      migrate:
+        capability: system-config.driver_wallet.read
+  - POST: # DriverWalletMigratePendingDuesAPI
+      endpoint: /config/driverWallet/migratePendingDues
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.driver_wallet.write
+
 types:
   MerchantUpdateReq:
     - name: Maybe Text
@@ -1271,6 +1288,8 @@ types:
     - cancellationRateConfig: Maybe CancellationRateConfig
     - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    - minWalletBalanceToGoOnline: Maybe HighPrecMoney
+    - autopayTriggerBalance: Maybe HighPrecMoney
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
@@ -1309,6 +1328,8 @@ types:
     - cancellationRateConfig: Maybe CancellationRateConfig
     - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    - minWalletBalanceToGoOnline: Maybe (OptionalValue HighPrecMoney)
+    - autopayTriggerBalance: Maybe (OptionalValue HighPrecMoney)
     - vehicleAgeThreshold: Maybe Months
     - allowNullVehicleRating: Maybe Bool
     - derive: "'HideSecrets"
@@ -1352,6 +1373,8 @@ types:
     - cancellationRateConfig: Maybe CancellationRateConfig
     - availabilityCheckConfig: Maybe AvailabilityCheckConfig
     - autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    - minWalletBalanceToGoOnline: Maybe HighPrecMoney
+    - autopayTriggerBalance: Maybe HighPrecMoney
     - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierListRes:
     - recordType: Type
@@ -1425,6 +1448,16 @@ types:
     - derive: "'HideSecrets"
   CityListResp:
     - supportedCities: [City]
+  DriverWalletConfigRes:
+    - enableDriverWallet: Bool
+    - enableWalletTopup: Bool
+    - enableWalletPayout: Bool
+    - forceOnlineLedger: Maybe Bool
+    - subscriptionFromWallet: Maybe Bool
+    - enforceMinWalletBalance: Maybe Bool
+    - rideCgstPercentage: Maybe HighPrecMoney
+    - rideSgstPercentage: Maybe HighPrecMoney
+    - rideIgstPercentage: Maybe HighPrecMoney
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE

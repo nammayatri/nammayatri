@@ -494,3 +494,38 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_service_
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_ride_allowed_variants text[] ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN min_wallet_balance_to_go_online double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN autopay_trigger_balance double precision ;
+
+
+------- SQL updates -------

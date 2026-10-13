@@ -58,7 +58,7 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("DISTANCE_FARE", "Distance Fare"),
                   ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),
                   ("EXTRA_TIME_FARE", "Extra Time Fare"),
-                  ("FIXED_GOVERNMENT_RATE", "Fixed Government Fare"),
+                  ("FIXED_GOVERNMENT_RATE", "GST"),
                   ("NIGHT_SHIFT_CHARGE", "Night Shift Charge"),
                   ("PLATFORM_FEE", "Platform Fee"),
                   ("CGST", "CGST"),

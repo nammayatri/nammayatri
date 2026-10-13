@@ -175,9 +175,10 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
     -- CancellationConsequence.driverMoneyDeduction emits + for a penalty, − for an
     -- addition). Positive = penalty (fee/wallet debit), negative = compensation, which
     -- rides the wallet only — the legacy DriverFee rail cannot pay out.
+    let walletOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
     when (signedAmount < 0) $
       if isWalletEnabled
-        then do
+        then Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey walletOwnerId) 10 1000 $ do
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
@@ -189,7 +190,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride mbPenaltyAmount trans
     when (signedAmount > 0) $ do
       let penaltyAmount = signedAmount
       if isWalletEnabled
-        then do
+        then Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey walletOwnerId) 10 1000 $ do
           mbPanCard <- QPanCard.findByDriverId ride.driverId
           mbDriverInfo <- QDI.findById (cast ride.driverId)
           ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True

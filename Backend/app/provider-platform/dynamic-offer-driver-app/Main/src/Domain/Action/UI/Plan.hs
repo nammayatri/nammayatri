@@ -63,6 +63,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -124,7 +125,9 @@ data PlanEntity = PlanEntity
     airportRideSubscriptionByTier :: Maybe [ServiceTierRideSubscription],
     mahilaShaktiRideSubscription :: Maybe HighPrecMoney,
     remainingPlanCreditLimit :: Maybe HighPrecMoney,
-    planBaseAmount :: HighPrecMoney
+    planBaseAmount :: HighPrecMoney,
+    -- | Payments and dues live on the Wallet page (the subscription is collected from the wallet).
+    isSubscriptionWalletManaged :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -943,6 +946,16 @@ planSuspendGeneric serviceName isDashboard (driverId, _merchantId, merchantOpCit
     (_, _) -> throwError $ NoCurrentPlanForDriver driverId.getId
   return Success
 
+-- | "Subscribe" on a suspended Autopay plan resumes it and then clears the dues by payment link. In a
+--   wallet city dues are paid from the wallet and clearing by link is refused, so refuse up front --
+--   otherwise the resume would already have changed the mandate and plan by the time the error comes.
+rejectResumeAndClearDuesInWalletCity :: ServiceNames -> Id DMOC.MerchantOperatingCity -> Flow ()
+rejectResumeAndClearDuesInWalletCity serviceName merchantOpCityId =
+  when (serviceName == YATRI_SUBSCRIPTION) $ do
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    when (isWalletSubscriptionCity transporterConfig.driverWalletConfig) $
+      throwError $ InvalidRequest "Subscription is paid from your wallet. Recharge your wallet to clear dues."
+
 -- This API is to make Mandate Active and switch to Autopay plan type. If an only if an Auto Pay plan was paused/cancelled by driver from App.
 planResumeGeneric :: ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow APISuccess
 planResumeGeneric serviceName (driverId, _merchantId, _merchantOpCityId) = do
@@ -1454,6 +1467,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         remainingPlanCreditLimit = Nothing,
         planBaseAmount = getPlanAmount plan.planBaseAmount,
         airportRideSubscriptionByTier = driverTierAirportCharges,
+        isSubscriptionWalletManaged = Just (serviceNameParam == YATRI_SUBSCRIPTION && isWalletSubscriptionCity transporterConfig_.driverWalletConfig),
         ..
       }
   where

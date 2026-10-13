@@ -112,11 +112,13 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
   fleetOwnerInfos <- if null fleetOwnerPersonIds then pure [] else QFOI.findAllByPrimaryKeys fleetOwnerPersonIds
   let fleetOwnerFOIMap = HashMap.fromList $ map (\foi -> (foi.fleetOwnerPersonId, foi)) fleetOwnerInfos
 
+  walletBalances <- Migrations.fetchWalletBalances personIds
+
   now <- getClockTimeInMs
   nowUtc <- getCurrentTime
-  pure $ mapMaybe (buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap) driverIds
+  pure $ mapMaybe (buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap walletBalances) driverIds
   where
-    buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap did = do
+    buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap walletBalances did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
@@ -184,6 +186,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             vehicleRating = v.vehicleRating,
             registrationNo = v.registrationNo,
             cloudType = p.cloudType,
+            walletBalance = HashMap.lookup (cast did :: Id Person.Person) walletBalances,
             schemaVersion = Just Migrations.currentSchemaVersion,
             lastUpdatedAt = Just now,
             -- Redis-only field, no driver_information column to recover it from on a cold rebuild.
