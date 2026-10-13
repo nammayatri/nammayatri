@@ -64,6 +64,42 @@ getBusTripSchedule integratedBPPConfig waybillNo tripNumber routeId = IM.withInM
   baseUrl <- getGimsBaseUrl integratedBPPConfig
   Flow.getBusTripSchedule baseUrl (integratedBPPConfig.feedKey) waybillNo tripNumber routeId
 
+getFleetOperationInfo ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe FleetOperationInfo)
+getFleetOperationInfo integratedBPPConfig fleetNo = do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getFleetOperationV2 baseUrl integratedBPPConfig.feedKey fleetNo
+
+getDepots ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m [DepotInfo]
+getDepots integratedBPPConfig = do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getDepotsV2 baseUrl integratedBPPConfig.feedKey
+
+getDepotById ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe DepotInfo)
+getDepotById integratedBPPConfig depotId = do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getDepotByIdV2 baseUrl integratedBPPConfig.feedKey depotId
+
+getDepotVehicles ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  Maybe Text ->
+  m [DepotVehicleInfo]
+getDepotVehicles integratedBPPConfig depotId mbStatus = do
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  Flow.getDepotVehiclesV2 baseUrl integratedBPPConfig.feedKey depotId mbStatus
+
 -- Parse Functions
 
 parseRouteStopMappingInMemoryServer ::

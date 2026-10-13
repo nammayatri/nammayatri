@@ -27,6 +27,7 @@ import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
 import Storage.Beam.CommonDriverOnboardingDocuments
 import Storage.Beam.Communication
+import Storage.Beam.DepotManager (DepotManagerT, depotManagerTable)
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverFyEarnings
 import Storage.Beam.DriverGoHomeRequest
@@ -125,7 +126,8 @@ atlasDB =
         financeAccount = BeamAccount.accountTable,
         financeLedgerEntry = BeamLE.ledgerEntryTable,
         pgPaymentSettlementReport = BeamPgReport.pgPaymentSettlementReportTable,
-        sapJournalEntry = BeamSapJournal.sapJournalEntryTable
+        sapJournalEntry = BeamSapJournal.sapJournalEntryTable,
+        depotManager = depotManagerTable
       }
 
 data AtlasDB f = AtlasDB
@@ -180,6 +182,7 @@ data AtlasDB f = AtlasDB
     financeAccount :: f (B.TableEntity BeamAccount.AccountT),
     financeLedgerEntry :: f (B.TableEntity BeamLE.LedgerEntryT),
     pgPaymentSettlementReport :: f (B.TableEntity BeamPgReport.PgPaymentSettlementReportT),
-    sapJournalEntry :: f (B.TableEntity BeamSapJournal.SapJournalEntryT)
+    sapJournalEntry :: f (B.TableEntity BeamSapJournal.SapJournalEntryT),
+    depotManager :: f (B.TableEntity DepotManagerT)
   }
   deriving (Generic, B.Database be)

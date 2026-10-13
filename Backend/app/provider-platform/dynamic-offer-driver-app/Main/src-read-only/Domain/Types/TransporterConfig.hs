@@ -296,6 +296,7 @@ data TransporterConfig = TransporterConfig
     payoutBatchLimit :: Kernel.Prelude.Int,
     payoutRideMoneyToDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     payoutRideScheduleTimeBuffer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    peerBapMerchantShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     pickupLocThreshold :: Kernel.Types.Common.Meters,
     pickupStallMonitoringConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PickupStallMonitoringConfig,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
