@@ -241,6 +241,9 @@ library
       Domain.Types.FRFSTicketStatus
       Domain.Types.InitiatedBy
       Domain.Types.Invoice
+      Domain.Types.JourneyBookingStatus
+      Domain.Types.JourneyLegStatus
+      Domain.Types.MultimodalTicketVerify
       Domain.Types.ParcelType
       Domain.Types.PaymentMode
       Domain.Types.RefereeLink
@@ -248,6 +251,7 @@ library
       Domain.Types.RideStatus
       Domain.Types.ServiceTierType
       Domain.Types.StationType
+      Domain.Types.TrackingStatus
       Domain.Types.Trip
       Domain.Types.VehicleCategory
       Domain.Types.VehicleVariant
