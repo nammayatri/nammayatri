@@ -888,6 +888,10 @@ getBusBlockMaxLimit = \case
 mkBusBlockKey :: Kernel.Types.Id.Id DIBC.IntegratedBPPConfig -> Text -> Text
 mkBusBlockKey cfgId vehicleNumber = cfgId.getId <> ":blocked:" <> vehicleNumber
 
+-- Where driver-app's blocks land: scoped by GTFS feed since its config row ids differ from ours.
+mkSharedBusBlockKey :: Text -> Text -> Text
+mkSharedBusBlockKey feedKey vehicleNumber = "shared:busBlock:" <> feedKey <> ":" <> vehicleNumber
+
 mkCheckerBlockedListKey :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Text
 mkCheckerBlockedListKey personId = "blocked:checker:" <> personId.getId
 
@@ -910,7 +914,15 @@ isVehicleBlocked configs vehicleNumber = do
           pure (isJust (mbVal :: Maybe Text))
       )
       configs
-  pure (Kernel.Prelude.or flags)
+  sharedFlags <-
+    Hedis.withCrossAppRedis $
+      mapM
+        ( \feedKey -> do
+            mbVal <- Hedis.safeGet (mkSharedBusBlockKey feedKey vehicleNumber)
+            pure (isJust (mbVal :: Maybe Text))
+        )
+        (nub $ map (.feedKey) configs)
+  pure (Kernel.Prelude.or (flags <> sharedFlags))
 
 addToCheckerBlockedList :: (CacheFlow m r, MonadFlow m) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Text -> m ()
 addToCheckerBlockedList personId vehicleNumber = do
@@ -1166,12 +1178,12 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
       Just vehicleNumber -> do
         mbVehicleOverrideInfo <- Dispatcher.getFleetOverrideInfo vehicleNumber
         case mbVehicleOverrideInfo of
-          Just (sourceVehicleNumber, overrideWaybillNo) -> do
+          Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
             mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
             case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
               JLU.FleetOverrideUsable -> pure mbSourceRouteInfo
               JLU.FleetOverrideFinished -> do
-                Dispatcher.delFleetOverrideInfo vehicleNumber
+                Dispatcher.delFleetOverrideInfo overrideScope vehicleNumber
                 getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
               JLU.FleetOverrideNotYetUsable -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
           Nothing -> getVehicleLiveRouteInfo vehicleNumber integratedBPPConfigs
@@ -2977,13 +2989,13 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
   (integratedBPPConfig, vehicleLiveRouteInfo) <- case mbVehicleOverrideInfo of
-    Just (sourceVehicleNumber, overrideWaybillNo) -> do
+    Just (overrideScope, (sourceVehicleNumber, overrideWaybillNo)) -> do
       mbSourceRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs sourceVehicleNumber Nothing
       let scannedVehicleRouteInfo = JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
       case JLU.classifyFleetOverride overrideWaybillNo (snd <$> mbSourceRouteInfo) of
         JLU.FleetOverrideUsable -> mbSourceRouteInfo & fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
         JLU.FleetOverrideFinished -> do
-          Dispatcher.delFleetOverrideInfo vehicleNumber
+          Dispatcher.delFleetOverrideInfo overrideScope vehicleNumber
           scannedVehicleRouteInfo
         JLU.FleetOverrideNotYetUsable -> scannedVehicleRouteInfo
     Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
