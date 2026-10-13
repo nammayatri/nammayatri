@@ -15,6 +15,7 @@ under the old keys, or hashed with the old salt, would no longer match anyone.
 | File | What it is |
 |---|---|
 | `rotate.js` | The conversion. `check` reads every value and proves the current salt reproduces every stored hash, writing nothing. `apply` re-encrypts with the new passetto, re-hashes with the new salt, all rows in one transaction, then reads every value back through the new keys. Renames the passengers' photographs, whose file name is the hash. Tested: `tests/key-rotation.test.js`. |
+| `ci-proof.sh` | The whole switch on the ride regression's throwaway stack (a step of `algeria-ride-regression.yml`): a passenger and a driver sign in, the keys and salt are rotated as in the window, and the same two numbers must sign in again as the same people (the person their new token names). |
 | `compose.keys.yml` | The switch, as a compose overlay: passetto keeps its name and port (8021) but runs `server` on a new key database with its own volume (`passetto-keys`), its master password from `/opt/ny/secrets/passetto-master.env`; the rider and driver apps get the two dhall copies mounted over upstream's and `MOVIN_HASH_SALT` from `/opt/ny/secrets/hash-salt.env`. Inert until named in `.env`'s `COMPOSE_FILE`; compose refuses it while either secrets file is missing. Merge checked with `docker compose config` on the server, 2026-10-13. Today's `ny-passetto-db` is left as it is: the rollback. |
 | `rehearse.sh` | The rehearsal: copies the seven tables, passetto's database and the photographs into throwaway containers on an internal network, starts a passetto on NEW keys, runs `check` then `apply` there, proves today's keys no longer open a converted value, and removes everything however it ends. Reads the live stack, writes nothing to it. |
 | `rider-app.secrets.dhall`, `dynamic-offer-driver-app.secrets.dhall` | Upstream's secrets files at `03a7531` (what the images run), byte for byte, except that `encHashSalt` is read from `MOVIN_HASH_SALT`. Mounted over the upstream files on the day; nothing reads them before. |
@@ -67,5 +68,5 @@ Redis -- the deployed configuration (03a7531) caches configs only
 fleet's positions). Dropping person keys after the switch stays in the window
 as a precaution. The configuration change is released as
 `compose.keys.yml`, shipped like any stack file and switched on by naming it
-in `.env`. Still open: a proof at the service level that a passenger and a
-driver sign in as the same person after the switch.
+in `.env`. The proof that a passenger and a driver sign in as the same people after
+the switch is `ci-proof.sh`, run by the ride regression on every push.
