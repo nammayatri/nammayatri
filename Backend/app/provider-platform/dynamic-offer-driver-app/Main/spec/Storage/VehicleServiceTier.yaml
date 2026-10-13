@@ -60,6 +60,8 @@ VehicleServiceTier:
     cancellationRateConfig: Maybe CancellationRateConfig
     availabilityCheckConfig: Maybe AvailabilityCheckConfig
     autoAcceptanceConfig: Maybe AutoAcceptanceConfig
+    minWalletBalanceToGoOnline: Maybe HighPrecMoney
+    autopayTriggerBalance: Maybe HighPrecMoney
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]

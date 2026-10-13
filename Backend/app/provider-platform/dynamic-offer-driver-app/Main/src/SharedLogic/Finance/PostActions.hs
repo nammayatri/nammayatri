@@ -28,6 +28,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
 import qualified SharedLogic.VehicleServiceTier as SVST
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
@@ -42,7 +43,7 @@ runFinance ctx action = do
   case result of
     Left err -> pure (Left err)
     Right (a, finalState) -> do
-      runPostActions ctx.enableWalletGatedTierCheck finalState `catchAny` \e ->
+      runPostActions ctx.enableWalletGatedTierCheck ctx.syncDriverWalletBalance finalState `catchAny` \e ->
         logError ("PostActions failed after runFinance, ignoring: " <> show e)
       pure (Right (a, finalState.collectedEntryIds))
 
@@ -50,21 +51,28 @@ runFinance ctx action = do
 runPostActions ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
+  Bool ->
   Finance.FinanceState ->
   m ()
-runPostActions walletGateEnabled finalState =
+runPostActions walletGateEnabled syncWalletBalance finalState =
   forM_ (nubBy (\a b -> a.id == b.id) finalState.affectedAccounts) $ \account ->
-    runPostActionsForAccount walletGateEnabled account `catchAny` \e ->
+    runPostActionsForAccount walletGateEnabled syncWalletBalance account `catchAny` \e ->
       logError ("PostActions: processing accountId=" <> account.id.getId <> " failed, skipping: " <> show e)
 
 -- | Like 'runPostActions' but for a single, already-known account -- the entry point for
 --   SharedLogic.Finance.Wallet.createWalletEntryDelta, which never goes through runFinance.
 runPostActionsForAccount ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Bool ->
+  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
+  Bool -> -- caller-resolved driverWalletConfig.enableDriverWallet: keep the pool's cached balance in sync
   Finance.AffectedAccount ->
   m ()
-runPostActionsForAccount walletGateEnabled account =
+runPostActionsForAccount walletGateEnabled syncWalletBalance account = do
+  -- Only driver wallets are cached in the pool (fleet owner postings never change it), and only where
+  -- the wallet is on (the pool reads the cache only where the minimum can be enforced).
+  when (syncWalletBalance && account.accountType == FAccount.Liability && account.counterpartyType == Just FAccount.DRIVER) $
+    syncWalletBalanceToPool account.id `catchAny` \e ->
+      logError ("PostActions: wallet balance cache sync failed for accountId=" <> account.id.getId <> ", ignoring: " <> show e)
   when walletGateEnabled $
     case (account.accountType, account.counterpartyType, account.counterpartyId) of
       (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) ->

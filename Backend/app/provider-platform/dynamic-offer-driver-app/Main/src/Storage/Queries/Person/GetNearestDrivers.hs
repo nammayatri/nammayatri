@@ -6,6 +6,7 @@ module Storage.Queries.Person.GetNearestDrivers
     isTierEligibleForDriver,
     scheduledTierEligibleForDriver,
     isDriverModeEligibleHelper,
+    isWalletMinBalanceEligible,
     SortedLTSCandidate (..),
     NearestDriversResult (..),
     NearestDriversReq (..),
@@ -268,6 +269,7 @@ buildDriverResult NearestDriversReq {..} isPrepaidEnabled poolDataMap cityServic
   -- FleetDriverAssociationExtra.findAllByDriverIds), so its presence IS the
   -- active-association check.
   guard $ dpd.subscribed || isExemptFromPostpaidDuesFlag isPrepaidEnabled dpd.fleetOwnerId dpd.rideBillingModel
+  guard $ isWalletMinBalanceEligible (isMinBalanceEnforced driverWalletConfig) now cityServiceTiers dpd
   guard $ isDriverModeEligibleHelper dpd.mode dpd.active
   guard $ isTripTypeEligibleHelper isRental isInterCity dpd
   when isAirportRequest $ guard $ dpd.enableForAirport == Just DI.ENABLED
@@ -383,6 +385,15 @@ isDriverModeEligibleHelper Nothing active = active
 isDriverModeEligibleHelper (Just DriverInfo.SILENT) _ = True
 isDriverModeEligibleHelper (Just DriverInfo.ONLINE) _ = True
 isDriverModeEligibleHelper _ _ = False
+
+-- | Go-online minimum, checked on the cached wallet balance ('DriverPoolData.walletBalance', kept
+-- current by the post-posting hook), so no finance read happens here. Applies to on-ride
+-- (forward-batching) candidates too. A tier without a minimum, or the exempt tag, passes.
+isWalletMinBalanceEligible :: Bool -> UTCTime -> [DVST.VehicleServiceTier] -> DPD.DriverPoolData -> Bool
+isWalletMinBalanceEligible enforced now cityServiceTiers dpd =
+  not enforced
+    || isWalletMinBalanceExempt now dpd.driverTag
+    || maybe True (\minBalance -> fromMaybe 0 dpd.walletBalance >= minBalance) (tierMinimum cityServiceTiers dpd.variant)
 
 isTripTypeEligibleHelper :: Bool -> Bool -> DPD.DriverPoolData -> Bool
 isTripTypeEligibleHelper isRental isInterCity dpd

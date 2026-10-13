@@ -60,6 +60,7 @@ import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
+import SharedLogic.Finance.WalletAccount (isWalletSubscriptionCity)
 import SharedLogic.VehicleServiceTier (recomputeSelectedServiceTiers, selectedServiceTiersLockKey)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -213,8 +214,23 @@ dispatchConsequence ctx driverId = \case
         case mbTransporterConfig of
           Nothing -> logError $ "ChargeFee skipped: TransporterConfig not found for city " <> ctx.merchantOperatingCityId.getId
           Just transporterConfig -> do
-            feeId <- DCP.chargeDriverPenaltyFee ctx.merchantId ctx.merchantOperatingCityId (cast driverId) penaltyAmount currency transporterConfig
-            logInfo $ "Charged behavior penalty fee " <> feeId.getId <> " (" <> params.chargeReason <> ") of " <> show penaltyAmount <> " to driver " <> driverId.getId
+            if isWalletSubscriptionCity transporterConfig.driverWalletConfig
+              then do
+                -- Wallet-subscription city: debit the driver's wallet right away (a retried job) instead of
+                -- creating a fee that would wait for a daily collection.
+                chargeId <- generateGUIDText
+                JC.createJobIn @_ @'ChargeWalletPenalty (Just ctx.merchantId) (Just ctx.merchantOperatingCityId) 0 $
+                  ChargeWalletPenaltyJobData
+                    { merchantId = ctx.merchantId,
+                      merchantOperatingCityId = ctx.merchantOperatingCityId,
+                      driverId = driverId,
+                      walletPenaltyAmount = penaltyAmount,
+                      walletPenaltyChargeId = chargeId
+                    }
+                logInfo $ "Queued wallet debit " <> chargeId <> " (" <> params.chargeReason <> ") of " <> show penaltyAmount <> " for driver " <> driverId.getId
+              else do
+                feeId <- DCP.chargeDriverPenaltyFee ctx.merchantId ctx.merchantOperatingCityId (cast driverId) penaltyAmount currency transporterConfig
+                logInfo $ "Charged behavior penalty fee " <> feeId.getId <> " (" <> params.chargeReason <> ") of " <> show penaltyAmount <> " to driver " <> driverId.getId
             -- Belt against rule-authoring mistakes: rules must also guard on
             -- {"var": "cooldowns.<feeCooldownTag>"} to avoid re-emitting CHARGE_FEE.
             whenJust params.feeCooldownTag $ \cooldownTag ->

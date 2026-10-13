@@ -340,7 +340,7 @@ initiateWalletPayoutWith ctx payoutableBalance payoutType coverageFrom coverageT
           then Bulk.localOrderCall
           else Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount
       counterparty = counterpartyFromRole ctx.person.role
-      ownerPayoutCtxFor pr = buildDriverChargeCtx counterparty ctx.driverId.getId ctx.merchantId.getId ctx.mocId.getId ctx.transporterConfig.currency pr.id.getId (fromMaybe False ctx.transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+      ownerPayoutCtxFor pr = buildDriverChargeCtx counterparty ctx.driverId.getId ctx.merchantId.getId ctx.mocId.getId ctx.transporterConfig.currency pr.id.getId ctx.transporterConfig.driverWalletConfig
       metadata =
         LedgerEntryMetadata
           { driverPayable = Just (negate netAmount),

@@ -18,6 +18,14 @@ findByIds [] = pure []
 findByIds entryIds =
   findAllWithKV [Se.Is Beam.id $ Se.In (map Kernel.Types.Id.getId entryIds)]
 
+-- | Every ledger entry under one reference id, whatever its reference type.
+findByReferenceId ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  m [Domain.LedgerEntry]
+findByReferenceId referenceId =
+  findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
+
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>

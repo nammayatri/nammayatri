@@ -176,7 +176,8 @@ mkLoyaltyFinanceCtx wallet refId =
       panType = Nothing,
       tdsRateReason = Nothing,
       emitLedgerEntries = True,
-      enableWalletGatedTierCheck = False -- shared lib, goes through the kernel's own runFinance, never dispatches
+      enableWalletGatedTierCheck = False, -- shared lib, goes through the kernel's own runFinance, never dispatches
+      syncDriverWalletBalance = False
     }
 
 data LedgerWriteOutcome
