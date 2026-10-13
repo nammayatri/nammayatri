@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+
+DepotManager:
+  tableName: depot_manager
+
+  fields:
+    id: Id DepotManager
+    personId: Id Person
+    # Holds the GIMS numeric depot_id, not its display short code: short codes collide across
+    depotCode: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    enabled: Bool
+    isAdmin: Bool
+    isBlockAllowed: Maybe Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+    depotCode: SecondaryKey
+    personId: SecondaryKey
+
+  queries:
+    findAllByPersonId:
+      kvFunction: findAllWithDb
+      where: personId
+    findByPersonIdAndDepotCode:
+      kvFunction: findOneWithDb
+      where:
+        and: [personId, depotCode]
+
+  sqlType:
+    depotCode: character varying(36)
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

@@ -293,6 +293,7 @@ data TransporterConfigT f = TransporterConfigT
     payoutBatchLimit :: B.C f Kernel.Prelude.Int,
     payoutRideMoneyToDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     payoutRideScheduleTimeBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    peerBapMerchantShortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     pickupLocThreshold :: B.C f Kernel.Types.Common.Meters,
     pickupStallMonitoringConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
