@@ -1287,7 +1287,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig personId
           FDV.endFleetDriverAssociation entityId personId
           whenJust mbNewOperator $ linkDriverToNewOperator merchant merchantOpCity personId
-        SOnboardingComms.clearOnboardingAsIfNoFleet transporterConfig personId
+        SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig personId
         -- Only decrement analytics if there was an active association
         when (isJust mbActiveAssociation) $ do
           Analytics.handleDriverAnalyticsAndFlowStatus
@@ -4780,7 +4780,7 @@ postDriverFleetApproveDriver merchantShortId opCity fleetOwnerId req = do
     _ -> do
       SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetOwnerId) driverId) SGuard.UnlinkFromFleet (SGuard.TargetDriver driverId) $
         QFDV.rejectFleetDriverAssociation driverId (Id fleetOwnerId) req.reason
-      SOnboardingComms.setOnboardingAs transporterConfig driver DI.INDIVIDUAL
+      SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig driverId
       pure
         ( "FLEET_REQUEST_REJECTED",
           \pn -> pn.body <> maybe "" (" " <>) req.reason
