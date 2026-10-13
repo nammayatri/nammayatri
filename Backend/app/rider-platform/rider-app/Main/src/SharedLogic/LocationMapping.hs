@@ -72,3 +72,13 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
       locationId = location.id
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
+
+buildFreshLocationMappings :: MonadFlow m => Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> [Id DL.Location] -> m [DLM.LocationMapping]
+buildFreshLocationMappings entityId tag merchantId merchantOperatingCityId locationIds = do
+  now <- getCurrentTime
+  forM (zip locationIds [0 ..]) $ \(locationId, order) -> do
+    id <- generateGUID
+    let version = QLM.latestTag
+        createdAt = now
+        updatedAt = now
+    pure DLM.LocationMapping {..}
