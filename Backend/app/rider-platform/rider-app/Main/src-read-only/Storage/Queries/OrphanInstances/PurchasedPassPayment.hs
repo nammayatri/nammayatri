@@ -30,6 +30,7 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             benefitType = benefitType,
             benefitValue = benefitValue,
             clientSdkVersion = clientSdkVersion',
+            destinationStopCode = destinationStopCode,
             endDate = endDate,
             id = Kernel.Types.Id.Id id,
             isDashboard = isDashboard,
@@ -46,8 +47,11 @@ instance FromTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.
             personId = Kernel.Types.Id.Id personId,
             profilePicture = profilePicture,
             purchasedPassId = Kernel.Types.Id.Id purchasedPassId,
+            referenceFare = referenceFare,
+            sourceStopCode = sourceStopCode,
             startDate = startDate,
             status = status,
+            validityDays = validityDays,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -62,6 +66,7 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.benefitType = benefitType,
         Beam.benefitValue = benefitValue,
         Beam.clientSdkVersion = Kernel.Utils.Version.versionToText <$> clientSdkVersion,
+        Beam.destinationStopCode = destinationStopCode,
         Beam.endDate = endDate,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDashboard = isDashboard,
@@ -78,8 +83,11 @@ instance ToTType' Beam.PurchasedPassPayment Domain.Types.PurchasedPassPayment.Pu
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.profilePicture = profilePicture,
         Beam.purchasedPassId = Kernel.Types.Id.getId purchasedPassId,
+        Beam.referenceFare = referenceFare,
+        Beam.sourceStopCode = sourceStopCode,
         Beam.startDate = startDate,
         Beam.status = status,
+        Beam.validityDays = validityDays,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -15,6 +15,7 @@ module Domain.Action.UI.Pass
     postMultimodalPassActivateToday,
     postMultimodalPassActivateTodayUtil,
     postMultimodalPassSelectUtil,
+    postMultimodalPassCalculateFare,
     postMultimodalPassUploadProfilePicture,
     getMultimodalPassPhoto,
     fetchPassPhotoFromS3,
@@ -39,7 +40,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AKey
 import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
-import Data.List (sortOn)
+import Data.List (partition, sortOn)
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..))
 import qualified Data.Text as T
@@ -50,6 +51,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassCategory as DPassCategory
 import qualified Domain.Types.PassDetails as DPassDetails
+import qualified Domain.Types.PassOverrideConfig as DPassOverrideConfig
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.PassVerifyTransaction as DPassVerifyTransaction
 import qualified Domain.Types.Person as DP
@@ -104,6 +106,7 @@ import qualified SharedLogic.OfferSegment as SOfferSegment
 import qualified SharedLogic.Pass.Eligibility as SLE
 import qualified SharedLogic.PaymentVendorSplits as PaymentVendorSplits
 import qualified SharedLogic.PersonPTStats as SPUS
+import qualified SharedLogic.RoutePassPricing as RoutePassPricing
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.Payment ()
@@ -179,11 +182,13 @@ getMultimodalPassAvailablePasses (mbPersonId, _merchantId) mbLanguage = do
       withTryCatch ("getMultimodalPassAvailablePasses:buildPassAPIEntity:" <> pass.id.getId) (buildPassAPIEntity mbLanguage person eligibilityLogics pass)
         >>= either (const (pure Nothing)) (pure . mfilter (.eligibility) . Just)
 
+    let (dynamicPassEntities, fixedPassEntities) = partition ((== Just True) . (.variableValidityDays)) passAPIEntities
     return $
       PassAPI.PassInfoAPIEntity
         { passCategory = buildPassCategoryAPIEntity category,
           passTypes = map (buildPassTypeAPIEntity . fst) allPasses,
-          passes = passAPIEntities
+          passes = fixedPassEntities,
+          dynamicPasses = dynamicPassEntities
         }
 
 postMultimodalPassSelectUtil ::
@@ -198,8 +203,9 @@ postMultimodalPassSelectUtil ::
   Maybe (Id.Id DMF.MediaFile) ->
   Maybe DT.Day ->
   Bool ->
+  Maybe RoutePassPricing.PassPurchaseSelection ->
   Environment.Flow PassAPI.PassSelectionAPIEntity
-postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay isMockPayment = do
+postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture mbPassPhotoMediaId mbStartDay isMockPayment mbSelection = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   unless isDashboard $ do
     rateLimitOptions <- asks (.passSelectAPIRateLimitOptions)
@@ -225,9 +231,21 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
     validateRequiredDocuments mbProfilePicture mbPassPhotoMediaId person pass.documentsRequired
   mbDeviceId <- if isDashboard then return Nothing else Just <$> getDeviceId person mbDeviceIdParam mbImeiParam
 
+  mbOverrideEntry <-
+    if pass.frfsPriceOverrideApplicable == Just True
+      then FRFSPassOverride.entryFromPass pass
+      else pure Nothing
+  let selection = fromMaybe (RoutePassPricing.PassPurchaseSelection Nothing Nothing Nothing Nothing) mbSelection
+  mbRouteTerm <- case mbOverrideEntry of
+    Just (FRFSPassOverride.PassTicketBenefit config) -> Just <$> RoutePassPricing.resolveRoutePassTerm person pass config selection
+    _ -> pure Nothing
+  validityDays <- case mbRouteTerm of
+    Just routeTerm -> pure routeTerm.validityDays
+    Nothing -> RoutePassPricing.resolveValidityDays pass selection.validityDays
+
   -- Use Redis lock to prevent race condition when purchasing pass
   let lockKey = mkPassPurchaseLockKey personId pass.passTypeId
-  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId isMockPayment) >>= \case
+  Redis.whenWithLockRedisAndReturnValue lockKey 60 (purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId isMockPayment mbOverrideEntry mbRouteTerm validityDays) >>= \case
     Left _ -> do
       logError $ "Pass purchase already in progress for personId: " <> personId.getId <> " and passTypeId: " <> pass.passTypeId.getId
       throwError (InvalidRequest "Pass purchase already in progress, please try again")
@@ -255,8 +273,11 @@ purchasePassWithPayment ::
   Maybe Text ->
   Maybe (Id.Id DMF.MediaFile) ->
   Bool ->
+  Maybe FRFSPassOverride.OverrideBenefitEntry ->
+  Maybe RoutePassPricing.RoutePassTerm ->
+  Maybe Int ->
   m PassAPI.PassSelectionAPIEntity
-purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId isMockPayment = do
+purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay mbDeviceId mbProfilePicture mbPassPhotoMediaId isMockPayment mbOverrideEntry mbRouteTerm validityDays = do
   -- Check if pass is already purchased and active
   now <- getCurrentTime
   purchasedPassPaymentId <- generateGUID
@@ -269,7 +290,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   istTime <- getLocalCurrentTime timeDiffFromUtc
   passNumber <- getNextPassNumber
   let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
-      endDate = calculatePassEndDate startDate pass.maxValidDays
+      endDate = calculatePassEndDate startDate validityDays
+      purchaseAmount = maybe pass.amount (.amount) mbRouteTerm
 
   let (benefitType, benefitValue) = case pass.benefit of
         Nothing -> (Nothing, Nothing)
@@ -305,7 +327,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         else throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device and the device switch limit has been reached")
 
   passType <- CQPassType.findById pass.passTypeId
-  let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
+  let initialStatus = if purchaseAmount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
     case mbSamePass of
       Just samePass -> do
@@ -331,14 +353,14 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   passCode = pass.code,
                   passName = pass.name,
                   passDescription = pass.description,
-                  passAmount = pass.amount,
+                  passAmount = purchaseAmount,
                   benefitDescription = pass.benefitDescription,
                   benefitType = benefitType,
                   benefitValue = benefitValue,
                   applicableVehicleServiceTiers = pass.applicableVehicleServiceTiers,
                   vehicleType = pass.vehicleType,
                   maxValidTrips = pass.maxValidTrips,
-                  maxValidDays = pass.maxValidDays,
+                  maxValidDays = validityDays,
                   deviceSwitchCount = 0,
                   profilePicture = mbProfilePicture <|> person.profilePicture,
                   passPhotoMediaId = mbPassPhotoMediaId,
@@ -360,10 +382,6 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         return newPurchasedPassId
 
   mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
-  mbOverrideEntry <-
-    if pass.frfsPriceOverrideApplicable == Just True
-      then FRFSPassOverride.entryFromPass pass
-      else pure Nothing
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -373,12 +391,12 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             startDate,
             endDate,
             benefitDescription = pass.benefitDescription,
-            availableTripCount = mbMaxTripCount,
+            availableTripCount = maybe mbMaxTripCount (Just . (.tripCount)) mbRouteTerm,
             isDashboard = Just isDashboard,
             benefitType = benefitType,
             benefitValue = benefitValue,
             status = initialStatus,
-            amount = pass.amount,
+            amount = purchaseAmount,
             passCode = pass.code,
             passName = pass.name,
             merchantId = pass.merchantId,
@@ -390,13 +408,17 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passPhotoChangeCount = Just 0,
             activatedAt = Nothing,
             clientSdkVersion = person.clientSdkVersion,
-            overrideBenefitConfigJson = (\entry -> FRFSPassOverride.OverrideBenefitConfig [entry]) <$> mbOverrideEntry,
+            overrideBenefitConfigJson = maybe ((\entry -> FRFSPassOverride.OverrideBenefitConfig [entry]) <$> mbOverrideEntry) (Just . (.overrideConfig)) mbRouteTerm,
+            sourceStopCode = (.sourceStopCode) <$> mbRouteTerm,
+            destinationStopCode = (.destinationStopCode) <$> mbRouteTerm,
+            referenceFare = (.referenceFare) <$> mbRouteTerm,
+            validityDays,
             createdAt = now,
             updatedAt = now
           }
 
   mbPaymentOrder <-
-    if pass.amount > 0
+    if purchaseAmount > 0
       then do
         customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
         customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -405,14 +427,14 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
               [ PaymentVendorSplits.ItemDetail
                   { itemId = pass.id.getId,
                     itemTransactionId = purchasedPassPaymentId.getId,
-                    amount = pass.amount
+                    amount = purchaseAmount
                   }
               ]
         vendorSplitList <- PaymentVendorSplits.createVendorSplit merchantId person.merchantOperatingCityId TPayment.FRFSPassPurchase itemDetails
         isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
-        splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled True
-        basket <- TPayment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase pass.amount 1
+        splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled purchaseAmount vendorSplitList isPercentageSplitEnabled True
+        basket <- TPayment.mkOfferBasket merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase purchaseAmount 1
         staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
         nwAddress <- asks (.nwAddress)
         udf1 <- SLUtils.getPersonUdf1 person
@@ -421,7 +443,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
                   orderShortId = paymentOrderShortId.getShortId,
-                  amount = pass.amount,
+                  amount = purchaseAmount,
                   customerId = staticCustomerId,
                   customerEmail,
                   customerPhone,
@@ -498,7 +520,7 @@ postMultimodalPassSelect ::
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
 postMultimodalPassSelect (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbIsMockPayment mbPassPhotoMediaIdParam mbProfilePicture mbStartDay =
-  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay (fromMaybe False mbIsMockPayment)
+  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId mbDeviceIdParam mbImeiParam mbProfilePicture (Id.Id <$> mbPassPhotoMediaIdParam) mbStartDay (fromMaybe False mbIsMockPayment) Nothing
 
 postMultimodalPassV2Select ::
   ( ( Kernel.Prelude.Maybe (Id.Id DP.Person),
@@ -510,7 +532,15 @@ postMultimodalPassV2Select ::
     Environment.Flow PassAPI.PassSelectionAPIEntity
   )
 postMultimodalPassV2Select (mbPersonId, merchantId) passId mbIsMockPayment req =
-  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate) (fromMaybe False mbIsMockPayment)
+  postMultimodalPassSelectUtil False (mbPersonId, merchantId) passId Nothing (Just req.imeiNumber) req.profilePicture req.passPhotoMediaId (Just req.startDate) (fromMaybe False mbIsMockPayment) (Just selection)
+  where
+    selection =
+      RoutePassPricing.PassPurchaseSelection
+        { sourceStopCode = req.sourceStopCode,
+          destinationStopCode = req.destinationStopCode,
+          tripCount = req.tripCount,
+          validityDays = req.validityDays
+        }
 
 -- Generate Redis lock key for pass purchase
 mkPassPurchaseLockKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
@@ -696,6 +726,8 @@ createPassCatalog merchantShortId opCity req = do
             minTripsAllowingOverlap = Nothing,
             minDaysToSuggestRenewal = Nothing,
             timeOverlappingFrfsBookingsLimit = Nothing,
+            variableValidityDays = Nothing,
+            validityDaysRecommendations = Nothing,
             purchaseEligibilityJsonLogic = [],
             redeemEligibilityJsonLogic = [],
             -- FRFS fare/cancellation override columns are owned by the override flow,
@@ -763,6 +795,21 @@ deletePassCatalog merchantShortId opCity passId = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId True
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
+
+mkRoutePassAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> Maybe PassAPI.RoutePassAPIEntity
+mkRoutePassAPIEntity payment
+  | isJust payment.sourceStopCode || isJust payment.destinationStopCode =
+    Just PassAPI.RoutePassAPIEntity {sourceStopCode = payment.sourceStopCode, destinationStopCode = payment.destinationStopCode}
+  | otherwise = Nothing
+
+mkRoutePassConfig :: DPassOverrideConfig.PassPricingConfig -> PassAPI.RoutePassConfigAPIEntity
+mkRoutePassConfig pricing =
+  PassAPI.RoutePassConfigAPIEntity
+    { primaryServiceTier = pricing.primaryServiceTier,
+      maximumPurchaseableTripCount = pricing.maximumPurchaseableTripCount,
+      variableTripCount = pricing.variableTripCount == Just True,
+      tripCountRecommendations = fromMaybe [] pricing.tripCountRecommendations
+    }
 
 mkFrfsOverrideConfig :: FRFSPassOverride.OverrideBenefit -> PassAPI.FrfsOverrideConfigAPIEntity
 mkFrfsOverrideConfig benefit =
@@ -867,10 +914,12 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         Just (DPass.PercentageSaving percentage) -> passAmount / (1 - (percentage / 100))
         Nothing -> passAmount
 
-  mbFrfsOverrideConfig <-
+  mbOverrideEntry <-
     if pass.frfsPriceOverrideApplicable == Just True
-      then fmap mkFrfsOverrideConfig <$> FRFSPassOverride.benefitFromPass pass
+      then FRFSPassOverride.entryFromPass pass
       else pure Nothing
+  let mbFrfsOverrideConfig = mkFrfsOverrideConfig . DPassOverrideConfig.entryBenefit <$> mbOverrideEntry
+      mbRoutePassConfig = mkRoutePassConfig <$> (mbOverrideEntry >>= DPassOverrideConfig.entryPricing)
 
   return $
     PassAPI.PassAPIEntity
@@ -900,7 +949,10 @@ buildPassAPIEntity mbLanguage person eligibilityLogics pass = do
         referenceNumber = (.referenceNumber) =<< mbPassDetails,
         minTripsAllowingOverlap = pass.minTripsAllowingOverlap,
         minDaysToSuggestRenewal = pass.minDaysToSuggestRenewal,
-        timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit
+        timeOverlappingFrfsBookingsLimit = pass.timeOverlappingFrfsBookingsLimit,
+        variableValidityDays = pass.variableValidityDays,
+        validityDaysRecommendations = pass.validityDaysRecommendations,
+        routePassConfig = mbRoutePassConfig
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -963,7 +1015,10 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         -- Built from the PurchasedPass snapshot, which carries no catalog config columns.
         minTripsAllowingOverlap = Nothing,
         minDaysToSuggestRenewal = Nothing,
-        timeOverlappingFrfsBookingsLimit = Nothing
+        timeOverlappingFrfsBookingsLimit = Nothing,
+        variableValidityDays = Nothing,
+        validityDaysRecommendations = Nothing,
+        routePassConfig = Nothing
       }
 
 -- Build PurchasedPass API Entity
@@ -1066,7 +1121,8 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         overlappingPasses = overlappingPassEntities,
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
-        maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit
+        maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit,
+        routePass = mbPayment >>= mkRoutePassAPIEntity
       }
 
 passTypeLabel :: Maybe DPassType.PassEnum -> Text
@@ -2000,15 +2056,6 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
     Just _ ->
       unless (purchasedPass.status `elem` [DPurchasedPass.PreBooked, DPurchasedPass.Active]) $
         throwError (PassActivationNotReady purchasedPass.id.getId "Only active or pre-booked passes can be rescheduled")
-  _ <- purchasedPass.maxValidDays & fromMaybeM (PassActivationNotReady purchasedPass.id.getId "Pass does not have a valid duration")
-  let newStartDate = case normalizedMbStartDate of
-        Nothing -> today
-        Just date -> date
-      newEndDate = calculatePassEndDate newStartDate purchasedPass.maxValidDays
-      newStatus
-        | newEndDate < today = DPurchasedPass.Expired
-        | newStartDate <= today = DPurchasedPass.Active
-        | otherwise = DPurchasedPass.PreBooked
   mbTargetPayment <- case mbPurchasedPassPaymentId of
     Just paymentId -> do
       payment <- QPurchasedPassPayment.findByPrimaryKey paymentId >>= fromMaybeM (InvalidRequest $ "Payment not found: " <> paymentId.getId)
@@ -2017,6 +2064,16 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
         throwError (PassActivationNotReady purchasedPass.id.getId $ "Payment " <> paymentId.getId <> " is not in PreBooked or Active status")
       pure $ Just payment
     Nothing -> pure Nothing
+  let validityDays = (mbTargetPayment >>= (.validityDays)) <|> purchasedPass.maxValidDays
+  _ <- validityDays & fromMaybeM (PassActivationNotReady purchasedPass.id.getId "Pass does not have a valid duration")
+  let newStartDate = case normalizedMbStartDate of
+        Nothing -> today
+        Just date -> date
+      newEndDate = calculatePassEndDate newStartDate validityDays
+      newStatus
+        | newEndDate < today = DPurchasedPass.Expired
+        | newStartDate <= today = DPurchasedPass.Active
+        | otherwise = DPurchasedPass.PreBooked
 
   allPaymentsForPassCode <- QPurchasedPassPayment.findAllByPersonIdWithFilters Nothing Nothing purchasedPass.personId purchasedPass.merchantId [DPurchasedPass.Active, DPurchasedPass.PreBooked] purchasedPass.passCode
   let otherPassPayments = case mbTargetPayment of
@@ -2215,3 +2272,47 @@ postMultimodalPassSetPrefSrcAndDest (mbCallerPersonId, merchantId) purchasedPass
   QPurchasedPass.updatePrefSrcAndDestById (Just req.prefSrc) (Just req.prefDest) purchasedPass.id
 
   return APISuccess.Success
+
+postMultimodalPassCalculateFare ::
+  ( Kernel.Prelude.Maybe (Id.Id DP.Person),
+    Id.Id DM.Merchant
+  ) ->
+  Id.Id DPass.Pass ->
+  PassAPI.PassCalculateFareReq ->
+  Environment.Flow PassAPI.PassCalculateFareResp
+postMultimodalPassCalculateFare (mbPersonId, merchantId) passId req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  rateLimitOptions <- asks (.searchRateLimitOptions)
+  checkSlidingWindowLimitWithOptions ("PassCalculateFare:PersonId:" <> personId.getId) rateLimitOptions
+  person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  pass <- CQPass.findById passId >>= fromMaybeM (PassNotFound passId.getId)
+  unless (pass.merchantId == merchantId) $ throwError (PassNotFound passId.getId)
+  unless pass.enable $ throwError (InvalidRequest "Pass is not enabled")
+  eligibilityResult <- resolvePassEligibility person pass
+  unless eligibilityResult.eligible $
+    throwError (InvalidRequest $ "Not eligible to purchase pass " <> pass.code)
+  mbOverrideEntry <-
+    if pass.frfsPriceOverrideApplicable == Just True
+      then FRFSPassOverride.entryFromPass pass
+      else pure Nothing
+  config <- case mbOverrideEntry of
+    Just (FRFSPassOverride.PassTicketBenefit config) -> pure config
+    _ -> throwError (InvalidRequest "This pass is not priced by route")
+  routeTerm <-
+    RoutePassPricing.resolveRoutePassTerm person pass config $
+      RoutePassPricing.PassPurchaseSelection
+        { sourceStopCode = Just req.sourceStopCode,
+          destinationStopCode = Just req.destinationStopCode,
+          tripCount = req.tripCount,
+          validityDays = req.validityDays
+        }
+  pure
+    PassAPI.PassCalculateFareResp
+      { amount = routeTerm.amount,
+        perTripAmount = routeTerm.perTripAmount,
+        referenceFare = routeTerm.referenceFare,
+        originalAmount = routeTerm.originalAmount,
+        tripCount = routeTerm.tripCount,
+        validityDays = routeTerm.validityDays,
+        serviceTier = routeTerm.serviceTier
+      }

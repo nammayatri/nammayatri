@@ -651,6 +651,7 @@ library
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
       SharedLogic.RiderConsentPush
+      SharedLogic.RoutePassPricing
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.BookingDepositExpiry
       SharedLogic.Scheduler.Jobs.CallPoliceApi
