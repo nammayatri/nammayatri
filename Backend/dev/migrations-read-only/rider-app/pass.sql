@@ -152,3 +152,5 @@ ALTER TABLE atlas_app.pass ADD COLUMN time_overlapping_frfs_bookings_limit integ
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.pass ADD COLUMN dynamic_day_count boolean ;
+ALTER TABLE atlas_app.pass ADD COLUMN day_count_recommendations integer[] ;
