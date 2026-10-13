@@ -94,7 +94,7 @@ const TABLES = `
   );
   await db.sql(
     `INSERT INTO atlas_driver_offer_bpp.rider_details (id, mobile_number_encrypted, mobile_number_hash)
-     VALUES ('x1', $1, $2), ('x2', $3, NULL)`,
+     VALUES ('x1', $1, $2), ('x2', $3, NULL), ('x3', 'deleted:p-erased', NULL)`,
     [await enc('22334455'), h(OLD, '22334455'), await enc('22990011')],
   );
 
@@ -103,6 +103,7 @@ const TABLES = `
   const before = await db.sql('SELECT mobile_number_encrypted AS e FROM atlas_app.person ORDER BY id');
   const checked = await rotate.check({ pool: db.pool, oldVault: oldKeys.vault, oldSalt: OLD });
   t.ok(checked.rows.length === 6, 'six values read', String(checked.rows.length));
+  t.ok(checked.erased.length === 1, 'an erased account\'s marker is set aside, not decrypted');
   t.ok(checked.counts.get('atlas_driver_offer_bpp.rider_details.mobile_number').hashes === 1,
     'rider_details: two values, one hash -- the unhashed row is counted as such');
   const after = await db.sql('SELECT mobile_number_encrypted AS e FROM atlas_app.person ORDER BY id');
@@ -110,6 +111,11 @@ const TABLES = `
 
   /* ── 2. refusals ──────────────────────────────────────────────────────── */
   t.section('2. it stops before writing when the method is wrong');
+  await db.sql(`INSERT INTO atlas_driver_offer_bpp.rider_details VALUES ('x4', 'deleted:p-odd', $1)`, [h(OLD, 'x')]);
+  let odd = '';
+  try { await rotate.check({ pool: db.pool, oldVault: oldKeys.vault, oldSalt: OLD }); } catch (e) { odd = e.message; }
+  t.ok(/erased value with a hash/.test(odd), 'an erased marker that still has a hash stops it', odd);
+  await db.sql(`DELETE FROM atlas_driver_offer_bpp.rider_details WHERE id = 'x4'`);
   let stopped = '';
   try {
     await rotate.check({ pool: db.pool, oldVault: oldKeys.vault, oldSalt: 'a-wrong-salt' });
@@ -146,6 +152,8 @@ const TABLES = `
   t.ok(!oldOpens, '... and no longer with the old ones');
   t.ok(Buffer.from(r1.h).equals(h(NEW, '22334455')), 'her hash is the new salt\'s');
 
+  const [x3] = await db.sql(`SELECT mobile_number_encrypted AS e, mobile_number_hash AS h FROM atlas_driver_offer_bpp.rider_details WHERE id = 'x3'`);
+  t.ok(x3.e === 'deleted:p-erased' && x3.h === null, 'an erased account\'s row is exactly as it was');
   const [x2] = await db.sql(`SELECT mobile_number_hash AS h FROM atlas_driver_offer_bpp.rider_details WHERE id = 'x2'`);
   t.ok(x2.h === null, 'a row that had no hash still has none');
   const [d1] = await db.sql(`SELECT driver_number_encrypted AS e FROM atlas_driver_offer_bpp.ride_details WHERE id = 'rd1'`);

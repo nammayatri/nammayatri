@@ -32,6 +32,12 @@
  * A hash that was empty stays empty: rider_details rows written before the
  * backend stored hashes have none, and inventing one would change who they
  * match.
+ *
+ * An erased account's value is not ciphertext: the website's
+ * db/deletion/anonymise.sql writes `deleted:<id>` into the columns that may
+ * not be NULL, and clears the hash. Those rows are left exactly as they are --
+ * and if one ever carries a hash, the rotation stops, because then it is not
+ * what that script writes.
  */
 const crypto = require('crypto');
 const fs = require('fs');
@@ -77,7 +83,10 @@ function vault(url) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ value }),
     });
-    if (!res.ok) throw new Error(`passetto ${what} answered ${res.status}`);
+    if (!res.ok) {
+      const why = (await res.text().catch(() => '')).slice(0, 160).replace(/\s+/g, ' ');
+      throw new Error(`passetto ${what} answered ${res.status}${why ? ` (${why})` : ''}`);
+    }
     const body = await res.json();
     if (typeof body.value !== 'string') throw new Error(`passetto ${what} answered no value`);
     return body.value;
@@ -89,7 +98,7 @@ function vault(url) {
 }
 
 /** Every row with a value, read and checked against today's salt. */
-async function read(pool, oldVault, oldSalt) {
+async function read(pool, oldVault, oldSalt, erased = []) {
   const rows = [];
   for (const [table, field] of COLUMNS) {
     const { rows: found } = await pool.query(
@@ -97,7 +106,17 @@ async function read(pool, oldVault, oldSalt) {
         WHERE ${field}_encrypted IS NOT NULL ORDER BY id`,
     );
     for (const r of found) {
-      const plain = await oldVault.decrypt(r.enc);
+      if (String(r.enc).startsWith('deleted:')) {
+        if (r.hash !== null) throw new Error(`${table}.${field} ${r.id}: an erased value with a hash`);
+        erased.push({ table, field, id: r.id });
+        continue;
+      }
+      // Where it failed, and the value's shape -- its version and key fields,
+      // its length -- never the value itself.
+      const shape = `${String(r.enc).split('|').slice(0, 2).join('|')}|… (${String(r.enc).length} chars)`;
+      const plain = await oldVault.decrypt(r.enc).catch((e) => {
+        throw new Error(`${table}.${field} ${r.id} [${shape}]: ${e.message}`);
+      });
       const hash = r.hash === null ? null : Buffer.from(r.hash);
       if (hash !== null && !hash.equals(hashOf(oldSalt, plain))) {
         throw new Error(`${table}.${field} ${r.id}: the current salt does not reproduce its hash`);
@@ -121,13 +140,15 @@ function counts(rows) {
 }
 
 async function check({ pool, oldVault, oldSalt }) {
-  const rows = await read(pool, oldVault, oldSalt);
-  return { rows, counts: counts(rows) };
+  const erased = [];
+  const rows = await read(pool, oldVault, oldSalt, erased);
+  return { rows, erased, counts: counts(rows) };
 }
 
 async function apply({ pool, oldVault, newVault, oldSalt, newSalt }) {
   if (!newSalt || newSalt === oldSalt) throw new Error('the new salt is empty or the old one');
-  const rows = await read(pool, oldVault, oldSalt);
+  const erased = [];
+  const rows = await read(pool, oldVault, oldSalt, erased);
 
   // Everything computed before anything is written.
   for (const r of rows) {
@@ -174,7 +195,7 @@ async function apply({ pool, oldVault, newVault, oldSalt, newSalt }) {
       from: 'h_' + r.hash.toString('hex').slice(0, 32),
       to: 'h_' + r.newHash.toString('hex').slice(0, 32),
     }));
-  return { rows, counts: counts(rows), renames };
+  return { rows, erased, counts: counts(rows), renames };
 }
 
 /** The photographs' moves, as maps-shim/avatars.js names them. Returns what moved. */
@@ -217,6 +238,7 @@ if (require.main === module) {
             });
       for (const [col, c] of result.counts) console.log(`${col}: ${c.values} values, ${c.hashes} hashes`);
       console.log(`${mode}: ${result.rows.length} values, every one read and checked`);
+      console.log(`erased accounts' markers left as they are: ${result.erased.length}`);
       if (mode === 'apply') {
         const at = process.argv.indexOf('--avatars');
         if (at > 0) {

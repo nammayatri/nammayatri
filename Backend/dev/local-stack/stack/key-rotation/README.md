@@ -15,6 +15,7 @@ under the old keys, or hashed with the old salt, would no longer match anyone.
 | File | What it is |
 |---|---|
 | `rotate.js` | The conversion. `check` reads every value and proves the current salt reproduces every stored hash, writing nothing. `apply` re-encrypts with the new passetto, re-hashes with the new salt, all rows in one transaction, then reads every value back through the new keys. Renames the passengers' photographs, whose file name is the hash. Tested: `tests/key-rotation.test.js`. |
+| `rehearse.sh` | The rehearsal: copies the seven tables, passetto's database and the photographs into throwaway containers on an internal network, starts a passetto on NEW keys, runs `check` then `apply` there, proves today's keys no longer open a converted value, and removes everything however it ends. Reads the live stack, writes nothing to it. |
 | `rider-app.secrets.dhall`, `dynamic-offer-driver-app.secrets.dhall` | Upstream's secrets files at `03a7531` (what the images run), byte for byte, except that `encHashSalt` is read from `MOVIN_HASH_SALT`. Mounted over the upstream files on the day; nothing reads them before. |
 
 ## What uses the salt, and must change on the same day
@@ -26,6 +27,20 @@ under the old keys, or hashed with the old salt, would no longer match anyone.
 Not affected: the trusted-phone keys, the SMS inbox token and the drivers'
 personal codes each hash with their own secret; `registration_token.auth_value_hash`
 holds the code itself.
+
+## The rehearsal, 2026-10-13
+
+`bash rehearse.sh` on the server (owner's OK): **passed**. `check` read 184
+values -- 14 passengers, 20 drivers, 143 rides, 7 rider records -- and the
+current salt reproduced every stored hash; 17 erased accounts' markers were set
+aside. `apply` converted all 184 in **4.5 s** and read each back through the
+new keys; the old passetto refused a converted value (422). One passenger
+photograph to rename. What it taught, now in the scripts:
+
+- the image's `create_schema.sql` also inserts upstream's demo master key and
+  keys: the new key store takes its CREATE statements only;
+- an erased account's value is `deleted:<id>`, not ciphertext
+  (db/deletion/anonymise.sql in the website): left as it is.
 
 ## The order, as planned (to be confirmed by the rehearsal)
 
