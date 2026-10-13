@@ -342,8 +342,9 @@ def main():
     proc.wait()
     exit_code = proc.returncode
 
-    # Small delay to let services flush logs
-    time.sleep(0.3)
+    # Only on failure (when the logs are kept for upload): let the services flush their last log lines
+    if exit_code != 0:
+        time.sleep(0.3)
 
     # Save logs for the LAST request
     if current_api is not None:
