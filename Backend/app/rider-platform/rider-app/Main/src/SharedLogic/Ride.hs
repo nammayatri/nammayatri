@@ -22,9 +22,11 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.PickupRoute as CQPickupRoute
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -84,9 +86,13 @@ getDriverLoc rideId = do
         pickupDist = Meters $ round pickupDist
       }
 
+maxPlausiblePickupSpeedInMPS :: Double
+maxPlausiblePickupSpeedInMPS = 27.8 -- 100 km/h
+
 calculatePickupETA ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
+    CacheFlow m r,
     MonadFlow m
   ) =>
   SRide.Ride ->
@@ -94,6 +100,23 @@ calculatePickupETA ::
   MapSearch.LatLong ->
   m (Maybe Int, Double)
 calculatePickupETA ride booking driverLocation = do
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+  if fromMaybe False (mbRiderConfig >>= (.enableDynamicPickupEta))
+    then calculateDynamicPickupETA ride booking driverLocation (mbRiderConfig >>= (.pickupEtaRefreshIntervalSeconds))
+    else calculateFlatSpeedPickupETA ride booking driverLocation
+
+-- Old func as is.
+calculateFlatSpeedPickupETA ::
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  SRide.Ride ->
+  DB.Booking ->
+  MapSearch.LatLong ->
+  m (Maybe Int, Double)
+calculateFlatSpeedPickupETA ride booking driverLocation = do
   let mbEstimatedSpeed = ride.pickupSpeedInMPS
   let pickupLocation = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
   mbCachedRoute <- CQPickupRoute.getPickupRouteFromCache ride.id
@@ -105,9 +128,9 @@ calculatePickupETA ride booking driverLocation = do
       fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
       case fetchedRoute of
         Just route -> do
-          CQPickupRoute.cachePickupRoute ride.id route
+          CQPickupRoute.cachePickupRoute ride.id route.points
           logInfo $ "Cached pickup route (fallback fetch) for rideId: " <> ride.id.getId
-          return route
+          return route.points
         Nothing -> do
           logWarning $ "Failed to fetch route, will use straight-line distance for rideId: " <> ride.id.getId
           return []
@@ -130,6 +153,69 @@ calculatePickupETA ride booking driverLocation = do
         return (Just $ ceiling (distanceToPickup / estimatedSpeedInMps / 60), distanceToPickup)
       | otherwise -> return (Nothing, distanceToPickup)
 
+-- Will Use Disha instead of OSRM.
+calculateDynamicPickupETA ::
+  ( ServiceFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    MonadFlow m
+  ) =>
+  SRide.Ride ->
+  DB.Booking ->
+  MapSearch.LatLong ->
+  Maybe Seconds ->
+  m (Maybe Int, Double)
+calculateDynamicPickupETA ride booking driverLocation mbRefreshInterval = do
+  let pickupLocation = MapSearch.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+      distanceAlong pts
+        | null pts = realToFrac $ getHighPrecMeters $ CD.distanceBetweenInMeters driverLocation pickupLocation
+        | otherwise = calculateDistanceAlongRoute driverLocation pickupLocation pts
+  mbCachedRoute <- CQPickupRoute.getPickupRouteFromCache ride.id
+  if ride.status /= NEW
+    then return (Nothing, distanceAlong (fromMaybe [] mbCachedRoute))
+    else do
+      mbBasis <- CQPickupRoute.getPickupEtaBasis ride.id
+      isThrottled <- not <$> CQPickupRoute.isPickupSpeedRefreshDue ride.id
+      let needsRoute
+            | isNothing mbCachedRoute = True
+            | otherwise = not isThrottled
+      mbFetched <-
+        if needsRoute
+          then do
+            logInfo $ "Fetching pickup route for rideId: " <> ride.id.getId <> " (cachedRoute=" <> show (isJust mbCachedRoute) <> " basis=" <> show (isJust mbBasis) <> ")"
+            fetchedRoute <- fetchPickupRoute ride booking driverLocation pickupLocation
+            CQPickupRoute.markPickupSpeedRefreshed ride.id mbRefreshInterval
+            case fetchedRoute of
+              Just routeInfo -> do
+                unless (null routeInfo.points) $ CQPickupRoute.cachePickupRoute ride.id routeInfo.points
+                whenJust routeInfo.duration $ \duration -> do
+                  now <- getCurrentTime
+                  CQPickupRoute.cachePickupEtaBasis ride.id duration now
+              Nothing -> logWarning $ "Failed to fetch pickup route, falling back for rideId: " <> ride.id.getId
+            return fetchedRoute
+          else return Nothing
+
+      let freshPoints = maybe [] (.points) mbFetched
+          routePoints = if null freshPoints then fromMaybe [] mbCachedRoute else freshPoints
+      when (null routePoints) $
+        logWarning $ "No cached route found, using straight-line distance for rideId: " <> ride.id.getId
+      let distanceToPickup = distanceAlong routePoints
+
+      mbRemainingSeconds <-
+        case mbFetched >>= (.duration) of
+          Just freshDuration -> return $ Just (fromIntegral freshDuration :: Double) -- fetched just now
+          Nothing -> case mbBasis of
+            Nothing -> do
+              logInfo $ "Cannot calculate pickup ETA: no duration measured yet for rideId: " <> ride.id.getId
+              return Nothing
+            Just basis -> do
+              now <- getCurrentTime
+              let remaining = fromIntegral basis.durationSeconds - realToFrac (diffUTCTime now basis.computedAt)
+              return $ Just $ max remaining (distanceToPickup / maxPlausiblePickupSpeedInMPS)
+      case mbRemainingSeconds of
+        Just remainingSeconds -> return (Just $ ceiling (remainingSeconds / 60), distanceToPickup)
+        _ -> return (Nothing, distanceToPickup)
+
 fetchPickupRoute ::
   ( ServiceFlow m r,
     EsqDBReplicaFlow m r,
@@ -139,7 +225,7 @@ fetchPickupRoute ::
   DB.Booking ->
   MapSearch.LatLong ->
   MapSearch.LatLong ->
-  m (Maybe [MapSearch.LatLong])
+  m (Maybe Maps.RouteInfo)
 fetchPickupRoute ride booking driverLoc pickupLoc = do
   let middleStops = maybe [] (\prevDropLoc -> [prevDropLoc]) ride.driversPreviousRideDropLoc
       waypointsList = driverLoc : (middleStops <> [pickupLoc])
@@ -159,7 +245,7 @@ fetchPickupRoute ride booking driverLoc pickupLoc = do
       return Nothing
     Right routes -> do
       case routes of
-        (firstRoute : _) -> return $ Just firstRoute.points
+        (firstRoute : _) -> return $ Just firstRoute
         [] -> do
           logWarning $ "Empty route response for rideId: " <> ride.id.getId
           return Nothing

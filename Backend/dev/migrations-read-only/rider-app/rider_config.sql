@@ -923,3 +923,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN manual_charge_approval_min_custome
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN send_legal_policy_update_email boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN legal_policy_notification_batch_size integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_eta_refresh_interval_seconds integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean ;
