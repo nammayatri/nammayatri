@@ -8,6 +8,7 @@ import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Pass
+import qualified Domain.Types.PassOverrideConfig
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
@@ -33,6 +34,7 @@ data PurchasedPassPayment = PurchasedPassPayment
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    overrideBenefitConfigJson :: Kernel.Prelude.Maybe Domain.Types.PassOverrideConfig.OverrideBenefitConfig,
     passCode :: Kernel.Prelude.Text,
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
     passId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),

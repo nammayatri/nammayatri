@@ -360,6 +360,10 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         return newPurchasedPassId
 
   mbMaxTripCount <- FRFSPassOverride.maxTripCountFromPass pass
+  mbOverrideEntry <-
+    if pass.frfsPriceOverrideApplicable == Just True
+      then FRFSPassOverride.entryFromPass pass
+      else pure Nothing
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
           { id = purchasedPassPaymentId,
@@ -386,6 +390,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             passPhotoChangeCount = Just 0,
             activatedAt = Nothing,
             clientSdkVersion = person.clientSdkVersion,
+            overrideBenefitConfigJson = (\entry -> FRFSPassOverride.OverrideBenefitConfig [entry]) <$> mbOverrideEntry,
             createdAt = now,
             updatedAt = now
           }
@@ -1000,7 +1005,9 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         listToMaybe . sortOn (Down . (.endDate)) . filter ((== DPurchasedPass.Expired) . (.status))
           <$> QPurchasedPassPayment.findAllByPurchasedPassId purchasedPass.id
   mbOverridePass <- maybe (pure Nothing) CQPass.findById (mbPayment >>= (.passId))
-  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbOverridePass
+  mbBenefit <- case (mbPayment, mbOverridePass) of
+    (Just payment, Just overridePass) -> FRFSPassOverride.benefitForPayment payment overridePass
+    _ -> pure Nothing
   availableTripCount <- case (mbPayment, mbBenefit) of
     (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
@@ -1011,7 +1018,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         PassAPI.PassDetailsAPIEntity
           { category = buildPassCategoryAPIEntity passCategory,
             passType = buildPassTypeAPIEntity passType,
-            passDetails = passAPIEntity
+            passDetails = passAPIEntity {PassAPI.frfsOverrideConfig = mkFrfsOverrideConfig <$> mbBenefit}
           }
 
   let daysToExpire = fromIntegral $ DT.diffDays purchasedPass.endDate today
@@ -1824,7 +1831,7 @@ availableTripCountForPayment ::
   m (Maybe Int)
 availableTripCountForPayment payment = do
   mbPass <- maybe (pure Nothing) CQPass.findById payment.passId
-  mbBenefit <- maybe (pure Nothing) FRFSPassOverride.benefitFromPass mbPass
+  mbBenefit <- maybe (pure Nothing) (FRFSPassOverride.benefitForPayment payment) mbPass
   maybe (pure Nothing) (FRFSPassOverride.remainingTrips payment) mbBenefit
 
 -- A live overlapping payment stops blocking a fresh purchase once its remaining trips fall to
@@ -1846,7 +1853,7 @@ allowsOverlappingPurchase payment =
       -- Guarded before benefitFromPass: that logs an error for a pass with no override config,
       -- and every gate runs this over passes that legitimately have none.
       | pass.frfsPriceOverrideApplicable == Just True ->
-        FRFSPassOverride.benefitFromPass pass >>= \case
+        FRFSPassOverride.benefitForPayment payment pass >>= \case
           Nothing -> pure False
           Just benefit -> do
             mbRemaining <- FRFSPassOverride.remainingTrips payment benefit

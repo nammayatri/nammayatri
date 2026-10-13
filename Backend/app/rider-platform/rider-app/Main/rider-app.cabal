@@ -468,6 +468,7 @@ library
       Domain.Types.HotSpot
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
+      Domain.Types.PassOverrideConfig
       Domain.Types.RentalsIntercityCache
       Domain.Types.RewardContext
       Domain.Types.Route
