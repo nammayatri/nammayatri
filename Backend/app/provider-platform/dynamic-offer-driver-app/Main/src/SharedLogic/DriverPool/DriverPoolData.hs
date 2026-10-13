@@ -106,6 +106,10 @@ data DriverPoolData = DriverPoolData
     vehicleRating :: Maybe Double,
     registrationNo :: Text,
     cloudType :: Maybe CloudType,
+    -- | Balance of the driver's own wallet (fleet driver or not). Kept current by the post-posting
+    -- hook ('SharedLogic.Finance.PostActions') so the go-online minimum is checked in the pool
+    -- without reading finance_account. 'Nothing' = no wallet row, i.e. 0.
+    walletBalance :: Maybe HighPrecMoney,
     -- | Monotonic schema version stamped by the cold-start builder and by
     -- migrators in 'SharedLogic.DriverPool.DriverPoolMigrations'. 'Nothing'
     -- means the entry was written before this field existed (treated as 0,
@@ -245,6 +249,7 @@ defaultDriverPoolData dId =
       vehicleRating = Nothing,
       registrationNo = "",
       cloudType = Nothing,
+      walletBalance = Nothing,
       schemaVersion = Nothing,
       lastUpdatedAt = Nothing,
       lastRideEndedAt = Nothing

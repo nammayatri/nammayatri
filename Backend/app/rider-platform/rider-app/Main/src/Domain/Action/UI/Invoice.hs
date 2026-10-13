@@ -1,6 +1,7 @@
 module Domain.Action.UI.Invoice
   ( getInvoice,
     getInvoiceList,
+    govtChargesTitle,
   )
 where
 
@@ -14,12 +15,15 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
 import qualified Storage.Clickhouse.FareBreakupInfo as CHFBI
@@ -30,14 +34,16 @@ import Tools.Error
 getInvoice :: (Maybe (Id DP.Person), Id DM.Merchant) -> UTCTime -> UTCTime -> Flow [DTInvoice.InvoiceRes]
 getInvoice (mbPersonId, merchantId) from to = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bookings <- CHB.findAllCompletedRiderBookingsByMerchantInRange merchantId personId from to
-  invoices <- mapM makeInvoiceResponse bookings
+  invoices <- mapM (makeInvoiceResponse merchant) bookings
   return $ catMaybes invoices
   where
-    makeInvoiceResponse booking = do
+    makeInvoiceResponse merchant booking = do
       mbRide <- CHR.findRideByBookingId booking.id booking.createdAt
       case mbRide of
         Just ride -> do
+          govtChargesLabel <- govtChargesTitle merchant booking
           let breakupItems =
                 [ ("BASE_FARE", "Base Fare"),
                   ("CUSTOMER_SELECTED_FARE", "Customer Selected Fare"),
@@ -45,7 +51,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("DISTANCE_FARE", "Distance Fare"),
                   ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),
                   ("EXTRA_TIME_FARE", "Extra Time Fare"),
-                  ("FIXED_GOVERNMENT_RATE", "Fixed Government Fare"),
+                  ("FIXED_GOVERNMENT_RATE", govtChargesLabel),
                   ("NIGHT_SHIFT_CHARGE", "Night Shift Charge"),
                   ("RIDE_DURATION_FARE", "Ride duration Fare"),
                   ("PLATFORM_FEE", "Platform Fee"),
@@ -181,3 +187,12 @@ getInvoiceList (mbPersonId, _) mbInvoiceType mbLimit mbOffset mbReferenceId = do
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing
             }
+
+-- | Invoice title of the fare's government charges: "GST" for a booking in an Indian city; elsewhere
+--   (e.g. European cities) the tax is not GST, so the generic title stays. The booking's own city
+--   decides; the merchant's country is the fallback when the booking carries no city.
+govtChargesTitle :: DM.Merchant -> CHB.Booking -> Flow Text
+govtChargesTitle merchant booking = do
+  mbCity <- maybe (pure Nothing) CQMOC.findById booking.merchantOperatingCityId
+  let country = maybe merchant.country (.country) mbCity
+  pure $ if country == Context.India then "GST" else "Fixed Government Fare"

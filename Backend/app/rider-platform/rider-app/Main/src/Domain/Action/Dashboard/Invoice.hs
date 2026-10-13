@@ -11,6 +11,7 @@ import qualified Dashboard.Common
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addGregorianMonthsClip, fromGregorian, toGregorian)
 import qualified Domain.Action.UI.FinanceInvoice as UIFinanceInvoice
+import qualified Domain.Action.UI.Invoice as UIInvoice
 import qualified "beckn-spec" Domain.Types.Invoice as DInvoice
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -44,13 +45,14 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantId "+91" phoneNumberDBHash merchant.id >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   let batchRanges = makeMonthlyBatchRanges from to
   bookings <- concat <$> mapM (\(bFrom, bTo) -> CHB.findAllCompletedRiderBookingsByMerchantInRange merchant.id person.id bFrom bTo) batchRanges
-  invoices <- mapM makeInvoiceResponse bookings
+  invoices <- mapM (makeInvoiceResponse merchant) bookings
   return $ catMaybes invoices
   where
-    makeInvoiceResponse booking = do
+    makeInvoiceResponse merchant booking = do
       mbRide <- CHR.findRideByBookingId booking.id booking.createdAt
       case mbRide of
         Just ride -> do
+          govtChargesLabel <- UIInvoice.govtChargesTitle merchant booking
           let breakupItems =
                 [ ("BASE_FARE", "Base Fare"),
                   ("CUSTOMER_SELECTED_FARE", "Customer Selected Fare"),
@@ -58,7 +60,7 @@ getInvoiceInvoice merchantShortId _ from phoneNumber to = do
                   ("DISTANCE_FARE", "Distance Fare"),
                   ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),
                   ("EXTRA_TIME_FARE", "Extra Time Fare"),
-                  ("FIXED_GOVERNMENT_RATE", "Fixed Government Fare"),
+                  ("FIXED_GOVERNMENT_RATE", govtChargesLabel),
                   ("NIGHT_SHIFT_CHARGE", "Night Shift Charge"),
                   ("PLATFORM_FEE", "Platform Fee"),
                   ("CGST", "CGST"),

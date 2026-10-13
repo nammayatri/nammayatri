@@ -137,6 +137,7 @@ import SharedLogic.DriverPool.DriverPoolData (mkParallelSearchRequestKey)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import SharedLogic.QuickRetry (withQuickRetry)
 import qualified SharedLogic.ScheduledBooking.OverlapCheck as SBOC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
@@ -1048,6 +1049,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
   let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
   -- R4: a still-unassigned scheduled ride within the open-to-all threshold drops eligibility (offered to everyone).
   let scheduledOpenToAll = isScheduled && maybe False (\pt -> isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pt now) scheduledPickupTime
+  minBalanceEnforced <- isMinBalanceEnforced transporterConfig
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QPG.getNearestDrivers
@@ -1064,6 +1066,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             rideFare,
             taxConfig = transporterConfig.taxConfig,
             driverWalletConfig = transporterConfig.driverWalletConfig,
+            walletMinBalanceEnforced = minBalanceEnforced,
             excludeDriverIds = excludeDriverIds,
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = poolStage == DriverSelection,
@@ -1140,6 +1143,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
   let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
   -- R4: a still-unassigned scheduled ride within the open-to-all threshold drops eligibility (offered to everyone).
   let scheduledOpenToAll = isScheduled && maybe False (\pt -> isScheduledOpenToAll transporterConfig.scheduledRideOpenToAllThresholdMinutes pt now) scheduledPickupTime
+  minBalanceEnforced <- isMinBalanceEnforced transporterConfig
   let ltsReq =
         QPG.NearestDriversReq
           { fromLocLatLong = coord,
@@ -1154,6 +1158,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
             rideFare,
             taxConfig = transporterConfig.taxConfig,
             driverWalletConfig = transporterConfig.driverWalletConfig,
+            walletMinBalanceEnforced = minBalanceEnforced,
             excludeDriverIds = excludeDriverIds,
             prevAttemptedDriverIds = prevAttemptedDriverIds,
             applyParallelRequestFilter = True,

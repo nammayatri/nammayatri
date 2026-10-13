@@ -27,3 +27,9 @@ ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN status_check_max_attempts integer ;
 ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN status_check_interval_sec integer ;
 ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN points_conversion_rate double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN subscription_from_balance boolean ;
+ALTER TABLE atlas_driver_offer_bpp.finance_account_config ADD COLUMN enforce_min_balance boolean ;

@@ -39,6 +39,8 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Driver as DCommon
 import qualified Domain.Action.UI.Driver as DDriver
+import qualified Domain.Action.UI.DriverWallet as DDriverWallet
+import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.Registration as DRegistration
 import Domain.Types
 import qualified Domain.Types.Booking as DRB
@@ -408,7 +410,13 @@ getDriverPayments :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperat
 getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getDriverPayments authInfo mbFrom mbTo mbStatus mbLimit mbOffset DPlan.YATRI_SUBSCRIPTION
 
 clearDriverDues :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.ClearDuesRes
-clearDriverDues authInfo@(personId, _, _) serviceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ DDriver.clearDriverDues authInfo (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName) Nothing Nothing
+clearDriverDues authInfo@(personId, _, _) mbServiceName = withFlowHandlerAPI . ActorInfo.withPersonIdActorInfo personId $ do
+  let serviceName = fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName
+  -- Wallet-subscription cities: the dues are the negative wallet balance, cleared by a wallet top-up.
+  mbTopup <- if serviceName == DPlan.YATRI_SUBSCRIPTION then DDriverWallet.clearDuesByWalletTopup authInfo else pure Nothing
+  case mbTopup of
+    Just DAPlan.PlanSubscribeRes {..} -> pure DDriver.ClearDuesRes {..}
+    Nothing -> DDriver.clearDriverDues authInfo serviceName Nothing Nothing
 
 getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.HistoryEntityV2
 getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset serviceName = withFlowHandlerAPI $ DDriver.getDriverPaymentsHistoryV2 authInfo pMode mbLimit mbOffset (fromMaybe DPlan.YATRI_SUBSCRIPTION serviceName)

@@ -25,10 +25,13 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
 import qualified SharedLogic.VehicleServiceTier as SVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
 --   Reads ctx.enableWalletGatedTierCheck (caller-resolved) to gate the recheck below.
@@ -52,9 +55,18 @@ runPostActions ::
   Bool ->
   Finance.FinanceState ->
   m ()
-runPostActions walletGateEnabled finalState =
-  forM_ (nubBy (\a b -> a.id == b.id) finalState.affectedAccounts) $ \account ->
-    runPostActionsForAccount walletGateEnabled account `catchAny` \e ->
+runPostActions walletGateEnabled finalState = do
+  let accounts = nubBy (\a b -> a.id == b.id) finalState.affectedAccounts
+  -- The pool caches driver wallet balances only where the wallet is on (it reads the cache only where
+  -- the minimum can be enforced); the city's config is read only when a driver wallet moved.
+  syncWalletBalance <- case find isDriverWallet accounts of
+    Nothing -> pure False
+    Just account ->
+      (maybe False (.driverWalletConfig.enableDriverWallet) <$> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = account.merchantOperatingCityId}) Nothing) `catchAny` \e -> do
+        logError ("PostActions: wallet config read failed for city " <> account.merchantOperatingCityId <> ", skipping the pool balance sync: " <> show e)
+        pure False
+  forM_ accounts $ \account ->
+    runPostActionsForAccount walletGateEnabled syncWalletBalance account `catchAny` \e ->
       logError ("PostActions: processing accountId=" <> account.id.getId <> " failed, skipping: " <> show e)
 
 -- | Like 'runPostActions' but for a single, already-known account. No callers remain
@@ -62,12 +74,20 @@ runPostActions walletGateEnabled finalState =
 --   the single-account entry point for future direct dispatch needs.
 runPostActionsForAccount ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, BeamFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Bool ->
+  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
+  Bool -> -- the city has driverWalletConfig.enableDriverWallet: keep the pool's cached balance in sync
   Finance.AffectedAccount ->
   m ()
-runPostActionsForAccount walletGateEnabled account =
+runPostActionsForAccount walletGateEnabled syncWalletBalance account = do
+  -- Only driver wallets are cached in the pool (fleet owner postings never change it).
+  when (syncWalletBalance && isDriverWallet account) $
+    syncWalletBalanceToPool account.id `catchAny` \e ->
+      logError ("PostActions: wallet balance cache sync failed for accountId=" <> account.id.getId <> ", ignoring: " <> show e)
   when walletGateEnabled $
     case (account.accountType, account.counterpartyType, account.counterpartyId) of
       (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) ->
         SVST.checkAndAutoDisableWalletGatedTiers (Id driverIdText) (Id account.merchantOperatingCityId)
       _ -> pure ()
+
+isDriverWallet :: Finance.AffectedAccount -> Bool
+isDriverWallet account = account.accountType == FAccount.Liability && account.counterpartyType == Just FAccount.DRIVER

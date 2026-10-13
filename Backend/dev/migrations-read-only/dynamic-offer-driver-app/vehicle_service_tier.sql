@@ -504,3 +504,5 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN region_condit
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN min_wallet_balance_to_go_online double precision ;
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN autopay_trigger_balance double precision ;

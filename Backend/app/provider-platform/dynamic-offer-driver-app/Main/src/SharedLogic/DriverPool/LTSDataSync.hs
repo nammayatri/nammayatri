@@ -97,7 +97,8 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     luggageCapacity :: SetField (Maybe Int),
     vehicleRating :: SetField (Maybe Double),
     registrationNo :: SetField Text,
-    cloudType :: SetField (Maybe CloudType)
+    cloudType :: SetField (Maybe CloudType),
+    walletBalance :: SetField (Maybe HighPrecMoney)
   }
 
 emptyUpdate :: DriverPoolDataUpdate
@@ -155,7 +156,8 @@ emptyUpdate =
       luggageCapacity = Unchanged,
       vehicleRating = Unchanged,
       registrationNo = Unchanged,
-      cloudType = Unchanged
+      cloudType = Unchanged,
+      walletBalance = Unchanged
     }
 
 -- | Synchronously update driver pool data in Redis/LTS.
@@ -294,7 +296,8 @@ applyUpdate now u d =
       DPD.luggageCapacity = applyField u.luggageCapacity d.luggageCapacity,
       DPD.vehicleRating = applyField u.vehicleRating d.vehicleRating,
       DPD.registrationNo = applyField u.registrationNo d.registrationNo,
-      DPD.cloudType = applyField u.cloudType d.cloudType
+      DPD.cloudType = applyField u.cloudType d.cloudType,
+      DPD.walletBalance = applyField u.walletBalance d.walletBalance
     }
 
 -- | Apply a single field update: Set overwrites, Unchanged keeps current.

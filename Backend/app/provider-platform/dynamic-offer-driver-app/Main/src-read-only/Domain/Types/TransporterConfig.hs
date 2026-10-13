@@ -534,8 +534,7 @@ data GstBreakup = GstBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data InterCityConfig = InterCityConfig {minDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
   { categoryOfServices :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -711,8 +710,7 @@ data TaxConfig = TaxConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig}
-  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+data TripConfig = TripConfig {interCity :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.InterCityConfig} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
 
