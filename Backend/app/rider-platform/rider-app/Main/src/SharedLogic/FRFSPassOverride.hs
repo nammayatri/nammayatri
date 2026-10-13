@@ -11,6 +11,9 @@ module SharedLogic.FRFSPassOverride
     entryFromPass,
     validateEntry,
     ApplicablePass (..),
+    LegStops (..),
+    requiresStopMatch,
+    coversStopPair,
     PassOption (..),
     mkPassOptionAPIEntity,
     passOptionsForQuote,
@@ -112,6 +115,35 @@ data ApplicablePass = ApplicablePass
     availableTripCount :: Maybe Int,
     unlimitedTripCount :: Bool
   }
+
+data LegStops = LegStops
+  { fromStopCode :: Text,
+    toStopCode :: Text
+  }
+  deriving (Show, Eq)
+
+requiresStopMatch :: ApplicablePass -> Bool
+requiresStopMatch applicablePass =
+  applicablePass.benefit.enforceStopPair == Just True
+    && (isJust applicablePass.purchasedPassPayment.sourceStopCode || isJust applicablePass.purchasedPassPayment.destinationStopCode)
+
+coversStopPair :: Maybe LegStops -> Price -> ApplicablePass -> Bool
+coversStopPair mbLegStops adultUnitPrice applicablePass
+  | not (requiresStopMatch applicablePass) = True
+  | coveredAsCheaper = True
+  | otherwise = case (mbLegStops, payment.sourceStopCode, payment.destinationStopCode) of
+    (Just legStops, Just sourceStopCode, Just destinationStopCode) ->
+      (legStops.fromStopCode == sourceStopCode && legStops.toStopCode == destinationStopCode)
+        || ( applicablePass.benefit.allowRoundTrip == Just True
+               && legStops.fromStopCode == destinationStopCode
+               && legStops.toStopCode == sourceStopCode
+           )
+    _ -> False
+  where
+    payment = applicablePass.purchasedPassPayment
+    coveredAsCheaper =
+      applicablePass.benefit.allowCheaperStopPairs == Just True
+        && maybe False (adultUnitPrice.amount <=) payment.referenceFare
 
 coverageSupported :: DIBC.IntegratedBPPConfig -> Price -> Bool
 coverageSupported integratedBPPConfig overriddenTotal =
@@ -243,6 +275,10 @@ toCandidate payment = case payment.passId of
         | otherwise ->
           benefitForPayment payment pass >>= \case
             Nothing -> pure Nothing
+            Just benefit
+              | benefit.enforceStopPair == Just True && isJust payment.sourceStopCode /= isJust payment.destinationStopCode -> do
+                logError $ "FRFSPassOverride: pass enforces its stop pair but the purchase has only one stop code, not offering it paymentId=" <> payment.id.getId
+                pure Nothing
             Just benefit -> do
               availableTripCount <- remainingTrips payment benefit
               pure . Just $ PassCandidate {payment = payment, pass = pass, benefit = benefit, availableTripCount = availableTripCount}
@@ -336,8 +372,8 @@ data PassOption = PassOption
   }
   deriving (Show, Generic)
 
-passOptionsForQuote :: DIBC.IntegratedBPPConfig -> [ApplicablePass] -> Maybe Spec.ServiceTierType -> Price -> [(Price, Int)] -> [PassOption]
-passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnitPrice priceItems =
+passOptionsForQuote :: DIBC.IntegratedBPPConfig -> Maybe LegStops -> [ApplicablePass] -> Maybe Spec.ServiceTierType -> Price -> [(Price, Int)] -> [PassOption]
+passOptionsForQuote integratedBPPConfig mbLegStops applicablePasses mbServiceTier adultUnitPrice priceItems =
   [ PassOption
       { purchasedPassPaymentId = applicablePass.purchasedPassPayment.id,
         passId = applicablePass.pass.id,
@@ -352,6 +388,7 @@ passOptionsForQuote integratedBPPConfig applicablePasses mbServiceTier adultUnit
       coversTier applicablePass,
       coversQuantity applicablePass,
       hasTripsForQuantity applicablePass,
+      coversStopPair mbLegStops adultUnitPrice applicablePass,
       let overriddenTotal = totalWith (applyOverrideBenefit applicablePass.benefit),
       overriddenTotal.amount < baseTotal.amount,
       coverageSupported integratedBPPConfig overriddenTotal
@@ -850,9 +887,10 @@ resolvePassOverride ::
   Maybe Spec.ServiceTierType ->
   Price ->
   [(Price, Int)] ->
+  ([ApplicablePass] -> m (Maybe LegStops, [ApplicablePass])) ->
   Id DPPP.PurchasedPassPayment ->
   m (Maybe (ApplicablePass, PassOption))
-resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTier adultUnitPrice priceItems paymentId
+resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTier adultUnitPrice priceItems resolveLegStops paymentId
   | integratedBPPConfig.passOverrideApplicable /= Just True = pure Nothing
   | otherwise = do
     tripDay <- localTripDay person tripTime
@@ -867,13 +905,14 @@ resolvePassOverride integratedBPPConfig person vehicleType tripTime mbServiceTie
       Nothing -> do
         logWarning $ "FRFSPassOverride: pass not applicable paymentId=" <> paymentId.getId
         pure Nothing
-      Just applicablePass ->
-        case passOptionsForQuote integratedBPPConfig [applicablePass] mbServiceTier adultUnitPrice priceItems of
+      Just applicablePass -> do
+        (mbLegStops, stopMatchedPasses) <- resolveLegStops [applicablePass]
+        case passOptionsForQuote integratedBPPConfig mbLegStops stopMatchedPasses mbServiceTier adultUnitPrice priceItems of
           [] -> do
             logWarning $
               "FRFSPassOverride: no applicable option for pass paymentId="
                 <> paymentId.getId
-                <> " (tier/quantity mismatch, no longer cheaper, or full coverage on an ONDC config) ondcConfig="
+                <> " (tier/quantity/stop pair mismatch, no longer cheaper, or full coverage on an ONDC config) ondcConfig="
                 <> show (isOndcConfig integratedBPPConfig)
             pure Nothing
           (passOption : _) -> pure (Just (applicablePass, passOption))
