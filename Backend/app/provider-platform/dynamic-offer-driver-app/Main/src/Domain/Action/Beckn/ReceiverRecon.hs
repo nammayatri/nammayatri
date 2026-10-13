@@ -8,7 +8,6 @@ module Domain.Action.Beckn.ReceiverRecon
   )
 where
 
-import qualified Data.HashSet as HS
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -23,9 +22,11 @@ import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.RsfReconLedgerEntry as L
 import qualified Lib.Finance.Reconciliation.Runner as ReconRunner
 import qualified Lib.Finance.Reconciliation.Types as ReconT
+import qualified Lib.Finance.Storage.Queries.RsfOrderState as QOrderState
 import qualified Lib.Finance.Storage.Queries.RsfReconLedgerEntry as QLedger
 import qualified Lib.Finance.Storage.Queries.RsfUtrState as QUtrState
 import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide as RsfRecipe
+import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfUtrClaimVsBankReceipt as RsfUtrRecipe
 import qualified SharedLogic.RSFLedger as RSFLedger
 
 data ReceiverReconRequest = ReceiverReconRequest
@@ -136,9 +137,13 @@ runReceiverReconPass merchantId merchantOpCityId req rideByOrderId =
                 L.claimStatus = Just (maybe L.PENDING fst stageA),
                 L.rejectionDiff = snd <$> stageA,
                 -- microsecond offsets keep payload (claim) order recoverable from createdAt
-                L.createdAt = addUTCTime (fromIntegral idx / 1000000) now
+                L.createdAt = addUTCTime (fromIntegral idx / 1000000) now -- Need Attention
                }
         QLedger.createMany claimRows
+        -- the two projections get their (status NULL) row the first time an order / UTR is seen;
+        -- the dashboard pages over them, Phase 4 stamps them
+        QOrderState.createMissing mid (Just req.bapId) now orderIds
+        QUtrState.createMissing mid (Just req.bapId) now (mapMaybe (.utr) claimRows)
 
         -- step 7. One lock for the whole message (held above), not one per order.
         let pendingOrderIds = nub [oid | r <- claimRows, r.claimStatus == Just L.PENDING, Just oid <- [r.orderId]]
@@ -146,7 +151,7 @@ runReceiverReconPass merchantId merchantOpCityId req rideByOrderId =
           ReconRunner.processChunkByIds RsfRecipe.recipe (ReconT.MerchantScope mid merchantOpCityId.getId) pendingOrderIds
 
         -- step 8
-        unjudged <- runStageC mid req.messageId orderIds rideByOrderId
+        unjudged <- runStageC mid merchantOpCityId.getId req.messageId rideByOrderId
 
         -- step 9. A ride still in flight leaves its claim PENDING and the message visibly incomplete.
         if unjudged > 0
@@ -167,31 +172,24 @@ runStageA order
     isPaid = (== "PAID") . T.toUpper
     legSum = sum $ map (.amount) order.settlementDetails
 
--- Stage C (check 5): a leg that revises an ACCEPTED (order, UTR) claim on a UTR we already reported
--- is refused (70011) and takes its whole order with it. Everything else still PENDING becomes
+-- Stage C (check 5): a UTR already bank-verified by us must still have the money to cover the
+-- new legs this message puts on it -- Σ new legs <= received − allocated. That
+-- comparison is a recon-framework pass (RsfUtrClaimVsBankReceipt); its write-back rejects the
+-- UTR's PENDING claims as REJECTED_UTR_IMBALANCE. Whatever is still PENDING afterwards becomes
 -- ACCEPTED -- written exactly once, here. Money is handed out later by autoAllocate.
 -- Returns how many claims stayed PENDING (ride in flight).
-runStageC :: Text -> Text -> [Text] -> Map.Map Text DRide.Ride -> Flow Int
-runStageC mid messageId orderIds rideByOrderId = do
-  entries <- QLedger.findAllByMerchantAndOrderIds mid orderIds
-  let (thisMessage, earlier) = partitionByMessage entries
-      pending = [e | e <- thisMessage, e.entryType == L.BAP_CLAIM, e.claimStatus == Just L.PENDING]
+runStageC :: Text -> Text -> Text -> Map.Map Text DRide.Ride -> Flow Int
+runStageC mid mocId messageId rideByOrderId = do
+  let pendingClaims entries = [e | e <- entries, e.entryType == L.BAP_CLAIM, e.claimStatus == Just L.PENDING]
       hasFare e = isJust $ e.orderId >>= (`Map.lookup` rideByOrderId) >>= RSFLedger.rideFare
-      (judgeable, inFlight) = (filter hasFare pending, filter (not . hasFare) pending)
-      priorAccepted = RSFLedger.acceptedClaims earlier
-  utrStates <- QUtrState.findAllByMerchantAndUtrs mid (nub $ mapMaybe (.utr) judgeable)
-  let closedUtrs = HS.fromList [s.utr | s <- utrStates, isJust s.reportedStatus]
-      revisesClosedUtr e = fromMaybe False $ do
-        orderId <- e.orderId
-        utr <- e.utr
-        prior <- Map.lookup (orderId, utr) priorAccepted
-        pure $ HS.member utr closedUtrs && prior.amount /= e.amount
-      refusedOrders = HS.fromList $ mapMaybe (.orderId) (filter revisesClosedUtr judgeable)
-      isRefused e = maybe False (`HS.member` refusedOrders) e.orderId
-  forM_ judgeable $ \e ->
-    if isRefused e
-      then QLedger.updateClaimStatus e.id L.REJECTED_UTR_IMBALANCE Nothing
-      else QLedger.updateClaimStatus e.id L.ACCEPTED Nothing
+  pending <- pendingClaims <$> QLedger.findAllByMerchantAndMessageId mid messageId
+  let (judgeable, inFlight) = (filter hasFare pending, filter (not . hasFare) pending)
+  -- a UTR is "already in the system" once finance has bank-verified it (it has a BANK_RECEIPT);
+  -- the rsf_utr_state row alone is not enough, it is written at ingest for every UTR
+  receipts <- QLedger.findAllByMerchantEntryTypesAndUtrs mid [L.BANK_RECEIPT] (nub $ mapMaybe (.utr) judgeable)
+  let verifiedUtrs = nub (mapMaybe (.utr) receipts)
+  unless (null verifiedUtrs) $
+    ReconRunner.processChunkByIds (RsfUtrRecipe.recipe messageId) (ReconT.MerchantScope mid mocId) verifiedUtrs
+  survivors <- filter hasFare . pendingClaims <$> QLedger.findAllByMerchantAndMessageId mid messageId
+  forM_ survivors $ \e -> QLedger.updateClaimStatus e.id L.ACCEPTED Nothing
   pure (length inFlight)
-  where
-    partitionByMessage = foldr (\e (a, b) -> if e.messageId == Just messageId then (e : a, b) else (a, e : b)) ([], [])

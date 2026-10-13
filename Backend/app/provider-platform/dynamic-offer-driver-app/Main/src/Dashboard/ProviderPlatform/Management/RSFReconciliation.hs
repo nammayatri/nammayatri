@@ -14,3 +14,6 @@ instance HideSecrets BankVerifyReq where
 
 instance HideSecrets ManualConfirmReq where
   hideSecrets = identity
+
+instance HideSecrets UtrAdjustReq where
+  hideSecrets = identity

@@ -55,7 +55,6 @@ import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidDssrVsSubscri
 import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPaymentVsSubscription as PrepaidPgPaymentVsSubscription
 import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidPgPayoutVsPayoutRequest as PrepaidPgPayoutVsPayoutRequest
 import qualified SharedLogic.Finance.Reconciliation.Recipes.PrepaidSubscriptionPurchaseVsTransaction as PrepaidSubscriptionPurchaseVsTransaction
-import qualified SharedLogic.Finance.Reconciliation.Recipes.RsfBapClaimVsPlatformRide as RsfBapClaimVsPlatformRide
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
@@ -85,8 +84,7 @@ reconciliationRegistry =
         PrepaidPgPaymentVsSubscription.recipe,
         PrepaidPgPayoutVsPayoutRequest.recipe,
         PrepaidSubscriptionPurchaseVsTransaction.recipe,
-        PostpaidDriverFeeVsPaymentOrder.recipe,
-        RsfBapClaimVsPlatformRide.recipe
+        PostpaidDriverFeeVsPaymentOrder.recipe
       ] ::
         [ReconRecipe.Recipe m]
 

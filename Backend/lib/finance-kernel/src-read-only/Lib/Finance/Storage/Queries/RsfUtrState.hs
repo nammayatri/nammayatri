@@ -29,7 +29,8 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.RsfUtrState.RsfUtrState {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.lastReportedAt lastReportedAt,
+    [ Se.Set Beam.bapId bapId,
+      Se.Set Beam.lastReportedAt lastReportedAt,
       Se.Set Beam.lastReportedMessageId lastReportedMessageId,
       Se.Set Beam.reportedDiff reportedDiff,
       Se.Set Beam.reportedStatus reportedStatus,

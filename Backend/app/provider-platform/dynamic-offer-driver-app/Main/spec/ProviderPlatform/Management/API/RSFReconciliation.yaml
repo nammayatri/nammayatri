@@ -5,7 +5,7 @@ imports:
 module: RSFReconciliation
 
 apis:
-  # Orders whose receiver_recon claim arrived on `date` (IST day), one row per order.
+  # Orders first claimed by a receiver_recon on `date` (IST day), one row per order.
   - GET: # OrderListAPI
       endpoint: /rsf/orders
       migrate:
@@ -16,10 +16,19 @@ apis:
         limit: Int
         offset: Int
         bapId: Text
-        utr: Text
-        status: OrderReconVerdict
       response:
         type: OrderListRes
+
+  # The day's tiles: claimed / received / allocated / unallocated / awaiting bank / needs attention.
+  - GET: # DaySummaryAPI
+      endpoint: /rsf/summary
+      migrate:
+        capability: financeManagement.rsfSummary.read
+      auth: ApiAuthV2
+      query:
+        date: Day
+      response:
+        type: DaySummaryRes
 
   # UTRs first mentioned by a receiver_recon on `date` (IST day).
   - GET: # UtrListAPI
@@ -32,7 +41,6 @@ apis:
         limit: Int
         offset: Int
         bapId: Text
-        isVerified: Bool
       response:
         type: UtrListRes
 
@@ -62,6 +70,21 @@ apis:
       response:
         type: APISuccess
 
+  # Phase 3 (step 11b): the bank figure for a verified UTR changed afterwards. Appends a signed
+  # MANUAL_ADJUSTMENT row; the receipt itself stays frozen.
+  - POST: # UtrAdjustAPI
+      endpoint: /rsf/utrs/{utr}/adjust
+      name: postRSFReconciliationRsfUtrAdjust
+      migrate:
+        capability: financeManagement.rsfUtrs.adjust
+      auth: ApiAuthV2
+      params:
+        utr: Text
+      request:
+        type: UtrAdjustReq
+      response:
+        type: APISuccess
+
   # Phase 3 (step 11): pooled allocation over the day's orders. Every UTR the day's
   # claims mention must be verified first, else the call fails.
   - POST: # AutoAllocationAPI
@@ -87,8 +110,8 @@ apis:
       response:
         type: APISuccess
 
-  # Phase 4: checks every receiver_recon message of the day (gates 1-3) and, only when all
-  # of them pass, sends their on_receiver_recon responses one by one.
+  # Phase 4: skips messages of the day already answered, checks every remaining one (gates 1-3)
+  # and, only when all of them pass, sends their on_receiver_recon responses one by one.
   - POST: # SendForDateAPI
       endpoint: /rsf/send
       migrate:
@@ -118,11 +141,26 @@ types:
   # AWAITING = not judged yet, or no allocation has run for it.
   OrderReconVerdict:
     - enum: "AWAITING, PAID, UNDERPAID, OVERPAID, REJECTED"
-    - derive: "HttpInstance"
 
   ReconTabStatus:
     - enum: "Matched, Unmatched, Mismatch, Pending"
     - derive: "HttpInstance"
+
+  DaySummaryRes:
+    - claimedByCollector: HighPrecMoney          # Σ payment.params.amount over the day's orders (latest claim)
+    - orderCount: Int
+    - utrCount: Int
+    - bankReceived: HighPrecMoney                # Σ receipt + adjustments over the day's verified UTRs
+    - utrsVerified: Int
+    - allocatedToOrders: HighPrecMoney           # Σ BANK_ALLOCATION to the day's orders
+    - unallocated: HighPrecMoney                 # Σ (received − allocated) over verified UTRs
+    - unallocatedUtrCount: Int                   # verified UTRs with money left
+    - awaitingBankFigure: HighPrecMoney          # Σ claimed on UTRs not yet verified
+    - unverifiedUtrCount: Int
+    - needsAttention: Int                        # distinct orders rejected, mismatched or not yet sent
+    - rejectedOrders: Int
+    - mismatchedOrders: Int                      # UNDERPAID / OVERPAID
+    - unsentOrders: Int                          # latest claim not yet answered
 
   OrderListRes:
     - totalItems: Int
@@ -134,7 +172,7 @@ types:
     - driverId: Maybe Text
     - bapId: Text
     - platformGrossFare: Maybe HighPrecMoney
-    - claimedTotalAmount: HighPrecMoney           # Σ standing claim legs
+    - claimedTotalAmount: HighPrecMoney           # payment.params.amount of the latest claim
     - receivedTotal: HighPrecMoney                # Σ BANK_ALLOCATION to this order
     - orderVerdict: OrderReconVerdict
     - orderDiff: HighPrecMoney
@@ -168,20 +206,25 @@ types:
     - utr: UtrSummary
     - orders: [OrderRow]
 
+  # The ledger actor is the authenticated dashboard user, never a body field.
   BankVerifyReq:
     - bankVerifiedAmount: HighPrecMoney
-    - verifiedBy: Maybe Text
     - reason: Maybe Text
+
+  # amount is a signed delta on what the bank credited for the UTR (+ more, - less).
+  UtrAdjustReq:
+    - amount: HighPrecMoney
+    - reason: Text
 
   # confirmedAmount is what this order should hold from this UTR afterwards.
   ManualConfirmReq:
     - utr: Text
-    - confirmedBy: Text
     - reason: Text
     - confirmedAmount: HighPrecMoney
 
   SendForDateRes:
     - messagesSent: [Text]
+    - messagesAlreadySent: [Text]               # answered earlier; skipped this run
 
   AutoAllocationRes:
     - ordersConsidered: Int
