@@ -138,6 +138,7 @@ types:
     - isFleetOwnerPlan: Maybe Bool
   ServiceTierRideSubscriptionAPIEntity:
     - serviceTier: Text
+    - serviceTierName: Maybe Text
     - amount: HighPrecMoney
   ListPlansResp:
     - plans: "[PlanAPIEntity]"

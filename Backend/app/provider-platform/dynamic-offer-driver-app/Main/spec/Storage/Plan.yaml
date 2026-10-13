@@ -35,6 +35,7 @@ Plan:
 
     ServiceTierRideSubscription:
       serviceTier: ServiceTierType
+      serviceTierName: Maybe Text
       amount: HighPrecMoney
       derive': "Generic, Eq, Show, ToJSON, FromJSON, ToSchema"
 
