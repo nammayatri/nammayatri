@@ -573,6 +573,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             toStationAddress = toStation'.address,
             vehicleNumber = Nothing,
             hasApplicablePass = Nothing,
+            enforceFRFSPass = Nothing,
             isSingleMode = Just True,
             cloudType = Nothing,
             clientSdkVersion = Nothing,
