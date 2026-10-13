@@ -44,7 +44,6 @@ data MembershipApplicationReq = MembershipApplicationReq
     address :: Address,
     addressProofImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    amount :: Kernel.Types.Common.Money,
     bankDetails :: Kernel.Prelude.Maybe BankDetails,
     dateOfBirth :: Data.Time.Day,
     declaration :: Declaration,

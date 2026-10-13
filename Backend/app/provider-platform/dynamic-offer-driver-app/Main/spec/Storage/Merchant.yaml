@@ -1187,6 +1187,8 @@ TransporterConfig:
       pricePerShare: Maybe Int
       # PENDING top-up older than this is treated as abandoned and retired as REJECTED.
       pendingStaleMinutes: Maybe Int
+      # Membership subscription amount in rupees, shown on the STCL membership form.
+      subscriptionAmount: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff",

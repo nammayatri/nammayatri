@@ -20,10 +20,12 @@ module Dashboard.ProviderPlatform.Management.Driver
 where
 
 import API.Types.ProviderPlatform.Management.Endpoints.Driver as Reexport
+import qualified API.Types.UI.StclMembership as MembershipAPI
 import Dashboard.Common as Reexport hiding (Role (..))
 import Dashboard.Common.Driver as Reexport hiding (Role (..))
 import Kernel.Prelude
 import Kernel.Types.Predicate
+import Kernel.Utils.Common (maskText)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 
@@ -58,3 +60,13 @@ instance HideSecrets ClearDriverFeeReq where
 
 instance HideSecrets [DriverEncDataReq] where
   hideSecrets = identity
+
+instance HideSecrets MembershipFeeCreateReq where
+  hideSecrets req =
+    req{aadharNumber = maskText req.aadharNumber,
+        panNumber = maskText req.panNumber,
+        mobileNumber = maskText req.mobileNumber,
+        emailId = maskText req.emailId,
+        bankDetails = (\MembershipAPI.BankDetails {..} -> MembershipAPI.BankDetails {accountNumber = maskText accountNumber, ifscCode = maskText ifscCode, ..}) <$> req.bankDetails,
+        nomineeInfo = (\MembershipAPI.NomineeInfo {..} -> MembershipAPI.NomineeInfo {nomineeAadhar = maskText <$> nomineeAadhar, ..}) <$> req.nomineeInfo
+       }
