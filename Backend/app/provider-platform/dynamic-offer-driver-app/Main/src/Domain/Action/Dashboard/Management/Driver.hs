@@ -77,12 +77,14 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverIdentityInfoUpdate,
     postDriverAssociationChange,
     postDriverBulkBlock,
+    postDriverMembershipFeeCreate,
     castToCommon,
     castFromCommon,
   )
 where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Driver as Common
+import qualified API.Types.UI.StclMembership as MembershipAPI
 import Control.Applicative ((<|>))
 import qualified "lib-dashboard" Dashboard.Common
 import qualified Data.ByteString as BS
@@ -108,6 +110,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Action.UI.StclMembership as DMembership
 import qualified Domain.Types.Common as DI
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
@@ -137,6 +140,7 @@ import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Types (LatLong (..))
+import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -2146,3 +2150,11 @@ postDriverAssociationChange merchantShortId opCity requestorId subjectId req = d
             _ -> SA.ChangeDriverOperator
       SA.performAssociationChange merchant merchantOpCity requestorId subjectId operatorCode changeType
   pure Success
+
+postDriverMembershipFeeCreate :: ShortId DM.Merchant -> Context.City -> Common.MembershipFeeCreateReq -> Flow PaymentTypes.CreateOrderResp
+postDriverMembershipFeeCreate merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let Common.MembershipFeeCreateReq {..} = req
+      applicationReq = MembershipAPI.MembershipApplicationReq {..}
+  DMembership.submitMembershipApplication (Id driverId) merchant.id merchantOpCityId applicationReq (Just amount)

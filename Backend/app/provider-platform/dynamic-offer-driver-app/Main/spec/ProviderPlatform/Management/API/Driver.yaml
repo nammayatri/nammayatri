@@ -21,6 +21,8 @@ imports:
   City: Kernel.Types.Beckn.Context
   Currency: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
+  Money: Kernel.Types.Common
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
   PersonIdsReq: Dashboard.Common
   PersonMobileNoReq: Dashboard.Common
   PersonRes: Dashboard.Common
@@ -43,6 +45,15 @@ imports:
   DriverAssociationInfo: Dashboard.Common.Driver
   ApprovalStatusFilter: Dashboard.Common.Driver
   Plan: Dashboard.Common
+  Address: API.Types.UI.StclMembership
+  BankDetails: API.Types.UI.StclMembership
+  VehicleInfo: API.Types.UI.StclMembership
+  NomineeInfo: API.Types.UI.StclMembership
+  Declaration: API.Types.UI.StclMembership
+  PaymentServiceType: Lib.Payment.Domain.Types.PaymentOrder
+
+importPackageOverrides:
+  Lib.Payment.Domain.Types.PaymentOrder: payment
 
 module: Driver
 
@@ -677,6 +688,16 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # MembershipFeeCreateAPI
+      endpoint: /membershipFee/create
+      auth: ApiAuthV2
+      request:
+        type: MembershipFeeCreateReq
+      response:
+        type: CreateOrderResp
+      migrate:
+        capability: finance.membership_fee.write
+
 types:
   DriverIdentityInfoRes:
     - driverId: Id Driver
@@ -1043,6 +1064,27 @@ types:
     - newOperatorCode: Maybe Text
     - fleetOwnerId: Maybe Text
     - derive: "'HideSecrets"
+  MembershipFeeCreateReq:
+    - driverId: Text
+    - firstName: Text
+    - lastName: Text
+    - memberCategory: Text
+    - numberOfShares: Int
+    - dateOfBirth: Day
+    - aadharNumber: Text
+    - panNumber: Text
+    - mobileNumber: Text
+    - emailId: Text
+    - fatherMotherName: Maybe Text
+    - address: Address
+    - addressProofType: Maybe Text
+    - addressProofImageId: Maybe Text
+    - bankDetails: Maybe BankDetails
+    - vehicleInfo: Maybe VehicleInfo
+    - nomineeInfo: Maybe NomineeInfo
+    - declaration: Declaration
+    - amount: Money
+    - paymentServiceType: Maybe PaymentServiceType
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
