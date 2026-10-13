@@ -31,6 +31,7 @@ module SharedLogic.FRFSPassOverride
     isFullyPassCovered,
     fullyCoveredByPass,
     passCoveredBankRef,
+    isOndcConfig,
     passOfferAllowed,
     PassCandidate (..),
     loadPassCandidates,
