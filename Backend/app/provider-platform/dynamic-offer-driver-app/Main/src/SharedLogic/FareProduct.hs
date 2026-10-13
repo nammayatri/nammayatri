@@ -61,8 +61,8 @@ getDropSpecialLocation merchantOpCityId dropSpecialLocation = do
 getSearchSources :: Bool -> [DFareProduct.SearchSource]
 getSearchSources isDashboard = [DFareProduct.ALL] <> (if isDashboard then [DFareProduct.DASHBOARD] else [DFareProduct.MOBILE_APP])
 
-getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> Maybe (Id DSpecialLocation.SpecialLocation) -> Maybe (Id DSpecialLocation.SpecialLocation) -> DTC.TripCategory -> m FareProducts
-getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong mbFromSpecialLocationId mbToSpecialLocationId tripCategory = do
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> LatLong -> Maybe LatLong -> Maybe (Id DSpecialLocation.SpecialLocation) -> Maybe (Id DSpecialLocation.SpecialLocation) -> DTC.TripCategory -> Maybe UTCTime -> m FareProducts
+getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLong mToLocationLatLong mbFromSpecialLocationId mbToSpecialLocationId tripCategory mbRideTime = do
   -- If SpecialLocation IDs provided directly (fixed route search), use them
   case (mbFromSpecialLocationId, mbToSpecialLocationId) of
     (Just fromId, Just toId) -> do
@@ -231,15 +231,21 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           mapM getBoundedOrDefaultFareProduct fareProducts
 
     getBoundedOrDefaultFareProduct fareProduct = do
-      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area
+      boundedFareProduct <- getBoundedFareProduct fareProduct.merchantOperatingCityId searchSources fareProduct.tripCategory fareProduct.vehicleServiceTier fareProduct.area mbRideTime
       return $ fromMaybe fareProduct boundedFareProduct
 
-getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> m (Maybe DFareProduct.FareProduct)
-getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
+-- | The time-bounded product covering the ride, if any.
+--
+-- A scheduled ride is matched on the time it is BOOKED FOR, not the time it is
+-- booked at: picking by "now" let a 13:00 booking for a 21:00 peak ride be
+-- priced off-peak, and the quote is what the rider pays. Nothing falls back to
+-- now, which is right for an immediate ride.
+getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> [DFareProduct.SearchSource] -> DTC.TripCategory -> DVST.ServiceTierType -> SL.Area -> Maybe UTCTime -> m (Maybe DFareProduct.FareProduct)
+getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area mbRideTime = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbTransporterConfig
-  currentIstTime <- getLocalCurrentTime timeDiffFromUtc
-  case listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime) of
+  rideLocalTime <- maybe (getLocalCurrentTime timeDiffFromUtc) (pure . addUTCTime (secondsToNominalDiffTime timeDiffFromUtc)) mbRideTime
+  case listToMaybe (DTB.findBoundedDomain fareProducts rideLocalTime) of
     Just fp -> return (Just fp)
     Nothing -> return Nothing
