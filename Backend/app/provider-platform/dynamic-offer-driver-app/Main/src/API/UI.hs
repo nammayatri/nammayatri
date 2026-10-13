@@ -69,6 +69,7 @@ import qualified API.Action.UI.SpecialZoneQueue as SpecialZoneQueue
 import qualified API.Action.UI.StclMembership as StclMembership
 import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
 import qualified API.Action.UI.TicketKapture as TicketKapture
+import qualified API.Action.UI.TicketVerify as TicketVerify
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
@@ -216,6 +217,7 @@ type API =
            :<|> SearchRoute.API
            :<|> Dispatcher.API
            :<|> PublicTransport.API
+           :<|> TicketVerify.API
        )
 
 handler :: FlowServer API
@@ -309,3 +311,4 @@ handler =
     :<|> SearchRoute.handler
     :<|> Dispatcher.handler
     :<|> PublicTransport.handler
+    :<|> TicketVerify.handler
