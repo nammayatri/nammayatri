@@ -714,7 +714,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
         if mbHasPasses == Just True
           then pure (Just True)
           else
-            withTryCatch "postFrfsSearchHandler:checkHasPass" (FRFSPassOverride.localTripDay person (fromMaybe now tripTime) >>= FRFSPassOverride.checkHasPass person) >>= \case
+            withTryCatch "postFrfsSearchHandler:checkHasPass" (FRFSPassOverride.localTripDay person (maybe now (max now) tripTime) >>= FRFSPassOverride.checkHasPass person) >>= \case
               Right hasPass -> pure (Just hasPass)
               Left _ -> pure Nothing
   let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
@@ -811,7 +811,7 @@ enrichQuotesWithPassOverride integratedBppConfig personId search mbClientHasPass
   | search.hasApplicablePass == Just False && mbClientHasPasses /= Just True = pure []
   | otherwise = do
     now <- getCurrentTime
-    let tripTime = fromMaybe now mbTripTime
+    let tripTime = maybe now (max now) mbTripTime
         mbKnownHasPass = if mbClientHasPasses == Just True then Just True else search.hasApplicablePass
     QP.findById personId >>= \case
       Nothing -> pure []
