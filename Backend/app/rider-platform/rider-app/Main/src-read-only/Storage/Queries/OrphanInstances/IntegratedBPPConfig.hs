@@ -22,6 +22,7 @@ instance FromTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.In
       Just
         Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig
           { agencyKey = agencyKey,
+            autoEnforceFRFSPass = autoEnforceFRFSPass,
             domain = domain,
             feedKey = feedKey,
             id = Kernel.Types.Id.Id id,
@@ -45,6 +46,7 @@ instance ToTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.Inte
   toTType' (Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig {..}) = do
     Beam.IntegratedBPPConfigT
       { Beam.agencyKey = agencyKey,
+        Beam.autoEnforceFRFSPass = autoEnforceFRFSPass,
         Beam.domain = domain,
         Beam.feedKey = feedKey,
         Beam.id = Kernel.Types.Id.getId id,

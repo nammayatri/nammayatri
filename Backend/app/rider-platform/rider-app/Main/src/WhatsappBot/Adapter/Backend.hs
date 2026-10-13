@@ -263,6 +263,7 @@ mkBackendHandle merchantId mocId _ctx =
         Nothing
         (Just True)
         Nothing
+        Nothing
 
     placeNameReq getBy =
       Maps.GetPlaceNameReq {getBy = getBy, sessionToken = Just "default-token", language = Just Maps.ENGLISH}

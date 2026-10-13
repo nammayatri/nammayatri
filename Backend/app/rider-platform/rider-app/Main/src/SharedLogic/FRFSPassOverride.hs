@@ -36,6 +36,7 @@ module SharedLogic.FRFSPassOverride
     fullyCoveredByPass,
     passCoveredBankRef,
     isOndcConfig,
+    passOfferAllowed,
     PassCandidate (..),
     loadPassCandidates,
     filterCandidatesForLeg,
@@ -155,6 +156,11 @@ coversStopPair mbLegStops adultUnitPrice applicablePass
 coverageSupported :: DIBC.IntegratedBPPConfig -> Price -> Bool
 coverageSupported integratedBPPConfig overriddenTotal =
   not (isOndcConfig integratedBPPConfig && isFullyPassCovered (Just overriddenTotal.amount))
+
+passOfferAllowed :: DIBC.IntegratedBPPConfig -> Maybe Bool -> Bool
+passOfferAllowed integratedBPPConfig mbEnforceFRFSPass =
+  integratedBPPConfig.passOverrideApplicable == Just True
+    && (integratedBPPConfig.autoEnforceFRFSPass /= Just False || mbEnforceFRFSPass == Just True)
 
 isOndcConfig :: DIBC.IntegratedBPPConfig -> Bool
 isOndcConfig integratedBPPConfig = case integratedBPPConfig.providerConfig of
