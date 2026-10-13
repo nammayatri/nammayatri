@@ -35,8 +35,8 @@ findAllActiveByMerchant merchantId merchantOperatingCityId isActive = do
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByOfferCode :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
-findByOfferCode offerCode = do findOneWithKV [Se.Is Beam.offerCode $ Se.Eq offerCode]
+findByOfferCodeAndCity :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
+findByOfferCodeAndCity offerCode merchantOperatingCityId = do findOneWithKV [Se.And [Se.Is Beam.offerCode $ Se.Eq offerCode, Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]]
 
 findByPrimaryKey :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> m (Maybe Lib.Payment.Domain.Types.Offer.Offer))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

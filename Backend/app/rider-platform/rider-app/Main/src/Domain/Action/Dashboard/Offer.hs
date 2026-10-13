@@ -40,6 +40,10 @@ postOfferCreate merchantShortId opCity req = do
   validateMinimumAmount req.minimumAmount
   validateMaxApplyCount req.maxApplyCount
   validateValidityWindow req.validFrom req.validTill
+  -- offer codes are unique per city (unique_offer_code_per_city); fail here instead of in the KV drainer
+  existingOffer <- QOffer.findByOfferCodeAndCity req.offerCode merchantOpCity.id.getId
+  when (isJust existingOffer) $
+    throwError (InvalidRequest $ "Offer code " <> req.offerCode <> " already exists in this city")
   now <- getCurrentTime
   offerId <- generateGUID
   let offer =

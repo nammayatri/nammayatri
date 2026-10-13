@@ -37,13 +37,11 @@ createStopsLocation = QL.createMany
 
 createDSReq :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
-  void $ QLM.create fromLocationMap
-  void $ createStopsLocation searchRequest.stops
-  stopsLocMapping <- SLM.buildStopsLocationMapping searchRequest.stops searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)
-  void $ QLM.createMany stopsLocMapping
-  mbToLocationMap <- maybe (pure Nothing) (\detail -> Just <$> SLM.buildDropLocationMapping detail.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId)) searchRequest.toLocation
-  void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
+  createStopsLocation searchRequest.stops
+  mappings <-
+    SLM.buildFreshLocationMappings searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.merchantId) (Just searchRequest.merchantOperatingCityId) $
+      [searchRequest.fromLocation.id] <> map (.id) searchRequest.stops <> maybeToList ((.id) <$> searchRequest.toLocation)
+  QLM.createMany mappings
   create searchRequest
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
