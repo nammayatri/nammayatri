@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.payment_order_split ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payment_order_split ADD COLUMN transaction_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payment_order_split ADD COLUMN refund_amount double precision ;

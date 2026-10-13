@@ -3,6 +3,7 @@
 
 module Lib.Payment.Domain.Types.Refunds where
 
+import qualified Data.Aeson
 import qualified Kernel.Beam.Lib.UtilsTH
 import qualified Kernel.External.Payment.Interface
 import Kernel.Prelude
@@ -28,6 +29,7 @@ data Refunds = Refunds
     referenceType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     refundAmount :: Kernel.Types.Common.HighPrecMoney,
     shortId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds,
+    split :: Kernel.Prelude.Maybe Data.Aeson.Value,
     status :: Kernel.External.Payment.Interface.RefundStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }

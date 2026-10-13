@@ -16,7 +16,8 @@ data DOnCancel = DOnCancel
     baseFare :: HighPrecMoney,
     cancellationCharges :: Maybe HighPrecMoney,
     cancelledBy :: Maybe Text,
-    cancellationTime :: Maybe UTCTime
+    cancellationTime :: Maybe UTCTime,
+    vendorRefunds :: Maybe [(Text, HighPrecMoney)]
   }
 
 isCounterCancellation :: DOnCancel -> Bool

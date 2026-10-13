@@ -25,6 +25,7 @@ PaymentOrderSplit:
     merchantCommission: Price
     merchantId: Text
     merchantOperatingCityId: Maybe Text
+    refundAmount: Maybe HighPrecMoney # This split's share of the refund sent to the gateway (net of cancellation charges)
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -54,6 +55,10 @@ PaymentOrderSplit:
     findByPaymentOrder:
       kvFunction: findAllWithKV
       where: paymentOrderId
+    updateRefundAmountById:
+      kvFunction: updateWithKV
+      params: [refundAmount]
+      where: id
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

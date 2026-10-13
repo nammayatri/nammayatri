@@ -33,6 +33,7 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
             referenceType = referenceType,
             refundAmount = refundAmount,
             shortId = Kernel.Types.Id.ShortId shortId,
+            split = split,
             status = status,
             updatedAt = updatedAt
           }
@@ -56,6 +57,7 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Beam.referenceType = referenceType,
         Beam.refundAmount = refundAmount,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
+        Beam.split = split,
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }

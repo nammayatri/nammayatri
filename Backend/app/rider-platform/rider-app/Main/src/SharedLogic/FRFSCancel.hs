@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
+import qualified Lib.Payment.Domain.Action as DPayment
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
@@ -70,10 +71,12 @@ handleCancelledStatus ::
   DFRFSTicketBooking.FRFSTicketBooking ->
   HighPrecMoney ->
   HighPrecMoney ->
+  -- | Vendor sub_mid -> refund amount, when the cancel flow resolved one.
+  Maybe [(Text, HighPrecMoney)] ->
   Text ->
   Bool ->
   m (Maybe Text, Maybe Text, FRFSUtils.FRFSFareParameters)
-handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId isCounterCancellation = do
+handleCancelledStatus _merchant booking refundAmount cancellationCharges mbVendorRefunds _messageId isCounterCancellation = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbPaymentBooking <- QTBP.findTicketBookingPayment booking
   unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
@@ -91,7 +94,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         -- The negative recon rows are written on refund success (SharedLogic.Payment.bookingsRefundStatusHandler),
         -- not here: at this point the refund has only been requested and may still fail.
         whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
+          void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId refundRequest
       else do
         void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
         void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.CANCELLED "cancelled" booking
@@ -101,7 +104,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
         whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId (Just refundRequest)
   -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
   -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
   -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical
@@ -162,6 +165,9 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
       Left err -> logError $ "FRFS cancellation quota not recorded for bookingId-" <> booking.id.getId <> ": " <> show err
       Right () -> pure ()
   return (mRiderNumber, person.mobileCountryCode, fareParameters)
+  where
+    -- The refund net of charges, with the vendor split the cancel flow resolved (if any).
+    refundRequest = DPayment.RefundRequest {totalRefundAmount = abs refundAmount, vendorRefundAmounts = mbVendorRefunds}
 
 -- | Side effects (SMS + Google Wallet) that require concrete Flow due to generic-lens constraints.
 -- Call this after handleCancelledStatus from a Flow context.

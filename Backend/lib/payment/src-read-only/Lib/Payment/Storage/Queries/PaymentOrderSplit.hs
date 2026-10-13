@@ -34,6 +34,13 @@ findByPaymentOrder ::
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit])
 findByPaymentOrder paymentOrderId = do findAllWithKV [Se.Is Beam.paymentOrderId $ Se.Eq (Kernel.Types.Id.getId paymentOrderId)]
 
+updateRefundAmountById ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit -> m ())
+updateRefundAmountById refundAmount id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.refundAmount refundAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit -> m (Maybe Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit))
@@ -50,6 +57,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PaymentOrderSplit.PaymentOrderSplit
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.paymentOrderId (Kernel.Types.Id.getId paymentOrderId),
+      Se.Set Beam.refundAmount refundAmount,
       Se.Set Beam.transactionId transactionId,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vendorId vendorId
@@ -69,6 +77,7 @@ instance FromTType' Beam.PaymentOrderSplit Lib.Payment.Domain.Types.PaymentOrder
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             paymentOrderId = Kernel.Types.Id.Id paymentOrderId,
+            refundAmount = refundAmount,
             transactionId = transactionId,
             updatedAt = updatedAt,
             vendorId = vendorId
@@ -86,6 +95,7 @@ instance ToTType' Beam.PaymentOrderSplit Lib.Payment.Domain.Types.PaymentOrderSp
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.paymentOrderId = Kernel.Types.Id.getId paymentOrderId,
+        Beam.refundAmount = refundAmount,
         Beam.transactionId = transactionId,
         Beam.updatedAt = updatedAt,
         Beam.vendorId = vendorId
