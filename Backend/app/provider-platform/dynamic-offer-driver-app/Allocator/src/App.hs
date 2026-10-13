@@ -76,6 +76,7 @@ import SharedLogic.Allocator.Jobs.PickupProgress.CheckDriverPickupProgress (chec
 import SharedLogic.Allocator.Jobs.Reconciliation.Reconciliation (runReconciliationJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationScheduler (runReconciliationSchedulerJob)
 import SharedLogic.Allocator.Jobs.Reconciliation.ReconciliationSweep (runReconciliationSweepJob)
+import SharedLogic.Allocator.Jobs.RegistrySync.RegistrySync (runRegistrySyncJob)
 import SharedLogic.Allocator.Jobs.Reminder.ProcessReminder (processReminder)
 import SharedLogic.Allocator.Jobs.ScheduledRides.CheckExotelCallStatusAndNotifyBAP (checkExotelCallStatusAndNotifyBAP)
 import SharedLogic.Allocator.Jobs.ScheduledRides.ScheduledRideAssignedOnUpdate (sendScheduledRideAssignedOnUpdate)
@@ -210,6 +211,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
           & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
           & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
+          & putJobHandlerInListWrapper flowRt env runRegistrySyncJob
     }
 
 runDriverOfferAllocator ::
