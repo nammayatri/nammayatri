@@ -218,8 +218,10 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.benefitType benefitType,
       Se.Set Beam.benefitValue benefitValue,
       Se.Set Beam.clientSdkVersion (Kernel.Utils.Version.versionToText <$> clientSdkVersion),
+      Se.Set Beam.destinationStopCode destinationStopCode,
       Se.Set Beam.endDate endDate,
       Se.Set Beam.isDashboard isDashboard,
+      Se.Set Beam.maximumOverrideableFarePerTicket maximumOverrideableFarePerTicket,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.orderId (Kernel.Types.Id.getId orderId),
@@ -233,8 +235,10 @@ updateByPrimaryKey (Domain.Types.PurchasedPassPayment.PurchasedPassPayment {..})
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.profilePicture profilePicture,
       Se.Set Beam.purchasedPassId (Kernel.Types.Id.getId purchasedPassId),
+      Se.Set Beam.sourceStopCode sourceStopCode,
       Se.Set Beam.startDate startDate,
       Se.Set Beam.status status,
+      Se.Set Beam.validityDays validityDays,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
