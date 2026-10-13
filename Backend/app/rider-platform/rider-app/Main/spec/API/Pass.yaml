@@ -63,6 +63,7 @@ types:
     destinationStopCode: Text
     tripCount: Maybe Int
     validityDays: Maybe Int
+    roundTrip: Maybe Bool
     derive: "Show"
 
   PassCalculateFareResp:
@@ -81,6 +82,9 @@ types:
     maximumTripCount: Maybe Int
     unlimitedTripCount: Bool
     maxTicketQuantityPerOverride: Maybe Int
+    enforceStopPair: Maybe Bool
+    allowRoundTrip: Maybe Bool
+    allowCheaperStopPairs: Maybe Bool
     derive: "Show"
 
   PassAPIEntity:
@@ -144,6 +148,7 @@ types:
     destinationStopCode: Maybe Text
     tripCount: Maybe Int
     validityDays: Maybe Int
+    roundTrip: Maybe Bool
 
   PassSwitchDeviceIdReq:
     deviceId: Maybe Text
