@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.StclMembership (postSubmitApplication, postBuyAdditionalShares, putUpdateApplication, getMembership, stclMemberShipOrderStatusHandler) where
+module Domain.Action.UI.StclMembership (postSubmitApplication, submitMembershipApplication, postBuyAdditionalShares, putUpdateApplication, getMembership, stclMemberShipOrderStatusHandler, defaultMaxSharesPerDriver, defaultPricePerShare, defaultSubscriptionAmount) where
 
 import qualified API.Types.UI.StclMembership as APITypes
 import Data.List (partition, sortOn)
@@ -59,6 +59,10 @@ defaultMaxSharesPerDriver = 5
 defaultPricePerShare :: Int
 defaultPricePerShare = 100
 
+-- Membership subscription amount (rupees) shown on the STCL membership form.
+defaultSubscriptionAmount :: Int
+defaultSubscriptionAmount = 50
+
 -- Stale window for PENDING top-up rows. A PENDING row older than this is treated as an
 -- abandoned payment (driver closed the payment app and never came back) and retired as
 -- REJECTED, so the driver can start a fresh top-up. Fresh PENDING rows still block new
@@ -83,6 +87,16 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   unless (driverId == requestDriverId) $
     throwError $ InvalidRequest "Driver ID in request does not match authenticated driver"
 
+  submitMembershipApplication driverId merchantId merchantOperatingCityId req Nothing
+
+submitMembershipApplication ::
+  Kernel.Types.Id.Id Person.Person ->
+  Kernel.Types.Id.Id Merchant.Merchant ->
+  Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity ->
+  APITypes.MembershipApplicationReq ->
+  Maybe Money ->
+  Environment.Flow PaymentTypes.CreateOrderResp
+submitMembershipApplication driverId merchantId merchantOperatingCityId req mbAdminOverrideMembershipFee = do
   -- First-purchase endpoint: reject if the driver already has a SUBMITTED application.
   -- Top-up purchases must go through the dedicated buyAdditionalShares endpoint.
   existingApplications <- QStclMembership.findByDriverId driverId
@@ -92,6 +106,14 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- Get person details
   person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  -- Dashboard callers pass merchant/city from the URL, so make sure the driver actually belongs to it.
+  unless (person.merchantId == merchantId && person.merchantOperatingCityId == merchantOperatingCityId) $
+    throwError $ InvalidRequest ("Driver " <> driverId.getId <> " does not belong to this merchant operating city")
+  -- Admin override membership fee only comes from the dashboard, where any person id can be passed; restrict it to drivers.
+  when (isJust mbAdminOverrideMembershipFee && person.role /= DP.DRIVER) $
+    throwError $ InvalidRequest "Membership can only be created for a driver"
+  whenJust mbAdminOverrideMembershipFee $ \adminOverrideMembershipFee ->
+    when (adminOverrideMembershipFee <= 0) $ throwError $ InvalidRequest "Amount must be greater than 0"
 
   -- Decrypt mobile number for payment
   mbMobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "Mobile number not found")
@@ -102,8 +124,31 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
   orderShortId <- generateShortId
   let shortIdText = orderShortId.getShortId
 
-  -- Get amount from request
-  let amount = toHighPrecMoney req.amount
+  transporterConfig <-
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  let stclCfg = transporterConfig.stclConfig
+      maxSharesPerDriver = fromMaybe defaultMaxSharesPerDriver (stclCfg >>= (.maxSharesPerDriver))
+      pricePerShare = fromMaybe defaultPricePerShare (stclCfg >>= (.pricePerShare))
+      subscriptionAmount = fromMaybe defaultSubscriptionAmount (stclCfg >>= (.subscriptionAmount))
+  when (req.numberOfShares <= 0) $
+    throwError $ InvalidRequest "Please select at least 1 share"
+  when (req.numberOfShares > maxSharesPerDriver) $
+    throwError $ InvalidRequest ("You can purchase a maximum of " <> show maxSharesPerDriver <> " shares")
+  let calculatedMembershipFee = Money (subscriptionAmount + req.numberOfShares * pricePerShare)
+      amount = toHighPrecMoney $ fromMaybe calculatedMembershipFee mbAdminOverrideMembershipFee
+  -- Admin override is already checked to be > 0; guard the config-derived fee against a bad stclConfig.
+  when (isNothing mbAdminOverrideMembershipFee && calculatedMembershipFee <= 0) $
+    throwError $ InternalError "Invalid STCL fee config: calculated membership fee must be greater than 0"
+  whenJust mbAdminOverrideMembershipFee $ \adminOverrideMembershipFee ->
+    logInfo $
+      "Admin override membership fee for driver " <> driverId.getId
+        <> ": override = "
+        <> show adminOverrideMembershipFee
+        <> ", calculated = "
+        <> show calculatedMembershipFee
+        <> ", numberOfShares = "
+        <> show req.numberOfShares
 
   -- Fetch gatewayReferenceId from merchant service config
   mbGatewayReferenceId <- do

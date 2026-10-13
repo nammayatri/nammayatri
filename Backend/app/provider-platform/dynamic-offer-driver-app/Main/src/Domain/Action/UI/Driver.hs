@@ -143,6 +143,7 @@ import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Action.UI.PolicyDocument as PolicyDoc
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
+import qualified Domain.Action.UI.StclMembership as DStclMembershipAction
 import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
@@ -374,6 +375,13 @@ data OperatorInfo = OperatorInfo
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data MembershipFeeInfo = MembershipFeeInfo
+  { subscriptionAmount :: Int,
+    pricePerShare :: Int,
+    maxSharesPerDriver :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
     firstName :: Text,
@@ -513,6 +521,7 @@ data DriverInformationRes = DriverInformationRes
     fleetReferralApplied :: Bool,
     operatorReferralApplied :: Bool,
     membershipId :: Maybe (Id DStclMembership.StclMembership),
+    membershipFeeInfo :: Maybe MembershipFeeInfo,
     createdAt :: UTCTime,
     role :: SP.Role,
     operatorBadgeToken :: Maybe Text,
@@ -1809,14 +1818,19 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbActiveFleetOwnerInfo <- maybe (pure Nothing) (\fda -> QFOI.findByPrimaryKey (Id fda.fleetOwnerId)) mbActiveFda
   now <- getCurrentTime
   merchantConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  membershipId <-
+  (membershipId, membershipFeeInfo) <-
     if fromMaybe False merchantConfig.sendMembershipIdInProfile
       then do
-        -- A driver may have multiple SUBMITTED rows after a share top-up. Pin the displayed
-        -- membership ID to the oldest allotment so it stays stable across top-ups.
         memberships <- QStclMembership.findByDriverIdAndStatus id DStclMembership.SUBMITTED
-        pure $ (.id) <$> listToMaybe (DL.sortOn (.createdAt) memberships)
-      else return Nothing
+        let stclCfg = merchantConfig.stclConfig
+            feeInfo =
+              MembershipFeeInfo
+                { subscriptionAmount = fromMaybe DStclMembershipAction.defaultSubscriptionAmount (stclCfg >>= (.subscriptionAmount)),
+                  pricePerShare = fromMaybe DStclMembershipAction.defaultPricePerShare (stclCfg >>= (.pricePerShare)),
+                  maxSharesPerDriver = fromMaybe DStclMembershipAction.defaultMaxSharesPerDriver (stclCfg >>= (.maxSharesPerDriver))
+                }
+        pure ((.id) <$> listToMaybe (DL.sortOn (.createdAt) memberships), Just feeInfo)
+      else return (Nothing, Nothing)
   bankDetails <-
     if merchant.onlinePayment
       then do
