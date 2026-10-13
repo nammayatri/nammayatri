@@ -64,9 +64,10 @@ Offer:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findByOfferCode:
+    findByOfferCodeAndCity:
       kvFunction: findOneWithKV
-      where: offerCode
+      where:
+        and: [offerCode, merchantOperatingCityId]
     findAllActiveByMerchant:
       kvFunction: findAllWithKV
       where:
