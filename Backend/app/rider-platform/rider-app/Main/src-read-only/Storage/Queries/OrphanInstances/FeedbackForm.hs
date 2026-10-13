@@ -25,8 +25,10 @@ instance FromTType' Beam.FeedbackForm Domain.Types.FeedbackForm.FeedbackForm whe
             categoryName = categoryName,
             id = Kernel.Types.Id.Id id,
             question = question,
+            questionKey = questionKey,
             questionTranslations = Kernel.Utils.JSON.valueToMaybe =<< questionTranslations,
             rating = rating,
+            shouldDefault = shouldDefault,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
@@ -40,8 +42,10 @@ instance ToTType' Beam.FeedbackForm Domain.Types.FeedbackForm.FeedbackForm where
         Beam.categoryName = categoryName,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.question = question,
+        Beam.questionKey = questionKey,
         Beam.questionTranslations = Data.Aeson.toJSON <$> questionTranslations,
         Beam.rating = rating,
+        Beam.shouldDefault = shouldDefault,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

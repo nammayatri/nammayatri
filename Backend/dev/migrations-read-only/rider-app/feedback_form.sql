@@ -15,3 +15,9 @@ ALTER TABLE atlas_app.feedback_form ADD COLUMN question_translations json ;
 ALTER TABLE atlas_app.feedback_form ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.feedback_form ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_app.feedback_form ADD COLUMN badges jsonb ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.feedback_form ADD COLUMN should_default boolean ;
+ALTER TABLE atlas_app.feedback_form ADD COLUMN question_key character varying(255) ;

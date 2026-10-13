@@ -13,6 +13,18 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.FeedbackForm as Queries
 
+clearAllFeedbackCache :: CacheFlow m r => m ()
+clearAllFeedbackCache = do Hedis.del $ "CachedQueries:FeedbackForm"
+
+clearFeedbackByMerchantOpCityIdAndRatingCache :: CacheFlow m r => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Int -> m ())
+clearFeedbackByMerchantOpCityIdAndRatingCache merchantOperatingCityId rating = do Hedis.del $ "CachedQueries:FeedbackForm:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":Rating-" <> show rating
+
+clearFeedbackByMerchantOpCityIdCache :: CacheFlow m r => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ())
+clearFeedbackByMerchantOpCityIdCache merchantOperatingCityId = do Hedis.del $ "CachedQueries:FeedbackForm:" <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId
+
+clearFeedbackByRatingCache :: CacheFlow m r => (Kernel.Prelude.Int -> m ())
+clearFeedbackByRatingCache rating = do Hedis.del $ "CachedQueries:FeedbackForm:" <> ":Rating-" <> show rating
+
 findAllFeedback :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => m [Domain.Types.FeedbackForm.FeedbackForm]
 findAllFeedback = do
   (Hedis.safeGet $ "CachedQueries:FeedbackForm")

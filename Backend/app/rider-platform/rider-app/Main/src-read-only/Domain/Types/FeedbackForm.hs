@@ -21,8 +21,10 @@ data FeedbackForm = FeedbackForm
     categoryName :: Domain.Types.FeedbackForm.Category,
     id :: Kernel.Types.Id.Id Domain.Types.FeedbackForm.FeedbackFormItem,
     question :: Kernel.Prelude.Text,
+    questionKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     questionTranslations :: Kernel.Prelude.Maybe [IssueManagement.Common.Translation],
     rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    shouldDefault :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
@@ -34,7 +36,8 @@ data BadgeDetail = BadgeDetail
   { contentWithTranslations :: Kernel.Prelude.Maybe [IssueManagement.Common.Translation],
     key :: Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    sendPN :: Kernel.Prelude.Bool
+    sendPN :: Kernel.Prelude.Bool,
+    shouldDefault :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 

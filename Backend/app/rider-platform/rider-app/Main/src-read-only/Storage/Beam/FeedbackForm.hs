@@ -19,8 +19,10 @@ data FeedbackFormT f = FeedbackFormT
     categoryName :: B.C f Domain.Types.FeedbackForm.Category,
     id :: B.C f Kernel.Prelude.Text,
     question :: B.C f Kernel.Prelude.Text,
+    questionKey :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     questionTranslations :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     rating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    shouldDefault :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
