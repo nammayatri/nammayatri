@@ -333,7 +333,8 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       registrationLon = Nothing,
       otpChannel = Nothing,
       password = Nothing,
-      employeeId = Nothing
+      employeeId = Nothing,
+      isOperatorReq = Nothing
     }
 
 fleetOwnerVerify ::

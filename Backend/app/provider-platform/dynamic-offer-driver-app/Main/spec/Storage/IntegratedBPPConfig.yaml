@@ -44,6 +44,8 @@ IntegratedBPPConfig:
       cipherKey: Text
       qrRefreshTtl: Maybe Seconds
       baseUrl: Maybe BaseUrl
+      busBlockExpiryTime: Maybe Seconds
+      busBlockMaxLimit: Maybe Int
       derive': "Generic, FromJSON, ToJSON, Eq, Show"
     ONDCBecknConfig:
       networkHostUrl: Maybe BaseUrl
@@ -53,6 +55,8 @@ IntegratedBPPConfig:
       singleTicketForMultiplePassengers: Maybe Bool
       overrideCity: Maybe City
       redisPrefix: Maybe Text
+      busBlockExpiryTime: Maybe Seconds
+      busBlockMaxLimit: Maybe Int
       derive': "Generic, FromJSON, ToJSON, Eq, Show"
 
   domainInstance:
