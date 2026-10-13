@@ -68,7 +68,6 @@ types:
     vehicleInfo: Maybe VehicleInfo
     nomineeInfo: Maybe NomineeInfo
     declaration: Declaration
-    amount: Money
     paymentServiceType: Maybe PaymentServiceType
   TopUpSharesReq:
     numberOfShares: Int
