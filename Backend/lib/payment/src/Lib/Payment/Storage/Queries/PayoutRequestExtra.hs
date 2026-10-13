@@ -4,7 +4,8 @@ module Lib.Payment.Storage.Queries.PayoutRequestExtra where
 
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.Id (getId)
+import Kernel.Types.Id (Id, getId)
+import Kernel.Utils.Common (getCurrentTime)
 import qualified Lib.Payment.Domain.Types.PayoutBatch as DPayoutBatch
 import Lib.Payment.Domain.Types.PayoutRequest
 import Lib.Payment.Storage.Beam.BeamFlow
@@ -72,3 +73,17 @@ findExcludedByMocAndTime mocId mbFrom mbTo limit offset =
     (Se.Desc Beam.createdAt)
     limit
     offset
+
+-- | Set the status only while the request is still INITIATED.
+updateStatusIfInitiated :: BeamFlow m r => PayoutRequestStatus -> Id PayoutRequest -> m ()
+updateStatusIfInitiated newStatus payoutRequestId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status newStatus,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.id $ Se.Eq (getId payoutRequestId),
+          Se.Is Beam.status $ Se.Eq INITIATED
+        ]
+    ]

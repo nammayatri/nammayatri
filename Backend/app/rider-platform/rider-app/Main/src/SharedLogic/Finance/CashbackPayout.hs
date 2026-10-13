@@ -16,6 +16,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Account as DA
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
+import Lib.Finance.Ledger.PayoutSettlement (PayoutOutcome (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -48,7 +49,7 @@ type CashbackPayoutFlow m r c =
   )
 
 -- | One cashback payout attempt for a rider, guarded by a per-person lock: eligibility, payout
---   request, and on PayoutInitiated the OwnerPayoutLiability hold.
+--   request, the OwnerPayoutLiability hold, then the Juspay call.
 runCashbackPayout :: (CashbackPayoutFlow m r c) => Id Person -> m ()
 runCashbackPayout personId =
   PayoutRequest.runPayoutUnderLock ("CashRideCashbackPayoutJob:" <> personId.getId) 120 (findCashbackPayoutAmount personId) submitCashbackPayout
@@ -136,51 +137,76 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
   -- Reserve the entries before calling Juspay, so no other run picks them while the order is in flight.
   -- They become PAID_OUT on a success status and UNSETTLED again on a failure status.
   RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds Nothing
-  result <-
-    PayoutRequest.submitPayoutRequest submission payoutCall afterPayoutOrderCreated
+  pr <-
+    ( do
+        payoutRequest <- PayoutRequest.buildPayoutRequest submission
+        PayoutRequest.createPayoutRequest payoutRequest
+        pure payoutRequest
+      )
       `catch` \(e :: SomeException) -> do
         RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
         throwM e
-  case result of
-    PayoutRequest.PayoutInitiated pr _ -> do
-      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
-      let ownerPayoutCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId payoutConfig.currency True person.id.getId pr.id.getId Nothing Nothing Nothing
-      RidePaymentFinance.postCashbackOwnerPayoutLiability ownerPayoutCtx totalAmount
-        >>= either (\err -> logError $ "Failed to move cashback payout amount to owner payout liability for payoutRequest " <> pr.id.getId <> ": " <> show err) (const (pure ()))
-      PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId (map (.getId) originalEntryIds)
-      logInfo $
-        "Cashback payout initiated person="
-          <> person.id.getId
-          <> " payoutRequestId="
-          <> pr.id.getId
-          <> " entries="
-          <> show (length originalEntryIds)
-          <> " amount="
-          <> show totalAmount
-      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
-    PayoutRequest.PayoutProcessing pr status -> do
-      -- Also returned when Juspay accepted the order but it could not be read back, so an order may be
-      -- in flight: keep the entries reserved under this request until a status check resolves it.
-      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
-      logInfo $
-        "Cashback payout already in flight. person="
-          <> person.id.getId
-          <> " payoutRequestId="
-          <> pr.id.getId
-          <> " status="
-          <> show status
-    PayoutRequest.PayoutFailed _ err -> do
-      RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
-      logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
-      Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
-    -- Only the bulk (HDFC CBX) rail returns this. Handled anyway (hold kept, no failure push) so a
-    -- future rail that returns it is not treated as a failure.
-    PayoutRequest.PayoutAmbiguous pr err ->
-      logError $
-        "Cashback payout outcome unknown for person="
-          <> person.id.getId
-          <> " payoutRequestId="
-          <> pr.id.getId
-          <> ": "
-          <> err
-          <> " -- hold left in place, needs manual reconciliation"
+  RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
+  let ownerPayoutCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId payoutConfig.currency True person.id.getId pr.id.getId Nothing Nothing Nothing
+      -- nothing reached Juspay: give back the hold, release the entries, fail the request if still INITIATED
+      stopNotSent failStillInitiated reason = do
+        logError $ "Cashback payout not sent for person=" <> person.id.getId <> " payoutRequestId=" <> pr.id.getId <> ": " <> reason
+        RidePaymentFinance.withPayoutSettlementLock pr.id.getId (RidePaymentFinance.settleCashbackPayoutLedger ownerPayoutCtx totalAmount originalEntryIds (PayoutFailed ("Payout not sent: " <> reason)))
+          >>= either (\err -> logError $ "Failed to give back cashback payout hold for payoutRequest " <> pr.id.getId <> ": " <> show err) (const (pure ()))
+        RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
+        PayoutRequest.clearPayoutLedgerEntryIds pr.id.getId
+        when failStillInitiated $ do
+          current <- fromMaybe pr <$> PayoutRequest.getPayoutRequestById pr.id
+          when (current.status == DPR.INITIATED) $
+            PayoutRequest.updateStatusWithHistoryById DPR.AUTO_PAY_FAILED (Just $ "Payout not sent: " <> reason) current
+        Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+  -- hold before the Juspay call, so a webhook always finds it and only settles it
+  holdResult <- try (RidePaymentFinance.withPayoutSettlementLock pr.id.getId $ RidePaymentFinance.postCashbackOwnerPayoutLiability ownerPayoutCtx totalAmount)
+  case holdResult of
+    Left (err :: SomeException) -> stopNotSent True ("hold failed: " <> show err)
+    Right (Left err) -> stopNotSent True ("hold failed: " <> show err)
+    Right (Right _) -> do
+      stashResult <- try (PayoutRequest.stashPayoutLedgerEntryIds pr.id.getId (map (.getId) originalEntryIds))
+      case stashResult of
+        Left (err :: SomeException) -> stopNotSent True ("recording the hold failed: " <> show err)
+        Right () -> do
+          sendResult <- try (PayoutRequest.executePayoutRequestWithOutcome submission.transferAmount submission.currency submission.payoutServiceFlow pr payoutCall afterPayoutOrderCreated)
+          case sendResult of
+            Right (PayoutRequest.Executed _) -> do
+              logInfo $
+                "Cashback payout initiated person="
+                  <> person.id.getId
+                  <> " payoutRequestId="
+                  <> pr.id.getId
+                  <> " entries="
+                  <> show (length originalEntryIds)
+                  <> " amount="
+                  <> show totalAmount
+              Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
+            -- request already AUTO_PAY_FAILED
+            Right (PayoutRequest.ConfirmedFailure err) -> stopNotSent False err
+            -- outcome unknown or already settled by a webhook: leave the hold for settlement
+            Right (PayoutRequest.NotExecutable status) ->
+              logInfo $
+                "Cashback payout already in flight. person="
+                  <> person.id.getId
+                  <> " payoutRequestId="
+                  <> pr.id.getId
+                  <> " status="
+                  <> show status
+            -- bulk only
+            Right (PayoutRequest.AmbiguousFailure err) ->
+              logError $
+                "Cashback payout outcome unknown for person="
+                  <> person.id.getId
+                  <> " payoutRequestId="
+                  <> pr.id.getId
+                  <> ": "
+                  <> err
+                  <> " -- hold left in place, needs manual reconciliation"
+            -- still INITIATED means nothing was sent
+            Left (err :: SomeException) -> do
+              current <- fromMaybe pr <$> PayoutRequest.getPayoutRequestById pr.id
+              if current.status == DPR.INITIATED
+                then stopNotSent True ("send failed: " <> show err)
+                else logError $ "Cashback payout send errored after the request moved to " <> show current.status <> " for payoutRequestId=" <> pr.id.getId <> ": " <> show err

@@ -8,14 +8,15 @@ module Domain.Action.UI.Payout
     isPayoutStatusFailed,
     PayoutSettlementFlow,
     runRiderPayoutSettlement,
+    payoutStatusHandler,
     refreshPayoutOrderWithSettlement,
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.PayoutConfig as DPayoutConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.VehicleCategory as DV
@@ -55,8 +56,8 @@ import qualified Tools.Payout as PayoutTools
 payoutProcessingLockKey :: Text -> Text
 payoutProcessingLockKey bookingId = "Payout:Processing:bookingId" <> bookingId
 
-payoutSettlementLockKey :: Text -> Text
-payoutSettlementLockKey payoutRequestId = "Payout:Settlement:payoutRequestId:" <> payoutRequestId
+payoutStatusHandlerLockKey :: Text -> Text
+payoutStatusHandlerLockKey orderId = "payoutStatusHandler:payoutOrder:" <> orderId
 
 type PayoutSettlementFlow m r =
   ( ServiceFlow m r,
@@ -105,11 +106,6 @@ runRiderPayoutSettlement ::
 runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutOrder =
   unless (isPayoutOrderSuccess payoutOrder.status && payoutOrder.entityName /= Just DPayment.RIDE_OFFER_CASHBACK) $ do
     let personId = Id payoutOrder.customerId
-    payoutConfig <-
-      getOneConfig
-        (PayoutConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
-        Nothing
-        >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchantOperatingCityId.getId)
     personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
     person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
     case payoutOrder.entityName of
@@ -117,36 +113,27 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
         forM_ (listToMaybe =<< payoutOrder.entityIds) $ \bookingId -> do
           when (isPayoutOrderSuccess payoutStatus) $
             QFTB.updatePayoutStatusById (Just $ castPayoutOrderStatus payoutStatus) (Id bookingId)
-          fork "Update Payout Status and Transactions for MetroBooking" $
-            callPayoutService payoutOrder payoutConfig person
       Just DPayment.REFERRAL_AWARD_RIDE -> do
         when (isPayoutOrderSuccess payoutStatus) $ do
           notifyPersonOnAmountCredit person
           QPersonStats.updateReferralAmountPaid (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
-        fork "Update Payout Status and Transactions for Referral Award" $
-          callPayoutService payoutOrder payoutConfig person
       Just DPayment.REFERRED_BY_AWARD -> do
         when (isPayoutOrderSuccess payoutStatus) $ do
           notifyPersonOnAmountCredit person
           QPersonStats.updateReferredByEarningsPayoutStatusAndAmountPaid (Just $ castOrderStatus payoutStatus) (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
-        fork "Update Payout Status and Transactions for ReferredBy Award" $
-          callPayoutService payoutOrder payoutConfig person
       Just DPayment.BACKLOG -> do
         when (isPayoutOrderSuccess payoutStatus) $ do
           notifyPersonOnAmountCredit person
           QPersonStats.updateBacklogStatusAndAmountPaid (Just $ castOrderStatus payoutStatus) (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
-        fork "Update Payout Status and Transactions for Backlog Referral Award" $
-          callPayoutService payoutOrder payoutConfig person
       Just DPayment.REFERRED_BY_AND_BACKLOG_AWARD -> do
         when (isPayoutOrderSuccess payoutStatus) $ do
           let mbStatus = Just $ castOrderStatus payoutStatus
           notifyPersonOnAmountCredit person
           QPersonStats.updateBacklogAndReferredByPayoutStatusAndAmountPaid mbStatus mbStatus (personStats.referralAmountPaid + payoutOrder.amount.amount) personId
-        fork "Update Payout Status and Transactions for Referred By And Backlog Award" $
-          callPayoutService payoutOrder payoutConfig person
       Just DPayment.RIDE_OFFER_CASHBACK -> do
         let mbPayoutRequestId = listToMaybe (fromMaybe [] payoutOrder.entityIds)
-        whenJust mbPayoutRequestId $ \prId -> Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForSettlementLock" (payoutSettlementLockKey prId) 60 100 $ do
+        -- caller holds the request lock
+        whenJust mbPayoutRequestId $ \prId -> do
           mbPayoutReq <- QPR.findById (Id prId)
           whenJust mbPayoutReq $ \payoutReq -> do
             let ctx =
@@ -180,43 +167,99 @@ runRiderPayoutSettlement merchantId merchantOperatingCityId payoutStatus payoutO
                 RidePaymentFinance.releaseCashbackEntriesReservation entryIds
                 PayoutRequest.clearPayoutLedgerEntryIds payoutReq.id.getId
                 Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" payoutOrder.amount.amount
-        fork "Update Payout Status and Transactions for RideOfferCashback" $
-          callPayoutService payoutOrder payoutConfig person
       _ -> logTagError "Webhook Handler Error" $ "Unsupported Payout Entity:" <> show payoutOrder.entityName
 
-refreshPayoutOrderWithSettlement ::
+-- | Applies a payout order's status, like orderStatusHandler: under a lock, fetch Juspay's status,
+--   settle, then write the rows. The webhook's status is only a fallback if the call fails.
+--   Cashback locks on its payout request (same lock as the hold at initiate), others on the order.
+payoutStatusHandler ::
   (PayoutSettlementFlow m r) =>
+  Maybe IPayout.PayoutOrderStatus ->
   DPayoutOrder.PayoutOrder ->
   m DPayoutOrder.PayoutOrder
-refreshPayoutOrderWithSettlement payoutOrder =
-  if isPayoutOrderSuccess payoutOrder.status
-    then pure payoutOrder
-    else case payoutOrder.entityName of
-      Nothing -> pure payoutOrder
-      Just _ -> do
+payoutStatusHandler mbWebhookStatus givenOrder =
+  withHandlerLock $ do
+    -- re-read inside the lock
+    payoutOrder <- fromMaybe givenOrder <$> QPayoutOrder.findByOrderId givenOrder.orderId
+    if isFinalOrderStatus payoutOrder.status || isNothing payoutOrder.entityName
+      then do
+        -- the request can lag a final order (overwritten, or its write failed): sync it, no settling
+        when (isFinalOrderStatus payoutOrder.status) $
+          DPayment.updatePayoutRequestStatusFromOrder payoutOrder payoutOrder.status
+        pure payoutOrder
+      else do
         person <- QPerson.findById (Id payoutOrder.customerId) >>= fromMaybeM (PersonNotFound payoutOrder.customerId)
         let merchantOperatingCityId = maybe person.merchantOperatingCityId Id payoutOrder.merchantOperatingCityId
             merchantId = person.merchantId
+            settle status = runRiderPayoutSettlement merchantId merchantOperatingCityId status payoutOrder
+            -- cashback settles first, so a failed settlement is retried while the order is not final;
+            -- its ledger legs are posted once. Other payouts add to person_stats, so the order is made
+            -- final first and they settle only once.
+            applyStatus status writeRows
+              | payoutOrder.entityName == Just DPayment.RIDE_OFFER_CASHBACK = settle status >> writeRows
+              | otherwise = writeRows >> when (isFinalOrderStatus status) (settle status)
         payoutConfig <-
           getOneConfig
             (PayoutConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
             Nothing
             >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchantOperatingCityId.getId)
         let payoutStatusServiceReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
-            createPayoutOrderStatusCall = PayoutTools.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
-        void $ DPayment.payoutStatusService (cast merchantId) (cast person.id) payoutStatusServiceReq createPayoutOrderStatusCall
-        refreshed <- QPayoutOrder.findByOrderId payoutOrder.orderId >>= fromMaybeM (PayoutOrderNotFound payoutOrder.orderId)
-        runRiderPayoutSettlement merchantId merchantOperatingCityId refreshed.status refreshed
-        QPayoutOrder.findByOrderId payoutOrder.orderId >>= \case
-          Nothing -> throwError $ PayoutOrderNotFound payoutOrder.orderId
-          Just finalOrder -> pure finalOrder
+            payoutOrderStatusCall = PayoutTools.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
+        statusRes <- withTryCatch "payoutStatusHandler:payoutOrderStatus" $ payoutOrderStatusCall payoutOrder payoutStatusServiceReq
+        now <- getCurrentTime
+        case statusRes of
+          Right statusResp ->
+            applyStatus statusResp.status (DPayment.payoutStatusUpdates payoutOrder.orderId statusResp)
+          Left err
+            | payoutOrder.entityName == Just DPayment.RIDE_OFFER_CASHBACK
+                && isProviderOrderNotFound err
+                && diffUTCTime now payoutOrder.createdAt > unknownOrderGracePeriod -> do
+              settle Payout.FULFILLMENTS_FAILURE
+              markUnknownCashbackOrderFailed payoutOrder err
+            | Just webhookStatus <- mbWebhookStatus -> do
+              logError $ "Payout status call failed for order " <> payoutOrder.orderId <> ", settling with the webhook status " <> show webhookStatus <> ": " <> show err
+              -- mark final so it is not settled again
+              applyStatus webhookStatus $
+                when (isFinalOrderStatus webhookStatus) $ do
+                  QPayoutOrder.updatePayoutOrderStatus webhookStatus payoutOrder.orderId
+                  DPayment.updatePayoutRequestStatusFromOrder payoutOrder webhookStatus
+            | otherwise -> throwM err
+        QPayoutOrder.findByOrderId payoutOrder.orderId >>= fromMaybeM (PayoutOrderNotFound payoutOrder.orderId)
+  where
+    isFinalOrderStatus status = isPayoutOrderSuccess status || isPayoutOrderFailed status
+    withHandlerLock = case (givenOrder.entityName, listToMaybe =<< givenOrder.entityIds) of
+      (Just DPayment.RIDE_OFFER_CASHBACK, Just payoutRequestId) -> RidePaymentFinance.withPayoutSettlementLock payoutRequestId
+      _ -> Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForPayoutStatusHandlerLock" (payoutStatusHandlerLockKey givenOrder.orderId) 60 100
 
-callPayoutService :: (PayoutSettlementFlow m r) => DPayoutOrder.PayoutOrder -> DPayoutConfig.PayoutConfig -> DP.Person -> m ()
-callPayoutService payoutOrder payoutConfig person = do
-  let personId = person.id
-      payoutStatusServiceReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
-      createPayoutOrderStatusCall = PayoutTools.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just personId.getId)
-  void $ DPayment.payoutStatusService (cast person.merchantId) (cast personId) payoutStatusServiceReq createPayoutOrderStatusCall
+refreshPayoutOrderWithSettlement ::
+  (PayoutSettlementFlow m r) =>
+  DPayoutOrder.PayoutOrder ->
+  m DPayoutOrder.PayoutOrder
+refreshPayoutOrderWithSettlement = payoutStatusHandler Nothing
+
+-- | After this, an order Juspay does not know is treated as never created.
+unknownOrderGracePeriod :: NominalDiffTime
+unknownOrderGracePeriod = 10 * 60
+
+-- | Juspay's 404 E09 (order not found), read from mobility-core's InternalError text.
+isProviderOrderNotFound :: SomeException -> Bool
+isProviderOrderNotFound err = case fromException err of
+  Just (InternalError msg) ->
+    "Failed to call payout order status API" `T.isPrefixOf` msg
+      && "statusCode = 404" `T.isInfixOf` msg
+      && "E09" `T.isInfixOf` msg
+  _ -> False
+
+-- | Juspay never got the order: fail it and its request. The caller settles the failure first.
+markUnknownCashbackOrderFailed :: (PayoutSettlementFlow m r) => DPayoutOrder.PayoutOrder -> SomeException -> m ()
+markUnknownCashbackOrderFailed payoutOrder err = do
+  logError $ "Provider has no payout order " <> payoutOrder.orderId <> ", marking it failed: " <> show err
+  QPayoutOrder.updatePayoutOrderStatus Payout.FULFILLMENTS_FAILURE payoutOrder.orderId
+  forM_ (listToMaybe =<< payoutOrder.entityIds) $ \payoutRequestId ->
+    QPR.findById (Id payoutRequestId) >>= \mbPayoutRequest ->
+      whenJust mbPayoutRequest $ \payoutRequest ->
+        when (payoutRequest.status `elem` [PayoutRequest.INITIATED, PayoutRequest.PROCESSING, PayoutRequest.RETRYING]) $
+          PayoutRequest.updateStatusWithHistoryById PayoutRequest.AUTO_PAY_FAILED (Just "Payout order not found at provider") payoutRequest
 
 notifyPersonOnAmountCredit :: (PayoutSettlementFlow m r) => DP.Person -> m ()
 notifyPersonOnAmountCredit person = do
