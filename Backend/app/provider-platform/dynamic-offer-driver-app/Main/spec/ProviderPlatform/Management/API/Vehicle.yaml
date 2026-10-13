@@ -52,7 +52,7 @@ types:
     - verified: Maybe Bool
     - approved: Maybe Bool
     - createdAt: UTCTime
-    - docsVerificationStatusUpdatedAt: Maybe UTCTime
+    - docsVerificationStatusUpdatedAt: UTCTime
     - recentFleetInfo: Maybe DriverAssociationInfo
     - linkedDriverInfo: Maybe DriverAssociationInfo
     - exemptParkingFee: Maybe Bool

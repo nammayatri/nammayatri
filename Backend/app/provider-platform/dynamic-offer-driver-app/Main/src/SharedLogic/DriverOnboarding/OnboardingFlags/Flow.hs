@@ -377,10 +377,8 @@ recomputeVehicleFlagsArm registrationNo vehicleDocItem allDocumentVerificationCo
   -- docsVerificationStatus is derived from the same documents as the flags and is written on every
   -- recompute, unified or not. It is the column the UI APIs and the legacy ClickHouse status counts
   -- still read, so letting the unified flow move verified / approved without it would leave those
-  -- surfaces showing a stale status. Its change time is stamped first, while the row still holds the old status.
-  let newDocsVerificationStatus = Just $ computeAdminDocsVerificationStatus vehicleDocItem'.documents
-  RCQuery.updateDocsVerificationStatusUpdatedAtByCertificateNumberHash newDocsVerificationStatus rcHash
-  RCQuery.updateDocsVerificationStatusByCertificateNumberHash newDocsVerificationStatus rcHash
+  -- surfaces showing a stale status.
+  RCQuery.updateDocsVerificationStatusByCertificateNumberHash (Just $ computeAdminDocsVerificationStatus vehicleDocItem'.documents) rcHash
   mbRc <- RCQuery.findLastVehicleRCWrapper registrationNo
   let derivedApproved = computeApprovedFromDocs Nothing (Right allDocumentVerificationConfigs) DP.DRIVER vehicleDocItem'.documents
       approvalSupported = approvalSupportedInConfigs (Right allDocumentVerificationConfigs)

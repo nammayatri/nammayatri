@@ -81,7 +81,7 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
                   docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus,
                   disabledReasonFlag = fleetOwnerInfo.disabledReasonFlag,
                   createdAt = Just fleetOwnerInfo.createdAt,
-                  docsVerificationStatusUpdatedAt = fleetOwnerInfo.docsVerificationStatusUpdatedAt
+                  docsVerificationStatusUpdatedAt = fromMaybe fleetOwnerInfo.createdAt fleetOwnerInfo.docsVerificationStatusUpdatedAt
                 }
 
     personName person@Person.Person {..} =

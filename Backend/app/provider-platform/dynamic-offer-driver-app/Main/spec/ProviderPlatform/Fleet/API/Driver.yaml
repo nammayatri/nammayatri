@@ -1766,7 +1766,7 @@ types:
     - docsVerificationStatus: Maybe DocsVerificationStatus
     - mobileCountryCode: Maybe Text
     - createdAt: Maybe UTCTime
-    - docsVerificationStatusUpdatedAt: Maybe UTCTime
+    - docsVerificationStatusUpdatedAt: UTCTime
   FleetGroup:
     - level: Int
     - parentGroupCode: Maybe Text # At Initial Level, this will be Nothing

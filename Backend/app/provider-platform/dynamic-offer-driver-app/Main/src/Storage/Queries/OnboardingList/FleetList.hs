@@ -60,8 +60,8 @@ findFleetOwners merchantOperatingCityId mbFleetType mbDocsVerificationStatus mbF
                           Nothing -> B.sqlBool_ $ B.val_ True
                           Just Nothing -> B.sqlBool_ (B.isNothing_ fleetOwnerInfo.approved) B.&&?. (fleetOwnerInfo.verified B.==?. B.val_ True)
                           Just (Just approved) -> fleetOwnerInfo.approved B.==?. B.val_ (Just approved)
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fromDate -> B.sqlBool_ $ fleetOwnerInfo.createdAt B.>=. B.val_ fromDate) mbFromDate
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\toDate -> B.sqlBool_ $ fleetOwnerInfo.createdAt B.<=. B.val_ toDate) mbToDate
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fromDate -> B.sqlBool_ $ B.coalesce_ [fleetOwnerInfo.docsVerificationStatusUpdatedAt] fleetOwnerInfo.createdAt B.>=. B.val_ fromDate) mbFromDate
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\toDate -> B.sqlBool_ $ B.coalesce_ [fleetOwnerInfo.docsVerificationStatusUpdatedAt] fleetOwnerInfo.createdAt B.<=. B.val_ toDate) mbToDate
                         B.&&?. maybe
                           (B.sqlBool_ $ B.val_ True)
                           ( \searchString ->

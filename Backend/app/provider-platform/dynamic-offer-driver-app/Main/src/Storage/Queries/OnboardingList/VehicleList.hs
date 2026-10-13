@@ -52,8 +52,8 @@ findVehicles merchantId merchantOpCityId limitVal offsetVal mbFleetOwnerId mbCer
                                   Just Nothing -> B.isNothing_ rc.approved B.&&. rc.verified B.==. B.val_ (Just True)
                                   Just (Just approved) -> rc.approved B.==. B.val_ (Just approved)
                               )
-                        B.&&. maybe (B.val_ True) (\fromTime -> rc.createdAt B.>=. B.val_ fromTime) mbFrom
-                        B.&&. maybe (B.val_ True) (\toTime -> rc.createdAt B.<=. B.val_ toTime) mbTo
+                        B.&&. maybe (B.val_ True) (\fromTime -> B.coalesce_ [rc.docsVerificationStatusUpdatedAt] rc.createdAt B.>=. B.val_ fromTime) mbFrom
+                        B.&&. maybe (B.val_ True) (\toTime -> B.coalesce_ [rc.docsVerificationStatusUpdatedAt] rc.createdAt B.<=. B.val_ toTime) mbTo
                   )
                   (B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB))
   case result of

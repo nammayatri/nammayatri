@@ -102,10 +102,11 @@ hasDriverInfoFilter f =
     || isJust f.dlfApproval
     || isJust f.dlfOnboardingAs
     || isFleetSeeker f
+    || isJust f.dlfFrom
+    || isJust f.dlfTo
 
--- from / to are person.createdAt, so a date window keeps Person in the filter set.
 hasPersonFilter :: DriverListFilters -> Bool
-hasPersonFilter f = isJust f.dlfPhoneHash || isJust f.dlfNameSearch || isJust f.dlfFrom || isJust f.dlfTo
+hasPersonFilter f = isJust f.dlfPhoneHash || isJust f.dlfNameSearch
 
 drivingTable :: DriverListFilters -> DrivingTable
 drivingTable f
@@ -130,8 +131,6 @@ personMatches merchant opCity f person =
                 B.||. B.like_ (B.coalesce_ [person.lastName] (B.val_ "")) pat
       )
       f.dlfNameSearch
-    B.&&. maybe (B.val_ True) (\fromTime -> person.createdAt B.>=. B.val_ fromTime) f.dlfFrom
-    B.&&. maybe (B.val_ True) (\toTime -> person.createdAt B.<=. B.val_ toTime) f.dlfTo
   where
     cityMatches col =
       col B.==. B.val_ (Just $ getId opCity.id)
@@ -150,6 +149,8 @@ driverInfoMatches f driverInfo =
               Just Nothing -> B.isNothing_ driverInfo.approved B.&&. driverInfo.verified B.==. B.val_ True
               Just (Just approved) -> driverInfo.approved B.==. B.val_ (Just approved)
           )
+    B.&&. maybe (B.val_ True) (\fromTime -> B.coalesce_ [driverInfo.docsVerificationStatusUpdatedAt] driverInfo.createdAt B.>=. B.val_ fromTime) f.dlfFrom
+    B.&&. maybe (B.val_ True) (\toTime -> B.coalesce_ [driverInfo.docsVerificationStatusUpdatedAt] driverInfo.createdAt B.<=. B.val_ toTime) f.dlfTo
 
 -- | Scope applied when driver_information drives, so the (city, verified, approved, enabled) index
 --   is usable without reaching into person.

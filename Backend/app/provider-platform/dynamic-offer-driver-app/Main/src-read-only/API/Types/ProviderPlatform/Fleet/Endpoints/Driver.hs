@@ -829,7 +829,7 @@ data FleetOwnerListItem = FleetOwnerListItem
     docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    docsVerificationStatusUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    docsVerificationStatusUpdatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
