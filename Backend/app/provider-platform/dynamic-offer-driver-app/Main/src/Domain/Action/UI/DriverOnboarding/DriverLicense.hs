@@ -69,6 +69,7 @@ import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.Reminder.Helper (createReminder)
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DocumentVersionMetadata as QDVM
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
@@ -130,7 +131,7 @@ isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLN
 verifyDL ::
   OnboardingFlow m r =>
   DPan.VerifiedBy ->
-  -- | the caller approves this submit right away (admin upload with auto-approve), so it may replace an approved DL
+  -- | the caller approves this submit right away (admin upload with auto-approve), so it may add a version to an approved DL
   Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -222,6 +223,21 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
         when (isNameCompareRequired transporterConfig verifyBy) $
           validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
         mbExistingLicense <- Query.findByDLNumber driverLicenseNumber person.merchantId
+        uploadedNumberHash <- getDbHash driverLicenseNumber
+        -- A driver has one licence number. An approved licence with another number must be unlinked first; an
+        -- unapproved one is replaced once this upload passes its checks, so a refused upload keeps it.
+        mbLicenseWithOtherNumber <- mfilter (\license -> (license.licenseNumber & hash) /= uploadedNumberHash) <$> Query.findByDriverId personId
+        whenJust mbLicenseWithOtherNumber $ \licenseWithOtherNumber ->
+          when (licenseWithOtherNumber.verificationStatus == Documents.VALID) $ do
+            Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+            throwImageError imageId1 DriverAlreadyLinked
+        -- Like an unlink, but the photos of this upload stay.
+        let replaceLicenseWithOtherNumber =
+              when (isJust mbLicenseWithOtherNumber) $ do
+                licenseImages <- ImageQuery.findImagesByPersonAndType Nothing Nothing merchantId personId DTO.DriverLicense
+                Utils.cleanupUploadedImages (filter (`notElem` (imageId1 : maybeToList imageId2)) (map (.id) licenseImages)) personId
+                Query.deleteByDriverId personId
+                QDVM.deleteByPersonIdAndDocumentType personId DTO.DriverLicense
         -- let mdriverLicense =
         --       mbExistingLicense >>= \dl ->
         --         if dl.verificationStatus == Documents.INVALID
@@ -249,15 +265,14 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
                   if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
                     then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
                     else throwError DLInvalid
+                replaceLicenseWithOtherNumber
                 verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+              else do
+                replaceLicenseWithOtherNumber
+                onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
-            mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
-            -- A different number over an approved DL is a correction only an auto-approving admin may make.
-            when (isJust mDriverDL && not autoApproved) $ do
-              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-              throwImageError imageId1 DriverAlreadyLinked
             runDlFaceMatch
+            replaceLicenseWithOtherNumber
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory

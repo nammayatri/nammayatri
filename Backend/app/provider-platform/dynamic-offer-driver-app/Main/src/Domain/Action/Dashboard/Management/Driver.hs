@@ -186,6 +186,7 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DocumentVersionMetadata as QDVM
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -796,6 +797,9 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkDocument (SGuard.TargetDriver personId) $ do
     QDriverLicense.deleteByDriverId personId
+    -- Its photos and their details go too, so no version of the unlinked licence is left behind.
+    QImage.deleteByPersonIdAndImageType personId DomainDVC.DriverLicense
+    QDVM.deleteByPersonIdAndDocumentType personId DomainDVC.DriverLicense
     unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
       Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
