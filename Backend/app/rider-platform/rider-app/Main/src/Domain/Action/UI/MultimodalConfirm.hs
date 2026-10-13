@@ -213,10 +213,11 @@ postMultimodalInitiate ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe [ServiceTierType] ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = withTimeAPI "multimodalInitiate" "total" $ do
+postMultimodalInitiate (_personId, _merchantId) journeyId mbEnforceFRFSPass filterServiceAndJrnyType mbHasPasses mbNewServiceTiers = withTimeAPI "multimodalInitiate" "total" $ do
   runAction journeyId $ do
     journeyLegs <- JMU.measureLatency (QJourneyLeg.getJourneyLegs journeyId) "QJourneyLeg.getJourneyLegs postMultimodalInitiate"
     journey <- JMU.measureLatency (JM.getJourney journeyId) "JM.getJourney postMultimodalInitiate"
@@ -226,7 +227,7 @@ postMultimodalInitiate (_personId, _merchantId) journeyId filterServiceAndJrnyTy
         then JMU.measureLatency (JM.getAllLegsInfoFromLegs journey.riderId journey.id journeyLegs) "JM.getAllLegsInfoFromLegs"
         else do
           let (blacklistedServiceTiers, blacklistedFareQuoteTypes) = JMU.getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers
-          JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) "addAllLegs"
+          JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass) "addAllLegs"
           JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
           JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
@@ -237,10 +238,11 @@ postMultimodalInitiateSimpl ::
   [Spec.ServiceTierType] ->
   [DFRFSQuote.FRFSQuoteType] ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow ApiTypes.JourneyInfoResp
-postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses = do
+postMultimodalInitiateSimpl journeyLegs journey blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass = do
   runAction journey.id $ do
-    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses) "addAllLegs"
+    JMU.measureLatency (addAllLegs journey (Just journeyLegs) journeyLegs blacklistedServiceTiers blacklistedFareQuoteTypes mbHasPasses mbEnforceFRFSPass) "addAllLegs"
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journey.id) "JM.getAllLegsInfo"
     JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
