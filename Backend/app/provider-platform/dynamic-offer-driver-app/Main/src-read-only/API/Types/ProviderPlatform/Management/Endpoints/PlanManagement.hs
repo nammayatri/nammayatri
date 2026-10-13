@@ -142,7 +142,7 @@ data PlanType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data ServiceTierRideSubscriptionAPIEntity = ServiceTierRideSubscriptionAPIEntity {serviceTier :: Kernel.Prelude.Text, amount :: Kernel.Types.Common.HighPrecMoney}
+data ServiceTierRideSubscriptionAPIEntity = ServiceTierRideSubscriptionAPIEntity {serviceTier :: Kernel.Prelude.Text, serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text, amount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

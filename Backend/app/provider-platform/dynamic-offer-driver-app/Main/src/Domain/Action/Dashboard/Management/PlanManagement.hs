@@ -186,7 +186,7 @@ toPlanTranslationAPIEntity planTranslation =
 toServiceTierRideSubscription :: Common.ServiceTierRideSubscriptionAPIEntity -> Flow DPlan.ServiceTierRideSubscription
 toServiceTierRideSubscription entity = do
   serviceTier <- fromMaybeM (InvalidRequest $ "Invalid service tier: " <> entity.serviceTier) (readMaybe (toString entity.serviceTier))
-  pure DPlan.ServiceTierRideSubscription {serviceTier = serviceTier, amount = entity.amount}
+  pure DPlan.ServiceTierRideSubscription {serviceTier = serviceTier, serviceTierName = entity.serviceTierName, amount = entity.amount}
 
 toPlanAPIEntity :: DPlan.Plan -> Common.PlanAPIEntity
 toPlanAPIEntity plan =
@@ -203,7 +203,7 @@ toPlanAPIEntity plan =
       registrationAmount = plan.registrationAmount,
       originalRegistrationAmount = plan.originalRegistrationAmount,
       airportRideSubscription = plan.airportRideSubscription,
-      airportRideSubscriptionByTier = map (\c -> Common.ServiceTierRideSubscriptionAPIEntity {serviceTier = show c.serviceTier, amount = c.amount}) <$> plan.airportRideSubscriptionByTier,
+      airportRideSubscriptionByTier = map (\c -> Common.ServiceTierRideSubscriptionAPIEntity {serviceTier = show c.serviceTier, serviceTierName = c.serviceTierName, amount = c.amount}) <$> plan.airportRideSubscriptionByTier,
       mahilaShaktiRideSubscription = plan.mahilaShaktiRideSubscription,
       maxCreditLimit = plan.maxCreditLimit,
       maxMandateAmount = plan.maxMandateAmount,
