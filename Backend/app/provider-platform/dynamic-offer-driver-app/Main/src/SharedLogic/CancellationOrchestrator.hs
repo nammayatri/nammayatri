@@ -263,7 +263,7 @@ applyImmediateConsequences ctx doCancellationRateBasedBlocking = do
     applyDriverOverlayNotification =
       whenJust ((.driverNotificationKey) =<< row) $ \overlayKey ->
         fork "cancellationConsequenceDriverNotify" $
-          BehaviorDispatch.sendOverlayByKey (BehaviorDispatch.DispatchContext {merchantId = ctx.transporterConfig.merchantId, merchantOperatingCityId = ctx.booking.merchantOperatingCityId, counterConfig = Nothing, actionEvent = Nothing}) ctx.ride.driverId overlayKey
+          void $ BehaviorDispatch.sendOverlayByKey (BehaviorDispatch.DispatchContext {merchantId = ctx.transporterConfig.merchantId, merchantOperatingCityId = ctx.booking.merchantOperatingCityId, counterConfig = Nothing, actionEvent = Nothing}) ctx.ride.driverId overlayKey Nothing
 
     -- column: driverDeduction (COIN variant, consumed inside the coin engine) — fires for
     -- genuine customer/driver cancels only, never ops ones

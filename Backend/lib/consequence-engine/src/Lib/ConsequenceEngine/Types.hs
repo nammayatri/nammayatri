@@ -61,14 +61,20 @@ data ConsequenceAction
 
 -- | Parameters for a nudge (warning only, no restrictions)
 data NudgeParams = NudgeParams
-  { nudgeKey :: Text -- template key for the nudge message
+  { nudgeKey :: Text, -- template key for the nudge message
+  -- values substituted into the overlay template's {#key#} placeholders,
+  -- e.g. {"actionCount": 4} fills "{#actionCount#}" — rules pass snapshot values
+    templateParams :: Maybe Value
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
--- | Parameters for a stronger warning (may show on profile)
+-- | Parameters for a stronger warning. With showOnProfile the warning is also
+-- pinned to the driver's profile for profileWarningHours (default 168 = 7 days).
 data WarnParams = WarnParams
   { warnKey :: Text,
-    showOnProfile :: Bool
+    showOnProfile :: Bool,
+    profileWarningHours :: Maybe Int,
+    templateParams :: Maybe Value
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

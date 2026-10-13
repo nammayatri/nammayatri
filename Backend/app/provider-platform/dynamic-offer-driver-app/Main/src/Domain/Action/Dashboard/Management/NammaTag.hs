@@ -61,9 +61,12 @@ where
 import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AK
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Aeson.Types as AT
 import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default (..))
+import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Singletons
@@ -1382,10 +1385,22 @@ getNammaTagBehaviorStatus merchantShortId opCity = do
           | mbActiveVersion == mbCanonicalVersion && Prelude.isJust mbCanonicalVersion = LYT.BehaviourCanonical
           | Just av <- mbActiveVersion, Just cv <- mbCanonicalVersion, av < cv = LYT.BehaviourStaleCanonical
           | otherwise = LYT.BehaviourCustom
+    -- The pack lists the keys its seeded templates need, but the city's rulebook is
+    -- free to reference others: check every NUDGE/WARN key the ACTIVE version actually
+    -- uses, so a rulebook pointing at a missing overlay shows up as a failing prereq.
+    rulebookKeys <- case mbActiveVersion of
+      Nothing -> pure []
+      Just v -> do
+        elements <- CADLE.findByDomainAndVersion bPack.packDomain v
+        pure $ DL.nub $ concatMap (collectOverlayKeys . (.logic)) elements
+    let overlaySatisfied key = any (\o -> o.overlayKey == key) cityOverlays
         overlayPrereqs =
           bPack.requiredOverlayKeys <&> \key ->
             let rows = filter (\o -> o.overlayKey == key) cityOverlays
              in LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = not (null rows), detail = Just ("rows: " <> show (length rows))}
+        rulebookOverlayPrereqs =
+          filter (`notElem` bPack.requiredOverlayKeys) rulebookKeys <&> \key ->
+            LYT.BehaviourPrereqStatus {name = key, kind = LYT.OVERLAY_KEY, satisfied = overlaySatisfied key, detail = Just "referenced by the active rulebook"}
         togglePrereqs =
           bPack.configPrereqs <&> \prereq ->
             LYT.BehaviourPrereqStatus {name = prereq.prereqName, kind = LYT.CONFIG_TOGGLE, satisfied = prereq.isSatisfied transporterConfig, detail = Nothing}
@@ -1400,9 +1415,21 @@ getNammaTagBehaviorStatus merchantShortId opCity = do
           activeVersion = mbActiveVersion,
           canonicalVersion = mbCanonicalVersion,
           versionState = versionState,
-          prerequisites = overlayPrereqs <> togglePrereqs <> blockReasonPrereqs
+          prerequisites = overlayPrereqs <> rulebookOverlayPrereqs <> togglePrereqs <> blockReasonPrereqs
         }
   pure $ LYT.BehaviourStatusRes behaviours
+
+-- | Every overlay key a rulebook's NUDGE/WARN consequences reference: any string
+-- found under a "nudgeKey"/"warnKey" field, however the rule builds its objects
+-- (plain object or the `cat` single-key-object idiom).
+collectOverlayKeys :: A.Value -> [Text]
+collectOverlayKeys = go
+  where
+    go (A.Object o) = concatMap goPair (AKM.toList o)
+    go (A.Array a) = concatMap go (toList a)
+    go _ = []
+    goPair (k, A.String s) | AK.toText k `elem` ["nudgeKey", "warnKey"] = [s]
+    goPair (_, v) = go v
 
 postNammaTagBehaviorEnable :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.LogicDomain -> Text -> Text -> LYT.EnableBehaviourReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postNammaTagBehaviorEnable merchantShortId opCity domain requestorId requestorName req = do

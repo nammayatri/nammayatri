@@ -15,11 +15,14 @@
 module Lib.BehaviorTracker.BlockTracker
   ( mkBlockKey,
     mkCooldownKey,
+    mkProfileWarningKey,
     writeBlockKey,
     writeCooldownKey,
     writeBlockAndCooldownKeys,
+    writeProfileWarning,
     readBlockKey,
     readCooldownKey,
+    readProfileWarnings,
     isEntityInCooldown,
     isEntityBlocked,
   )
@@ -112,6 +115,47 @@ writeBlockAndCooldownKeys entityType entityId blockType reasonTag durationHours 
   writeBlockKey entityType entityId blockType reasonTag durationHours blockReason extraParams
   whenJust mbCooldownHours $ \cooldownHours ->
     writeCooldownKey entityType entityId reasonTag cooldownHours
+
+-- | Redis key for profile warnings: ONE key per entity holding the full list, so the
+-- hot profile path costs a single GET (unlike blocks/cooldowns, which are probed per tag).
+-- Format: "bt:profilewarn:{entityType}:{entityId}"
+mkProfileWarningKey :: EntityType -> Text -> Text
+mkProfileWarningKey entityType entityId =
+  "bt:profilewarn:" <> show entityType <> ":" <> entityId
+
+-- | Append a profile warning: prunes expired entries, replaces any existing warning
+-- with the same reasonTag, and sets the key TTL to the furthest expiry.
+writeProfileWarning ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  EntityType ->
+  Text -> -- entityId
+  ProfileWarningInfo ->
+  m ()
+writeProfileWarning entityType entityId info = do
+  now <- getCurrentTime
+  let key = mkProfileWarningKey entityType entityId
+  existing <- fromMaybe [] <$> Redis.withCrossAppRedis (Redis.get @[ProfileWarningInfo] key)
+  let alive = filter (\w -> w.expiresAt > now && w.reasonTag /= info.reasonTag) existing
+      updated = alive <> [info]
+      maxExpiry = maximum $ map (.expiresAt) updated
+      ttlSeconds = max 1 (round (diffUTCTime maxExpiry now)) :: Int
+  Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ Redis.setExp key updated ttlSeconds
+
+-- | Active (unexpired) profile warnings for an entity, newest last. One Redis GET.
+readProfileWarnings ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  EntityType ->
+  Text -> -- entityId
+  m [ProfileWarningInfo]
+readProfileWarnings entityType entityId = do
+  now <- getCurrentTime
+  let key = mkProfileWarningKey entityType entityId
+  existing <- fromMaybe [] <$> Redis.withCrossAppRedis (Redis.get @[ProfileWarningInfo] key)
+  pure $ filter (\w -> w.expiresAt > now) existing
 
 -- | Read a block key: returns (BlockInfo, remainingTTL in seconds)
 readBlockKey ::

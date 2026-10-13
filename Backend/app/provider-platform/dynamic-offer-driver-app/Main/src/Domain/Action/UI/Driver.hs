@@ -237,6 +237,8 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
+import qualified Lib.BehaviorTracker.BlockTracker as BT
+import qualified Lib.BehaviorTracker.Types as BTT
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
@@ -464,6 +466,9 @@ data DriverInformationRes = DriverInformationRes
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
+    -- active behaviour warnings pinned to the profile (WARN with showOnProfile);
+    -- text is pre-localized to the driver's language with placeholders filled
+    behaviourWarnings :: Maybe [BTT.ProfileWarningInfo],
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
@@ -1858,6 +1863,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
       operatorReferralApplied = isJust driverInfo.referredByOperatorId
   hasActiveRc <- isJust <$> QRCAssociation.findActiveAssociationByDriver id True
   availableForRidesInfo <- AvailableForRides.getAvailableForRidesInfo merchantConfig id personTags
+  activeProfileWarnings <- BT.readProfileWarnings BTT.DRIVER id.getId
   getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId) >>= \cfg ->
     return $
       DriverInformationRes
@@ -1915,6 +1921,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           blockedReason = driverInfo.blockedReason,
           disabledReasonFlag = driverInfo.disabledReasonFlag,
           preferredMapProvider = driverInfo.preferredMapProvider,
+          behaviourWarnings = if null activeProfileWarnings then Nothing else Just activeProfileWarnings,
           ..
         }
 

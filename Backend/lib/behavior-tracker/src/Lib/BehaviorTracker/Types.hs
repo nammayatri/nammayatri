@@ -23,6 +23,7 @@ module Lib.BehaviorTracker.Types
     BlockType (..),
     BlockInfo (..),
     CooldownInfo (..),
+    ProfileWarningInfo (..),
     ActiveBlockInfo (..),
     ActiveCooldownInfo (..),
     BehaviorDomainConfig (..),
@@ -122,6 +123,18 @@ data BlockInfo = BlockInfo
 data CooldownInfo = CooldownInfo
   { reasonTag :: Text,
     setAt :: UTCTime,
+    expiresAt :: UTCTime
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | A warning pinned to the entity's profile (WARN with showOnProfile). Title/message
+-- are captured at warn time — already localized to the driver's language and with
+-- {#placeholders#} substituted — so readers need no overlay/template lookup.
+data ProfileWarningInfo = ProfileWarningInfo
+  { reasonTag :: Text,
+    title :: Maybe Text,
+    message :: Maybe Text,
+    warnedAt :: UTCTime,
     expiresAt :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

@@ -26,6 +26,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.BehaviorTracker.Visibility as BTV
+import qualified SharedLogic.BehaviourManagement.AutoAcceptCancellation as AutoAcceptCancellation
 import qualified SharedLogic.BehaviourManagement.LowRating as LowRating
 import qualified SharedLogic.DriverPool as DP
 
@@ -95,7 +96,26 @@ defaultDriverDomainConfig =
           (DP.quoteResponseAcceptActionType, DP.quoteResponseCounterConfig),
           (DP.quoteResponseRejectActionType, DP.quoteResponseCounterConfig),
           (DP.quoteResponseEligibleActionType, DP.quoteResponseCounterConfig),
-          (LowRating.lowRatingActionType, LowRating.lowRatingCounterConfig)
+          (LowRating.lowRatingActionType, LowRating.lowRatingCounterConfig),
+          (AutoAcceptCancellation.autoAcceptCancellationActionType, AutoAcceptCancellation.autoAcceptCancellationCounterConfig),
+          -- UNHYGIENIC_VEHICLE / VEHICLE_UNSAFE keep lifetime totals only (no periods):
+          -- the registry entry still surfaces their blocks and lets callers probe counters
+          ( "UNHYGIENIC_VEHICLE",
+            BTT.CounterConfig
+              { windowSizeDays = 365,
+                counters = [BTT.ACTION_COUNT],
+                periods = [],
+                hashTagEntityId = False
+              }
+          ),
+          ( "VEHICLE_UNSAFE",
+            BTT.CounterConfig
+              { windowSizeDays = 365,
+                counters = [BTT.ACTION_COUNT],
+                periods = [],
+                hashTagEntityId = False
+              }
+          )
         ],
       blockReasonTags =
         [ "TOLL_ROUTES",
@@ -114,7 +134,10 @@ defaultDriverDomainConfig =
           "LowRating",
           "LOW_RATING_WARN",
           "LOW_RATING_SOFT_BLOCK",
-          "LOW_RATING_BLOCK"
+          "LOW_RATING_BLOCK",
+          "AutoAcceptCancellation",
+          "UNHYGIENIC_VEHICLE",
+          "VEHICLE_UNSAFE"
         ]
           <> DP.quoteResponseCooldownTags,
       blockTypes = [BTT.HARD_BLOCK, BTT.SOFT_BLOCK, BTT.FEATURE_BLOCK, BTT.PERMANENT_BLOCK]

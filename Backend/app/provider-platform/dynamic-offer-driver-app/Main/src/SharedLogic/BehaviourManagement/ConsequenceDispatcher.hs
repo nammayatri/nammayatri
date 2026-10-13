@@ -24,7 +24,9 @@ import qualified Dashboard.Common as DC
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
@@ -186,8 +188,20 @@ dispatchConsequence ctx driverId = \case
           }
     let tag = fromMaybe "PERMANENT_BLOCK" params.blockReasonTag
     BT.writeBlockKey BTT.DRIVER driverId.getId BTT.PERMANENT_BLOCK tag 0 params.blockReason (A.Object mempty)
-  CET.Nudge params -> sendOverlayByKey ctx driverId params.nudgeKey
-  CET.Warn params -> sendOverlayByKey ctx driverId params.warnKey
+  CET.Nudge params -> void $ sendOverlayByKey ctx driverId params.nudgeKey params.templateParams
+  CET.Warn params -> do
+    mbSentOverlay <- sendOverlayByKey ctx driverId params.warnKey params.templateParams
+    when params.showOnProfile $ do
+      now <- getCurrentTime
+      let hours = fromMaybe 168 params.profileWarningHours
+      BT.writeProfileWarning BTT.DRIVER driverId.getId $
+        BTT.ProfileWarningInfo
+          { reasonTag = params.warnKey,
+            title = (.title) =<< mbSentOverlay,
+            message = (.description) =<< mbSentOverlay,
+            warnedAt = now,
+            expiresAt = addUTCTime (fromIntegral hours * 3600) now
+          }
   CET.ChargeFee params -> do
     logInfo $ "Charge fee requested for driver " <> driverId.getId <> ": " <> show params.penaltyAmount <> " " <> params.currency <> " (" <> params.chargeReason <> ")"
     let penaltyAmount :: HighPrecMoney = realToFrac params.penaltyAmount
@@ -267,7 +281,11 @@ parseBlockReasonFlag = \case
   Just other -> fromMaybe ByDashboard (readMaybe $ toString other)
   Nothing -> ByDashboard
 
--- | Send an overlay notification to a driver using a PNKey
+-- | Send an overlay notification to a driver using a PNKey. The rule's
+-- templateParams fill {#key#} placeholders in the city's per-language template,
+-- so copy stays localized and ops-editable while the numbers come from the rule.
+-- Returns the substituted request it sent (Nothing = driver or template missing),
+-- so callers can persist the exact text the driver saw.
 sendOverlayByKey ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -277,15 +295,35 @@ sendOverlayByKey ::
   DispatchContext ->
   Id DP.Person ->
   Text -> -- overlayPNKey
-  m ()
-sendOverlayByKey ctx driverId overlayKey = do
+  Maybe A.Value -> -- placeholder values from the rule
+  m (Maybe FCM.FCMOverlayReq)
+sendOverlayByKey ctx driverId overlayKey mbTemplateParams = do
   logInfo $ "Sending overlay for driver " <> driverId.getId <> ": " <> overlayKey
   mbDriver <- QPerson.findById driverId
-  whenJust mbDriver $ \driver -> do
-    mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory ctx.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing
-    whenJust mbOverlay $ \overlay -> do
-      let fcmOverlayReq = Notify.mkOverlayReq overlay
-      Notify.sendOverlay ctx.merchantOperatingCityId driver fcmOverlayReq
+  case mbDriver of
+    Nothing -> pure Nothing
+    Just driver -> do
+      mbOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory ctx.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing
+      forM mbOverlay $ \overlay -> do
+        let fcmOverlayReq = substituteOverlayParams mbTemplateParams (Notify.mkOverlayReq overlay)
+        Notify.sendOverlay ctx.merchantOperatingCityId driver fcmOverlayReq
+        pure fcmOverlayReq
+
+-- | Fill {#key#} placeholders in the overlay's user-visible text fields from the
+-- rule's templateParams object. Unknown placeholders are left as-is.
+substituteOverlayParams :: Maybe A.Value -> FCM.FCMOverlayReq -> FCM.FCMOverlayReq
+substituteOverlayParams (Just (A.Object o)) req =
+  req{FCM.title = subst <$> req.title,
+      FCM.description = subst <$> req.description,
+      FCM.okButtonText = subst <$> req.okButtonText,
+      FCM.toastMessage = subst <$> req.toastMessage
+     }
+  where
+    subst txt = foldl' (\acc (k, v) -> T.replace ("{#" <> AK.toText k <> "#}") (renderParam v) acc) txt (AKM.toList o)
+    renderParam = \case
+      A.String s -> s
+      v -> TE.decodeUtf8 (BSL.toStrict (A.encode v)) -- numbers render bare: 4, 12.5
+substituteOverlayParams _ req = req
 
 -- | Dispatch all communication directives for a driver.
 handleCommunications ::
