@@ -159,6 +159,14 @@ jobs:
           bash setup.sh two-countries
           bash setup.sh price-both
 
+      # Plan point 5: the key rotation for stored numbers, end to end on this
+      # throwaway stack -- new passetto keys and salt, every value converted,
+      # the switch -- and then the same passenger and driver must sign in as
+      # the same people (stack/key-rotation/README.md). Never the server.
+      - name: The key rotation, and the same people sign in after it
+        working-directory: Backend/dev/local-stack/stack
+        run: bash key-rotation/ci-proof.sh
+
       - name: What was running, and what it said
         if: ${{ always() }}
         working-directory: Backend/dev/local-stack/stack
