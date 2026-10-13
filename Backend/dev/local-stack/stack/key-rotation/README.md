@@ -60,6 +60,11 @@ photograph to rename. What it taught, now in the scripts:
 4. **Rollback**, if any proof fails: restore the window's backup with the old
    passetto and the old salt (`docs/runbooks/rollback.md`).
 
-Open questions for the rehearsal: whether any of these tables is served from
-Redis (KV) rather than read from Postgres, and how the configuration change is
-released (the dhall files under `2023/` are not shipped by `ops/deploy.sh`).
+Answered 2026-10-13: these tables are read from Postgres, not served from
+Redis -- the deployed configuration (03a7531) caches configs only
+(`configsExpTime`), and the live Redis holds no person or rider row (only the
+fleet's positions). Dropping person keys after the switch stays in the window
+as a precaution. Still open: how the configuration change is released (the
+dhall files under `2023/` are not shipped by `ops/deploy.sh`; a compose
+overlay mounting the two files here is the likely way), and a proof at the
+service level that a passenger and a driver sign in as the same person.
