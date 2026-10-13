@@ -61,6 +61,10 @@ const TABLES = `
     (id text PRIMARY KEY, document_number_encrypted text, document_number_hash bytea);
   CREATE TABLE atlas_driver_offer_bpp.vehicle_registration_certificate
     (id text PRIMARY KEY, certificate_number_encrypted text, certificate_number_hash bytea);
+  CREATE TABLE atlas_app.merchant_service_config
+    (merchant_id character(36), service_name text, config_json json);
+  CREATE TABLE atlas_driver_offer_bpp.merchant_service_config
+    (merchant_id character(36), service_name text, config_json json);
 `;
 
 (async () => {
@@ -169,6 +173,27 @@ const TABLES = `
   const newPhoto = 'h_' + h(NEW, '22334455').toString('hex').slice(0, 32) + '.jpg';
   t.ok(moved.length === 1 && fs.existsSync(path.join(photos, newPhoto)) && !fs.existsSync(path.join(photos, r1Photo)),
     'the one photograph moved to her new key; the passenger without one is skipped');
+
+  /* ── 4. configs ───────────────────────────────────────────────────────── */
+  t.section('4. configs: the encrypted strings inside the services\' JSON');
+  const sealed = await oldKeys.vault.encryptRaw('S"maps-api-key"');
+  const nested = await oldKeys.vault.encryptRaw('S"sms-password"');
+  await db.sql(
+    `INSERT INTO atlas_app.merchant_service_config VALUES ('m1', 'Maps_Google', $1::json),
+            ('m1', 'Maps_OSRM', '{"osrmUrl":"http://osrm"}'::json)`,
+    [JSON.stringify({ googleKey: sealed, googleMapsUrl: 'http://shim', sms: { password: nested, n: 3 } })],
+  );
+  const conf = await rotate.configs({ pool: db.pool, oldVault: oldKeys.vault, newVault: newKeys.vault });
+  t.ok(conf.rows === 1 && conf.values === 2, 'one row, two encrypted values -- a row with none is left alone',
+    JSON.stringify(conf));
+  const [row] = await db.sql(`SELECT config_json AS j FROM atlas_app.merchant_service_config WHERE service_name = 'Maps_Google'`);
+  const j = typeof row.j === 'string' ? JSON.parse(row.j) : row.j;
+  t.ok((await newKeys.vault.decryptRaw(j.googleKey)) === 'S"maps-api-key"', 'the key opens with the new keys');
+  t.ok((await newKeys.vault.decryptRaw(j.sms.password)) === 'S"sms-password"', '... and so does a nested one');
+  t.ok(j.googleMapsUrl === 'http://shim' && j.sms.n === 3, 'everything else in the JSON is as it was');
+  let openedOld = true;
+  try { await oldKeys.vault.decryptRaw(j.googleKey); } catch { openedOld = false; }
+  t.ok(!openedOld, 'the old keys no longer open it');
 
   oldKeys.close();
   newKeys.close();

@@ -55,6 +55,71 @@ const COLUMNS = [
   ['atlas_driver_offer_bpp.vehicle_registration_certificate', 'certificate_number'],
 ];
 
+/**
+ * Configuration that holds encrypted strings inside JSON: the services'
+ * credentials (maps, SMS, WhatsApp). Found AFTER the first switch on the live
+ * server (2026-10-13): numbers were converted, these were not, and a ride
+ * search failed with passetto's /decrypt/obj refusing them. A row is found by
+ * its merchant and service, and only rewritten if it is still exactly what
+ * was read.
+ */
+const CONFIGS = ['atlas_app.merchant_service_config', 'atlas_driver_offer_bpp.merchant_service_config'];
+const SEALED = /^\d+\.\d+\.\d+\|\d+\|/;
+
+/** Every encrypted string in the configs, re-encrypted from the old keys to the new ones. */
+async function configs({ pool, oldVault, newVault }) {
+  const rows = [];
+  let values = 0;
+  for (const table of CONFIGS) {
+    const { rows: found } = await pool.query(
+      `SELECT merchant_id, service_name, config_json::text AS j FROM ${table}
+        WHERE config_json::text ~ '\\d+\\.\\d+\\.\\d+\\|\\d+\\|'`,
+    );
+    for (const r of found) {
+      const walk = async (v) => {
+        if (typeof v === 'string' && SEALED.test(v)) {
+          const shown = await oldVault.decryptRaw(v).catch((e) => {
+            throw new Error(`${table} ${r.service_name}: ${e.message}`);
+          });
+          const sealed = await newVault.encryptRaw(shown);
+          if ((await newVault.decryptRaw(sealed)) !== shown) {
+            throw new Error(`${table} ${r.service_name}: does not read back through the new keys`);
+          }
+          values += 1;
+          return sealed;
+        }
+        if (Array.isArray(v)) return Promise.all(v.map(walk));
+        if (v && typeof v === 'object') {
+          const out = {};
+          for (const [k, x] of Object.entries(v)) out[k] = await walk(x);
+          return out;
+        }
+        return v;
+      };
+      rows.push({ table, ...r, next: JSON.stringify(await walk(JSON.parse(r.j))) });
+    }
+  }
+  const client = typeof pool.connect === 'function' ? await pool.connect() : pool;
+  try {
+    await client.query('BEGIN');
+    for (const r of rows) {
+      const done = await client.query(
+        `UPDATE ${r.table} SET config_json = $1::json
+          WHERE merchant_id = $2 AND service_name = $3 AND config_json::text = $4`,
+        [r.next, r.merchant_id, r.service_name, r.j],
+      );
+      if (done.rowCount !== 1) throw new Error(`${r.table} ${r.service_name}: changed while converting`);
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    if (client !== pool && typeof client.release === 'function') client.release();
+  }
+  return { rows: rows.length, values };
+}
+
 /** The passenger's photograph is named after this hash (maps-shim/avatars.js). */
 const PHOTO_HASH = 'atlas_app.person.mobile_number';
 
@@ -94,6 +159,9 @@ function vault(url) {
   return {
     decrypt: async (cipher) => unwrap(await call('decrypt', cipher)),
     encrypt: async (plain) => call('encrypt', wrap(plain)),
+    // As passetto keeps it, unwrapped: for values that are not plain strings.
+    decryptRaw: (cipher) => call('decrypt', cipher),
+    encryptRaw: (shown) => call('encrypt', shown),
   };
 }
 
@@ -212,13 +280,31 @@ function renamePhotos(dir, renames) {
   return moved;
 }
 
-module.exports = { COLUMNS, hashOf, wrap, unwrap, vault, check, apply, renamePhotos };
+module.exports = { COLUMNS, hashOf, wrap, unwrap, vault, check, apply, configs, renamePhotos };
 
 if (require.main === module) {
   (async () => {
     const mode = process.argv[2];
+    if (mode === 'configs') {
+      const { Pool } = require('pg');
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      try {
+        const done = await configs({
+          pool,
+          oldVault: vault(process.env.OLD_PASSETTO_URL),
+          newVault: vault(process.env.NEW_PASSETTO_URL),
+        });
+        console.log(`configs: ${done.values} encrypted values in ${done.rows} rows, re-encrypted and read back`);
+      } catch (err) {
+        console.error(`STOPPED: ${err.message}`);
+        process.exitCode = 1;
+      } finally {
+        await pool.end();
+      }
+      return;
+    }
     if (mode !== 'check' && mode !== 'apply') {
-      console.error('usage: node rotate.js check|apply [--avatars DIR]');
+      console.error('usage: node rotate.js check|apply [--avatars DIR] | configs');
       process.exit(2);
     }
     const salt = (name) => fs.readFileSync(process.env[name], 'utf8').trim();

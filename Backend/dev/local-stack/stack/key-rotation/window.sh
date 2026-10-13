@@ -4,6 +4,9 @@
 #
 #   sudo bash key-rotation/window.sh            the switch
 #   sudo bash key-rotation/window.sh rollback   back to today's keys and salt
+#   sudo bash key-rotation/window.sh configs    after a switch made before
+#                                               2026-10-13's fix: the services'
+#                                               encrypted credentials too
 #
 # Prepared beforehand (2026-10-13, owner's OK): /opt/ny/secrets/hash-salt.env
 # and passetto-master.env, and ny-passetto-keys-db holding 1 master key and
@@ -120,10 +123,29 @@ start_all() { # services the switch did not recreate, then the units
   docker start ny-auth-guard movin-admin-api >/dev/null
   systemctl start "${UNITS[@]}" 2>/dev/null || true
 }
+drop_cached_configs() {
+  docker exec ny-redis sh -c "redis-cli --scan --pattern '*CachedQueries:MerchantServiceConfig*' | xargs -r redis-cli del" >/dev/null || true
+}
 drop_cached_people() {
   docker exec ny-redis sh -c "redis-cli --scan --pattern '*Person*' | grep -v DriverLocation | xargs -r redis-cli del" >/dev/null || true
 }
 compose() { (cd "$STACK" && docker compose "$@"); }
+
+if [ "${1:-}" = configs ]; then
+  # The first switch (2026-10-13) converted every number but not the services'
+  # credentials, which merchant_service_config keeps encrypted inside JSON: a
+  # ride search then failed. Today's passetto still holds the old keys on its
+  # own database (never touched): it decrypts them, the live one (the new
+  # keys) encrypts them, and the cached copies are dropped.
+  say "configs: the services' encrypted credentials, from the old keys to the new"
+  grep -q "$OVERLAY" "$ENVF" || die "the switch has not been made: run window.sh, which does this too"
+  temp_passetto ny-passetto-db demo
+  ok "the old keys' passetto on 127.0.0.1:8022"
+  rotate http://localhost:8022 http://localhost:8021 old-salt old-salt configs || die "configs refused (nothing written)"
+  drop_cached_configs
+  ok "cached configs dropped: the apps read the new ones"
+  exit 0
+fi
 
 if [ "${1:-}" = rollback ]; then
   say "ROLLBACK: back to today's keys and salt"
@@ -134,11 +156,14 @@ if [ "${1:-}" = rollback ]; then
   stop_all
   rotate http://localhost:8021 http://localhost:8022 new-salt old-salt apply --avatars /avatars \
     || { start_all; die "the conversion back failed (nothing written if before COMMIT); the stack is on the NEW keys"; }
+  rotate http://localhost:8021 http://localhost:8022 new-salt old-salt configs \
+    || { start_all; die "the configs' conversion back failed; numbers are on today's keys, configs on the new"; }
   sed -i "s#:$OVERLAY##" "$ENVF"
   sed -i "s#^NUMBER_HASH_SALT=.*#NUMBER_HASH_SALT=$(cat "$WORK/old-salt")#" "$NCE"
   docker rm -f ny-passetto-temp >/dev/null
   compose up -d --no-deps passetto rider-app driver-app maps-shim
   drop_cached_people
+  drop_cached_configs
   start_all
   wait_up http://localhost:8013/v2/auth/channels || true
   ok "back on today's keys and salt; the new key database is kept, unused"
@@ -179,6 +204,8 @@ if ! rotate http://localhost:8021 http://localhost:8022 old-salt new-salt apply 
   start_all
   die "the conversion refused; its transaction was rolled back and the stack is started as it was"
 fi
+rotate http://localhost:8021 http://localhost:8022 old-salt old-salt configs \
+  || die "the services' credentials did not convert; numbers are converted -- run: sudo bash key-rotation/window.sh rollback"
 
 say "5. the switch"
 sed -i "s#^COMPOSE_FILE=\(.*\)\$#COMPOSE_FILE=\1:$OVERLAY#" "$ENVF"
@@ -188,6 +215,7 @@ sed -i "s#^NUMBER_HASH_SALT=.*#NUMBER_HASH_SALT=$(cat "$WORK/new-salt")#" "$NCE"
 docker rm -f ny-passetto-temp >/dev/null
 compose up -d --no-deps passetto rider-app driver-app maps-shim
 drop_cached_people
+drop_cached_configs
 start_all
 wait_up http://localhost:8013/v2/auth/channels || die "rider-app does not answer after the switch -- consider: sudo bash key-rotation/window.sh rollback"
 wait_up http://localhost:8016/ || true
