@@ -69,3 +69,8 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN pass_photo_change_count 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN activated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN override_benefit_config_json jsonb ;
