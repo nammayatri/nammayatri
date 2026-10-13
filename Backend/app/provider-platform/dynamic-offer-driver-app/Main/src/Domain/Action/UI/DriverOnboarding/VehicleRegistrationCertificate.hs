@@ -309,6 +309,8 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
       Nothing -> verifyRCFlow person merchantOpCityId (fromMaybe True transporterConfig.useCategoryBasedVerificationPriorityList) req.vehicleRegistrationCertNumber req.imageId req.imageId2 req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber req.engineNumber req.chassisNumber
   -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
   groupRegisteredImages (req.imageId : maybeToList req.imageId2)
+  mbRegisteredRC <- RCQuery.findByImageId req.imageId
+  whenJust mbRegisteredRC saveRCVersionMetadata
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
@@ -648,6 +650,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" rcVerificationResponse.registrationNumber))
           -- RC images are uploaded before the RC exists; the vehicle link is written once the row is known.
           ImageQuery.updateRcIdByIds (Just rc.id.getId) (vehicleRC.documentImageId : maybeToList vehicleRC.documentImageId2)
+          saveRCVersionMetadata rc
           -- Create reminders only for non-INVALID RCs
           unless isInvalid $ do
             createReminder

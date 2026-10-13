@@ -1120,12 +1120,14 @@ postDriverUpdateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Id Com
 postDriverUpdateRCInvalidStatus _merchantShortId _opCity _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   pure Success
 
 postDriverUpdateRCInvalidStatusByRCNumber :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusByRCNumberReq -> Flow APISuccess
 postDriverUpdateRCInvalidStatusByRCNumber _merchantShortId _opCity req = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (VehicleNotFound req.rcNumber)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   pure Success
 
 ---------------------------------------------------------------------
@@ -1141,6 +1143,7 @@ postDriverUpdateVehicleVariant merchantShortId opCity _ req = do
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       then RCQueryExtra.updateVehicleVariantWithoutVerificationStatus vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
       else RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier transporterConfig req.vehicleVariant vehicle $ DV.castVehicleVariantToVehicleCategory req.vehicleVariant
   pure Success
 
@@ -1187,6 +1190,7 @@ postDriverBulkReviewRCVariant merchantShortId opCity req = do
           RCQueryExtra.updateVehicleVariantWithoutVerificationStatus vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
           void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) vehicleRC.id
         else RCQuery.updateVehicleVariant vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
+      RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
       whenJust mVehicle $ \vehicle -> do
         whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier transporterConfig variant vehicle $ DV.castVehicleVariantToVehicleCategory variant
 

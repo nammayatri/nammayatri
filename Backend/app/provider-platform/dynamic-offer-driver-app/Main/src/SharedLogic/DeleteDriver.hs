@@ -33,6 +33,7 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarOtpReq as AadhaarReq
 import qualified Storage.Queries.AadhaarOtpVerify as AadhaarOtp
 import qualified Storage.Queries.DailyStats as QDailyStats
+import qualified Storage.Queries.DocumentVersionMetadata as QDocumentVersionMetadata
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstin as QDriverGstin
 import qualified Storage.Queries.DriverIdentityInfo as QDriverIdentityInfo
@@ -95,6 +96,7 @@ deleteDriver merchantShortId reqDriverId = do
           QDriverReferral.deleteByDriverId person.id
           QIV.deleteByPersonId person.id
           QImage.deleteByPersonId person.id
+          QDocumentVersionMetadata.deleteByPersonId person.id
           QDBA.deleteById person.id
           QFleetOwnerInformation.deleteByFleetOwnerPersonId person.id
           QPerson.deleteById person.id
@@ -111,6 +113,7 @@ deleteDriver merchantShortId reqDriverId = do
           -- Esq.runTransaction $ do
           QIV.deleteByPersonId person.id
           QImage.deleteByPersonId person.id
+          QDocumentVersionMetadata.deleteByPersonId person.id
           QDriverLicense.deleteByDriverId person.id
           QRCAssociation.deleteByDriverId person.id
           QDriverQuote.deleteByDriverId person.id
@@ -142,6 +145,7 @@ deleteDriver merchantShortId reqDriverId = do
           QDriverReferral.deleteByDriverId person.id
           QIV.deleteByPersonId person.id
           QImage.deleteByPersonId person.id
+          QDocumentVersionMetadata.deleteByPersonId person.id
           QPerson.deleteById person.id
           logTagInfo "deleteOperator : " (show reqDriverId)
         _ -> pure ()

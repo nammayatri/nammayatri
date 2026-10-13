@@ -1,0 +1,1 @@
+CREATE INDEX idx_document_version_metadata_person_doc_type ON atlas_driver_offer_bpp.document_version_metadata USING btree (person_id, document_type);

@@ -2599,6 +2599,7 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
             DVRC.updatedAt = now
           }
   RCQuery.updateByPrimaryKey updRc
+  saveRCVersionMetadata updRc
   QVehicleExtra.updateVehicleFromRcEdit vehicleNoGuard displayCert mbMake mbModel mbColor year
   logTagInfo "dashboard -> fleetVehicleEdit" (rc.id.getId <> " " <> vehicleNoGuard)
   pure Success

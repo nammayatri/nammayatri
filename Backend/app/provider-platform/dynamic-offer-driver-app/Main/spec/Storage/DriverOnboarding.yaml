@@ -613,6 +613,51 @@ Image:
   domainInstance:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <SelfieFetchStatus>
 
+DocumentVersionMetadata:
+  tableName: document_version_metadata
+  # The details a DL/RC version was registered or approved with, keyed by image.documentVersionId.
+  types:
+    VersionMetadata:
+      enum: "DLMetadata DLVersionMetadata, RCMetadata RCVersionMetadata"
+      derive': "Generic, FromJSON, ToJSON, Eq, Show"
+    DLVersionMetadata:
+      driverDateOfBirth: Maybe UTCTime
+      dateOfExpiry: Maybe UTCTime
+      derive': "Generic, FromJSON, ToJSON, Eq, Show"
+    RCVersionMetadata:
+      fitnessExpiry: Maybe UTCTime
+      vehicleVariant: Maybe VehicleVariant
+      vehicleManufacturer: Maybe Text
+      vehicleModel: Maybe Text
+      vehicleModelYear: Maybe Int
+      vehicleColor: Maybe Text
+      derive': "Generic, FromJSON, ToJSON, Eq, Show"
+  fields:
+    documentVersionId: Text
+    documentType: DocumentType
+    personId: Id Person
+    documentNumber: EncryptedHashedField e Text
+    metadata: Maybe VersionMetadata
+  beamType:
+    metadata: Maybe Value
+  fromTType:
+    metadata: Kernel.Utils.JSON.valueToMaybe =<< metadata|E
+  toTType:
+    metadata: Data.Aeson.toJSON <$> metadata|E
+  sqlType:
+    metadata: json
+  constraints:
+    documentVersionId: PrimaryKey
+    personId: SecondaryKey
+  queries:
+    deleteByPersonId:
+      kvFunction: deleteWithKV
+      where: personId
+    deleteByPersonIdAndDocumentType:
+      kvFunction: deleteWithKV
+      where:
+        and: [personId, documentType]
+
 MediaFileDocument:
   tableName: media_file_document
   types:

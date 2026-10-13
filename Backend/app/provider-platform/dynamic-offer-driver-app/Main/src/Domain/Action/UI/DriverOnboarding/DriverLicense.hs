@@ -264,6 +264,8 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
   withDocumentOperationLock "DL" personId.getId runBody
   -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
   groupRegisteredImages (imageId1 : maybeToList imageId2)
+  mbRegisteredDL <- Query.findByImageId imageId1
+  whenJust mbRegisteredDL saveDLVersionMetadata
   return Success
   where
     getImage imageId = do
@@ -440,6 +442,7 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
           then resolveFaceMatchVerificationStatus person documentVerificationConfig imageId1 Nothing dlNumber
           else pure driverLicense.verificationStatus
       Query.upsert driverLicense {Domain.verificationStatus = finalStatus}
+      saveDLVersionMetadata driverLicense
       let docImageInvalid = any (\mbImg -> (mbImg >>= (.verificationStatus)) == Just Documents.INVALID) [image1, image2]
       when docImageInvalid $ Query.updateVerificationStatus Documents.INVALID imageId1
       case person.role of

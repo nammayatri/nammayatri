@@ -82,6 +82,7 @@ import qualified Domain.Types.CommonDocumentData as DCommonDocData
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DocumentVersionMetadata as DDVM
 import qualified Domain.Types.DriverGstin as DGstin
 import qualified Domain.Types.DriverIdentityInfo as DII
 import qualified Domain.Types.DriverInformation as DI
@@ -158,6 +159,7 @@ import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.BusinessLicenseExtra as QBLExtra
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDriverOnboardingDocumentsExtra
+import qualified Storage.Queries.DocumentVersionMetadata as QDVM
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -534,7 +536,10 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       img <- getImage merchant.id imageId
       image <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
       let docType = maybe image.imageType mapDocumentType mbDocType
-      mbMeta <- metadataByImageId docType image
+      -- A version's own details come first: the row and the other sources only know the current version.
+      mbVersionMetadata <- maybe (pure Nothing) QDVM.findByPrimaryKey image.documentVersionId
+      mbVersionMeta <- maybe (pure Nothing) (VDocs.mkVersionMetadata (Just imageId.getId)) mbVersionMetadata
+      mbMeta <- maybe (metadataByImageId docType image) (pure . Just) mbVersionMeta
       let mbFinalMeta = mbMeta <|> (VDocs.imageMetadataToDocumentMetadata docType (Just imageId.getId) =<< image.metadata)
       pure Common.GetDocumentResponse {imageBase64 = Just img, status = castVerificationStatus <$> image.verificationStatus, createdAt = Just image.createdAt, commonDocumentData = Nothing, rejectReason = Nothing, metadata = A.toJSON <$> mbFinalMeta}
     Common.DocumentEntity -> do
@@ -1417,6 +1422,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       else rc.docsVerificationStatus
                 }
         QRC.updateByPrimaryKey udpatedRC
+        SDO.saveRCVersionMetadata udpatedRC
         forM_ (imageId' : maybeToList mbImageId2') $ \img ->
           QImage.updateVerificationStatusByIdAndType VALID img DVC.VehicleRegistrationCertificate
         QImage.updateRcIdByIds (Just rc.id.getId) (imageId' : maybeToList mbImageId2')
@@ -1495,6 +1501,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.rcVehicleType = Nothing
                     }
             QRC.create newRC
+            SDO.saveRCVersionMetadata newRC
             -- Create driver RC association so the RC is linked to the driver
             assocId <- generateGUID
             let driverRCAssoc =
@@ -1950,6 +1957,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
         deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
         QDL.upsert updatedDL
+        SDO.saveDLVersionMetadata updatedDL
         forM_ (imageId1' : maybeToList mbImageId2') $ \img ->
           QImage.updateVerificationStatusByIdAndType VALID img DVC.DriverLicense
         -- Create reminders for DL when it's updated
@@ -1992,6 +2000,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
                 }
         deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
         QDL.create newDL
+        SDO.saveDLVersionMetadata newDL
         forM_ (imageId1' : maybeToList mbImageId2') $ \img ->
           QImage.updateVerificationStatusByIdAndType VALID img DVC.DriverLicense
         createReminder
@@ -2755,7 +2764,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         Just dl -> do
           driverDlImages <- QImage.findImagesByPersonAndType Nothing Nothing merchantId clickedImage.personId DVC.DriverLicense
           olderApprovedVersion docRowHoldingClickedImages driverDlImages >>= \case
-            Just (front, back) -> False <$ QDL.updateDocImagesAndMarkValidById dl.id front back -- row moves to it, stays VALID
+            Just (front, back) -> False <$ moveDLToVersion dl front back -- row moves to it, stays VALID
             Nothing -> True <$ QDL.updateDocImageAndStatusById dl.id clickedImage.id INVALID reason -- nothing to fall back to
 
     -- Same shape for the RC row; its images are found by rcId (set at register/approve).
@@ -2769,8 +2778,58 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         Just rc -> do
           vehicleRcImages <- QImage.findImagesByRCAndType merchantId (Just rc.id.getId) DVC.VehicleRegistrationCertificate Nothing
           olderApprovedVersion docRowHoldingClickedImages vehicleRcImages >>= \case
-            Just (front, back) -> False <$ QRC.updateDocImagesAndMarkValidById rc.id front back
+            Just (front, back) -> False <$ moveRCToVersion rc front back
             Nothing -> True <$ QRC.updateDocImageAndStatusById rc.id clickedImage.id INVALID reason
+
+    -- The row takes the older version's images and the details that version was approved with. If another
+    -- driver's DL now holds that version's number, approving it would be refused, so the details stay as they are.
+    moveDLToVersion :: DDL.DriverLicense -> Id DImage.Image -> Maybe (Id DImage.Image) -> Flow ()
+    moveDLToVersion dl front back =
+      SDO.findVersionMetadata front >>= \case
+        Just versionMetadata
+          | Just (DDVM.DLMetadata dlMetadata) <- versionMetadata.metadata -> do
+            versionNumber <- decrypt versionMetadata.documentNumber
+            numberHolder <- QDL.findByDLNumber versionNumber merchantId
+            if maybe False ((/= dl.driverId) . (.driverId)) numberHolder
+              then do
+                logWarning $ "DL " <> dl.id.getId <> " keeps its details: the restored version's number belongs to another driver"
+                QDL.updateDocImagesAndMarkValidById dl.id front back
+              else do
+                let restoredDL =
+                      dl
+                        { DDL.documentImageId1 = front,
+                          DDL.documentImageId2 = back,
+                          DDL.licenseNumber = versionMetadata.documentNumber,
+                          DDL.driverDob = dlMetadata.driverDateOfBirth,
+                          DDL.licenseExpiry = fromMaybe dl.licenseExpiry dlMetadata.dateOfExpiry,
+                          DDL.verificationStatus = VALID,
+                          DDL.rejectReason = Nothing
+                        }
+                QDL.updateByPrimaryKey restoredDL
+        _ -> QDL.updateDocImagesAndMarkValidById dl.id front back
+
+    -- Same for the RC row, except its number: the number names the vehicle, and changing it also needs the
+    -- vehicle update a fleet vehicle edit makes.
+    moveRCToVersion :: DRC.VehicleRegistrationCertificate -> Id DImage.Image -> Maybe (Id DImage.Image) -> Flow ()
+    moveRCToVersion rc front back =
+      SDO.findVersionMetadata front >>= \case
+        Just versionMetadata
+          | Just (DDVM.RCMetadata rcMetadata) <- versionMetadata.metadata -> do
+            let restoredRC =
+                  rc
+                    { DRC.documentImageId = front,
+                      DRC.documentImageId2 = back,
+                      DRC.fitnessExpiry = fromMaybe rc.fitnessExpiry rcMetadata.fitnessExpiry,
+                      DRC.vehicleVariant = rcMetadata.vehicleVariant,
+                      DRC.vehicleManufacturer = rcMetadata.vehicleManufacturer,
+                      DRC.vehicleModel = rcMetadata.vehicleModel,
+                      DRC.vehicleModelYear = rcMetadata.vehicleModelYear,
+                      DRC.vehicleColor = rcMetadata.vehicleColor,
+                      DRC.verificationStatus = VALID,
+                      DRC.rejectReason = Nothing
+                    }
+            QRC.updateByPrimaryKey restoredRC
+        _ -> QRC.updateDocImagesAndMarkValidById rc.id front back
 
     -- Rejects every image of the clicked version. Images uploaded before versioning have no version id;
     -- for them the row's pair is the version, when the row holds the clicked image.
