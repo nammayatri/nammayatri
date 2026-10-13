@@ -19,7 +19,7 @@
 -- pickupStallMonitoringConfig and skips its distance maths for scheduled rides. Reads
 -- LTS directly each tick rather than waiting for bulkLocPickupUpdate, which only fires
 -- once ~100 points have piled up.
-module SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (checkBetterDriverSearchProximity, betterDriverSearchProximityTickIntervalSec) where
+module SharedLogic.Allocator.Jobs.CheckBetterDriverSearchProximity (checkBetterDriverSearchProximity, betterDriverSearchProximityInitialDelaySec) where
 
 import qualified AWS.S3 as S3
 import qualified Data.HashMap.Strict as HMS
@@ -53,9 +53,36 @@ import qualified Storage.Queries.SearchTry as QST
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 
--- | How often to re-check while a stand-by search is active. Not city-configurable.
-betterDriverSearchProximityTickIntervalSec :: NominalDiffTime
-betterDriverSearchProximityTickIntervalSec = 10
+betterDriverSearchProximityInitialDelaySec :: NominalDiffTime
+betterDriverSearchProximityInitialDelaySec = 10
+
+proximityCheckFloorSec, proximityCheckCapSec :: Double
+proximityCheckFloorSec = 5
+proximityCheckCapSec = 50
+
+proximityMinSpeedMps, proximityMaxSpeedMps, proximityFallbackSpeedMps :: Double
+proximityMinSpeedMps = 2
+proximityMaxSpeedMps = 25
+proximityFallbackSpeedMps = 8
+
+nextCheckDelay :: Double -> Maybe Double -> NominalDiffTime
+nextCheckDelay distanceToAbortRadius mbObservedSpeed =
+  let speedMps = max proximityMinSpeedMps . min proximityMaxSpeedMps $ fromMaybe proximityFallbackSpeedMps mbObservedSpeed
+      secondsToReach = distanceToAbortRadius / speedMps
+   in realToFrac . max proximityCheckFloorSec $ min proximityCheckCapSec secondsToReach
+
+observedSpeedMps :: [LT.LocationUpdate] -> Maybe Double
+observedSpeedMps locs = do
+  (prev, curr) <- lastTwo locs
+  t1 <- prev.ts
+  t2 <- curr.ts
+  let elapsedSec = fromIntegral (t2 - t1) :: Double
+      movedMeters = realToFrac (distanceBetweenInMeters (LatLong prev.lat prev.lon) (LatLong curr.lat curr.lon)) :: Double
+  if elapsedSec > 0 then Just (movedMeters / elapsedSec) else Nothing
+  where
+    lastTwo [a, b] = Just (a, b)
+    lastTwo (_ : xs) = lastTwo xs
+    lastTwo [] = Nothing
 
 checkBetterDriverSearchProximity ::
   ( EsqDBFlow m r,
@@ -115,9 +142,9 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
       rideId = jobData.rideId
       driverId = jobData.driverId
       merchantId = jobData.merchantId
-      reschedule = do
+      rescheduleIn waitFor = do
         now <- getCurrentTime
-        return $ ReSchedule (addUTCTime betterDriverSearchProximityTickIntervalSec now)
+        return $ ReSchedule (addUTCTime waitFor now)
   mbSearchTry <- QST.findById searchTryId
   case mbSearchTry of
     Nothing -> return $ Terminate "Stand-by search try not found"
@@ -135,7 +162,7 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
               Just abortRadius -> do
                 driverLocationResp <- LTSF.pickupDriverLocation rideId merchantId driverId
                 case lastMaybe driverLocationResp.loc of
-                  Nothing -> reschedule -- no fresh pickup-leg location yet; try again next tick
+                  Nothing -> rescheduleIn betterDriverSearchProximityInitialDelaySec -- no fresh pickup-leg location yet
                   Just latest -> do
                     let pickupLoc = getCoordinates booking.fromLocation
                         distance = distanceBetweenInMeters (LatLong latest.lat latest.lon) pickupLoc
@@ -143,7 +170,7 @@ checkBetterDriverSearchProximity Job {id, jobInfo} = withLogTag ("JobId-" <> id.
                       then do
                         QST.cancelBetterDriverSearchByBookingId bookingId.getId
                         return Complete
-                      else reschedule
+                      else rescheduleIn $ nextCheckDelay (realToFrac (distance - abortRadius)) (observedSpeedMps driverLocationResp.loc)
   where
     lastMaybe [] = Nothing
     lastMaybe [x] = Just x
