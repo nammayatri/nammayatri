@@ -39,6 +39,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     disabledReasonFlag :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
+    docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     enableCashRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enabled :: B.C f Kernel.Prelude.Bool,
     fleetDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

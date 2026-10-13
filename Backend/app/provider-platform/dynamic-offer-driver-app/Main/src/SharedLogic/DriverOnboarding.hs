@@ -577,6 +577,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
           if transporterConfig.enableManualDocumentStatusCheck == Just True
             then Just DDVS.ADMIN_PENDING
             else Nothing,
+        docsVerificationStatusUpdatedAt = Nothing,
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
         rejectReason = mbRejectReason,

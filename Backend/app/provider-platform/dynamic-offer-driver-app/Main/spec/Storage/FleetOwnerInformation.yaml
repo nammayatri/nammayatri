@@ -62,6 +62,7 @@ FleetOwnerInformation:
     isBlockedForReferralPayout: Maybe Bool
     payoutRegistrationOrderId: Maybe Text
     docsVerificationStatus: Maybe DocsVerificationStatus
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Set by the onboarding recompute whenever docsVerificationStatus changes; the onboarding lists sort by it.
     address: Maybe Text
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType

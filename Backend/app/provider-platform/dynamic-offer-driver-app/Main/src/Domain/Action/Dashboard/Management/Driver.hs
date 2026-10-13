@@ -479,6 +479,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
         onboardingDate = driverInformation.lastEnabledOn,
         createdAt = person.createdAt,
         updatedAt = person.updatedAt,
+        docsVerificationStatusUpdatedAt = driverInformation.docsVerificationStatusUpdatedAt,
         approved = driverInformation.approved,
         onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
         recentFleetInfo = mbRecentFleetInfo,

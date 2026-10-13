@@ -4135,7 +4135,8 @@ getDriverFleetOwnerList merchantShortId opCity mbApprovalStatus mbBlocked mbDocs
           mobileNumber = mobileNumber,
           mobileCountryCode = mobileCountryCode,
           docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
-          createdAt = createdAt
+          createdAt = createdAt,
+          docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt
         }
 
 postDriverFleetAccessSelect :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Bool -> Bool -> Flow APISuccess

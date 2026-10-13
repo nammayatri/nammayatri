@@ -247,6 +247,29 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
     ]
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
+-- | Stamp docsVerificationStatusUpdatedAt on the RCs whose docsVerificationStatus differs from the given one.
+--   Call it right before updateDocsVerificationStatusByCertificateNumberHash, which writes the status on every
+--   recompute, so the date moves only on a real change. `IS NULL` is listed since SQL's NULL <> x is never true.
+updateDocsVerificationStatusUpdatedAtByCertificateNumberHash ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe DDVS.DocsVerificationStatus ->
+  DbHash ->
+  m ()
+updateDocsVerificationStatusUpdatedAtByCertificateNumberHash docsVerificationStatus certificateHash = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now),
+      Se.Set BeamVRC.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
+          Se.Or
+            [ Se.Is BeamVRC.docsVerificationStatus $ Se.Eq Nothing,
+              Se.Is BeamVRC.docsVerificationStatus $ Se.Not (Se.Eq docsVerificationStatus)
+            ]
+        ]
+    ]
+
 -- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
 --   Downgrading `verified` to False also revokes `approved` (re-approval required), mirroring the driver side.
 updateVerifiedByCertificateNumberHash ::

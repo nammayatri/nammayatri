@@ -236,3 +236,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN latest_sch
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN enable_cash_ride boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN docs_verification_status_updated_at timestamp with time zone ;

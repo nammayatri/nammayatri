@@ -80,7 +80,8 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
                   email = person.email,
                   docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus,
                   disabledReasonFlag = fleetOwnerInfo.disabledReasonFlag,
-                  createdAt = Just fleetOwnerInfo.createdAt
+                  createdAt = Just fleetOwnerInfo.createdAt,
+                  docsVerificationStatusUpdatedAt = fleetOwnerInfo.docsVerificationStatusUpdatedAt
                 }
 
     personName person@Person.Person {..} =

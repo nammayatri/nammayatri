@@ -7,23 +7,25 @@
 --   semi-joins, so they cost a join without widening the row or multiplying it), and the tables
 --   needed only for the response are fetched afterwards by id in one batch each.
 --
---   Driving table, by filter set:
+--   Driving table, by filter set (⋈ DI = driver_information joined by primary key, carrying its
+--   filters, because the grid orders by its docsVerificationStatusUpdatedAt):
 --
 --   > no filter                        DI     : Person, FDA, Vehicle
---   > phoneNumber (exact)              Person : DI, FDA, Vehicle
---   >   + approval                     Person . DI : FDA, Vehicle
---   >   + approval + fleetOwnerId      Person . FDA . DI : Vehicle
---   >   + fleetOwnerId                 Person . FDA : DI, Vehicle
---   > name (partial)                   Person : DI, FDA, Vehicle
---   >   + approval                     Person . DI : FDA, Vehicle
---   > vehicleNumber (exact)            Vehicle : Person, DI, FDA
---   >   + approval                     Vehicle . DI : Person, FDA
+--   > phoneNumber (exact)              Person ⋈ DI : FDA, Vehicle
+--   >   + approval                     Person ⋈ DI : FDA, Vehicle
+--   >   + approval + fleetOwnerId      Person ⋈ DI . FDA : Vehicle
+--   >   + fleetOwnerId                 Person ⋈ DI . FDA : Vehicle
+--   > name (partial)                   Person ⋈ DI : FDA, Vehicle
+--   >   + approval                     Person ⋈ DI : FDA, Vehicle
+--   > vehicleNumber (exact)            Vehicle ⋈ DI : Person, FDA
+--   >   + approval                     Vehicle ⋈ DI : Person, FDA
 --   > approval                         DI     : Person, FDA, Vehicle
 --   >   + fleetOwnerId                 DI . FDA : Person, Vehicle
---   > fleetOwnerId                     FDA    : Person, DI, Vehicle
+--   > fleetOwnerId                     FDA ⋈ DI : Person, Vehicle
 --
 --   The merchant / operating-city scope is applied to whichever table drives, which is what lets
---   the per-table (city, ...) indexes be used. Ordering follows the driving table's createdAt.
+--   the per-table (city, ...) indexes be used. Ordering is driver_information's
+--   docsVerificationStatusUpdatedAt (newest first, NULLs last), then the driving table's createdAt.
 module Storage.Queries.OnboardingList.DriverList
   ( DriverListFilters (..),
     emptyDriverListFilters,
@@ -101,8 +103,7 @@ hasDriverInfoFilter f =
     || isJust f.dlfOnboardingAs
     || isFleetSeeker f
 
--- from / to are person.createdAt, so a date window keeps Person in the filter set and therefore
--- keeps the ordering on the column the grid has always sorted by.
+-- from / to are person.createdAt, so a date window keeps Person in the filter set.
 hasPersonFilter :: DriverListFilters -> Bool
 hasPersonFilter f = isJust f.dlfPhoneHash || isJust f.dlfNameSearch || isJust f.dlfFrom || isJust f.dlfTo
 
@@ -183,18 +184,19 @@ driverIdsQuery ::
   Merchant ->
   DMOC.MerchantOperatingCity ->
   DriverListFilters ->
-  B.Q Postgres BeamCommon.AtlasDB s (B.QGenExpr B.QValueContext Postgres s Text, B.QGenExpr B.QValueContext Postgres s UTCTime)
+  B.Q Postgres BeamCommon.AtlasDB s (B.QGenExpr B.QValueContext Postgres s Text, B.QGenExpr B.QValueContext Postgres s (Maybe UTCTime), B.QGenExpr B.QValueContext Postgres s UTCTime)
 driverIdsQuery now merchant opCity f = case drivingTable f of
   DriveVehicle -> do
     vehicle <- B.filter_ (vehicleMatches merchant opCity f) $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
-    applySecondary vehicle.driverId
-    pure (vehicle.driverId, vehicle.createdAt)
+    driverInfo <- joinDriverInfo vehicle.driverId
+    whenFilter (isJust f.dlfFleetOwnerId) $ existsFleetAssoc vehicle.driverId
+    pure (vehicle.driverId, driverInfo.docsVerificationStatusUpdatedAt, vehicle.createdAt)
   DrivePerson -> do
     person <- B.filter_ (personMatches merchant opCity f) $ B.all_ (BeamCommon.person BeamCommon.atlasDB)
-    whenFilter (hasDriverInfoFilter f) $ existsDriverInfo person.id
+    driverInfo <- joinDriverInfo person.id
     whenFilter (isJust f.dlfFleetOwnerId) $ existsFleetAssoc person.id
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle person.id
-    pure (person.id, person.createdAt)
+    pure (person.id, driverInfo.docsVerificationStatusUpdatedAt, person.createdAt)
   DriveDriverInfo -> do
     driverInfo <-
       B.filter_ (\di -> driverInfoScoped merchant opCity di B.&&. driverInfoMatches f di) $
@@ -203,24 +205,20 @@ driverIdsQuery now merchant opCity f = case drivingTable f of
     whenFilter (isJust f.dlfFleetOwnerId) $ existsFleetAssoc driverInfo.driverId
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle driverInfo.driverId
     whenFilter (isFleetSeeker f) $ B.not_ (existsActiveFleetAssoc driverInfo.driverId)
-    pure (driverInfo.driverId, driverInfo.createdAt)
+    pure (driverInfo.driverId, driverInfo.docsVerificationStatusUpdatedAt, driverInfo.createdAt)
   DriveFleetAssoc -> do
     fda <- B.filter_ (fleetAssocMatches now f) $ B.all_ (BeamCommon.fleetDriverAssociation BeamCommon.atlasDB)
+    driverInfo <- joinDriverInfo fda.driverId
     whenFilter (isJust f.dlfVehicleNumber) $ existsVehicle fda.driverId
-    pure (fda.driverId, fda.createdAt)
+    pure (fda.driverId, driverInfo.docsVerificationStatusUpdatedAt, fda.createdAt)
   where
     whenFilter cond q = when cond (B.guard_' (B.sqlBool_ q))
-    applySecondary driverId = do
-      whenFilter (hasDriverInfoFilter f) $ existsDriverInfo driverId
-      whenFilter (isJust f.dlfFleetOwnerId) $ existsFleetAssoc driverId
+    joinDriverInfo driverId =
+      B.join_ (BeamCommon.driverInformation BeamCommon.atlasDB) (\di -> di.driverId B.==. driverId B.&&. driverInfoMatches f di)
     existsVehicle driverId =
       B.exists_ $
         B.filter_ (\v -> v.driverId B.==. driverId B.&&. vehicleMatches merchant opCity f v) $
           B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
-    existsDriverInfo driverId =
-      B.exists_ $
-        B.filter_ (\di -> di.driverId B.==. driverId B.&&. driverInfoMatches f di) $
-          B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
     existsFleetAssoc driverId =
       B.exists_ $
         B.filter_ (\fda -> fda.driverId B.==. driverId B.&&. fleetAssocMatches now f fda) $
@@ -251,9 +249,9 @@ findDrivers merchant opCity limitVal offsetVal f = do
         B.select $
           B.limit_ (fromIntegral limitVal) $
             B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\(driverId, createdAt) -> (B.desc_ createdAt, B.asc_ driverId)) $
+              B.orderBy_ (\(driverId, docsVerificationStatusUpdatedAt, createdAt) -> (B.nullsLast_ (B.desc_ docsVerificationStatusUpdatedAt), B.desc_ createdAt, B.asc_ driverId)) $
                 driverIdsQuery now merchant opCity f
-  let driverIds = either (const []) (map fst) result
+  let driverIds = either (const []) (map (\(driverId, _, _) -> driverId)) result
   if null driverIds
     then pure []
     else do

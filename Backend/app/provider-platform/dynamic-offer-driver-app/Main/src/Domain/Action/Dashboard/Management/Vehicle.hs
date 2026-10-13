@@ -126,6 +126,7 @@ buildVehicleListItem fleetAssocByRc driverAssocByRc personById fleetOwnerInfoByI
         verified = rc.verified,
         approved = rc.approved,
         createdAt = rc.createdAt,
+        docsVerificationStatusUpdatedAt = rc.docsVerificationStatusUpdatedAt,
         recentFleetInfo,
         linkedDriverInfo,
         exemptParkingFee = mbLinkedVehicle >>= (.exemptParkingFee)

@@ -610,6 +610,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
               if transporterConfig.enableManualDocumentStatusCheck == Just True
                 then Just DDVS.ADMIN_PENDING
                 else Nothing,
+            docsVerificationStatusUpdatedAt = Nothing,
             dateOfRegistration = input.dateOfRegistration,
             vehicleModelYear = input.vehicleModelYear,
             vehicleDoors = mbVehicleDoors,

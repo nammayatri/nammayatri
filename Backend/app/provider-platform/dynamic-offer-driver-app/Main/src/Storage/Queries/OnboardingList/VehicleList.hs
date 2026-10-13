@@ -1,4 +1,5 @@
--- | Backing queries for the city-wide vehicle onboarding grid.
+-- | Backing queries for the city-wide vehicle onboarding grid. Ordered by docsVerificationStatusUpdatedAt,
+--   newest first with NULLs last, then createdAt, with id as tiebreaker so paging is stable.
 module Storage.Queries.OnboardingList.VehicleList
   ( findVehicles,
   )
@@ -38,7 +39,7 @@ findVehicles merchantId merchantOpCityId limitVal offsetVal mbFleetOwnerId mbCer
         B.select $
           B.limit_ (fromIntegral limitVal) $
             B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\rc -> (B.desc_ rc.createdAt, B.asc_ rc.id)) $
+              B.orderBy_ (\rc -> (B.nullsLast_ (B.desc_ rc.docsVerificationStatusUpdatedAt), B.desc_ rc.createdAt, B.asc_ rc.id)) $
                 B.filter_
                   ( \rc ->
                       rc.merchantId B.==. B.val_ (Just merchantId.getId)

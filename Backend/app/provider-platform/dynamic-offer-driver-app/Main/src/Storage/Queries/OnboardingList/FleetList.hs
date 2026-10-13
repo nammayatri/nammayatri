@@ -1,7 +1,8 @@
 -- | The fleet owner onboarding grid query.
 --
 --   Joins person so the caller does not have to re-read the same rows by id, and orders by
---   createdAt with fleetOwnerPersonId as tiebreaker so paging is stable.
+--   docsVerificationStatusUpdatedAt (newest first, NULLs last), then createdAt, with
+--   fleetOwnerPersonId as tiebreaker so paging is stable.
 module Storage.Queries.OnboardingList.FleetList (findFleetOwners) where
 
 import Data.Text (toLower)
@@ -46,7 +47,7 @@ findFleetOwners merchantOperatingCityId mbFleetType mbDocsVerificationStatus mbF
         B.select $
           B.limit_ (fromIntegral $ fromMaybe 10 mbLimit) $
             B.offset_ (fromIntegral $ fromMaybe 0 mbOffset) $
-              B.orderBy_ (\(fleetOwnerInfo, _) -> (B.desc_ fleetOwnerInfo.createdAt, B.asc_ fleetOwnerInfo.fleetOwnerPersonId)) $
+              B.orderBy_ (\(fleetOwnerInfo, _) -> (B.nullsLast_ (B.desc_ fleetOwnerInfo.docsVerificationStatusUpdatedAt), B.desc_ fleetOwnerInfo.createdAt, B.asc_ fleetOwnerInfo.fleetOwnerPersonId)) $
                 B.filter_'
                   ( \(fleetOwnerInfo, person) ->
                       fleetOwnerInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOperatingCityId)
