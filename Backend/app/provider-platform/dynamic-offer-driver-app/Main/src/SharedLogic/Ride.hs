@@ -147,7 +147,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       throwError $
         InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
     whenJust mbAccount $ \account -> do
-      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+      Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 50000 $ do
         mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
         otherPrepaidOfferHolds <- getPrepaidOfferHoldTotalExcluding ownerId mbSearchTryId
         existingBookingHold <- maybe 0 (.amount) <$> findPendingPrepaidHoldByReference account.id prepaidRideDebitReferenceType booking.id.getId
@@ -218,7 +218,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
       Metrics.observePickupDistanceMeters merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) "pre_ride" (realToFrac pickupDistanceVal)
   QRideD.create rideDetails
   whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
-  Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
+  Redis.withWaitAndLockRedisWithTimeout (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 50000 $ do
     when (not booking.isScheduled) $ do
       whenJust (booking.toLocation) $ \toLoc -> do
         QDI.updateTripCategoryAndTripEndLocationByDriverId (cast driver.id) (Just ride.tripCategory) (Just (Maps.LatLong toLoc.lat toLoc.lon))
@@ -369,14 +369,14 @@ releaseBookingHolds booking driverId mbFleetOwnerId reason failureLogTag = do
     when (prepaidEnabled || walletEnabled) $ do
       let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
           mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
-      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
+      Redis.withWaitAndLockRedisWithTimeout (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 50000 $ do
         voidPrepaidHold
           counterpartyType
           ownerId
           booking.id.getId
           reason
           mbVehicleCategory
-      Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ownerId) 10 10 $
+      Redis.withWaitAndLockRedisWithTimeout (makeWalletRunningBalanceLockKey ownerId) 10 10 50000 $
         voidWalletHoldByReference counterpartyType ownerId booking.id.getId reason
   case result of
     Left (e :: SomeException) ->
@@ -411,7 +411,7 @@ getPayoutDetailsForRide rideId payoutAmount = do
   case mbRcIdText of
     Nothing -> pure (Nothing, payoutAmount, Nothing)
     Just rcIdText -> do
-      Redis.withLockRedisAndReturnValue (mkVehicleBalanceLockKey rcIdText) 10 $ do
+      Redis.withWaitAndLockRedis (mkVehicleBalanceLockKey rcIdText) 10 50000 $ do
         mbBankAccount <- QDRPB.findByRcId (Id rcIdText :: Id DVRC.VehicleRegistrationCertificate)
         case mbBankAccount of
           Nothing -> pure (Nothing, payoutAmount, Nothing)
@@ -466,7 +466,7 @@ safeRevertVehicleBalanceForPayout pr = do
   whenJust pr.payoutFee $ \fee -> do
     mbRcIdText <- getRcIdForRide (Id pr.entityId)
     whenJust mbRcIdText $ \rcIdText -> do
-      Redis.withLockRedis (mkVehicleBalanceLockKey rcIdText) 10 $ do
+      Redis.withWaitAndLockRedis (mkVehicleBalanceLockKey rcIdText) 10 50000 $ do
         let redisKey = mkRevertVehicleBalanceRedisKey pr.id
         alreadyReverted <- Redis.get redisKey -- Added this because webhook might call this revert function more then once times
         case (alreadyReverted :: Maybe Bool) of
@@ -493,7 +493,7 @@ safeApplyVehicleBalanceForPayout pr = do
   whenJust pr.payoutFee $ \fee -> do
     mbRcIdText <- getRcIdForRide (Id pr.entityId)
     whenJust mbRcIdText $ \rcIdText -> do
-      Redis.withLockRedis (mkVehicleBalanceLockKey rcIdText) 10 $ do
+      Redis.withWaitAndLockRedis (mkVehicleBalanceLockKey rcIdText) 10 50000 $ do
         let redisKey = mkRevertVehicleBalanceRedisKey pr.id
         wasReverted <- Redis.get redisKey
         case (wasReverted :: Maybe Bool) of
@@ -794,7 +794,7 @@ updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
     Nothing -> pure True
   if lockAcquired
     then do
-      Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey personId.getId) 4 4 $ do
+      Redis.withWaitAndLockRedisWithTimeout (isOnRideWithAdvRideConditionKey personId.getId) 4 4 50000 $ do
         hasAdvancedRide <- QDI.findById (cast personId) <&> maybe False (.hasAdvanceBooking)
         unless hasAdvancedRide $ QDI.updateOnRideAndTripEndLocationByDriverId (cast personId) False Nothing
         QDI.updateHasAdvancedRide (cast personId) False

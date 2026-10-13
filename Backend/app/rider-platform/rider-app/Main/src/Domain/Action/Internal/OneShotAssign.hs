@@ -124,7 +124,7 @@ oneShotAssign apiKey req = do
   -- be successfully creating (its retry wrapper only retries connection errors).
   -- args: lock TTL 60s (must outlive processing), wait budget 30s (a duplicate
   -- waits this long before giving up; the final check below then answers an error).
-  Redis.withWaitOnLockRedisWithExpiry (oneShotAssignLockKey req.transactionId) 60 30 $ do
+  Redis.withWaitAndLockRedisWithTimeout (oneShotAssignLockKey req.transactionId) 60 30 50000 $ do
     -- Master reads throughout: these are read-your-own-write checks on a row this
     -- same flow just created; a stale replica answer here would fail a successful
     -- assignment and trigger the BPP's cancel path.

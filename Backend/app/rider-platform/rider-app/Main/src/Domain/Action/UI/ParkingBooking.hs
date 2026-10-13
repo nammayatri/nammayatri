@@ -143,7 +143,7 @@ postMultimodalParkingMarshalCreate mbApiKey req = do
   mobileNumberHash <- getDbHash req.mobileNumber
   let lockKey = "marshalPersonCreate:" <> merchantOpCity.merchantId.getId <> ":" <> Kernel.Prelude.show mobileNumberHash
   -- Serialize concurrent requests for the same (mobile, merchant) so the find-or-create below is atomic
-  Redis.withLockRedisAndReturnValue lockKey 10 $ do
+  Redis.withWaitAndLockRedis lockKey 10 50000 $ do
     mbExisting <- QPerson.findByMobileNumberAndMerchantId req.mobileCountryCode mobileNumberHash merchantOpCity.merchantId
     case mbExisting of
       Just existing -> return $ API.Types.UI.ParkingBooking.MarshalPersonResp {customerId = existing.id}

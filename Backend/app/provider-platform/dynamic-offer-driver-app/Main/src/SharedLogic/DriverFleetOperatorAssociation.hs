@@ -345,7 +345,7 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
   where
     changeDriverOperator merchant' moc' transporterConfig subject newOperator = do
       let personId = subject.id
-      Redis.withLockRedis (driverOperatorAssociationLockKey personId) 10 $ do
+      Redis.withWaitAndLockRedis (driverOperatorAssociationLockKey personId) 10 50000 $ do
         mbActiveAssociation <- QDOA.findByDriverId personId True
         case mbActiveAssociation of
           Just old | old.operatorId == newOperator.id.getId -> pure ()
@@ -359,7 +359,7 @@ performAssociationChange merchant merchantOpCity requestorId subjectId operatorC
 
     changeFleetOperator merchant' moc' transporterConfig subject newOperator = do
       let fleetOwnerId = subject.id.getId
-      Redis.withLockRedis (fleetOperatorAssociationLockKey fleetOwnerId) 10 $ do
+      Redis.withWaitAndLockRedis (fleetOperatorAssociationLockKey fleetOwnerId) 10 50000 $ do
         mbActiveAssociation <- QFOA.findActiveByFleetOwnerId subject.id
         case mbActiveAssociation of
           Just old | old.operatorId == newOperator.id.getId -> pure ()
