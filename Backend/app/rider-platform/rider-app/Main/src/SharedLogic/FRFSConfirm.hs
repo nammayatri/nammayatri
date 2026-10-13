@@ -328,7 +328,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                   let passResolutionTime = case booking.startTime of
                         Just startTime | startTime > now -> startTime
                         _ -> now
-                  mbResolved <- resolvePassForFare rider quote.vehicleType passResolutionTime mbNewServiceTierType fareParameters mbPurchasedPassPaymentId
+                  mbResolved <- resolvePassForFare rider quote.vehicleType passResolutionTime mbNewServiceTierType fareParameters mbPurchasedPassPaymentId (quote.fromStationCode, quote.toStationCode)
                   -- Must run before the updates below: a throw after them leaves totalPrice at the
                   -- discounted fare on a booking that never received the pass.
                   whenJust (snd <$> mbResolved) $ \newPassOption -> do
@@ -389,8 +389,9 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       Maybe Spec.ServiceTierType ->
       FRFSUtils.FRFSFareParameters ->
       Maybe (Id DPPP.PurchasedPassPayment) ->
+      (Text, Text) ->
       m (Maybe (FRFSPassOverride.ApplicablePass, FRFSPassOverride.PassOption))
-    resolvePassForFare rider vehicleType bookingStartTime mbServiceTierType fareParameters mbPassPaymentId = do
+    resolvePassForFare rider vehicleType bookingStartTime mbServiceTierType fareParameters mbPassPaymentId (fromStopCode, toStopCode) = do
       let mbAdultUnitPriceForOverride =
             find (\priceItem -> priceItem.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)
       case (mbPassPaymentId, mbAdultUnitPriceForOverride) of
@@ -408,6 +409,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
               mbServiceTierType
               adultUnitPriceForOverride
               (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems)
+              (\applicablePasses -> FRFSUtils.passLegStops integratedBppConfig applicablePasses fromStopCode toStopCode)
               paymentId
           when (isNothing resolved) $
             throwError (InvalidRequest $ "Selected pass is not applicable to this booking, purchasedPassPaymentId=" <> paymentId.getId)
@@ -465,7 +467,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
           pure (fromMaybe now mbLegDepartureTime)
         _ -> pure (fromMaybe now mbLegDepartureTime)
 
-      mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId'
+      mbResolved <- resolvePassForFare rider quote'.vehicleType bookingStartTime mbServiceTierType fareParameters mbPurchasedPassPaymentId' (quote'.fromStationCode, quote'.toStationCode)
 
       mbTripWindow <- case ((,) <$> (mbScheduledStartTime <|> mbLegDepartureTime) <*> mbScheduledEndTime) of
         Just window -> pure $ Just window
