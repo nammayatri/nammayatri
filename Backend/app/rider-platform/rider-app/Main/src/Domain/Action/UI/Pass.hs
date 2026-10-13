@@ -818,7 +818,10 @@ mkFrfsOverrideConfig benefit =
       fixedApplicable = benefit.fixedSaving >>= \f -> if f.enabled == Just True then Just f.applicableValue else Nothing,
       maximumTripCount = benefit.maximumTripCount,
       unlimitedTripCount = benefit.unlimitedTripCount == Just True,
-      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
+      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride,
+      enforceStopPair = benefit.enforceStopPair,
+      allowRoundTrip = benefit.allowRoundTrip,
+      allowCheaperStopPairs = benefit.allowCheaperStopPairs
     }
 
 findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
