@@ -238,19 +238,6 @@ updateOffersFraudCheckFailureReason rbId failureReason = do
       Se.Is BeamB.offersFraudCheckFailureReason (Se.Eq Nothing)
     ]
 
-findLatestCompletedByRiderIdBefore :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> UTCTime -> Int -> m [Booking]
-findLatestCompletedByRiderIdBefore (Id riderId) before limit =
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is BeamB.riderId $ Se.Eq riderId,
-          Se.Is BeamB.status $ Se.Eq DRB.COMPLETED,
-          Se.Is BeamB.createdAt $ Se.LessThan before
-        ]
-    ]
-    (Se.Desc BeamB.createdAt)
-    (Just limit)
-    Nothing
-
 findLatestSelfAndPartyBookingByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
 findLatestSelfAndPartyBookingByRiderId (Id riderId) =
   do

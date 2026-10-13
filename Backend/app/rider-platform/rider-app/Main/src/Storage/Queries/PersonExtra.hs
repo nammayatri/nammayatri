@@ -531,6 +531,27 @@ updateTotalRidesCount personId totalRidesCount = do
       ]
       [Se.Is BeamP.id (Se.Eq (getId personId))]
 
+-- ride count and last ride are set together at ride end, in one query
+updateRideCompletion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe Int -> Maybe UTCTime -> m ()
+updateRideCompletion personId mbTotalRidesCount mbRideEndTime =
+  unless (isNothing mbTotalRidesCount && isNothing mbRideEndTime) $ do
+    now <- getCurrentTime
+    updateOneWithKV
+      ( [Se.Set BeamP.totalRidesCount (Just count') | Just count' <- [mbTotalRidesCount]]
+          <> concat [[Se.Set BeamP.lastRideEndTime (Just endTime), Se.Set BeamP.lastRideRating Nothing] | Just endTime <- [mbRideEndTime]]
+          <> [Se.Set BeamP.updatedAt now]
+      )
+      [Se.Is BeamP.id (Se.Eq (getId personId))]
+
+updateLastRideRating :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Int -> m ()
+updateLastRideRating personId rating = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.lastRideRating (Just rating),
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq (getId personId))]
+
 updatePersonComments :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> Maybe [Text] -> m ()
 updatePersonComments personId comments = do
   whenJust comments \comments' -> do

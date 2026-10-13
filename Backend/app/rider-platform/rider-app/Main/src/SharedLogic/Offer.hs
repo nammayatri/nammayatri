@@ -137,8 +137,7 @@ data OfferEligibilityInput = OfferEligibilityInput
     nowEpoch :: Int,
     registeredAtEpoch :: Int,
     lastRideEndEpoch :: Maybe Int,
-    lastRideRating :: Maybe Int,
-    priorCompletedRidesCount :: Int -- before nowEpoch, capped at priorRidesCountCap
+    lastRideRating :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -149,30 +148,21 @@ data OfferTimeContext = OfferTimeContext
     nowEpoch :: Int,
     registeredAtEpoch :: Int,
     lastRideEndEpoch :: Maybe Int,
-    lastRideRating :: Maybe Int,
-    priorCompletedRidesCount :: Int
+    lastRideRating :: Maybe Int
   }
 
-priorRidesCountCap :: Int
-priorRidesCountCap = 10
-
-mkOfferTimeContext :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Maybe DRB.Booking -> m OfferTimeContext
+-- last ride fields come from person, which ride end updates after the offer is processed
+mkOfferTimeContext :: (MonadFlow m) => Person.Person -> Maybe DRB.Booking -> m OfferTimeContext
 mkOfferTimeContext person mbBooking = do
   now <- getCurrentTime
   let referenceTime = maybe now (.createdAt) mbBooking
-  priorBookings <-
-    if person.totalRidesCount == Just 0
-      then pure []
-      else QBooking.findLatestCompletedByRiderIdBefore person.id referenceTime priorRidesCountCap
-  mbLastRide <- maybe (pure Nothing) (QRide.findOneByBookingId . (.id)) (listToMaybe priorBookings)
   pure
     OfferTimeContext
       { referenceTime,
         nowEpoch = toEpochSeconds referenceTime,
         registeredAtEpoch = toEpochSeconds person.createdAt,
-        lastRideEndEpoch = toEpochSeconds <$> (mbLastRide >>= (.rideEndTime)),
-        lastRideRating = mbLastRide >>= (.rideRating),
-        priorCompletedRidesCount = length priorBookings
+        lastRideEndEpoch = toEpochSeconds <$> person.lastRideEndTime,
+        lastRideRating = person.lastRideRating
       }
   where
     toEpochSeconds :: UTCTime -> Int
@@ -238,8 +228,7 @@ offerListCache merchantId personId merchantOperatingCityId paymentServiceType pr
                             nowEpoch = timeCtx.nowEpoch,
                             registeredAtEpoch = timeCtx.registeredAtEpoch,
                             lastRideEndEpoch = timeCtx.lastRideEndEpoch,
-                            lastRideRating = timeCtx.lastRideRating,
-                            priorCompletedRidesCount = timeCtx.priorCompletedRidesCount
+                            lastRideRating = timeCtx.lastRideRating
                           }
               DPayment.listDomainOffers merchantId.getId merchantOperatingCityId.getId price.amount price.currency domainContext (Just rider)
         DPayment.offerListService customerId version paymentServiceType (6 * 3600) False domainOfferCall req
@@ -794,8 +783,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
                       nowEpoch = timeCtx.nowEpoch,
                       registeredAtEpoch = timeCtx.registeredAtEpoch,
                       lastRideEndEpoch = timeCtx.lastRideEndEpoch,
-                      lastRideRating = timeCtx.lastRideRating,
-                      priorCompletedRidesCount = timeCtx.priorCompletedRidesCount
+                      lastRideRating = timeCtx.lastRideRating
                     }
             currency = maybe INR ((.currency) . snd) (listToMaybe products)
         offersByProduct <- DPayment.listDomainOffersWithBasket merchantId.getId merchantOperatingCityId.getId productsWithAmount currency domainContextFor mbRider
