@@ -637,12 +637,13 @@ calculateFareParametersHandler params = do
         _ -> Nothing
 
       schedulingChargeResult =
-        if params.isScheduled
-          then
-            fp.schedulingCharge <&> \case
-              DFP.ProgressiveSchedulingCharge percent -> fullRideCost * fromRational (toRational percent / 100)
-              DFP.ConstantSchedulingCharge charge -> charge
-          else Nothing
+        capComponentMb SchedulingChargeComponent $
+          if params.isScheduled
+            then
+              fp.schedulingCharge <&> \case
+                DFP.ProgressiveSchedulingCharge percent -> fullRideCost * fromRational (toRational percent / 100)
+                DFP.ConstantSchedulingCharge charge -> charge
+            else Nothing
       fullRideCostN {-without govtCharges, platformFee, cardChargeOnFare and fixedCharge-} =
         fullRideCost
           + fromMaybe 0.0 resultNightShiftCharge
@@ -1551,7 +1552,8 @@ buildComponentMap FareParameters {..} =
             (AirportConvenienceFeeComponent, maybeZero airportConvenienceFee),
             (ReturnFeeChargeComponent, maybeZero returnFeeCharge),
             (BoothChargeComponent, maybeZero boothCharge),
-            (RideExtraTimeFareComponent, maybeZero rideExtraTimeFare)
+            (RideExtraTimeFareComponent, maybeZero rideExtraTimeFare),
+            (SchedulingChargeComponent, maybeZero schedulingCharge)
           ]
    in Map.union baseMap (detailComponentMap fareParametersDetails)
 
@@ -1680,7 +1682,7 @@ applyPaymentChargeOnPayableFare mbDwc fareBase =
       | Just rate <- dwc.paymentChargeRate,
         Just bearer <- dwc.paymentChargeBearer,
         rate > 0 ->
-        let charge = HighPrecMoney ((max 0 fareBase).getHighPrecMoney * (toRational rate / 100))
+        let charge = HighPrecMoney (max 0 fareBase.getHighPrecMoney * (toRational rate / 100))
             vat = HighPrecMoney (charge.getHighPrecMoney * (toRational (fromMaybe 0 dwc.paymentChargeVat) / 100))
          in (charge, vat, Just (show bearer))
     _ -> (0, 0, Nothing)

@@ -1474,6 +1474,7 @@ toApiChargeComponent = \case
   FarePolicyD.ReturnFeeChargeComponent -> Common.ReturnFeeChargeComponent
   FarePolicyD.BoothChargeComponent -> Common.BoothChargeComponent
   FarePolicyD.RideExtraTimeFareComponent -> Common.RideExtraTimeFareComponent
+  FarePolicyD.SchedulingChargeComponent -> Common.SchedulingChargeComponent
 
 fromApiChargeComponent :: Common.FPV2FareChargeComponent -> FarePolicyD.FareChargeComponent
 fromApiChargeComponent = \case
@@ -1512,3 +1513,4 @@ fromApiChargeComponent = \case
   Common.ReturnFeeChargeComponent -> FarePolicyD.ReturnFeeChargeComponent
   Common.BoothChargeComponent -> FarePolicyD.BoothChargeComponent
   Common.RideExtraTimeFareComponent -> FarePolicyD.RideExtraTimeFareComponent
+  Common.SchedulingChargeComponent -> FarePolicyD.SchedulingChargeComponent
