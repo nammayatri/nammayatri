@@ -616,6 +616,7 @@ library
       SharedLogic.FRFSFareCalculator
       SharedLogic.FRFSLiveTrip
       SharedLogic.FRFSPassConfirm
+      SharedLogic.FRFSPassInstantBook
       SharedLogic.FRFSPassOverride
       SharedLogic.FRFSPassTicketStatistics
       SharedLogic.FRFSReschedule
