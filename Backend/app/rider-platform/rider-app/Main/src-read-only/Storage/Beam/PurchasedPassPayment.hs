@@ -23,6 +23,7 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     benefitType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType),
     benefitValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    destinationStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     endDate :: B.C f Data.Time.Calendar.Day,
     id :: B.C f Kernel.Prelude.Text,
     isDashboard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -39,8 +40,11 @@ data PurchasedPassPaymentT f = PurchasedPassPaymentT
     personId :: B.C f Kernel.Prelude.Text,
     profilePicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     purchasedPassId :: B.C f Kernel.Prelude.Text,
+    referenceFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    sourceStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startDate :: B.C f Data.Time.Calendar.Day,
     status :: B.C f Domain.Types.PurchasedPass.StatusType,
+    validityDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

@@ -74,3 +74,11 @@ ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN activated_at timestamp w
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN override_benefit_config_json jsonb ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN validity_days integer ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN source_stop_code text ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN reference_fare double precision ;
+ALTER TABLE atlas_app.purchased_pass_payment ADD COLUMN destination_stop_code text ;
