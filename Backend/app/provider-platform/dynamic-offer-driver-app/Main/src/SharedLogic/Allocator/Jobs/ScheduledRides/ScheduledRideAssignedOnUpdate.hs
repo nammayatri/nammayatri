@@ -304,23 +304,24 @@ activateScheduledRide driverId bookingId booking ride driver vehicle transporter
   void $ LF.rideDetails ride.id DRide.NEW booking.providerId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
   -- Forked: a BAP NACK throws, and the tail below still has the pickup monitor to schedule.
   fork "scheduled ride activation push to BAP" $ do
-    notifyDriverOnScheduledRideAssigned booking ride driver
     -- The job still reports Complete so the pickup monitor gets scheduled, so a dropped push is only visible here: name the ids, since nothing retries.
-    let logPushFailure pushResult = case pushResult of
-          Left err -> logError $ "scheduled ride activation push to BAP failed; bookingId=" <> booking.id.getId <> " rideId=" <> ride.id.getId <> " bapId=" <> booking.bapId <> "; error: " <> show err
+    let logPushFailure what pushResult = case pushResult of
+          Left err -> logError $ what <> " failed; bookingId=" <> booking.id.getId <> " rideId=" <> ride.id.getId <> " bapId=" <> booking.bapId <> "; error: " <> show err
           Right _ -> pure ()
+    -- Guarded like the pushes below it: a notification failure must not cost the BAP its activation message.
+    withTryCatch "scheduledRideAssignedDriverNotification" (notifyDriverOnScheduledRideAssigned booking ride driver) >>= logPushFailure "scheduled ride driver notification"
     -- 3P BAPs NACK a repeated RIDE_ASSIGNED; ours take it fine, so their activation message is unchanged.
     isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
     if isValueAddNP
-      then withTryCatch "scheduledRideActivationPush" (sendRideAssignedUpdateToBAP booking ride driver vehicle) >>= logPushFailure
+      then withTryCatch "scheduledRideActivationPush" (sendRideAssignedUpdateToBAP booking ride driver vehicle) >>= logPushFailure "scheduled ride activation push to BAP"
       else do
         now <- getCurrentTime
         -- A driver already on the pin is arrived either way, since the app's geofence marks it on its next tick once the ride is NEW; announcing it here keeps this push and a /status pull agreeing from the first message. Decided before any IO, so a failure below can never be mistaken for "he is not there".
         let pickupLoc = LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
             isAtPickup = maybe False (\loc -> distanceBetweenInMeters loc pickupLoc < transporterConfig.arrivedPickupThreshold) mbCurrentDriverLocation
         if isAtPickup
-          then withTryCatch "scheduledActivationArrival" (sendDriverArrivalUpdateToBAP booking ride (Just now) >> QRide.updateArrival ride.id now) >>= logPushFailure
-          else withTryCatch "scheduledRideActivationPush" (sendRideEnroutePickupStatusToBAP booking ride driver vehicle) >>= logPushFailure
+          then withTryCatch "scheduledActivationArrival" (sendDriverArrivalUpdateToBAP booking ride (Just now) >> QRide.updateArrival ride.id now) >>= logPushFailure "scheduled ride activation push to BAP"
+          else withTryCatch "scheduledRideActivationPush" (sendRideEnroutePickupStatusToBAP booking ride driver vehicle) >>= logPushFailure "scheduled ride activation push to BAP"
   -- On activation, start the per-tick pickup monitor (distance or ETA per scheduledMonitoringMode); no-op when scheduled monitoring is unconfigured.
   whenJust transporterConfig.pickupStallMonitoringConfig $ \monitoringConfig ->
     when (isJust monitoringConfig.scheduledMonitoringMode) $
