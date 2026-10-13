@@ -107,6 +107,7 @@ type API =
            :<|> MasterCloudForward.API
            :<|> XyneWebhook.API
            :<|> XyneWebhook.BearerAPI
+           :<|> XyneWebhook.IssuesAPI
            :<|> RadarXyneWebhook.API
            :<|> NotificationWebhook.API
            :<|> SearchTryPoolStats.API
@@ -162,6 +163,7 @@ handler env =
     :<|> MasterCloudForward.handler env
     :<|> XyneWebhook.handler
     :<|> XyneWebhook.bearerHandler
+    :<|> XyneWebhook.issuesHandler
     :<|> RadarXyneWebhook.handler
     :<|> NotificationWebhook.handler
     :<|> SearchTryPoolStats.handler

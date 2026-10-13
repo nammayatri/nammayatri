@@ -43,7 +43,7 @@ import qualified Storage.Queries.Ride as QRide
 --   Only after the collector ACKs: ORDER_VARIANCE per order + UTR_VARIANCE per UTR (clean ones
 --   included), then the rsf_order_state / rsf_utr_state stamps.
 -- checkMessage runs every gate and builds the entries without sending; dispatchMessage sends
--- and records. Every message of the day is checked first and only then are they sent.
+-- and records. Every unanswered message of the day is checked first and only then are they sent.
 
 type SendFlow m r =
   ( BeamFlow m r,
@@ -60,26 +60,30 @@ data PreparedMessage = PreparedMessage
     utrReports :: [ACL.ReconReport]
   }
 
--- Every message whose receiver_recon arrived on the IST day: all gates on all of them first,
--- then send one by one. Returns the message ids sent.
-sendOnReceiverReconForDate :: SendFlow m r => Id DM.Merchant -> Day -> m [Text]
+-- Every message whose receiver_recon arrived on the IST day. Messages already answered (they
+-- have VARIANCE rows) are skipped; every remaining message passes every gate before any of
+-- them is sent, then they are sent one by one. Returns (sent, already sent).
+sendOnReceiverReconForDate :: SendFlow m r => Id DM.Merchant -> Day -> m ([Text], [Text])
 sendOnReceiverReconForDate merchantId day = do
   let mid = merchantId.getId
       (from, to) = RSFLedger.istDayRange day
   envelopes <- QLedger.findAllByMerchantEntryTypeAndCreatedAtRange mid L.MESSAGE_RECEIVED from to
   let messageIds = nub (mapMaybe (.messageId) envelopes)
   when (null messageIds) $ throwError $ InvalidRequest "No receiver_recon messages on this date"
-  Hedis.withLockRedis ("RsfSendLock:" <> mid <> ":" <> show day) 300 $ do
-    prepared <- forM messageIds (checkMessage mid)
+  Hedis.withLockRedisAndReturnValue ("RsfSendLock:" <> mid <> ":" <> show day) 300 $ do
+    tagged <- forM messageIds $ \messageId -> do
+      msgEntries <- QLedger.findAllByMerchantAndMessageId mid messageId
+      pure (messageId, msgEntries, alreadyAnswered msgEntries)
+    let alreadySent = [m | (m, _, True) <- tagged]
+    prepared <- forM [(m, e) | (m, e, False) <- tagged] (uncurry (checkMessage mid))
     forM_ prepared (dispatchMessage merchantId)
-  pure messageIds
+    pure (map (.messageId) prepared, alreadySent)
+  where
+    alreadyAnswered entries = not (null (RSFLedger.ofType L.ORDER_VARIANCE entries <> RSFLedger.ofType L.UTR_VARIANCE entries))
 
-checkMessage :: (BeamFlow m r) => Text -> Text -> m PreparedMessage
-checkMessage mid messageId = do
-  msgEntries <- QLedger.findAllByMerchantAndMessageId mid messageId
+checkMessage :: (BeamFlow m r) => Text -> Text -> [RSFLedger.Entry] -> m PreparedMessage
+checkMessage mid messageId msgEntries = do
   envelope <- fromMaybeM (InvalidRequest ("No receiver_recon found for message " <> messageId)) $ listToMaybe (RSFLedger.ofType L.MESSAGE_RECEIVED msgEntries)
-  unless (null (RSFLedger.ofType L.ORDER_VARIANCE msgEntries <> RSFLedger.ofType L.UTR_VARIANCE msgEntries)) $
-    throwError $ InvalidRequest ("on_receiver_recon already sent for message " <> messageId)
   when (null (RSFLedger.ofType L.MESSAGE_PROCESSED msgEntries)) $
     throwError $ InvalidRequest ("Message " <> messageId <> " is not fully processed yet (no MESSAGE_PROCESSED row)")
 
@@ -109,7 +113,7 @@ checkMessage mid messageId = do
           | orderId <- orderIds,
             let fare = fromMaybe 0 (Map.lookup orderId rideByOrderId >>= RSFLedger.rideFare)
                 verdict = RSFLedger.orderWireVerdict messageId fare orderId orderEntries
-                echo = latestLeg [c | ((o, _), c) <- Map.toList (RSFLedger.standingClaims orderEntries), o == orderId]
+                echo = latestLeg [c | ((o, _), c) <- Map.toList (RSFLedger.latestClaims orderEntries), o == orderId]
         ]
       utrReports =
         [ ACL.ReconReport {orderId = Nothing, utr = utr, verdict = RSFLedger.utrWireVerdict utr utrEntries, echo = echo}

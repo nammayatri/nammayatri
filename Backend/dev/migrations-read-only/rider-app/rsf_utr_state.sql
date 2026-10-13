@@ -9,3 +9,10 @@ ALTER TABLE atlas_app.rsf_utr_state ADD COLUMN reported_status text ;
 ALTER TABLE atlas_app.rsf_utr_state ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.rsf_utr_state ADD COLUMN utr text NOT NULL;
 ALTER TABLE atlas_app.rsf_utr_state ADD PRIMARY KEY ( merchant_id, utr);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rsf_utr_state ADD COLUMN bap_id text ;
+CREATE INDEX CONCURRENTLY rsf_utr_state_idx_created_at_merchant_id ON atlas_app.rsf_utr_state USING btree (created_at, merchant_id);

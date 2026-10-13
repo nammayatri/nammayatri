@@ -1,6 +1,9 @@
 -- {"api":"GetRSFReconciliationRsfOrders","migration":"capability","param":"financeManagement.rsfOrders.list","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'financeManagement.rsfOrders.list', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RSF_RECONCILIATION/GET_RSF_RECONCILIATION_RSF_ORDERS' ) ON CONFLICT DO NOTHING;
 
+-- {"api":"GetRSFReconciliationRsfSummary","migration":"capability","param":"financeManagement.rsfSummary.read","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'financeManagement.rsfSummary.read', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RSF_RECONCILIATION/GET_RSF_RECONCILIATION_RSF_SUMMARY' ) ON CONFLICT DO NOTHING;
+
 -- {"api":"GetRSFReconciliationRsfUtrs","migration":"capability","param":"financeManagement.rsfUtrs.list","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'financeManagement.rsfUtrs.list', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RSF_RECONCILIATION/GET_RSF_RECONCILIATION_RSF_UTRS' ) ON CONFLICT DO NOTHING;
 
@@ -9,6 +12,9 @@ INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, end
 
 -- {"api":"PostRSFReconciliationRsfUtrBankVerify","migration":"capability","param":"financeManagement.rsfUtrs.bankVerify","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'financeManagement.rsfUtrs.bankVerify', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_UTR_BANK_VERIFY' ) ON CONFLICT DO NOTHING;
+
+-- {"api":"PostRSFReconciliationRsfUtrAdjust","migration":"capability","param":"financeManagement.rsfUtrs.adjust","schema":"atlas_dashboard"}
+INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'financeManagement.rsfUtrs.adjust', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_UTR_ADJUST' ) ON CONFLICT DO NOTHING;
 
 -- {"api":"PostRSFReconciliationRsfAutoAllocation","migration":"capability","param":"financeManagement.rsfAllocation.auto","schema":"atlas_dashboard"}
 INSERT INTO atlas_dashboard.capability_endpoint (capability_id, server_name, endpoint_id) VALUES ( 'financeManagement.rsfAllocation.auto', 'DASHBOARD', 'PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_AUTO_ALLOCATION' ) ON CONFLICT DO NOTHING;

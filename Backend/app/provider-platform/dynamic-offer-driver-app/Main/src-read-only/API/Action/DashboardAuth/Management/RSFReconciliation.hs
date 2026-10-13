@@ -23,13 +23,20 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("rSFReconciliation" :> (GetRSFReconciliationRsfOrders :<|> GetRSFReconciliationRsfUtrs :<|> GetRSFReconciliationRsfUtr :<|> PostRSFReconciliationRsfUtrBankVerify :<|> PostRSFReconciliationRsfAutoAllocation :<|> PostRSFReconciliationRsfOrdersConfirm :<|> PostRSFReconciliationRsfSend :<|> GetRSFReconciliationRsfReconUnmatched))
+type API = ("rSFReconciliation" :> (GetRSFReconciliationRsfOrders :<|> GetRSFReconciliationRsfSummary :<|> GetRSFReconciliationRsfUtrs :<|> GetRSFReconciliationRsfUtr :<|> PostRSFReconciliationRsfUtrBankVerify :<|> PostRSFReconciliationRsfUtrAdjust :<|> PostRSFReconciliationRsfAutoAllocation :<|> PostRSFReconciliationRsfOrdersConfirm :<|> PostRSFReconciliationRsfSend :<|> GetRSFReconciliationRsfReconUnmatched))
 
 type GetRSFReconciliationRsfOrders =
   ( DashboardUserAuth
       ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/RSF_RECONCILIATION/GET_RSF_RECONCILIATION_RSF_ORDERS"
       :> API.Types.ProviderPlatform.Management.RSFReconciliation.GetRSFReconciliationRsfOrders
+  )
+
+type GetRSFReconciliationRsfSummary =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/RSF_RECONCILIATION/GET_RSF_RECONCILIATION_RSF_SUMMARY"
+      :> API.Types.ProviderPlatform.Management.RSFReconciliation.GetRSFReconciliationRsfSummary
   )
 
 type GetRSFReconciliationRsfUtrs =
@@ -51,6 +58,13 @@ type PostRSFReconciliationRsfUtrBankVerify =
       ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_UTR_BANK_VERIFY"
       :> API.Types.ProviderPlatform.Management.RSFReconciliation.PostRSFReconciliationRsfUtrBankVerify
+  )
+
+type PostRSFReconciliationRsfUtrAdjust =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_UTR_ADJUST"
+      :> API.Types.ProviderPlatform.Management.RSFReconciliation.PostRSFReconciliationRsfUtrAdjust
   )
 
 type PostRSFReconciliationRsfAutoAllocation =
@@ -82,13 +96,16 @@ type GetRSFReconciliationRsfReconUnmatched =
   )
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getRSFReconciliationRsfOrders merchantId city :<|> getRSFReconciliationRsfUtrs merchantId city :<|> getRSFReconciliationRsfUtr merchantId city :<|> postRSFReconciliationRsfUtrBankVerify merchantId city :<|> postRSFReconciliationRsfAutoAllocation merchantId city :<|> postRSFReconciliationRsfOrdersConfirm merchantId city :<|> postRSFReconciliationRsfSend merchantId city :<|> getRSFReconciliationRsfReconUnmatched merchantId city
+handler merchantId city = getRSFReconciliationRsfOrders merchantId city :<|> getRSFReconciliationRsfSummary merchantId city :<|> getRSFReconciliationRsfUtrs merchantId city :<|> getRSFReconciliationRsfUtr merchantId city :<|> postRSFReconciliationRsfUtrBankVerify merchantId city :<|> postRSFReconciliationRsfUtrAdjust merchantId city :<|> postRSFReconciliationRsfAutoAllocation merchantId city :<|> postRSFReconciliationRsfOrdersConfirm merchantId city :<|> postRSFReconciliationRsfSend merchantId city :<|> getRSFReconciliationRsfReconUnmatched merchantId city
 
-getRSFReconciliationRsfOrders :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.RSFReconciliation.OrderReconVerdict) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.OrderListRes)
-getRSFReconciliationRsfOrders a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.Management.RSFReconciliation.getRSFReconciliationRsfOrders a9 a8 a6 a5 a4 a3 a2 a1
+getRSFReconciliationRsfOrders :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.OrderListRes)
+getRSFReconciliationRsfOrders a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.Management.RSFReconciliation.getRSFReconciliationRsfOrders a7 a6 a4 a3 a2 a1
 
-getRSFReconciliationRsfUtrs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.UtrListRes)
-getRSFReconciliationRsfUtrs a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.Management.RSFReconciliation.getRSFReconciliationRsfUtrs a8 a7 a5 a4 a3 a2 a1
+getRSFReconciliationRsfSummary :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.DaySummaryRes)
+getRSFReconciliationRsfSummary a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.RSFReconciliation.getRSFReconciliationRsfSummary a4 a3 a1
+
+getRSFReconciliationRsfUtrs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.UtrListRes)
+getRSFReconciliationRsfUtrs a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a5 $ Domain.Action.Dashboard.Management.RSFReconciliation.getRSFReconciliationRsfUtrs a7 a6 a4 a3 a2 a1
 
 getRSFReconciliationRsfUtr :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.UtrDetailRes)
 getRSFReconciliationRsfUtr a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.RSFReconciliation.getRSFReconciliationRsfUtr a4 a3 a1
@@ -99,6 +116,14 @@ postRSFReconciliationRsfUtrBankVerify a5 a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_UTR_BANK_VERIFY" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.RSFReconciliation.postRSFReconciliationRsfUtrBankVerify a5 a4 a2 a1
+    )
+
+postRSFReconciliationRsfUtrAdjust :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.RSFReconciliation.UtrAdjustReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postRSFReconciliationRsfUtrAdjust a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RSF_RECONCILIATION/POST_RSF_RECONCILIATION_RSF_UTR_ADJUST" a3 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.RSFReconciliation.postRSFReconciliationRsfUtrAdjust a5 a4 a2 a1
     )
 
 postRSFReconciliationRsfAutoAllocation :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Data.Time.Day) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RSFReconciliation.AutoAllocationRes)

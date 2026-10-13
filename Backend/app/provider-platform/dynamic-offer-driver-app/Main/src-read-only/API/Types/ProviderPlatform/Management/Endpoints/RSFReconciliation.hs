@@ -26,11 +26,30 @@ data AutoAllocationRes = AutoAllocationRes {ordersConsidered :: Kernel.Prelude.I
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BankVerifyReq = BankVerifyReq {bankVerifiedAmount :: Kernel.Types.Common.HighPrecMoney, verifiedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data BankVerifyReq = BankVerifyReq {bankVerifiedAmount :: Kernel.Types.Common.HighPrecMoney, reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ManualConfirmReq = ManualConfirmReq {utr :: Kernel.Prelude.Text, confirmedBy :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Text, confirmedAmount :: Kernel.Types.Common.HighPrecMoney}
+data DaySummaryRes = DaySummaryRes
+  { claimedByCollector :: Kernel.Types.Common.HighPrecMoney,
+    orderCount :: Kernel.Prelude.Int,
+    utrCount :: Kernel.Prelude.Int,
+    bankReceived :: Kernel.Types.Common.HighPrecMoney,
+    utrsVerified :: Kernel.Prelude.Int,
+    allocatedToOrders :: Kernel.Types.Common.HighPrecMoney,
+    unallocated :: Kernel.Types.Common.HighPrecMoney,
+    unallocatedUtrCount :: Kernel.Prelude.Int,
+    awaitingBankFigure :: Kernel.Types.Common.HighPrecMoney,
+    unverifiedUtrCount :: Kernel.Prelude.Int,
+    needsAttention :: Kernel.Prelude.Int,
+    rejectedOrders :: Kernel.Prelude.Int,
+    mismatchedOrders :: Kernel.Prelude.Int,
+    unsentOrders :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ManualConfirmReq = ManualConfirmReq {utr :: Kernel.Prelude.Text, reason :: Kernel.Prelude.Text, confirmedAmount :: Kernel.Types.Common.HighPrecMoney}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -49,7 +68,7 @@ data OrderReconVerdict
   | OVERPAID
   | REJECTED
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OrderRow = OrderRow
   { orderId :: Kernel.Prelude.Text,
@@ -103,7 +122,11 @@ data ReconTabStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data SendForDateRes = SendForDateRes {messagesSent :: [Kernel.Prelude.Text]}
+data SendForDateRes = SendForDateRes {messagesSent :: [Kernel.Prelude.Text], messagesAlreadySent :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UtrAdjustReq = UtrAdjustReq {amount :: Kernel.Types.Common.HighPrecMoney, reason :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -129,34 +152,31 @@ data UtrSummary = UtrSummary
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("rSFReconciliation" :> (GetRSFReconciliationRsfOrders :<|> GetRSFReconciliationRsfUtrs :<|> GetRSFReconciliationRsfUtr :<|> PostRSFReconciliationRsfUtrBankVerify :<|> PostRSFReconciliationRsfAutoAllocation :<|> PostRSFReconciliationRsfOrdersConfirm :<|> PostRSFReconciliationRsfSend :<|> GetRSFReconciliationRsfReconUnmatched))
+type API = ("rSFReconciliation" :> (GetRSFReconciliationRsfOrders :<|> GetRSFReconciliationRsfSummary :<|> GetRSFReconciliationRsfUtrs :<|> GetRSFReconciliationRsfUtr :<|> PostRSFReconciliationRsfUtrBankVerify :<|> PostRSFReconciliationRsfUtrAdjust :<|> PostRSFReconciliationRsfAutoAllocation :<|> PostRSFReconciliationRsfOrdersConfirm :<|> PostRSFReconciliationRsfSend :<|> GetRSFReconciliationRsfReconUnmatched))
 
 type GetRSFReconciliationRsfOrders =
   ( "rsf" :> "orders" :> QueryParam "bapId" Kernel.Prelude.Text :> QueryParam "date" Data.Time.Day :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> QueryParam "status" OrderReconVerdict
-      :> QueryParam
-           "utr"
-           Kernel.Prelude.Text
-      :> Get
-           ('[JSON])
-           OrderListRes
+      :> Get ('[JSON]) OrderListRes
   )
 
+type GetRSFReconciliationRsfSummary = ("rsf" :> "summary" :> QueryParam "date" Data.Time.Day :> Get ('[JSON]) DaySummaryRes)
+
 type GetRSFReconciliationRsfUtrs =
-  ( "rsf" :> "utrs" :> QueryParam "bapId" Kernel.Prelude.Text :> QueryParam "date" Data.Time.Day :> QueryParam "isVerified" Kernel.Prelude.Bool
+  ( "rsf" :> "utrs" :> QueryParam "bapId" Kernel.Prelude.Text :> QueryParam "date" Data.Time.Day :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam
-           "limit"
+           "offset"
            Kernel.Prelude.Int
-      :> QueryParam "offset" Kernel.Prelude.Int
       :> Get ('[JSON]) UtrListRes
   )
 
 type GetRSFReconciliationRsfUtr = ("rsf" :> "utrs" :> Capture "utr" Kernel.Prelude.Text :> Get ('[JSON]) UtrDetailRes)
 
 type PostRSFReconciliationRsfUtrBankVerify = ("rsf" :> "utrs" :> Capture "utr" Kernel.Prelude.Text :> "verify" :> ReqBody ('[JSON]) BankVerifyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
+type PostRSFReconciliationRsfUtrAdjust = ("rsf" :> "utrs" :> Capture "utr" Kernel.Prelude.Text :> "adjust" :> ReqBody ('[JSON]) UtrAdjustReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
 type PostRSFReconciliationRsfAutoAllocation = ("rsf" :> "autoAllocation" :> QueryParam "date" Data.Time.Day :> Post ('[JSON]) AutoAllocationRes)
 
@@ -179,10 +199,12 @@ type GetRSFReconciliationRsfReconUnmatched =
   )
 
 data RSFReconciliationAPIs = RSFReconciliationAPIs
-  { getRSFReconciliationRsfOrders :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (OrderReconVerdict) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient OrderListRes),
-    getRSFReconciliationRsfUtrs :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient UtrListRes),
+  { getRSFReconciliationRsfOrders :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient OrderListRes),
+    getRSFReconciliationRsfSummary :: (Kernel.Prelude.Maybe (Data.Time.Day) -> EulerHS.Types.EulerClient DaySummaryRes),
+    getRSFReconciliationRsfUtrs :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient UtrListRes),
     getRSFReconciliationRsfUtr :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient UtrDetailRes),
     postRSFReconciliationRsfUtrBankVerify :: (Kernel.Prelude.Text -> BankVerifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postRSFReconciliationRsfUtrAdjust :: (Kernel.Prelude.Text -> UtrAdjustReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRSFReconciliationRsfAutoAllocation :: (Kernel.Prelude.Maybe (Data.Time.Day) -> EulerHS.Types.EulerClient AutoAllocationRes),
     postRSFReconciliationRsfOrdersConfirm :: (Kernel.Prelude.Text -> ManualConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postRSFReconciliationRsfSend :: (Kernel.Prelude.Maybe (Data.Time.Day) -> EulerHS.Types.EulerClient SendForDateRes),
@@ -192,21 +214,21 @@ data RSFReconciliationAPIs = RSFReconciliationAPIs
 mkRSFReconciliationAPIs :: (Client EulerHS.Types.EulerClient API -> RSFReconciliationAPIs)
 mkRSFReconciliationAPIs rSFReconciliationClient = (RSFReconciliationAPIs {..})
   where
-    getRSFReconciliationRsfOrders :<|> getRSFReconciliationRsfUtrs :<|> getRSFReconciliationRsfUtr :<|> postRSFReconciliationRsfUtrBankVerify :<|> postRSFReconciliationRsfAutoAllocation :<|> postRSFReconciliationRsfOrdersConfirm :<|> postRSFReconciliationRsfSend :<|> getRSFReconciliationRsfReconUnmatched = rSFReconciliationClient
+    getRSFReconciliationRsfOrders :<|> getRSFReconciliationRsfSummary :<|> getRSFReconciliationRsfUtrs :<|> getRSFReconciliationRsfUtr :<|> postRSFReconciliationRsfUtrBankVerify :<|> postRSFReconciliationRsfUtrAdjust :<|> postRSFReconciliationRsfAutoAllocation :<|> postRSFReconciliationRsfOrdersConfirm :<|> postRSFReconciliationRsfSend :<|> getRSFReconciliationRsfReconUnmatched = rSFReconciliationClient
 
 data RSFReconciliationUserActionType
   = GET_RSF_RECONCILIATION_RSF_ORDERS
+  | GET_RSF_RECONCILIATION_RSF_SUMMARY
   | GET_RSF_RECONCILIATION_RSF_UTRS
   | GET_RSF_RECONCILIATION_RSF_UTR
   | POST_RSF_RECONCILIATION_RSF_UTR_BANK_VERIFY
+  | POST_RSF_RECONCILIATION_RSF_UTR_ADJUST
   | POST_RSF_RECONCILIATION_RSF_AUTO_ALLOCATION
   | POST_RSF_RECONCILIATION_RSF_ORDERS_CONFIRM
   | POST_RSF_RECONCILIATION_RSF_SEND
   | GET_RSF_RECONCILIATION_RSF_RECON_UNMATCHED
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-$(mkHttpInstancesForEnum (''OrderReconVerdict))
 
 $(mkHttpInstancesForEnum (''ReconTabStatus))
 
