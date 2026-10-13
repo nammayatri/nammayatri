@@ -1,0 +1,25 @@
+imports:
+  Text: Data.Text
+
+module: PublicTransport
+
+types:
+  BlockedVehiclesResp:
+    blockedVehicleNumbers: "[Text]"
+
+apis:
+  - POST:
+      endpoint: /publicTransport/vehicleData/{vehicleNumber}/block
+      auth: TokenAuth PROVIDER_TYPE
+      params:
+        vehicleNumber: Text
+      mandatoryQuery:
+        isBlock: Bool
+      response:
+        type: API.Types.UI.PublicTransport.BlockedVehiclesResp
+
+  - GET:
+      endpoint: /publicTransport/blockedVehicles
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: API.Types.UI.PublicTransport.BlockedVehiclesResp
