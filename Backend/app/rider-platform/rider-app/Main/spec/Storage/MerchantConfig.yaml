@@ -17,6 +17,7 @@ MerchantConfig:
     fraudBookingCancelledByDriverCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     fraudSearchCountThreshold : Int
     fraudSearchCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
+    fraudZeroRideSearchCountThreshold : Maybe Int
     fraudRideCountThreshold : Int
     fraudRideCountWindow : Kernel.Types.SlidingWindowCounters.SlidingWindowOptions
     fraudAuthCountThreshold : Maybe Int

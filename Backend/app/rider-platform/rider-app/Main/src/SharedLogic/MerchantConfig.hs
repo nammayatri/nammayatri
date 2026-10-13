@@ -57,6 +57,7 @@ import qualified Storage.Queries.RegistrationToken as RT
 import Tools.Auth (authTokenCacheKey)
 
 data Factors = MoreCancelling | MoreSearching | MoreCancelledByDriver | TotalRides | TotalRidesInWindow
+  deriving (Eq)
 
 mkCancellationKey :: Text -> Text -> Text
 mkCancellationKey ind idtxt = "Customer:CancellationCount:" <> idtxt <> ":" <> ind
@@ -142,9 +143,17 @@ checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, Click
 checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSearchReq = Redis.withNonCriticalCrossAppRedis $ do
   useFraudDetection <- maybe False (.useFraudDetection) <$> getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   if useFraudDetection
-    then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
+    then findM (\mc -> orM [isZeroRideHeavySearcher mc, and <$> mapM (getFactorResult mc) factors]) merchantConfigs
     else pure Nothing
   where
+    -- TotalRides never matches zero-ride riders, so heavy searchers with no rides need their own check
+    isZeroRideHeavySearcher mc =
+      case mc.fraudZeroRideSearchCountThreshold of
+        Just threshold
+          | MoreSearching `elem` factors && (mSearchReq >>= DSR.totalRidesCount) == Just 0 -> do
+            searchCount :: Int <- sum . catMaybes <$> SWC.getCurrentWindowValues (mkSearchCounterKey mc.id.getId riderId.getId) mc.fraudSearchCountWindow
+            pure $ searchCount >= threshold
+        _ -> pure False
     getFactorResult mc factor =
       case factor of
         MoreCancelling -> do
