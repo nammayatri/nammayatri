@@ -890,6 +890,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
               Left _ -> pure Nothing
               Right mbResp -> pure mbResp
   applicablePassesForSearch <- enrichQuotesWithPassOverride integratedBppConfig personId search mbHasPasses mbTripTime
+  (mbPassLegStops, stopMatchedPasses) <- FRFSUtils.passLegStops integratedBppConfig applicablePassesForSearch search.fromStationCode search.toStationCode
   quotesRes <-
     mapM
       ( \(quote, quoteCategories) -> do
@@ -925,7 +926,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ mbHasPasses mbTripTime = 
                 _type = quote._type,
                 applicablePasses =
                   map FRFSPassOverride.mkPassOptionAPIEntity $
-                    FRFSPassOverride.passOptionsForQuote integratedBppConfig applicablePassesForSearch serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
+                    FRFSPassOverride.passOptionsForQuote integratedBppConfig mbPassLegStops stopMatchedPasses serviceTierType singleAdultTicketPrice (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) fareParameters.priceItems),
                 price = singleAdultTicketPrice.amount,
                 priceWithCurrency = mkPriceAPIEntity singleAdultTicketPrice,
                 quantity = adultQuantity,
