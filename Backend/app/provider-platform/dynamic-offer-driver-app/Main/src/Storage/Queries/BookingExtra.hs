@@ -215,16 +215,21 @@ updateRiderName bookingId riderName = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamB.riderName $ Just riderName, Se.Set BeamB.updatedAt now] [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
-updateMultipleById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Maybe HighPrecMeters -> Maybe Meters -> Text -> Id Booking -> m ()
-updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance fareParametersId bookingId = do
+updateMultipleById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Maybe HighPrecMeters -> Maybe Meters -> Maybe Seconds -> Maybe Seconds -> Text -> Id Booking -> m ()
+updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance mbEstimatedDuration estimatedStaticDuration fareParametersId bookingId = do
   now <- getCurrentTime
+  let durationSets = case mbEstimatedDuration of
+        Just estimatedDuration -> [Se.Set BeamB.estimatedDuration (Just estimatedDuration), Se.Set BeamB.estimatedStaticDuration estimatedStaticDuration]
+        Nothing -> []
   updateOneWithKV
-    [ Se.Set BeamB.estimatedFare estimatedFare,
-      Se.Set BeamB.maxEstimatedDistance maxEstimatedDistance,
-      Se.Set BeamB.estimatedDistance estimatedDistance,
-      Se.Set BeamB.fareParametersId fareParametersId,
-      Se.Set BeamB.updatedAt now
-    ]
+    ( [ Se.Set BeamB.estimatedFare estimatedFare,
+        Se.Set BeamB.maxEstimatedDistance maxEstimatedDistance,
+        Se.Set BeamB.estimatedDistance estimatedDistance,
+        Se.Set BeamB.fareParametersId fareParametersId,
+        Se.Set BeamB.updatedAt now
+      ]
+        <> durationSets
+    )
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateVehicleServiceTierAndFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DVST.ServiceTierType -> Id DFP.FareParameters -> HighPrecMoney -> Maybe Text -> Text -> Maybe Double -> Maybe Int -> Maybe Bool -> Maybe HighPrecMoney -> m ()

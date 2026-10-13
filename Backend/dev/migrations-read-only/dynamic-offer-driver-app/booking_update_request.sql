@@ -44,3 +44,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN snap_to_roa
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN estimated_static_duration integer ;
+ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN estimated_duration integer ;
