@@ -57,6 +57,7 @@ import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEme
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PolicyDocument as PolicyDocument
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.PublicTransport as PublicTransport
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
@@ -210,6 +211,7 @@ type API =
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
            :<|> Dispatcher.API
+           :<|> PublicTransport.API
        )
 
 handler :: FlowServer API
@@ -300,3 +302,4 @@ handler =
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
     :<|> Dispatcher.handler
+    :<|> PublicTransport.handler

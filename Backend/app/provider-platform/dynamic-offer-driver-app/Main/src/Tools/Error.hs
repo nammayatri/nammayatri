@@ -2513,3 +2513,29 @@ instance IsHTTPError DepotManagerError where
     DepotFleetInfoNotFound _ -> E400
 
 instance IsAPIError DepotManagerError
+
+data PublicTransportBlockError
+  = BusBlocked Text
+  | BusBlockNotAllowed Text
+  | BusBlockLimitExceeded Int
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PublicTransportBlockError
+
+instance IsBaseError PublicTransportBlockError where
+  toMessage = \case
+    BusBlocked vehicleNumber -> Just $ "Bus with vehicle number " <> vehicleNumber <> " is already blocked."
+    BusBlockNotAllowed personId -> Just $ "Person " <> personId <> " is not allowed to block/unblock buses."
+    BusBlockLimitExceeded maxLimit -> Just $ "Bus block limit exceeded (max " <> show maxLimit <> ")."
+
+instance IsHTTPError PublicTransportBlockError where
+  toErrorCode = \case
+    BusBlocked _ -> "BUS_BLOCKED"
+    BusBlockNotAllowed _ -> "BUS_BLOCK_NOT_ALLOWED"
+    BusBlockLimitExceeded _ -> "BUS_BLOCK_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    BusBlocked _ -> E403
+    BusBlockNotAllowed _ -> E403
+    BusBlockLimitExceeded _ -> E403
+
+instance IsAPIError PublicTransportBlockError
