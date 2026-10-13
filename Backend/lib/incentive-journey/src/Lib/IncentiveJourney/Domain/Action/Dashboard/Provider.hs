@@ -54,6 +54,7 @@ import qualified Lib.IncentiveJourney.Storage.Queries.CohortDetailsExtra as QCDE
 import qualified Lib.IncentiveJourney.Storage.Queries.CohortJourneyMappingExtra as QCJMExtra
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourney as QJourney
 import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestone as QMilestone
+import qualified Lib.IncentiveJourney.Storage.Queries.IncentiveJourneyMilestoneExtra as QMilestoneExtra
 import qualified Lib.IncentiveJourney.Streak as IJStreak
 
 resolveMerchant ::
@@ -314,7 +315,11 @@ getIncentiveJourneyStatsHistory handle merchantShortId opCity driverId mbJourney
       mbOffset
       fromDate
       toDate
-  pure Common.IncentiveJourneyStatsHistoryRes {stats = map toStatsHistoryItem rows}
+  journeys <- handle.getJourneysByIds (map (.journeyId) rows)
+  milestones <- QMilestoneExtra.findByIds (map (.milestoneId) rows)
+  let journeyNameById = HM.fromList [(journey.id, journey.name) | journey <- journeys]
+      milestoneNameById = HM.fromList [(milestone.id, milestone.name) | milestone <- milestones]
+  pure Common.IncentiveJourneyStatsHistoryRes {stats = map (toStatsHistoryItem journeyNameById milestoneNameById) rows}
 
 getIncentiveJourneyDriverAssignments ::
   BeamFlow m r =>
@@ -725,13 +730,19 @@ toDriverAssignmentItem assignmentView =
       assignedAt = assignmentView.assignedAt
     }
 
-toStatsHistoryItem :: DIJS.IncentiveJourneyStats -> Common.IncentiveJourneyStatsHistoryItem
-toStatsHistoryItem stats =
+toStatsHistoryItem ::
+  HM.HashMap (ID.Id DIJ.IncentiveJourney) Text ->
+  HM.HashMap (ID.Id DIJM.IncentiveJourneyMilestone) (Maybe Text) ->
+  DIJS.IncentiveJourneyStats ->
+  Common.IncentiveJourneyStatsHistoryItem
+toStatsHistoryItem journeyNameById milestoneNameById stats =
   Common.IncentiveJourneyStatsHistoryItem
     { statsId = stats.id.getId,
       driverId = ID.cast stats.personId,
       journeyId = ID.cast stats.journeyId,
+      journeyName = fromMaybe stats.journeyId.getId (HM.lookup stats.journeyId journeyNameById),
       milestoneId = ID.cast stats.milestoneId,
+      milestoneName = join (HM.lookup stats.milestoneId milestoneNameById),
       periodKey = stats.periodKey,
       conditionType = toApiConditionType stats.conditionType,
       conditionValue = stats.conditionValue,
