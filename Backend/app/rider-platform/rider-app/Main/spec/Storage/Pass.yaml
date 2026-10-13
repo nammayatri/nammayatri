@@ -7,6 +7,7 @@ imports:
   Value: Data.Aeson
   ServiceTierType: BecknV2.FRFS.Enums
   VehicleCategory: BecknV2.FRFS.Enums
+  OverrideBenefitConfig: Domain.Types.PassOverrideConfig
 
 Pass:
   tableName: pass
@@ -59,7 +60,7 @@ Pass:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     formVerificationConfig: Maybe Value
-    overrideBenefitConfigJson: Maybe Value
+    overrideBenefitConfigJson: Maybe OverrideBenefitConfig
     minTripsAllowingOverlap: Maybe Int
     minDaysToSuggestRenewal: Maybe Int
     timeOverlappingFrfsBookingsLimit: Maybe Int
@@ -72,16 +73,19 @@ Pass:
     vehicleType: Maybe VehicleCategory
     verificationValidity: Maybe Seconds
     maxSwitchCount: Maybe Int
+    overrideBenefitConfigJson: Maybe Value
 
   fromTType:
     vehicleType: Kernel.Prelude.fromMaybe BecknV2.FRFS.Enums.BUS|I
     verificationValidity: Kernel.Prelude.fromMaybe 9000|I
     passConfig: (Domain.Types.Pass.PassConfig <$> maxSwitchCount)|E
+    overrideBenefitConfigJson: (overrideBenefitConfigJson >>= Kernel.Utils.JSON.valueToMaybe)|E
 
   toTType:
     vehicleType: Kernel.Prelude.Just|I
     verificationValidity: Kernel.Prelude.Just|I
     maxSwitchCount: ((.maxSwitchCount) <$> passConfig)|E
+    overrideBenefitConfigJson: (Data.Aeson.toJSON <$> overrideBenefitConfigJson)|E
 
   constraints:
     id: PrimaryKey
