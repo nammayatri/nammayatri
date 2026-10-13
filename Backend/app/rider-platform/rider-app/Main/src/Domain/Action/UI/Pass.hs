@@ -240,7 +240,7 @@ postMultimodalPassSelectUtil isDashboard (mbPersonId, merchantId) passId mbDevic
       else pure Nothing
   when (pass.frfsPriceOverrideApplicable == Just True && isNothing mbOverrideEntry) $
     throwError (InvalidRequest "This pass is not available right now")
-  let selection = fromMaybe (RoutePassPricing.PassPurchaseSelection Nothing Nothing Nothing Nothing) mbSelection
+  let selection = fromMaybe (RoutePassPricing.PassPurchaseSelection Nothing Nothing Nothing Nothing Nothing) mbSelection
   mbRouteTerm <- case mbOverrideEntry of
     Just (FRFSPassOverride.PassTicketBenefit config) -> Just <$> RoutePassPricing.resolveRoutePassTerm person pass config selection
     _ -> pure Nothing
@@ -545,7 +545,8 @@ postMultimodalPassV2Select (mbPersonId, merchantId) passId mbIsMockPayment req =
         { sourceStopCode = req.sourceStopCode,
           destinationStopCode = req.destinationStopCode,
           tripCount = req.tripCount,
-          validityDays = req.validityDays
+          validityDays = req.validityDays,
+          roundTrip = req.roundTrip
         }
 
 -- Generate Redis lock key for pass purchase
@@ -819,7 +820,10 @@ mkFrfsOverrideConfig benefit =
       fixedApplicable = benefit.fixedSaving >>= \f -> if f.enabled == Just True then Just f.applicableValue else Nothing,
       maximumTripCount = benefit.maximumTripCount,
       unlimitedTripCount = benefit.unlimitedTripCount == Just True,
-      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride
+      maxTicketQuantityPerOverride = benefit.maxTicketQuantityPerOverride,
+      enforceStopPair = benefit.enforceStopPair,
+      allowRoundTrip = benefit.allowRoundTrip,
+      allowCheaperStopPairs = benefit.allowCheaperStopPairs
     }
 
 findMerchantOperatingCity :: Id.ShortId DM.Merchant -> Context.City -> Environment.Flow DMOC.MerchantOperatingCity
@@ -2336,7 +2340,8 @@ postMultimodalPassCalculateFare (mbPersonId, merchantId) passId req = do
         { sourceStopCode = Just req.sourceStopCode,
           destinationStopCode = Just req.destinationStopCode,
           tripCount = req.tripCount,
-          validityDays = req.validityDays
+          validityDays = req.validityDays,
+          roundTrip = req.roundTrip
         }
   pure
     PassAPI.PassCalculateFareResp

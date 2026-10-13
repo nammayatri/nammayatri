@@ -1509,10 +1509,11 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let overridePurchasedPassIds = if shouldCheckPass then maybe [] (map (.payment.purchasedPassId)) mbPassCandidates else []
       adultUnitPrice = (mbFareParameters <&> (.priceItems)) >>= find (\priceItem -> priceItem.categoryType == ADULT) <&> (.unitPrice)
       overridePriceItems = maybe [] (map (\priceItem -> (priceItem.unitPrice, priceItem.quantity)) . (.priceItems)) mbFareParameters
-      applicablePasses =
+  (mbPassLegStops, stopMatchedPasses) <- passLegStops integratedBPPConfig overridePasses frfsSearch.fromStationCode frfsSearch.toStationCode
+  let applicablePasses =
         maybe
           []
-          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig overridePasses serviceTierType unitPrice overridePriceItems)
+          (\unitPrice -> map FRFSPassOverride.mkPassOptionAPIEntity $ FRFSPassOverride.passOptionsForQuote integratedBPPConfig mbPassLegStops stopMatchedPasses serviceTierType unitPrice overridePriceItems)
           adultUnitPrice
   let hasTicketFreePass =
         shouldCheckPass

@@ -61,6 +61,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.PurchasedPassPayment as DPPP
 import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
@@ -652,6 +653,39 @@ getFareThroughGTFS _riderId vehicleType serviceTier integratedBPPConfig _merchan
             _ -> return [] -- No stage information available
         _ -> return [] -- Start or end stop not found in trip
     Nothing -> return [] -- Trip details not found
+
+stationCodeForMatching ::
+  (MonadFlow m, Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Text)
+stationCodeForMatching integratedBPPConfig stopCode =
+  OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig
+    <&> fmap (\station -> fromMaybe station.code station.parentStopCode)
+
+passLegStops ::
+  (MonadFlow m, Metrics.CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
+  IntegratedBPPConfig ->
+  [FRFSPassOverride.ApplicablePass] ->
+  Text ->
+  Text ->
+  m (Maybe FRFSPassOverride.LegStops, [FRFSPassOverride.ApplicablePass])
+passLegStops integratedBPPConfig applicablePasses fromStopCode toStopCode
+  | not (any FRFSPassOverride.hasPurchasedStops applicablePasses) = pure (Nothing, applicablePasses)
+  | otherwise = do
+    mbFrom <- stationCodeForMatching integratedBPPConfig fromStopCode
+    mbTo <- stationCodeForMatching integratedBPPConfig toStopCode
+    normalisedPasses <- mapM normalisePassStops applicablePasses
+    pure (FRFSPassOverride.LegStops <$> mbFrom <*> mbTo, normalisedPasses)
+  where
+    normaliseCode stopCode = fromMaybe stopCode <$> stationCodeForMatching integratedBPPConfig stopCode
+    normalisePassStops applicablePass
+      | not (FRFSPassOverride.hasPurchasedStops applicablePass) = pure applicablePass
+      | otherwise = do
+        let payment = applicablePass.purchasedPassPayment
+        normalisedSource <- mapM normaliseCode payment.sourceStopCode
+        normalisedDestination <- mapM normaliseCode payment.destinationStopCode
+        pure applicablePass {FRFSPassOverride.purchasedPassPayment = payment {DPPP.sourceStopCode = normalisedSource, DPPP.destinationStopCode = normalisedDestination}}
 
 data RouteStageSpan = RouteStageSpan
   { routeCode :: Text,
