@@ -53,6 +53,8 @@ types:
   RoutePassAPIEntity:
     sourceStopCode: Maybe Text
     destinationStopCode: Maybe Text
+    sourceStopName: Maybe Text
+    destinationStopName: Maybe Text
     derive: "Show"
 
   PassCalculateFareReq:

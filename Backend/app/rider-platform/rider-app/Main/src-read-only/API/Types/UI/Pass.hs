@@ -226,7 +226,12 @@ data RefundAPIEntity = RefundAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RoutePassAPIEntity = RoutePassAPIEntity {destinationStopCode :: Data.Maybe.Maybe Data.Text.Text, sourceStopCode :: Data.Maybe.Maybe Data.Text.Text}
+data RoutePassAPIEntity = RoutePassAPIEntity
+  { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    destinationStopName :: Data.Maybe.Maybe Data.Text.Text,
+    sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    sourceStopName :: Data.Maybe.Maybe Data.Text.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
