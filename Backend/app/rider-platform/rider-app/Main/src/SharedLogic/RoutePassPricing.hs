@@ -5,7 +5,6 @@ module SharedLogic.RoutePassPricing
     resolveRoutePassTerm,
     resolveValidityDays,
     normaliseStopCode,
-    stationCodeForMatching,
   )
 where
 
@@ -26,9 +25,8 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error (GenericError (..))
 import Kernel.Utils.Common
-import SharedLogic.FRFSUtils (stageFareBetweenStops)
+import SharedLogic.FRFSUtils (stageFareBetweenStops, stationCodeForMatching)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Tools.Metrics.BAPMetrics as Metrics
 
 type RoutePassFlow m r c =
@@ -48,7 +46,8 @@ data PassPurchaseSelection = PassPurchaseSelection
   { sourceStopCode :: Maybe Text,
     destinationStopCode :: Maybe Text,
     tripCount :: Maybe Int,
-    validityDays :: Maybe Int
+    validityDays :: Maybe Int,
+    roundTrip :: Maybe Bool
   }
   deriving (Generic, Show)
 
@@ -79,6 +78,8 @@ resolveRoutePassTerm person pass config selection = do
   destinationStopCode <- selection.destinationStopCode & fromMaybeM (InvalidRequest "destinationStopCode is required for this pass")
   when (sourceStopCode == destinationStopCode) $
     throwError (InvalidRequest "sourceStopCode and destinationStopCode must be different")
+  when (selection.roundTrip == Just True && config.pricing.allowRoundTripPurchase /= Just True) $
+    throwError (InvalidRequest "This pass does not offer round trips")
   tripCount <- resolveTripCount config selection.tripCount
   let unlimited = config.benefit.unlimitedTripCount == Just True
   validityDays <- resolveValidityDays pass selection.validityDays
@@ -96,7 +97,10 @@ resolveRoutePassTerm person pass config selection = do
             fixedSaving = config.benefit.fixedSaving,
             unlimitedTripCount = config.benefit.unlimitedTripCount,
             maximumTripCount = if unlimited then Nothing else Just tripCount,
-            maxTicketQuantityPerOverride = config.benefit.maxTicketQuantityPerOverride
+            maxTicketQuantityPerOverride = config.benefit.maxTicketQuantityPerOverride,
+            enforceStopPair = config.benefit.enforceStopPair,
+            allowRoundTrip = Just (selection.roundTrip == Just True),
+            allowCheaperStopPairs = config.benefit.allowCheaperStopPairs
           }
   pure
     RoutePassTerm
@@ -189,12 +193,3 @@ normaliseStopCode ::
   m Text
 normaliseStopCode integratedBPPConfig stopCode =
   stationCodeForMatching integratedBPPConfig stopCode >>= fromMaybeM (InvalidRequest $ "Unknown stop: " <> stopCode)
-
-stationCodeForMatching ::
-  (MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, HasShortDurationRetryCfg r c) =>
-  DIBC.IntegratedBPPConfig ->
-  Text ->
-  m (Maybe Text)
-stationCodeForMatching integratedBPPConfig stopCode =
-  OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig
-    <&> fmap (\station -> fromMaybe station.code station.parentStopCode)

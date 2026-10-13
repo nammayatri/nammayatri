@@ -43,7 +43,10 @@ data FRFSPassTicketStatisticsResp = FRFSPassTicketStatisticsResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FrfsOverrideConfigAPIEntity = FrfsOverrideConfigAPIEntity
-  { fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+  { allowCheaperStopPairs :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    allowRoundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    enforceStopPair :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maximumTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     percentageApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -87,7 +90,13 @@ data PassAPIEntity = PassAPIEntity
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassCalculateFareReq = PassCalculateFareReq {destinationStopCode :: Data.Text.Text, sourceStopCode :: Data.Text.Text, tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int, validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int}
+data PassCalculateFareReq = PassCalculateFareReq
+  { destinationStopCode :: Data.Text.Text,
+    roundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    sourceStopCode :: Data.Text.Text,
+    tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -120,6 +129,7 @@ data PassSelectReq = PassSelectReq
     imeiNumber :: Data.Text.Text,
     passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
+    roundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
     startDate :: Data.Time.Day,
     tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
