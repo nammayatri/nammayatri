@@ -48,6 +48,9 @@ FinanceAccountConfig:
     pointsConversionRate: Maybe Double
     # --- scheduling hook (names a scheduled_transfer_rule; Nothing = manual only) ---
     autoTransferOut: Maybe Text
+    # --- balance-backed charging (the kernel stores these; the domain decides what they gate) ---
+    subscriptionFromBalance: Maybe Bool # the owner's recurring subscription charges are debited from this class's balance (Nothing = no)
+    enforceMinBalance: Maybe Bool # the owner is blocked while this class's balance is below the domain's minimum (Nothing = no)
     createdAt: UTCTime
     updatedAt: UTCTime
 

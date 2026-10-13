@@ -356,14 +356,28 @@ let AllocatorJobType =
       | GenerateInvoicePdf
       | SendLegalPolicyNotification
       | CheckBetterDriverSearchProximity
+      | MigratePendingDuesToWallet
+      | ProcessEndRideFinance
+      | WalletIntegrityCheck
+      | ChargeWalletPenalty
       >
 
 let jobRetryOnExceptionMapx =
       [ { mapKey = AllocatorJobType.FleetAnalyticsRedisRecon, mapValue = True }
+      , { mapKey = AllocatorJobType.MigratePendingDuesToWallet
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.WalletIntegrityCheck, mapValue = True }
       ]
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
+      , { mapKey = AllocatorJobType.MigratePendingDuesToWallet
+        , mapValue = True
+        }
+      , { mapKey = AllocatorJobType.ProcessEndRideFinance, mapValue = True }
+      , { mapKey = AllocatorJobType.WalletIntegrityCheck, mapValue = True }
+      , { mapKey = AllocatorJobType.ChargeWalletPenalty, mapValue = True }
       , { mapKey = AllocatorJobType.SendScheduledSearchRequestToDriver
         , mapValue = True
         }

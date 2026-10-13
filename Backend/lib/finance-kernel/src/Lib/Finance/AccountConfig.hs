@@ -79,6 +79,10 @@ data ResolvedAccountConfig = ResolvedAccountConfig
     statusCheckMaxAttempts :: Maybe Int,
     -- | points-denominated classes (loyalty wallets): currency units per point
     pointsConversionRate :: Maybe Double,
+    -- | recurring subscription charges are debited from this class's balance
+    subscriptionFromBalance :: Bool,
+    -- | the owner is blocked while this class's balance is below the domain's minimum
+    enforceMinBalance :: Bool,
     resolvedFrom :: Maybe (Id FinanceAccountConfig)
   }
   deriving (Eq, Show, Generic)
@@ -102,6 +106,8 @@ defaultAccountConfig =
       statusCheckIntervalSec = Nothing,
       statusCheckMaxAttempts = Nothing,
       pointsConversionRate = Nothing,
+      subscriptionFromBalance = False,
+      enforceMinBalance = False,
       resolvedFrom = Nothing
     }
 
@@ -171,6 +177,8 @@ toResolved r =
       statusCheckIntervalSec = r.statusCheckIntervalSec,
       statusCheckMaxAttempts = r.statusCheckMaxAttempts,
       pointsConversionRate = r.pointsConversionRate,
+      subscriptionFromBalance = fromMaybe False r.subscriptionFromBalance,
+      enforceMinBalance = fromMaybe False r.enforceMinBalance,
       resolvedFrom = Just r.id
     }
 

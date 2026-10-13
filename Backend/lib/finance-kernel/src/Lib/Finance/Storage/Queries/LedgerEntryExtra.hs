@@ -48,6 +48,14 @@ sumPendingByFromAccount accountId = do
       _ -> False
   pure $ sum [e.amount | e <- entries, e.toAccountId `notElem` govIds]
 
+-- | Every ledger entry under one reference id, whatever its reference type.
+findByReferenceId ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  m [Domain.LedgerEntry]
+findByReferenceId referenceId =
+  findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
+
 -- | Find ledger entries by reference type (IN list) and reference ID
 findByReferenceIn ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
