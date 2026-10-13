@@ -28,3 +28,9 @@ ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_thresho
 ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_window1 json;
 ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_threshold2 integer;
 ALTER TABLE atlas_app.merchant_config ADD COLUMN auth_phone_number_count_window2 json;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_config ADD COLUMN fraud_zero_ride_search_count_threshold integer ;

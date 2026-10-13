@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.MerchantConfig.MerchantConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.MerchantConfig.MerchantConfig])
 findAllByMerchantOperatingCityId merchantOperatingCityId enabled = do
   findAllWithKV
     [ Se.And
@@ -56,6 +56,7 @@ updateByPrimaryKey (Domain.Types.MerchantConfig.MerchantConfig {..}) = do
       Se.Set Beam.fraudRideCountWindow fraudRideCountWindow,
       Se.Set Beam.fraudSearchCountThreshold fraudSearchCountThreshold,
       Se.Set Beam.fraudSearchCountWindow fraudSearchCountWindow,
+      Se.Set Beam.fraudZeroRideSearchCountThreshold fraudZeroRideSearchCountThreshold,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.updatedAt (Just _now)
@@ -84,6 +85,7 @@ instance FromTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConf
             fraudRideCountWindow = fraudRideCountWindow,
             fraudSearchCountThreshold = fraudSearchCountThreshold,
             fraudSearchCountWindow = fraudSearchCountWindow,
+            fraudZeroRideSearchCountThreshold = fraudZeroRideSearchCountThreshold,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -110,6 +112,7 @@ instance ToTType' Beam.MerchantConfig Domain.Types.MerchantConfig.MerchantConfig
         Beam.fraudRideCountWindow = fraudRideCountWindow,
         Beam.fraudSearchCountThreshold = fraudSearchCountThreshold,
         Beam.fraudSearchCountWindow = fraudSearchCountWindow,
+        Beam.fraudZeroRideSearchCountThreshold = fraudZeroRideSearchCountThreshold,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
