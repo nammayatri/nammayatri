@@ -138,6 +138,10 @@ data FinanceCtx = FinanceCtx
     -- | Driver-app only: caller-resolved driverWalletConfig.enableWalletGatedTierCheck, read by
     --   SharedLogic.Finance.PostActions to gate the wallet-tier recheck. Always False for rider-app.
     enableWalletGatedTierCheck :: Bool,
+    -- | Driver-app only: caller-resolved driverWalletConfig.enableDriverWallet, read by
+    --   SharedLogic.Finance.PostActions to keep the pool's cached driver wallet balance in sync.
+    --   Always False for rider-app and the shared libs.
+    syncDriverWalletBalance :: Bool,
     buyerCounterpartyId :: Maybe Text
   }
   deriving (Eq, Show, Generic)

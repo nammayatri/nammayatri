@@ -6,6 +6,7 @@ module SharedLogic.DriverPool.DriverPoolMigrations
     migrations,
     currentSchemaVersion,
     applyMigrations,
+    fetchWalletBalances,
   )
 where
 
@@ -16,8 +17,10 @@ import qualified Domain.Types.Person as Person
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.DriverPool.DriverPoolData
+import SharedLogic.Finance.WalletAccount (findWalletAccountsByOwners)
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
@@ -71,7 +74,8 @@ migrations =
     MigrationEntry 5 backfillEnableCashRide,
     MigrationEntry 6 backfillMerchantOperatingCityId,
     MigrationEntry 7 backfillRideBillingModel,
-    MigrationEntry 8 backfillFleetOwnerId
+    MigrationEntry 8 backfillFleetOwnerId,
+    MigrationEntry 9 backfillWalletBalance
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -160,6 +164,29 @@ backfillFleetOwnerId entries = do
     map
       (\e -> e {fleetOwnerId = HashMap.lookup (cast e.driverId :: Id Person.Person) fleetOwnerMap})
       entries
+
+-- | v9: backfill the new 'walletBalance' field (balance of the driver's own wallet).
+backfillWalletBalance ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillWalletBalance entries = do
+  balances <- fetchWalletBalances (map (cast . (.driverId)) entries)
+  pure $
+    map
+      (\e -> e {walletBalance = HashMap.lookup (cast e.driverId :: Id Person.Person) balances})
+      entries
+
+-- | Wallet balance of each driver's own wallet, fleet driver or not (the charges of the wallet feature
+-- settle in the driver's wallet, and that is the one the go-online minimum is checked against). One
+-- batched query for the whole list; a driver with no wallet row has no entry.
+fetchWalletBalances ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [Id Person.Person] ->
+  m (HashMap.HashMap (Id Person.Person) HighPrecMoney)
+fetchWalletBalances personIds = do
+  driverAccounts <- findWalletAccountsByOwners FAccount.DRIVER (DL.nub (getId <$> personIds))
+  let driverBalances = HashMap.fromList [(ownerId, acc.balance) | acc <- driverAccounts, Just ownerId <- [acc.counterpartyId]]
+  pure $ HashMap.fromList [(pid, b) | pid <- personIds, Just b <- [HashMap.lookup pid.getId driverBalances]]
 
 -- | v3: backfill the new 'cloudType' field from the person table.
 -- Without this, legacy entries would default to 'cloudType = Nothing'.

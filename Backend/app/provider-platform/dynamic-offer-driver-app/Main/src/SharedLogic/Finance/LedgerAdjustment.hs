@@ -51,9 +51,11 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPayoutRequest
 import qualified SharedLogic.DriverFyEarnings as SDFE
 import qualified SharedLogic.FareCalculator as SFC
 import SharedLogic.Finance.LedgerAdjustmentCast
+import qualified SharedLogic.Finance.PostActions as PostActions
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.TdsReimbursement as TdsReimbursement
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -631,12 +633,8 @@ lookupFleetOwnerTdsRate personId panLinkTdsEnabled configTdsRate = do
 
 -- | Submit/post TOCTOU guard: debit amount must not exceed current wallet balance.
 validateWalletDebitAmountForPerson :: DP.Person -> HighPrecMoney -> Flow ()
-validateWalletDebitAmountForPerson person debitAmount = do
-  let counterpartyType = case person.role of
-        DP.FLEET_OWNER -> FinancePrepaid.counterpartyFleetOwner
-        DP.FLEET_BUSINESS -> FinancePrepaid.counterpartyFleetOwner
-        _ -> FinancePrepaid.counterpartyDriver
-  Wallet.validateWalletDebitAmount counterpartyType person.id.getId debitAmount
+validateWalletDebitAmountForPerson person debitAmount =
+  Wallet.validateWalletDebitAmount (Wallet.counterpartyFromRole person.role) person.id.getId debitAmount
 
 --------------------------------------------------------------------------------
 -- Builders / helpers
@@ -829,6 +827,11 @@ ledgerAdjustmentApproveAndPost merchantShortId opCity adjustmentRequestId reques
             mbLedgerEntryId
             (Just now)
             adjustmentRequest.id
+          when (adjustmentRequest.direction == DLA.Debit) $
+            fork "wallet floor after ledger adjustment debit" $ do
+              mbPerson <- QP.findById adjustmentRequest.personId
+              whenJust mbPerson $ \person ->
+                WalletFloor.enforceWalletFloorForOwner transporterConfig (Wallet.counterpartyFromRole person.role) person.id.getId
         Left (err :: SomeException) -> do
           let errMessage = T.pack (displayException err)
           logError $
@@ -882,7 +885,7 @@ adjustment ::
 adjustment DLA.Credit fromRole toRole amount = Finance.adjustment fromRole toRole amount
 adjustment DLA.Debit fromRole toRole amount = Finance.adjustment fromRole toRole (negate amount)
 
--- | Unwrap a 'Finance.runFinance' result for a category post; 'adjustmentName'
+-- | Unwrap a 'PostActions.runFinance' result for a category post; 'adjustmentName'
 --   is interpolated into the error message.
 unwrapFinanceResult :: Show err => Text -> Either err (a, b) -> Flow a
 unwrapFinanceResult adjustmentName = \case
@@ -899,7 +902,7 @@ runLedgerAdjustment ::
   Flow (Maybe (Id DLE.LedgerEntry))
 runLedgerAdjustment adjustmentName ctx fromRole adjustmentRequest = do
   result <-
-    Finance.runFinance ctx $
+    PostActions.runFinance ctx $
       adjustment
         adjustmentRequest.direction
         fromRole
@@ -1020,7 +1023,7 @@ postTdsReimbursementAdjustment transporterConfig checkerId adminCheckerName adju
 
   let ctx = mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person
   result <-
-    Finance.runFinance ctx $ do
+    PostActions.runFinance ctx $ do
       mbLedgerEntryId <-
         adjustment
           DLA.Credit
@@ -1141,6 +1144,7 @@ mkFinanceContextWithoutInvoice transporterConfig adjustmentRequest person =
           fromLocationAddress = Nothing,
           issuedToName = Nothing,
           enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+          syncDriverWalletBalance = transporterConfig.driverWalletConfig.enableDriverWallet,
           buyerCounterpartyId = Nothing
         }
 

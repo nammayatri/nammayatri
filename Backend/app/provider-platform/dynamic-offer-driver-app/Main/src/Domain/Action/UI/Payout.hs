@@ -589,7 +589,7 @@ settleDriverWalletPayoutLedgerFor ::
 settleDriverWalletPayoutLedgerFor merchantOperatingCityId merchantId person transporterConfig payoutReq amount updPayoutStatus = do
   let driverId = person.id
       counterparty = counterpartyFromRole person.role
-  let walletCtx = buildDriverChargeCtx counterparty driverId.getId merchantId merchantOperatingCityId.getId transporterConfig.currency payoutReq.id.getId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+  let walletCtx = buildDriverChargeCtx counterparty driverId.getId merchantId merchantOperatingCityId.getId transporterConfig.currency payoutReq.id.getId transporterConfig.driverWalletConfig
       holdMetadata =
         LedgerEntryMetadata
           { driverPayable = Just (-1 * amount),

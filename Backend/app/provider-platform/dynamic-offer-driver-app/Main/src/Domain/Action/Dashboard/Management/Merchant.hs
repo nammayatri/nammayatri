@@ -15,6 +15,8 @@
 
 module Domain.Action.Dashboard.Management.Merchant
   ( postMerchantServiceConfigMapsUpdate,
+    getMerchantConfigDriverWallet,
+    postMerchantConfigDriverWalletMigratePendingDues,
     postMerchantServiceUsageConfigMapsUpdate,
     postMerchantUpdate,
     postMerchantCloudUpdate,
@@ -204,12 +206,14 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, MigratePendingDuesToWalletJobData (..), RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import qualified SharedLogic.Allocator.Jobs.Wallet.MigratePendingDues as WalletDuesMigration
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverFee as SDF
 import qualified SharedLogic.DriverOnboarding as SDO
+import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -5262,6 +5266,22 @@ validateVehicleServiceTierUpdate merchantOpCityId existing req = do
   whenJust req.name $ \n ->
     when (T.null (T.strip n)) $ throwError $ InvalidRequest "name cannot be empty"
 
+  whenJust (req.minWalletBalanceToGoOnline >>= (.value)) $ \minBalance ->
+    when (minBalance <= 0) $ throwError $ InvalidRequest "minWalletBalanceToGoOnline must be positive"
+  whenJust (req.autopayTriggerBalance >>= (.value)) $ \triggerBalance ->
+    when (triggerBalance <= 0) $ throwError $ InvalidRequest "autopayTriggerBalance must be positive"
+  -- Validate the resulting pair, not just the request: the recharge must start at or above the blocking minimum.
+  let newMinimum = maybe existing.minWalletBalanceToGoOnline (.value) req.minWalletBalanceToGoOnline
+  validateAutopayTriggerNotBelowMinimum newMinimum (maybe existing.autopayTriggerBalance (.value) req.autopayTriggerBalance)
+  -- Clearing the last tier minimum while enforcement is on would leave enforcement with nothing to enforce.
+  -- The effective config (with any ConfigPilot patch applied) decides, since that is where enforcement is set.
+  when (isJust existing.minWalletBalanceToGoOnline && isNothing newMinimum) $ do
+    mbConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+    when (maybe False (isMinBalanceEnforced . (.driverWalletConfig)) mbConfig) $ do
+      tiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+      when (all (isNothing . (.minWalletBalanceToGoOnline)) (filter ((/= existing.id) . (.id)) tiers)) $
+        throwError $ InvalidRequest "Cannot clear the last tier minimum while enforceMinWalletBalance is on; turn enforcement off first"
+
   -- 2. Seating capacity validation
   whenJust req.seatingCapacity $ \cap ->
     when (cap <= 0 || cap > 100) $
@@ -5305,6 +5325,16 @@ validateAirConditionedThreshold :: DVST.VehicleServiceTier -> Flow ()
 validateAirConditionedThreshold vst =
   when (vst.isAirConditioned == Just True && isNothing vst.airConditionedThreshold) $
     throwError $ InvalidRequest "airConditionedThreshold is mandatory when isAirConditioned is true"
+
+-- | The Autopay recharge trigger is the higher of the two tier thresholds: a driver is topped up
+--   before they reach the level at which they are blocked from going online.
+validateAutopayTriggerNotBelowMinimum :: Maybe HighPrecMoney -> Maybe HighPrecMoney -> Flow ()
+validateAutopayTriggerNotBelowMinimum mbMinimum mbTrigger =
+  case (mbMinimum, mbTrigger) of
+    (Just minBalance, Just triggerBalance)
+      | triggerBalance < minBalance ->
+        throwError $ InvalidRequest "autopayTriggerBalance must be at least minWalletBalanceToGoOnline"
+    _ -> pure ()
 
 applyVehicleServiceTierUpdate ::
   DVST.VehicleServiceTier ->
@@ -5350,6 +5380,9 @@ applyVehicleServiceTierUpdate existing req =
       DVST.cancellationRateConfig = req.cancellationRateConfig <|> existing.cancellationRateConfig,
       DVST.availabilityCheckConfig = req.availabilityCheckConfig <|> existing.availabilityCheckConfig,
       DVST.autoAcceptanceConfig = req.autoAcceptanceConfig <|> existing.autoAcceptanceConfig,
+      -- Omitted keeps the stored minimum; an explicit {"value": null} clears it.
+      DVST.minWalletBalanceToGoOnline = maybe existing.minWalletBalanceToGoOnline (.value) req.minWalletBalanceToGoOnline,
+      DVST.autopayTriggerBalance = maybe existing.autopayTriggerBalance (.value) req.autopayTriggerBalance,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
       DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
@@ -5389,6 +5422,12 @@ postMerchantConfigVehicleServiceTierCreate ::
 postMerchantConfigVehicleServiceTierCreate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+
+  whenJust req.minWalletBalanceToGoOnline $ \minBalance ->
+    when (minBalance <= 0) $ throwError $ InvalidRequest "minWalletBalanceToGoOnline must be positive"
+  whenJust req.autopayTriggerBalance $ \triggerBalance ->
+    when (triggerBalance <= 0) $ throwError $ InvalidRequest "autopayTriggerBalance must be positive"
+  validateAutopayTriggerNotBelowMinimum req.minWalletBalanceToGoOnline req.autopayTriggerBalance
 
   existingConfig <- CQVST.findByServiceTierTypeAndCityId req.serviceTierType merchantOpCityId Nothing
   whenJust existingConfig $ \_ ->
@@ -5462,6 +5501,8 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         availabilityCheckConfig = req.availabilityCheckConfig,
         autoAcceptanceConfig = req.autoAcceptanceConfig,
+        minWalletBalanceToGoOnline = req.minWalletBalanceToGoOnline,
+        autopayTriggerBalance = req.autopayTriggerBalance,
         createdAt = now,
         updatedAt = now
       }
@@ -5777,3 +5818,41 @@ verifyCloudSwitchPassword given = do
     asks (.cloudSwitchPassword)
       >>= fromMaybeM (InvalidRequest "Cloud switch is disabled: cloudSwitchPassword is not configured for this app")
   unless (given == expected) $ throwError AccessDenied
+
+---------------------------------------------------------------------
+-- Driver wallet (GST collection via the wallet)
+---------------------------------------------------------------------
+
+getMerchantConfigDriverWallet :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverWalletConfigRes
+getMerchantConfigDriverWallet merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let dwc = config.driverWalletConfig
+      rideGst = config.taxConfig.rideGst
+  pure
+    Common.DriverWalletConfigRes
+      { enableDriverWallet = dwc.enableDriverWallet,
+        enableWalletTopup = dwc.enableWalletTopup,
+        enableWalletPayout = dwc.enableWalletPayout,
+        forceOnlineLedger = dwc.forceOnlineLedger,
+        subscriptionFromWallet = dwc.subscriptionFromWallet,
+        enforceMinWalletBalance = dwc.enforceMinWalletBalance,
+        rideCgstPercentage = rideGst.cgstPercentage,
+        rideSgstPercentage = rideGst.sgstPercentage,
+        rideIgstPercentage = rideGst.igstPercentage
+      }
+
+postMerchantConfigDriverWalletMigratePendingDues :: ShortId DM.Merchant -> Context.City -> Flow APISuccess
+postMerchantConfigDriverWalletMigratePendingDues merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  unless (config.driverWalletConfig.subscriptionFromWallet == Just True && config.driverWalletConfig.enableDriverWallet) $
+    throwError $ InvalidRequest "Turn on subscriptionFromWallet for this city before moving pending dues"
+  -- One migration per city at a time (the job releases the slot when it ends).
+  started <- WalletDuesMigration.markDuesMigrationRunning merchantOpCityId
+  unless started $ throwError $ InvalidRequest "Pending dues are already being moved into the wallets for this city"
+  createJobIn @_ @'MigratePendingDuesToWallet (Just merchant.id) (Just merchantOpCityId) 0 $
+    MigratePendingDuesToWalletJobData {merchantId = merchant.id, merchantOperatingCityId = merchantOpCityId}
+  pure Success

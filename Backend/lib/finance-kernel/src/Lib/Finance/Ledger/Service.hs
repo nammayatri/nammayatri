@@ -31,6 +31,7 @@ module Lib.Finance.Ledger.Service
     -- * Query by ID/reference
     getEntry,
     getEntriesByReference,
+    getEntriesByReferenceId,
     getEntriesByEntityReference,
     getEntriesByReferenceAndToAccount,
     getEntriesByReferenceAndFromAccount,
@@ -540,6 +541,13 @@ getEntriesByReference ::
   Text -> -- Reference ID
   m [LedgerEntry]
 getEntriesByReference = QLedger.findByReference
+
+-- | Every entry under one reference id (e.g. rideId), across all reference types
+getEntriesByReferenceId ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- Reference ID
+  m [LedgerEntry]
+getEntriesByReferenceId = QLedgerExtra.findByReferenceId
 
 -- | Every entry for a sub-domain entity (e.g. one refund request), reversals included —
 --   a reversal inherits the entity reference of the entry it reverses.

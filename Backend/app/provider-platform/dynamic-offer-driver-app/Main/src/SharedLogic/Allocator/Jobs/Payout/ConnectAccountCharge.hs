@@ -76,7 +76,7 @@ sendConnectAccountCharge Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $
                 mbPerson <- QPerson.findById acc.driverId
                 whenJust mbPerson $ \person -> do
                   let counterparty = counterpartyFromRole person.role
-                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId) (fromMaybe False dwc.enableWalletGatedTierCheck)
+                      chargeCtx = buildDriverChargeCtx counterparty acc.driverId.getId jobData.merchantId.getId merchantOpCityId.getId tConfig.currency ("ConnectAccountCharge-" <> acc.driverId.getId) dwc
                   void $
                     recordStripeChargeLedger chargeCtx (connectBearerToFunder bearer) charge walletReferenceConnectAccountCharges
                       >>= fromEitherM (\e -> InternalError ("Failed to post connect-account charge: " <> show e))

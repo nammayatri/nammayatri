@@ -49,7 +49,7 @@ import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.External.Maps (LatLong)
 import Kernel.External.Settlement.Types (SettlementService)
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, Seconds)
+import Kernel.Types.Common (HighPrecMoney, Meters, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Lib.Finance.Reconciliation.Job
@@ -124,6 +124,10 @@ data AllocatorJobType
   | DeleteUnreferencedFarePolicies
   | GenerateInvoicePdf
   | SendLegalPolicyNotification
+  | MigratePendingDuesToWallet
+  | ProcessEndRideFinance
+  | WalletIntegrityCheck
+  | ChargeWalletPenalty
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -207,6 +211,10 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
   restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
   restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
+  restoreAnyJobInfo SMigratePendingDuesToWallet jobData = AnyJobInfo <$> restoreJobInfo SMigratePendingDuesToWallet jobData
+  restoreAnyJobInfo SProcessEndRideFinance jobData = AnyJobInfo <$> restoreJobInfo SProcessEndRideFinance jobData
+  restoreAnyJobInfo SWalletIntegrityCheck jobData = AnyJobInfo <$> restoreJobInfo SWalletIntegrityCheck jobData
+  restoreAnyJobInfo SChargeWalletPenalty jobData = AnyJobInfo <$> restoreJobInfo SChargeWalletPenalty jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -941,3 +949,56 @@ data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
 instance JobInfoProcessor 'SendLegalPolicyNotification
 
 type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData
+
+-- | One-time move of a city's unpaid subscription dues into the driver wallets (started from
+--   Control Centre); re-schedules itself until nothing is left to move.
+data MigratePendingDuesToWalletJobData = MigratePendingDuesToWalletJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MigratePendingDuesToWallet
+
+type instance JobContent 'MigratePendingDuesToWallet = MigratePendingDuesToWalletJobData
+
+-- | End-ride wallet postings (GST, fee accrual, airport fee), run as a retried job instead of a
+--   fork in wallet-subscription cities so a crash after the ride completes can't lose them.
+data ProcessEndRideFinanceJobData = ProcessEndRideFinanceJobData
+  { rideId :: Id DRide.Ride,
+    bookingId :: Id DB.Booking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ProcessEndRideFinance
+
+type instance JobContent 'ProcessEndRideFinance = ProcessEndRideFinanceJobData
+
+-- | Daily wallet integrity check of a wallet-subscription city for the fee window just closed.
+data WalletIntegrityCheckJobData = WalletIntegrityCheckJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    endTime :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'WalletIntegrityCheck
+
+type instance JobContent 'WalletIntegrityCheck = WalletIntegrityCheckJobData
+
+-- | A penalty the behaviour engine charges a driver (its CHARGE_FEE consequence) in a
+--   wallet-subscription city: debited from the driver's wallet right away, as a retried job.
+--   'walletPenaltyChargeId' is the ledger reference, so a retry never posts the penalty twice.
+data ChargeWalletPenaltyJobData = ChargeWalletPenaltyJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    driverId :: Id DP.Person,
+    walletPenaltyAmount :: HighPrecMoney,
+    walletPenaltyChargeId :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ChargeWalletPenalty
+
+type instance JobContent 'ChargeWalletPenalty = ChargeWalletPenaltyJobData

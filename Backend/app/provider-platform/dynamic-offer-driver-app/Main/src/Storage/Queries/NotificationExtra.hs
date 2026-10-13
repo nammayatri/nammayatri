@@ -31,6 +31,10 @@ updateMerchantOperatingCityIdByNotificationId notificationId merchantOperatingCi
 findAllByDriverFeeIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
 findAllByDriverFeeIdAndStatus driverFeeIds status = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds), Se.Is BeamI.status $ Se.Eq status]]
 
+findAllByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> m [Domain.Notification]
+findAllByDriverFeeIds [] = pure []
+findAllByDriverFeeIds driverFeeIds = findAllWithKV [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
+
 findAllByStatusWithLimit ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [NotificationStatus] ->

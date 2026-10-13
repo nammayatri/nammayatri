@@ -98,6 +98,7 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             fromLocationAddress = Nothing,
             issuedToName = Nothing,
             enableWalletGatedTierCheck = False, -- shared lib, no app-specific wallet-tier context here
+            syncDriverWalletBalance = False,
             buyerCounterpartyId = Nothing
           }
   result <- runFinance ctx $ do

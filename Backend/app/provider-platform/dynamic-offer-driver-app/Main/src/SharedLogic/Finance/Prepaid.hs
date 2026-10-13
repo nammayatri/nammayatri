@@ -877,26 +877,30 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
         Left err -> pure $ Left err
         Right _ -> do
           when (revenueAmount > 0) $ do
-            let revenueEntry =
-                  LedgerEntryInput
-                    { fromAccountId = sellerLiability.id,
-                      toAccountId = sellerRevenue.id,
-                      concernedIndividualId = Nothing,
-                      amount = revenueAmount,
-                      currency = currency,
-                      entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
-                      status = SETTLED,
-                      referenceType = subscriptionRideReferenceType,
-                      referenceId = referenceId,
-                      entityReferenceId = Nothing,
-                      entityReferenceType = Nothing,
-                      metadata = Nothing,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOperatingCityId,
-                      settlementStatus = Nothing
-                    }
-            _ <- createEntryWithBalanceUpdate revenueEntry
-            pure ()
+            -- One revenue entry per booking: the hold settlement above is a no-op on a retried
+            -- end-ride job, but this entry would otherwise be recognised a second time.
+            alreadyRecognised <- any (\existing -> existing.status == SETTLED) <$> getEntriesByReference subscriptionRideReferenceType referenceId
+            unless alreadyRecognised $ do
+              let revenueEntry =
+                    LedgerEntryInput
+                      { fromAccountId = sellerLiability.id,
+                        toAccountId = sellerRevenue.id,
+                        concernedIndividualId = Nothing,
+                        amount = revenueAmount,
+                        currency = currency,
+                        entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
+                        status = SETTLED,
+                        referenceType = subscriptionRideReferenceType,
+                        referenceId = referenceId,
+                        entityReferenceId = Nothing,
+                        entityReferenceType = Nothing,
+                        metadata = Nothing,
+                        merchantId = merchantId,
+                        merchantOperatingCityId = merchantOperatingCityId,
+                        settlementStatus = Nothing
+                      }
+              _ <- createEntryWithBalanceUpdate revenueEntry
+              pure ()
           mbBal <- getBalance ownerAccount.id
           pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") Right mbBal
     (Left err, _, _) -> pure $ Left err

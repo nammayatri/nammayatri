@@ -205,6 +205,12 @@ module SharedLogic.Finance.Wallet
     cashWalletCheckEnabled,
     shouldCheckCashWallet,
     settlementWalletFinanceEnabled,
+    getPostedEntries,
+    anyPosted,
+    countPosted,
+    transferOnce,
+    transferOnce_,
+    transferWithoutAttributionOnce,
   )
 where
 
@@ -634,6 +640,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
         enableWalletGatedTierCheck = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck,
+        syncDriverWalletBalance = transporterConfig.driverWalletConfig.enableDriverWallet,
         buyerCounterpartyId = Just (normaliseBuyerCounterpartyId booking.bapId)
       }
 
@@ -710,6 +717,7 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
         issuedToName = Nothing,
         enableWalletGatedTierCheck = False, -- no transporterConfig in scope here; this function has no real callers today
+        syncDriverWalletBalance = False,
         buyerCounterpartyId = Nothing
       }
 
@@ -810,7 +818,7 @@ createWalletEntryDeltaWithEntryIds counterpartyType ownerId delta currency merch
               -- This function never goes through runFinance, so it can't ride the automatic
               -- PostActions dispatch. Call it explicitly here, once, for both callers.
               transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId)
-              runPostActionsForAccount (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) (toAffectedAccount ownerAccount)
+              runPostActionsForAccount (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck) transporterConfig.driverWalletConfig.enableDriverWallet (toAffectedAccount ownerAccount)
               mbBal <- getBalance ownerAccount.id
               pure $ maybe (Left $ LedgerError AccountMismatch "Balance not found") (Right . (,[entry.id])) mbBal
         (Left err, _) -> pure $ Left err
@@ -863,9 +871,9 @@ buildDriverChargeCtx ::
   Text -> -- merchant operating city id
   Currency ->
   Text -> -- reference id (e.g. payout order id / period key)
-  Bool -> -- caller-resolved driverWalletConfig.enableWalletGatedTierCheck
+  DTC.DriverWalletConfig -> -- the city's wallet config (wallet-tier recheck and pool balance sync flags)
   FinanceCtx
-buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId walletGateEnabled =
+buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId currency referenceId walletConfig =
   FinanceCtx
     { merchantId = merchantId,
       merchantOpCityId = merchantOperatingCityId,
@@ -893,7 +901,8 @@ buildDriverChargeCtx counterpartyType ownerId merchantId merchantOperatingCityId
       emitLedgerEntries = True,
       fromLocationAddress = Nothing,
       issuedToName = Nothing,
-      enableWalletGatedTierCheck = walletGateEnabled,
+      enableWalletGatedTierCheck = fromMaybe False walletConfig.enableWalletGatedTierCheck,
+      syncDriverWalletBalance = walletConfig.enableDriverWallet,
       buyerCounterpartyId = Nothing
     }
 
@@ -944,8 +953,9 @@ createWalletHold ::
   Text -> -- Reference ID (rideId / bookingId / payoutRequestId)
   Maybe (Id DP.Person) -> -- Concerned driver: the individual the hold is for, even when the wallet is the fleet's
   Maybe Lib.Finance.Domain.Types.LedgerEntry.LedgerEntryMetadata ->
+  DTC.DriverWalletConfig ->
   m (Either FinanceError ())
-createWalletHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId mbConcernedDriverId metadata = do
+createWalletHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId mbConcernedDriverId metadata walletConfig = do
   -- Idempotent per reference: an estimate already recorded as PENDING stays as-is.
   -- The hold is not a settled movement; end-ride posts the real deductions separately.
   mbExistingHold <- do
@@ -955,8 +965,10 @@ createWalletHold counterpartyType ownerId amount currency merchantId merchantOpe
     Just _ -> pure $ Right ()
     Nothing -> do
       let ctx =
-            (buildDriverChargeCtx counterpartyType ownerId merchantId.getId merchantOperatingCityId.getId currency referenceId False :: FinanceCtx)
-              { concernedIndividualId = fmap (.getId) mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing)
+            (buildDriverChargeCtx counterpartyType ownerId merchantId.getId merchantOperatingCityId.getId currency referenceId walletConfig :: FinanceCtx)
+              { concernedIndividualId = fmap (.getId) mbConcernedDriverId <|> (if counterpartyType == DRIVER then Just ownerId else Nothing),
+                -- A hold is a PENDING entry and moves no balance, so it never rechecks the wallet tier.
+                enableWalletGatedTierCheck = False
               }
       result <- runFinance ctx $ void $ transferPendingWithEntryType Lib.Finance.Domain.Types.LedgerEntry.Revenue metadata OwnerLiability PlatformAsset amount walletReferenceStatutoryHold
       pure $ void result
@@ -1093,7 +1105,7 @@ reserveWalletForCashRide transporterConfig driver booking mbFleetOwnerId mbSearc
           throwError (InvalidRequest "Insufficient earnings balance to cover cash ride deductions.")
         when (holdAmount > 0) $ do
           _ <-
-            createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId booking.merchantOperatingCityId booking.id.getId (Just driver.id) Nothing
+            createWalletHold walletCounterpartyType walletOwnerId holdAmount booking.currency booking.providerId booking.merchantOperatingCityId booking.id.getId (Just driver.id) Nothing dwc
               >>= fromEitherM (\err -> InternalError ("Failed to create wallet hold: " <> show err))
           whenJust mbSearchTryId $ removeWalletOfferHold walletOwnerId
 
@@ -1295,3 +1307,52 @@ applyThresholdBenefit taxConfig mbCumulative mbPanCard currentBase rawAmount =
         if cumulative + currentBase <= thresh
           then 0
           else rawAmount
+
+-- | The entries already in the ledger under one reference id: one read, taken before a block is posted.
+--   A first run finds none, so the per-leg checks below cost nothing; a retry finds what an earlier run
+--   left and posts only the missing legs.
+getPostedEntries :: (BeamFlow m r) => Text -> m [LedgerEntry]
+getPostedEntries = LedgerService.getEntriesByReferenceId
+
+-- | Whether any of these reference types is among the posted entries.
+anyPosted :: [LedgerEntry] -> [Text] -> Bool
+anyPosted posted refTypes = any (\entry -> entry.referenceType `elem` refTypes) posted
+
+-- | How many posted entries have this reference type.
+countPosted :: [LedgerEntry] -> Text -> Int
+countPosted posted refType = length $ filter (\entry -> entry.referenceType == refType) posted
+
+-- | Whether this exact leg (reference type, from account, to account) is among the posted entries. The
+--   postings of one block are separate writes, so a failure part way leaves some of them; checking each
+--   leg on its own lets a retry post exactly the ones that are missing. The accounts are resolved only
+--   when an entry of that reference type exists, so a first run does no reads here.
+legAlreadyPosted :: (BeamFlow m r) => [LedgerEntry] -> AccountRole -> AccountRole -> Text -> FinanceM m Bool
+legAlreadyPosted posted fromRole toRole refType =
+  case filter (\entry -> entry.referenceType == refType) posted of
+    [] -> pure False
+    sameRef -> do
+      fromAcc <- account fromRole
+      toAcc <- account toRole
+      pure $ any (\entry -> entry.fromAccountId == fromAcc.id && entry.toAccountId == toAcc.id) sameRef
+
+-- | 'transfer', skipped when the leg is already posted (see 'legAlreadyPosted'). Only for legs that are
+--   unique per (reference type, from, to) within one reference id.
+transferOnce :: (BeamFlow m r, Lib.Finance.HasActorInfo m r) => [LedgerEntry] -> AccountRole -> AccountRole -> HighPrecMoney -> Text -> FinanceM m ()
+transferOnce posted fromRole toRole amount refType =
+  when (amount > 0) $ do
+    alreadyPosted <- legAlreadyPosted posted fromRole toRole refType
+    unless alreadyPosted $ void $ transfer fromRole toRole amount refType Nothing
+
+-- | 'transfer_', skipped when the leg is already posted.
+transferOnce_ :: (BeamFlow m r, Lib.Finance.HasActorInfo m r) => [LedgerEntry] -> AccountRole -> AccountRole -> HighPrecMoney -> Text -> FinanceM m ()
+transferOnce_ posted fromRole toRole amount refType =
+  when (amount > 0) $ do
+    alreadyPosted <- legAlreadyPosted posted fromRole toRole refType
+    unless alreadyPosted $ transfer_ fromRole toRole amount refType
+
+-- | 'transferWithoutAttribution', skipped when the leg is already posted.
+transferWithoutAttributionOnce :: (BeamFlow m r, Lib.Finance.HasActorInfo m r) => [LedgerEntry] -> AccountRole -> AccountRole -> HighPrecMoney -> Text -> FinanceM m ()
+transferWithoutAttributionOnce posted fromRole toRole amount refType =
+  when (amount > 0) $ do
+    alreadyPosted <- legAlreadyPosted posted fromRole toRole refType
+    unless alreadyPosted $ void $ transferWithoutAttribution fromRole toRole amount refType

@@ -63,6 +63,15 @@ Account:
       where:
         and: [merchantId, counterpartyType, counterpartyId, accountType, subLedger]
 
+    # Batched owner lookup (pool-data cold start / backfill): one query for many wallets. Scoped by
+    # counterpartyType too, so a person holding wallets of two owner types gets only the one asked for.
+    findAllByCounterpartyIdsAndType:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [counterpartyId]
+          - eq: [counterpartyType, accountType, subLedger]
+
     updateBalance:
       kvFunction: updateWithKV
       params: [balance, updatedAt]

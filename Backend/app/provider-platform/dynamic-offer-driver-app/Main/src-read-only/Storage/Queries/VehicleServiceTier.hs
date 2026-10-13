@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleServiceTier.VehicleServiceTier]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
 findAllByMerchantOpCityId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -52,7 +52,7 @@ findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOperatingCity
 
 findByMerchantOpCityIdForList ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleServiceTier.VehicleServiceTier]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
 findByMerchantOpCityIdForList merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByServiceTierTypeAndCityId ::
@@ -89,10 +89,11 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
   updateWithKV
     [ Se.Set Beam.airConditionedThreshold airConditionedThreshold,
       Se.Set Beam.allowNullVehicleRating allowNullVehicleRating,
-      Se.Set Beam.allowedAreas ((Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText)) allowedAreas),
+      Se.Set Beam.allowedAreas (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText) allowedAreas),
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
       Se.Set Beam.autoAcceptanceConfig (Kernel.Prelude.toJSON <$> autoAcceptanceConfig),
       Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
+      Se.Set Beam.autopayTriggerBalance autopayTriggerBalance,
       Se.Set Beam.availabilityCheckConfig (Kernel.Prelude.toJSON <$> availabilityCheckConfig),
       Se.Set Beam.baseVehicleServiceTier baseVehicleServiceTier,
       Se.Set Beam.cancellationRateConfig (Kernel.Prelude.toJSON <$> cancellationRateConfig),
@@ -109,6 +110,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.luggageCapacity luggageCapacity,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.minWalletBalanceToGoOnline minWalletBalanceToGoOnline,
       Se.Set Beam.name name,
       Se.Set Beam.oxygen oxygen,
       Se.Set Beam.priority priority,
@@ -125,7 +127,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.stopFcmThreshold stopFcmThreshold,
       Se.Set Beam.vehicleAgeThreshold vehicleAgeThreshold,
       Se.Set Beam.vehicleCategory vehicleCategory,
-      Se.Set Beam.vehicleIconUrl ((Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl),
+      Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleRating vehicleRating,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.updatedAt _now
@@ -134,16 +136,17 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
 
 instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.VehicleServiceTier where
   fromTType' (Beam.VehicleServiceTierT {..}) = do
-    vehicleIconUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) vehicleIconUrl
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditionedThreshold = airConditionedThreshold,
             allowNullVehicleRating = allowNullVehicleRating,
-            allowedAreas = ((Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText))) allowedAreas,
+            allowedAreas = Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText) allowedAreas,
             allowedVehicleVariant = allowedVehicleVariant,
             autoAcceptanceConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< autoAcceptanceConfig,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
+            autopayTriggerBalance = autopayTriggerBalance,
             availabilityCheckConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< availabilityCheckConfig,
             baseVehicleServiceTier = baseVehicleServiceTier,
             cancellationRateConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateConfig,
@@ -161,6 +164,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             luggageCapacity = luggageCapacity,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            minWalletBalanceToGoOnline = minWalletBalanceToGoOnline,
             name = name,
             oxygen = oxygen,
             priority = priority,
@@ -189,10 +193,11 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
     Beam.VehicleServiceTierT
       { Beam.airConditionedThreshold = airConditionedThreshold,
         Beam.allowNullVehicleRating = allowNullVehicleRating,
-        Beam.allowedAreas = (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText)) allowedAreas,
+        Beam.allowedAreas = Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText) allowedAreas,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
         Beam.autoAcceptanceConfig = Kernel.Prelude.toJSON <$> autoAcceptanceConfig,
         Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
+        Beam.autopayTriggerBalance = autopayTriggerBalance,
         Beam.availabilityCheckConfig = Kernel.Prelude.toJSON <$> availabilityCheckConfig,
         Beam.baseVehicleServiceTier = baseVehicleServiceTier,
         Beam.cancellationRateConfig = Kernel.Prelude.toJSON <$> cancellationRateConfig,
@@ -210,6 +215,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.luggageCapacity = luggageCapacity,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.minWalletBalanceToGoOnline = minWalletBalanceToGoOnline,
         Beam.name = name,
         Beam.oxygen = oxygen,
         Beam.priority = priority,
@@ -226,7 +232,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.stopFcmThreshold = stopFcmThreshold,
         Beam.vehicleAgeThreshold = vehicleAgeThreshold,
         Beam.vehicleCategory = vehicleCategory,
-        Beam.vehicleIconUrl = (Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleRating = vehicleRating,
         Beam.ventilator = ventilator,
         Beam.createdAt = createdAt,

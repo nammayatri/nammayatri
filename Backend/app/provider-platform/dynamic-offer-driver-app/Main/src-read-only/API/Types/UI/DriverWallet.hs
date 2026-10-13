@@ -5,6 +5,7 @@ module API.Types.UI.DriverWallet where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Time
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.WalletTransaction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -66,7 +67,25 @@ data WalletAggregateBucket = WalletAggregateBucket
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data WalletBalanceResponse = WalletBalanceResponse {currentBalance :: Kernel.Types.Common.HighPrecMoney}
+data WalletAutopayInfo = WalletAutopayInfo
+  { mandateMaxAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    nextRechargeAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    nextRechargeAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    status :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverAutoPayStatus,
+    triggerBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletBalanceResponse = WalletBalanceResponse
+  { autopay :: Kernel.Prelude.Maybe WalletAutopayInfo,
+    blockerEnforced :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    currentBalance :: Kernel.Types.Common.HighPrecMoney,
+    isSubscriptionWalletManaged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    minimumBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    walletStage :: Kernel.Prelude.Maybe WalletStage,
+    withdrawableBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -84,6 +103,34 @@ data WalletItemGroup = WalletItemGroup {items :: [WalletItem], totalAmount :: Ke
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data WalletPaymentInfo = WalletPaymentInfo
+  { completedAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    initiatedAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    kind :: WalletPaymentKind,
+    payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    referenceId :: Kernel.Prelude.Text,
+    scheduledAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    stage :: WalletPaymentStage,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletPaymentKind
+  = TOPUP
+  | AUTOPAY
+  | PAYOUT
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletPaymentStage
+  = INITIATED
+  | PROCESSING
+  | SUCCESS
+  | FAILED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data WalletPayoutConfig = WalletPayoutConfig
   { minimumPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
     payoutCutOffDays :: Kernel.Prelude.Int,
@@ -91,6 +138,12 @@ data WalletPayoutConfig = WalletPayoutConfig
     payoutFee :: Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WalletStage
+  = COMING_SOON
+  | LIVE
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data WalletSummaryResponse = WalletSummaryResponse
@@ -114,6 +167,7 @@ data WalletTransactionHistoryItem = WalletTransactionHistoryItem
     itemName :: Kernel.Prelude.Text,
     itemReference :: Kernel.Prelude.Text,
     itemValue :: Kernel.Types.Common.HighPrecMoney,
+    payment :: Kernel.Prelude.Maybe WalletPaymentInfo,
     paymentOrder :: Kernel.Prelude.Maybe PaymentOrderInfo,
     reason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.LedgerEntry.EntryStatus
