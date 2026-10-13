@@ -1456,17 +1456,23 @@ postNammaTagBehaviorEnable merchantShortId opCity domain requestorId requestorNa
             modifiedBy = Just (Id requestorId)
           }
   void $ YudhishthiraFlow.upsertLogicRollout (Just $ cast merchant.id) (cast merchantOpCityId) [rolloutObj] TC.returnConfigs opCity
-  seedBehaviourOverlays merchant merchantOpCityId bPack
+  -- Seed the pack's template keys PLUS every NUDGE/WARN key the enabled rulebook
+  -- version actually references, so a customised rulebook never points at an
+  -- overlay the city doesn't have.
+  elements <- CADLE.findByDomainAndVersion domain version
+  let rulebookKeys = DL.nub $ concatMap (collectOverlayKeys . (.logic)) elements
+      overlayKeysToSeed = DL.nub $ bPack.requiredOverlayKeys <> rulebookKeys
+  seedBehaviourOverlays merchant merchantOpCityId overlayKeysToSeed
   seedBehaviourBlockReasons bPack
   logInfo $ "Behaviour " <> show domain <> " enabled at " <> show percentage <> "% (version " <> show version <> ") in city " <> merchantOpCityId.getId <> " by " <> requestorId
   pure Kernel.Types.APISuccess.Success
   where
-    seedBehaviourOverlays merchant merchantOpCityId bPack =
-      unless (null bPack.requiredOverlayKeys) $ do
+    seedBehaviourOverlays merchant merchantOpCityId overlayKeys =
+      unless (null overlayKeys) $ do
         templates <- SQOVL.findAllByMerchantOpCityId (Id "default")
         cityOverlays <- SQOVL.findAllByMerchantOpCityId merchantOpCityId
-        let wanted = filter (\o -> o.overlayKey `elem` bPack.requiredOverlayKeys) templates
-            missingTemplateKeys = filter (\k -> not (any (\o -> o.overlayKey == k) templates)) bPack.requiredOverlayKeys
+        let wanted = filter (\o -> o.overlayKey `elem` overlayKeys) templates
+            missingTemplateKeys = filter (\k -> not (any (\o -> o.overlayKey == k) templates)) overlayKeys
             alreadyPresent tmpl = any (\c -> c.overlayKey == tmpl.overlayKey && c.language == tmpl.language && c.udf1 == tmpl.udf1 && c.vehicleCategory == tmpl.vehicleCategory) cityOverlays
             toCopy = filter (not . alreadyPresent) wanted
         unless (null missingTemplateKeys) $
