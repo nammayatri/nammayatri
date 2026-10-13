@@ -506,6 +506,7 @@ apis:
         filterServiceAndJrnyType: Bool
         newServiceTiers: [ServiceTierType]
         hasPasses: Bool
+        enforceFRFSPass: Bool
       response:
         type: JourneyInfoResp
   - POST:
