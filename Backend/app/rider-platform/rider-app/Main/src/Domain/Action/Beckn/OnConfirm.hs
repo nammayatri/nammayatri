@@ -211,4 +211,4 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP 
         return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
   let bppInvoiceProviderFields = bppInvoiceProviderInfoToFields bppInvoiceProviderInfo
-  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, isSynchronousOnUpdateProcessing = False, bppUri = Nothing, bookingPrePersisted = False, ..}
+  return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, isSynchronousOnUpdateProcessing = False, bppUri = Nothing, bookingPrePersisted = False, isScheduledRideActivated = False, ..}

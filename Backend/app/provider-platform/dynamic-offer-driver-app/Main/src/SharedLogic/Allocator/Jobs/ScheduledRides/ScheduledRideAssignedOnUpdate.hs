@@ -311,8 +311,10 @@ activateScheduledRide driverId bookingId booking ride driver vehicle transporter
           Right _ -> pure ()
     -- 3P BAPs NACK a repeated RIDE_ASSIGNED; ours take it fine, so their activation message is unchanged.
     isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+    -- ride is the pre-activation copy (UPCOMING); the push must say NEW, or ours keeps the ride upcoming.
+    let activatedRide = ride {DRide.status = DRide.NEW}
     if isValueAddNP
-      then withTryCatch "scheduledRideActivationPush" (sendRideAssignedUpdateToBAP booking ride driver vehicle) >>= logPushFailure
+      then withTryCatch "scheduledRideActivationPush" (sendRideAssignedUpdateToBAP booking activatedRide driver vehicle) >>= logPushFailure
       else do
         now <- getCurrentTime
         -- A driver already on the pin is arrived either way, since the app's geofence marks it on its next tick once the ride is NEW; announcing it here keeps this push and a /status pull agreeing from the first message. Decided before any IO, so a failure below can never be mistaken for "he is not there".

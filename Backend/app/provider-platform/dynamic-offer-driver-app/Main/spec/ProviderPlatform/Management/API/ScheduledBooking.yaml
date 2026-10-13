@@ -4,6 +4,7 @@ imports:
   RideStatus: Domain.Types.RideStatus
   Driver: Dashboard.Common
   ServiceTierType: Dashboard.Common
+  Centesimal: Kernel.Types.Common
 
 
 module: ScheduledBooking
@@ -51,6 +52,14 @@ apis:
         transactionId: Text
       query:
         radiusKm: Double
+        limit: Int
+        offset: Int
+        tags: Text # comma-separated "name#value" list; a driver must carry every one
+        onlyFavourites: Bool # favourites of this booking's rider
+        minRating: Double
+        maxCancellationRatePercent: Int # lifetime: ridesCancelled / totalRidesAssigned
+        minCompletedRides: Int
+        sortBy: NearbyDriverSortBy
       response:
         type: NearbyDriversRes
       migrate:
@@ -173,6 +182,7 @@ types:
   NearbyDriversRes:
     - radiusKm: Double
     - searchedAt: UTCTime
+    - totalCount: Int # matches after filters, before paging
     - drivers: [NearbyDriverItem]
 
   NearbyDriverItem:
@@ -181,6 +191,14 @@ types:
     - driverPhoneNo: Maybe Text
     - serviceTiers: [ServiceTierType]
     - straightLineDistanceMeters: Meters
+    - rating: Maybe Centesimal
+    - totalRides: Int
+    - cancellationRatePercent: Maybe Int
+    - isFavourite: Bool
+
+  NearbyDriverSortBy:
+    - enum: "DISTANCE, RATING"
+    - derive: "HttpInstance"
 
   DriverDistanceRes:
     - assigned: Bool

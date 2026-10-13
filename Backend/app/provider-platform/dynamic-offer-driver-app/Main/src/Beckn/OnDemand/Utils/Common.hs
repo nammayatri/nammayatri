@@ -724,7 +724,7 @@ mkFulfillmentV2' driverDetached mbDriver mbDriverStats ride booking mbVehicle mb
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus (booking.isScheduled && ride.status == DRide.NEW)
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
@@ -744,8 +744,8 @@ tfCustomer riderPhone riderName =
           Just $ emptyPerson {Spec.personName = riderName}
       }
 
-mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Maybe [Spec.TagGroup]
-mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount isSafetyPlus =
+mkDriverDetailsTags :: SP.Person -> DDriverStats.DriverStats -> Bool -> Bool -> Maybe Payment.AccountId -> BaseUrl -> Maybe Text -> Bool -> Int -> Bool -> Bool -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId driverTrackingUrl driverAlternateNumber isAlreadyFav favCount isSafetyPlus isScheduledRideActivated =
   Tags.buildTagGroups
     [ Tags.REGISTERED_AT ~= show driver.createdAt,
       Tags.RATING ~=? (show <$> driverStats.rating),
@@ -756,7 +756,8 @@ mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccount
       Tags.DRIVER_ALTERNATE_NUMBER ~=? driverAlternateNumber,
       Tags.IS_ALREADY_FAVOURITE ~=| (isAlreadyFav, show isAlreadyFav),
       Tags.FAVOURITE_COUNT ~= show favCount,
-      Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus)
+      Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus),
+      Tags.IS_SCHEDULED_RIDE_ACTIVATED ~=| (isScheduledRideActivated, show isScheduledRideActivated)
     ]
 
 mkLocationTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
@@ -1457,7 +1458,7 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
       dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
       dAlternatePhoneNum <- SP.getPersonAlternateNumber driver
       dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus
+      let dTags = mkDriverDetailsTags driver driverStats isDriverBirthDay isFreeRide driverAccountId ride.trackingUrl dAlternatePhoneNum isAlreadyFav favCount booking.isSafetyPlus (booking.isScheduled && ride.status == DRide.NEW)
       pure $
         DriverInfo
           { mobileNumber = dPhoneNum,
