@@ -33,6 +33,7 @@ where
 import qualified API.Types.Dashboard.AppManagement.Pass as DashPass
 import qualified API.Types.UI.Pass as PassAPI
 import qualified AWS.S3 as S3
+import BecknV2.FRFS.Utils (frfsVehicleCategoryToBecknVehicleCategory)
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM, whenJustM)
@@ -78,6 +79,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
@@ -801,12 +803,6 @@ deletePassCatalog merchantShortId opCity passId = do
   CQPass.clearCacheByPassTypeIdAndEnabled passRow.passTypeId False
   pure APISuccess.Success
 
-mkRoutePassAPIEntity :: DPurchasedPassPayment.PurchasedPassPayment -> Maybe PassAPI.RoutePassAPIEntity
-mkRoutePassAPIEntity payment
-  | isJust payment.sourceStopCode || isJust payment.destinationStopCode =
-    Just PassAPI.RoutePassAPIEntity {sourceStopCode = payment.sourceStopCode, destinationStopCode = payment.destinationStopCode}
-  | otherwise = Nothing
-
 mkRoutePassConfig :: DPassOverrideConfig.PassPricingConfig -> PassAPI.RoutePassConfigAPIEntity
 mkRoutePassConfig pricing =
   PassAPI.RoutePassConfigAPIEntity
@@ -1031,7 +1027,7 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
 
 -- Build PurchasedPass API Entity
 buildPurchasedPassAPIEntity ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, IssueManagement.Storage.BeamFlow.BeamFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, IssueManagement.Storage.BeamFlow.BeamFlow m r, CoreMetrics m, HasShortDurationRetryCfg r c) =>
   Maybe Lang.Language ->
   DP.Person ->
   Maybe Text ->
@@ -1075,6 +1071,30 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
     (Just payment, Just benefit) -> FRFSPassOverride.remainingTrips payment benefit
     _ -> pure Nothing
   let unlimitedTripCount = maybe False FRFSPassOverride.isUnlimitedBenefit mbBenefit
+  mbRoutePass <- case mbPayment of
+    Just payment
+      | isJust payment.sourceStopCode || isJust payment.destinationStopCode -> do
+        mbIntegratedBPPConfig <-
+          maybe
+            (pure Nothing)
+            (\overridePass -> SIBC.findMaybeIntegratedBPPConfig Nothing overridePass.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory overridePass.vehicleType) DIBC.MULTIMODAL)
+            mbOverridePass
+        let stopName stopCode = case mbIntegratedBPPConfig of
+              Nothing -> pure Nothing
+              Just integratedBPPConfig ->
+                either (const Nothing) (fmap (.name))
+                  <$> withTryCatch "buildPurchasedPassAPIEntity:stopName" (OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig)
+        sourceStopName <- maybe (pure Nothing) stopName payment.sourceStopCode
+        destinationStopName <- maybe (pure Nothing) stopName payment.destinationStopCode
+        pure $
+          Just
+            PassAPI.RoutePassAPIEntity
+              { sourceStopCode = payment.sourceStopCode,
+                destinationStopCode = payment.destinationStopCode,
+                sourceStopName,
+                destinationStopName
+              }
+    _ -> pure Nothing
 
   passAPIEntity <- buildPassAPIEntityFromPurchasedPass mbLanguage person.id purchasedPass
   let passDetailsEntity =
@@ -1130,7 +1150,7 @@ buildPurchasedPassAPIEntity mbLanguage person mbDeviceId today purchasedPass = d
         photoUploadTimeLimit = reUploadValidTill,
         photoChangedCount = mbActivePayment >>= (.passPhotoChangeCount),
         maxPhotoChangeConfigCount = passType.maxPhotoChangeLimit,
-        routePass = mbPayment >>= mkRoutePassAPIEntity
+        routePass = mbRoutePass
       }
 
 passTypeLabel :: Maybe DPassType.PassEnum -> Text
