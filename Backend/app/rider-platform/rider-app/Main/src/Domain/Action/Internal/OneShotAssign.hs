@@ -323,5 +323,6 @@ processAssignment req = do
           isSafetyPlus = req.isSafetyPlus,
           isSynchronousOnUpdateProcessing = True,
           bppInvoiceProviderFields = QRideB.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing,
-          bookingPrePersisted = True
+          bookingPrePersisted = True,
+          isScheduledRideActivated = False
         }

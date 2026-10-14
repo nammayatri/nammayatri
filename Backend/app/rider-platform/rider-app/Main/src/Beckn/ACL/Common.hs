@@ -161,6 +161,7 @@ parseRideAssignedEvent order msgId txnId bppUri = do
       previousRideEndPos = getLocationFromTagV2 tagGroupsFullfillment Tag.PREVIOUS_RIDE_DROP_LOCATION_LAT Tag.PREVIOUS_RIDE_DROP_LOCATION_LON
       isAlreadyFav = isJust $ Utils.getTag Tag.IS_ALREADY_FAVOURITE tagGroups
       isSafetyPlus = isJust $ Utils.getTag Tag.IS_SAFETY_PLUS tagGroups
+      isScheduledRideActivated = isJust $ Utils.getTag Tag.IS_SCHEDULED_RIDE_ACTIVATED tagGroups
       favCount :: Maybe Int = readMaybe . T.unpack =<< Utils.getTag Tag.FAVOURITE_COUNT tagGroups
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
   let fareBreakups = mbFareBreakupsQuotationBreakup <&> (mapMaybe mkDFareBreakup)

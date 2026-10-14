@@ -510,6 +510,7 @@ data BecknTag
   | DRIVER_ALTERNATE_NUMBER
   | IS_ALREADY_FAVOURITE
   | FAVOURITE_COUNT
+  | IS_SCHEDULED_RIDE_ACTIVATED -- scheduled ride activated at the BPP (UPCOMING -> NEW)
   | -- Driver arrived info tags
     ARRIVAL_TIME
   | -- Ride distance details tags
@@ -684,6 +685,7 @@ instance CompleteTag BecknTag where
     PARCEL_QUANTITY -> (Just "Delivery Parcel Quantity", Nothing)
     SAFETY_PLUS_CHARGES -> (Just "safety plus charges", Nothing)
     IS_SAFETY_PLUS -> (Just "is safety plus", Nothing)
+    IS_SCHEDULED_RIDE_ACTIVATED -> (Just "is scheduled ride activated", Nothing)
     NO_CHARGES -> (Just "no conditional charges", Nothing)
     IS_INSURED -> (Just "is insured", Nothing)
     INSURED_AMOUNT -> (Just "insured amount", Nothing)
@@ -788,6 +790,7 @@ instance CompleteTag BecknTag where
     DRIVER_ALTERNATE_NUMBER -> DRIVER_DETAILS
     IS_ALREADY_FAVOURITE -> DRIVER_DETAILS
     FAVOURITE_COUNT -> DRIVER_DETAILS
+    IS_SCHEDULED_RIDE_ACTIVATED -> DRIVER_DETAILS
     -- Ride distance details tags
     CHARGEABLE_DISTANCE -> RIDE_DISTANCE_DETAILS
     TRAVELED_DISTANCE -> RIDE_DISTANCE_DETAILS
