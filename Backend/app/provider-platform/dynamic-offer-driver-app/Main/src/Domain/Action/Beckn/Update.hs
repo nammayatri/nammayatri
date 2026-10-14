@@ -445,7 +445,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
               throwError $ InvalidRequest "Vehicle not allowed for toll route."
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) Nothing Nothing (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions Nothing
-            farePolicy <- getFarePolicy (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
+            farePolicy <- getFarePolicyByEstOrQuoteId (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) booking.quoteId (Just booking.startTime) (Just False) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
             let farePolicy' =
@@ -528,7 +528,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                       pure currentDiscount
                 else pure currentDiscount
             let clampedDiscount = FC.clampDiscountToDiscountable fareParameters rawDiscountAmount
-            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed clampedDiscount
+            bookingUpdateReq <- buildbookingUpdateRequest booking merchantOperatingCity.merchantId bapBookingUpdateRequestId fareParameters farePolicy.id maxEstimatedDist currentPoint estimatedDistance duration shortestRoute.staticDuration validTill mapsRouteReqInText routeInfoInText snapToRoadFailed clampedDiscount
             startLocMapping <- QLM.getLatestStartByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> bookingId.getId)
             dropLocMapping <- QLM.getLatestEndByEntityId bookingId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> bookingId.getId)
             startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
@@ -721,8 +721,8 @@ validateStopReq booking isEdit = do
     then unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be edited " <> booking.id.getId) -- should we throw error or just allow?
     else unless (isNothing booking.stopLocationId) $ throwError (InvalidRequest $ "Can't add next stop before reaching previous stop " <> booking.id.getId)
 
-buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> UTCTime -> Text -> Text -> Maybe Bool -> Maybe HighPrecMoney -> m DBUR.BookingUpdateRequest
-buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance validTill mapsRouteReqInText routeInfoInText snapToRoadFailed discountAmount = do
+buildbookingUpdateRequest :: MonadFlow m => DBooking.Booking -> Id DM.Merchant -> Text -> DFP.FareParameters -> Id DFP.FarePolicy -> Maybe Meters -> Maybe Maps.LatLong -> Meters -> Seconds -> Maybe Seconds -> UTCTime -> Text -> Text -> Maybe Bool -> Maybe HighPrecMoney -> m DBUR.BookingUpdateRequest
+buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParams farePolicyId maxEstimatedDistance currentPoint estimatedDistance estimatedDuration estimatedStaticDuration validTill mapsRouteReqInText routeInfoInText snapToRoadFailed discountAmount = do
   guid <- generateGUID
   now <- getCurrentTime
   return $
@@ -739,6 +739,8 @@ buildbookingUpdateRequest booking merchantId bapBookingUpdateRequestId fareParam
         currentPointLon = (.lon) <$> currentPoint,
         estimatedFare = HighPrecMoney $ toRational $ fareSum fareParams Nothing,
         estimatedDistance = Just $ metersToHighPrecMeters estimatedDistance,
+        estimatedDuration = Just estimatedDuration,
+        estimatedStaticDuration,
         oldEstimatedFare = booking.estimatedFare,
         maxEstimatedDistance = metersToHighPrecMeters <$> maxEstimatedDistance,
         oldEstimatedDistance = metersToHighPrecMeters <$> booking.estimatedDistance,
