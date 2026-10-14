@@ -5153,6 +5153,7 @@ postMerchantConfigVehicleServiceTierUpdate merchantShortId opCity serviceTierTyp
 
   -- 3. Build updated config
   let updatedConfig = applyVehicleServiceTierUpdate existingConfig req
+  validateAirConditionedThreshold updatedConfig
 
   -- 4. Update DB
   QVST.updateByPrimaryKey updatedConfig
@@ -5220,6 +5221,11 @@ validateVehicleServiceTierUpdate merchantOpCityId existing req = do
   whenJust req.stopFcmSuppressCount $ \v ->
     when (v < 0) $
       throwError $ InvalidRequest "stopFcmSuppressCount cannot be negative"
+
+validateAirConditionedThreshold :: DVST.VehicleServiceTier -> Flow ()
+validateAirConditionedThreshold vst =
+  when (vst.isAirConditioned == Just True && isNothing vst.airConditionedThreshold) $
+    throwError $ InvalidRequest "airConditionedThreshold is mandatory when isAirConditioned is true"
 
 applyVehicleServiceTierUpdate ::
   DVST.VehicleServiceTier ->
@@ -5310,6 +5316,7 @@ postMerchantConfigVehicleServiceTierCreate merchantShortId opCity req = do
     throwError (InvalidRequest $ "Vehicle service tier already exists: " <> show req.serviceTierType)
 
   newConfig <- buildVehicleServiceTierFromRequest merchant.id merchantOpCityId req.serviceTierType req
+  validateAirConditionedThreshold newConfig
 
   QVST.create newConfig
 
