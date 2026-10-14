@@ -301,18 +301,24 @@ assertAdminEmailDomainForPerson tokenInfo person role mbEmail =
 
 -- | Granting a person access to a merchant is how somebody becomes a user of that merchant, so
 -- leaving this open undoes every other cross-merchant guard: an admin of B could grant their own
--- user access to merchant A. Callers are held to their own merchant, with an escape hatch for a
--- SUPER_ADMIN, who legitimately provisions across merchants.
+-- user access to merchant A. Delegation model: a caller may hand out only access they themselves
+-- hold — their session merchant, or any (merchant, city) pair among their own merchant_access
+-- rows — with an escape hatch for a SUPER_ADMIN, who legitimately provisions across merchants.
 --
--- Unconditional, matching DCap.guardAdminMutation: the SUPER_ADMIN tier is seeded (seed-migration
--- 0018), so the existence guard that once kept these rules dormant no longer has anything to wait
--- for.
-assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> m ()
-assertMayGrantAccessToMerchant tokenInfo targetMerchantId
+-- The city must match exactly when one is given: a merchant-level check would let an admin
+-- holding (A, Bangalore) grant (A, Delhi) — including to themselves — widening their own reach.
+-- Requiring the exact pair keeps access monotone. Pass Nothing only for merchant-wide
+-- revocation, where any access row to the merchant suffices and nothing can be escalated.
+assertMayGrantAccessToMerchant :: BeamFlow m r => TokenInfo -> Id DMerchant.Merchant -> Maybe City.City -> m ()
+assertMayGrantAccessToMerchant tokenInfo targetMerchantId mbTargetCity
   | targetMerchantId == tokenInfo.merchantId = pure ()
-  | otherwise =
-    unlessM (isSuperAdmin tokenInfo.personId) $
-      throwError AccessDenied
+  | otherwise = do
+    giverHoldsAccess <- case mbTargetCity of
+      Just city -> isJust <$> QAccess.findByPersonIdAndMerchantIdAndCity tokenInfo.personId targetMerchantId city
+      Nothing -> not . null <$> QAccess.findByPersonIdAndMerchantId tokenInfo.personId targetMerchantId
+    unless giverHoldsAccess $
+      unlessM (isSuperAdmin tokenInfo.personId) $
+        throwError AccessDenied
 
 -- | Record an admin-initiated mutation against another person. Mirrors the shape deletePerson
 -- already uses: who did it (requestorId), to whom (request), and when. The target's id is the
@@ -548,8 +554,9 @@ assignMerchantCityAccess tokenInfo personId req = do
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
   -- Same-merchant grants are open to any admin of that merchant, including onto persons
-  -- provisioned under other merchants; cross-merchant grants remain SUPER_ADMIN-gated.
-  assertMayGrantAccessToMerchant tokenInfo merchant.id
+  -- provisioned under other merchants; cross-merchant grants require the giver to hold the
+  -- exact (merchant, city) access themselves, or SUPER_ADMIN.
+  assertMayGrantAccessToMerchant tokenInfo merchant.id (Just req.operatingCity)
   let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
   unless isSupportedCity $
     throwError $ InvalidRequest "Server does not support this city"
@@ -584,7 +591,7 @@ resetMerchantAccess tokenInfo personId req = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  assertMayGrantAccessToMerchant tokenInfo merchant.id
+  assertMayGrantAccessToMerchant tokenInfo merchant.id Nothing
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
   case merchantAccesses of
@@ -611,7 +618,7 @@ resetMerchantCityAccess tokenInfo personId req = do
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
   merchantServerAccessCheck merchant
-  assertMayGrantAccessToMerchant tokenInfo merchant.id
+  assertMayGrantAccessToMerchant tokenInfo merchant.id (Just req.operatingCity)
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
