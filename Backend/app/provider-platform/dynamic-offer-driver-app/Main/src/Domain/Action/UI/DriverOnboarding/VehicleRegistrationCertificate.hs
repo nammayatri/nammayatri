@@ -630,15 +630,18 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           | vehicleRC.verificationStatus == Documents.INVALID && null vehicleRC.failedRules ->
             throwError $
               InvalidRequest $
-                "No valid mapping found for (vehicleClass: "
-                  <> fromMaybe "null" rcVerificationResponse.vehicleClass
-                  <> ", vehicleClassCategory: "
-                  <> maybe "null" (T.pack . show) rcVerificationResponse.vehicleCategory
-                  <> ", manufacturer: "
-                  <> fromMaybe "null" rcVerificationResponse.manufacturer
-                  <> ", model: "
-                  <> fromMaybe "null" rcVerificationResponse.manufacturerModel
-                  <> ")"
+                fromMaybe
+                  ( "No valid mapping found for (vehicleClass: "
+                      <> fromMaybe "null" rcVerificationResponse.vehicleClass
+                      <> ", vehicleClassCategory: "
+                      <> maybe "null" (T.pack . show) rcVerificationResponse.vehicleCategory
+                      <> ", manufacturer: "
+                      <> fromMaybe "null" rcVerificationResponse.manufacturer
+                      <> ", model: "
+                      <> fromMaybe "null" rcVerificationResponse.manufacturerModel
+                      <> ")"
+                  )
+                  vehicleRC.rejectReason
         Just vehicleRC -> do
           let isInvalid = vehicleRC.verificationStatus == Documents.INVALID
           logInfo $ "initiateRCCreation: Upserting RC with verificationStatus=" <> show vehicleRC.verificationStatus <> ", failedRules=" <> show vehicleRC.failedRules <> ", registrationNumber=" <> show vehicleRC.unencryptedCertificateNumber <> ", vehicleVariant=" <> show vehicleRC.vehicleVariant <> ", vehicleClass=" <> show vehicleRC.vehicleClass
