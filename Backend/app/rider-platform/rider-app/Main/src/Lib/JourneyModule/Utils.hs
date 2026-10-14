@@ -1575,6 +1575,7 @@ buildExternalOrderCreationReq paymentOrder allJourneyBookings person paymentType
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
   udf1 <- SLUtils.getPersonUdf1 person
   udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode ((.quoteId) <$> listToMaybe bookings)
+  let udf3 = FRFSUtils.mkTicketingTypeUdf3 isSingleMode ((.vehicleType) <$> listToMaybe bookings)
   nwAddress <- asks (.nwAddress)
   let interfaceReq =
         KT.CreateOrderReq
@@ -1601,7 +1602,8 @@ buildExternalOrderCreationReq paymentOrder allJourneyBookings person paymentType
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = udf1,
-            udf2 = udf2
+            udf2 = udf2,
+            udf3 = udf3
           }
 
   -- Translated through the same function createOrder uses, so this payload cannot drift from the

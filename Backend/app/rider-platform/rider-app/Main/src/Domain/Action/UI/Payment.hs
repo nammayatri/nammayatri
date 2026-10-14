@@ -185,7 +185,8 @@ createOrder (personId, merchantId) rideId = do
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = udf1,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -279,7 +280,8 @@ createRideBookingPaymentOrder booking = do
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = udf1,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -461,7 +463,8 @@ createBookingDepositPaymentOrder booking isMockPayment = do
                 autoRefundPostSuccess = Nothing,
                 paymentFilter = Nothing,
                 udf1 = udf1,
-                udf2 = Nothing
+                udf2 = Nothing,
+                udf3 = Nothing
               }
           commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
           commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -1270,7 +1273,8 @@ postWalletRecharge (personId, merchantId) req = do
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = udf1,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
