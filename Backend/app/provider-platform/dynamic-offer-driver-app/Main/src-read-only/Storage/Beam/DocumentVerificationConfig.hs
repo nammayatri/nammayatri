@@ -16,6 +16,7 @@ import Tools.Beam.UtilsTH
 
 data DocumentVerificationConfigT f = DocumentVerificationConfigT
   { allowLicenseTransfer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    allowNonTransportVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     applicableTo :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentApplicableType),
     checkExpiry :: B.C f Kernel.Prelude.Bool,
     checkExtraction :: B.C f Kernel.Prelude.Bool,
