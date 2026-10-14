@@ -171,6 +171,16 @@
 .rsp-run-row label.rsp-data-ver { min-width: 280px; }
 .rsp-devbox-ids dd.rsp-data-row { flex-wrap: wrap; }
 .rsp-devbox-ids dd.rsp-data-row .rsp-tag { margin-left: 0; }
+/* Control centre row: link + code identity + warnings wrap; log opens under it. */
+.rsp-devbox-ids dd.rsp-cc-row { flex-wrap: wrap; }
+.rsp-devbox-ids dd.rsp-cc-row a.rsp-btn-ghost { text-decoration: none; }
+.rsp-devbox-ids dd.rsp-cc-row .rsp-tag { margin-left: 0; }
+.rsp-devbox-ids dd.rsp-cc-logdd { display: block; }
+.rsp-cc-log {
+  margin: 0; max-height: 220px; overflow: auto;
+  background: #11141a; border: 1px solid #2a2f37; border-radius: 6px;
+  padding: 8px 10px; font-size: 10.5px; line-height: 1.5; white-space: pre-wrap; color: #aab1bb;
+}
 
 /* ── Deploy freshness readout ── */
 .rsp-sync {

@@ -20,6 +20,10 @@ import {
   publishedDataSources,
   workspaceDataStatus,
   workspaceDataSync,
+  devboxCcStatus,
+  devboxCcStart,
+  devboxCcStop,
+  DevboxCcStatus,
   RemoteTarget,
   DevboxAssignment,
   PreflightResponse,
@@ -256,11 +260,43 @@ export const RemoteStackPanel: React.FC = () => {
   const [dataNote, setDataNote] = useState<string | null>(null);  // last Re-sync failure
   const dataAbort = useRef(false);                                 // set by Stop
 
+  // ── Control centre on the dev-box ── this checkout's control-center/ (rsynced
+  // with the backend) run next to the workspace's rider-app / driver-app.
+  const [cc, setCc] = useState<DevboxCcStatus | null>(null);
+  const [ccBusy, setCcBusy] = useState<string | null>(null);  // Launch / Stop progress
+  const [ccLogOpen, setCcLogOpen] = useState(false);
+  const ccActive = cc?.state === 'starting' || cc?.state === 'running';
+
+  const refreshCc = async () => {
+    if (mode !== 'devbox' || !devbox) { setCc(null); return; }
+    try {
+      setCc(await devboxCcStatus());
+    } catch { /* local-api down — keep the last reading */ }
+  };
+
+  useEffect(() => {
+    refreshCc();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, devbox?.id]);
+
+  // While it is coming up (first run installs Node + npm packages), follow it.
+  useEffect(() => {
+    if (cc?.state !== 'starting') return;
+    const t = window.setInterval(refreshCc, 3000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cc?.state]);
+
   const ws = mode === 'devbox' && devbox?.frontdeskOk ? devbox.workspaceUrl : undefined;
   const pickedSource = dataSources.find(s => s.name === dataPick.from);
   const pickedVersion = dataPick.version
     || (pickedSource?.recommended != null ? `v${pickedSource.recommended}` : '');
   const held = dataStatus?.last_synced;
+  // The control centre needs rider-app / driver-app answering and the seeded
+  // login user, i.e. data loaded. Without a front desk we cannot read that, so
+  // a started stack has to do.
+  const ccReady = !!state.startSession
+    && (!ws || (!!held && !dataStatus?.unreachable && !dataStatus?.running && !dataBusy));
   const heldStatus = dataSources
     .find(s => s.name === held?.from)?.versions
     .find(v => `v${v.version}` === held?.version)?.status;
@@ -398,6 +434,7 @@ export const RemoteStackPanel: React.FC = () => {
       setSyncing(false);
     }
     refreshDataStatus();  // the same ⟳ also re-reads what data the workspace holds
+    refreshCc();          // … and the control centre's state
   };
 
   useEffect(() => {
@@ -733,6 +770,49 @@ export const RemoteStackPanel: React.FC = () => {
     }
   };
 
+  // Launch = make sure the dev-box has this checkout's latest files (the same
+  // pre-flight + rsync as Start), then start control-center there. Copying first
+  // means what runs is what you just edited, not the previous deploy.
+  const onCcLaunch = async () => {
+    setCcLogOpen(false);
+    try {
+      setCcBusy('checking your code…');
+      const pre = await remotePreflight(target);
+      if (pre.error) { setCc({ state: 'unknown', error: pre.error }); return; }
+      if (pre.needsDeploy) {
+        setCcBusy('deploying your changes…');
+        const res = await remoteDeploy(target);
+        if (res.error || !res.session) { setCc({ state: 'unknown', error: res.error || 'deploy failed' }); return; }
+        const code = await waitForSession(res.session);
+        if (code !== 0) { setCc({ state: 'unknown', error: `rsync exited (code ${code})` }); return; }
+      }
+      setCcBusy('starting…');
+      setCc(await devboxCcStart());
+    } catch (e) {
+      setCc({ state: 'unknown', error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setCcBusy(null);
+      refreshSync();
+    }
+  };
+
+  const onCcStop = async () => {
+    setCcBusy('stopping…');
+    try {
+      setCc(await devboxCcStop());
+    } catch (e) {
+      setCc({ state: 'unknown', error: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setCcBusy(null);
+    }
+  };
+
+  // Restart runs exactly the latest deployed files (Vite only hot-reloads some).
+  const onCcRestart = async () => {
+    await onCcStop();
+    await onCcLaunch();
+  };
+
   const onStop = async () => {
     if (!state.startSession) return;
     dataAbort.current = true;  // ends a "Load data" wait still in progress
@@ -848,7 +928,7 @@ export const RemoteStackPanel: React.FC = () => {
           <button
             className="rsp-icon-btn rsp-icon-danger"
             onClick={onClearData}
-            disabled={!!busy || devboxNotReady || !hasDevName || !!state.deploySession || !!state.startSession || !!state.cabalCleanSession}
+            disabled={!!busy || devboxNotReady || !hasDevName || !!state.deploySession || !!state.startSession || !!state.cabalCleanSession || ccActive}
             aria-label="Clear data"
             title="Clear data — wipes runtime state under <workspace>/data (postgres, kafka, metabase, …) using `, clear-data`"
           >
@@ -1033,6 +1113,75 @@ export const RemoteStackPanel: React.FC = () => {
                     </button>
                   )}
                 </dd>
+                <dt>Control centre</dt>
+                <dd className="rsp-cc-row">
+                  {ccBusy ? (
+                    <span className="rsp-sync-checked">◐ {ccBusy}</span>
+                  ) : cc?.state === 'running' ? (
+                    <>
+                      <a className="rsp-btn-ghost" href={cc.url} target="_blank" rel="noreferrer">Open ↗ {cc.url}</a>
+                      <code title="What was launched (recorded at launch)">
+                        {cc.branch || '?'} @ {cc.commit || '?'}{cc.dirty ? ' + uncommitted' : ''}
+                      </code>
+                      <span className="rsp-sync-checked" title={timeExact(cc.startedAt)}>launched {timeAgo(cc.startedAt)}</span>
+                      {cc.changedSinceLaunch && (
+                        <span className="rsp-tag" title="Files were deployed after launch. Vite reloads most of them; Restart runs exactly the latest.">
+                          code changed since launch
+                        </span>
+                      )}
+                      {sync?.needsDeploy && (
+                        <span className="rsp-tag" title={sync.deployReason}>local changes not deployed</span>
+                      )}
+                      {cc.changedSinceLaunch && (
+                        <button className="rsp-btn-ghost" onClick={onCcRestart} disabled={!!busy}>⟳ Restart</button>
+                      )}
+                      <button className="rsp-btn-ghost" onClick={onCcStop}>■ Stop</button>
+                      {/* control-center uses crypto.randomUUID, which browsers only allow on
+                          https or localhost; a plain-http dev-box address needs a one-time allow. */}
+                      <span
+                        className="rsp-sync-checked"
+                        title={`Chrome: open chrome://flags/#unsafely-treat-insecure-origin-as-secure, add ${cc.url}, Enabled, Relaunch.\nOr: ssh -N -L ${cc.port}:127.0.0.1:${cc.port} ${devbox?.sshUser}@${devbox?.host} and open http://localhost:${cc.port}`}
+                      >
+                        “crypto.randomUUID is not a function”? allow {cc.url} once in chrome://flags (Insecure origins treated as secure)
+                      </span>
+                    </>
+                  ) : cc?.state === 'starting' ? (
+                    <>
+                      <span className="rsp-sync-checked">◐ starting… (first run installs Node + npm packages: a few minutes)</span>
+                      <button className="rsp-btn-ghost" onClick={onCcStop}>■ Stop</button>
+                    </>
+                  ) : (
+                    <>
+                      {cc?.state === 'exited' && <span className="rsp-tag rsp-tag-warn">exited: see log</span>}
+                      <button
+                        className="rsp-btn-ghost"
+                        onClick={onCcLaunch}
+                        disabled={!!busy || !ccReady || cc?.checkoutPresent === false}
+                        title="Copy your latest control-center edits to the dev-box, then run it next to this workspace's rider-app / driver-app"
+                      >
+                        ▶ Launch
+                      </button>
+                      {!state.startSession ? (
+                        <span className="rsp-sync-checked">start the stack first</span>
+                      ) : !ccReady && (
+                        <span className="rsp-sync-checked">waiting for the stack and data…</span>
+                      )}
+                      {cc?.checkoutPresent === false && (
+                        <span className="rsp-sync-checked">no control-center/ in the workspace: keep your checkout at &lt;repo&gt;/control-center</span>
+                      )}
+                    </>
+                  )}
+                  {cc?.error && !ccBusy && <span className="rsp-tag rsp-tag-warn" title={cc.error}>✗ {cc.error}</span>}
+                  {!!cc?.log?.length && !ccBusy && (
+                    <button className="rsp-btn-ghost" onClick={() => setCcLogOpen(o => !o)}>{ccLogOpen ? 'hide log' : 'log'}</button>
+                  )}
+                </dd>
+                {ccLogOpen && !!cc?.log?.length && (
+                  <>
+                    <dt />
+                    <dd className="rsp-cc-logdd"><pre className="rsp-cc-log">{cc.log.join('\n')}</pre></dd>
+                  </>
+                )}
               </dl>
 
               <div className="rsp-sync">

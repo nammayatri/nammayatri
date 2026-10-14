@@ -227,6 +227,34 @@ export const workspaceDataSync = (
 ): Promise<{ started?: boolean; error?: string }> =>
   json('/api/devbox/data/sync', { ws, from, version });
 
+// ── Control centre on the dev-box — this checkout's control-center/, run next to
+// the workspace's rider-app / driver-app (local-api devbox_cc_*).
+
+export interface DevboxCcStatus {
+  /** running = Vite answers; starting = process up, not answering yet (npm install…);
+   *  exited = process died (see log); unavailable = no dev-box pinned. */
+  state?: 'stopped' | 'starting' | 'running' | 'exited' | 'unknown' | 'unavailable';
+  url?: string;
+  port?: number;
+  pid?: number;
+  startedAt?: number;
+  /** What was launched (recorded at launch, not read from the Mac later). */
+  branch?: string;
+  commit?: string;
+  dirty?: boolean;
+  /** Files were deployed after launch — the running process may be older. */
+  changedSinceLaunch?: boolean;
+  checkoutPresent?: boolean;
+  /** This Mac's control-center checkout right now. */
+  checkout?: { branch?: string; commit?: string; dirty?: boolean };
+  log?: string[];
+  error?: string;
+}
+
+export const devboxCcStatus = (): Promise<DevboxCcStatus> => json('/api/devbox/cc/status');
+export const devboxCcStart = (): Promise<DevboxCcStatus> => json('/api/devbox/cc/start', {});
+export const devboxCcStop = (): Promise<DevboxCcStatus> => json('/api/devbox/cc/stop', {});
+
 export interface LogListResponse { files?: string[]; error?: string }
 export interface LogTailResponse { file?: string; content?: string; truncated?: boolean; error?: string }
 export interface LogClearResponse { cleared?: boolean; file?: string; error?: string }
