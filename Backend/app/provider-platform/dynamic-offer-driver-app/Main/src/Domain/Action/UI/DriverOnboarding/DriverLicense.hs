@@ -150,7 +150,7 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
     else runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- DriverInfo.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  when driverInfo.blocked $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+  when driverInfo.blocked $ throwError $ DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   let normalizedDLNumber = normalizeDocumentIdentifier transporterConfig driverLicenseNumber

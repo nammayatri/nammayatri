@@ -615,7 +615,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
       do
         driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbP
         driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
-        when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
+        when driverInfo.blocked $ throwError (DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason))
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
           mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
@@ -748,7 +748,7 @@ recordAirportCashRecharge ::
   m ()
 recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbReason = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
-  when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
+  when driverInfo.blocked $ throwError (DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason))
   now <- getCurrentTime
   effectiveAirport <- QDI.resolveAirportRestriction now driverInfo
   when (effectiveAirport == DI.BLOCKED) $ throwError DriverNotEnabledForAirport

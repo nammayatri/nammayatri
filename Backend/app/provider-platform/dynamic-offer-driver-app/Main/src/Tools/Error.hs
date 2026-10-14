@@ -209,16 +209,30 @@ $(mkBeamInstancesForEnum ''BlockReasonFlag)
 
 data BlockErrorPayload = BlockErrorPayload
   { blockExpiryTime :: Maybe UTCTime,
-    blockReason :: Maybe BlockReasonFlag
+    blockReason :: Maybe BlockReasonFlag,
+    -- free-form reason authored by the dashboard operator or behaviour rule
+    -- (e.g. offence counts in a time window); shown to the driver as-is
+    blockReasonDescription :: Maybe Text
   }
   deriving (Eq, Show, IsBecknAPIError)
 
 instance ToJSON BlockErrorPayload where
-  toJSON (BlockErrorPayload expiryTime reason) =
+  toJSON (BlockErrorPayload expiryTime reason reasonDescription) =
     object
       [ "blockExpiryTime" .= expiryTime,
-        "blockReason" .= reason
+        "blockReason" .= reason,
+        "blockReasonDescription" .= reasonDescription
       ]
+
+-- ByDashboard reasons are ops-internal (may name allegations or complainants),
+-- so the driver only gets the generic operations-team copy for those.
+mkBlockErrorPayload :: Maybe UTCTime -> Maybe BlockReasonFlag -> Maybe Text -> BlockErrorPayload
+mkBlockErrorPayload expiryTime reason reasonDescription =
+  BlockErrorPayload
+    { blockExpiryTime = expiryTime,
+      blockReason = reason,
+      blockReasonDescription = if reason == Just ByDashboard then Nothing else reasonDescription
+    }
 
 data DriverError
   = DriverAccountDisabled
