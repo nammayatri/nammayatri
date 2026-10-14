@@ -886,6 +886,9 @@ case "${1:-up}" in
   # The live layout and a priced ride in each country, each from its own
   # merchant (2026-10-08). What the CI ride regression runs after `setup.sh`.
   two-countries) two_countries; exit 0 ;;
+  # Fresh positions for both countries' drivers, each at its own pickup: the
+  # dispatch ignores old ones (`drivers` places Algiers only).
+  drivers-both) place_drivers_two_countries; exit 0 ;;
   price-both)
     price_in +213 0550123456 36.7538 3.0588 36.7169 3.1836 "$DZ_MERCHANT" Algiers
     price_in +222 22000001 18.0858 -15.9582 18.1030 -15.9500 "$MR_MERCHANT" Nouakchott

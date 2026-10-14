@@ -127,7 +127,7 @@ echo "    driver ${DRIVER[*]}: $driver_after"
 # And a priced ride in each country: a search reads the services'
 # credentials, which sign-in never does -- the check the first live switch
 # lacked.
-bash setup.sh drivers >/dev/null
+bash setup.sh drivers-both >/dev/null
 bash setup.sh price-both
 n=$($PG -c "SELECT count(*) FROM atlas_app.person WHERE mobile_number_hash IS NOT NULL")
 echo "    $n passenger(s) with a number, every one now hashed with the new salt"
