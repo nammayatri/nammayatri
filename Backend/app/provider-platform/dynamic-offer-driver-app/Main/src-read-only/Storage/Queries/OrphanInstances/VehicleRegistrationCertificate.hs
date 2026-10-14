@@ -4,6 +4,7 @@
 module Storage.Queries.OrphanInstances.VehicleRegistrationCertificate where
 
 import qualified Data.Aeson
+import qualified Data.Text
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -40,6 +41,7 @@ instance FromTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegi
             pendingChallan = Kernel.Utils.JSON.valueToMaybe =<< pendingChallan,
             permitExpiry = permitExpiry,
             pucExpiry = pucExpiry,
+            rcVehicleType = rcVehicleType >>= (readMaybe . Data.Text.unpack),
             rejectReason = rejectReason,
             reviewRequired = reviewRequired,
             reviewedAt = reviewedAt,
@@ -92,6 +94,7 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
         Beam.pendingChallan = Data.Aeson.toJSON <$> pendingChallan,
         Beam.permitExpiry = permitExpiry,
         Beam.pucExpiry = pucExpiry,
+        Beam.rcVehicleType = Data.Text.pack . show <$> rcVehicleType,
         Beam.rejectReason = rejectReason,
         Beam.reviewRequired = reviewRequired,
         Beam.reviewedAt = reviewedAt,

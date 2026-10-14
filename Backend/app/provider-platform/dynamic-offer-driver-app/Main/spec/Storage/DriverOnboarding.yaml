@@ -340,6 +340,7 @@ VehicleRegistrationCertificate:
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
     initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
+    rcVehicleType: Maybe Kernel.External.Verification.Types.VehicleRegistrationType
   default:
     approved: "false"
   constraints:
@@ -351,10 +352,13 @@ VehicleRegistrationCertificate:
     pendingChallan: json
   beamType:
     pendingChallan: Maybe Value
+    rcVehicleType: Maybe Text
   toTType:
     pendingChallan: Data.Aeson.toJSON <$> pendingChallan|E
+    rcVehicleType: ((Data.Text.pack . show) <$> rcVehicleType)|E
   fromTType:
     pendingChallan: Kernel.Utils.JSON.valueToMaybe =<< pendingChallan|E
+    rcVehicleType: (rcVehicleType >>= (readMaybe . Data.Text.unpack))|E
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -785,6 +789,7 @@ DocumentVerificationConfig:
     isApprovalSupported: Maybe Bool
     onlyImageVerificationStatusLookupRequired: Maybe Bool
     faceMatchSourceDoc: Maybe DocumentType
+    allowNonTransportVehicle: Maybe Bool
   default:
     order: "0"
     doStrictVerifcation: "true"
