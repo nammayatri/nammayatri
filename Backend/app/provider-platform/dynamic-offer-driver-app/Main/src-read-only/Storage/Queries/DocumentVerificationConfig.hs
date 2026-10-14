@@ -48,6 +48,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowLicenseTransfer allowLicenseTransfer,
+      Se.Set Beam.allowNonTransportVehicle allowNonTransportVehicle,
       Se.Set Beam.applicableTo (Kernel.Prelude.Just applicableTo),
       Se.Set Beam.checkExpiry checkExpiry,
       Se.Set Beam.checkExtraction checkExtraction,

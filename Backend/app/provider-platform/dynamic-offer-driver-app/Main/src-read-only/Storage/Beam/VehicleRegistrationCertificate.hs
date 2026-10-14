@@ -41,6 +41,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     pendingChallan :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     permitExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     pucExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    rcVehicleType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     reviewRequired :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     reviewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

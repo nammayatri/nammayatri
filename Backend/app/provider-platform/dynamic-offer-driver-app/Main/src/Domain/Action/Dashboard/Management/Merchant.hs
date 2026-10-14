@@ -1396,6 +1396,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         doNotValidateDuringOnboarding = Nothing,
         documentOnboardingStage = SDO.castDocumentOnboardingStageFromCommon <$> documentOnboardingStage,
         isDefaultVerifiedOnManualVerification = Nothing,
+        allowNonTransportVehicle = Nothing,
         ..
       }
   where
