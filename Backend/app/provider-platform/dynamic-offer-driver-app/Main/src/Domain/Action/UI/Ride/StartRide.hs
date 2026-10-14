@@ -245,6 +245,7 @@ startRideHandler ServiceHandle {..} rideId req = do
                 driverLocations <- LF.driversLocation [driverId]
                 listToMaybe driverLocations & fromMaybeM LocationNotFound
               pure (getCoordinates driverLocation, dashboardReq.odometer)
+      AirportEntryFee.deductAirportEntryFeeAtStartRide (fromMaybe False transporterConfig.airportEntryFeeEnabled) ride booking
       now <- getCurrentTime
       -- create first entry of eta here
       let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
