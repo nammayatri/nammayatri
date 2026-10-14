@@ -150,6 +150,7 @@ buildRideInfo ride booking rideDetails person driverPhoneNumber customerPhoneNum
       vehicleCategory = show <$> ride.vehicleVariant,
       vehicleServiceTier = ride.vehicleServiceTierName,
       status = show ride.status,
+      rideType = Nothing,
       rideCreatedAt = ride.createdAt,
       pickupLocation = castLocation ride.fromLocation,
       dropLocation = castLocation <$> ride.toLocation,
