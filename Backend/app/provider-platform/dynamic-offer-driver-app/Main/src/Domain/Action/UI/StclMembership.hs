@@ -188,7 +188,8 @@ submitMembershipApplication driverId merchantId merchantOperatingCityId req mbAd
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = Nothing,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)
@@ -377,7 +378,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,
                   udf1 = Nothing,
-                  udf2 = Nothing
+                  udf2 = Nothing,
+                  udf3 = Nothing
                 }
         SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
       Nothing -> do
@@ -429,7 +431,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,
                   udf1 = Nothing,
-                  udf2 = Nothing
+                  udf2 = Nothing,
+                  udf3 = Nothing
                 }
 
         createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
