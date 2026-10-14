@@ -298,19 +298,43 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
         deleteVehicleWithAllAssociations personId mbFleetOwnerId prevRcNo
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction && not isTtenCertificate)
-  withDocumentOperationLock "RC" personId.getId $ do
-    case req.vehicleDetails of
-      Just vDetails@DriverVehicleDetails {..} -> do
-        vehicleDetails <-
-          CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel vehicleModelYear
-            |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
-        let mbVehicleVariant =
-              (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
-        void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId req.imageId2 mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing (not autoApproved)
-      Nothing -> verifyRCFlow person merchantOpCityId (fromMaybe True transporterConfig.useCategoryBasedVerificationPriorityList) req.vehicleRegistrationCertNumber req.imageId req.imageId2 req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber req.engineNumber req.chassisNumber
+  -- Re-upload of an approved RC by someone already linked to the vehicle, without auto-approve: only a new pending
+  -- version is added, and the approved RC stays as is until an admin approves this new version. Registering an approved
+  -- RC one is not linked to still goes through the handler, which links the vehicle.
+  mbPendingVersionRC <- withDocumentOperationLock "RC" personId.getId $ do
+    mbApprovedLinkedRC <-
+      if autoApproved || transporterConfig.unifiedOnboardingFlagsRecompute /= Just True
+        then pure Nothing
+        else do
+          mbExistingRC <- VRCExtra.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
+          now <- getCurrentTime
+          case mbExistingRC of
+            Just rc | rc.verificationStatus == Documents.VALID -> do
+              linked <- case person.role of
+                role | isFleetRole role -> isJust <$> FRCAssoc.findLinkedByRCIdAndFleetOwnerId person.id rc.id now
+                _ -> isJust <$> DAQuery.findLinkedByRCIdAndDriverId person.id rc.id now
+              pure (if linked then Just rc else Nothing)
+            _ -> pure Nothing
+    case mbApprovedLinkedRC of
+      Just rc ->
+        pure . Just $ case req.vehicleDetails of
+          Just DriverVehicleDetails {..} -> rc {DVRC.documentImageId = req.imageId, DVRC.documentImageId2 = req.imageId2, DVRC.vehicleManufacturer = Just vehicleManufacturer, DVRC.vehicleModel = Just vehicleModel, DVRC.vehicleColor = Just vehicleColour, DVRC.vehicleModelYear = vehicleModelYear}
+          Nothing -> rc {DVRC.documentImageId = req.imageId, DVRC.documentImageId2 = req.imageId2}
+      Nothing ->
+        Nothing <$ case req.vehicleDetails of
+          Just vDetails@DriverVehicleDetails {..} -> do
+            vehicleDetails <-
+              CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel vehicleModelYear
+                |<|>| CQVD.findByMakeAndModelAndYear vehicleManufacturer vehicleModel Nothing
+            let mbVehicleVariant =
+                  (vehicleDetails <&> (.vehicleVariant)) <|> transporterConfig.missingMappingFallbackVariant
+            void $ onVerifyRCHandler person (buildRCVerificationResponse vehicleDetails vehicleColour vehicleManufacturer vehicleModel req.vehicleCategory req.vehicleClass) req.vehicleCategory mbAirConditioned req.imageId req.imageId2 mbVehicleVariant vehicleDoors vehicleSeatBelts req.dateOfRegistration vDetails.vehicleModelYear mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) req.imageId Nothing Nothing (not autoApproved)
+          Nothing -> verifyRCFlow person merchantOpCityId (fromMaybe True transporterConfig.useCategoryBasedVerificationPriorityList) req.vehicleRegistrationCertNumber req.imageId req.imageId2 req.dateOfRegistration req.vehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation req.udinNumber req.engineNumber req.chassisNumber
   -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
   groupRegisteredImages (req.imageId : maybeToList req.imageId2)
-  mbRegisteredRC <- RCQuery.findByImageId req.imageId
+  -- The handler was skipped, so the new photos get their vehicle tag here.
+  whenJust mbPendingVersionRC $ \rc -> ImageQuery.updateRcIdByIds (Just rc.id.getId) (req.imageId : maybeToList req.imageId2)
+  mbRegisteredRC <- maybe (RCQuery.findByImageId req.imageId) (pure . Just) mbPendingVersionRC
   whenJust mbRegisteredRC saveRCVersionMetadata
   return Success
   where
