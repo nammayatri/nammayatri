@@ -236,15 +236,18 @@ partialFindLastVehicleRCFleet certNumber fleetOwnerId limit offset = do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
--- | Writes the status on every recompute; docsVerificationStatusUpdatedAt moves only on RCs whose status changes, so it
---   is stamped first, while the row still holds the old status (`IS NULL` since SQL's NULL <> x is never true).
+-- | Set RC `docsVerificationStatus` by cert-number hash, stamping docsVerificationStatusUpdatedAt; skips no-op writes
+--   so the stamp moves only on a status change (the `IS NULL` OR keeps the first write null-safe).
 updateDocsVerificationStatusByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe DDVS.DocsVerificationStatus -> DbHash -> m ())
 updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certificateHash = do
   now <- getCurrentTime
   updateWithKV
-    [Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now)]
+    [ Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
+      Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now),
+      Se.Set BeamVRC.updatedAt now
+    ]
     [ Se.And
         [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
           Se.Or
@@ -253,11 +256,6 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
             ]
         ]
     ]
-  updateWithKV
-    [ Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
-      Se.Set BeamVRC.updatedAt now
-    ]
-    [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
 -- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
 --   Downgrading `verified` to False also revokes `approved` (re-approval required), mirroring the driver side.
