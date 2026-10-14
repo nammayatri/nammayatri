@@ -328,6 +328,10 @@ RiderConfig:
     # through the point at all, so a fresh route is resolved instead -- one map call, on a
     # path the customer is explicitly waiting on.
     betterPointMaxOffRouteDistance: Maybe Meters
+    # "find a better driver": city switch, minimum trip distance, rollout fraction.
+    betterDriverSearchEnabled: Maybe Bool
+    minTripDistanceForBetterDriverSearch: Maybe Meters
+    betterDriverSearchEligibilityProbability: Maybe Double
     # Off/unset: the shape we would pick is priced before /rideSearch answers, so it arrives
     # with the estimates. On: it is dispatched with the others and collected from
     # 'alternateSuggestions' on the results poll instead, which keeps the provider round trip off

@@ -213,6 +213,7 @@ processAssignment req = do
                 merchant = merchant,
                 requiresPaymentBeforeConfirm = False,
                 supportsBookingDeposit = Nothing,
+                mbBetterDriverSwapDetails = Nothing,
                 mbOneShotDetails =
                   Just
                     SConfirm.OneShotConfirmDetails
@@ -305,6 +306,7 @@ processAssignment req = do
                 assignedVehicleVariant = Just req.vehicleDetails.variant,
                 otp = req.otp,
                 isInitiatedByCronJob = False,
+                isBetterDriverSwap = False,
                 isTierUpgrade = req.isTierUpgrade,
                 assignedServiceTierName = req.assignedServiceTierName
               },

@@ -591,3 +591,13 @@ ALTER TABLE atlas_app.booking ADD COLUMN booking_deposit_amount double precision
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN pickup_area text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN eligible_for_better_driver_search boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN superseded_by_booking_id text ;

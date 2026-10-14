@@ -923,3 +923,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN manual_charge_approval_min_custome
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN send_legal_policy_update_email boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN legal_policy_notification_batch_size integer ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN min_trip_distance_for_better_driver_search integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_enabled boolean ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN better_driver_search_eligibility_probability double precision ;
