@@ -97,6 +97,7 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
@@ -437,7 +438,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   autoRefundPostSuccess = Nothing,
                   paymentFilter = Nothing,
                   udf1 = udf1,
-                  udf2 = udf2
+                  udf2 = udf2,
+                  udf3 = Just (FRFSUtils.ticketingTypeToUdf3 FRFSUtils.PassTicket)
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
