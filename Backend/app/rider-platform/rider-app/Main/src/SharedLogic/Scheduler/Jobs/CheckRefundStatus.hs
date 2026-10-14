@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.ParkingBooking as ParkingBooking
 import qualified Domain.Action.UI.Pass as Pass
+import qualified Domain.Action.UI.Payment as DPaymentAction
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -42,6 +43,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.BookingDepositLedger as BookingDepositLedger
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
@@ -74,7 +76,8 @@ checkRefundStatusJob ::
     HasField "blackListedJobs" r [Text],
     HasMasterCloudForwarder r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    MonadMask m
   ) =>
   Job 'CheckRefundStatus ->
   m ExecutionResult
@@ -125,7 +128,8 @@ processRefundStatus ::
     HasField "blackListedJobs" r [Text],
     HasMasterCloudForwarder r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    MonadMask m
   ) =>
   DRefunds.Refunds ->
   DP.Person ->
@@ -134,7 +138,9 @@ processRefundStatus ::
 processRefundStatus refundEntry person paymentOrder = do
   let nonTerminalStatuses = [Payment.REFUND_PENDING, Payment.MANUAL_REVIEW]
       paymentServiceType = fromMaybe Payment.FRFSMultiModalBooking paymentOrder.paymentServiceType
-  if refundEntry.status `elem` nonTerminalStatuses
+      -- A deposit refund call that threw is recorded FAILURE but may have reached the gateway: keep asking it.
+      unknownDepositOutcome = paymentServiceType == Payment.BookingDeposit && BookingDepositLedger.unknownRefundOutcome refundEntry
+  if refundEntry.status `elem` nonTerminalStatuses || unknownDepositOutcome
     then do
       let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing paymentServiceType (Just person.id.getId) person.clientSdkVersion paymentOrder.isMockPayment
           commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
@@ -151,7 +157,7 @@ processRefundStatus refundEntry person paymentOrder = do
             let fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
             void $ SPayment.orderStatusHandler person.merchantOperatingCityId fulfillmentHandler paymentServiceType paymentOrder orderStatusCall
           return True
-        Nothing -> return False
+        Nothing -> return unknownDepositOutcome
     else return False
   where
     -- Helper to create fulfillment handler based on payment service type
@@ -169,4 +175,6 @@ processRefundStatus refundEntry person paymentOrder = do
       Payment.BBPS -> do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
+      -- The fallback answers with no domain entity, which would clear the order's booking link.
+      Payment.BookingDeposit -> DPaymentAction.bookingDepositOrderStatusHandler True orderId merchantId paymentStatusResp
       _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp

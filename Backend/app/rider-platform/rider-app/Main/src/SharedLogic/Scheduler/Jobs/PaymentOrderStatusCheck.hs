@@ -80,7 +80,10 @@ paymentOrderStatusCheckJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
       merchantId' = jobData.merchantId
       merchantOperatingCityId' = jobData.merchantOperatingCityId
   now <- getCurrentTime
-  allRecentNonTerminalOrders <- QPaymentOrder.findAllNonTerminalOrders (addUTCTime (intToNominalDiffTime (-3600)) now)
+  let sweepFrom = addUTCTime (intToNominalDiffTime (-3600)) now
+  nonTerminalOrders <- QPaymentOrder.findAllNonTerminalOrders sweepFrom
+  failedAttemptDepositOrders <- QPaymentOrder.findAllFailedAttemptDepositOrders sweepFrom
+  let allRecentNonTerminalOrders = nonTerminalOrders <> failedAttemptDepositOrders
 
   logInfo $ "Found " <> show (length allRecentNonTerminalOrders) <> " payment orders with status not CHARGED (or CHARGED with pending refunds) created within the last hour"
 
@@ -163,5 +166,5 @@ processPaymentOrder merchantId merchantOperatingCityId paymentOrder = do
       Payment.BBPS -> do
         paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler mId paymentStatusResp
         pure (paymentFulfillStatus, Nothing, Nothing)
-      Payment.BookingDeposit -> DPaymentAction.bookingDepositOrderStatusHandler orderId mId paymentStatusResp
+      Payment.BookingDeposit -> DPaymentAction.bookingDepositOrderStatusHandler False orderId mId paymentStatusResp
       _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp

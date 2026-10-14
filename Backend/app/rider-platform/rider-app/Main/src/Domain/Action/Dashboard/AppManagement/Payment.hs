@@ -33,7 +33,6 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified SharedLogic.BookingDeposit as BookingDeposit
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -154,12 +153,16 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId _mbReques
     Right result -> return result
   where
     initiateRetryRefunds refundRequest = do
+      -- A retry can't tell a gateway timeout from a decline, and the retry's status is read off the order's first refund.
+      when (refundRequest.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) $
+        throwError (InvalidRequest "Retrying a booking deposit refund is disabled; settle it manually")
       unless (req.retryRefunds == Just True) $
         throwError (InvalidRequest "Refund was failed. Set retryRefund flag for new attempt")
       initiateRefunds refundRequest
 
     initiateRefunds refundRequest
-      | refundRequest.refundPurpose == DRefundRequest.BOOKING_DEPOSIT = initiateDepositRefunds refundRequest
+      | refundRequest.refundPurpose == DRefundRequest.BOOKING_DEPOSIT =
+        throwError (InvalidRequest "Booking deposit refunds are issued automatically; they cannot be approved here")
       | otherwise = do
         logInfo $ "Refund request approved by admin: orderId: " <> refundRequest.orderId.getId <> ". Initiate refunds: refundsTries: " <> show (refundRequest.refundsTries + 1)
         -- Approved breakdown: admin's override if supplied, else the prior approval (retry) or the customer's requested set.
@@ -197,32 +200,6 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId _mbReques
         Notify.notifyRefunds updRefundRequest
         DRidePayment.processRefundRaised updRefundRequest
         submitRefundToPaymentService updRefundRequest (fromMaybe False req.retryRefunds)
-
-    initiateDepositRefunds refundRequest = do
-      logInfo $ "Deposit refund approved by admin: orderId: " <> refundRequest.orderId.getId <> "; try " <> show (refundRequest.refundsTries + 1)
-      bpRow <-
-        (find (\r -> r.paymentServiceType == DPaymentOrder.BookingDeposit) <$> QBookingPayment.findAllByOrderId refundRequest.orderId)
-          >>= fromMaybeM (InvalidRequest $ "No booking_payment row for deposit order: " <> refundRequest.orderId.getId)
-      booking <- QBooking.findById bpRow.bookingId >>= fromMaybeM (BookingDoesNotExist bpRow.bookingId.getId)
-      order <- QPaymentOrder.findById refundRequest.orderId >>= fromMaybeM (PaymentOrderNotFound refundRequest.orderId.getId)
-      existingRequests <- QRefundRequest.findAllByOrderId refundRequest.orderId
-      let inFlight r = r.status == DRefundRequest.APPROVED && r.id /= refundRequest.id
-      blockers <- filterM (\r -> if not (inFlight r) then pure False else isJust <$> maybe (pure Nothing) (fmap Just . HQRefunds.findById) r.refundsId) existingRequests
-      unless (null blockers) $
-        throwError (InvalidRequest $ "Another refund request is in flight for order: " <> refundRequest.orderId.getId)
-      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription (Just order.amount) (refundRequest.refundsTries + 1) Nothing Nothing refundRequest.id
-      let updReq =
-            refundRequest{status = DRefundRequest.APPROVED,
-                          responseDescription = req.responseDescription,
-                          refundsAmount = Just order.amount,
-                          refundsTries = refundRequest.refundsTries + 1
-                         }
-      pairs <- BookingDeposit.prepareDepositRefundLedger booking
-      case find (\(_, o) -> o.id == order.id) pairs of
-        Nothing -> throwError (InvalidRequest $ "Deposit for order " <> order.id.getId <> " is not refundable (captured, or no paid attempt)")
-        Just pair -> BookingDeposit.executeDepositRefundGateway booking updReq (fromMaybe False req.retryRefunds) pair
-      finalReq <- QRefundRequest.findById refundRequest.id >>= fromMaybeM (RefundRequestDoesNotExist refundRequest.id.getId)
-      pure Common.RefundRequestRespondResp {status = finalReq.status, refundStatus = Nothing, errorCode = Nothing}
 
     rejectRefunds refundRequest = do
       logInfo $ "Refund request rejected by admin: orderId: " <> refundRequest.orderId.getId
@@ -350,14 +327,16 @@ postPaymentRefundRequestBookingInitiate merchantShortId opCity phantomBookingId 
     throwError (InvalidRequest $ "Booking " <> bookingId.getId <> " is still in status " <> show booking.status <> "; deposit can be refunded only after the booking is terminal")
   when (isNothing booking.bookingDepositAmount) $
     throwError (InvalidRequest $ "Booking " <> bookingId.getId <> " has no booking deposit")
-  depositWasCaptured <- BookingDeposit.depositCaptured booking.id
-  when depositWasCaptured $
-    throwError (InvalidRequest $ "Booking deposit for " <> bookingId.getId <> " was forfeited (captured to revenue); nothing to refund")
+  let refuseIfCaptured = do
+        depositWasCaptured <- fst <$> BookingDeposit.depositHoldState booking.id
+        when depositWasCaptured $
+          throwError (InvalidRequest $ "Booking deposit for " <> bookingId.getId <> " was forfeited (captured to revenue); nothing to refund")
+  refuseIfCaptured
   BookingDeposit.refundBookingDeposit booking
   rows <- QBookingPayment.findAllByBookingIdAndServiceType booking.id DPaymentOrder.BookingDeposit
   reqs <- concat <$> mapM (QRefundRequest.findAllByOrderId . (.paymentOrderId)) rows
   let deposits = filter (\r -> r.refundPurpose == DRefundRequest.BOOKING_DEPOSIT) reqs
   -- Prefer a live/actionable row over historical ones; any representative is fine beyond that.
   case find (\r -> r.status `elem` [DRefundRequest.APPROVED, DRefundRequest.FAILED, DRefundRequest.OPEN]) deposits <|> listToMaybe deposits of
-    Nothing -> pure Common.RefundRequestRespondResp {status = DRefundRequest.REFUNDED, refundStatus = Nothing, errorCode = Nothing}
+    Nothing -> throwError (InvalidRequest $ "No deposit refund was initiated for " <> bookingId.getId <> ": no paid order was credited to the wallet, or the wallet balance is re-spent on a live booking")
     Just r -> pure Common.RefundRequestRespondResp {status = r.status, refundStatus = Nothing, errorCode = Nothing}

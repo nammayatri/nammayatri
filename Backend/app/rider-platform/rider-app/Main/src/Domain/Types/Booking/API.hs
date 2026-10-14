@@ -216,9 +216,6 @@ data RideRefundInfo = RideRefundInfo
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getBookingApiDeposit :: BookingAPIEntity -> Maybe HighPrecMoney
-getBookingApiDeposit BookingAPIEntity {bookingDepositAmount} = bookingDepositAmount
-
 data BookingCancellationReasonAPIEntity = BookingCancellationReasonAPIEntity
   { additionalInfo :: Maybe Text,
     reasonCode :: Maybe CancellationReasonCode,
