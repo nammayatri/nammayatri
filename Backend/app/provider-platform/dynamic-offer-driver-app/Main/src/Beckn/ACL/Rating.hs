@@ -37,11 +37,7 @@ buildRatingReqV2 ::
   Spec.RatingReq ->
   m DRating.DRatingReq
 buildRatingReqV2 subscriber req = do
-  let context = req.ratingReqContext
-  ContextV2.validateContext Context.RATING context
-  bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
-  unless (subscriber.subscriber_id == bap_id) $
-    throwError (InvalidRequest "Invalid bap_id")
+  validateRatingContext subscriber req
   ratings <- req.ratingReqMessage.ratingReqMessageRatings & fromMaybeM (InvalidRequest "Missing ratings")
   rating <- safeHead ratings & fromMaybeM (InvalidRequest "Missing rating")
   bookingId <- rating.ratingId & fromMaybeM (InvalidRequest "Missing ratingId")
@@ -52,6 +48,8 @@ buildRatingReqV2 subscriber req = do
       mbFilePath = getFilePath rating
       mbRiderName = getRiderName rating
   ratingValue <- mbRatingValue & fromMaybeM (InvalidRequest "Invalid ratingValue")
+  unless (isValidRatingValue ratingValue) $
+    throwError (InvalidRequest "Invalid ratingValue")
   pure
     DRating.DRatingReq
       { bookingId = Id bookingId,
@@ -62,6 +60,26 @@ buildRatingReqV2 subscriber req = do
         filePath = mbFilePath,
         riderName = mbRiderName
       }
+
+-- | Driver ratings are on a 1..5 scale. Nothing downstream checks the range (DRating.handler adds the value to ratingsSum as is),
+-- so every /rating parser must reject anything outside it.
+isValidRatingValue :: Int -> Bool
+isValidRatingValue v = v >= 1 && v <= 5
+
+-- | Context and bap_id checks shared by every /rating parser.
+validateRatingContext ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    MonadFlow m
+  ) =>
+  Subscriber.Subscriber ->
+  Spec.RatingReq ->
+  m ()
+validateRatingContext subscriber req = do
+  let context = req.ratingReqContext
+  ContextV2.validateContext Context.RATING context
+  bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
+  unless (subscriber.subscriber_id == bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
 
 tfFeedbackDetails :: Spec.Rating -> [Maybe Text]
 tfFeedbackDetails rating = do

@@ -18,12 +18,15 @@ import qualified Beckn.ACL.Rating as ACL
 import qualified Beckn.OnDemand.Transformer.OndcScheduledRide.Rating as OSRRating
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Domain.Action.Beckn.Rating as DRating
+import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant (Merchant)
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import Kernel.Beam.Types (TxnIdKey (..))
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -34,10 +37,9 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Tools.ActorInfo as ActorInfo
-import Tools.Error
 import TransactionLogs.PushLogs
 
 type API =
@@ -58,25 +60,35 @@ rating merchantId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBeck
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "ratingAPIV2" $ "Received rating API call:-" <> show reqV2
-    dRatingReq' <- ACL.buildRatingReqV2 subscriber reqV2
-    city <- Utils.getContextCity reqV2.ratingReqContext
-    moc <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (InvalidRequest $ "Operating City " <> show city <> " not supported or not found")
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (TransporterConfigDoesNotExist moc.id.getId)
-    let isOndcScheduledRideSupportEnabled = fromMaybe False transporterConfig.enableOndcScheduledRideSupport
-    -- Pilot merchants get the v2.1.0 shape (order_id, ref_type/ref_id, feedbacks) parsed over Layer 1's own-BAP convention.
-    let dRatingReq =
-          if isOndcScheduledRideSupportEnabled
-            then OSRRating.ondcScheduledRideParser reqV2.ratingReqMessage dRatingReq'
-            else dRatingReq'
+    (mbBooking, isOndcScheduledRideSupportEnabled) <- getBookingAndOndcScheduledRideFlag reqV2.ratingReqMessage
+    -- Pilot merchants get a separate v2.1.0 parser (order_id, ref_type/ref_id, feedbacks); Layer 1's parser would reject spec-compliant
+    -- payloads that omit ratings[0].id or carry a non-Int ratings[0].value.
+    dRatingReq <-
+      if isOndcScheduledRideSupportEnabled
+        then OSRRating.buildRatingReq subscriber reqV2
+        else ACL.buildRatingReqV2 subscriber reqV2
 
     Redis.whenWithLockRedis (ratingLockKey dRatingReq.bookingId.getId) 60 $ do
-      ride <- DRating.validateRequest dRatingReq
+      ride <- DRating.validateRequest dRatingReq mbBooking
       fork "rating request processing" $
         Redis.whenWithLockRedis (ratingProcessingLockKey dRatingReq.bookingId.getId) 60 $
           DRating.handler merchantId dRatingReq ride
       fork "rating received pushing ondc logs" do
         void $ pushLogs "rating" (toJSON reqV2) merchantId.getId "MOBILITY"
     pure Ack
+
+-- | Reads the pilot flag from the booking's own city, not the city the BAP puts in the context. The booking id is order_id (v2.1.0)
+-- or ratings[0].id (our own BAP). A missing booking or config means "not a pilot" rather than an error, so non-pilot requests fail
+-- (or succeed) exactly as they did before the flag existed. The booking is returned so validateRequest doesn't read it again.
+getBookingAndOndcScheduledRideFlag :: Spec.RatingReqMessage -> Flow (Maybe DBooking.Booking, Bool)
+getBookingAndOndcScheduledRideFlag message = do
+  let mbBookingId = message.ratingReqMessageOrderId <|> (safeHead (fromMaybe [] message.ratingReqMessageRatings) >>= (.ratingId))
+  mbBooking <- maybe (pure Nothing) (B.runInReplica . QRB.findById . Id) mbBookingId
+  case mbBooking of
+    Nothing -> pure (Nothing, False)
+    Just booking -> do
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
+      pure (Just booking, fromMaybe False (mbTransporterConfig >>= (.enableOndcScheduledRideSupport)))
 
 ratingLockKey :: Text -> Text
 ratingLockKey id = "Driver:Rating:BookingId-" <> id
