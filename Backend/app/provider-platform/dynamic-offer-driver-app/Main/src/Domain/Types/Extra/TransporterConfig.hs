@@ -196,7 +196,7 @@ data DownwardRecomputePolicy = DownwardRecomputePolicy
 -- | Time-overage billing controls.
 data TimeRecomputePolicy = TimeRecomputePolicy
   { -- | Flat forgiveness: time overage strictly below this bills the
-    -- estimated duration (no time charge). Fleet default: 300s (5 min).
+    -- estimated duration (no time charge). Fleet default: 1200s (20 min).
     -- Ignored when 'forgivenessBands' is set.
     overageForgivenessSeconds :: Maybe Seconds,
     -- | Estimate-relative forgiveness, mirroring the distance bands: the band

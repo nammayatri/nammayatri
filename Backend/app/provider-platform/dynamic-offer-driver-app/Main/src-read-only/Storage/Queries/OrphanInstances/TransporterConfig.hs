@@ -25,6 +25,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     fcmUrl' <- Kernel.Prelude.parseBaseUrl fcmUrl
     analyticsConfig' <- Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId analyticsConfig
     driverWalletConfig' <- Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId driverWalletConfig
+    fareRecomputePolicy' <- Storage.Queries.Transformers.TransporterConfig.parseFareRecomputePolicy merchantOperatingCityId fareRecomputePolicy
     knowledgeCenterSopTypes' <- Storage.Queries.Transformers.TransporterConfig.parseKnowledgeCenterSopTypesConfig merchantOperatingCityId knowledgeCenterSopTypes
     scheduledRideConfig' <- Storage.Queries.Transformers.TransporterConfig.parseScheduledRideConfig merchantOperatingCityId scheduledRideConfig
     subscriptionConfig' <- Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId subscriptionConfig
@@ -212,7 +213,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             exotelStatusCheckSchedulerDelay = maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay,
             fakeOtpEmails = fakeOtpEmails,
             fakeOtpMobileNumbers = fakeOtpMobileNumbers,
-            fareRecomputePolicy = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< fareRecomputePolicy,
+            fareRecomputePolicy = fareRecomputePolicy',
             favouriteDriverDailyCoinRideThreshold = fromMaybe 4 favouriteDriverDailyCoinRideThreshold,
             fcmConfig = Kernel.External.Notification.FCM.Types.FCMConfig {fcmUrl = fcmUrl', fcmServiceAccount = fcmServiceAccount, fcmTokenKeyPrefix = fcmTokenKeyPrefix, fcmNotificationObj = Nothing},
             feedbackNotificationConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< feedbackNotificationConfig,
