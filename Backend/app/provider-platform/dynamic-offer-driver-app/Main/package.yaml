@@ -240,3 +240,21 @@ executables:
       - beckn-services
     extra-libraries:
       - cac_client
+
+tests:
+  dynamic-offer-driver-app-test:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options:
+      - -Wall
+      - -Werror
+      - -Wno-ambiguous-fields
+      - -Wno-incomplete-uni-patterns
+      - -Wno-incomplete-record-updates
+      - -threaded
+      - -O0
+    dependencies:
+      - dynamic-offer-driver-app
+      - mobility-core
+      - beckn-spec
+      - special-zone-a

@@ -46,7 +46,7 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet personId
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
   pure $ buildInfoRes fleetDisablesPreference minCells person.driverTag
 
 postDriverAreaPreferenceUpdateInfo ::
@@ -59,7 +59,7 @@ postDriverAreaPreferenceUpdateInfo ::
   )
 postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet personId
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
   when (fleetDisablesPreference && req.enabled == Just True) $
     throwError (InvalidRequest "Area preference is disabled by your fleet")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -99,9 +99,9 @@ getDriverAreaPreferenceList (_, _, merchantOpCityId) = do
   pure [APIT.GeohashAreaItem {geohash = a.geohash, areaName = a.areaName} | a <- areas]
 
 -- | The driver's active fleet ignores area/trip-distance preferences (ignoreDriverAreaAndDistancePreference).
-isAreaPreferenceDisabledByFleet :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
-isAreaPreferenceDisabledByFleet personId =
-  maybe False ((.ignoreDriverAreaAndDistancePreference) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver personId
+isAreaPreferenceDisabledByFleet :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
+isAreaPreferenceDisabledByFleet merchantOpCityId personId =
+  maybe False ((.ignoreDriverAreaAndDistancePreference) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver merchantOpCityId personId
 
 getMinCells ::
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -137,24 +137,26 @@ validateSelection merchantOpCityId minCells = \case
 -- needed at read time, since cell tags already carry their area name as the
 -- tag value. minCells is threaded in rather than refetched here, since both
 -- callers already have it (from getMinCells). A fleet with ignoreDriverAreaAndDistancePreference
--- forces enabled=False regardless of the driver's own tag.
+-- forces enabled=False regardless of the driver's own tag and reports lockedByFleet.
 buildInfoRes :: Bool -> Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
 buildInfoRes fleetDisablesPreference minCells mbTags =
   case AreaPref.driverAreaPreferenceFromTags (fromMaybe [] mbTags) of
-    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled}
+    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled, lockedByFleet = Just fleetDisablesPreference}
     Just (AreaPref.PreferredRadius center radiusMeters) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [],
           radiusArea = Just APIT.RadiusAreaSelection {center = center, radiusMeters = radiusMeters},
           minCells = minCells,
-          enabled = enabled
+          enabled = enabled,
+          lockedByFleet = Just fleetDisablesPreference
         }
     Just (AreaPref.PreferredGeohashCells cells) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [APIT.SelectedGeohashArea {geohash = c, areaName = areaName} | (c, areaName) <- cells],
           radiusArea = Nothing,
           minCells = minCells,
-          enabled = enabled
+          enabled = enabled,
+          lockedByFleet = Just fleetDisablesPreference
         }
   where
     enabled = not fleetDisablesPreference && AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)

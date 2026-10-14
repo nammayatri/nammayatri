@@ -93,6 +93,8 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
+import qualified SharedLogic.Finance.Prepaid as SFPrepaid
+import qualified SharedLogic.Finance.Wallet as SFWallet
 import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -504,6 +506,9 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
+  mbFleet <- SFleetFeatures.getFleetFeaturesForDriver merchantOpCityId personId
+  -- Lets the app show the auto-accept toggle as locked instead of letting it snap back.
+  let autoAcceptLockedByFleet = maybe False (not . (.allowDriverToToggleAutoAssign) . snd) mbFleet
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
@@ -574,7 +579,8 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
         enableForAirport = effectiveAirport,
-        airConditioned = mbAirConditioned
+        airConditioned = mbAirConditioned,
+        autoAcceptLockedByFleet = Just autoAcceptLockedByFleet
       }
   where
     getDriverCurrentSpecialLocationId personId' =
@@ -643,9 +649,10 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  mbFleetFeatures <- fmap snd <$> SFleetFeatures.getFleetFeaturesForDriver merchantOperatingCityId personId
   -- A fleet that disallows driver toggling owns auto-assign: the driver's request is ignored for
   -- auto-accept-enabled tiers, whose current selected/auto-accept membership is preserved as-is.
-  fleetLocksAutoAssign <- maybe False (not . (.allowDriverToToggleAutoAssign) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver personId
+  let fleetLocksAutoAssign = maybe False (not . (.allowDriverToToggleAutoAssign)) mbFleetFeatures
 
   -- Same lock checkAndAutoDisableWalletGatedTiers takes: a concurrent wallet-debit revoke must not
   -- interleave its strip between this read and these writes.
@@ -685,10 +692,10 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
                 logInfo $ "Ignoring driver service tier request for fleet-managed auto-assign tier " <> show driverServiceTier.serviceTierType <> " for driver " <> personId.getId
               pure (keepIfPreviously vehicle.selectedServiceTiers, keepIfPreviously (fromMaybe [] vehicle.selectedAutoAcceptTiers))
             | isSelected -> do
-              -- Only call hasMinWalletBalanceForTier (a real DB query) when its result actually matters:
+              -- Only call checkMinWalletBalance (a real DB query) when its result actually matters:
               -- an AutoAcceptOptional tier the driver isn't requesting auto-accept for never consults it.
               let walletCheckNeeded = walletGateEnabled && (isAutoAcceptOnlyTier || wantsAutoAccept)
-              hasSufficientWalletBalance <- if walletCheckNeeded then hasMinWalletBalanceForTier driverServiceTier personId else pure True
+              hasSufficientWalletBalance <- if walletCheckNeeded then checkMinWalletBalance driverServiceTier personId else pure True
               -- AutoAcceptOnly has no non-priority existence, so insufficient wallet drops the base tier too.
               -- AutoAcceptOptional base-tier eligibility stays wallet-independent, matching checkAndAutoDisableWalletGatedTiers.
               let baseTierSurvivesWalletCheck = hasSufficientWalletBalance || not isAutoAcceptOnlyTier
@@ -702,7 +709,11 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     -- automated recompute would re-add it on the next rating/AC event anyway.
     let ratingGatedTiers = [t.serviceTierType | (t, isUsageRestricted) <- driverVehicleServiceTierTypes, not isUsageRestricted, isJust t.vehicleRating]
         selectedServiceTierTypes = DL.nub $ mapMaybe fst tierResults <> ratingGatedTiers
-        selectedAutoAcceptTierTypes = mapMaybe snd tierResults
+        -- While the fleet owns auto-assign it keeps every city auto-accept tier selected, including
+        -- tiers this vehicle cannot serve; the driver's save must not drop those either.
+        vehicleTierTypes = map ((.serviceTierType) . fst) driverVehicleServiceTierTypes
+        fleetKeptAutoAcceptTiers = if fleetLocksAutoAssign then filter (`notElem` vehicleTierTypes) (fromMaybe [] vehicle.selectedAutoAcceptTiers) else []
+        selectedAutoAcceptTierTypes = DL.nub $ mapMaybe snd tierResults <> fleetKeptAutoAcceptTiers
     QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
     QVehicle.updateSelectedAutoAcceptTiers selectedAutoAcceptTierTypes personId
 
@@ -735,6 +746,15 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     QDI.updateAirportSwitch enableForAirport Nothing Nothing personId
 
   return Success
+  where
+    -- Tiers with no minWalletBalance set are unaffected.
+    checkMinWalletBalance :: VehicleServiceTier -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
+    checkMinWalletBalance serviceTier driverId =
+      case serviceTier.autoAcceptanceConfig >>= (.minWalletBalance) of
+        Nothing -> pure True
+        Just minBalance -> do
+          mbBalance <- SFWallet.getWalletBalanceByOwner SFPrepaid.counterpartyDriver driverId.getId
+          pure $ maybe False (>= minBalance) mbBalance
 
 postDriverRegisterSsn ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

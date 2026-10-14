@@ -651,7 +651,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             let stillHasTierSelected = maybe False ((dp.driverPoolResult.serviceTier `elem`) . (.selectedServiceTiers)) mbFreshPoolData
                 stillHasAutoAcceptTierSelected = maybe False ((dp.driverPoolResult.serviceTier `elem`) . fromMaybe [] . (.selectedAutoAcceptTiers)) mbFreshPoolData
             -- Deliberately NO dispatch-time wallet balance re-check here: the opt-in write gate
-            -- (hasMinWalletBalanceForTier in postDriverUpdateServiceTiers) admits only sufficient
+            -- (checkMinWalletBalance in postDriverUpdateServiceTiers) admits only sufficient
             -- balances and the debit-driven auto-revoke strips selections synchronously with
             -- every wallet decrease, so selectedAutoAcceptTiers + the cohort tag together are
             -- treated as the standing guarantee of eligibility. A stale selection in the ms

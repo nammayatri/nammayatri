@@ -33,7 +33,6 @@ import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
-import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -59,8 +58,6 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
-import qualified SharedLogic.FleetDriverLink as SFleetDriverLink
-import qualified SharedLogic.FleetFeatures as SFleetFeatures
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.DashboardAlert ()
@@ -208,7 +205,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- The link is created ACTIVE, so the fleet owner's ACTIVE_DRIVER_COUNT must go up with it.
   -- Hung off onCreated rather than done unconditionally here: a driver starting their second
   -- trip under the same fleet already has the association, and incrementing again would inflate.
-  SFleetDriverLink.createFleetDriverAssociationWithJoinDefaults driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing (Just merchantId) (Just merchantOperatingCityId) $
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing (Just merchantId) (Just merchantOperatingCityId) $
     when wmbTransporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
       Analytics.incrementFleetOwnerAnalyticsActiveDriverCount wmbTransporterConfig (Just vehicleRouteMapping.fleetOwnerId.getId) driverId
   let qrStartTransporterConfig = wmbTransporterConfig
@@ -496,7 +493,7 @@ postFleetConsentDecline (mbDriverId, _merchantId, merchantOperatingCityId) = do
   when (isJust fleetDriverAssociation.requestReason) $ throwError $ InvalidRequest "Cannot decline a driver-initiated request"
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id fleetDriverAssociation.fleetOwnerId) (cast driverId)) SGuard.DeactivateFromFleet (SGuard.TargetDriver (cast driverId)) $
-    SFleetDriverLink.endFleetDriverAssociationWithCleanup fleetDriverAssociation.fleetOwnerId driverId
+    FDV.endFleetDriverAssociation fleetDriverAssociation.fleetOwnerId driverId
   SOnboardingComms.resetOnboardingAsIfNoFleet transporterConfig driverId
   fork "Driver fleet unlink notification" $ do
     driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -526,7 +523,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
-    FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    FDV.activateFleetDriverAssociation driverId (Id fleetDriverAssociation.fleetOwnerId) fleetDriverAssociation.responseReason
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -544,8 +541,6 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     unless (transporterConfig.requiresOnboardingInspection == Just True) $
       unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
         Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
-  -- The pending association just became active: this is the driver joining the fleet.
-  SFleetFeatures.applyFleetJoinDefaults driverId (Id fleetDriverAssociation.fleetOwnerId)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

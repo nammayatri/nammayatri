@@ -35,7 +35,6 @@ import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DashboardAlert as SDA
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types
-import qualified SharedLogic.FleetDriverLink as SFleetDriverLink
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
@@ -95,7 +94,7 @@ setOnboardingAs transporterConfig driver onboardingAs = do
           associations <- QFDA.findAllByDriverIdWithStatus driver.id
           forM_ associations $ \association ->
             SGuard.withOnboardingAction transporterConfig (SGuard.ActorFleetAndDriver (Id association.fleetOwnerId) driver.id) SGuard.UnlinkFromFleet (SGuard.TargetDriver driver.id) $ do
-              SFleetDriverLink.endFleetDriverAssociationWithCleanup association.fleetOwnerId association.driverId
+              QFDA.endFleetDriverAssociation association.fleetOwnerId association.driverId
               -- findAllByDriverIdWithStatus returns unexpired rows regardless of isActive, and
               -- only active ones are counted in ACTIVE_DRIVER_COUNT -- so decrement just for those,
               -- otherwise ending a pending invite would push the fleet owner's count below reality.

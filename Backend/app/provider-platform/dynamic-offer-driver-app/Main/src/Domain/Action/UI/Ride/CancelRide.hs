@@ -249,7 +249,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation all
           when (booking.fareParams.driverCancellationNotAllowed == Just True) $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
           -- Fleet-level lock: the ride's fleet owner can forbid its drivers from cancelling assigned rides.
           whenJust ride.fleetOwnerId $ \fleetOwnerId -> do
-            fleetFeatures <- SFleetFeatures.getFleetFeaturesByFleetOwnerId fleetOwnerId
+            fleetFeatures <- SFleetFeatures.getFleetFeatures booking.merchantOperatingCityId fleetOwnerId
             unless fleetFeatures.allowCancellationByDriver $ throwError $ DriverCancellationNotAllowedOnRide ride.id.getId
           goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)

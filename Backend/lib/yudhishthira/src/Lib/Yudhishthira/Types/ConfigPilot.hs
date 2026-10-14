@@ -77,6 +77,7 @@ data ConfigType
   | IssueConfigDriver
   | MonetaryRewardConfig
   | DocumentVerificationStagesConfig
+  | FleetConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
 instance ToHttpApiData ConfigType where

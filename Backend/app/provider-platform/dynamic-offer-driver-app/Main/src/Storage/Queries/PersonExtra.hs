@@ -36,8 +36,6 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common hiding (Value)
 import Kernel.Utils.Version
-import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -52,7 +50,6 @@ import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
-import qualified Storage.CachedQueries.CoinsConfig as CQCoinsConfig
 import Storage.Queries.Booking ()
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLicense ()
@@ -60,6 +57,7 @@ import Storage.Queries.DriverQuote ()
 import qualified Storage.Queries.DriverRCAssociation ()
 import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.Person ()
+import Storage.Queries.Person.DriverTag as Reexport
 import Storage.Queries.Person.GetNearestDrivers as Reexport
 import qualified Storage.Queries.Person.Internal as Int
 import Storage.Queries.Ride ()
@@ -713,14 +711,6 @@ updateDeviceToken token personId = do
   updateOneWithKV [Se.Set BeamP.deviceToken token, Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.deviceToken = LTSSync.Set token}
-
-updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
-updateDriverTag driverTag personId = do
-  now <- getCurrentTime
-  updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
-  LTSSync.syncDriverPoolDataToLTS (cast personId) $
-    LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set driverTag}
-  CQCoinsConfig.clearDriverIncentiveConfigHashForDriver personId
 
 findByOperatorBadgeTokenAndMerchantId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

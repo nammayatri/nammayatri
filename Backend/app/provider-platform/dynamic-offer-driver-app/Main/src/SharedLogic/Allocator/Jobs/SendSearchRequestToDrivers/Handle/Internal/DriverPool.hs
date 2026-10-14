@@ -279,13 +279,15 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
   logInfo $ "POOLING version applied: " <> show mbVersion <> " batchNum=" <> show batchNum <> " isOnRidePool=" <> show isOnRidePool
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
   let personIds = map (\d -> cast d.driverPoolResult.driverId) onlyNewDriversWithCustomerInfo
-  -- Pooling priority map of each driver's ACTIVE fleet: one batched association read for
-  -- all drivers of the batch plus one batched fleet_config read; never throws. Skipped when
-  -- no POOLING logic is loaded, since nothing would read it.
+  -- Pooling priority map of each driver's ACTIVE fleet, from the city's in-memory fleet configs.
+  -- Skipped when no POOLING logic is loaded (nothing would read it); reads no table unless some
+  -- fleet of the city has a pooling priority; never throws.
   fleetPriorityMap <-
     if null allLogics
       then pure Map.empty
-      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriorities" $ SFleetFeatures.getFleetPoolingPrioritiesForDrivers personIds
+      else
+        withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $
+          SFleetFeatures.fleetPoolingPrioritiesForPool (cast mOCityId) [(cast d.driverPoolResult.driverId, d.driverPoolResult.fleetOwnerId) | d <- onlyNewDriversWithCustomerInfo]
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.

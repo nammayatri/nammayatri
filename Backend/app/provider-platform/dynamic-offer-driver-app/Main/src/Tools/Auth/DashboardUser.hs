@@ -28,6 +28,7 @@ module Tools.Auth.DashboardUser
     DashboardUser (..),
     DashboardAuthFlow,
     requestorFleetFlag,
+    isDashboardAdminTier,
     dashboardRequestorId,
     requestorHasFleetMemberHierarchy,
     requestorIsFleetOwner,
@@ -51,6 +52,7 @@ where
 
 import "lib-dashboard" Dashboard.Common ()
 import qualified Data.Text as T
+import qualified "lib-dashboard" Domain.Action.Dashboard.Person as DashboardPersonAction
 import qualified "lib-dashboard" Domain.Types.Merchant as DDashboardMerchant
 import qualified "lib-dashboard" Domain.Types.Person as DDashboardPerson
 import qualified "lib-dashboard" Domain.Types.Role as DDashboardRole
@@ -178,6 +180,16 @@ requestorFleetFlag dashboardUser = runInDashboardDb $ do
   pure $
     role.dashboardAccessType == DDashboardRole.FLEET_OWNER
       || role.dashboardAccessType == DDashboardRole.RENTAL_FLEET_OWNER
+
+-- | Whether the dashboard person holds an admin-tier role ('DashboardPerson.isAdminTier'):
+-- a positive check for admin-only writes, rather than inferring admin from the absence of
+-- BPP or fleet-member rows. An unknown person is not an admin.
+isDashboardAdminTier :: DashboardAuthFlow m r => Text -> m Bool
+isDashboardAdminTier personId = runInDashboardDb $ do
+  mbPerson <- QDashboardPerson.findById (Id personId)
+  case mbPerson of
+    Nothing -> pure False
+    Just person -> maybe False (DashboardPersonAction.isAdminTier . (.dashboardAccessType)) <$> QDashboardRole.findById person.roleId
 
 -- | The calling operator's person id, as the text those endpoints expect.
 --

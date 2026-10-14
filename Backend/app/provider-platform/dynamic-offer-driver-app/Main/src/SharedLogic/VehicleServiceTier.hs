@@ -39,6 +39,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import SharedLogic.Finance.WalletAccount (getWalletBalanceByOwner)
+import qualified SharedLogic.FleetTags as SFleetTags
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -296,20 +297,10 @@ backfillSelectedServiceTiers inputTiers vehicle driverInfo transporterConfig mer
         LTSSync.syncDriverPoolDataToLTS driverId $
           LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set inputTiers}
 
--- | Wallet gate for enabling auto-acceptance on a tier: True when the tier sets no
---   minWalletBalance, else whether the driver's wallet balance meets it (missing wallet => False).
---   Shared by the driver path (postDriverUpdateServiceTiers) and the fleet path (SharedLogic.FleetFeatures).
-hasMinWalletBalanceForTier :: BeamFlow m r => DVST.VehicleServiceTier -> Id DP.Person -> m Bool
-hasMinWalletBalanceForTier serviceTier driverId =
-  case serviceTier.autoAcceptanceConfig >>= (.minWalletBalance) of
-    Nothing -> pure True
-    Just minBalance -> do
-      mbBalance <- getWalletBalanceByOwner DRIVER driverId.getId
-      pure $ maybe False (>= minBalance) mbBalance
-
 -- | Serializes checkAndAutoDisableWalletGatedTiers's own concurrent invocations for one driver, since two can otherwise race and undo each other's write.
+--   The key lives in SharedLogic.FleetTags, which the fleet tag writes share and which cannot import this module.
 selectedServiceTiersLockKey :: Id DP.Person -> Text
-selectedServiceTiersLockKey driverId = "Driver:SelectedServiceTiers:DId-" <> driverId.getId
+selectedServiceTiersLockKey = SFleetTags.selectedServiceTiersLockKey
 
 -- | Re-checks every wallet-gated tier a driver holds and drops any they can no longer afford.
 --   Called automatically after every wallet debit via PostActions, which already gates the call on enableWalletGatedTierCheck -- this function doesn't check the flag itself.

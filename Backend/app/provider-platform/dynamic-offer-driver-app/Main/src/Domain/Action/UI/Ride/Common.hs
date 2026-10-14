@@ -511,11 +511,12 @@ mkExoPhone mbExophone booking =
 -- | Resolved fleet features keyed by fleet owner.
 type FleetFeaturesByOwner = M.Map (Id DP.Person) SFleetFeatures.FleetFeatures
 
--- | Resolves fleet features once per distinct fleet owner of the given rides.
+-- | Resolves fleet features once per distinct fleet owner of the given rides (from the
+-- in-memory fleet config of each ride's city).
 fetchFleetFeaturesByOwner :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [DRide.Ride] -> m FleetFeaturesByOwner
 fetchFleetFeaturesByOwner rides = do
-  let fleetOwnerIds = nub $ mapMaybe (.fleetOwnerId) rides
-  M.fromList <$> mapM (\fleetOwnerId -> (fleetOwnerId,) <$> SFleetFeatures.getFleetFeaturesByFleetOwnerId fleetOwnerId) fleetOwnerIds
+  let fleetOwners = nub [(fleetOwnerId, ride.merchantOperatingCityId) | ride <- rides, Just fleetOwnerId <- [ride.fleetOwnerId]]
+  M.fromList <$> mapM (\(fleetOwnerId, merchantOpCityId) -> (fleetOwnerId,) <$> SFleetFeatures.getFleetFeatures merchantOpCityId fleetOwnerId) fleetOwners
 
 -- | True when the ride belongs to a fleet that forbids its drivers from cancelling assigned rides.
 isDriverCancellationDisallowedByFleet :: FleetFeaturesByOwner -> DRide.Ride -> Bool

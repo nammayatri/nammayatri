@@ -291,6 +291,7 @@ import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, 
 import qualified SharedLogic.Finance.Wallet as FWallet
 import qualified SharedLogic.FleetEngine as FleetEngine
 import qualified SharedLogic.FleetFeatures as SFleetFeatures
+import qualified SharedLogic.FleetTags as SFleetTags
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MetricsLabels as SML
@@ -1565,10 +1566,14 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let touchesTripDistance = isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold
   fleetDisablesDistancePreference <-
     if touchesTripDistance
-      then maybe False ((.ignoreDriverAreaAndDistancePreference) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver personId
+      then maybe False ((.ignoreDriverAreaAndDistancePreference) . snd) <$> SFleetFeatures.getFleetFeaturesForDriver merchantOpCityId personId
       else pure False
-  when fleetDisablesDistancePreference $
-    logInfo $ "Ignoring trip distance threshold update for driver " <> personId.getId <> ": disabled by fleet (ignoreDriverAreaAndDistancePreference)"
+  -- Resending the current values (e.g. a full profile save) is allowed; an actual change is
+  -- rejected, as the area-preference API does.
+  let normaliseThreshold val = if val.getMeters < 0 then Nothing else Just val
+      changesThreshold mbRequested current = maybe False ((/= current) . normaliseThreshold) mbRequested
+  when (fleetDisablesDistancePreference && (changesThreshold req.tripDistanceMaxThreshold driverInfo.tripDistanceMaxThreshold || changesThreshold req.tripDistanceMinThreshold driverInfo.tripDistanceMinThreshold)) $
+    throwError $ InvalidRequest "Trip distance preference is disabled by your fleet"
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
       tripDistanceMaxThreshold = case req.tripDistanceMaxThreshold of
         _ | fleetDisablesDistancePreference -> driverInfo.tripDistanceMaxThreshold
@@ -1684,7 +1689,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       else return $ Yudhishthira.removeTagName person.driverTag petTag
   -- A DistancePreferenceEnabled#false left by a fleet that no longer disables
   -- preferences would silently ignore the thresholds the driver just saved.
-  let tag = if touchesTripDistance && not fleetDisablesDistancePreference then SFleetFeatures.clearDistancePreferenceOffTag petUpdatedTag else petUpdatedTag
+  let tag = if touchesTripDistance && not fleetDisablesDistancePreference then SFleetTags.clearDistancePreferenceOffTag petUpdatedTag else petUpdatedTag
   unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
     QPerson.updateDriverTag (Just tag) personId
 

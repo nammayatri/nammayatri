@@ -2312,6 +2312,7 @@ types:
     - allowDriverToToggleAutoAssign: Maybe Bool
     - allowCancellationByDriver: Maybe Bool
     - ignoreDriverAreaAndDistancePreference: Maybe Bool
+    - fleetPoolingPriority: Maybe FleetPoolingPriority
     - derive: "'HideSecrets"
   FleetDriverControlsConfigRes:
     - autoAssignDefaultOn: Bool

@@ -613,7 +613,8 @@ data FleetConfig = FleetConfig
     autoAssignDefaultOn :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDriverToToggleAutoAssign :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowCancellationByDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    ignoreDriverAreaAndDistancePreference :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    ignoreDriverAreaAndDistancePreference :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

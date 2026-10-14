@@ -79,6 +79,8 @@ import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.Association.Change as AC
 import SharedLogic.DriverOnboarding.DocumentIdentifier
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import qualified SharedLogic.FleetFeatures as SFleetFeatures
+import qualified SharedLogic.FleetTags as SFleetTags
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -413,6 +415,46 @@ makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certific
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
     addSelectedServiceTiers serviceTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, ..}
+
+-- | Every vehicle record built from an RC goes through here: 'makeFullVehicleFromRC' plus
+-- the auto-accept state, given the driver's previous vehicle (Nothing when there is none).
+-- A driver in an ACTIVE fleet with autoAssignDefaultOn gets the fleet's VEHICLE PART (and
+-- AutoAssign tag) when they had no vehicle or had auto-accept on, so an owner's per-driver
+-- OFF survives a vehicle change; otherwise the previous vehicle's auto-accept tiers are
+-- kept when the variant is unchanged. Never fails the caller: on an error the vehicle only
+-- gets the carry-over. The AutoAssign tag is written here, before the caller saves the
+-- vehicle; if that save fails the tag is left without selectedAutoAcceptTiers, which the
+-- auto-assign status treats as off.
+buildFullVehicleFromRC ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Maybe Vehicle ->
+  [DVST.VehicleServiceTier] ->
+  DI.DriverInformation ->
+  Person ->
+  Id DTM.Merchant ->
+  Text ->
+  VehicleRegistrationCertificate ->
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  Maybe [Text] ->
+  m Vehicle
+buildFullVehicleFromRC mbPreviousVehicle vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
+  let rebuiltVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
+      carriedOver = SFleetTags.carryOverAutoAcceptTiers vehicleServiceTiers mbPreviousVehicle rebuiltVehicle
+  result <- withTryCatch "buildFullVehicleFromRC" $ do
+    mbFleet <- SFleetFeatures.getFleetFeaturesForDriver driver.merchantOperatingCityId driver.id
+    let autoAssignDefaultOn = maybe False ((.autoAssignDefaultOn) . snd) mbFleet
+        cityAutoAcceptTiers = filter SFleetTags.isAutoAcceptEnabledTier vehicleServiceTiers
+    if SFleetTags.shouldApplyFleetVehiclePart autoAssignDefaultOn mbPreviousVehicle && not (null cityAutoAcceptTiers)
+      then do
+        SFleetTags.ensureAutoAssignTag driver.id (map (.serviceTierType) cityAutoAcceptTiers)
+        pure $ SFleetTags.autoAssignVehicleFields now driver.driverTag cityAutoAcceptTiers rebuiltVehicle
+      else pure carriedOver
+  case result of
+    Left err -> do
+      logError $ "buildFullVehicleFromRC: fleet auto-assign not applied for driver " <> driver.id.getId <> ": " <> show err
+      pure carriedOver
+    Right vehicle -> pure vehicle
 
 makeVehicleFromRC :: Id Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now vehicleTag = do

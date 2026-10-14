@@ -46,7 +46,6 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
-import qualified SharedLogic.FleetDriverLink as SFleetDriverLink
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -102,7 +101,7 @@ endDriverAssociations merchantOpCityId transporterConfig driver = do
   unless (null existingFDAssociations) $ do
     forM_ existingFDAssociations $ \existingAssociation -> do
       logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
-      SFleetDriverLink.endFleetDriverAssociationWithCleanup existingAssociation.fleetOwnerId existingAssociation.driverId
+      QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
       Analytics.handleDriverAnalyticsAndFlowStatus
         transporterConfig
         existingAssociation.driverId

@@ -1,6 +1,7 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import Control.Applicative (liftA2, liftA3)
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import Data.Text (takeEnd, toLower)
@@ -27,6 +28,7 @@ import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
+import qualified SharedLogic.FleetTags as SFleetTags
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverBankAccount as BeamDBA
 import qualified Storage.Beam.DriverInformation as BeamDI
@@ -80,6 +82,7 @@ createFleetDriverAssociationIfNotExists ::
   m ()
 createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorId onboardingVehicleCategory isActive requestReason merchantId merchantOperatingCityId onCreated = do
   now <- getCurrentTime
+  createdActiveRef <- liftIO $ newIORef False
   Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
     mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
     case mbFleetDriverAssociation of
@@ -107,18 +110,80 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
                   ..
                 }
         createWithKV newAssociation
-        (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
-        mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
-        mbDriverCashRide <- if isActive then pure Nothing else (>>= (.enableCashRide)) <$> QDIE.findById driverId
-        let cashRideEffective = effectiveEnableCashRide now mbDriverCashRide (Just newAssociation) (mbFleetOwnerInfo >>= (.enableCashRide))
-        LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-          LTSSync.emptyUpdate
-            { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
-              LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
-              LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
-              LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
-            }
+        -- The pool's fleetOwnerId means "active fleet" (the fleet pooling priority reads it), so a
+        -- pending (inactive) request leaves the pool data alone; approval syncs it.
+        when isActive $ do
+          syncActiveFleetToLTS now newAssociation
+          liftIO $ writeIORef createdActiveRef True
         onCreated
+  createdActive <- liftIO $ readIORef createdActiveRef
+  when createdActive $ SFleetTags.applyFleetTags driverId fleetOwnerId
+
+-- | The ONLY way a NEW association row is created active (besides the active branch of
+-- 'createFleetDriverAssociationIfNotExists', which shares its body): creates the row,
+-- points the driver's pool data at the fleet and applies the fleet's tags.
+createActiveFleetDriverAssociation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  FleetDriverAssociation ->
+  m ()
+createActiveFleetDriverAssociation association = do
+  now <- getCurrentTime
+  let activeAssociation = association {DFDA.isActive = True}
+      fleetOwnerId = Id activeAssociation.fleetOwnerId
+  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey activeAssociation.driverId.getId activeAssociation.fleetOwnerId) 10 10 $ do
+    createWithKV activeAssociation
+    syncActiveFleetToLTS now activeAssociation
+  SFleetTags.applyFleetTags activeAssociation.driverId fleetOwnerId
+
+-- | The ONLY way an existing (pending, unexpired) association becomes active: approval of a
+-- driver request and the driver's consent to a fleet invite. Sets isActive and the
+-- response reason, points the driver's pool data at the fleet and applies the fleet's
+-- tags. Expired rows of the pair are left alone, so a past association is never revived.
+activateFleetDriverAssociation ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id Person ->
+  Id Person ->
+  Maybe Text ->
+  m ()
+activateFleetDriverAssociation driverId fleetOwnerId responseReason = do
+  now <- getCurrentTime
+  activatedRef <- liftIO $ newIORef False
+  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
+    let pairUnexpired = [Se.Is BeamFDVA.driverId $ Se.Eq driverId.getId, Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]
+    updateWithKV
+      [ Se.Set BeamFDVA.isActive True,
+        Se.Set BeamFDVA.responseReason responseReason,
+        Se.Set BeamFDVA.updatedAt now
+      ]
+      [Se.And pairUnexpired]
+    mbAssociation <- findOneWithKV [Se.And (pairUnexpired <> [Se.Is BeamFDVA.isActive $ Se.Eq True])]
+    case mbAssociation of
+      Nothing -> logError $ "activateFleetDriverAssociation: no unexpired association of driver " <> driverId.getId <> " with fleet owner " <> fleetOwnerId.getId
+      Just association -> do
+        syncActiveFleetToLTS now association
+        liftIO $ writeIORef activatedRef True
+  activated <- liftIO $ readIORef activatedRef
+  when activated $ SFleetTags.applyFleetTags driverId fleetOwnerId
+
+-- | Points the driver's pool data at the association's (active) fleet: fleet owner, the
+-- fleet owner's bank account and the effective cash-ride flag. Called under the pair lock.
+syncActiveFleetToLTS ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  UTCTime ->
+  FleetDriverAssociation ->
+  m ()
+syncActiveFleetToLTS now association = do
+  let fleetOwnerId = Id association.fleetOwnerId
+  (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq association.fleetOwnerId]
+  mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
+  let cashRideEffective = effectiveEnableCashRide now Nothing (Just association) (mbFleetOwnerInfo >>= (.enableCashRide))
+  LTSSync.syncDriverPoolDataToLTS (cast association.driverId) $
+    LTSSync.emptyUpdate
+      { LTSSync.fleetOwnerId = LTSSync.Set (Just association.fleetOwnerId),
+        LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
+        LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
+        LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
+      }
 
 findAllActiveByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [FleetDriverAssociation]
 findAllActiveByFleetOwnerIds [] = pure []
@@ -512,32 +577,6 @@ findAllDriverByFleetOwnerIdAndMbIsActive fleetOwnerId mbIsActive limit offset = 
     (Just limit)
     (Just offset)
 
--- | Keyset page of the fleet's ACTIVE (isActive, associatedTill in the future) driver ids,
--- ordered by driverId and starting after the given one. Unlike offset paging over
--- updatedAt, rows changing while the caller walks the pages cannot shift drivers out
--- of the walk.
-findActiveDriverIdsByFleetOwnerIdAfter ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Text ->
-  Maybe Text ->
-  Int ->
-  m [Id Person]
-findActiveDriverIdsByFleetOwnerIdAfter fleetOwnerId mbLastDriverId limit = do
-  now <- getCurrentTime
-  associations <-
-    findAllWithOptionsKV
-      [ Se.And $
-          [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
-            Se.Is BeamFDVA.isActive $ Se.Eq True,
-            Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
-          ]
-            <> [Se.Is BeamFDVA.driverId (Se.GreaterThan lastDriverId) | Just lastDriverId <- [mbLastDriverId]]
-      ]
-      (Se.Asc BeamFDVA.driverId)
-      (Just limit)
-      Nothing
-  pure $ map (.driverId) associations
-
 findActiveDriverByFleetOwnerId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Text ->
@@ -555,17 +594,26 @@ findActiveDriverByFleetOwnerId fleetOwnerId = do
       (Just 1)
       Nothing
 
+-- | The single unlink: ends every unexpired association of the pair (active or pending) and
+-- clears the fleet from the driver's pool data. When an ACTIVE association was ended, the
+-- fleet's tags are cleared too.
 endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Text -> Id Person -> m ()
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   now <- getCurrentTime
+  endedActiveRef <- liftIO $ newIORef False
   Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId fleetOwnerId) 10 10 $ do
+    let pairUnexpired = [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]
+    unexpiredAssociations <- findAllWithKV [Se.And pairUnexpired]
+    liftIO $ writeIORef endedActiveRef (any (.isActive) unexpiredAssociations)
     updateWithKV
       [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
-      [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
+      [Se.And pairUnexpired]
     mbDriverInfo <- QDIE.findById (Id driverId)
     let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
     LTSSync.syncDriverPoolDataToLTS (Id driverId) $
       LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+  endedActive <- liftIO $ readIORef endedActiveRef
+  when endedActive $ SFleetTags.clearFleetTags (Id driverId) (Id fleetOwnerId)
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
@@ -943,48 +991,39 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds merchantId merch
               pure $ mapMaybe (\(f, d) -> (f,d,) <$> M.lookup d.id.getId driverInfoMap) fdaPersonPairs
             Left _ -> pure []
 
+-- | Approval of a driver's request to join the fleet: 'activateFleetDriverAssociation'.
 approveFleetDriverAssociation ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id Person ->
   Maybe Text ->
   m ()
-approveFleetDriverAssociation driverId fleetOwnerId responseReason = do
-  now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
-    updateWithKV
-      [ Se.Set BeamFDVA.isActive True,
-        Se.Set BeamFDVA.responseReason responseReason,
-        Se.Set BeamFDVA.updatedAt now
-      ]
-      [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
-    (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
-    mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
-    mbAssociation <- findByDriverIdAndFleetOwnerIdWithStatus driverId fleetOwnerId.getId
-    let cashRideEffective = effectiveEnableCashRide now Nothing mbAssociation (mbFleetOwnerInfo >>= (.enableCashRide))
-    LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-      LTSSync.emptyUpdate
-        { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
-          LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
-          LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
-          LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
-        }
+approveFleetDriverAssociation = activateFleetDriverAssociation
 
 rejectFleetDriverAssociation ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id Person ->
   Maybe Text ->
   m ()
 rejectFleetDriverAssociation driverId fleetOwnerId responseReason = do
   now <- getCurrentTime
-  updateWithKV
-    [ Se.Set BeamFDVA.isActive False,
-      Se.Set BeamFDVA.responseReason responseReason,
-      Se.Set BeamFDVA.associatedTill (Just now),
-      Se.Set BeamFDVA.updatedAt now
-    ]
-    [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+  Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId.getId fleetOwnerId.getId) 10 10 $ do
+    updateWithKV
+      [ Se.Set BeamFDVA.isActive False,
+        Se.Set BeamFDVA.responseReason responseReason,
+        Se.Set BeamFDVA.associatedTill (Just now),
+        Se.Set BeamFDVA.updatedAt now
+      ]
+      [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+    -- Pool data written for the pending request by older code may still carry this fleet:
+    -- clear it like revoke, unless the driver is active in a fleet.
+    mbActive <- findByDriverId driverId True
+    when (isNothing mbActive) $ do
+      mbDriverInfo <- QDIE.findById driverId
+      let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
+      LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+        LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
 
 revokeFleetDriverAssociation ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>

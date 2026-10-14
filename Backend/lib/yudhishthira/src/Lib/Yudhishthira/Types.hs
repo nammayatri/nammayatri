@@ -464,6 +464,7 @@ isDriverOnlyConfigType = \case
   MerchantServiceUsageConfigDriver -> True
   DocumentVerificationConfig -> True
   DocumentVerificationStagesConfig -> True
+  FleetConfig -> True
   GoHomeConfig -> True
   LeaderBoardConfig -> True
   ReminderConfig -> True

@@ -225,7 +225,7 @@ FleetConfig:
     allowDriverToToggleAutoAssign: Bool
     allowCancellationByDriver: Bool
     ignoreDriverAreaAndDistancePreference: Bool
-    # Map: {"default" | "Pickup_<id>" | "Drop_<id>": PoolingPriorityLevel}; missing column/key = NO_PRIORITY.
+    # Map: {"Default" | "Pickup_<id>" | "Drop_<id>": PoolingPriorityLevel}; missing column/key = NO_PRIORITY.
     fleetPoolingPriority: Maybe FleetPoolingPriority
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
@@ -271,7 +271,6 @@ FleetConfig:
     fleetOwnerId: PrimaryKey
 
   queries:
-    findAllByFleetOwnerIds:
+    findAllByMerchantOperatingCityId:
       kvFunction: findAllWithKV
-      where:
-        in: [fleetOwnerId]
+      where: merchantOperatingCityId

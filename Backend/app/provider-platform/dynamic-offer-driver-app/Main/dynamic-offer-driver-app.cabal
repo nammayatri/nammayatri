@@ -535,6 +535,7 @@ library
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
       Domain.Types.FleetOperatorTripAction
+      Domain.Types.FleetPoolingPriority
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
@@ -720,10 +721,10 @@ library
       SharedLogic.Finance.WalletAccount
       SharedLogic.Finance.WalletPayout
       SharedLogic.Fleet
-      SharedLogic.FleetDriverLink
       SharedLogic.FleetEngine
       SharedLogic.FleetFeatures
       SharedLogic.FleetOperatorStats
+      SharedLogic.FleetTags
       SharedLogic.FleetVehicleStats
       SharedLogic.GatewayDispatch
       SharedLogic.GeohashAreaUpsert
@@ -930,6 +931,7 @@ library
       Storage.ConfigPilot.Config.DocumentVerificationStagesConfig
       Storage.ConfigPilot.Config.DriverPoolConfig
       Storage.ConfigPilot.Config.Exophone
+      Storage.ConfigPilot.Config.FleetConfig
       Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig
       Storage.ConfigPilot.Config.GoHomeConfig
       Storage.ConfigPilot.Config.IssueConfig
@@ -1052,6 +1054,7 @@ library
       Storage.Queries.OperationHubExtra
       Storage.Queries.OperationHubRequestsExtra
       Storage.Queries.PayoutConfigExtra
+      Storage.Queries.Person.DriverTag
       Storage.Queries.Person.GetNearestDrivers
       Storage.Queries.Person.Internal
       Storage.Queries.PersonExtra
@@ -2500,3 +2503,147 @@ executable dynamic-offer-driver-app-exe
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O2 -j4
+
+test-suite dynamic-offer-driver-app-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      FleetPoolingPrioritySpec
+      FleetTagsSpec
+      Paths_dynamic_offer_driver_app
+  hs-source-dirs:
+      test
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DerivingStrategies
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      StandaloneDeriving
+      PackageImports
+      TemplateHaskell
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Werror -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -threaded -O0
+  build-depends:
+      JuicyPixels
+    , JuicyPixels-extra
+    , aeson
+    , base >=4.7 && <5
+    , base64-bytestring
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , beckn-services
+    , beckn-spec
+    , behavior-engine
+    , behavior-tracker
+    , bytestring
+    , casing
+    , cassava
+    , cereal
+    , communication-engine
+    , config-pilot
+    , consequence-engine
+    , containers
+    , cryptonite
+    , cryptostore >=0.2.3.0
+    , data-default-class
+    , directory
+    , dynamic-offer-driver-app
+    , either
+    , esqueleto
+    , euler-hs
+    , exceptions
+    , extra
+    , finance-kernel
+    , generic-lens
+    , geohash ==1.0.1
+    , hashable
+    , hedis
+    , hex-text
+    , hspec
+    , http-client
+    , http-client-tls
+    , http-conduit
+    , http-types
+    , incentive-journey
+    , json-logic-hs
+    , jwt >=0.11
+    , lens
+    , lens-aeson
+    , lib-dashboard
+    , memory
+    , mobility-core
+    , network-uri
+    , openapi3
+    , passetto-client
+    , passetto-lib
+    , persistent
+    , postgresql-simple
+    , prometheus-client
+    , pureMD5
+    , random
+    , record-dot-preprocessor
+    , record-hasfield
+    , regex-posix
+    , resource-pool
+    , scheduler
+    , scientific
+    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-multipart
+    , servant-openapi3
+    , servant-server
+    , servant-xml
+    , shared-services
+    , singletons
+    , singletons-th
+    , special-zone-a
+    , split
+    , stm
+    , string-conversions
+    , template-haskell
+    , temporary
+    , text
+    , text-conversions
+    , text-format
+    , time
+    , unordered-containers
+    , uuid
+    , vector
+    , wai
+    , wai-extra
+    , warp
+    , x509
+    , xml-conduit
+    , xmlbf
+    , yudhishthira
+  default-language: Haskell2010
