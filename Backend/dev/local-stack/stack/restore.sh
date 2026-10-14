@@ -48,7 +48,15 @@ DATA_SCHEMAS="atlas_app atlas_driver_offer_bpp atlas_registry movin"
 # The live stack (env-overridable, so the same code can be tested on a copy).
 LIVE_PG="${LIVE_PG:-ny-postgres}"
 LIVE_DB="${LIVE_DB:-atlas_dev}"
+# The key database the live passetto reads, from its own connection string:
+# since the key rotation (2026-10-13) ny-passetto-keys-db, not ny-passetto-db.
+live_key_db() {
+  docker inspect ny-passetto -f '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+    | sed -n 's/^PASSETTO_PG_BACKEND_CONN_STRING=.*@\([^:/]*\)[:/].*/\1/p'
+}
+LIVE_PASSETTO_DB="${LIVE_PASSETTO_DB:-$(live_key_db)}"
 LIVE_PASSETTO_DB="${LIVE_PASSETTO_DB:-ny-passetto-db}"
+SECRETS_DIR="${SECRETS_DIR:-/opt/ny/secrets}"
 LIVE_PASSETTO="${LIVE_PASSETTO:-ny-passetto}"
 LIVE_PASSETTO_URL="${LIVE_PASSETTO_URL:-http://127.0.0.1:8021}"
 LIVE_REDIS="${LIVE_REDIS:-ny-redis}"
@@ -293,11 +301,18 @@ rehearse() {
 
   restore_data "$R-pg" atlas_dev "$R-passetto-db"
 
+  # Since the key rotation (2026-10-13) a backup carries key-secrets.env: the
+  # keys are locked by its master password, so passetto runs `server` with it.
+  # An older backup holds the demo keys, which `demo` opens.
+  local master=""
+  [ -f "$WORK/key-secrets.env" ] && master=$(sed -n 's/^MASTER_PASSWORD=//p' "$WORK/key-secrets.env")
+  if [ -n "$master" ]; then PASSETTO_RUN=(-e "MASTER_PASSWORD=$master" "$PASSETTO_IMAGE" server)
+  else PASSETTO_RUN=("$PASSETTO_IMAGE" demo); fi
   # passetto starts only now, on the restored keys: an empty database would
   # make it generate keys of its own, and every number would fail to open.
   docker run -d --name "$R-passetto" --network "$R" --memory 256m --restart no \
     -e PASSETTO_PG_BACKEND_CONN_STRING="postgresql://passetto:passetto@$R-passetto-db:5432/passetto" \
-    "$PASSETTO_IMAGE" demo >/dev/null || die "passetto did not start"
+    "${PASSETTO_RUN[@]}" >/dev/null || die "passetto did not start"
   for i in $(seq 1 60); do passetto_up && break; sleep 2; done
   passetto_up || die "passetto did not answer"
   ok "passetto started on the restored keys"
@@ -344,6 +359,27 @@ live() {
        AND dn.nspname <> ALL (string_to_array('$DATA_SCHEMAS', ' '))")
   [ -z "$deps" ] || die "these would be dropped with the data: $deps"
   ok "nothing"
+
+  # Since the key rotation (2026-10-13) the backup's keys open only with its
+  # master password, and its hashes match only its salt. On this server they
+  # must be the same as the backup's; on a new one, they are put in place.
+  if [ -f "$WORK/key-secrets.env" ]; then
+    say "the key secrets: the backup's against this server's"
+    local want have
+    want=$(grep -E '^(MASTER_PASSWORD|MOVIN_HASH_SALT)=' "$WORK/key-secrets.env" | sort)
+    if [ -f "$SECRETS_DIR/passetto-master.env" ] || [ -f "$SECRETS_DIR/hash-salt.env" ]; then
+      have=$(cat "$SECRETS_DIR/passetto-master.env" "$SECRETS_DIR/hash-salt.env" 2>/dev/null \
+        | grep -E '^(MASTER_PASSWORD|MOVIN_HASH_SALT)=' | sort)
+      [ "$want" = "$have" ] || die "this server's key secrets are not the backup's: its keys would not open (nothing changed)"
+      ok "the same"
+    else
+      ( umask 077; mkdir -p "$SECRETS_DIR"
+        grep '^MASTER_PASSWORD=' "$WORK/key-secrets.env" > "$SECRETS_DIR/passetto-master.env"
+        grep '^MOVIN_HASH_SALT=' "$WORK/key-secrets.env" > "$SECRETS_DIR/hash-salt.env" ) \
+        || die "could not put the key secrets in $SECRETS_DIR"
+      ok "put in place from the backup (this server had none)"
+    fi
+  fi
 
   say "THIS REPLACES THE LIVE DATA"
   info "database:  $LIVE_PG / $LIVE_DB, schemas $DATA_SCHEMAS"

@@ -10,10 +10,16 @@
 # ── Why this is not just `pg_dump atlas_dev` ────────────────────────────────
 #
 # 1. **The keys live in a different container.** atlas_app stores rider phone
-#    numbers encrypted, and the keys that open them are in `ny-passetto-db`, a
-#    separate Postgres. A backup of ny-postgres alone restores perfectly and
-#    leaves every phone number permanently unreadable. Both are dumped here, and
-#    a restore is only meaningful with both.
+#    numbers encrypted, and the keys that open them are in passetto's own
+#    Postgres. A backup of ny-postgres alone restores perfectly and leaves every
+#    phone number permanently unreadable. Both are dumped here, and a restore is
+#    only meaningful with both. Which key database: the one the LIVE passetto
+#    reads, taken from its own connection string -- since the key rotation of
+#    2026-10-13 that is ny-passetto-keys-db, and the first backup after it
+#    still dumped the old ny-passetto-db by name. The new keys are locked by a
+#    master password, and the hashes by a salt, both only in /opt/ny/secrets:
+#    they travel in the backup too (key-secrets.env), or a backup could not be
+#    opened on any other server.
 #
 # 2. **Most of the database is rebuildable, and skipping it is the difference
 #    between a 7 MB backup and a 183 MB one.** Measured:
@@ -44,7 +50,15 @@ DB_CONTAINER="${DB_CONTAINER:-ny-postgres}"
 DB_NAME="${DB_NAME:-atlas_dev}"
 DB_USER="${DB_USER:-postgres}"
 
+# The key database the live passetto actually reads (its connection string),
+# not a name written here: see 1. above.
+live_key_db() {
+  docker inspect ny-passetto -f '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null \
+    | sed -n 's/^PASSETTO_PG_BACKEND_CONN_STRING=.*@\([^:/]*\)[:/].*/\1/p'
+}
+PASSETTO_CONTAINER="${PASSETTO_CONTAINER:-$(live_key_db)}"
 PASSETTO_CONTAINER="${PASSETTO_CONTAINER:-ny-passetto-db}"
+SECRETS_DIR="${SECRETS_DIR:-/opt/ny/secrets}"
 PASSETTO_DB="${PASSETTO_DB:-passetto}"
 PASSETTO_USER="${PASSETTO_USER:-passetto}"
 
@@ -156,7 +170,17 @@ take() {
   docker exec "$PASSETTO_CONTAINER" pg_dump -U "$PASSETTO_USER" -d "$PASSETTO_DB" \
       --no-owner --no-privileges > "$work/passetto.sql" \
     || die "pg_dump of $PASSETTO_DB failed"
-  ok "passetto: $(du -h "$work/passetto.sql" | cut -f1)"
+  ok "passetto: $(du -h "$work/passetto.sql" | cut -f1) (from $PASSETTO_CONTAINER)"
+
+  # What opens those keys and matches those hashes since the rotation: the
+  # master password and the salt. Without them this backup opens nowhere else.
+  local keys_note="none -- the demo keys of before 2026-10-13"
+  if [ -f "$SECRETS_DIR/passetto-master.env" ] && [ -f "$SECRETS_DIR/hash-salt.env" ]; then
+    ( umask 077; cat "$SECRETS_DIR/passetto-master.env" "$SECRETS_DIR/hash-salt.env" > "$work/key-secrets.env" ) \
+      || die "could not read the key secrets"
+    keys_note="master password and hash salt (key-secrets.env)"
+    ok "key secrets: included, never shown"
+  fi
 
   # The Arabic place names. The index they live in (`geo`) is rebuilt rather
   # than backed up, and a rebuild drops `name_ar` (docs/maps.md): refilling it
@@ -231,7 +255,8 @@ Movin DZ backup
 taken            $stamp (UTC)
 host             $(hostname)
 atlas database   $DB_NAME, schemas: $DATA_SCHEMAS
-passetto         $PASSETTO_DB
+passetto         $PASSETTO_DB, from $PASSETTO_CONTAINER
+key secrets      $keys_note
 driver codes     $codes_note
 arabic names     $ar_note
 documents        $docs_note
@@ -266,6 +291,7 @@ EOF
   local members=(atlas.sql passetto.sql MANIFEST.txt)
   if [ -f "$work/geo-arabic.csv" ]; then members+=(geo-arabic.csv); fi
   if [ -f "$work/driver-codes.json" ]; then members+=(driver-codes.json); fi
+  if [ -f "$work/key-secrets.env" ]; then members+=(key-secrets.env); fi
   if [ -f "$work/documents.tar.gz" ]; then members+=(documents.tar.gz); fi
   tar -czf "$work/bundle.tar.gz" -C "$work" "${members[@]}" \
     || die "tar failed"
