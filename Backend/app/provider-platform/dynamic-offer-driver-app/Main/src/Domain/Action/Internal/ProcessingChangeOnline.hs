@@ -1,4 +1,4 @@
-module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, updateOnlineDurationDuringFetchingDailyStats) where
+module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, processingChangeOffline, updateOnlineDurationDuringFetchingDailyStats) where
 
 import Data.Time (Day, DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
@@ -54,6 +54,22 @@ processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
       QDI.updateOnlineDurationRefreshedAt driverId now
       -- Resume idle tracking when the driver comes back online.
       DriverIdleTime.resumeIdleOnOnline driverId
+
+-- | Same bookkeeping as 'processingChangeOnline' for a forced transition to OFFLINE, without the
+-- caller having to supply the old mode. Must run BEFORE the driver's mode is written as OFFLINE:
+-- the old mode is taken from the driverInfo already read under the lock. The cache/idle steps are
+-- no-ops when the driver is already offline.
+processingChangeOffline ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  DTC.TransporterConfig ->
+  m ()
+processingChangeOffline driverId transporterConfig = do
+  void $ DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+  withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom ->
+    when (driverInfo.mode == Just DriverInfo.ONLINE) $
+      updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
+  DriverIdleTime.bankIdleOnOffline driverId
 
 updateOnlineDurationDuringFetchingDailyStats ::
   (CacheFlow m r, EsqDBFlow m r) =>
