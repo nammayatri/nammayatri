@@ -13,7 +13,6 @@ import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.DocumentVersionMetadata as DDVM
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as FODVC
@@ -1056,27 +1055,6 @@ mkInProgressMetadata req = do
               imageId2
             }
     _ -> Nothing
-
-mkVersionMetadata :: OnboardingFlow m r => Maybe Text -> DDVM.DocumentVersionMetadata -> m (Maybe DocumentMetadata)
-mkVersionMetadata mbImageId versionMetadata =
-  forM versionMetadata.metadata $ \storedMetadata -> do
-    documentNumber <- decrypt versionMetadata.documentNumber
-    pure $ case storedMetadata of
-      DDVM.DLMetadata dlMetadata ->
-        DLMetadata DLDocumentMetadata {driverLicenseNumber = documentNumber, driverDateOfBirth = dlMetadata.driverDateOfBirth, dateOfExpiry = dlMetadata.dateOfExpiry, imageId1 = mbImageId, imageId2 = Nothing}
-      DDVM.RCMetadata rcMetadata ->
-        RCMetadata
-          RCDocumentMetadata
-            { fitnessExpiry = rcMetadata.fitnessExpiry,
-              vehicleNumberPlate = documentNumber,
-              vehicleVariant = show <$> rcMetadata.vehicleVariant,
-              vehicleManufacturer = rcMetadata.vehicleManufacturer,
-              vehicleModel = rcMetadata.vehicleModel,
-              vehicleModelYear = rcMetadata.vehicleModelYear,
-              vehicleColor = rcMetadata.vehicleColor,
-              imageId = mbImageId,
-              imageId2 = Nothing
-            }
 
 lookupImageMetadata :: OnboardingFlow m r => IQuery.EntityImagesInfo -> Maybe IQuery.RcImagesInfo -> Maybe Text -> m (Maybe DImage.ImageMetadata)
 lookupImageMetadata entityImagesInfo mbRcImagesInfo mbImageId

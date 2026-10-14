@@ -5,7 +5,6 @@
 module Storage.Queries.DocumentVersionMetadata where
 
 import qualified Data.Aeson
-import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVersionMetadata
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
@@ -27,9 +26,6 @@ createMany = traverse_ create
 
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId personId = do deleteWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
-
-deleteByPersonIdAndDocumentType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ())
-deleteByPersonIdAndDocumentType personId documentType = do deleteWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.documentType $ Se.Eq documentType]]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.DocumentVersionMetadata.DocumentVersionMetadata))
 findByPrimaryKey documentVersionId = do findOneWithKV [Se.And [Se.Is Beam.documentVersionId $ Se.Eq documentVersionId]]

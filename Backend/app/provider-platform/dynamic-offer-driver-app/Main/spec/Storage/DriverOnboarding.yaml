@@ -653,10 +653,6 @@ DocumentVersionMetadata:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
-    deleteByPersonIdAndDocumentType:
-      kvFunction: deleteWithKV
-      where:
-        and: [personId, documentType]
 
 MediaFileDocument:
   tableName: media_file_document

@@ -664,6 +664,7 @@ library
       SharedLogic.DriverOnboarding.OnboardingFlags.Types
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
+      SharedLogic.DriverOnboardingDocumentVersion
       SharedLogic.DriverOnlineHoursCache
       SharedLogic.DriverPool
       SharedLogic.DriverPool.AreaPreference

@@ -143,6 +143,7 @@ import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as VDocs
+import qualified SharedLogic.DriverOnboardingDocumentVersion as SDocVersion
 import qualified SharedLogic.Finance.TdsRate as STds
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -538,7 +539,7 @@ getDriverRegistrationGetDocument merchantShortId _ entityId mbDocType mbEntityTy
       let docType = maybe image.imageType mapDocumentType mbDocType
       -- A version's own details come first: the row and the other sources only know the current version.
       mbVersionMetadata <- maybe (pure Nothing) QDVM.findByPrimaryKey image.documentVersionId
-      mbVersionMeta <- maybe (pure Nothing) (VDocs.mkVersionMetadata (Just imageId.getId)) mbVersionMetadata
+      mbVersionMeta <- maybe (pure Nothing) (SDocVersion.mkVersionMetadata (Just imageId.getId)) mbVersionMetadata
       mbMeta <- maybe (metadataByImageId docType image) (pure . Just) mbVersionMeta
       let mbFinalMeta = mbMeta <|> (VDocs.imageMetadataToDocumentMetadata docType (Just imageId.getId) =<< image.metadata)
       pure Common.GetDocumentResponse {imageBase64 = Just img, status = castVerificationStatus <$> image.verificationStatus, createdAt = Just image.createdAt, commonDocumentData = Nothing, rejectReason = Nothing, metadata = A.toJSON <$> mbFinalMeta}
@@ -1422,7 +1423,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       else rc.docsVerificationStatus
                 }
         QRC.updateByPrimaryKey udpatedRC
-        SDO.saveRCVersionMetadata udpatedRC
+        SDocVersion.saveRCVersionMetadata udpatedRC
         forM_ (imageId' : maybeToList mbImageId2') $ \img ->
           QImage.updateVerificationStatusByIdAndType VALID img DVC.VehicleRegistrationCertificate
         QImage.updateRcIdByIds (Just rc.id.getId) (imageId' : maybeToList mbImageId2')
@@ -1501,7 +1502,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                       DRC.rcVehicleType = Nothing
                     }
             QRC.create newRC
-            SDO.saveRCVersionMetadata newRC
+            SDocVersion.saveRCVersionMetadata newRC
             -- Create driver RC association so the RC is linked to the driver
             assocId <- generateGUID
             let driverRCAssoc =
@@ -1961,7 +1962,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         -- Clean up stale INVALID rows, then upsert (the driver's own row may be among the deleted)
         deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
         QDL.upsert updatedDL
-        SDO.saveDLVersionMetadata updatedDL
+        SDocVersion.saveDLVersionMetadata updatedDL
         forM_ (imageId1' : maybeToList mbImageId2') $ \img ->
           QImage.updateVerificationStatusByIdAndType VALID img DVC.DriverLicense
         -- Create reminders for DL when it's updated
@@ -2004,7 +2005,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
                 }
         deleteInvalidDocumentOfDriver DVC.DriverLicense driverId
         QDL.create newDL
-        SDO.saveDLVersionMetadata newDL
+        SDocVersion.saveDLVersionMetadata newDL
         forM_ (imageId1' : maybeToList mbImageId2') $ \img ->
           QImage.updateVerificationStatusByIdAndType VALID img DVC.DriverLicense
         createReminder
@@ -2789,7 +2790,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
     -- licence number, so the number stays.
     moveDLToVersion :: DDL.DriverLicense -> Id DImage.Image -> Maybe (Id DImage.Image) -> Flow ()
     moveDLToVersion dl front back =
-      SDO.findVersionMetadata front >>= \case
+      SDocVersion.findVersionMetadata front >>= \case
         Just versionMetadata
           | Just (DDVM.DLMetadata dlMetadata) <- versionMetadata.metadata ->
             QDL.updateByPrimaryKey
@@ -2806,7 +2807,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
     -- Same for the RC row; its number names the vehicle, so it stays too.
     moveRCToVersion :: DRC.VehicleRegistrationCertificate -> Id DImage.Image -> Maybe (Id DImage.Image) -> Flow ()
     moveRCToVersion rc front back =
-      SDO.findVersionMetadata front >>= \case
+      SDocVersion.findVersionMetadata front >>= \case
         Just versionMetadata
           | Just (DDVM.RCMetadata rcMetadata) <- versionMetadata.metadata ->
             QRC.updateByPrimaryKey

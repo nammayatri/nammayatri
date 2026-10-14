@@ -66,10 +66,10 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import SharedLogic.DriverOnboardingDocumentVersion (saveDLVersionMetadata)
 import SharedLogic.Reminder.Helper (createReminder)
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.DocumentVersionMetadata as QDVM
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
@@ -237,7 +237,6 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
                 licenseImages <- ImageQuery.findImagesByPersonAndType Nothing Nothing merchantId personId DTO.DriverLicense
                 Utils.cleanupUploadedImages (filter (`notElem` (imageId1 : maybeToList imageId2)) (map (.id) licenseImages)) personId
                 Query.deleteByDriverId personId
-                QDVM.deleteByPersonIdAndDocumentType personId DTO.DriverLicense
         -- let mdriverLicense =
         --       mbExistingLicense >>= \dl ->
         --         if dl.verificationStatus == Documents.INVALID

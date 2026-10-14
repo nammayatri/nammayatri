@@ -167,6 +167,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -186,7 +187,6 @@ import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
 import qualified Storage.Queries.DailyStats as QDailyStats
-import qualified Storage.Queries.DocumentVersionMetadata as QDVM
 import qualified Storage.Queries.DriverBlockTransactions as QDBT
 import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -797,9 +797,8 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkDocument (SGuard.TargetDriver personId) $ do
     QDriverLicense.deleteByDriverId personId
-    -- Its photos and their details go too, so no version of the unlinked licence is left behind.
+    -- Its photos go too, so no version of the unlinked licence is left behind.
     QImage.deleteByPersonIdAndImageType personId DomainDVC.DriverLicense
-    QDVM.deleteByPersonIdAndDocumentType personId DomainDVC.DriverLicense
     unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
       Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
