@@ -1,0 +1,36 @@
+imports:
+  Text: Data.Text
+  Value: Data.Aeson
+  APISuccess: Kernel.Types.APISuccess
+
+module: SupportBot
+
+types:
+  # One step of the pre-ticket support bot. Omit conversationId to start a new
+  # conversation: `context` is the object the workflow declares under "Started
+  # with" (e.g. {"ride_id": "...", "language": "en"}); the server adds
+  # customer_id. Send turnId with choice or text to answer the current turn, or
+  # only conversationId to re-read it.
+  SupportBotConversationReq:
+    context: Maybe Value
+    conversationId: Maybe Text
+    turnId: Maybe Text
+    choice: Maybe Text
+    text: Maybe Text
+    values: Maybe Value
+
+apis:
+  - POST:
+      endpoint: /support/bot/conversation
+      auth: TokenAuth
+      request:
+        type: SupportBotConversationReq
+      response:
+        type: Value
+  - POST:
+      endpoint: /support/bot/conversation/{conversationId}/end
+      auth: TokenAuth
+      params:
+        conversationId: Text
+      response:
+        type: APISuccess

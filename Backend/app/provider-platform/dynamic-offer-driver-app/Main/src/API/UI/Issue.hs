@@ -290,6 +290,7 @@ castRideInfo merchantId merchantOpCityId rideId = do
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
           rideStatus = castRideStatus res.rideStatus,
+          rideType = Just $ T.takeWhile (/= '_') (T.pack (show res.tripCategoryV2)),
           mobileCountryCode = Nothing
         }
 

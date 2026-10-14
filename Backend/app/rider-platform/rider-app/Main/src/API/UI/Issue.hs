@@ -374,6 +374,8 @@ castRideInfo merchantId _ rideId = do
           rideCreatedAt = res.rideCreatedAt,
           rideStartTime = res.rideStartTime,
           rideStatus = castRideStatus res.rideStatus,
+          -- "OneWay_OneWayOnDemandDynamicOffer" -> "OneWay"
+          rideType = Just $ T.takeWhile (/= '_') (T.pack (show res.tripCategory)),
           mobileCountryCode = res.mobileCountryCode
         }
 
@@ -572,7 +574,8 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
     processIssueRequest igmReq person reqBody = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       igmConfig <- QIGMConfig.findByMerchantId (cast merchantId) >>= fromMaybeM (InternalError $ "IGMConfig not found " <> show merchantId)
-      category <- QIC.findById reqBody.categoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
+      reqCategoryId <- reqBody.categoryId & fromMaybeM (InvalidRequest "categoryId is required for IGM issues")
+      category <- QIC.findById reqCategoryId CUSTOMER >>= fromMaybeM (InvalidRequest "Issue Category not found")
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) req.optionId
       validateSubcategory option igmReq
 

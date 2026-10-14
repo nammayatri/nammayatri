@@ -664,12 +664,14 @@ getOrCreateScheduledBookingIssueReport booking =
             { rideId = Nothing,
               mediaFiles = [],
               optionId = Nothing,
-              categoryId = scheduledBookingIssueCategoryId,
+              categoryId = Just scheduledBookingIssueCategoryId,
               description = "Scheduled booking operations notes",
               chats = Nothing,
               createTicket = Just False,
               isFeedback = Nothing,
-              ticketBookingId = Nothing
+              ticketBookingId = Nothing,
+              categoryName = Nothing,
+              subCategoryName = Nothing
             }
           AUI.driverIssueHandle
           Issue.DRIVER
