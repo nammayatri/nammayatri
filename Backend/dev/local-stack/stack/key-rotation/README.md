@@ -1,8 +1,8 @@
 # Key rotation: the keys and salt that protect stored numbers
 
-Plan point 5, before the first real passenger. Prepared 2026-10-13; **not run
-on the live server yet**. Every step on the server needs the owner's OK, the
-rehearsal included.
+Plan point 5, before the first real passenger. **Done on the live server on
+2026-10-13** (owner's OK at each step; he ran the steps that read the secrets
+folder himself).
 
 Phone numbers (and a few document numbers) are stored twice: encrypted by
 passetto, and hashed — `sha256(salt + number)` — so the backend can look a
@@ -73,3 +73,25 @@ as a precaution. The configuration change is released as
 `compose.keys.yml`, shipped like any stack file and switched on by naming it
 in `.env`. The proof that a passenger and a driver sign in as the same people after
 the switch is `ci-proof.sh`, run by the ride regression on every push.
+
+## The live switch, 2026-10-13
+
+- **20:57 UTC, `window.sh`**: ended « done: new keys and salt are live ». Every
+  number converted and read back; the test passenger signed in as the same
+  person; no crypto error in any log.
+- **Then a ride search failed** (500: passetto's `/decrypt/obj` refused a
+  value). `merchant_service_config` keeps the services' credentials -- maps,
+  SMS, WhatsApp -- encrypted inside its JSON: 37 values in 20 rows, which the
+  inventory had missed (it looked for `*_encrypted` columns), and which
+  `ci-proof.sh` did not catch (it re-tested sign-in, not search). Fixed the same
+  hour: `rotate.js configs`, `window.sh configs` (run by the owner ~21:05),
+  the cached configs dropped. The switch, its rollback and `ci-proof.sh` now
+  include it, and the proof prices a ride in each country after the switch.
+- **After**: a complete test ride in each country (`probe-two-country-rides.py`):
+  Mauritania 102 MRU, Algeria 917 DA, both COMPLETED.
+
+Left on the server, on purpose: `ny-passetto-db` (today's old keys, the
+rollback -- `window.sh rollback`), and `/root/key-rotation.*` (the window's
+safety dump). Both can go once the new keys have run without trouble for a
+while.
+
