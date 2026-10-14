@@ -30,6 +30,7 @@ module Tools.Maps
     getServiceConfigForRectifyingSnapToRoadDistantPointsFailure,
     getDistanceForScheduledRides,
     getDistancesForScheduledRides,
+    getDynamicPickupDistances,
   )
 where
 
@@ -113,6 +114,29 @@ getEstimatedPickupDistances ::
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
+
+dynamicPickupDistancesProvider :: MapsService
+dynamicPickupDistancesProvider = Maps.Disha -- our maps.
+
+getDynamicPickupDistances ::
+  ( ServiceFlow m r,
+    HasCoordinates a,
+    HasCoordinates b,
+    ToJSON a,
+    ToJSON b
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Maybe Text ->
+  GetDistancesReq a b ->
+  m (GetDistancesResp a b)
+getDynamicPickupDistances _merchantId merchantOpCityId entityId req = do
+  serviceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = Nothing, serviceName = Just (DOSC.MapsService dynamicPickupDistancesProvider)}) Nothing
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show dynamicPickupDistancesProvider))
+  case serviceConfig.serviceConfig of
+    DOSC.MapsServiceConfig msc -> Maps.getDistances entityId (Just merchantOpCityId.getId) msc req
+    _ -> throwError $ InternalError "Unknown Service Config"
 
 getDistanceForScheduledRides ::
   ( ServiceFlow m r,

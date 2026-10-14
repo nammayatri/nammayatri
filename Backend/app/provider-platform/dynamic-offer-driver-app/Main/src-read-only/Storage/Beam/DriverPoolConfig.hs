@@ -36,6 +36,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverToDestinationDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
     driverToDestinationDuration :: B.C f Kernel.Types.Common.Seconds,
     dynamicBatchSize :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
+    enableDynamicPickupDistanceAndDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableEarlyBatchAdvanceOnFullReject :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableForwardBatching :: B.C f Kernel.Prelude.Bool,
     enablePriorityTagSplit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

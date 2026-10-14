@@ -45,6 +45,8 @@ data SearchRequestForDriver = SearchRequestForDriver
     currency :: Kernel.Types.Common.Currency,
     customerCancellationDues :: Kernel.Types.Common.HighPrecMoney,
     customerTags :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    displayDistanceToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    displayDurationToPickup :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverAvailableTime :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     driverCancellationNotAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

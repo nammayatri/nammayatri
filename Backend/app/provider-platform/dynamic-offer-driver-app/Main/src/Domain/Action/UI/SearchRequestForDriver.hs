@@ -142,6 +142,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       rawBaseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare
       paymentChargeDeduction = FC.paymentChargeFromFareTotal mbDriverWalletConfig rawBaseFare
       netBaseFare = rawBaseFare - fromMaybe 0 nearbyReq.commissionCharges - paymentChargeDeduction
+      shownDistanceToPickup = fromMaybe nearbyReq.actualDistanceToPickup nearbyReq.displayDistanceToPickup
+      shownDurationToPickup = fromMaybe nearbyReq.durationToPickup nearbyReq.displayDurationToPickup
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
@@ -152,9 +154,9 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           startTime = nearbyReq.startTime,
           billingCategory = searchTry.billingCategory,
           searchRequestValidTill = nearbyReq.searchRequestValidTill,
-          distanceToPickup = nearbyReq.actualDistanceToPickup,
-          distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit nearbyReq.actualDistanceToPickup,
-          durationToPickup = nearbyReq.durationToPickup,
+          distanceToPickup = shownDistanceToPickup,
+          distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit shownDistanceToPickup,
+          durationToPickup = shownDurationToPickup,
           baseFare = roundToIntegral netBaseFare, -- net fare = gross fare - commission
           baseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' nearbyReq.currency netBaseFare) nearbyReq.currency,
           customerExtraFee = roundToIntegral <$> searchTry.customerExtraFee,
