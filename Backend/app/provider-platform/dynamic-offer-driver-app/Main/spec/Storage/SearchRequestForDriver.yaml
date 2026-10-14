@@ -53,6 +53,8 @@ SearchRequestForDriver:
     actualDistanceToPickup : Meters
     straightLineDistanceToPickup : Meters
     durationToPickup : Seconds
+    displayDistanceToPickup : Maybe Meters
+    displayDurationToPickup : Maybe Seconds
     vehicleVariant : VehicleVariant|NoRelation
     vehicleServiceTier : ServiceTierType|NoRelation
     vehicleServiceTierName : Maybe Text
@@ -247,6 +249,8 @@ SearchRequestForDriver:
     batchingMode: text
     actualDistanceToPickup: bigint
     durationToPickup: bigint
+    displayDistanceToPickup: bigint
+    displayDurationToPickup: bigint
     vehicleVariant: character varying (255)
     status: character varying (255)
     straightLineDistanceToPickup: bigint

@@ -47,6 +47,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
     customerCancellationDues :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     customerTags :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    displayDistanceToPickup :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
+    displayDurationToPickup :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
     distanceUnit :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit)),
     driverAvailableTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
     driverCancellationNotAllowed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),

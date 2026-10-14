@@ -784,6 +784,7 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance distanceUnit area
         -- Not settable from the dashboard yet; all are opt-in dispatch tuning driven from config.
         softMaxParallelSearchRequests = Nothing,
         autoAssignMaxPickupDistance = Nothing,
+        enableDynamicPickupDistanceAndDuration = Nothing,
         enableEarlyBatchAdvanceOnFullReject = Nothing,
         batchingMode = Nothing,
         nextBatchScheduleTime = Nothing,
@@ -894,6 +895,7 @@ postMerchantConfigDriverPoolUpsert merchantShortId opCity req = do
             -- Not part of the CSV upload yet; all are opt-in dispatch tuning driven from config.
             softMaxParallelSearchRequests = Nothing,
             autoAssignMaxPickupDistance = Nothing,
+            enableDynamicPickupDistanceAndDuration = Nothing,
             enableEarlyBatchAdvanceOnFullReject = Nothing,
             batchingMode = Nothing,
             nextBatchScheduleTime = Nothing,
