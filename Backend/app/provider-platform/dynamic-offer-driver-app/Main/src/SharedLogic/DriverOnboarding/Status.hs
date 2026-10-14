@@ -92,7 +92,6 @@ import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import SharedLogic.DriverOnboarding.OnboardingFlags.Flow
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
 import SharedLogic.DriverOnboarding.VehicleDocs
-import qualified SharedLogic.PersonBankAccount as SPBA
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -1168,10 +1167,6 @@ getProcessedDriverDocuments role driverId entityImagesInfo mbCommonDoc docType u
         return (VALID <$ mbRegisteredAt, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
       DVC.BankingDetails -> do
         mbDriverInfo <- DIQuery.findById (cast driverId)
-        unless (maybe False (.enabled) mbDriverInfo) $
-          void $
-            withTryCatch "getPersonRegisterBankAccountStatus:getProcessedDriverDocuments" $
-              SPBA.getPersonRegisterBankAccountStatus (Just True) driverId merchantOpCityId
         mbBankAccount <- QDriverBankAccount.findByPrimaryKey driverId
         bankingDetailsConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DVC.BankingDetails Nothing
         let isManualVerification = maybe False (.doStrictVerifcation) (listToMaybe bankingDetailsConfigs)

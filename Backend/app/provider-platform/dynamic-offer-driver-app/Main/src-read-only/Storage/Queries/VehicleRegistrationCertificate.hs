@@ -5,6 +5,7 @@
 module Storage.Queries.VehicleRegistrationCertificate (module Storage.Queries.VehicleRegistrationCertificate, module ReExport) where
 
 import qualified Data.Aeson
+import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant
@@ -159,6 +160,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.pendingChallan (Data.Aeson.toJSON <$> pendingChallan),
       Se.Set Beam.permitExpiry permitExpiry,
       Se.Set Beam.pucExpiry pucExpiry,
+      Se.Set Beam.rcVehicleType (Data.Text.pack . show <$> rcVehicleType),
       Se.Set Beam.rejectReason rejectReason,
       Se.Set Beam.reviewRequired reviewRequired,
       Se.Set Beam.reviewedAt reviewedAt,

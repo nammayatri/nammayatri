@@ -353,7 +353,8 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
           bodyType = Nothing,
           status = Nothing,
           grossVehicleWeight = Nothing,
-          unladdenWeight = Nothing
+          unladdenWeight = Nothing,
+          rcVehicleType = Nothing
         }
 
     makeVerifyRCHitsCountKey :: Text -> Text
@@ -492,12 +493,14 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDocumentImageId2 mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       expiryFailures = getExpiryFailures transporterConfig rcInput now
       allFailures = failures <> expiryFailures
+  rcDocumentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just ODC.VehicleRegistrationCertificate, vehicleCategory = Just (fromMaybe DVC.CAR mbVehicleCategory)}) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show ODC.VehicleRegistrationCertificate))
+  let nonTransportRejected = rcDocumentVerificationConfig.allowNonTransportVehicle == Just False && rcInput.rcVehicleType == Just VT.NonTransport
   mVehicleRC <- do
     case mbVehicleVariant of
       Just vehicleVariant ->
         maybeM
           (return Nothing)
-          ((Just <$>) . createVehicleRC transporterConfig person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
+          ((Just <$>) . createVehicleRC nonTransportRejected transporterConfig person.merchantId person.merchantOperatingCityId rcInput vehicleVariant allFailures)
           (encrypt `mapM` rcVerificationResponse.registrationNumber)
       Nothing -> buildRC person.merchantId person.merchantOperatingCityId rcInput allFailures
   if isNothing mbVehicleVariant && mbRemPriorityList /= Just [] && isJust mbRemPriorityList && ((mVehicleRC <&> (.verificationStatus)) == Just Documents.MANUAL_VERIFICATION_REQUIRED || join (mVehicleRC <&> (.reviewRequired)) == Just True)
@@ -547,23 +550,28 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           vehicleModelYear,
           color = rcVerificationResponse.color,
           grossVehicleWeight = mbGrossVehicleWeight,
-          unladdenWeight = mbUnladdenWeight
+          unladdenWeight = mbUnladdenWeight,
+          rcVehicleType = rcVerificationResponse.rcVehicleType
         }
 
     readFromJson (String val) = Just val
     readFromJson (Number val) = Just $ T.pack $ show (floor val :: Int)
     readFromJson _ = Nothing
 
-    createVehicleRC :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => DTC.TransporterConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
-    createVehicleRC transporterConfig merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
+    createVehicleRC :: (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> DTC.TransporterConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> CreateRCInput -> DV.VehicleVariant -> [Text] -> EncryptedHashedField 'AsEncrypted Text -> m DVRC.VehicleRegistrationCertificate
+    createVehicleRC nonTransportRejected transporterConfig merchantId merchantOperatingCityId input vehicleVariant failedRules certificateNumber = do
       now <- getCurrentTime
       id <- generateGUID
       let updatedVehicleVariant = case input.vehicleCategory of
             Just DVC.TRUCK -> DV.getTruckVehicleVariant input.grossVehicleWeight input.unladdenWeight vehicleVariant
             Just DVC.TOTO -> DV.E_RICKSHAW
             _ -> vehicleVariant
-          verificationStatus = if null failedRules then Documents.MANUAL_VERIFICATION_REQUIRED else Documents.INVALID
-      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatus <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", registrationNumber=" <> show input.registrationNumber
+          verificationStatus
+            | nonTransportRejected = Documents.INVALID
+            | null failedRules = Documents.MANUAL_VERIFICATION_REQUIRED
+            | otherwise = Documents.INVALID
+          computedRejectReason = if nonTransportRejected then Just "Non Transport vehicles are not allowed" else Nothing
+      logInfo $ "createVehicleRC: Creating RC with verificationStatus=" <> show verificationStatus <> ", vehicleVariant=" <> show vehicleVariant <> ", failedRules=" <> show failedRules <> ", rejectReason=" <> show computedRejectReason <> ", registrationNumber=" <> show input.registrationNumber
       return $
         DVRC.VehicleRegistrationCertificate
           { id,
@@ -606,7 +614,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleModelYear = input.vehicleModelYear,
             vehicleDoors = mbVehicleDoors,
             vehicleSeatBelts = mbVehicleSeatBelts,
-            rejectReason = Nothing,
+            rejectReason = computedRejectReason,
             createdAt = now,
             unencryptedCertificateNumber = input.registrationNumber,
             approved = Nothing,
@@ -614,7 +622,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             vehicleImageId = Nothing,
             verified = Nothing,
             pendingChallan = Nothing,
-            initiatedBy = Nothing
+            initiatedBy = Nothing,
+            rcVehicleType = input.rcVehicleType
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of

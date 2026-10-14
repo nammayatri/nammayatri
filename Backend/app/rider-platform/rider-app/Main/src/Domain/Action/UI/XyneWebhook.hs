@@ -6,6 +6,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified IssueManagement.Common as Common
 import qualified IssueManagement.Domain.Action.UI.XyneWebhook as XyneShared
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Ticket.XyneSpaces.Config as Xyne
 import qualified Kernel.External.Ticket.XyneSpaces.Types as XyneTypes
@@ -17,13 +18,16 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
-postXyneWebhook :: Maybe Text -> RawByteString -> Flow XyneShared.XyneWebhookAck
-postXyneWebhook mbSig rawBody = do
-  signingSecret <- asks (.xyneWebhookSigningSecret)
+postXyneWebhook :: Maybe Text -> Maybe Text -> RawByteString -> Flow XyneShared.XyneWebhookAck
+postXyneWebhook mbMocId mbSig rawBody = do
+  (mbExpectedMerchantId, usedConfiguredSecret, signingSecret) <- resolveXyneSigningSecret mbMocId
   XyneShared.processXyneWebhook
     signingSecret
+    mbExpectedMerchantId
+    usedConfiguredSecret
     lookupXyneCfg
     DDIM.dashboardIssueHandle
     Common.CUSTOMER
@@ -40,18 +44,41 @@ getXyneIssues mbStartDate mbEndDate mbLimit mbOffset mbAuth = do
   bearerToken <- asks (.xyneWebhookBearerToken)
   XyneShared.fetchXyneIssues bearerToken lookupXyneCfg DDIM.dashboardIssueHandle Common.CUSTOMER mbStartDate mbEndDate mbLimit mbOffset mbAuth
 
+resolveXyneSigningSecret :: Maybe Text -> Flow (Maybe (KId.Id Common.Merchant), Bool, Text)
+resolveXyneSigningSecret Nothing = do
+  envSigningSecret <- asks (.xyneWebhookSigningSecret)
+  pure (Nothing, False, envSigningSecret)
+resolveXyneSigningSecret (Just mocIdText) = do
+  let mocId = KId.Id mocIdText
+  moc <- CQMOC.findById mocId >>= fromMaybeM (InvalidRequest "INVALID_XYNE_SIGNATURE")
+  let merchantIdCommon = KId.cast moc.merchantId
+  mbCfg <- lookupXyneCfgMaybe merchantIdCommon (KId.cast mocId)
+  envSigningSecret <- asks (.xyneWebhookSigningSecret)
+  case mbCfg >>= (.webhookSigningSecret) of
+    Just encryptedSecret -> do
+      signingSecret <- decrypt encryptedSecret
+      pure (Just merchantIdCommon, True, signingSecret)
+    Nothing -> pure (Just merchantIdCommon, False, envSigningSecret)
+
+lookupXyneCfgMaybe ::
+  KId.Id Common.Merchant ->
+  KId.Id Common.MerchantOperatingCity ->
+  Flow (Maybe Xyne.XyneSpacesCfg)
+lookupXyneCfgMaybe merchantIdCommon mocIdCommon = do
+  let merchantId = KId.cast merchantIdCommon
+      mocId = KId.cast mocIdCommon
+  mbMsc <-
+    getOneConfig
+      (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService Ticket.XyneSpaces)})
+      Nothing
+  pure $ case mbMsc <&> (.serviceConfig) of
+    Just (DMSC.IssueTicketServiceConfig (Ticket.XyneSpacesConfig cfg)) -> Just cfg
+    _ -> Nothing
+
 lookupXyneCfg ::
   KId.Id Common.Merchant ->
   KId.Id Common.MerchantOperatingCity ->
   Flow Xyne.XyneSpacesCfg
-lookupXyneCfg merchantIdCommon mocIdCommon = do
-  let merchantId = KId.cast merchantIdCommon
-      mocId = KId.cast mocIdCommon
-  msc <-
-    getOneConfig
-      (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService Ticket.XyneSpaces)})
-      Nothing
-      >>= fromMaybeM (InternalError $ "XyneSpaces config not found for mocId=" <> mocIdCommon.getId)
-  case msc.serviceConfig of
-    DMSC.IssueTicketServiceConfig (Ticket.XyneSpacesConfig cfg) -> pure cfg
-    _ -> throwError (InternalError "Unexpected service config shape for XyneSpaces")
+lookupXyneCfg merchantIdCommon mocIdCommon =
+  lookupXyneCfgMaybe merchantIdCommon mocIdCommon
+    >>= fromMaybeM (InternalError $ "XyneSpaces config not found for mocId=" <> mocIdCommon.getId)

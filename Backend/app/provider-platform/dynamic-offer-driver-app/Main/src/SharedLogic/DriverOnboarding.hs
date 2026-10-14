@@ -66,6 +66,7 @@ import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Types (Language, VerificationFlow)
 import qualified Kernel.External.Verification.Interface as VI
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Documents
@@ -520,7 +521,8 @@ data CreateRCInput = CreateRCInput
     dateOfRegistration :: Maybe UTCTime,
     vehicleModelYear :: Maybe Int,
     grossVehicleWeight :: Maybe Float,
-    unladdenWeight :: Maybe Float
+    unladdenWeight :: Maybe Float,
+    rcVehicleType :: Maybe VT.VehicleRegistrationType
   }
 
 getExpiryFailures :: DTC.TransporterConfig -> CreateRCInput -> UTCTime -> [Text]
@@ -569,8 +571,8 @@ createRC ::
   m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
-  (verificationStatus, reviewRequired, variant, mbVehicleModel) <- validateRCStatus input rcconfigs now expiry
-  logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel
+  (verificationStatus, reviewRequired, variant, mbVehicleModel, mbRejectReason) <- validateRCStatus input rcconfigs now expiry
+  logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel <> ", rejectReason=" <> show mbRejectReason
   let airConditioned = input.airConditioned
       updVariant = case DV.castVehicleVariantToVehicleCategory <$> variant of
         Just DVC.BUS -> if airConditioned == Just True then Just DV.BUS_AC else Just DV.BUS_NON_AC
@@ -619,7 +621,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
             else Nothing,
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,
-        rejectReason = Nothing,
+        rejectReason = mbRejectReason,
         createdAt = now,
         unencryptedCertificateNumber = input.registrationNumber,
         approved = Nothing,
@@ -627,13 +629,14 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         vehicleImageId = Nothing,
         verified = Nothing,
         pendingChallan = Nothing,
-        initiatedBy = Nothing
+        initiatedBy = Nothing,
+        rcVehicleType = input.rcVehicleType
       }
 
-validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
+validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text, Maybe Text)
 validateRCStatus input rcconfigs now expiry = do
   case rcconfigs.supportedVehicleClasses of
-    DVC.RCValidClasses [] -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
+    DVC.RCValidClasses [] -> pure (Documents.INVALID, Nothing, Nothing, Nothing, Nothing)
     DVC.RCValidClasses vehicleClassVariantMap -> do
       let validCOVsCheck = rcconfigs.vehicleClassCheckType
       let mbVehicleClassOrCategory = input.vehicleClass <|> input.vehicleClassCategory
@@ -643,10 +646,12 @@ validateRCStatus input rcconfigs now expiry = do
       logInfo $ "validateRCStatus: isCOVValid=" <> show isCOVValid <> ", checkExpiry=" <> show rcconfigs.checkExpiry <> ", expiry=" <> show expiry <> ", now < expiry=" <> show (now < expiry)
       let validInsurance = True -- (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
       let expiryCheck = (not rcconfigs.checkExpiry) || now < expiry
-      let finalStatus = if expiryCheck && isCOVValid && validInsurance then Documents.VALID else Documents.INVALID
-      logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ")"
-      pure $ if finalStatus == Documents.VALID then (Documents.VALID, reviewRequired, variant, mbVehicleModel) else (Documents.INVALID, reviewRequired, variant, mbVehicleModel)
-    _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing)
+      let vehicleTypeValid = rcconfigs.allowNonTransportVehicle /= Just False || input.rcVehicleType /= Just VT.NonTransport
+      let finalStatus = if expiryCheck && isCOVValid && validInsurance && vehicleTypeValid then Documents.VALID else Documents.INVALID
+      let rejectReason = if not vehicleTypeValid then Just "Non Transport vehicles are not allowed" else Nothing
+      logInfo $ "validateRCStatus: Setting verificationStatus=" <> show finalStatus <> " (expiryCheck=" <> show expiryCheck <> ", isCOVValid=" <> show isCOVValid <> ", validInsurance=" <> show validInsurance <> ", vehicleTypeValid=" <> show vehicleTypeValid <> ")"
+      pure (finalStatus, reviewRequired, variant, mbVehicleModel, rejectReason)
+    _ -> pure (Documents.INVALID, Nothing, Nothing, Nothing, Nothing)
 
 isValidCOVRC :: Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Text -> [DVC.VehicleClassVariantMap] -> DVC.VehicleClassCheckType -> Text -> (Bool, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text)
 isValidCOVRC mbAirConditioned mbOxygen mbVentilator mVehicleCategory capacity manufacturer bodyType manufacturerModel vehicleClassVariantMap validCOVsCheck cov = do

@@ -14,6 +14,7 @@
 
 module API where
 
+import qualified API.Action.UI.LegalPublishInternal as LegalPublishInternal
 import qualified API.Beckn as Beckn
 import qualified API.DashboardCacAuth as DashboardCacAuth
 import qualified API.DashboardDriverInfoByPhoneNumber as DashboardDriverInfo
@@ -23,7 +24,6 @@ import qualified API.DashboardInternalAuth as DashboardInternalAuth
 import qualified API.DashboardLogin as DashboardLogin
 import qualified API.DirectDashboard as DirectDashboard
 import qualified API.IGM as IGM
-import qualified API.Action.UI.LegalPublishInternal as LegalPublishInternal
 import qualified API.Internal as Internal
 import qualified API.Internal.SyncSearch as InternalSyncSearch
 import qualified API.OnixBppWebhook as OnixBppWebhook

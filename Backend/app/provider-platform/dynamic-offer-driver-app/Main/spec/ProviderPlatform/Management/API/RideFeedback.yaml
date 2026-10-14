@@ -1,0 +1,98 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  Value: Data.Aeson
+  IssueReportType: IssueManagement.Common
+  RideStatus: Domain.Types.Ride
+  RideFeedbackConfig: Domain.Types.RideFeedbackConfig
+  RideFeedbackResponse: Domain.Types.RideFeedbackResponse
+  RideFeedbackResponseStatus: Domain.Types.RideFeedbackResponse
+  RideFeedbackStage: Domain.Types.RideFeedbackConfig
+  RideFeedbackQuestionType: Domain.Types.RideFeedbackConfig
+  RideFeedbackAnswer: Domain.Types.RideFeedbackResponse
+  RideFeedbackActionResult: Domain.Types.RideFeedbackResponse
+
+# Inspector for during-ride feedback in one merchant + city: looks a journey up by ride or booking id. The questions (ride_feedback_config)
+# are a Config Pilot table, managed through the generic nammaTag/configPilot APIs; which rides get a
+# question is the driver-side RIDE-FEEDBACK logic (NammaTag APIs). Answers are stored here, linked to
+# the driver, with the results of the actions rider-app ran.
+module: RideFeedback
+
+types:
+  # bookingId is the journey's current driver-side booking; stage is empty when nothing can be asked now.
+  RideFeedbackPreviewRes:
+    bookingId: Text
+    rideId: Maybe Text
+    rideStatus: Maybe RideStatus
+    stage: Maybe RideFeedbackStage
+    secondsSinceBooking: Int
+    logicVersion: Maybe Int
+    selectedQuestionKeys: "[Text]"
+    context: Value
+    evaluations: "[QuestionEvaluation]"
+
+  QuestionEvaluation:
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    eligible: Bool
+    isFollowUp: Bool
+    reason: Maybe Text
+    showAt: Maybe UTCTime
+
+  RideFeedbackResponseItem:
+    id: Id RideFeedbackResponse
+    configId: Id RideFeedbackConfig
+    questionKey: Text
+    questionType: RideFeedbackQuestionType
+    bookingId: Text
+    rideId: Maybe Text
+    logicVersion: Maybe Int
+    configPilotVersions: Maybe [Int]
+    status: RideFeedbackResponseStatus
+    answer: Maybe RideFeedbackAnswer
+    answerScore: Maybe Double
+    stage: RideFeedbackStage
+    secondsSinceBooking: Int
+    secondsIntoRide: Maybe Int
+    actionResults: Maybe [RideFeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # What the question schema cannot say: questions themselves are managed through the generic
+  # Config Pilot APIs (nammaTag/configPilot/RideFeedbackConfig/*), whose schemas carry the enums.
+  RideFeedbackMetaRes:
+    issueReportTypes: "[IssueReportType]"
+    uiLayouts: "[Text]"
+    supportedOperators: "[Text]"
+
+apis:
+  # GET /rideFeedback/inspect/{rideOrBookingId}/preview
+  - GET:
+      endpoint: /inspect/{rideOrBookingId}/preview
+      auth: ApiAuthV2
+      params:
+        rideOrBookingId: Text
+      response:
+        type: RideFeedbackPreviewRes
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # GET /rideFeedback/inspect/{rideOrBookingId}/responses (every answer of the journey)
+  - GET:
+      endpoint: /inspect/{rideOrBookingId}/responses
+      auth: ApiAuthV2
+      params:
+        rideOrBookingId: Text
+      response:
+        type: "[RideFeedbackResponseItem]"
+      migrate:
+        capability: system-config.ride_feedback.read
+
+  # GET /rideFeedback/meta
+  - GET:
+      endpoint: /meta
+      auth: ApiAuthV2
+      response:
+        type: RideFeedbackMetaRes
+      migrate:
+        capability: system-config.ride_feedback.read

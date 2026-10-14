@@ -13,6 +13,7 @@ import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleVariant
 import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.External.Encryption
+import qualified Kernel.External.Verification.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Documents
 import qualified Kernel.Types.Id
@@ -41,6 +42,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     pendingChallan :: Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.PendingChallanResult,
     permitExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     pucExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rcVehicleType :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VehicleRegistrationType,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     reviewRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     reviewedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -100,6 +102,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
           pendingChallan = pendingChallan entity,
           permitExpiry = permitExpiry entity,
           pucExpiry = pucExpiry entity,
+          rcVehicleType = rcVehicleType entity,
           rejectReason = rejectReason entity,
           reviewRequired = reviewRequired entity,
           reviewedAt = reviewedAt entity,
@@ -151,6 +154,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
             pendingChallan = pendingChallan entity,
             permitExpiry = permitExpiry entity,
             pucExpiry = pucExpiry entity,
+            rcVehicleType = rcVehicleType entity,
             rejectReason = rejectReason entity,
             reviewRequired = reviewRequired entity,
             reviewedAt = reviewedAt entity,

@@ -173,3 +173,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN batching_mode t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN auto_assign_max_pickup_distance integer ;
+
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_dynamic_pickup_distance_and_duration boolean ;
+

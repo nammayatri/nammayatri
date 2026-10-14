@@ -35,6 +35,7 @@ data DriverPoolConfig = DriverPoolConfig
     driverToDestinationDistanceThreshold :: Kernel.Types.Common.Meters,
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
     dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int,
+    enableDynamicPickupDistanceAndDuration :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableEarlyBatchAdvanceOnFullReject :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableForwardBatching :: Kernel.Prelude.Bool,
     enablePriorityTagSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

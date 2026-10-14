@@ -722,7 +722,7 @@ sendUnattendedSosTicketAlert ticketId = do
                 Call.InitiateCallReq
                   { fromPhoneNum = cxAgentDetails.agentMobileNumber,
                     toPhoneNum = Nothing,
-                    attachments = Call.Attachments $ DUCall.CallAttachments {callStatusId = callStatusId, rideId = cast @SafetyCommon.Ride @DRide.Ride rideId},
+                    attachments = Call.Attachments $ DUCall.CallAttachments {callStatusId = callStatusId, rideId = Just $ cast @SafetyCommon.Ride @DRide.Ride rideId},
                     appletId = maybeAppId
                   }
           exotelResponse <- Call.initiateCall merchantOpCity.merchantId merchantOpCity.id callReq

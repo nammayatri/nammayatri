@@ -51,6 +51,7 @@ DriverPoolConfig:
     batchSizeOnRide: Int
     batchSizeOnRideWithStraightLineDistance: Maybe Int
     useOneToOneOsrmMapping : Maybe Bool
+    enableDynamicPickupDistanceAndDuration: Maybe Bool
     onRideRadiusConfig: "[OnRideRadiusConfig]"
     onRideBatchSplitConfig: "[BatchSplitByPickupDistanceOnRide]"
     enableForwardBatching: Bool

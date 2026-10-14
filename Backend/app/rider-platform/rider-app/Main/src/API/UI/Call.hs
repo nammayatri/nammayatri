@@ -26,6 +26,7 @@ where
 
 import Data.ByteString.Lazy (fromStrict)
 import qualified Domain.Action.UI.Call as DCall
+import qualified Domain.Types.Booking as BT
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Merchant as Merchant
@@ -51,10 +52,10 @@ instance Accept XML where
 instance MimeRender XML Text where
   mimeRender _ = fromStrict . encodeUtf8
 
-type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> SDKBasedCallAPI
+type API = BackendBasedCallAPI :<|> BookingBasedCallAPI :<|> FrontendBasedCallAPI :<|> SDKBasedCallAPI
 
 handler :: FlowServer API
-handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> sdkBasedCallHandler
+handler = backendBasedCallHandler :<|> bookingBasedCallHandler :<|> frontendBasedCallHandler :<|> sdkBasedCallHandler
 
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
@@ -82,6 +83,19 @@ backendBasedCallHandler =
         :<|> getCallStatus
   )
     :<|> callStatusCallback
+
+-- Keyed on the booking rather than the ride: a confirmed scheduled booking has no ride row
+-- until a driver is assigned, and support must be reachable in that window.
+type BookingBasedCallAPI =
+  "booking"
+    :> Capture "bookingId" (Id BT.Booking)
+    :> "call"
+    :> "support"
+    :> TokenAuth
+    :> Post '[JSON] DCall.CallRes
+
+bookingBasedCallHandler :: FlowServer BookingBasedCallAPI
+bookingBasedCallHandler = initiateCallToSupport
 
 type FrontendBasedCallAPI =
   "exotel"
@@ -137,6 +151,10 @@ frontendBasedCallHandler =
 -- | Try to initiate a call customer -> driver
 initiateCallToDriver :: Id SRide.Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.CallRes
 initiateCallToDriver rideId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCall.initiateCallToDriver rideId
+
+-- | Try to initiate a call customer -> CX support agent
+initiateCallToSupport :: Id BT.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.CallRes
+initiateCallToSupport bookingId (personId, _) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DCall.initiateCallToSupport bookingId personId
 
 callStatusCallback :: DCall.CallCallbackReq -> FlowHandler DCall.CallCallbackRes
 callStatusCallback = withFlowHandlerAPI . DCall.callStatusCallback

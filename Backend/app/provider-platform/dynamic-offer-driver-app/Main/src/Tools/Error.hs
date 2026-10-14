@@ -209,16 +209,30 @@ $(mkBeamInstancesForEnum ''BlockReasonFlag)
 
 data BlockErrorPayload = BlockErrorPayload
   { blockExpiryTime :: Maybe UTCTime,
-    blockReason :: Maybe BlockReasonFlag
+    blockReason :: Maybe BlockReasonFlag,
+    -- free-form reason authored by the dashboard operator or behaviour rule
+    -- (e.g. offence counts in a time window); shown to the driver as-is
+    blockReasonDescription :: Maybe Text
   }
   deriving (Eq, Show, IsBecknAPIError)
 
 instance ToJSON BlockErrorPayload where
-  toJSON (BlockErrorPayload expiryTime reason) =
+  toJSON (BlockErrorPayload expiryTime reason reasonDescription) =
     object
       [ "blockExpiryTime" .= expiryTime,
-        "blockReason" .= reason
+        "blockReason" .= reason,
+        "blockReasonDescription" .= reasonDescription
       ]
+
+-- ByDashboard reasons are ops-internal (may name allegations or complainants),
+-- so the driver only gets the generic operations-team copy for those.
+mkBlockErrorPayload :: Maybe UTCTime -> Maybe BlockReasonFlag -> Maybe Text -> BlockErrorPayload
+mkBlockErrorPayload expiryTime reason reasonDescription =
+  BlockErrorPayload
+    { blockExpiryTime = expiryTime,
+      blockReason = reason,
+      blockReasonDescription = if reason == Just ByDashboard then Nothing else reasonDescription
+    }
 
 data DriverError
   = DriverAccountDisabled
@@ -2447,3 +2461,29 @@ instance IsHTTPError ManualTollChargeError where
     TollChargeApprovalRequestFailed -> E500
 
 instance IsAPIError ManualTollChargeError
+
+data RideFeedbackError
+  = RideFeedbackConfigNotFound Text
+  | RideFeedbackConfigAlreadyExists Text
+  | RideFeedbackInvalidConfig [Text]
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideFeedbackError
+
+instance IsBaseError RideFeedbackError where
+  toMessage = \case
+    RideFeedbackConfigNotFound configId -> Just $ "Ride feedback question " <> configId <> " not found in this city."
+    RideFeedbackConfigAlreadyExists questionKey -> Just $ "A ride feedback question with key " <> questionKey <> " already exists in this city."
+    RideFeedbackInvalidConfig errors -> Just $ "Invalid ride feedback question: " <> T.intercalate "; " errors
+
+instance IsHTTPError RideFeedbackError where
+  toErrorCode = \case
+    RideFeedbackConfigNotFound _ -> "RIDE_FEEDBACK_CONFIG_NOT_FOUND"
+    RideFeedbackConfigAlreadyExists _ -> "RIDE_FEEDBACK_CONFIG_ALREADY_EXISTS"
+    RideFeedbackInvalidConfig _ -> "RIDE_FEEDBACK_INVALID_CONFIG"
+  toHttpCode = \case
+    RideFeedbackConfigNotFound _ -> E404
+    RideFeedbackConfigAlreadyExists _ -> E400
+    RideFeedbackInvalidConfig _ -> E400
+
+instance IsAPIError RideFeedbackError

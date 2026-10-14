@@ -80,6 +80,8 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.customerCancellationDues (Kernel.Prelude.Just customerCancellationDues),
       Se.Set Beam.customerTags customerTags,
+      Se.Set Beam.displayDistanceToPickup displayDistanceToPickup,
+      Se.Set Beam.displayDurationToPickup displayDurationToPickup,
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.driverAvailableTime driverAvailableTime,
       Se.Set Beam.driverCancellationNotAllowed driverCancellationNotAllowed,

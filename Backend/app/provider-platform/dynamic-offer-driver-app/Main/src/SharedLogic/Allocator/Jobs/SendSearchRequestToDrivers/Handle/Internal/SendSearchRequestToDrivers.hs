@@ -207,8 +207,9 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
   dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache driverPool
+  dynamicPickupMetrics <- fetchDynamicPickupMetrics driverPoolConfig searchReq dispatchPool
   languageDictionary <- foldM (addLanguageToDictionary transporterConfig searchReq) M.empty dispatchPool
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False driverPoolConfig.autoAssignMaxPickupDistance) dispatchPool
+  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
   (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
   let metricsDistanceBucketEdges = SML.distanceBucketEdges transporterConfig
@@ -306,6 +307,36 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
         Just tags -> any (\tag -> tag == TagNameValue "CustomerTier#Gold") tags
         Nothing -> False
 
+-- Driver-facing dist+eta only (Doesn't affect pooling, only ui change for now.)
+fetchDynamicPickupMetrics ::
+  ( ServiceFlow m r
+  ) =>
+  DriverPoolConfig ->
+  DSR.SearchRequest ->
+  [SDP.DriverPoolWithActualDistResult] ->
+  m (M.Map Text (Meters, Seconds))
+fetchDynamicPickupMetrics driverPoolConfig searchReq pool =
+  case (fromMaybe False driverPoolConfig.enableDynamicPickupDistanceAndDuration, pool) of
+    (False, _) -> pure M.empty
+    (_, []) -> pure M.empty
+    (_, d : ds) -> do
+      result :: Either SomeException (Maps.GetDistancesResp SDP.DriverPoolResult Maps.LatLong) <-
+        C.try $
+          Maps.getDynamicPickupDistances searchReq.providerId searchReq.merchantOperatingCityId (Just searchReq.id.getId) $
+            Maps.GetDistancesReq
+              { origins = (.driverPoolResult) <$> (d :| ds),
+                destinations = EMaps.getCoordinates searchReq.fromLocation :| [],
+                travelMode = Just Maps.CAR,
+                sourceDestinationMapping = Nothing,
+                distanceUnit = searchReq.distanceUnit
+              }
+      case result of
+        Right results ->
+          pure $ M.fromList $ foldr (\r acc -> (r.origin.driverId.getId, (r.distance, r.duration)) : acc) [] results
+        Left err -> do
+          logWarning $ "Display pickup distance/duration fetch failed for searchReq " <> searchReq.id.getId <> ", falling back to the pooling provider's values: " <> show err
+          pure M.empty
+
 getBaseFare ::
   ( MonadFlow m,
     Redis.HedisFlow m r,
@@ -400,9 +431,10 @@ buildSearchRequestForDriver ::
   M.Map DVST.ServiceTierType (Maybe Int) ->
   Bool ->
   Maybe Meters ->
+  Maybe (Meters, Seconds) ->
   SDP.DriverPoolWithActualDistResult ->
   m SearchRequestForDriver
-buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache isAutoAccepted autoAssignMaxPickupDistance dpwRes = do
+buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
   let currency = searchTry.currency
   guid <- generateGUID
   now <- getCurrentTime
@@ -457,6 +489,8 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             actualDistanceToPickup = dpwRes.actualDistanceToPickup,
             straightLineDistanceToPickup = dpRes.distanceToPickup,
             durationToPickup = dpwRes.actualDurationToPickup,
+            displayDistanceToPickup = fst <$> mbDynamicPickup,
+            displayDurationToPickup = snd <$> mbDynamicPickup,
             status = Active,
             lat = Just dpRes.lat,
             lon = Just dpRes.lon,
@@ -685,7 +719,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             if onRide || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
               then pure False
               else do
-                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True driverPoolCfg.autoAssignMaxPickupDistance dp
+                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True driverPoolCfg.autoAssignMaxPickupDistance Nothing dp
                 -- Nested try: a failure after the SRFD row exists must retract it, otherwise the
                 -- driver can still poll and manually accept an offer this loop already abandoned.
                 assignResult :: Either SomeException [SearchRequestForDriver] <- C.try $ do

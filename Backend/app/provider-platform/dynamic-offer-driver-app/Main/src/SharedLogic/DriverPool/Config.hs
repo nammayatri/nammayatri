@@ -128,6 +128,7 @@ instance Default DriverPoolConfig where
         driverRequestCountLimit = 15,
         driverToDestinationDistanceThreshold = Common.Meters 1000,
         driverToDestinationDuration = Common.Seconds 900,
+        enableDynamicPickupDistanceAndDuration = Nothing,
         enableEarlyBatchAdvanceOnFullReject = Nothing,
         batchingMode = Nothing,
         nextBatchScheduleTime = Nothing,

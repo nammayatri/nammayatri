@@ -69,6 +69,10 @@ getPickupRoute (personId, merchantId) req = withFlowHandlerAPIPersonId personId 
       (firstRoute : _) -> do
         unless (null firstRoute.points) $ do
           CQPickupRoute.cachePickupRoute rid firstRoute.points
+        whenJust firstRoute.duration $ \duration -> do
+          -- remove for non disha cities later
+          now <- getCurrentTime
+          CQPickupRoute.cachePickupEtaBasis rid duration now
       [] -> pure ()
   return routeResp
 

@@ -209,7 +209,8 @@ data RideAssignedReq = RideAssignedReq
     fareBreakups :: Maybe [DFareBreakup],
     mbUpdatedFare :: Maybe Price,
     driverTrackingUrl :: Maybe BaseUrl,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    isScheduledRideActivated :: Bool
   }
 
 data OnlinePaymentParameters = OnlinePaymentParameters
@@ -240,7 +241,9 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     -- | One-shot assignment (internal oneShotAssign API): the booking row was created
     -- directly in its final state (TRIP_ASSIGNED, bppBookingId set), so the two
     -- corresponding writes here must be skipped. False on every Beckn path.
-    bookingPrePersisted :: Bool
+    bookingPrePersisted :: Bool,
+    -- | The BPP activated this scheduled ride (its ride is NEW), so it is no longer upcoming.
+    isScheduledRideActivated :: Bool
   }
 
 data RideStartedReq = RideStartedReq
@@ -523,6 +526,7 @@ rideAssignedReqHandler req = do
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
   let rideStatus = case mbMerchant of
+        _ | req.isScheduledRideActivated -> DRide.NEW
         Just merchant | (maybe True not booking.isMultimodalSearch) && diffUTCTime booking.startTime now > merchant.scheduleRideBufferTime -> DRide.UPCOMING
         _ -> DRide.NEW
   mbRide <- QRide.findByBPPRideId bppRideId

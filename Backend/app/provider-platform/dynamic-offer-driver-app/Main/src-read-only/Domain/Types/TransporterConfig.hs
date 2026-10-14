@@ -626,7 +626,12 @@ data ScheduledRideConfig = ScheduledRideConfig
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data StclConfig = StclConfig {maxSharesPerDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int, pendingStaleMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int, pricePerShare :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
+data StclConfig = StclConfig
+  { maxSharesPerDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    pendingStaleMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    pricePerShare :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    subscriptionAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data SubscriptionConfig = SubscriptionConfig

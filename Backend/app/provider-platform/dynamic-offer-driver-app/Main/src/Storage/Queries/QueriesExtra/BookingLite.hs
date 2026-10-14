@@ -48,17 +48,15 @@ findBookingsFromDBLite bookingIds = findAllWithKV [Se.Is Beam.id $ Se.In (Kernel
 
 -- Lite list read for the ops "scheduled bookings" dashboard: scalar columns only, NO
 -- LocationMapping/Location joins (pickup is resolved per-page in the handler).
-findScheduledUpcomingBookingsLite ::
+findScheduledBookingsInWindowLite ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
   [Domain.Types.Booking.BookingStatus] ->
   UTCTime ->
   UTCTime ->
-  Int ->
-  Int ->
   m [BookingLite]
-findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limit offset =
-  findAllWithOptionsKV
+findScheduledBookingsInWindowLite merchantOpCityId statuses fromTime toTime =
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just (Kernel.Types.Id.getId merchantOpCityId)),
           Se.Is Beam.isScheduled $ Se.Eq (Just True),
@@ -67,9 +65,6 @@ findScheduledUpcomingBookingsLite merchantOpCityId statuses fromTime toTime limi
           Se.Is Beam.startTime $ Se.LessThanOrEq toTime
         ]
     ]
-    (Se.Asc Beam.startTime)
-    (Just limit)
-    (Just offset)
 
 -- | History page of transactionIds (latest pickup first): paging booking rows would split reallocated transactions.
 findScheduledTransactionIdsLite ::

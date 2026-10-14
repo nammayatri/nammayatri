@@ -356,6 +356,7 @@ data LogicDomain
   | PASS_PURCHASE_ELIGIBILITY
   | LEGAL_POLICY_UPDATE_EMAIL
   | FEEDBACK_FORM
+  | RIDE_FEEDBACK
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
@@ -400,7 +401,8 @@ instance Enumerable LogicDomain where
       RIDE_FOOTNOTES_DISPLAY,
       PASS_PURCHASE_ELIGIBILITY,
       LEGAL_POLICY_UPDATE_EMAIL,
-      FEEDBACK_FORM
+      FEEDBACK_FORM,
+      RIDE_FEEDBACK
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG (filter (not . isDriverOnlyConfigType) [minBound .. maxBound])
@@ -465,6 +467,7 @@ isDriverOnlyConfigType = \case
   DocumentVerificationConfig -> True
   DocumentVerificationStagesConfig -> True
   FleetConfig -> True
+  RideFeedbackConfig -> True
   GoHomeConfig -> True
   LeaderBoardConfig -> True
   ReminderConfig -> True
@@ -521,6 +524,7 @@ generateLogicDomainShowInstances =
     ++ [show PASS_PURCHASE_ELIGIBILITY]
     ++ [show LEGAL_POLICY_UPDATE_EMAIL]
     ++ [show FEEDBACK_FORM]
+    ++ [show RIDE_FEEDBACK]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
@@ -576,6 +580,7 @@ instance Show LogicDomain where
   show PASS_PURCHASE_ELIGIBILITY = "PASS-PURCHASE-ELIGIBILITY"
   show LEGAL_POLICY_UPDATE_EMAIL = "LEGAL-POLICY-UPDATE-EMAIL"
   show FEEDBACK_FORM = "FEEDBACK-FORM"
+  show RIDE_FEEDBACK = "RIDE-FEEDBACK"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -648,6 +653,8 @@ instance Read LogicDomain where
             [(LEGAL_POLICY_UPDATE_EMAIL, drop 1 rest)]
           "FEEDBACK-FORM" ->
             [(FEEDBACK_FORM, drop 1 rest)]
+          "RIDE-FEEDBACK" ->
+            [(RIDE_FEEDBACK, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of

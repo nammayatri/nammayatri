@@ -130,6 +130,8 @@ RiderConfig:
     isAvoidToll: Bool
     enableRouteCacheRead: Maybe Bool
     routeCacheMaxDurationDeviation: Maybe Seconds
+    enableDynamicPickupEta: Maybe Bool
+    pickupEtaRefreshIntervalSeconds: Maybe Seconds
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     enableAdjacentGeoHashPlaceNameLookup: Maybe Bool
