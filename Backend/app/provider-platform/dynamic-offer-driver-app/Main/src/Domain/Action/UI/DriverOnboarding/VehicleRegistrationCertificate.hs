@@ -48,7 +48,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import qualified Data.Text as T hiding (elem, find, map, zip)
 import Data.Time (Day)
-import Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline)
+import Domain.Action.Internal.ProcessingChangeOnline (processingChangeOffline, processingChangeOnline)
 import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -803,9 +803,8 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
   removeVehicle isTaxiBoothRequest driverId
   DAQuery.deactivateRCForDriver False driverId rc.id
   now <- getCurrentTime
-  driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  processingChangeOffline driverId transporterConfig
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
-  processingChangeOnline driverId transporterConfig (Just DCommon.OFFLINE) driverInfo.mode
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 
@@ -817,9 +816,8 @@ endAllRCAssociationsAndRemoveVehicle transporterConfig driverId = do
   removeVehicle False driverId -- throws RCVehicleOnRide rather than unlinking under a live ride
   DAQuery.endAllRCAssociationsForDriver driverId
   now <- getCurrentTime
-  driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  processingChangeOffline driverId transporterConfig
   DIQuery.updateActivityWithDriverFlowStatus False (Just DCommon.OFFLINE) (Just DDFS.OFFLINE) Nothing (Just now) (cast driverId)
-  processingChangeOnline driverId transporterConfig (Just DCommon.OFFLINE) driverInfo.mode
   -- deactivateRC -- the sibling teardown doing the same removeVehicle + end-association work --
   -- decrements here. This path never did, so with overwriteAssociation enabled every driver
   -- re-association deleted the vehicle while leaving the fleet owner's count inflated, in one
