@@ -314,6 +314,7 @@ data TransporterConfigT f = TransporterConfigT
     requiresDriverOnboardingInspection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     requiresOnboardingInspection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     restrictMobileUpdateToDashboard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    rideEvidenceConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     rideTimeEstimatedThreshold :: B.C f Kernel.Types.Common.Seconds,
     routeDeviationThreshold :: B.C f Kernel.Types.Common.Meters,
     safetyTeamNumbers :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

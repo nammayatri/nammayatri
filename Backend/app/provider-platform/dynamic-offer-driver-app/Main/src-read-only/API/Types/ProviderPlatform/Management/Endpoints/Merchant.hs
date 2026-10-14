@@ -516,6 +516,15 @@ data JobName
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data ManualTollChargeConfigItem = ManualTollChargeConfigItem
+  { tripCategories :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    maxAmountWithoutEstimate :: Kernel.Types.Common.HighPrecMoney,
+    approvalTimeoutSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxApprovalAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data MerchantCommonConfigRes = MerchantCommonConfigRes
   { pickupLocThreshold :: Kernel.Types.Common.Meters,
     dropLocThreshold :: Kernel.Types.Common.Meters,
@@ -554,6 +563,8 @@ data MerchantCommonConfigRes = MerchantCommonConfigRes
     negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverCoolOffPeriod :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    rideEvidenceConfig :: Kernel.Prelude.Maybe RideEvidenceConfigItem,
+    manualTollChargeConfig :: Kernel.Prelude.Maybe ManualTollChargeConfigItem,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -608,7 +619,9 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     negativeFareAdjustmentCongestionThreshold :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Double),
     negativeFareAdjustmentMinDistanceMeters :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int),
     negativeFareAdjustmentMaxAmount :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Prelude.Int),
-    driverCoolOffPeriod :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds)
+    driverCoolOffPeriod :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue Kernel.Types.Common.Seconds),
+    rideEvidenceConfig :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue RideEvidenceConfigItem),
+    manualTollChargeConfig :: Kernel.Prelude.Maybe (Kernel.Types.Value.OptionalValue ManualTollChargeConfigItem)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -735,6 +748,15 @@ newtype ReviveSchedulerJobsRes = ReviveSchedulerJobsRes {list :: [Kernel.Prelude
 
 instance Kernel.Types.HideSecrets.HideSecrets ReviveSchedulerJobsRes where
   hideSecrets = Kernel.Prelude.identity
+
+data RideEvidenceConfigItem = RideEvidenceConfigItem
+  { enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    maxFilesPerRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    completedRideWindowHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    linkExpirySeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SchedulerTriggerReq = SchedulerTriggerReq {scheduledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, jobName :: Kernel.Prelude.Maybe JobName, jobData :: Kernel.Prelude.Text}
   deriving stock (Generic)

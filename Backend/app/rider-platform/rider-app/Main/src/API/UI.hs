@@ -42,6 +42,7 @@ import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PolicyDocument as PolicyDocument
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Rewards as Rewards
+import qualified API.Action.UI.RideEvidence as RideEvidence
 import qualified API.Action.UI.RideFeedback as RideFeedback
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
@@ -156,6 +157,7 @@ type API =
            :<|> Disability.API
            :<|> AadhaarVerification.API
            :<|> File.API
+           :<|> RideEvidence.API
            :<|> Aarokya.API
            :<|> Issue.API
            :<|> TicketService.API
@@ -298,6 +300,7 @@ handler =
     :<|> Disability.handler
     :<|> AadhaarVerification.handler
     :<|> File.handler
+    :<|> RideEvidence.handler
     :<|> Aarokya.handler
     :<|> Issue.handler
     :<|> TicketService.handler

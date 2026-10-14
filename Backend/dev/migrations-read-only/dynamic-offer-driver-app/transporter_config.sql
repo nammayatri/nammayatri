@@ -1276,6 +1276,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN manual_toll_cha
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN looking_for_fleet_supported boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN ride_evidence_config json ;
 
 
 

@@ -169,6 +169,42 @@ apis:
         rideId: Id Ride
       response:
         type: RideInfoRes
+  - GET: # RideEvidenceListAPI
+      endpoint: /{rideId}/evidence
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideEvidenceListRes
+      migrate:
+        capability: city-operations.ride.read
+  - GET: # RideEvidenceFileAPI
+      endpoint: /{rideId}/evidence/{evidenceId}/file
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+        evidenceId: Text
+      response:
+        type: RideEvidenceFileRes
+      migrate:
+        capability: city-operations.ride.read
+  - POST: # RideEvidenceVisibilityAPI
+      endpoint: /{rideId}/evidence/{evidenceId}/visibility
+      name: PostRideEvidenceVisibility
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+        evidenceId: Text
+      request:
+        type: SetRideEvidenceVisibilityReq
+      response:
+        type: APISuccess
+      helperApiExtra:
+        query:
+          - requestorId: Text
+        actorInfo: requestorId
+      migrate:
+        capability: city-operations.ride.write
   - POST: # RideSyncAPI
       endpoint: /{rideId}/sync
       auth: ApiAuthV2
@@ -717,6 +753,31 @@ types:
     - rideEndedBy: Maybe Text
     - createdAt: UTCTime
     - updatedAt: UTCTime
+
+  RideEvidenceListRes:
+    - evidence: [RideEvidenceItem]
+  RideEvidenceItem:
+    - id: Text
+    - fileId: Text
+    - driverId: Text
+    - description: Maybe Text
+    - rideStatus: RideStatus
+    - fileStatus: Maybe Text
+    - createdAt: UTCTime
+    - isHidden: Bool
+    - hiddenAt: Maybe UTCTime
+    - hiddenBy: Maybe Text
+    - hiddenReason: Maybe Text
+    - thumbnailUrl: Maybe Text
+    - imageUrl: Maybe Text
+    - urlsExpireAt: Maybe UTCTime
+  SetRideEvidenceVisibilityReq:
+    - isHidden: Bool
+    - reason: Maybe Text
+    - derive: "'HideSecrets"
+  RideEvidenceFileRes:
+    - evidenceId: Text
+    - content: Text
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

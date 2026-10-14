@@ -58,6 +58,7 @@ import qualified API.Action.UI.PolicyDocument as PolicyDocument
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
+import qualified API.Action.UI.RideEvidence as RideEvidence
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
@@ -149,6 +150,7 @@ type API =
            :<|> Rating.API
            :<|> DriverReferral.API
            :<|> File.API
+           :<|> RideEvidence.API
            :<|> Issue.API
            :<|> TicketKapture.API
            :<|> ExotelEndRide.API
@@ -238,6 +240,7 @@ handler =
     :<|> Rating.handler
     :<|> DriverReferral.handler
     :<|> File.handler
+    :<|> RideEvidence.handler
     :<|> Issue.handler
     :<|> TicketKapture.handler
     :<|> ExotelEndRide.handler

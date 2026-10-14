@@ -1036,6 +1036,7 @@ mkQuotationBreakup isValueAddNP fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.LUGGAGE_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.DRIVER_ALLOWANCE)
