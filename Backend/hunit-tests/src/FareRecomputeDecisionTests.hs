@@ -230,11 +230,11 @@ tests =
                       }
             RD.durationSource d @?= RD.UseEstimatedDuration
             RD.modifiers d @?= [RD.DurationOverageForgiven],
-          testCase "fleet default forgives up to 5 minutes of overage" $ do
+          testCase "fleet default forgives up to 20 minutes of overage" $ do
             let d =
                   decide
                     baseInput
-                      { RD.actualDuration = Just 2000, -- 200s over < 300s default
+                      { RD.actualDuration = Just 2900, -- 1100s over < 1200s default
                         RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = RD.defaultTimeForgivenessBands}
                       }
             RD.durationSource d @?= RD.UseEstimatedDuration
@@ -243,7 +243,7 @@ tests =
             let d =
                   decide
                     baseInput
-                      { RD.actualDuration = Just 2000, -- 200s over, inside the default 5-min band
+                      { RD.actualDuration = Just 2000, -- 200s over, inside the default 20-min band
                         RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = RD.defaultTimeForgivenessBands},
                         RD.productFlags = cityFlags {RD.timeLeversApplicable = False}
                       }

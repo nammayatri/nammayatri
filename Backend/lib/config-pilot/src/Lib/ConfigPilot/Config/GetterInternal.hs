@@ -22,7 +22,7 @@ import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import Kernel.Types.CacheFlow (HasInMemEnv)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, logDebug, throwError)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, logDebug, logError, throwError)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
@@ -137,7 +137,10 @@ getConfigImpl activeElementVersions wrappedConfig logicDomain merchantOpCityId =
       logDebug $ "ConfigPilot read path: successfully applied JSON patch to config for logicDomain: " <> show logicDomain <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ". Output: " <> decodeUtf8 (A.encode cfg.config)
       pure cfg.config
     A.Error e -> do
-      logDebug $ "ConfigPilot read path: error applying JSON patch to config for logicDomain: " <> show logicDomain <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ". Error: " <> show e
+      -- ERROR, not debug: getConfig catches the throw below and silently serves
+      -- the fallback config, so this line is the only direct trace that a
+      -- dynamic-logic patch produced an undecodable config (2026-10-14 incident).
+      logError $ "ConfigPilot read path: error applying JSON patch to config for logicDomain: " <> show logicDomain <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", versions: " <> show effectiveVersions <> ". Error: " <> show e
       throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
 
 -- | Build the in-mem cache key from dimensions. Uses 'dimensionsCacheKey' so
