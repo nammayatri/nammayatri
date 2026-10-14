@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Terminal } from './Terminal';
 import { LOCAL_API_BASE } from '../config';
 import {
@@ -17,11 +17,18 @@ import {
   openRemoteEditor,
   editorAvailable,
   setAutoDeploy,
+  publishedDataSources,
+  workspaceDataStatus,
+  workspaceDataSync,
   RemoteTarget,
   DevboxAssignment,
   PreflightResponse,
+  DataSource,
+  DataSourceName,
+  WorkspaceDataStatus,
 } from '../services/remote';
 import { RemoteLogsModal } from './RemoteLogsModal';
+import { showConfirm } from './Dialogs';
 import './RemoteStackPanel.css';
 
 interface PanelState {
@@ -47,6 +54,32 @@ const CMD_FIXED_PORTS = 'cd Backend && nix develop .#backend -c , run-mobility-s
 const CMD_AVAILABLE_PORTS = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev-on-available-ports';
 const FORM_STORAGE_KEY = 'ny.remoteStack.target';
 const MODE_STORAGE_KEY = 'ny.remoteStack.mode';
+const DATA_STORAGE_KEY = 'ny.remoteStack.data';
+
+// Data loaded into a dev-box workspace on Start. version '' = "latest safe":
+// whatever local-api recommends for that source at Start time.
+interface DataPick { from: DataSourceName; version: string }
+
+const loadStoredDataPick = (): DataPick => {
+  try {
+    const p = JSON.parse(window.localStorage.getItem(DATA_STORAGE_KEY) || 'null');
+    if (p && typeof p.from === 'string') {
+      return { from: p.from, version: typeof p.version === 'string' ? p.version : '' };
+    }
+  } catch { /* ignore */ }
+  return { from: 'master', version: '' };
+};
+
+const VERSION_STATUS_TEXT: Record<string, string> = {
+  verified: 'verified',
+  not_verified: 'not verified',
+  not_stable: 'not stable',
+};
+
+const shortDate = (iso?: string): string =>
+  iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '';
+
+const sleep = (ms: number) => new Promise<void>(resolve => window.setTimeout(resolve, ms));
 
 type RunMode = 'local' | 'devbox';
 
@@ -55,7 +88,7 @@ type RunMode = 'local' | 'devbox';
 // automatically when local-api's pre-flight says they are needed (workspace
 // files changed since the last rsync / the last run's commit is no longer in
 // this branch's history). These steps are what the progress strip renders.
-type StepKey = 'check' | 'deploy' | 'cabal-clean' | 'start';
+type StepKey = 'check' | 'deploy' | 'cabal-clean' | 'start' | 'data';
 type StepState = 'pending' | 'running' | 'done' | 'skipped' | 'failed';
 
 interface Step {
@@ -72,6 +105,8 @@ const stepsFor = (localRun: boolean): Step[] => [
   ...(localRun ? [] : [{ key: 'deploy' as StepKey, label: 'Deploy (rsync)', state: 'pending' as StepState }]),
   { key: 'cabal-clean', label: 'Cabal clean', state: 'pending' },
   { key: 'start', label: localRun ? 'Start mobility-stack-dev (fixed ports)' : 'Start mobility-stack-dev (available ports)', state: 'pending' },
+  // Loads the picked source/version once the stack's context-api answers.
+  { key: 'data', label: 'Load data', state: 'pending' },
 ];
 
 const STEP_ICON: Record<StepState, string> = {
@@ -210,6 +245,126 @@ export const RemoteStackPanel: React.FC = () => {
   const [sync, setSync] = useState<PreflightResponse | null>(null);
   const [syncing, setSyncing] = useState(false);
 
+  // ── Workspace data ── which published config Start loads into a dev-box
+  // workspace, and what the workspace holds now. The version list comes from
+  // DB Manager's metadata.json (via local-api); the workspace is reached
+  // through the dev-box front desk, so this needs devbox.frontdeskOk.
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const [dataPick, setDataPick] = useState<DataPick>(loadStoredDataPick);
+  const [dataStatus, setDataStatus] = useState<WorkspaceDataStatus | null>(null);
+  const [dataBusy, setDataBusy] = useState<string | null>(null);  // Re-sync progress
+  const [dataNote, setDataNote] = useState<string | null>(null);  // last Re-sync failure
+  const dataAbort = useRef(false);                                 // set by Stop
+
+  const ws = mode === 'devbox' && devbox?.frontdeskOk ? devbox.workspaceUrl : undefined;
+  const pickedSource = dataSources.find(s => s.name === dataPick.from);
+  const pickedVersion = dataPick.version
+    || (pickedSource?.recommended != null ? `v${pickedSource.recommended}` : '');
+  const held = dataStatus?.last_synced;
+  const heldStatus = dataSources
+    .find(s => s.name === held?.from)?.versions
+    .find(v => `v${v.version}` === held?.version)?.status;
+
+  useEffect(() => {
+    try { window.localStorage.setItem(DATA_STORAGE_KEY, JSON.stringify(dataPick)); } catch { /* ignore */ }
+  }, [dataPick]);
+
+  useEffect(() => {
+    if (mode !== 'devbox') return;
+    publishedDataSources()
+      .then(r => setDataSources(r.sources || []))
+      .catch(() => setDataSources([]));
+  }, [mode]);
+
+  // A remembered pick that is no longer published (e.g. prod hidden, a version
+  // removed) falls back to master / the first source, at "latest safe".
+  useEffect(() => {
+    if (dataSources.length === 0) return;
+    const src = dataSources.find(s => s.name === dataPick.from);
+    if (!src) {
+      const fallback = dataSources.find(s => s.name === 'master') || dataSources[0];
+      setDataPick({ from: fallback.name, version: '' });
+    } else if (dataPick.version && !src.versions.some(v => `v${v.version}` === dataPick.version)) {
+      setDataPick({ from: src.name, version: '' });
+    }
+  }, [dataSources, dataPick]);
+
+  const refreshDataStatus = async () => {
+    if (!ws) { setDataStatus(null); return; }
+    try {
+      setDataStatus(await workspaceDataStatus(ws));
+    } catch {
+      setDataStatus(null);
+    }
+  };
+
+  useEffect(() => {
+    refreshDataStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws]);
+
+  const statusOrUnreachable = (wsUrl: string): Promise<WorkspaceDataStatus> =>
+    workspaceDataStatus(wsUrl).catch(() => ({ unreachable: true }));
+
+  // Load from/version into the workspace: wait for its context-api, skip when it
+  // already holds exactly that (unless forced), otherwise import and wait for that
+  // run to finish. Never throws; `report` gets progress text for the caller.
+  const syncWorkspaceData = async (
+    wsUrl: string, from: DataSourceName, version: string, force: boolean,
+    report: (detail: string) => void,
+  ): Promise<{ state: 'done' | 'skipped' | 'failed'; detail: string }> => {
+    const label = `${from} ${version}`;
+    dataAbort.current = false;
+
+    report('waiting for the stack…');
+    const upBy = Date.now() + 30 * 60_000;  // a first build can take a while
+    let st = await statusOrUnreachable(wsUrl);
+    while (st.unreachable && Date.now() < upBy && !dataAbort.current) {
+      await sleep(5000);
+      st = await statusOrUnreachable(wsUrl);
+    }
+    if (dataAbort.current) return { state: 'skipped', detail: 'stack stopped' };
+    if (st.unreachable) return { state: 'failed', detail: 'stack did not come up within 30 min' };
+
+    if (!force && !st.running && st.last_synced?.from === from && st.last_synced?.version === version) {
+      setDataStatus(st);
+      return { state: 'skipped', detail: `already ${label}` };
+    }
+
+    report(`syncing ${label}…`);
+    const before = st.started_at ?? null;
+    const r = await workspaceDataSync(wsUrl, from, version).catch(e => ({ error: String(e) }));
+    if (r.error) return { state: 'failed', detail: r.error };
+
+    // Status may still show the previous run for a moment: wait for a new
+    // started_at, then for it to stop running.
+    const doneBy = Date.now() + 30 * 60_000;
+    do {
+      await sleep(3000);
+      st = await statusOrUnreachable(wsUrl);
+    } while (!dataAbort.current && Date.now() < doneBy
+             && (st.unreachable || st.running || (st.started_at ?? null) === before));
+    setDataStatus(st);
+    if (dataAbort.current) return { state: 'skipped', detail: 'stack stopped' };
+    if (st.running || st.unreachable) return { state: 'failed', detail: 'sync did not finish within 30 min' };
+    return st.error ? { state: 'failed', detail: st.error } : { state: 'done', detail: label };
+  };
+
+  const onResync = async () => {
+    if (!ws || !pickedSource || !pickedVersion) return;
+    const ok = await showConfirm(
+      `Load ${pickedSource.name} ${pickedVersion} into this workspace?\n\n`
+      + 'Test users are re-seeded and rider-app, driver-app and mock-registry restart.',
+      { title: 'Re-sync data', confirmLabel: `Load ${pickedSource.name} ${pickedVersion}`, variant: 'info' },
+    );
+    if (!ok) return;
+    setDataNote(null);
+    setDataBusy('starting…');
+    const out = await syncWorkspaceData(ws, pickedSource.name, pickedVersion, true, setDataBusy);
+    setDataBusy(null);
+    if (out.state === 'failed') setDataNote(out.detail);
+  };
+
   const isLocalhost = !target.host || ['localhost', '127.0.0.1', '::1'].includes(target.host.trim());
   const hasDevName = isLocalhost || !!target.devName?.trim();
   // In Dev-Box mode nothing may run until an assignment is resolved —
@@ -242,6 +397,7 @@ export const RemoteStackPanel: React.FC = () => {
     } finally {
       setSyncing(false);
     }
+    refreshDataStatus();  // the same ⟳ also re-reads what data the workspace holds
   };
 
   useEffect(() => {
@@ -552,6 +708,21 @@ export const RemoteStackPanel: React.FC = () => {
         startRows: res.rows,
         status: `mobility-stack-dev running on ${target.host}`,
       }));
+
+      // Load data: the stack is only launched at this point; the data step
+      // waits for it, and its outcome never stops the stack.
+      if (isLocalhost) {
+        patchStep('data', { state: 'skipped', detail: 'local run: use Tools → Sync Data' });
+      } else if (!ws) {
+        patchStep('data', { state: 'skipped', detail: 'front desk not installed on this dev-box' });
+      } else if (!pickedSource || !pickedVersion) {
+        patchStep('data', { state: 'skipped', detail: 'no published data version found' });
+      } else {
+        patchStep('data', { state: 'running', detail: 'waiting for the stack…' });
+        const out = await syncWorkspaceData(ws, pickedSource.name, pickedVersion, false,
+          detail => patchStep('data', { state: 'running', detail }));
+        patchStep('data', { state: out.state, detail: out.detail });
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setState(prev => ({ ...prev, error: `Start failed: ${msg}`, status: undefined }));
@@ -564,6 +735,7 @@ export const RemoteStackPanel: React.FC = () => {
 
   const onStop = async () => {
     if (!state.startSession) return;
+    dataAbort.current = true;  // ends a "Load data" wait still in progress
     setBusy('stop');
     try {
       await remoteStop(state.startSession);
@@ -598,6 +770,47 @@ export const RemoteStackPanel: React.FC = () => {
             <option value="devbox">Dev-Box (auto-assigned)</option>
           </select>
         </label>
+
+        {mode === 'devbox' && (
+          <>
+            <label className="rsp-data-src">
+              <span>Data</span>
+              <select
+                id="rsp-data-src"
+                value={pickedSource ? dataPick.from : ''}
+                onChange={e => setDataPick({ from: e.target.value as DataSourceName, version: '' })}
+                disabled={!!busy || !!dataBusy || dataSources.length === 0}
+                title="Config data loaded into the workspace on Start (published by DB Manager)"
+              >
+                {dataSources.length === 0 && <option value="">no published data</option>}
+                {dataSources.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+              </select>
+            </label>
+            <label className="rsp-data-ver">
+              <span>Version</span>
+              <select
+                id="rsp-data-ver"
+                value={dataPick.version}
+                onChange={e => setDataPick(p => ({ ...p, version: e.target.value }))}
+                disabled={!!busy || !!dataBusy || !pickedSource}
+                title="“latest safe” = newest verified version, else the newest one not marked not stable"
+              >
+                <option value="">
+                  {pickedSource?.recommended != null
+                    ? `latest safe (v${pickedSource.recommended})`
+                    : 'no usable version'}
+                </option>
+                {pickedSource?.versions.map(v => (
+                  <option key={v.version} value={`v${v.version}`}>
+                    v{v.version} · {VERSION_STATUS_TEXT[v.status || 'not_verified'] || v.status}
+                    {v.created_at ? ` · ${shortDate(v.created_at)}` : ''}
+                    {v.uploaded_by ? ` · ${v.uploaded_by}` : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
 
         {state.startSession ? (
           <button
@@ -783,6 +996,41 @@ export const RemoteStackPanel: React.FC = () => {
                     >
                       front desk not installed on this dev-box
                     </span>
+                  )}
+                </dd>
+                <dt>Data</dt>
+                <dd className="rsp-data-row">
+                  {!ws ? (
+                    <span className="rsp-sync-checked">needs the front desk</span>
+                  ) : dataBusy ? (
+                    <span className="rsp-sync-checked">◐ {dataBusy}</span>
+                  ) : dataStatus?.unreachable ? (
+                    <span className="rsp-sync-checked">stack not running</span>
+                  ) : !held && dataStatus?.error ? (
+                    <span className="rsp-sync-checked" title={dataStatus.error}>status unavailable: {dataStatus.error}</span>
+                  ) : held ? (
+                    <>
+                      <code>{held.from} {held.version || '(version not recorded)'}</code>
+                      <span className="rsp-sync-checked" title={timeExact(held.finished_at)}>
+                        synced {timeAgo(held.finished_at)}
+                      </span>
+                      {heldStatus && heldStatus !== 'verified' && (
+                        <span className="rsp-tag">{VERSION_STATUS_TEXT[heldStatus] || heldStatus}</span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="rsp-sync-checked">no data loaded yet</span>
+                  )}
+                  {dataNote && <span className="rsp-tag rsp-tag-warn" title={dataNote}>✗ {dataNote}</span>}
+                  {ws && (
+                    <button
+                      className="rsp-btn-ghost"
+                      onClick={onResync}
+                      disabled={!!busy || !!dataBusy || !pickedVersion || !dataStatus || !!dataStatus.unreachable}
+                      title={`Load ${dataPick.from} ${pickedVersion || ''} now: re-seeds test users and restarts rider/driver`}
+                    >
+                      ⟳ Re-sync
+                    </button>
                   )}
                 </dd>
               </dl>

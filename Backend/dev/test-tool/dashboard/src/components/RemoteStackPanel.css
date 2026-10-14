@@ -165,6 +165,12 @@
 /* Workspace URL row: URL + Copy + links wrap on narrow cards; links look like the buttons. */
 .rsp-devbox-ids dd.rsp-ws-url { flex-wrap: wrap; }
 .rsp-devbox-ids dd.rsp-ws-url a.rsp-btn-ghost { text-decoration: none; }
+/* Data / Version pickers sit in the run row; the Data row wraps like the URL row. */
+.rsp-run-row { flex-wrap: wrap; }
+.rsp-run-row label.rsp-data-src { min-width: 150px; }
+.rsp-run-row label.rsp-data-ver { min-width: 280px; }
+.rsp-devbox-ids dd.rsp-data-row { flex-wrap: wrap; }
+.rsp-devbox-ids dd.rsp-data-row .rsp-tag { margin-left: 0; }
 
 /* ── Deploy freshness readout ── */
 .rsp-sync {

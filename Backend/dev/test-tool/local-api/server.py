@@ -1237,6 +1237,76 @@ def _frontdesk_ok(host: str) -> bool:
         return False
 
 
+# ── Workspace data (config-sync), reached through the dev-box front desk ──
+# The workspace's test-context-api does the actual import; these helpers only
+# pick a version and forward calls to <Workspace URL>/test-context-api/....
+DATA_SOURCES = ("master", "prod", "prod_international")
+# A front-desk Workspace URL: http://<host>:<port>/<workspace-id>, nothing else.
+_WS_URL_RE = re.compile(r"^http://[A-Za-z0-9.\-]+:\d+/[A-Za-z0-9_-]+$")
+# Where DB Manager publishes <source>_to_local/metadata.json. Same env vars and
+# default as context-api's CONFIG_SYNC_PUBLIC_BASE. Read from here (not via the
+# workspace) so the version can be picked before the stack is running.
+CONFIG_SYNC_PUBLIC_BASE = (
+    os.getenv("CONFIG_SYNC_CLOUDFRONT_URL", "")
+    or os.getenv("CONFIG_SYNC_PUBLIC_BUCKET_URL",
+                 "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com")
+)
+
+
+def _published_versions(source: str) -> tuple[list, str | None]:
+    """(versions, error) from <source>_to_local/metadata.json. A 404 means
+    nothing is published for that source yet: no versions, no error."""
+    url = f"{CONFIG_SYNC_PUBLIC_BASE.rstrip('/')}/{source}_to_local/metadata.json"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as r:
+            return json.loads(r.read()).get("available_versions") or [], None
+    except urllib.error.HTTPError as e:
+        return [], (None if e.code == 404 else f"HTTP {e.code} for {url}")
+    except Exception as e:
+        return [], f"cannot reach {url}: {e}"
+
+
+def _pick_version(versions: list) -> dict | None:
+    """'Latest, but safe': the newest verified version, else the newest one not
+    marked not_stable. None for an empty list (the import then falls back to
+    config_transfer.py's pinned version)."""
+    usable = [v for v in versions if isinstance(v, dict) and isinstance(v.get("version"), int)]
+    for keep in (lambda v: v.get("status") == "verified",
+                 lambda v: v.get("status") != "not_stable"):
+        pool = [v for v in usable if keep(v)]
+        if pool:
+            return max(pool, key=lambda v: v["version"])
+    return None
+
+
+def _workspace_ctx(ws: str, path: str, body: dict | None = None,
+                   timeout: float = 10.0) -> dict:
+    """Call the workspace's test-context-api at <ws>/test-context-api<path>.
+
+    `unreachable: True` means the front desk answered but the stack behind it
+    is not up yet (or the dev-box is off) — the caller should wait and retry."""
+    if not _WS_URL_RE.match(ws or ""):
+        return {"error": f"not a workspace URL: {ws!r}"}
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        f"{ws}/test-context-api{path}", data=data,
+        method="POST" if data is not None else "GET",
+        headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as e:
+        if e.code in (502, 503, 504):
+            return {"unreachable": True, "error": f"stack not up yet (HTTP {e.code})"}
+        try:
+            msg = json.loads(e.read()).get("error")
+        except Exception:
+            msg = None
+        return {"error": msg or f"HTTP {e.code}", "httpStatus": e.code}
+    except Exception as e:
+        return {"unreachable": True, "error": f"workspace not reachable: {e}"}
+
+
 def _devbox_state_rehost(dev_id: str, ssh_user: str, old_host: str, new_host: str) -> None:
     """Carry this checkout's per-target state across a dev-box IP change.
 
@@ -3971,6 +4041,52 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             q = _pq(urlparse(self.path).query)
             force = (q.get("new", ["0"])[0] or "0") in ("1", "true")
             self._send_json(_devbox_resolve(force_new=force))
+            return True
+
+        # GET /api/devbox/data/sources
+        # Sources DB Manager has published, each with its versions and the
+        # "latest, but safe" pick. A source with no version list is left out.
+        if method == "GET" and path == "/api/devbox/data/sources":
+            sources, errors = [], []
+            for src in DATA_SOURCES:
+                versions, err = _published_versions(src)
+                if err:
+                    errors.append(f"{src}: {err}")
+                if versions:
+                    pick = _pick_version(versions)
+                    sources.append({"name": src, "versions": versions,
+                                    "recommended": pick["version"] if pick else None})
+            self._send_json({"sources": sources, "errors": errors})
+            return True
+
+        # GET /api/devbox/data/status?ws=<Workspace URL>
+        # What the workspace holds (last_synced) and whether a sync is running.
+        if method == "GET" and path == "/api/devbox/data/status":
+            from urllib.parse import parse_qs as _pq
+            ws = (_pq(urlparse(self.path).query).get("ws", [""])[0] or "").strip()
+            st = _workspace_ctx(ws, "/api/config-sync/status", timeout=5)
+            # Only context-api's own status has `running`; any other reply (an empty
+            # page from a Caddy that is still coming up, …) means "not up yet".
+            if "running" not in st and not st.get("error"):
+                st = {"unreachable": True, "error": "stack not up yet (no sync status)"}
+            if isinstance(st.get("log"), list):
+                st["log"] = st["log"][-40:]
+            self._send_json(st)
+            return True
+
+        # POST /api/devbox/data/sync  {ws, from, version}
+        # Starts the import on the workspace. Always sends an explicit version.
+        if method == "POST" and path == "/api/devbox/data/sync":
+            body = self._read_json_body() or {}
+            src, version = body.get("from"), body.get("version")
+            if src not in DATA_SOURCES:
+                self._send_json({"error": f"unknown source {src!r}"}, 400)
+                return True
+            if not re.fullmatch(r"v\d+", str(version or "")):
+                self._send_json({"error": f"invalid version {version!r} (expected e.g. 'v13')"}, 400)
+                return True
+            self._send_json(_workspace_ctx((body.get("ws") or "").strip(), "/api/config-sync/import",
+                                           {"from": src, "version": version}))
             return True
 
         # GET /api/devbox/ports[?refresh=1][&host=...]
