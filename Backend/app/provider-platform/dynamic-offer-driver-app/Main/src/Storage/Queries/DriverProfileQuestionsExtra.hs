@@ -1,5 +1,6 @@
 module Storage.Queries.DriverProfileQuestionsExtra where
 
+import qualified Data.Aeson
 import Domain.Types.DriverProfileQuestions
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -25,6 +26,7 @@ upsert a@DriverProfileQuestions {..} = do
             <> [Se.Set Beam.imageIds imageIds]
             <> [Se.Set Beam.vehicleTags vehicleTags]
             <> [Se.Set Beam.aboutMe aboutMe]
+            <> [Se.Set Beam.selfDeclarations (Data.Aeson.toJSON <$> selfDeclarations)]
         )
         [Se.Is Beam.driverId $ Se.Eq a.driverId.getId]
     else createWithKV a

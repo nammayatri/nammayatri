@@ -62,7 +62,7 @@ data DocumentVerificationConfig = DocumentVerificationConfig
 
 data DocumentApplicableType = FLEET | INDIVIDUAL | FLEET_AND_INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data DocumentCategory = Driver | Vehicle | Permission | Training | Fleet deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data DocumentCategory = Driver | Vehicle | Permission | Training | Fleet | SelfDeclaration deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data DocumentFlowGrouping = COMMON | STANDARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

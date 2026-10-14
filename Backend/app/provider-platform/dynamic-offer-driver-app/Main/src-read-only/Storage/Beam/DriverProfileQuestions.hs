@@ -3,6 +3,7 @@
 
 module Storage.Beam.DriverProfileQuestions where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import Kernel.External.Encryption
@@ -20,6 +21,7 @@ data DriverProfileQuestionsT f = DriverProfileQuestionsT
     imageIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     pledges :: B.C f [Kernel.Prelude.Text],
+    selfDeclarations :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])
   }
