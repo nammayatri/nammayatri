@@ -99,6 +99,12 @@ docker run --rm --network host -v "$PWD/key-rotation":/code:ro -v "$WORK":/work 
   -e OLD_PASSETTO_URL=http://localhost:8021 -e NEW_PASSETTO_URL=http://localhost:8022 \
   -e OLD_SALT_FILE=/work/old-salt -e NEW_SALT_FILE=/work/new-salt \
   ny-maps-shim:local node /code/rotate.js apply
+# The services' credentials, encrypted inside merchant_service_config's JSON:
+# missed by the first live switch (2026-10-13), when a ride search failed.
+docker run --rm --network host -v "$PWD/key-rotation":/code:ro \
+  -e DATABASE_URL=postgres://postgres:root@localhost:5434/atlas_dev \
+  -e OLD_PASSETTO_URL=http://localhost:8021 -e NEW_PASSETTO_URL=http://localhost:8022 \
+  ny-maps-shim:local node /code/rotate.js configs
 docker rm -f ny-passetto-new >/dev/null
 
 log "switched: passetto on the new keys, the backends on the new salt"
@@ -108,6 +114,7 @@ docker compose $KEYS up -d --no-deps passetto rider-app driver-app
 recreated=$(docker inspect ny-postgres -f '{{.State.StartedAt}}')
 [ "$recreated" = "$pg_started" ] || die "the switch restarted the database"
 docker exec ny-redis sh -c "redis-cli --scan --pattern '*Person*' | grep -v DriverLocation | xargs -r redis-cli del" >/dev/null || true
+docker exec ny-redis sh -c "redis-cli --scan --pattern '*CachedQueries:MerchantServiceConfig*' | xargs -r redis-cli del" >/dev/null || true
 up 8014 /v2/auth/channels
 up 8017 /openapi
 
@@ -117,6 +124,11 @@ echo "    rider  ${RIDER[*]}: $rider_after"
 echo "    driver ${DRIVER[*]}: $driver_after"
 [ "$rider_after" = "$rider_before" ] || die "the rider signed in as a different person"
 [ "$driver_after" = "$driver_before" ] || die "the driver signed in as a different person"
+# And a priced ride in each country: a search reads the services'
+# credentials, which sign-in never does -- the check the first live switch
+# lacked.
+bash setup.sh drivers >/dev/null
+bash setup.sh price-both
 n=$($PG -c "SELECT count(*) FROM atlas_app.person WHERE mobile_number_hash IS NOT NULL")
 echo "    $n passenger(s) with a number, every one now hashed with the new salt"
 
