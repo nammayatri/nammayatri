@@ -300,8 +300,12 @@ the registry or the map.
 `./backup.sh` — nightly, encrypted, off to cloud storage. It deliberately skips
 the 155 MB place index (rebuildable) and deliberately includes the **passetto**
 database, without which restored phone numbers are unreadable ciphertext, and
-(since 2026-10-08) the index's Arabic names by `place_id`. See the header of
-that script.
+(since 2026-10-08) the index's Arabic names by `place_id`. Since the key
+rotation (2026-10-13) it dumps the key database the live passetto actually
+reads (from its connection string: `ny-passetto-keys-db`) and carries the keys'
+master password and the hash salt inside the encrypted bundle (`key-secrets.env`),
+or no backup could be opened on another server. See the header of that script
+and `local-stack/docs/backups.md`.
 
 **Putting one back is `./restore.sh`** (2026-10-08): `rehearse offsite:latest`
 proves a backup in a throwaway copy (rehearsed on the server: 71 s, 106 tables

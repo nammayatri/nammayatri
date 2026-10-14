@@ -55,10 +55,23 @@ in that Drive.
 ### It is not `pg_dump atlas_dev`, for two reasons
 
 **The encryption keys are in a different container.** `atlas_app` stores rider
-phone numbers encrypted and the keys live in `ny-passetto-db`. A dump of
+phone numbers encrypted, and the keys live in passetto's own Postgres. A dump of
 `ny-postgres` alone restores perfectly and leaves every number permanently
 unreadable — a backup that looks complete and is not. Both databases go into the
 archive, and a restore is only meaningful with both.
+
+**Which key database: the one the live passetto reads**, taken from its own
+connection string, never a name written in the script. Since the key rotation
+of 2026-10-13 (`stack/key-rotation/`) that is `ny-passetto-keys-db`; the first
+nightly backup after it still dumped the old `ny-passetto-db` by name and could
+not have been restored, which is how this rule came about (2026-10-14). The new
+keys open only with their **master password**, and the hashes match only their
+**salt** -- both in `/opt/ny/secrets` alone -- so they travel in the backup too,
+as `key-secrets.env` inside the encrypted bundle. `restore.sh` runs passetto
+with that password, stops a live restore if this server's secrets are not the
+backup's, and puts them in place on a server that has none. Proved the same
+day: a backup taken after the fix, rehearsed in 73 s, 20 of 20 sampled numbers
+decrypted with the new keys.
 
 **Most of the database is rebuildable, and skipping it is 183 MB → 1.8 MB:**
 

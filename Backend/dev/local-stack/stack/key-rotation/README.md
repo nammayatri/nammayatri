@@ -90,6 +90,14 @@ the switch is `ci-proof.sh`, run by the ride regression on every push.
 - **After**: a complete test ride in each country (`probe-two-country-rides.py`):
   Mauritania 102 MRU, Algeria 917 DA, both COMPLETED.
 
+**The next morning (2026-10-14): the backups.** The nightly backup of 00:32
+UTC still dumped `ny-passetto-db` by name -- the old keys -- beside numbers
+already under the new ones, and the new keys' master password and salt were
+in no backup at all. `backup.sh` and `restore.sh` now take the key database
+from the live passetto's connection string and carry `key-secrets.env`; a
+backup taken after the fix was rehearsed: 73 s, 20 of 20 numbers decrypted.
+The 00:32 backup is not a usable restore point for the numbers.
+
 Left on the server, on purpose: `ny-passetto-db` (today's old keys, the
 rollback -- `window.sh rollback`), and `/root/key-rotation.*` (the window's
 safety dump). Both can go once the new keys have run without trouble for a
