@@ -22,7 +22,7 @@ import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import qualified Tools.Beam.UtilsTH
 import Prelude
 
-data AppletKey = SosAppletID | RentalAppletID | UnattendedTicketAppletID | PostRideSafetyCheckAppletID deriving (Show, Read, Eq, Ord, Generic)
+data AppletKey = SosAppletID | RentalAppletID | UnattendedTicketAppletID | PostRideSafetyCheckAppletID | SupportCallAppletID deriving (Show, Read, Eq, Ord, Generic)
 
 instance Hashable AppletKey
 
@@ -33,6 +33,7 @@ appletKeyToString = \case
   RentalAppletID -> "RentalAppletID"
   UnattendedTicketAppletID -> "UnattendedTicketAppletID"
   PostRideSafetyCheckAppletID -> "PostRideSafetyCheckAppletID"
+  SupportCallAppletID -> "SupportCallAppletID"
 
 stringToAppletKey :: Text -> Maybe AppletKey
 stringToAppletKey = \case
@@ -40,6 +41,7 @@ stringToAppletKey = \case
   "RentalAppletID" -> Just RentalAppletID
   "UnattendedTicketAppletID" -> Just UnattendedTicketAppletID
   "PostRideSafetyCheckAppletID" -> Just PostRideSafetyCheckAppletID
+  "SupportCallAppletID" -> Just SupportCallAppletID
   _ -> Nothing
 
 instance ToJSON AppletKey where

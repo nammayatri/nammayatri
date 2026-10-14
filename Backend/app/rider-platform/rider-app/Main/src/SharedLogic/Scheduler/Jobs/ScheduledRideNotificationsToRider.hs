@@ -144,7 +144,7 @@ sendCommunicationToCustomer SendCommunicationToCustomerReq {..} = do
             Call.InitiateCallReq
               { fromPhoneNum = phoneNumber,
                 toPhoneNum = Nothing,
-                attachments = Call.Attachments $ DCall.CallAttachments {callStatusId = callStatusId, rideId = fromMaybe (cast person.id) rideId}, -- temporary fix
+                attachments = Call.Attachments $ DCall.CallAttachments {callStatusId = callStatusId, rideId = rideId},
                 appletId = maybeAppId
               }
       exotelResponse <- Call.initiateCall merchantId merchantOperatingCityId callReq

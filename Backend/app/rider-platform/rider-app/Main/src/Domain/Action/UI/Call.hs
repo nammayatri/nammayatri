@@ -21,6 +21,7 @@ module Domain.Action.UI.Call
     GetDriverMobileNumberResp,
     GetCallStatusRes,
     initiateCallToDriver,
+    initiateCallToSupport,
     callStatusCallback,
     directCallStatusCallback,
     getCallStatus,
@@ -43,12 +44,15 @@ import Data.Text.Lazy.Builder (fromString, toLazyText)
 import Data.Time.Clock.POSIX (POSIXTime, utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.CallEvent as DCE
 import qualified Domain.Types.Booking as BT
+import qualified Domain.Types.BookingStatus as DBookingStatus
 import Domain.Types.CallStatus
 import qualified Domain.Types.CallStatus as DCS
 import qualified Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideStatus as DRideStatus
+import qualified Domain.Types.RiderConfig as DRC
 import Environment (Flow)
 import EulerHS.Prelude (Alternative ((<|>)))
 import Kernel.Beam.Functions
@@ -67,7 +71,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
-import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -79,6 +83,7 @@ import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
@@ -99,7 +104,8 @@ type CallCallbackReq = Call.ExotelCallCallbackReq CallAttachments
 
 data CallAttachments = CallAttachments
   { callStatusId :: Id DCS.CallStatus,
-    rideId :: Id SRide.Ride
+    -- Absent for a support call on a confirmed booking that has no ride yet.
+    rideId :: Maybe (Id SRide.Ride)
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
@@ -146,7 +152,7 @@ initiateCallToDriver rideId = do
         Call.InitiateCallReq
           { fromPhoneNum = customerPhone,
             toPhoneNum = Just providerPhone,
-            attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = rideId},
+            attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = Just rideId},
             appletId = Nothing
           }
   let merchantOperatingCityId = booking.merchantOperatingCityId
@@ -181,13 +187,87 @@ initiateCallToDriver rideId = do
             customerIvrResponse = Nothing
           }
 
+initiateCallToSupport :: Id BT.Booking -> Id Person -> Flow CallRes
+initiateCallToSupport bookingId personId = do
+  requested <- QB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  unless (requested.riderId == personId) $ throwError AccessDenied
+  -- Reallocation retires the booking and mints a new id under the same transactionId, so a
+  -- client still holding the pre-reallocation id has to resolve forward to the live one.
+  booking <-
+    if requested.status == DBookingStatus.REALLOCATED
+      then QB.findByTransactionId requested.transactionId >>= fromMaybeM (BookingNotFound bookingId.getId)
+      else pure requested
+  mbRide <- QRide.findActiveByRBId booking.id
+  -- Keyed on the booking, not the ride: a scheduled rental sits CONFIRMED with no ride row
+  -- for hours, which is exactly when the customer wants a human.
+  let withinCallWindow =
+        booking.status == DBookingStatus.CONFIRMED
+          || maybe False (\ride -> ride.status `elem` [DRideStatus.UPCOMING, DRideStatus.NEW, DRideStatus.INPROGRESS]) mbRide
+  unless withinCallWindow $
+    throwError (InvalidRequest "Support call is available only for a confirmed booking or a live ride")
+  unless (isSupportCallEligible booking.bookingDetails) $
+    throwError (InvalidRequest "Support call is available only for rental and intercity rides")
+  let merchantOperatingCityId = booking.merchantOperatingCityId
+  riderConfig <-
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+      >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  -- Same shape as the safety alert to a CX agent: the applet owns agent routing, so the
+  -- mapping is both the dial plan and the per-city kill switch. appletId only takes effect
+  -- when toPhoneNum is Nothing (Exotel's ConnectToCallFlow), so the two are exclusive.
+  appletId <-
+    ((HM.lookup DRC.SupportCallAppletID . DRC.exotelMap) =<< riderConfig.exotelAppIdMapping)
+      & fromMaybeM (InvalidRequest "Support call is not configured for this city")
+  customerPhone <- getPerson booking >>= getPersonPhone
+  callStatusId <- generateGUID
+  let callReq =
+        Call.InitiateCallReq
+          { fromPhoneNum = customerPhone,
+            toPhoneNum = Nothing,
+            -- No ride leg: the row and the callback stay unlinked from the ride, so the
+            -- driver-call fallback can never fire and findOneByRideId can never pick this row up.
+            attachments = Call.Attachments $ CallAttachments {callStatusId = callStatusId, rideId = Nothing},
+            appletId = Just appletId
+          }
+  exotelResponse <- Call.initiateCall booking.merchantId merchantOperatingCityId callReq
+  logTagInfo ("BookingId: " <> getId booking.id) "Support call initiated from customer to the CX applet."
+  callStatus <- buildSupportCallStatus callStatusId exotelResponse booking
+  QCallStatus.create callStatus
+  pure $ CallRes callStatusId
+  where
+    -- Gating on the bookingDetails constructor, not booking.tripCategory, which is Maybe and null on older rows.
+    isSupportCallEligible = \case
+      BT.RentalDetails {} -> True
+      BT.InterCityDetails {} -> True
+      _ -> False
+
+    buildSupportCallStatus callStatusId exotelResponse booking = do
+      now <- getCurrentTime
+      pure
+        CallStatus
+          { id = callStatusId,
+            callId = exotelResponse.callId,
+            rideId = Nothing,
+            dtmfNumberUsed = Nothing,
+            status = exotelResponse.callStatus,
+            conversationDuration = 0,
+            recordingUrl = Nothing,
+            merchantId = Just booking.merchantId.getId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            callService = Just Call.Exotel,
+            callError = Nothing,
+            callAttempt = Just $ handleCallStatus exotelResponse.callStatus,
+            createdAt = now,
+            updatedAt = now,
+            customerIvrResponse = Nothing
+          }
+
 callStatusCallback :: (CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], EventStreamFlow m r) => CallCallbackReq -> m CallCallbackRes
 callStatusCallback req = do
   let callStatusId = req.customField.callStatusId
   callStatus <- QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist
   let interfaceStatus = exotelStatusToInterfaceStatus req.status
   let dCallStatus = Just $ handleCallStatus (interfaceStatus)
-  isSendFCMSuccess <- sendFCMToDriverOnCallFailure interfaceStatus (Just req.customField.rideId) callStatus.merchantId
+  isSendFCMSuccess <- sendFCMToDriverOnCallFailure interfaceStatus req.customField.rideId callStatus.merchantId
   let callAttemptStatus = if isSendFCMSuccess then Just DCallStatus.Resolved else dCallStatus
   QCallStatus.updateCallStatus req.conversationDuration (Just req.recordingUrl) interfaceStatus callAttemptStatus callStatusId
   return Ack
@@ -393,10 +473,12 @@ sendFCMToDriverOnCallFailure ::
   Maybe Text ->
   m Bool
 sendFCMToDriverOnCallFailure callStatus mbRideId mbMerchantId =
-  if isFailureStatus callStatus
-    then do
+  -- An absent rideId means the call had no driver leg (support call, IVR to the rider), so
+  -- there is no one to nudge; skip rather than throw, which would abort the status callback
+  -- before it records the final status.
+  case (isFailureStatus callStatus, mbRideId) of
+    (True, Just rideId) -> do
       deploymentVersion <- asks (.version)
-      rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") mbRideId
       ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
       booking <- runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
       merchantId <- fromMaybeM (RideFieldNotPresent "merchantId") mbMerchantId
@@ -404,7 +486,7 @@ sendFCMToDriverOnCallFailure callStatus mbRideId mbMerchantId =
       fork "updating in prometheus" $ incrementCounter (getId booking.merchantOperatingCityId) "call_attempt" deploymentVersion.getDeploymentVersion
       void $ CallBPPInternal.callCustomerFCM merchant.driverOfferApiKey merchant.driverOfferBaseUrl (getId ride.bppRideId)
       return True
-    else return False
+    _ -> return False
   where
     isFailureStatus :: CallTypes.CallStatus -> Bool
     isFailureStatus status = status `elem` [CallTypes.INVALID_STATUS, CallTypes.NOT_CONNECTED, CallTypes.FAILED]
