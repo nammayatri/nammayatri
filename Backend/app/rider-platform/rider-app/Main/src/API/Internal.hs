@@ -11,7 +11,6 @@ import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Action.UI.ZendeskWebhook as ZendeskWebhook
 import qualified API.Internal.Auth as Auth
-import qualified API.Internal.BetterDriverSwapAssign as BetterDriverSwapAssign
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
@@ -51,7 +50,6 @@ type API =
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
            :<|> OneShotAssign.API
-           :<|> BetterDriverSwapAssign.API
            :<|> GetPickupInstructions.API
            :<|> AlertWebhook.API
            :<|> EKDLiveCallFeedback.API
@@ -86,7 +84,6 @@ handler =
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
     :<|> OneShotAssign.handler
-    :<|> BetterDriverSwapAssign.handler
     :<|> GetPickupInstructions.handler
     :<|> AlertWebhook.handler
     :<|> EKDLiveCallFeedback.handler

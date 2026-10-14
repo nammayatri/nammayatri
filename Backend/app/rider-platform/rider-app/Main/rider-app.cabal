@@ -68,7 +68,6 @@ library
       API.IGM
       API.Internal
       API.Internal.Auth
-      API.Internal.BetterDriverSwapAssign
       API.Internal.Cac
       API.Internal.DriverArrivalNotf
       API.Internal.EKDLiveCallFeedback
@@ -291,7 +290,6 @@ library
       Domain.Action.DashboardAuth.Management.NammaTag
       Domain.Action.DashboardAuth.Management.Notification
       Domain.Action.Internal.Auth
-      Domain.Action.Internal.BetterDriverSwapAssign
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser

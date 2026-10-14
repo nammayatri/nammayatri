@@ -78,7 +78,8 @@ data OneShotAssignReq = OneShotAssignReq
     specialLocationTag :: Maybe Text,
     isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
-    billingCategory :: BillingCategory
+    billingCategory :: BillingCategory,
+    oldBppBookingId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -166,6 +167,7 @@ processAssignment req = do
   -- the BPP cancel and the customer's search expire instead of silently breaking payment.
   when merchant.onlinePayment $
     throwError $ InvalidRequest "One-shot assignment is not supported for online-payment merchants"
+  mbOldBooking <- mapM (\oldId -> QRideB.findByBPPBookingId (Id oldId) >>= fromMaybeM (BookingDoesNotExist $ "oldBppBookingId-" <> oldId)) req.oldBppBookingId
   -- Resume-safe: a previous attempt may have crashed after booking creation; the BPP
   -- retry must continue from the ride step instead of failing on the duplicate guard.
   mbExistingBooking <- QRideB.findByBPPBookingId (Id req.bppBookingId)
@@ -213,7 +215,7 @@ processAssignment req = do
                 merchant = merchant,
                 requiresPaymentBeforeConfirm = False,
                 supportsBookingDeposit = Nothing,
-                mbBetterDriverSwapDetails = Nothing,
+                mbBetterDriverSwapDetails = (\oldBooking -> SConfirm.BetterDriverSwapDetails {oldBookingId = oldBooking.id}) <$> mbOldBooking,
                 mbOneShotDetails =
                   Just
                     SConfirm.OneShotConfirmDetails
@@ -306,7 +308,7 @@ processAssignment req = do
                 assignedVehicleVariant = Just req.vehicleDetails.variant,
                 otp = req.otp,
                 isInitiatedByCronJob = False,
-                isBetterDriverSwap = False,
+                isBetterDriverSwap = isJust req.oldBppBookingId,
                 isTierUpgrade = req.isTierUpgrade,
                 assignedServiceTierName = req.assignedServiceTierName
               },

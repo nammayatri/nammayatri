@@ -17,7 +17,7 @@
 -- The Beckn relay cannot do this: on_select reaches a BAP still holding the rider's live
 -- TRIP_ASSIGNED booking, whose confirm rejects it (ACTIVE_BOOKING_ALREADY_PRESENT). So
 -- this replaces sendDriverOffer - the same hook SharedLogic.OneShotAssign uses - creating
--- booking + ride here and telling the BAP via its own callback.
+-- booking + ride here and telling the BAP via the one-shot callback (oldBppBookingId set).
 module SharedLogic.BetterDriverSwap
   ( BetterDriverSwapReq (..),
     betterDriverSwapAssign,
@@ -25,7 +25,6 @@ module SharedLogic.BetterDriverSwap
 where
 
 import qualified Domain.Action.Beckn.Init as DInit
-import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -34,15 +33,12 @@ import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.DriverStats as DStats
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.TransporterConfig (TransporterConfig)
-import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -51,9 +47,8 @@ import SharedLogic.Booking (cancelBooking)
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import SharedLogic.Cancel (mkCancelSearchInitLockKey)
-import SharedLogic.FareCalculator (mkFareParamsBreakups)
 import qualified SharedLogic.MetricsLabels as SML
-import SharedLogic.OneShotAssign (buildAssignedDriverRideRes)
+import SharedLogic.OneShotAssign (buildAssignedDriverRideRes, buildOneShotAssignPayload)
 import SharedLogic.QuickRetry (withQuickRetry)
 import SharedLogic.Ride (deactivateExistingQuotes, initializeRide)
 import qualified Storage.Queries.Booking as QRB
@@ -130,9 +125,9 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
               }
       -- NOT forked: the old ride is only cancelled once the BAP accepts the replacement.
       -- Cancelling first and failing here would leave the rider with no ride at all.
-      payload <- buildBetterDriverSwapPayload prefetch oldBooking booking ride driver vehicle driverQuote
+      payload <- (\p -> p {CallBAPInternal.oldBppBookingId = Just oldBooking.id.getId}) <$> buildOneShotAssignPayload prefetch booking ride driver vehicle driverQuote
       appBackendBapInternal <- asks (.appBackendBapInternal)
-      void $ withQuickRetry $ CallBAPInternal.betterDriverSwapAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
+      void $ withQuickRetry $ CallBAPInternal.oneShotAssign appBackendBapInternal.apiKey appBackendBapInternal.url payload
       logInfo $ "Better-driver swap: BAP accepted replacement booking " <> booking.id.getId <> " for old booking " <> oldBookingIdText
       -- BAP is now pointing the rider at the new booking, so retire the old ride.
       cancelOldRide oldBooking oldRide
@@ -188,64 +183,3 @@ betterDriverSwapAssign BetterDriverSwapReq {..} = do
         case cancelUpdateResult of
           Right _ -> logInfo $ "Better-driver swap: BAP told to cancel old booking " <> oldBooking.id.getId
           Left err -> logError $ "Better-driver swap: telling BAP to cancel old booking " <> oldBooking.id.getId <> " failed: " <> show err
-
--- | Reuses the rideAssignedCommon builder the Beckn RIDE_ASSIGNED paths use, so driver
--- image, birthday and favourites behave identically.
-buildBetterDriverSwapPayload :: BP.RideAssignedPrefetch -> DRB.Booking -> DRB.Booking -> DRide.Ride -> DPerson.Person -> DVeh.Vehicle -> DDQ.DriverQuote -> Flow CallBAPInternal.BetterDriverSwapAssignReq
-buildBetterDriverSwapPayload prefetch oldBooking booking ride driver vehicle driverQuote = do
-  buildReq <- BP.rideAssignedCommonPrefetched prefetch booking ride driver vehicle
-  rideAssignedReq <- case buildReq of
-    DOU.RideAssignedBuildReq r -> pure r
-    DOU.ScheduledRideAssignedBuildReq r -> pure r
-    _ -> throwError $ InternalError "rideAssignedCommon returned an unexpected build request"
-  let bookingDetails = rideAssignedReq.bookingDetails
-  driverName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
-  driverMobile <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  let fareBreakups = mkFareParamsBreakups True identity CallBAPInternal.OneShotFareBreakupItem booking.fareParams
-  pure
-    CallBAPInternal.BetterDriverSwapAssignReq
-      { oldBppBookingId = oldBooking.id.getId,
-        bppEstimateId = driverQuote.estimateId.getId,
-        bppQuoteId = driverQuote.id.getId,
-        bppBookingId = booking.id.getId,
-        bppRideId = ride.id.getId,
-        currency = booking.currency,
-        estimatedFare = booking.estimatedFare,
-        commission = booking.commission,
-        paymentCharge = booking.paymentCharge,
-        paymentChargeBearer = booking.paymentChargeBearer,
-        fareBreakups = fareBreakups,
-        quoteValidTill = driverQuote.validTill,
-        otp = fromMaybe ride.otp ride.endOtp,
-        trackingUrl = ride.trackingUrl,
-        driverDetails =
-          CallBAPInternal.OneShotDriverDetails
-            { name = driverName,
-              mobileCountryCode = driver.mobileCountryCode,
-              mobileNumber = driverMobile,
-              rating = SP.roundToOneDecimal <$> bookingDetails.driverStats.rating,
-              registeredAt = Just driver.createdAt,
-              image = rideAssignedReq.image,
-              isDriverBirthDay = rideAssignedReq.isDriverBirthDay,
-              accountId = Nothing
-            },
-        vehicleDetails =
-          CallBAPInternal.OneShotVehicleDetails
-            { number = bookingDetails.vehicle.registrationNo,
-              color = Just bookingDetails.vehicle.color,
-              model = Just bookingDetails.vehicle.model,
-              variant = bookingDetails.vehicle.variant,
-              serviceTierType = booking.vehicleServiceTier,
-              serviceTierName = Just booking.vehicleServiceTierName,
-              vehicleAge = rideAssignedReq.vehicleAge
-            },
-        distanceToPickup = Just driverQuote.distanceToPickup,
-        durationToPickup = Just driverQuote.durationToPickup,
-        isAlreadyFav = rideAssignedReq.isAlreadyFav,
-        favCount = Just rideAssignedReq.favCount,
-        isSafetyPlus = rideAssignedReq.isSafetyPlus,
-        isFreeRide = rideAssignedReq.isFreeRide,
-        specialLocationTag = booking.specialLocationTag,
-        assignedServiceTierName = rideAssignedReq.assignedServiceTierName,
-        billingCategory = booking.billingCategory
-      }
