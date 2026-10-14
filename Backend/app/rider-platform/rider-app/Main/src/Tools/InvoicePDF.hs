@@ -187,9 +187,9 @@ generatePDFFromHTML htmlPath pdfPath = do
 -- | Calculate total amount from actual ride computed prices
 calculateTotalAmount :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
 calculateTotalAmount bookings =
+  -- The booking deposit is refunded when the ride completes, so it is not part of what the rider paid.
   let amounts = mapMaybe getRideComputedPrice bookings
-      fees = mapMaybe (fmap toRational . DBAPI.getBookingApiDeposit) bookings
-   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts + sum fees)
+   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
   where
     getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
     getRideComputedPrice booking = do
@@ -315,16 +315,6 @@ generateRideCard booking =
       safeDriverName = escapeHtml driverName
       safeVehicleNumber = escapeHtml vehicleNumber
       safeRideId = escapeHtml rideId
-      bookingFeeLine = case DBAPI.getBookingApiDeposit booking of
-        Just fee ->
-          T.concat
-            [ "<div class='ride-header'>",
-              "<span class='ride-fare'>Booking Deposit: ₹",
-              T.pack $ printf "%.0f" (realToFrac fee :: Double),
-              "</span>",
-              "</div>"
-            ]
-        Nothing -> ""
    in T.concat
         [ "<div class='ride-card'>",
           "<div class='ride-header'>",
@@ -332,7 +322,6 @@ generateRideCard booking =
           amount,
           "</span>",
           "</div>",
-          bookingFeeLine,
           -- Pickup location
           "<div class='location-row'>",
           "<span class='dot green-dot'></span>",

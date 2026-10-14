@@ -165,12 +165,9 @@ bookingSync merchant merchantOpCityId reqBookingId = do
         cancellationReason <- mkBookingCancellationReason merchant.id Common.syncBookingCode (Just ride.id) booking.distanceUnit bookingId booking.riderId
         QBooking.updateStatus booking.riderId bookingId bookingNewStatus
         when (bookingNewStatus == DBooking.CANCELLED) $ QBCR.upsert cancellationReason
-      when (isJust booking.bookingDepositAmount) $
-        void . withTryCatch "bookingSync:settleBookingDeposit" $
-          case bookingNewStatus of
-            DBooking.COMPLETED -> void $ BookingDeposit.captureBookingDeposit booking
-            DBooking.CANCELLED -> BookingDeposit.refundBookingDeposit booking
-            _ -> pure ()
+      -- Completed rides return the deposit too: only a fee-bearing cancellation captures it.
+      when (isJust booking.bookingDepositAmount && bookingNewStatus `elem` [DBooking.COMPLETED, DBooking.CANCELLED]) $
+        void . withTryCatch "bookingSync:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
       let updBooking = booking{status = bookingNewStatus}
           dStatusReq = DStatusReq {booking = updBooking, merchant, city}
       becknStatusReq <- buildStatusReqV2 dStatusReq
