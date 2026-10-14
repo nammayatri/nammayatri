@@ -1002,7 +1002,12 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     Just newRC -> do
       let isInvalid = newRC.verificationStatus == Documents.INVALID
       when (isInvalid && null newRC.failedRules) $
-        throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+        throwError
+          ( InvalidRequest $
+              fromMaybe
+                ("No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
+                newRC.rejectReason
+          )
       RCQuery.upsert newRC
       createRCAssociationIfNotExists personId requestor.role newRC transporterConfig now
 

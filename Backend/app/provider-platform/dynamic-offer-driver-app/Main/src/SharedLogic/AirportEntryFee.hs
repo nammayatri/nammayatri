@@ -14,7 +14,7 @@
 
 module SharedLogic.AirportEntryFee
   ( checkAirportEntryFeeBalanceBeforeStartRide,
-    deductAirportEntryFeeAtEndRide,
+    deductAirportEntryFeeAtStartRide,
     ensureDriverEnabledForAirportPickup,
     isAirportPickupArea,
     requiredEntryFeeForBooking,
@@ -104,10 +104,10 @@ driverFeeItemsOfGate mbGate mbCurrency =
 -- | Total amount the driver's wallet must cover before the ride.
 --   A gate pins this directly with @minBalanceRequired@, which is a policy floor rather than
 --   a price: set it above what the ride actually costs and the wallet still clears the check
---   for the driver's next airport ride after the EndRide deduction. When the gate leaves it
+--   for the driver's next airport ride after the StartRide deduction. When the gate leaves it
 --   unset (or non-positive) we fall back to what the ride will actually debit -- the airport
 --   entry fee (when enabled and not EDC-collected) plus every gate DriverFeeItem.
---   This only sets the bar for the pre-ride check; the amount debited at EndRide is untouched
+--   This only sets the bar for the pre-ride check; the amount debited at StartRide is untouched
 --   and always the real fee, so the override never charges the driver more.
 requiredDriverWalletAmountForBooking ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -170,15 +170,16 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking = do
     when (available < required) $
       throwError $ InsufficientAirportBalance required available
 
--- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
+-- | At StartRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
-deductAirportEntryFeeAtEndRide ::
+--   Runs inside startRide before the ride is marked INPROGRESS, so a failed debit fails the start.
+deductAirportEntryFeeAtStartRide ::
   (BeamFlow m r, CacheFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, Finance.HasActorInfo m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Bool ->
   DRide.Ride ->
   SRB.Booking ->
   m ()
-deductAirportEntryFeeAtEndRide enabled ride booking = do
+deductAirportEntryFeeAtStartRide enabled ride booking = do
   entryFee <- fromMaybe 0 <$> requiredEntryFeeForBooking enabled booking.pickupGateId (Just booking.vehicleServiceTier) booking.fareSettlementType
   gateFeeItems <- driverGateFeeItemsForGate booking.pickupGateId (Just booking.currency)
   unless (entryFee <= 0 && null gateFeeItems) $ do
