@@ -104,7 +104,6 @@ import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.ActiveDriversList as ADL
-import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import SharedLogic.Allocator
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
@@ -351,9 +350,6 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
   -- 2. Wallet Flow
   when walletFinanceEnabled $ do
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
-
-  -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
-  AirportEntryFee.deductAirportEntryFeeAtEndRide (fromMaybe False thresholdConfig.airportEntryFeeEnabled) ride booking
   where
     settlementOwnerId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId
 
