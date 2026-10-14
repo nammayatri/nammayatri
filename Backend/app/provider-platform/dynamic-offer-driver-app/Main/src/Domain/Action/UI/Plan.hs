@@ -1246,7 +1246,8 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = Nothing,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
   paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- Payment.createOrder merchantId merchantOpCityId paymentServiceName (Just driver.id.getId)
