@@ -13,9 +13,14 @@
 -}
 
 module Storage.CachedQueries.PickupRoute
-  ( cachePickupRoute,
+  ( PickupEtaBasis (..),
+    cachePickupRoute,
     getPickupRouteFromCache,
     invalidatePickupRouteCache,
+    isPickupSpeedRefreshDue,
+    markPickupSpeedRefreshed,
+    cachePickupEtaBasis,
+    getPickupEtaBasis,
   )
 where
 
@@ -25,6 +30,9 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+
+pickupRouteTtlSeconds :: Int
+pickupRouteTtlSeconds = 1800
 
 makePickupRouteKey :: Id Ride -> Text
 makePickupRouteKey rideId = "CachedQueries:PickupRoute:RideId-" <> rideId.getId
@@ -36,7 +44,7 @@ cachePickupRoute ::
   m ()
 cachePickupRoute rideId routePoints = do
   let key = makePickupRouteKey rideId
-  Hedis.setExp key routePoints 1800 -- 30 minutes TTL
+  Hedis.setExp key routePoints pickupRouteTtlSeconds
 
 getPickupRouteFromCache ::
   (CacheFlow m r) =>
@@ -53,3 +61,35 @@ invalidatePickupRouteCache ::
 invalidatePickupRouteCache rideId = do
   let key = makePickupRouteKey rideId
   Hedis.del key
+
+defaultPickupEtaRefreshIntervalSeconds :: Int
+defaultPickupEtaRefreshIntervalSeconds = 60
+
+makePickupSpeedRefreshKey :: Id Ride -> Text
+makePickupSpeedRefreshKey rideId = "CachedQueries:PickupSpeedRefresh:RideId-" <> rideId.getId
+
+isPickupSpeedRefreshDue :: (CacheFlow m r) => Id Ride -> m Bool
+isPickupSpeedRefreshDue rideId = do
+  mbMarker <- Hedis.safeGet (makePickupSpeedRefreshKey rideId)
+  pure $ isNothing (mbMarker :: Maybe Bool)
+
+markPickupSpeedRefreshed :: (CacheFlow m r) => Id Ride -> Maybe Seconds -> m ()
+markPickupSpeedRefreshed rideId mbInterval =
+  Hedis.setExp (makePickupSpeedRefreshKey rideId) True $
+    maybe defaultPickupEtaRefreshIntervalSeconds (.getSeconds) mbInterval
+
+data PickupEtaBasis = PickupEtaBasis
+  { durationSeconds :: Seconds,
+    computedAt :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makePickupEtaBasisKey :: Id Ride -> Text
+makePickupEtaBasisKey rideId = "CachedQueries:PickupEtaBasis:RideId-" <> rideId.getId
+
+cachePickupEtaBasis :: (CacheFlow m r) => Id Ride -> Seconds -> UTCTime -> m ()
+cachePickupEtaBasis rideId durationSeconds computedAt =
+  Hedis.setExp (makePickupEtaBasisKey rideId) PickupEtaBasis {..} pickupRouteTtlSeconds
+
+getPickupEtaBasis :: (CacheFlow m r) => Id Ride -> m (Maybe PickupEtaBasis)
+getPickupEtaBasis rideId = Hedis.safeGet (makePickupEtaBasisKey rideId)
