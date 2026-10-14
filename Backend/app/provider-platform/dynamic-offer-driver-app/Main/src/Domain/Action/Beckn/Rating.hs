@@ -242,9 +242,12 @@ buildRating merchantId merchantOperatingCityId rideId driverId ratingValue feedb
   let updatedAt = now
   pure $ DRating.Rating {..}
 
-validateRequest :: DRatingReq -> Flow DRide.Ride
-validateRequest req = do
-  booking <- B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+-- | mbPrefetchedBooking is reused only when it is the booking the request resolved to; otherwise the booking is read here.
+validateRequest :: DRatingReq -> Maybe DBooking.Booking -> Flow DRide.Ride
+validateRequest req mbPrefetchedBooking = do
+  booking <- case mbPrefetchedBooking of
+    Just prefetched | prefetched.id == req.bookingId -> pure prefetched
+    _ -> B.runInReplica $ QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   ride <-
     QRide.findActiveByRBId booking.id
       >>= fromMaybeM (RideNotFound booking.id.getId)
