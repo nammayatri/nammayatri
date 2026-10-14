@@ -60,7 +60,6 @@ import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Pricing
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
-import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.VehicleServiceTier as CQDVST
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
@@ -142,13 +141,12 @@ computeBetterDriverSearchRadiusOverride searchTry
             case mbRide of
               Nothing -> pure Nothing
               Just ride -> do
-                mbMerchant <- QMerchant.findById booking.providerId
                 mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
-                case (,) <$> mbMerchant <*> (mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters)) of
+                case mbTransporterConfig >>= (.betterDriverSearchMaxRadiusMeters) of
                   Nothing -> pure Nothing
-                  Just (merchant, cap) -> do
+                  Just cap -> do
                     -- Pre-pickup driver: pings are in LTS's on_pickup bucket, not on_ride.
-                    driverLocationResp <- LTSF.pickupDriverLocation ride.id merchant.id ride.driverId
+                    driverLocationResp <- LTSF.pickupDriverLocation ride.id booking.providerId ride.driverId
                     pure $
                       ( \latest ->
                           highPrecMetersToMeters (min (distanceBetweenInMeters (LatLong latest.lat latest.lon) (getCoordinates booking.fromLocation)) cap)
