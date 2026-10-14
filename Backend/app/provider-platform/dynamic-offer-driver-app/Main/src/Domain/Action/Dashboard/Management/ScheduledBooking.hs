@@ -28,6 +28,7 @@ import qualified API.UI.Issue as AUI
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub, nubBy, sortOn)
 import qualified Data.Map.Strict as Map
+import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Driver as UIDriver
 import Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl)
@@ -35,6 +36,7 @@ import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.DriverLocation as DDL
+import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -76,6 +78,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
@@ -85,6 +88,7 @@ import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
+import qualified Storage.Queries.RiderDriverCorrelation as QRDC
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import qualified Tools.Maps as Maps
@@ -118,6 +122,10 @@ maxLookbackSeconds = 7 * 24 * 60 * 60
 -- does not pass one.
 defaultNearbyRadiusKm :: Double
 defaultNearbyRadiusKm = 5.0
+
+-- | Nearby-driver page size; also the cap on a caller's limit.
+maxNearbyLimit :: Int
+maxNearbyLimit = 100
 
 maxLimit :: Int
 maxLimit = 20
@@ -161,7 +169,8 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
         (_, Just Common.UNASSIGNED) -> [SRB.NEW]
         (True, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED, SRB.COMPLETED, SRB.CANCELLED, SRB.REALLOCATED]
         (False, Nothing) -> [SRB.NEW, SRB.TRIP_ASSIGNED]
-  -- History pages by transaction (it includes superseded attempts); live statuses exclude those, so a booking page is a transaction page.
+  -- Both views page by transaction: history includes superseded attempts, and the live booking of a
+  -- scheduled transaction may itself be unscheduled (see the live branch).
   (rows, hasMorePages, txnBookings) <-
     if isHistory
       then do
@@ -170,10 +179,14 @@ getScheduledBookingList merchantShortId opCity mbAssignmentStatus mbFrom mbIsHis
         pageTxnBookings <- QBookingLite.findAllByTransactionIdsLite pageTxnIds
         pure (latestBookingPerTransaction pageTxnBookings pageTxnIds, length txnIds > limit, pageTxnBookings)
       else do
-        liteBookings <- QBookingLite.findScheduledUpcomingBookingsLite merchantOpCity.id statuses fromTime toTime (limit + 1) offset
-        let pageRows = take limit liteBookings
-        pageTxnBookings <- QBookingLite.findAllByTransactionIdsLite (nub $ map (.transactionId) pageRows)
-        pure (pageRows, length liteBookings > limit, pageTxnBookings)
+        scheduledBookings <- QBookingLite.findScheduledBookingsInWindowLite merchantOpCity.id (statuses <> [SRB.CANCELLED, SRB.REALLOCATED]) fromTime toTime
+        let scheduledTxnIds = nub $ map (.transactionId) scheduledBookings
+        allTxnBookings <- QBookingLite.findAllByTransactionIdsLite scheduledTxnIds
+        let liveRows =
+              sortOn (\b -> (b.startTime, b.id.getId)) . filter ((`elem` statuses) . (.status)) $
+                latestBookingPerTransaction allTxnBookings scheduledTxnIds
+            pageRows = take limit $ drop offset liveRows
+        pure (pageRows, length liveRows > offset + limit, allTxnBookings)
   ctx <- buildListPageContext isHistory txnBookings rows
   let bookings = map (buildListItem ctx) rows
   pure Common.ScheduledBookingListRes {totalItems = offset + length rows + (if hasMorePages then 1 else 0), bookings}
@@ -273,6 +286,17 @@ buildListItem ctx booking =
           cancellationAdditionalInfo = (.additionalInfo) =<< mbCancellation
         }
 
+-- | Latest booking of a scheduled transaction. Once any booking of a transaction is scheduled, all of
+-- them are: reallocating near pickup creates the next booking with isScheduled = False
+-- (SharedLogic.Cancel), and ops must still be able to open and act on it. Same rule as the list queries.
+findScheduledTransactionBooking :: DM.Merchant -> DMOC.MerchantOperatingCity -> Text -> Flow SRB.Booking
+findScheduledTransactionBooking merchant merchantOpCity transactionId = do
+  txnBookings <- QBooking.findAllByTransactionId transactionId
+  booking <- listToMaybe (sortOn (Down . (.createdAt)) txnBookings) & fromMaybeM (BookingNotFound transactionId)
+  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && any (.isScheduled) txnBookings) $
+    throwError (BookingNotFound transactionId)
+  pure booking
+
 getScheduledBookingInfo ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -283,9 +307,7 @@ getScheduledBookingInfo merchantShortId opCity transactionId = do
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
-  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
-    throwError (BookingNotFound transactionId)
+  booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
   mbRide <- QRide.findActiveByRBId booking.id
   mbRiderPhoneNo <- fetchRiderPhone booking.riderId
   (mbDriverName, mbDriverPhoneNo) <- fetchDriverNameAndPhone (mbRide <&> (.driverId))
@@ -365,9 +387,7 @@ getScheduledBookingDriverDistance merchantShortId opCity transactionId = do
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
-  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
-    throwError (BookingNotFound transactionId)
+  booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
   now <- getCurrentTime
   mbRide <- QRide.findActiveByRBId booking.id
   case mbRide of
@@ -397,16 +417,22 @@ getScheduledBookingNearbyDrivers ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Int ->
   Maybe Double ->
+  Maybe Int ->
+  Maybe Bool ->
+  Maybe Double ->
+  Maybe Common.NearbyDriverSortBy ->
+  Maybe Text ->
   Flow Common.NearbyDriversRes
-getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm = do
+getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbLimit mbMaxCancellationRatePercent mbMinCompletedRides mbMinRating mbOffset mbOnlyFavourites mbRadiusKm mbSortBy mbTags = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
-  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
-    throwError (BookingNotFound transactionId)
+  booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
   now <- getCurrentTime
   transporterConfig <-
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
@@ -417,51 +443,106 @@ getScheduledBookingNearbyDrivers merchantShortId opCity transactionId mbRadiusKm
       radiusKm = max 0 $ fromMaybe defaultNearbyRadiusKm mbRadiusKm
       radiusMeters = round (radiusKm * 1000) :: Int
       pickupLatLong = KEMT.LatLong {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
+      limit = min maxNearbyLimit . max 1 $ fromMaybe maxNearbyLimit mbLimit
+      offset = max 0 $ fromMaybe 0 mbOffset
+      requiredTags = filter (not . T.null) . map T.strip $ maybe [] (T.splitOn ",") mbTags
+      emptyRes = Common.NearbyDriversRes {radiusKm, searchedAt = now, totalCount = 0, drivers = []}
   driverLocations <- nubBy (\x y -> x.driverId == y.driverId) <$> LF.nearBy booking.fromLocation.lat booking.fromLocation.lon (Just False) Nothing radiusMeters merchant.id Nothing Nothing Nothing
   let driverIds = (.driverId) <$> driverLocations
   if null driverIds
-    then pure Common.NearbyDriversRes {radiusKm, searchedAt = now, drivers = []}
+    then pure emptyRes
     else do
       -- One batched mGet over LTS redis (primary + secondary) for the whole pool.
-      poolData <- DPD.getDriverPoolDataBatch (cast <$> driverIds)
-      let poolByDriver = Map.fromList [(pd.driverId, pd) | pd <- poolData]
+      driverPool <- DPD.getDriverPoolDataBatch (cast <$> driverIds)
+      let poolByDriver = Map.fromList [(pd.driverId, pd) | pd <- driverPool]
 
           driverTagTexts pd =
             LYT.getTagNameValue . LYTU.removeTagExpiry <$> LYTU.filterExpiredTags' now (fromMaybe [] pd.driverTag)
-          tierEligible pd =
-            GND.scheduledTierEligibleForDriver True scheduledOpenToAll (driverTagTexts pd) cityServiceTiersHashMap booking.vehicleServiceTier
-          isEligible pd =
+          tierEligible tags =
+            GND.scheduledTierEligibleForDriver True scheduledOpenToAll tags cityServiceTiersHashMap booking.vehicleServiceTier
+          isEligible pd tags =
             pd.enabled
               && not pd.blocked
               && not pd.onRide
               && booking.vehicleServiceTier `elem` pd.selectedServiceTiers
-              && tierEligible pd
+              && tierEligible tags
+              && all (`elem` tags) requiredTags
           eligible =
             [ (locn, pd)
               | locn <- driverLocations,
                 Just pd <- [Map.lookup (cast locn.driverId) poolByDriver],
-                isEligible pd
+                isEligible pd (driverTagTexts pd)
             ]
 
-      persons <- QPerson.getDriversByIdIn ((.driverId) . fst <$> eligible)
+      -- Favourites are per rider; a booking without a rider has none.
+      favouriteDriverIds <- case booking.riderId of
+        Just riderId | not (null eligible) -> map (.driverId) <$> QRDC.findFavDriversForRider riderId True
+        _ -> pure []
+      driverStats <- QDriverStats.findAllByDriverIdList ((.driverId) . fst <$> eligible)
+      let statsByDriver = Map.fromList [(ds.driverId, ds) | ds <- driverStats]
+          mkCandidate (locn', pd') =
+            let mbStats = Map.lookup locn'.driverId statsByDriver
+             in NearbyCandidate
+                  { location = locn',
+                    poolData = pd',
+                    driverRating = realToFrac <$> (mbStats >>= (.rating)),
+                    completedRides = maybe 0 (.totalRides) mbStats,
+                    cancellationRate = mbStats >>= lifetimeCancellationRatePercent,
+                    favourite = locn'.driverId `elem` favouriteDriverIds,
+                    distance =
+                      highPrecMetersToMeters $
+                        distanceBetweenInMeters (KEMT.LatLong {lat = locn'.lat, lon = locn'.lon}) pickupLatLong
+                  }
+          -- Drivers without the history a filter needs (unrated, or never assigned a ride) are dropped by that filter.
+          passesFilters c =
+            maybe True (\minR -> maybe False (>= minR) c.driverRating) mbMinRating
+              && maybe True (\maxC -> maybe False (<= maxC) c.cancellationRate) mbMaxCancellationRatePercent
+              && maybe True (c.completedRides >=) mbMinCompletedRides
+              && (mbOnlyFavourites /= Just True || c.favourite)
+          candidates = filter passesFilters $ mkCandidate <$> eligible
+          -- Distance is the default and the tie-break; unrated drivers sort last under RATING.
+          sorted = case fromMaybe Common.DISTANCE mbSortBy of
+            Common.DISTANCE -> sortOn (.distance) candidates
+            Common.RATING -> sortOn (\c -> (Down (fromMaybe (-1) c.driverRating), c.distance)) candidates
+          page = take limit $ drop offset sorted
+
+      -- Names and phone numbers only for the page, not the whole pool.
+      persons <- QPerson.getDriversByIdIn ((.location.driverId) <$> page)
       let personByDriver = Map.fromList [(p.id, p) | p <- persons]
           -- "firstName lastName", collapsing to just firstName when lastName is absent.
           mkName p = p.firstName <> maybe "" (" " <>) p.lastName
-      drivers <- forM eligible $ \(locn, pd) -> do
-        let mbPerson = Map.lookup locn.driverId personByDriver
+      drivers <- forM page $ \c -> do
+        let mbPerson = Map.lookup c.location.driverId personByDriver
         mbPhone <- maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
         pure
           Common.NearbyDriverItem
-            { driverId = locn.driverId.getId,
+            { driverId = c.location.driverId.getId,
               driverName = maybe "" mkName mbPerson,
               driverPhoneNo = mbPhone,
-              serviceTiers = pd.selectedServiceTiers,
-              straightLineDistanceMeters =
-                highPrecMetersToMeters $
-                  distanceBetweenInMeters (KEMT.LatLong {lat = locn.lat, lon = locn.lon}) pickupLatLong
+              serviceTiers = c.poolData.selectedServiceTiers,
+              straightLineDistanceMeters = c.distance,
+              rating = realToFrac <$> c.driverRating,
+              totalRides = c.completedRides,
+              cancellationRatePercent = c.cancellationRate,
+              isFavourite = c.favourite
             }
-      -- nearest first: the order ops actually scan
-      pure Common.NearbyDriversRes {radiusKm, searchedAt = now, drivers = sortOn (.straightLineDistanceMeters) drivers}
+      pure Common.NearbyDriversRes {radiusKm, searchedAt = now, totalCount = length sorted, drivers}
+
+data NearbyCandidate = NearbyCandidate
+  { location :: DDL.DriverLocation,
+    poolData :: DPD.DriverPoolData,
+    driverRating :: Maybe Double,
+    completedRides :: Int,
+    cancellationRate :: Maybe Int,
+    favourite :: Bool,
+    distance :: Meters
+  }
+
+-- | Same lifetime formula as driver scoring; Nothing for a driver never assigned a ride.
+lifetimeCancellationRatePercent :: DDS.DriverStats -> Maybe Int
+lifetimeCancellationRatePercent ds = case ds.totalRidesAssigned of
+  Just assigned | assigned > 0 -> Just $ (fromMaybe 0 ds.ridesCancelled * 100) `div` assigned
+  _ -> Nothing
 
 postScheduledBookingAssign ::
   ShortId DM.Merchant ->
@@ -475,9 +556,7 @@ postScheduledBookingAssign merchantShortId opCity transactionId _mbRequestorId r
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
-  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
-    throwError (BookingNotFound transactionId)
+  booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
   let driverPersonId = cast req.driverId :: Id DP.Person
   -- driver's vehicle must be able to serve the booking's service tier (same check the fleet-assign uses)
   vehicle <- QVehicle.findById driverPersonId >>= fromMaybeM (VehicleNotFound driverPersonId.getId)
@@ -497,9 +576,7 @@ postScheduledBookingUnassign merchantShortId opCity transactionId _mbRequestorId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
-  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
-    throwError (BookingNotFound transactionId)
+  booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
   ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (InvalidRequest "No driver assigned to this booking")
   now <- getCurrentTime
   let bookingCReason =
@@ -536,9 +613,7 @@ postScheduledBookingOpsNote merchantShortId opCity transactionId mbRequestorId r
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  booking <- QBooking.findByTransactionId transactionId >>= fromMaybeM (BookingNotFound transactionId)
-  unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId && booking.isScheduled) $
-    throwError (BookingNotFound transactionId)
+  booking <- findScheduledTransactionBooking merchant merchantOpCity transactionId
   Redis.withWaitOnLockRedisWithExpiry (opsNoteLockKey merchantOpCity.id transactionId) 10 10 $ do
     issueReportId <- getOrCreateScheduledBookingIssueReport booking
     commentId <- generateGUID
