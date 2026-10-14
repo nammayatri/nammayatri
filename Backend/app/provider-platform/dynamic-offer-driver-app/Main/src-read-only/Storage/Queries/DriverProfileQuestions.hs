@@ -4,6 +4,7 @@
 
 module Storage.Queries.DriverProfileQuestions (module Storage.Queries.DriverProfileQuestions, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverProfileQuestions
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -47,6 +48,7 @@ updateByPrimaryKey (Domain.Types.DriverProfileQuestions.DriverProfileQuestions {
       Se.Set Beam.imageIds imageIds,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.pledges pledges,
+      Se.Set Beam.selfDeclarations (Data.Aeson.toJSON <$> selfDeclarations),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleTags vehicleTags
     ]

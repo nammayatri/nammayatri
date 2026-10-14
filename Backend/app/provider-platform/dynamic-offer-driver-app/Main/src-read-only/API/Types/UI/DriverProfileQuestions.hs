@@ -3,6 +3,7 @@
 module API.Types.UI.DriverProfileQuestions where
 
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.DriverProfileQuestions
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import Servant
@@ -14,6 +15,7 @@ data DriverProfileQuesReq = DriverProfileQuesReq
     hometown :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     imageIds :: [Kernel.Prelude.Text],
     pledges :: [Kernel.Prelude.Text],
+    selfDeclarations :: Kernel.Prelude.Maybe [Domain.Types.DriverProfileQuestions.SelfDeclarationValueReq],
     vehicleTags :: [Kernel.Prelude.Text]
   }
   deriving stock (Generic)
@@ -27,6 +29,7 @@ data DriverProfileQuesRes = DriverProfileQuesRes
     otherImages :: [Kernel.Prelude.Text],
     pledges :: [Kernel.Prelude.Text],
     profileImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    selfDeclarations :: Kernel.Prelude.Maybe [Domain.Types.DriverProfileQuestions.SelfDeclarationValueReq],
     vehicleImage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleTags :: [Kernel.Prelude.Text]
   }

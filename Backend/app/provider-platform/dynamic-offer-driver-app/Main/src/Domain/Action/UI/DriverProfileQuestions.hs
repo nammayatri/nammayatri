@@ -67,6 +67,7 @@ postDriverProfileQues (mbPersonId, merchantId, merchantOpCityId) req@API.Types.U
               drivingSince = drivingSince,
               imageIds = toMaybe imageIds,
               vehicleTags = toMaybe vehicleTags,
+              selfDeclarations = selfDeclarations,
               aboutMe = Just aboutMe
             }
         )
@@ -184,7 +185,8 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
                 otherImages = if isImages == Just True then images else [], -- fromMaybe [] res.images
                 profileImage = profileImage,
                 otherImageIds = fromMaybe [] res.imageIds,
-                vehicleImage = if isImages == Just True then vehicleImage else Nothing
+                vehicleImage = if isImages == Just True then vehicleImage else Nothing,
+                selfDeclarations = res.selfDeclarations
               }
     Nothing ->
       pure $
@@ -197,7 +199,8 @@ getDriverProfileQues (mbPersonId, _merchantId, _merchantOpCityId) isImages = do
             otherImages = [],
             profileImage = profileImage,
             otherImageIds = [],
-            vehicleImage = Nothing
+            vehicleImage = Nothing,
+            selfDeclarations = Nothing
           }
   where
     getImages imageIds = do

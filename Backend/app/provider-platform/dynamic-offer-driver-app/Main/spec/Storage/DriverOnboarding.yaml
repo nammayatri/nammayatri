@@ -673,7 +673,7 @@ DocumentVerificationConfig:
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
-      enum: "Driver,Vehicle,Permission,Training,Fleet"
+      enum: "Driver,Vehicle,Permission,Training,Fleet,SelfDeclaration"
     DocumentFlowGrouping:
       enum: "COMMON,STANDARD"
     DocumentApplicableType:
