@@ -19,6 +19,7 @@ module API
   )
 where
 
+import qualified API.Action.UI.LegalPublishInternal as LegalPublishInternal
 import qualified API.Beckn as Beckn
 import qualified API.Beckn.FRFSSeller as BecknFRFSSeller
 import qualified API.Beckn.FRFSSeller.Onboarding as BecknFRFSSellerOnboarding
@@ -30,7 +31,6 @@ import qualified API.DirectDashboard as DirectDashboard
 import qualified API.FRFS as FRFS
 import qualified API.FRFSMetrics as FRFSMetrics
 import qualified API.IGM as IGM
-import qualified API.Action.UI.LegalPublishInternal as LegalPublishInternal
 import qualified API.Internal as Internal
 import qualified API.MetaWhatsappWebhook as MetaWhatsappWebhook
 import qualified API.OnixBapWebhook as OnixBapWebhook

@@ -23,6 +23,7 @@ instance FromTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerific
       Just
         Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig
           { allowLicenseTransfer = allowLicenseTransfer,
+            allowNonTransportVehicle = allowNonTransportVehicle,
             applicableTo = fromMaybe Domain.Types.DocumentVerificationConfig.FLEET_AND_INDIVIDUAL applicableTo,
             checkExpiry = checkExpiry,
             checkExtraction = checkExtraction,
@@ -67,6 +68,7 @@ instance ToTType' Beam.DocumentVerificationConfig Domain.Types.DocumentVerificat
   toTType' (Domain.Types.DocumentVerificationConfig.DocumentVerificationConfig {..}) = do
     Beam.DocumentVerificationConfigT
       { Beam.allowLicenseTransfer = allowLicenseTransfer,
+        Beam.allowNonTransportVehicle = allowNonTransportVehicle,
         Beam.applicableTo = Kernel.Prelude.Just applicableTo,
         Beam.checkExpiry = checkExpiry,
         Beam.checkExtraction = checkExtraction,
