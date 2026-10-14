@@ -1,0 +1,59 @@
+imports:
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  MediaFile: IssueManagement.Domain.Types.MediaFile
+
+RideEvidence:
+  tableName: ride_evidence
+
+  fields:
+    id: Id RideEvidence
+    rideId: Id Ride
+    driverId: Id Person
+    mediaFileId: Id MediaFile
+    description: Maybe Text
+    rideStatus: Domain.Types.Ride.RideStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    hiddenAt: Maybe UTCTime
+    hiddenBy: Maybe Text
+    hiddenReason: Maybe Text
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
+    mediaFileId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByRideId:
+      kvFunction: findAllWithKV
+      where:
+        eq: [rideId]
+
+    findByMediaFileId:
+      kvFunction: findOneWithKV
+      where:
+        eq: [mediaFileId]
+
+    updateVisibility:
+      kvFunction: updateOneWithKV
+      params: [hiddenAt, hiddenBy, hiddenReason, updatedAt]
+      where: id
+
+  sqlType:
+    id: character varying (36)
+    rideId: character varying (36)
+    driverId: character varying (36)
+    mediaFileId: character varying (36)
+    description: text
+    rideStatus: text
+    merchantId: character varying (36)
+    merchantOperatingCityId: character varying (36)
+    hiddenBy: text
+    hiddenReason: text

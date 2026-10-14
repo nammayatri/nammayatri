@@ -232,26 +232,35 @@ requestManualTollChargeApproval (driverId, _merchantId, merchantOpCityId) rideId
           pure (Just newRecord)
     whenJust mbRecordToSend $ \record -> do
       appBackendBapInternal <- asks (.appBackendBapInternal)
+      -- The rider app can be a moment behind the ride start, so a failed send is repeated twice. Every send carries the same request id.
       requestResult <-
-        withTryCatch "requestTollChargeApproval" $
-          CallBAPInternal.requestTollChargeApproval
-            appBackendBapInternal.apiKey
-            appBackendBapInternal.url
-            booking.id.getId
-            CallBAPInternal.RequestTollChargeApprovalReq
-              { bppRideId = ride.id.getId,
-                tollNames = ride.estimatedTollNames,
-                amount = req.amount,
-                currency = ride.currency,
-                approvalTimeoutSeconds = approvalTimeoutSeconds thresholdConfig,
-                requestId = record.requestId,
-                requestedAt = record.requestedAt
-              }
+        retryTollApprovalSend 3 $
+          withTryCatch "requestTollChargeApproval" $
+            CallBAPInternal.requestTollChargeApproval
+              appBackendBapInternal.apiKey
+              appBackendBapInternal.url
+              booking.id.getId
+              CallBAPInternal.RequestTollChargeApprovalReq
+                { bppRideId = ride.id.getId,
+                  tollNames = ride.estimatedTollNames,
+                  amount = req.amount,
+                  currency = ride.currency,
+                  approvalTimeoutSeconds = approvalTimeoutSeconds thresholdConfig,
+                  requestId = record.requestId,
+                  requestedAt = record.requestedAt
+                }
       -- Left in place on failure: stays PENDING, can't be charged, expires as NOT_DELIVERED.
       whenLeft requestResult $ \err -> do
         logError $ "Toll charge approval request failed for ride " <> ride.id.getId <> ": " <> show err
         throwError TollChargeApprovalRequestFailed
   pure Success
+
+retryTollApprovalSend :: MonadFlow m => Int -> m (Either SomeException a) -> m (Either SomeException a)
+retryTollApprovalSend attemptsLeft send = do
+  result <- send
+  case result of
+    Left _ | attemptsLeft > 1 -> liftIO (threadDelay 2000000) >> retryTollApprovalSend (attemptsLeft - 1) send
+    _ -> pure result
 
 -- | The rider's app has shown the prompt. Only an acknowledged request can be charged on timeout, so
 -- this is what turns a sent request into one the rider can be held to.

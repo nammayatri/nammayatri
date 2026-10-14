@@ -29,21 +29,30 @@ module Domain.Action.Dashboard.Management.Ride
     getRideNearby,
     getRideCallCount,
     getRideFlowDebug,
+    getRideEvidence,
+    getRideEvidenceFile,
+    postRideEvidenceVisibility,
   )
 where
 
 import qualified "this" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
+import Data.List (sortOn)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Ride as DRide
 import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
+import qualified Domain.Action.UI.RideEvidence as RideEvidence
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified FileManagement.Domain.Action.UI.File as DFile
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -58,6 +67,7 @@ import qualified Storage.Queries.CallStatusExtra as QCallStatus
 import qualified Storage.Queries.DriverFee as QDriverFee
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideEvidence as QRideEvidence
 import Tools.Error
 
 getRideList ::
@@ -212,3 +222,72 @@ getRideFlowDebug merchantShortId opCity _mbBapBookingId _mbBapRideId _mbBapRideS
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   RideFlowDebug.getRideFlowDebug merchantShortId merchantOpCityId mbRideId mbBookingId mbSearchRequestId mbRideShortId
+
+getRideEvidence :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideEvidenceListRes
+getRideEvidence merchantShortId opCity rideId = do
+  ride <- findRideInMerchantCity merchantShortId opCity rideId
+  evidences <- QRideEvidence.findAllByRideId ride.id
+  mediaFiles <- RideEvidence.loadMediaFiles (map (.mediaFileId) evidences)
+  let items =
+        map
+          ( \evidence ->
+              Common.RideEvidenceItem
+                { id = evidence.id.getId,
+                  fileId = evidence.mediaFileId.getId,
+                  driverId = evidence.driverId.getId,
+                  description = evidence.description,
+                  rideStatus = castToCommonRideStatus evidence.rideStatus,
+                  fileStatus = Map.lookup evidence.mediaFileId.getId mediaFiles >>= (.status) <&> show,
+                  createdAt = evidence.createdAt,
+                  isHidden = isJust evidence.hiddenAt,
+                  hiddenAt = evidence.hiddenAt,
+                  hiddenBy = evidence.hiddenBy,
+                  hiddenReason = evidence.hiddenReason
+                }
+          )
+          (sortOn (.createdAt) evidences)
+  pure Common.RideEvidenceListRes {evidence = items}
+
+getRideEvidenceFile :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Text -> Flow Common.RideEvidenceFileRes
+getRideEvidenceFile merchantShortId opCity rideId evidenceId = do
+  ride <- findRideInMerchantCity merchantShortId opCity rideId
+  evidence <- QRideEvidence.findById (Id evidenceId) >>= fromMaybeM (InvalidRequest $ "Evidence does not exist: " <> evidenceId)
+  unless (evidence.rideId == ride.id) $ throwError (InvalidRequest $ "Evidence does not exist: " <> evidenceId)
+  mediaFile <- QMediaFile.findById evidence.mediaFileId >>= fromMaybeM (InvalidRequest "Evidence file does not exist")
+  filePath <- fromMaybeM (InvalidRequest "Evidence file has no stored path") mediaFile.s3FilePath
+  content <- DFile.fetchFileMediaOrNotFound filePath
+  pure Common.RideEvidenceFileRes {evidenceId, content}
+
+findRideInMerchantCity :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow DRide.Ride
+findRideInMerchantCity merchantShortId opCity rideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  ride <- QRide.findById (cast @Common.Ride @DRide.Ride rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.merchantOperatingCityId == merchantOpCityId) $ throwError (RideDoesNotExist rideId.getId)
+  pure ride
+
+castToCommonRideStatus :: DRide.RideStatus -> Common.RideStatus
+castToCommonRideStatus = \case
+  DRide.UPCOMING -> Common.RIDE_UPCOMING
+  DRide.NEW -> Common.RIDE_NEW
+  DRide.INPROGRESS -> Common.RIDE_INPROGRESS
+  DRide.COMPLETED -> Common.RIDE_COMPLETED
+  DRide.CANCELLED -> Common.RIDE_CANCELLED
+
+postRideEvidenceVisibility :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Text -> Maybe Text -> Common.SetRideEvidenceVisibilityReq -> Flow APISuccess
+postRideEvidenceVisibility merchantShortId opCity rideId evidenceId mbRequestorId req = do
+  ride <- findRideInMerchantCity merchantShortId opCity rideId
+  evidence <- QRideEvidence.findById (Id evidenceId) >>= fromMaybeM (InvalidRequest $ "Evidence does not exist: " <> evidenceId)
+  unless (evidence.rideId == ride.id) $ throwError (InvalidRequest $ "Evidence does not exist: " <> evidenceId)
+  let reason = req.reason >>= \r -> let stripped = T.strip r in if T.null stripped then Nothing else Just stripped
+  whenJust reason $ \r ->
+    when (T.length r > maxHideReasonLength) $
+      throwError (InvalidRequest $ "Reason cannot exceed " <> show maxHideReasonLength <> " characters")
+  now <- getCurrentTime
+  if req.isHidden
+    then QRideEvidence.updateVisibility (Just now) mbRequestorId reason evidence.id
+    else QRideEvidence.updateVisibility Nothing Nothing Nothing evidence.id
+  pure Success
+
+maxHideReasonLength :: Int
+maxHideReasonLength = 500

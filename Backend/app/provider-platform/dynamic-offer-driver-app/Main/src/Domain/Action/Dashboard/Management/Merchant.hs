@@ -400,10 +400,46 @@ mkMerchantCommonConfigRes tc@DTC.TransporterConfig {..} = do
       upwardsRecomputeBufferPercentage = rcfg.cfgUpwardsRecomputeBufferPercentage,
       actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit 0,
       upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgUpwardsRecomputeBuffer,
+      manualTollChargeConfig = mkManualTollChargeConfigItem <$> manualTollChargeConfig,
+      rideEvidenceConfig = mkRideEvidenceConfigItem <$> rideEvidenceConfig,
       ..
     }
 
 ---------------------------------------------------------------------
+mkRideEvidenceConfig :: Common.RideEvidenceConfigItem -> DTC.RideEvidenceConfig
+mkRideEvidenceConfig item =
+  DTC.RideEvidenceConfig
+    { enabled = item.enabled,
+      maxFilesPerRide = item.maxFilesPerRide,
+      completedRideWindowHours = item.completedRideWindowHours
+    }
+
+mkRideEvidenceConfigItem :: DTC.RideEvidenceConfig -> Common.RideEvidenceConfigItem
+mkRideEvidenceConfigItem config =
+  Common.RideEvidenceConfigItem
+    { enabled = config.enabled,
+      maxFilesPerRide = config.maxFilesPerRide,
+      completedRideWindowHours = config.completedRideWindowHours
+    }
+
+mkManualTollChargeConfig :: Common.ManualTollChargeConfigItem -> DTC.ManualTollChargeConfig
+mkManualTollChargeConfig item =
+  DTC.ManualTollChargeConfig
+    { tripCategories = item.tripCategories,
+      maxAmountWithoutEstimate = item.maxAmountWithoutEstimate,
+      approvalTimeoutSeconds = item.approvalTimeoutSeconds,
+      maxApprovalAttempts = item.maxApprovalAttempts
+    }
+
+mkManualTollChargeConfigItem :: DTC.ManualTollChargeConfig -> Common.ManualTollChargeConfigItem
+mkManualTollChargeConfigItem config =
+  Common.ManualTollChargeConfigItem
+    { tripCategories = config.tripCategories,
+      maxAmountWithoutEstimate = config.maxAmountWithoutEstimate,
+      approvalTimeoutSeconds = config.approvalTimeoutSeconds,
+      maxApprovalAttempts = config.maxApprovalAttempts
+    }
+
 mkDistanceField :: Meters -> Maybe (MandatoryValue Distance) -> Maybe (MandatoryValue Meters) -> Meters
 mkDistanceField oldField reqFieldWithUnit reqField =
   fromMaybe oldField $
@@ -469,6 +505,8 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                enableScheduleReallocation = maybe config.enableScheduleReallocation (.value) req.enableScheduleReallocation,
                disableListScheduledBookingAPI = maybe config.disableListScheduledBookingAPI (.value) req.disableListScheduledBookingAPI,
                driverCoolOffPeriod = maybe config.driverCoolOffPeriod (.value) req.driverCoolOffPeriod,
+               manualTollChargeConfig = maybe config.manualTollChargeConfig (fmap mkManualTollChargeConfig . (.value)) req.manualTollChargeConfig,
+               rideEvidenceConfig = maybe config.rideEvidenceConfig (fmap mkRideEvidenceConfig . (.value)) req.rideEvidenceConfig,
                scheduledRideConfig =
                  DTC.ScheduledRideConfig
                    { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,
@@ -482,6 +520,18 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
               }
   whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
     when (mn >= mx) $ throwError (InvalidRequest "scheduledRideMaxLeadTime must be greater than scheduledRideMinLeadTime")
+  whenJust (req.rideEvidenceConfig >>= (.value)) $ \evidence -> do
+    when (maybe False (< 1) evidence.maxFilesPerRide) $ throwError (InvalidRequest "rideEvidenceConfig.maxFilesPerRide must be at least 1")
+    when (maybe False (< 0) evidence.completedRideWindowHours) $ throwError (InvalidRequest "rideEvidenceConfig.completedRideWindowHours cannot be negative")
+    when (maybe False (> 1000) evidence.maxFilesPerRide) $ throwError (InvalidRequest "rideEvidenceConfig.maxFilesPerRide cannot exceed 1000")
+    when (maybe False (> 720) evidence.completedRideWindowHours) $ throwError (InvalidRequest "rideEvidenceConfig.completedRideWindowHours cannot exceed 720 (30 days)")
+  whenJust (req.manualTollChargeConfig >>= (.value)) $ \toll -> do
+    when (toll.maxAmountWithoutEstimate < 0) $ throwError (InvalidRequest "manualTollChargeConfig.maxAmountWithoutEstimate cannot be negative")
+    when (maybe False (< 1) toll.approvalTimeoutSeconds) $ throwError (InvalidRequest "manualTollChargeConfig.approvalTimeoutSeconds must be at least 1")
+    when (maybe False (< 1) toll.maxApprovalAttempts) $ throwError (InvalidRequest "manualTollChargeConfig.maxApprovalAttempts must be at least 1")
+    when (maybe False (> 3600) toll.approvalTimeoutSeconds) $ throwError (InvalidRequest "manualTollChargeConfig.approvalTimeoutSeconds cannot exceed 3600")
+    when (maybe False (> 20) toll.maxApprovalAttempts) $ throwError (InvalidRequest "manualTollChargeConfig.maxApprovalAttempts cannot exceed 20")
+    when (toll.maxAmountWithoutEstimate > 100000) $ throwError (InvalidRequest "manualTollChargeConfig.maxAmountWithoutEstimate cannot exceed 100000")
   _ <- CQTC.update updConfig
   CQTC.clearCache merchantOpCityId
   invalidateConfigInMem LYT.TransporterConfig

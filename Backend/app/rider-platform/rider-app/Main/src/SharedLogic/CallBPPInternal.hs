@@ -820,6 +820,73 @@ getDeliveryImage apiKey internalUrl bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getDeliveryImageClient bppRideId (Just apiKey)) "GetDeliveryImage" getDeliveryImageApi
 
+data RideEvidenceInternalItem = RideEvidenceInternalItem
+  { evidenceId :: Text,
+    evidenceDescription :: Maybe Text,
+    evidenceRideStatus :: Text,
+    evidenceCreatedAt :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+type GetRideEvidenceAPI =
+  "internal"
+    :> "ride"
+    :> Capture "rideId" Text
+    :> "evidence"
+    :> Header "token" Text
+    :> Get '[JSON] [RideEvidenceInternalItem]
+
+getRideEvidenceApi :: Proxy GetRideEvidenceAPI
+getRideEvidenceApi = Proxy
+
+getRideEvidenceClient :: Text -> Maybe Text -> EulerClient [RideEvidenceInternalItem]
+getRideEvidenceClient = client getRideEvidenceApi
+
+getRideEvidence ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m [RideEvidenceInternalItem]
+getRideEvidence apiKey internalUrl bppRideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getRideEvidenceClient bppRideId (Just apiKey)) "GetRideEvidence" getRideEvidenceApi
+
+type GetRideEvidenceFileAPI =
+  "internal"
+    :> "ride"
+    :> Capture "rideId" Text
+    :> "evidence"
+    :> Capture "evidenceId" Text
+    :> "file"
+    :> Header "token" Text
+    :> Get '[JSON] Text
+
+getRideEvidenceFileApi :: Proxy GetRideEvidenceFileAPI
+getRideEvidenceFileApi = Proxy
+
+getRideEvidenceFileClient :: Text -> Text -> Maybe Text -> EulerClient Text
+getRideEvidenceFileClient = client getRideEvidenceFileApi
+
+getRideEvidenceFile ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  m Text
+getRideEvidenceFile apiKey internalUrl bppRideId evidenceId' = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getRideEvidenceFileClient bppRideId evidenceId' (Just apiKey)) "GetRideEvidenceFile" getRideEvidenceFileApi
+
 data CalculateFareReq = CalculateFareReq
   { dropLatLong :: Maybe Kernel.External.Maps.Types.LatLong,
     pickupLatLong :: Kernel.External.Maps.Types.LatLong,

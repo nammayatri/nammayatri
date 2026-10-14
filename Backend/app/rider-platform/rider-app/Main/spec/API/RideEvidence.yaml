@@ -1,0 +1,29 @@
+imports:
+  Ride: Domain.Types.Ride
+
+module: RideEvidence
+
+types:
+  RideEvidenceItem:
+    id: Text
+    description: Maybe Text
+    rideStatus: Text
+    createdAt: UTCTime
+
+apis:
+  - GET:
+      endpoint: /ride/{rideId}/evidence
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: "[API.Types.UI.RideEvidence.RideEvidenceItem]"
+
+  - GET:
+      endpoint: /ride/{rideId}/evidence/{evidenceId}/file
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+        evidenceId: Text
+      response:
+        type: Text

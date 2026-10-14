@@ -403,6 +403,7 @@ library
       Domain.Action.UI.RentalsIntercityCache
       Domain.Action.UI.Rewards
       Domain.Action.UI.Ride
+      Domain.Action.UI.RideEvidence
       Domain.Action.UI.RideFeedback
       Domain.Action.UI.RidePayment
       Domain.Action.UI.RiderLocation
@@ -1080,6 +1081,7 @@ library
       API.Action.UI.PolicyDocument
       API.Action.UI.PriceBreakup
       API.Action.UI.Rewards
+      API.Action.UI.RideEvidence
       API.Action.UI.RideFeedback
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
@@ -1245,6 +1247,7 @@ library
       API.Types.UI.PolicyDocument
       API.Types.UI.PriceBreakup
       API.Types.UI.Rewards
+      API.Types.UI.RideEvidence
       API.Types.UI.RideFeedback
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation

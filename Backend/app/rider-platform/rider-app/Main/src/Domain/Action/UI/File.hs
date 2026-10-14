@@ -24,9 +24,12 @@ postFilesUpload ::
     FCommon.FileUploadReq ->
     Environment.Flow FCommon.FileUploadRes
   )
-postFilesUpload (_mbPersonId, merchantId) req = do
+postFilesUpload (mbPersonId, merchantId) req = do
+  personId <- fromMaybeM (PersonNotFound "person id not present in token") mbPersonId
+  when (req.domain == FCommon.RideEvidence) $
+    throwError (InvalidRequest "Ride evidence is uploaded by the driver")
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  DFile.fileUploadToS3 merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern req
+  DFile.fileUploadToS3 merchant.mediaFileSizeUpperLimit merchant.mediaFileUrlPattern personId.getId req
 
 getFilesMedia ::
   ( ( Kernel.Prelude.Maybe (Id Domain.Types.Person.Person),
@@ -35,5 +38,8 @@ getFilesMedia ::
     Kernel.Prelude.Text ->
     Environment.Flow Kernel.Prelude.Text
   )
-getFilesMedia (_mbPersonId, _merchantId) =
-  DFile.fetchFileMedia
+getFilesMedia (mbPersonId, _merchantId) filePath = do
+  personId <- fromMaybeM (PersonNotFound "person id not present in token") mbPersonId
+  unless (FCommon.canReadFile personId.getId filePath) $
+    throwError (InvalidRequest "File is not accessible")
+  DFile.fetchFileMedia filePath
