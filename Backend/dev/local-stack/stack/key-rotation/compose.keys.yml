@@ -9,8 +9,14 @@
 #   rider-app,    upstream's secrets file replaced by the copy beside this one,
 #   driver-app    which reads the salt from MOVIN_HASH_SALT (secrets folder).
 #
-# ny-passetto-db, with today's keys, is left as it is: it is the rollback.
+# ny-passetto-db, with the old keys, was the rollback until 2026-10-15: since
+# then it is in the `old-keys` profile, so compose no longer makes it, and
+# passetto no longer depends on it (!override replaces the base file's list
+# instead of adding to it). cleanup.sh removes the container.
 services:
+  passetto-db:
+    profiles: [old-keys]
+
   passetto-keys-db:
     image: postgres:12.3
     container_name: ny-passetto-keys-db
@@ -24,7 +30,7 @@ services:
 
   passetto:
     command: server
-    depends_on:
+    depends_on: !override
       - passetto-keys-db
     environment:
       PASSETTO_PG_BACKEND_CONN_STRING: postgresql://passetto:passetto@ny-passetto-keys-db:5432/passetto

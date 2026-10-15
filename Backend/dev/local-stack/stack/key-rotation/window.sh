@@ -131,6 +131,10 @@ drop_cached_people() {
 }
 compose() { (cd "$STACK" && docker compose "$@"); }
 
+case "${1:-}" in configs|rollback)
+  docker inspect ny-passetto-db >/dev/null 2>&1 \
+    || die "retired 2026-10-15: the old key store is gone (cleanup.sh); restore a backup from before the switch instead" ;;
+esac
 if [ "${1:-}" = configs ]; then
   # The first switch (2026-10-13) converted every number but not the services'
   # credentials, which merchant_service_config keeps encrypted inside JSON: a
