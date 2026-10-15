@@ -167,6 +167,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as SFlags
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -479,6 +480,7 @@ buildDriverListItem fleetAssocByDriver driversWithActiveRc linkedAssocsByDriver 
         onboardingDate = driverInformation.lastEnabledOn,
         createdAt = person.createdAt,
         updatedAt = person.updatedAt,
+        docsVerificationStatusUpdatedAt = fromMaybe driverInformation.createdAt driverInformation.docsVerificationStatusUpdatedAt,
         approved = driverInformation.approved,
         onboardingAs = castOnboardingAs <$> driverInformation.onboardingAs,
         recentFleetInfo = mbRecentFleetInfo,
@@ -796,6 +798,8 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.UnlinkDocument (SGuard.TargetDriver personId) $ do
     QDriverLicense.deleteByDriverId personId
+    -- Its photos go too, so no version of the unlinked licence is left behind.
+    QImage.deleteByPersonIdAndImageType personId DomainDVC.DriverLicense
     unless (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) $
       Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
@@ -1120,12 +1124,14 @@ postDriverUpdateRCInvalidStatus :: ShortId DM.Merchant -> Context.City -> Id Com
 postDriverUpdateRCInvalidStatus _merchantShortId _opCity _ req = do
   vehicleRC <- RCQuery.findById (Id req.rcId) >>= fromMaybeM (VehicleNotFound req.rcId)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   pure Success
 
 postDriverUpdateRCInvalidStatusByRCNumber :: ShortId DM.Merchant -> Context.City -> Common.UpdateRCInvalidStatusByRCNumberReq -> Flow APISuccess
 postDriverUpdateRCInvalidStatusByRCNumber _merchantShortId _opCity req = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (VehicleNotFound req.rcNumber)
   RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing (Just True)
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   pure Success
 
 ---------------------------------------------------------------------
@@ -1141,6 +1147,7 @@ postDriverUpdateVehicleVariant merchantShortId opCity _ req = do
     if transporterConfig.unifiedOnboardingFlagsRecompute == Just True
       then RCQueryExtra.updateVehicleVariantWithoutVerificationStatus vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
       else RCQuery.updateVehicleVariant vehicleRC.id (Just req.vehicleVariant) Nothing Nothing
+  RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
   whenJust mVehicle $ \vehicle -> updateVehicleVariantAndServiceTier transporterConfig req.vehicleVariant vehicle $ DV.castVehicleVariantToVehicleCategory req.vehicleVariant
   pure Success
 
@@ -1187,6 +1194,7 @@ postDriverBulkReviewRCVariant merchantShortId opCity req = do
           RCQueryExtra.updateVehicleVariantWithoutVerificationStatus vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
           void $ SStatus.runRefreshOnboardingFlagsVehicle (Just transporterConfig) vehicleRC.id
         else RCQuery.updateVehicleVariant vehicleRC.id rcReq.vehicleVariant rcReq.markReviewed (not <$> rcReq.markReviewed)
+      RCQuery.findById vehicleRC.id >>= flip whenJust saveRCVersionMetadata
       whenJust mVehicle $ \vehicle -> do
         whenJust rcReq.vehicleVariant $ \variant -> updateVehicleVariantAndServiceTier transporterConfig variant vehicle $ DV.castVehicleVariantToVehicleCategory variant
 

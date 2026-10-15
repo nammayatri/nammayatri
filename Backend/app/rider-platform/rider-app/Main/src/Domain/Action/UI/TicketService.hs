@@ -362,7 +362,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = udf1,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_

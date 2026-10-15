@@ -34,6 +34,7 @@ data VehicleListItem = VehicleListItem
     verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
+    docsVerificationStatusUpdatedAt :: Kernel.Prelude.UTCTime,
     recentFleetInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
     linkedDriverInfo :: Kernel.Prelude.Maybe Dashboard.Common.Driver.DriverAssociationInfo,
     exemptParkingFee :: Kernel.Prelude.Maybe Kernel.Prelude.Bool

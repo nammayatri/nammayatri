@@ -1,4 +1,5 @@
--- | Backing queries for the city-wide vehicle onboarding grid.
+-- | Backing queries for the city-wide vehicle onboarding grid. Ordered by docsVerificationStatusUpdatedAt,
+--   newest first with NULLs last, then createdAt, with id as tiebreaker so paging is stable.
 module Storage.Queries.OnboardingList.VehicleList
   ( findVehicles,
   )
@@ -38,7 +39,7 @@ findVehicles merchantId merchantOpCityId limitVal offsetVal mbFleetOwnerId mbCer
         B.select $
           B.limit_ (fromIntegral limitVal) $
             B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\rc -> (B.desc_ rc.createdAt, B.asc_ rc.id)) $
+              B.orderBy_ (\rc -> (B.nullsLast_ (B.desc_ rc.docsVerificationStatusUpdatedAt), B.desc_ rc.createdAt, B.asc_ rc.id)) $
                 B.filter_
                   ( \rc ->
                       rc.merchantId B.==. B.val_ (Just merchantId.getId)
@@ -51,8 +52,8 @@ findVehicles merchantId merchantOpCityId limitVal offsetVal mbFleetOwnerId mbCer
                                   Just Nothing -> B.isNothing_ rc.approved B.&&. rc.verified B.==. B.val_ (Just True)
                                   Just (Just approved) -> rc.approved B.==. B.val_ (Just approved)
                               )
-                        B.&&. maybe (B.val_ True) (\fromTime -> rc.createdAt B.>=. B.val_ fromTime) mbFrom
-                        B.&&. maybe (B.val_ True) (\toTime -> rc.createdAt B.<=. B.val_ toTime) mbTo
+                        B.&&. maybe (B.val_ True) (\fromTime -> B.coalesce_ [rc.docsVerificationStatusUpdatedAt] rc.createdAt B.>=. B.val_ fromTime) mbFrom
+                        B.&&. maybe (B.val_ True) (\toTime -> B.coalesce_ [rc.docsVerificationStatusUpdatedAt] rc.createdAt B.<=. B.val_ toTime) mbTo
                   )
                   (B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB))
   case result of

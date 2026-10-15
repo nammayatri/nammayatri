@@ -33,7 +33,6 @@ import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
@@ -105,9 +104,8 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       busRouteMapping <-
         mapConcurrently
           ( \vehicleNumber -> do
-              mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-                maybeToList <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
-              pure $ (vehicleNumber,) <$> Kernel.Prelude.listToMaybe mbResult
+              mbResult <- getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber
+              pure $ (vehicleNumber,) . snd <$> mbResult
           )
           vehicleNumbers
 

@@ -55,6 +55,7 @@ data DriverInformationT f = DriverInformationT
     dlNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dlNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
+    docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverBankAccountDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverFlowStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus),

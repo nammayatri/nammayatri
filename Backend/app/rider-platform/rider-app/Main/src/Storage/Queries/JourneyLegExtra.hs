@@ -3,6 +3,7 @@
 
 module Storage.Queries.JourneyLegExtra where
 
+import qualified BecknV2.FRFS.Enums
 import Control.Monad.Extra (mapMaybeM)
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as Journey
@@ -29,12 +30,13 @@ import qualified Storage.Queries.RouteDetails as RD
 -- reflect an operator swapping the bus on a waybill onto the customer's ticket (fleetNo + busTagNumber).
 -- Scoped to these columns so it does not clobber concurrent writes the way a whole-row updateByPrimaryKey
 -- would.
-updateFinalBoardedBusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id JL.JourneyLeg -> m ()
-updateFinalBoardedBusById finalBoardedBusNumber busTagNumber id = do
+updateFinalBoardedBusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe BecknV2.FRFS.Enums.BusVehicleVariant -> Kernel.Types.Id.Id JL.JourneyLeg -> m ()
+updateFinalBoardedBusById finalBoardedBusNumber busTagNumber busVehicleVariant id = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
       Se.Set Beam.busTagNumber busTagNumber,
+      Se.Set Beam.busVehicleVariant busVehicleVariant,
       Se.Set Beam.updatedAt now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

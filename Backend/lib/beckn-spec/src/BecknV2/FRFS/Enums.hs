@@ -145,6 +145,20 @@ instance ToJSON ServiceSubType where
 
 $(mkHttpInstancesForEnum ''ServiceSubType)
 
+data BusVehicleVariant = STANDARD_BUS | TEMPO_TRAVELLER
+  deriving (Eq, Ord, Show, Read, Generic, ToParamSchema, ToSchema)
+
+instance FromJSON BusVehicleVariant where
+  parseJSON (String "STANDARD_BUS") = pure STANDARD_BUS
+  parseJSON (String "TEMPO_TRAVELLER") = pure TEMPO_TRAVELLER
+  parseJSON _ = mzero -- Silently ignore unknown values
+
+instance ToJSON BusVehicleVariant where
+  toJSON STANDARD_BUS = String "STANDARD_BUS"
+  toJSON TEMPO_TRAVELLER = String "TEMPO_TRAVELLER"
+
+$(mkHttpInstancesForEnum ''BusVehicleVariant)
+
 data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 

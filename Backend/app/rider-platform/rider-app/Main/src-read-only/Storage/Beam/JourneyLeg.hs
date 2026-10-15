@@ -23,6 +23,7 @@ data JourneyLegT f = JourneyLegT
     busDriverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     busTagNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    busVehicleVariant :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.BusVehicleVariant),
     changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

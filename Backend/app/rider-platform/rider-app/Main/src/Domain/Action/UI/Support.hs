@@ -215,6 +215,7 @@ mkRideInfo mbRide person mbPhoneNumber = do
         vehicleCategory = show . (.vehicleVariant) <$> mbRide,
         vehicleServiceTier = show . (.vehicleServiceTierType) <$> mbRide,
         status = maybe "" (show . (.status)) mbRide,
+        rideType = Nothing,
         rideCreatedAt = maybe now (.createdAt) mbRide,
         pickupLocation = castLocationAPIEntity ((.fromLocation) <$> mbRide),
         dropLocation = castLocationAPIEntity . (.toLocation) <$> mbRide,

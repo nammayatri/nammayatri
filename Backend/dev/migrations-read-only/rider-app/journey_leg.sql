@@ -400,3 +400,8 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_tag_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN boarding_confirmed_despite_distance boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_vehicle_variant text ;

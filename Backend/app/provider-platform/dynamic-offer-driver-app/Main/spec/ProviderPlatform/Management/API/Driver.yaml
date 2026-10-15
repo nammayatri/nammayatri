@@ -747,6 +747,7 @@ types:
     - onboardingDate: Maybe UTCTime
     - createdAt: UTCTime
     - updatedAt: UTCTime
+    - docsVerificationStatusUpdatedAt: UTCTime
     - approved: Maybe Bool
     - onboardingAs: Maybe OnboardingAs
     - recentFleetInfo: Maybe DriverAssociationInfo

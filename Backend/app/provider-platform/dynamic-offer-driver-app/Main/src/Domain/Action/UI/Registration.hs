@@ -548,6 +548,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
               if transporterConfig.enableManualDocumentStatusCheck == Just True
                 then Just DDVS.ADMIN_PENDING
                 else Nothing,
+            docsVerificationStatusUpdatedAt = Nothing,
             address = Nothing,
             addressDocumentType = Nothing,
             nomineeName = Nothing,

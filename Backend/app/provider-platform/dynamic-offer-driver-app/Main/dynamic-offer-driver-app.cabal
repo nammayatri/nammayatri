@@ -667,6 +667,7 @@ library
       SharedLogic.DriverOnboarding.OnboardingFlags.Types
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
+      SharedLogic.DriverOnboardingDocumentVersion
       SharedLogic.DriverOnlineHoursCache
       SharedLogic.DriverPool
       SharedLogic.DriverPool.AreaPreference
@@ -1551,6 +1552,7 @@ library
       Domain.Types.DocumentReminderHistory
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DocumentVerificationStagesConfig
+      Domain.Types.DocumentVersionMetadata
       Domain.Types.DomainDiscountConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
@@ -1750,6 +1752,7 @@ library
       Storage.Beam.DocumentReminderHistory
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DocumentVerificationStagesConfig
+      Storage.Beam.DocumentVersionMetadata
       Storage.Beam.DomainDiscountConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
@@ -1954,6 +1957,7 @@ library
       Storage.Queries.DocumentReminderHistory
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DocumentVerificationStagesConfig
+      Storage.Queries.DocumentVersionMetadata
       Storage.Queries.DomainDiscountConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason

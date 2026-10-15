@@ -425,6 +425,7 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             weeklyCancellationRateBlockingCooldown = Nothing,
             payoutRegistrationOrderId = Nothing,
             docsVerificationStatus = mbDocsVerificationStatus,
+            docsVerificationStatusUpdatedAt = Nothing,
             address = Nothing,
             addressState = Nothing,
             addressDocumentType = Nothing,

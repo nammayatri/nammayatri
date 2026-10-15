@@ -173,7 +173,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing,
             udf1 = Nothing,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
@@ -510,7 +511,8 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
             webhookUrl = Just nwAddress,
             paymentFilter = Nothing,
             udf1 = Nothing,
-            udf2 = Nothing
+            udf2 = Nothing,
+            udf3 = Nothing
           }
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId mocId paymentServiceName (Just driver.id.getId)
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

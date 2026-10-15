@@ -254,6 +254,7 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             merchantOperatingCityId = Just merchantOperatingCityId,
             payoutRegistrationOrderId = Nothing,
             docsVerificationStatus = mbDocsVerificationStatus,
+            docsVerificationStatusUpdatedAt = Nothing,
             address = Nothing,
             addressState = Nothing,
             addressDocumentType = Nothing,

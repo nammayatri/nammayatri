@@ -1043,6 +1043,31 @@ getOfferSegmentUdf2 True (Just quoteId) = do
   pure $ mbQuote >>= (.offerSegment)
 getOfferSegmentUdf2 _ _ = pure Nothing
 
+-- | Kind of ticketing an order pays for, sent to the payment gateway as udf3 so gateway
+-- priority can be decided per ticketing type.
+data TicketingType = SingleModeBusTicket | SingleModeMetroTicket | SingleModeSubwayTicket | MultimodalTicket | PassTicket
+  deriving (Show, Eq)
+
+ticketingTypeToUdf3 :: TicketingType -> Text
+ticketingTypeToUdf3 = \case
+  SingleModeBusTicket -> "SINGLE_MODE_BUS"
+  SingleModeMetroTicket -> "SINGLE_MODE_METRO"
+  SingleModeSubwayTicket -> "SINGLE_MODE_SUBWAY"
+  MultimodalTicket -> "MULTIMODAL"
+  PassTicket -> "PASS"
+
+-- | Single-mode orders are typed by the booking's vehicle category; an order over several
+-- bookings is MULTIMODAL. A single-mode order whose vehicle category is unknown sends nothing.
+mkTicketingTypeUdf3 :: Bool -> Maybe Spec.VehicleCategory -> Maybe Text
+mkTicketingTypeUdf3 isSingleMode mbVehicleCategory
+  | isSingleMode = ticketingTypeToUdf3 . singleModeTicketingType <$> mbVehicleCategory
+  | otherwise = Just (ticketingTypeToUdf3 MultimodalTicket)
+  where
+    singleModeTicketingType = \case
+      Spec.BUS -> SingleModeBusTicket
+      Spec.METRO -> SingleModeMetroTicket
+      Spec.SUBWAY -> SingleModeSubwayTicket
+
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -1095,6 +1120,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
     staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
     udf1 <- SLUtils.getPersonUdf1 person
     udf2 <- getOfferSegmentUdf2 isSingleMode ((.quoteId) <$> listToMaybe bookings)
+    let udf3 = mkTicketingTypeUdf3 isSingleMode ((.vehicleType) <$> listToMaybe bookings)
     let createOrderReq =
           Payment.CreateOrderReq
             { orderId = orderId.getId,
@@ -1120,7 +1146,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
               autoRefundPostSuccess = Nothing,
               paymentFilter = Nothing,
               udf1 = udf1,
-              udf2 = udf2
+              udf2 = udf2,
+              udf3 = udf3
             }
     let mocId = merchantOperatingCityId
         commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
