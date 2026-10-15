@@ -22,6 +22,7 @@ import Kernel.Types.Id
 import Kernel.Types.TimeBound
 import Kernel.Utils.Common
 import Lib.Yudhishthira.Event.KaalChakra as KaalChakraEvent
+import qualified Lib.Yudhishthira.Event.KaalChakra.Internal as KaalChakraInternal
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicAlwaysOn as CADLAO
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
@@ -32,6 +33,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout as LYSQ
 import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra as LYSQADLRE
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as QChakraQueries
 import qualified Lib.Yudhishthira.Storage.Queries.ChakraQueries as SQCQ
+import qualified Lib.Yudhishthira.Storage.Queries.KaalChakraJobRun as QKCJR
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNTTV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNTV2
 import Lib.Yudhishthira.Tools.Error
@@ -43,6 +45,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as DTADLE
 import Lib.Yudhishthira.Types.AppDynamicLogicRollout
 import qualified Lib.Yudhishthira.Types.ChakraQueries
 import qualified Lib.Yudhishthira.Types.ChakraQueries as LYTCQ
+import qualified Lib.Yudhishthira.Types.KaalChakraJobRun as DKCJR
 import qualified Lib.Yudhishthira.Types.NammaTagTriggerV2 as DNTTV2
 import qualified Lib.Yudhishthira.Types.NammaTagV2 as DNTv2
 import Lib.Yudhishthira.Types.TimeBoundConfig
@@ -338,10 +341,71 @@ postRunKaalChakraJob ::
   Handle m action ->
   Lib.Yudhishthira.Types.RunKaalChakraJobReq ->
   m Lib.Yudhishthira.Types.RunKaalChakraJobRes
-postRunKaalChakraJob _h req =
+postRunKaalChakraJob h req =
   case req.usersSet of
     Lib.Yudhishthira.Types.ALL_USERS -> throwError (InvalidRequest "ALL_USERS option available only from kaal-chakra scheduler")
-    _ -> kaalChakraEvent req
+    _ -> do
+      let clearTestRun = case req.action of
+            Lib.Yudhishthira.Types.RUN -> KaalChakraInternal.clearTestRunState h.merchantId h.merchantOperatingCityId req.chakra
+            Lib.Yudhishthira.Types.SCHEDULE _ -> pure ()
+      res <- handle (\(err :: SomeException) -> clearTestRun >> throwM err) $ kaalChakraEvent h req
+      case res.chakraBatchState of
+        Lib.Yudhishthira.Types.Continue _ -> pure ()
+        _ -> clearTestRun
+      pure res
+
+mkChakraRunListItem :: DKCJR.KaalChakraJobRun -> LYT.ChakraRunListItem
+mkChakraRunListItem row =
+  LYT.ChakraRunListItem
+    { eventId = row.eventId.getId,
+      chakra = row.chakra,
+      phase = row.phase,
+      status = row.status,
+      startedAt = row.startedAt,
+      endedAt = row.endedAt,
+      usersProcessed = row.usersProcessed,
+      batchesProcessed = row.batchesProcessed,
+      retryCount = row.retryCount,
+      failureReason = row.failureReason,
+      failedQueryName = row.failedQueryName
+    }
+
+-- Shared by both apps' Jobs tab "run history" list, called from each app's
+-- thin dashboard handler (same pattern as postRunKaalChakraJob above).
+getChakraRuns ::
+  (BeamFlow m r) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DKCJR.KaalChakraJobRunStatus ->
+  Maybe UTCTime ->
+  LYT.Chakra ->
+  m LYT.ChakraRunListRes
+getChakraRuns merchantOperatingCityId from limit offset status to chakra = do
+  let limit_ = max 0 (min 50 (fromMaybe 20 limit))
+      offset_ = max 0 (fromMaybe 0 offset)
+  rows <- QKCJR.findAllByFilters merchantOperatingCityId (Just chakra) status from to limit_ offset_
+  pure LYT.ChakraRunListRes {runs = mkChakraRunListItem <$> rows}
+
+getChakraRunDetail ::
+  (BeamFlow m r) =>
+  Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Text ->
+  m LYT.ChakraRunDetailRes
+getChakraRunDetail merchantOperatingCityId eventIdText = do
+  allRows <- QKCJR.findAllByEventId (Id eventIdText)
+  -- Another city's run reads as "not found", same as an unknown eventId.
+  let rows = filter ((== merchantOperatingCityId) . (.merchantOperatingCityId)) allRows
+  case rows of
+    [] -> throwError (InvalidRequest $ "No run found for eventId: " <> eventIdText)
+    (row : _) ->
+      pure
+        LYT.ChakraRunDetailRes
+          { eventId = eventIdText,
+            chakra = row.chakra,
+            phases = mkChakraRunListItem <$> rows
+          }
 
 mergeInputOverDefault :: A.Value -> A.Value -> A.Value
 mergeInputOverDefault (A.Object a) (A.Object b) = A.Object (AKM.unionWith mergeInputOverDefault a b)
