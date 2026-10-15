@@ -8,7 +8,6 @@ where
 
 import qualified "this" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
-import qualified Domain.Action.UI.FleetDriverAssociation as FDV
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant as DM
@@ -24,7 +23,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.Analytics as Analytics
-import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.DriverOnboarding.Common as SOnbCommon
 import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComms
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -97,8 +95,7 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     -- Check if driver has any active rides (not completed or cancelled)
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId res.person.id
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
-    assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId DomainRC.defaultAssociationEnd (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId)
-    QFDV.create assoc
+    QFDV.createFleetDriverAssociationIfNotExists res.person.id (Id fleetOwnerId) mbOperatorId Nothing True Nothing (Just transporterConfig.merchantId) (Just transporterConfig.merchantOperatingCityId) (pure ())
     fleetLinkDriver <- QP.findById res.person.id >>= fromMaybeM (PersonNotFound res.person.id.getId)
     SOnboardingComms.setOnboardingAs transporterConfig fleetLinkDriver DDI.FLEET_DRIVER
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById res.person.id

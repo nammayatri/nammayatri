@@ -25,6 +25,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetCashRideUpdate,
     getDriverFleetConfig,
     postDriverFleetConfigUpdate,
+    getDriverFleetDriverAutoAssign,
+    postDriverFleetDriverAutoAssign,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -131,7 +133,6 @@ import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.Driver as UIDriver
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
-import qualified Domain.Action.UI.FleetDriverAssociation as FDA
 import qualified Domain.Action.UI.FleetOwnerList as FleetOwnerList
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -172,9 +173,11 @@ import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
+import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
@@ -202,6 +205,7 @@ import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
@@ -223,6 +227,7 @@ import SharedLogic.Fleet (getFleetOwnerId, getFleetOwnerIds, getFleetOwnersInfoM
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
+import qualified SharedLogic.VehicleServiceTier as SVST
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.DashboardAlert ()
 import Storage.Beam.SystemConfigs ()
@@ -2975,8 +2980,7 @@ linkExistingDriverToFleet merchant merchantOpCityId transporterConfig fleetOwner
     SA.endDriverAssociations merchantOpCityId transporterConfig person
     when (merchant.overwriteAssociation == Just True) $
       DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
-    assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd (Just person.merchantId) (Just person.merchantOperatingCityId)
-    QFDV.create assoc
+    QFDV.createFleetDriverAssociationIfNotExists person.id (Id fleetOwnerId) Nothing Nothing True Nothing (Just person.merchantId) (Just person.merchantOperatingCityId) (pure ())
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig
@@ -3820,7 +3824,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
               when (merchant.overwriteAssociation == Just True) $
                 DomainRC.endAllRCAssociationsAndRemoveVehicle transporterConfig person.id
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
-            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False Nothing (Just merchant.id) (Just moc.id) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
+            FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (Just (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory)) False Nothing (Just merchant.id) (Just moc.id) (pure ()) -- created inactive: not part of ACTIVE_DRIVER_COUNT
             whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             fork "Sending onboarding link SMS to Driver" $
               SOnbCommon.sendOnboardingLinkSms moc transporterConfig person (Just fleetOwner)
@@ -4754,7 +4758,7 @@ postDriverFleetDriverChangeFleetOwner merchantShortId opCity driverId req = do
     -- system total drifts down on every reassignment. Guarded on linkAsActive because an
     -- inactive row is not part of ACTIVE_DRIVER_COUNT, and hung off onCreated so a pre-existing
     -- link cannot double-count.
-    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
+    FDV.createFleetDriverAssociationIfNotExists personId newFleetOwner.id Nothing (Just (fromMaybe DVC.CAR driverInfo.onboardingVehicleCategory)) linkAsActive req.reason (Just merchant.id) (Just moc.id) $
       when (linkAsActive && transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $
         Analytics.incrementFleetOwnerAnalyticsActiveDriverCount transporterConfig (Just newFleetOwner.id.getId) personId
   fork "Fleet owner change notification" $
@@ -5581,3 +5585,62 @@ validatePoolingPrioritySpecialLocations merchantOpCityId priority = do
   where
     areaSpecialLocationId area = SL.pickupSpecialZoneIdFromArea area <|> SL.dropSpecialZoneIdFromArea area
     inCity = maybe False (\loc -> ((.getId) <$> loc.merchantOperatingCityId) == Just merchantOpCityId.getId)
+
+getFleetAutoAssignDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Maybe Text -> Flow (Id DMOC.MerchantOperatingCity, DP.Person, DP.Person, DVeh.Vehicle, [DVST.VehicleServiceTier])
+getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
+  (merchant, merchantOpCityId, fleetOwner) <- getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  validateFleetDriverAssociation fleetOwner.id.getId personId
+  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+  cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  pure (merchantOpCityId, fleetOwner, driver, vehicle, cityTiers)
+
+getDriverFleetDriverAutoAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Maybe Text ->
+  Flow Common.DriverAutoAssignStatusRes
+getDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId = do
+  (merchantOpCityId, fleetOwner, driver, vehicle, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  mbAutoAssign <- QFDAExtra.getFleetAutoAssignConfig fleetOwner.id.getId merchantOpCityId
+  now <- getCurrentTime
+  let hasAutoAssignTag = Yudhishthira.elemTagName (LYT.TagNameValue QFDAExtra.autoAssignTagName) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag))
+      enabledTiers = fromMaybe [] vehicle.selectedAutoAcceptTiers
+  pure $
+    Common.DriverAutoAssignStatusRes
+      { enabled = hasAutoAssignTag && not (null enabledTiers),
+        enabledTiers,
+        eligibleTiers = [tier.serviceTierType | tier <- cityTiers, QFDAExtra.isAutoAcceptEnabledTier tier],
+        autoAcceptOnlyTiers = [tier.serviceTierType | tier <- cityTiers, QFDAExtra.isAutoAcceptOnlyTier tier, vehicle.variant `elem` tier.allowedVehicleVariant],
+        hasAutoAssignTag,
+        allowDriverToToggle = maybe True (.allowDriverToToggle) mbAutoAssign
+      }
+
+postDriverFleetDriverAutoAssign ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Id Common.Driver ->
+  Maybe Text ->
+  Common.FleetDriverAutoAssignReq ->
+  Flow APISuccess
+postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
+  (_, _, driver, vehicle, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  when (req.enable && not (any QFDAExtra.isAutoAcceptEnabledTier cityTiers)) $
+    throwError $ InvalidRequest "No service tier in this city has auto-accept enabled"
+  now <- getCurrentTime
+  Redis.withWaitOnLockRedisWithExpiry (SVST.selectedServiceTiersLockKey driver.id) 5 10 $
+    if req.enable
+      then QFDAExtra.writeFleetDriverTags True (Just DFC.AutoAssignConfig {defaultOn = True, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False}) driver
+      else do
+        let tags = fromMaybe [] driver.driverTag
+            newTags = Yudhishthira.removeTagName (Just tags) (LYT.TagNameValue QFDAExtra.autoAssignTagName)
+            updatedVehicle = QFDAExtra.fleetAutoAcceptVehicle now False Nothing cityTiers vehicle
+        when (newTags /= tags) $ QPerson.updateDriverTag (Just newTags) driver.id
+        QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers updatedVehicle.selectedServiceTiers [] driver.id
+  pure Success

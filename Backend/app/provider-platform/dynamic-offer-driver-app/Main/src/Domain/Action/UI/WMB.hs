@@ -33,7 +33,6 @@ import qualified Domain.Types.DriverInformation as DDI
 import Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
-import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
@@ -206,7 +205,7 @@ postWmbQrStart (mbDriverId, merchantId, merchantOperatingCityId) req = do
   -- The link is created ACTIVE, so the fleet owner's ACTIVE_DRIVER_COUNT must go up with it.
   -- Hung off onCreated rather than done unconditionally here: a driver starting their second
   -- trip under the same fleet already has the association, and incrementing again would inflate.
-  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing DVehCategory.BUS True Nothing (Just merchantId) (Just merchantOperatingCityId) $
+  FDV.createFleetDriverAssociationIfNotExists driverId vehicleRouteMapping.fleetOwnerId Nothing (Just DVehCategory.BUS) True Nothing (Just merchantId) (Just merchantOperatingCityId) $
     when wmbTransporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
       Analytics.incrementFleetOwnerAnalyticsActiveDriverCount wmbTransporterConfig (Just vehicleRouteMapping.fleetOwnerId.getId) driverId
   let qrStartTransporterConfig = wmbTransporterConfig
@@ -524,7 +523,7 @@ postFleetConsent (mbDriverId, _merchantId, merchantOperatingCityId) = do
     SA.endDriverAssociations merchantOperatingCityId transporterConfig driver
     mbActiveRide <- B.runInReplica $ QRideExtra.getUpcomingOrActiveByDriverId driverId
     when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
-    FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+    FDV.approveFleetDriverAssociation driverId (Id fleetDriverAssociation.fleetOwnerId) fleetDriverAssociation.responseReason
     when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById driverId
     Analytics.handleDriverAnalyticsAndFlowStatus
       transporterConfig

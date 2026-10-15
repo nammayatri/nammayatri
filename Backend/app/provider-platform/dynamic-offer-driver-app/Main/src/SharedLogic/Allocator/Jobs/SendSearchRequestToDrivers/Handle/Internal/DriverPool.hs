@@ -211,7 +211,7 @@ mkDriverPreferenceChecks searchReq driver =
     dpr = driver.driverPoolResult
     rideDistanceCheck =
       binaryCheck
-        (isJust dpr.minRideDistance || isJust dpr.maxRideDistance)
+        (AreaPref.isDistancePreferenceEnabledJson dpr.driverTags && (isJust dpr.minRideDistance || isJust dpr.maxRideDistance))
         ( case driver.tripDistance of
             Nothing -> True -- ride distance unknown yet, don't penalize
             Just rideDistance -> maybe True (rideDistance >=) dpr.minRideDistance && maybe True (rideDistance <=) dpr.maxRideDistance
