@@ -775,6 +775,7 @@ library
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
+      SharedLogic.ScheduledRideVisibility
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker

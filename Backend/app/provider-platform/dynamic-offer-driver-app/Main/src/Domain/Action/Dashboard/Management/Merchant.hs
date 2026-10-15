@@ -213,6 +213,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.ScheduledRideVisibility as SRV
 import qualified SharedLogic.SpecialLocationUpsert as SLU
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.TollDashboard
@@ -389,6 +390,7 @@ mkMerchantCommonConfigRes tc@DTC.TransporterConfig {..} = do
       scheduledRideAvgSpeedKmph = scheduledRideConfig.avgSpeedKmph,
       scheduledRideMinLeadTime = scheduledRideConfig.minLeadTime,
       scheduledRideMaxLeadTime = scheduledRideConfig.maxLeadTime,
+      scheduledRideVisibilityStages = A.toJSON <$> scheduledRideConfig.scheduledRideVisibilityStages,
       pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
       dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
       actualRideDistanceDiffThreshold = rcfg.cfgActualRideDistanceDiffThreshold,
@@ -418,6 +420,11 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  visibilityStages <- case req.scheduledRideVisibilityStages of
+    Nothing -> pure config.scheduledRideConfig.scheduledRideVisibilityStages
+    Just optionalStages -> case optionalStages.value of
+      Nothing -> pure Nothing
+      Just stagesJson -> either (throwError . InvalidRequest) (pure . Just) (SRV.parseVisibilityStagesJson stagesJson)
   let updConfig =
         config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
                dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
@@ -467,7 +474,8 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                      minLeadTime = maybe config.scheduledRideConfig.minLeadTime (.value) req.scheduledRideMinLeadTime,
                      maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime,
                      enableScheduledRideActivationChecks = config.scheduledRideConfig.enableScheduledRideActivationChecks,
-                     driverActivationWindow = config.scheduledRideConfig.driverActivationWindow
+                     driverActivationWindow = config.scheduledRideConfig.driverActivationWindow,
+                     scheduledRideVisibilityStages = visibilityStages
                    }
               }
   whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
