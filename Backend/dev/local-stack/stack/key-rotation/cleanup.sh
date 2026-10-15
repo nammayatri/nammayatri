@@ -80,6 +80,9 @@ out=$(curl -s --max-time 10 -X POST -H 'Content-Type: application/json' \
   -d "{\"value\":\"$enc\"}" http://127.0.0.1:8021/decrypt)
 grep -q '"value":"S\\"' <<<"$out" || die "a stored number no longer decrypts -- look at ny-passetto now"
 ok "a stored number still decrypts through the live passetto"
-[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8013/v2/auth/channels)" = 200 ] \
-  && ok "the rider app answers" || echo "   !!  the rider app did not answer 200: look at it"
+# Any HTTP answer: the rider app has no health route (/v2/auth/channels is the
+# guard's, on 8031, and the rider answers it 404 -- which the first --apply,
+# 2026-10-15, took for a failure).
+code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:8013/ || true)
+[ "$code" != 000 ] && ok "the rider app answers (HTTP $code)" || echo "   !!  the rider app does not answer: look at it"
 echo "   containers running: $(docker ps -q | wc -l)"
