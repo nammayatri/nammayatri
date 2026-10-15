@@ -12,6 +12,7 @@ import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.PolicyDocument
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
