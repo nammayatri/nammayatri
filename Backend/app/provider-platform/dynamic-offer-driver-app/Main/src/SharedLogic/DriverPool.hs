@@ -805,7 +805,9 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     CoreMetrics m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   [NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -814,41 +816,44 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
   now <- getCurrentTime
+  goHomeInfos <- withTimeAPI "driverPooling" "goHomeRequestInfoBatch" $ Map.fromList <$> CQDGR.getDriversGoHomeRequestInfoBatch (map (.driverId) randomDriverPool) merchantOpCityId goHomeCfg
   goHomeRequests <-
-    mapMaybeM
-      ( \driver -> runMaybeT $ do
-          ghrId <- MaybeT $ CQDGR.getDriverGoHomeRequestInfo driver.driverId merchantOpCityId Nothing <&> (.driverGoHomeRequestId)
-          goHomeReq <- MaybeT $ QDGR.findById ghrId
-          return (goHomeReq, driver, Nothing)
-      )
-      randomDriverPool
+    withTimeAPI "driverPooling" "goHomeFindByIdLoop" $
+      mapMaybeM
+        ( \driver -> runMaybeT $ do
+            ghrId <- MaybeT $ pure $ Map.lookup driver.driverId goHomeInfos >>= (.driverGoHomeRequestId)
+            goHomeReq <- MaybeT $ QDGR.findById ghrId
+            return (goHomeReq, driver, Nothing)
+        )
+        randomDriverPool
   let specialLocWarriorDrivers = filter (\driver -> driver.isSpecialLocWarrior) randomDriverPool -- specialLocWarriorDriversInfo <- Int.getSpecialLocWarriorDriverInfo specialLocWarriorDrivers
   logDebug $ "MetroWarriorDebugging specialLocWarriorDrivers -----" <> show specialLocWarriorDrivers
   specialLocgoHomeRequests <-
-    mapMaybeM
-      ( \specialLocWarriorDriver -> runMaybeT $ do
-          driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
-          specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
-          preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
-          preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
-          preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
-          let gHR =
-                DDGR.DriverGoHomeRequest
-                  { createdAt = now,
-                    driverId = driverInfo.driverId,
-                    id = Id "specialLocWarriorGoHomeId",
-                    lat = preferredLocGate.point.lat,
-                    lon = preferredLocGate.point.lon,
-                    mbReachedHome = Nothing,
-                    numCancellation = 0,
-                    status = DDGR.ACTIVE,
-                    updatedAt = now,
-                    merchantId = Just merchantId,
-                    merchantOperatingCityId = Just merchantOpCityId
-                  }
-          return (gHR, specialLocWarriorDriver, Just preferredLocId)
-      )
-      specialLocWarriorDrivers
+    withTimeAPI "driverPooling" "specialLocWarriorLookup" $
+      mapMaybeM
+        ( \specialLocWarriorDriver -> runMaybeT $ do
+            driverInfo <- MaybeT $ Int.getSpecialLocWarriorDriverInfo specialLocWarriorDriver.driverId.getId
+            specialLocWarriorDriverInfo <- MaybeT $ return $ if driverInfo.isSpecialLocWarrior then Just driverInfo else Nothing
+            preferredLocId <- MaybeT $ return specialLocWarriorDriverInfo.preferredPrimarySpecialLocId
+            preferredLoc <- MaybeT $ TDI.getPreferredPrimarySpecialLoc (Just preferredLocId.getId)
+            preferredLocGate <- MaybeT $ return $ listToMaybe preferredLoc.gates
+            let gHR =
+                  DDGR.DriverGoHomeRequest
+                    { createdAt = now,
+                      driverId = driverInfo.driverId,
+                      id = Id "specialLocWarriorGoHomeId",
+                      lat = preferredLocGate.point.lat,
+                      lon = preferredLocGate.point.lon,
+                      mbReachedHome = Nothing,
+                      numCancellation = 0,
+                      status = DDGR.ACTIVE,
+                      updatedAt = now,
+                      merchantId = Just merchantId,
+                      merchantOperatingCityId = Just merchantOpCityId
+                    }
+            return (gHR, specialLocWarriorDriver, Just preferredLocId)
+        )
+        specialLocWarriorDrivers
   logDebug $ "MetroWarriorDebugging specialLocgoHomeRequests -----" <> show specialLocgoHomeRequests
   let convertedDriverPoolRes = map (\(ghr, driver, mbPreferredSpecialLocId) -> (ghr, driver, mbPreferredSpecialLocId, makeDriverPoolRes driver)) (goHomeRequests <> specialLocgoHomeRequests)
   driverGoHomePoolWithActualDistance <-
@@ -869,7 +874,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
             _ -> do
               computed <-
                 zipWith (curry (\((ghr, driver, mbPreferredSpecialLocId, _), dpwAD) -> (ghr, driver, mbPreferredSpecialLocId, dpwAD))) needMapsRes . NE.toList
-                  <$> computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId Nothing fromLocation (NE.fromList $ map (\(_, _, _, c) -> c) needMapsRes) currentSearchInfo
+                  <$> withTimeAPI "driverPooling" "goHomeComputeActualDistance" (computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOpCityId Nothing fromLocation (NE.fromList $ map (\(_, _, _, c) -> c) needMapsRes) currentSearchInfo)
               case driverPoolCfg.actualDistanceThreshold of
                 Nothing -> return computed
                 Just threshold -> do
@@ -879,7 +884,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
                   return res
         return $ skippedWithStraightLine <> needMapsWithActualDistance
 
-  driversRoutes' <- getRoutesForAllDrivers driverGoHomePoolWithActualDistance
+  driversRoutes' <- withTimeAPI "driverPooling" "goHomeGetRoutes" $ getRoutesForAllDrivers driverGoHomePoolWithActualDistance
   let driversRoutes = map (refactorRoutesResp goHomeCfg) driversRoutes'
   let driversOnWayToHome =
         filter
