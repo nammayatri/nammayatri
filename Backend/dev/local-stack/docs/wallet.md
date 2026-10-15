@@ -119,8 +119,13 @@ each find theirs, and a rollback needs nothing.
 have no credit and get no rides. Test with a real driver account topped up
 through the gateway page.
 
-**That test stopped being free on 2026-09-20**, and only on one side. Chargily
-is still a test key, so an Algerian top-up is the real flow with no real money.
+**That test stopped being free on 2026-09-20**, and only on one side then.
+**Since 2026-10-15 Chargily is live too** (the owner installed the live secret
+key in the server's `.env` with a one-off script that read it hidden, checked it
+against Chargily's live `GET /balance`, set `CHARGILY_BASE` to
+`https://pay.chargily.net/api/v2` and recreated maps-shim alone; the previous
+`.env` is kept as `.env.bak-*-before-chargily-live`). An Algerian top-up now
+moves real money as well. Before that date it was the real flow with no money.
 **Moosyl is live**: a Mauritanian top-up moves a real 30 MRU out of a real
 account, and there is no sandbox to fall back to — the same URL serves both and
 only the key differs. To rehearse the Mauritanian flow without paying, put the
