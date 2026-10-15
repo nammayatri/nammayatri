@@ -23,6 +23,8 @@ import qualified Lib.JourneyLeg.Types as JLTypes
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.SharedCab.Allocation as SharedCabAllocation
+import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
+import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), RiderFix (..))
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Config as Config
@@ -56,7 +58,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
   -- the fallback gate and the arrival deadline both live in the cross-app Redis cell the allocation tick writes to
   cfg <- Config.getTunables booking.merchantOperatingCityId
-  findingSince <- SharedCabAllocation.readFindingSince booking.id booking.createdAt
+  findingSince <- Claim.readFindingSince booking.id booking.createdAt
   attempts <- SharedCabBooking.shared $ fromMaybe 0 <$> Redis.safeGet (Keys.attemptsKey booking.id)
   mbAllocState <- SharedCabBooking.shared $ Redis.safeGet @AllocationState (Keys.allocKey booking.id)
   -- the cab's fix and ETAs: one read of the route's LTS hash (what the allocator reads); any miss is Nothing
@@ -71,7 +73,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
     _ -> pure Nothing
   let cabTrack = do
         veh <- mbCabTracking
-        guard (SharedCabAllocation.isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo)
+        guard (Select.isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo)
         pure (SharedCabLeg.cabTracking now booking.fromStationCode booking.toStationCode veh.vehicleInfo)
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)

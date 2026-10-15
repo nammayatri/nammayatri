@@ -17,7 +17,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, ticketsCountedAtConfirm, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, ticketsCountedAtConfirm, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
@@ -191,6 +191,13 @@ tests =
               silentCab t0 60 "P1" []
             ]
               @?= [False, False, True, True, False, False],
+      testCase "a cab counts as moving only on a fresh report above the speed threshold" $
+        [ movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 8) 5],
+          movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 0) 5],
+          movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 8) 500],
+          movingCab t0 60 "P1" [cabFix "P2" nearStop (Just 8) 5]
+        ]
+          @?= [True, False, False, False],
       testCase "a silent-cab release is nobody's fault and not an attempt" $
         (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
       testCase "only a cab that sat at the stop (or is moving) gets the stand-timer kind; a cab away from the stop gets its own" $

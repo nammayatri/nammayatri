@@ -701,6 +701,10 @@ library
       SharedLogic.Serviceability
       SharedLogic.SharedCab
       SharedLogic.SharedCab.Allocation
+      SharedLogic.SharedCab.Allocation.Claim
+      SharedLogic.SharedCab.Allocation.Reallocate
+      SharedLogic.SharedCab.Allocation.Select
+      SharedLogic.SharedCab.Allocation.Timers
       SharedLogic.SharedCab.Allocation.Types
       SharedLogic.SharedCab.Boarding
       SharedLogic.SharedCab.Booking

@@ -26,7 +26,9 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import SharedLogic.FRFSUtils (markFRFSBookingStatus, noPaymentDue)
 import qualified SharedLogic.Payment as SPayment
-import SharedLogic.SharedCab.Allocation (claimable, clearAllocationKeys, readFindingSince, releaseCancelledBooking)
+import SharedLogic.SharedCab.Allocation.Claim (clearAllocationKeys, readFindingSince)
+import SharedLogic.SharedCab.Allocation.Reallocate (releaseCancelledBooking)
+import SharedLogic.SharedCab.Allocation.Select (claimable)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
 import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config

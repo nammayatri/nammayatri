@@ -38,6 +38,7 @@ import qualified Lib.JourneyModule.Utils as JLU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation as Allocation
+import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
@@ -250,7 +251,7 @@ sharedCabRouteServiceability person cabIbc mbPlate legReqs = do
         mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:routeServiceability:readRoutePosition" (Allocation.readRoutePosition code sess.vehicleNumber)
         pure $ do
           track <- mbTrack
-          guard (Allocation.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)
+          guard (Select.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)
           pure (mkLiveCab now sess.vehicleNumber track.vehicleInfo)
       pure
         ApiTypes.RouteWithLiveVehicle

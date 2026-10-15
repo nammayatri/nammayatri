@@ -25,6 +25,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.SharedCab.Allocation as Allocation
+import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (SkipReason (..))
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -95,7 +96,7 @@ postSharedCabBookingSkip (mbPersonId, _) bookingId req = do
   unless (booking.riderId == personId && isSharedCabBooking booking && booking.status == CONFIRMED) $
     throwError $ InvalidRequest "Booking not found"
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
-  plate <- Allocation.allocatedPlate (booking, map (.status) tickets) & fromMaybeM (InvalidRequest "This booking has no cab to skip")
+  plate <- Select.allocatedPlate (booking, map (.status) tickets) & fromMaybeM (InvalidRequest "This booking has no cab to skip")
   cfg <- Config.getTunables booking.merchantOperatingCityId
   skipped <- Allocation.skipSharedCabAllocation cfg booking.id plate (skipReason req.reason)
   unless skipped $ throwError $ InvalidRequest "This booking has no cab to skip"

@@ -19,6 +19,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
+import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState (..))
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -46,7 +47,7 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     checkFresh fresh
     refund <- decide by fresh
     setRefundDecision booking.id refund
-    (cancelAction >> when (stage == ConfirmCancel) (Allocation.clearAllocationKeys booking.id)) `finally` clearRefundDecision booking.id
+    (cancelAction >> when (stage == ConfirmCancel) (Claim.clearAllocationKeys booking.id)) `finally` clearRefundDecision booking.id
     pure refund
   when (stage == ConfirmCancel) $ do
     -- the leg-state surface shows why. Swallowed: the booking is cancelled by now, so a Redis hiccup here must not error a
