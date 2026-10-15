@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.RadarTickets
 import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Management.RadarTickets
+import qualified Domain.Action.DashboardAuth.Management.RadarTickets
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -160,7 +161,7 @@ postRadarTicketsTicketReply a5 a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RADAR_TICKETS/POST_RADAR_TICKETS_TICKET_REPLY" a3 (Kernel.Prelude.Just a1)
-        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.RadarTickets.postRadarTicketsTicketReply a5 a4 a2 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.RadarTickets.postRadarTicketsTicketReply a5 a4 a3 a2 a1
     )
 
 postRadarTicketsUpload :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.RadarTickets.RadarUploadReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.RadarTickets.RadarUploadRes)
@@ -168,7 +169,7 @@ postRadarTicketsUpload a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
-        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RADAR_TICKETS/POST_RADAR_TICKETS_UPLOAD" a2 (Kernel.Prelude.Just a1)
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RADAR_TICKETS/POST_RADAR_TICKETS_UPLOAD" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.RadarTickets.postRadarTicketsUpload a4 a3 a1
     )
 
@@ -178,7 +179,7 @@ postRadarTicketsCreate a4 a3 a2 a1 =
     ( do
         Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/RADAR_TICKETS/POST_RADAR_TICKETS_CREATE" a2 (Kernel.Prelude.Just a1)
-        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.RadarTickets.postRadarTicketsCreate a4 a3 a1
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.RadarTickets.postRadarTicketsCreate a4 a3 a2 a1
     )
 
 postRadarTicketsTicketUpdateStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.RadarTickets.RadarUpdateStatusReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
