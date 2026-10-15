@@ -1784,7 +1784,7 @@ getVehicleServiceTypeFromInMem ::
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
   m (Maybe Spec.ServiceTierType)
-getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
+getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ("CACHED_VEHICLE_TYPE" : vehicleNumber : map (.id.getId) integratedBPPConfigs) 43200 $ do
   mbMbResult <-
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
       OTPRest.getVehicleMetadata config vehicleNumber Nothing
@@ -1797,7 +1797,7 @@ getVehicleServiceSubTypesFromInMem ::
   Text ->
   m (Maybe [Spec.ServiceSubType])
 getVehicleServiceSubTypesFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ["CACHED_VEHICLE_SERVICE_SUBTYPES", vehicleNumber] 86400 $ do
+  IM.withInMemCache ("CACHED_VEHICLE_SERVICE_SUBTYPES" : vehicleNumber : map (.id.getId) integratedBPPConfigs) 86400 $ do
     mbMbResult <-
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
         OTPRest.getVehicleMetadata config vehicleNumber Nothing
@@ -1809,7 +1809,7 @@ getVehicleTagNumberFromInMem ::
   Text ->
   m (Maybe Text)
 getVehicleTagNumberFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ["CACHED_VEHICLE_TAG_NUMBER", vehicleNumber] 86400 $ do
+  IM.withInMemCache ("CACHED_VEHICLE_TAG_NUMBER" : vehicleNumber : map (.id.getId) integratedBPPConfigs) 86400 $ do
     mbMbResult <-
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
         OTPRest.getVehicleMetadata config vehicleNumber Nothing
@@ -1821,14 +1821,9 @@ getVehicleMetadataFromInMem ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, NandiTypes.VehicleMetadataResponse))
 getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ["CACHED_VEHICLE_METADATA", vehicleNumber] 43200 $ do
-    mbMbResult <-
-      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-        (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
-    pure $
-      mbMbResult
-        >>= \(integratedBPPConfig, mbResult) ->
-          mbResult <&> (\result -> (integratedBPPConfig, result))
+  IM.withInMemCache ("CACHED_VEHICLE_METADATA" : vehicleNumber : map (.id.getId) integratedBPPConfigs) 43200 $
+    SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config ->
+      fmap (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
 
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>

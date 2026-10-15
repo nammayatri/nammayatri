@@ -877,7 +877,16 @@ data VehicleMetadataResponse = VehicleMetadataResponse
     busTagNumber :: Maybe Text,
     isActuallyValid :: Maybe Bool
   }
-  deriving (Generic, ToJSON, ToSchema, Show)
+  deriving (Generic, ToSchema, Show)
+
+instance ToJSON VehicleMetadataResponse where
+  toJSON (VehicleMetadataResponse serviceType serviceSubTypes busTagNumber isActuallyValid) =
+    object
+      [ "serviceType" .= serviceType,
+        "serviceSubTypes" .= serviceSubTypes,
+        "busTagNumber" .= busTagNumber,
+        "is_actually_valid" .= isActuallyValid
+      ]
 
 instance FromJSON VehicleMetadataResponse where
   parseJSON = withObject "VehicleMetadataResponse" $ \v -> do
