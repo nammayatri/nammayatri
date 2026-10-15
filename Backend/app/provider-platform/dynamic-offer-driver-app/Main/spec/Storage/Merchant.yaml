@@ -30,6 +30,7 @@ imports:
   NotificationService: Kernel.External.Notification.Types
   SmsService: Kernel.External.SMS.Types
   IssueTicketService: Kernel.External.Ticket.Types
+  EventTrackingService: Kernel.External.EventTracking
   DriverBackgroundVerificationService: Kernel.External.Verification.Types
   BackgroundVerificationService: Kernel.External.BackgroundVerification.Types
   VerificationService: Kernel.External.Verification.Types
@@ -693,6 +694,8 @@ MerchantServiceUsageConfig:
     totoVerificationPriorityList: "Maybe [VerificationService]"
     challanProvidersPriorityList: "Maybe [ChallanSearchService]"
     imageExtractionProvidersPriorityList: "Maybe [VerificationService]"
+    eventTrackingProviders: "[EventTrackingService]"
+    eventTrackingOverrides: "Maybe (Map Text [EventTrackingService])"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
@@ -700,6 +703,8 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Maybe PayoutService
     payoutOrderStatus: Maybe PayoutService
     faceMatchService: Maybe VerificationService
+    eventTrackingProviders: Maybe [EventTrackingService]
+    eventTrackingOverrides: Maybe Value
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
@@ -707,6 +712,8 @@ MerchantServiceUsageConfig:
     createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
     faceMatchService: Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy|I
+    eventTrackingProviders: fromMaybe [] eventTrackingProviders|E
+    eventTrackingOverrides: Kernel.Utils.JSON.valueToMaybe =<< eventTrackingOverrides|E
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
@@ -714,6 +721,8 @@ MerchantServiceUsageConfig:
     createPayoutOrder: Kernel.Prelude.Just|I
     payoutOrderStatus: Kernel.Prelude.Just|I
     faceMatchService: Kernel.Prelude.Just|I
+    eventTrackingProviders: Kernel.Prelude.Just|I
+    eventTrackingOverrides: Data.Aeson.toJSON <$> eventTrackingOverrides|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -762,6 +771,8 @@ MerchantServiceUsageConfig:
     llmChatCompletion: character varying(30)
     totoVerificationPriorityList: "text[]"
     challanProvidersPriorityList: "text[]"
+    eventTrackingProviders: "text[]"
+    eventTrackingOverrides: jsonb
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
