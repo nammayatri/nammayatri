@@ -113,7 +113,13 @@ def sha(path):
 
 def run(cmd, check=True, quiet=False):
     if TEST:
-        print(f'       [test] {cmd}')
+        # Quiet commands stay quiet here too. key_overlay_problem() runs one at
+        # the END of `status`, and its echo landed after the line the test
+        # greps for: `status | grep -q` under pipefail then failed whenever
+        # grep had already exited (SIGPIPE) -- release.test.sh red one run in
+        # three, 2026-10-15.
+        if not quiet:
+            print(f'       [test] {cmd}')
         out = '{"services": {}}' if 'config --format json' in cmd else ''
         return subprocess.CompletedProcess(cmd, 0, out, '')
     r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
