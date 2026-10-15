@@ -173,7 +173,6 @@ import qualified Domain.Types.Route as DRoute
 import qualified Domain.Types.TransporterConfig as DTCConfig
 import Domain.Types.TripTransaction
 import qualified Domain.Types.TripTransaction as DTT
-import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
@@ -5586,7 +5585,7 @@ validatePoolingPrioritySpecialLocations merchantOpCityId priority = do
     areaSpecialLocationId area = SL.pickupSpecialZoneIdFromArea area <|> SL.dropSpecialZoneIdFromArea area
     inCity = maybe False (\loc -> ((.getId) <$> loc.merchantOperatingCityId) == Just merchantOpCityId.getId)
 
-getFleetAutoAssignDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Maybe Text -> Flow (Id DMOC.MerchantOperatingCity, DP.Person, DP.Person, DVeh.Vehicle, [DVST.VehicleServiceTier])
+getFleetAutoAssignDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Maybe Text -> Flow (Id DMOC.MerchantOperatingCity, DP.Person, DP.Person, [DVST.VehicleServiceTier])
 getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
   (merchant, merchantOpCityId, fleetOwner) <- getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId
   let personId = cast @Common.Driver @DP.Person driverId
@@ -5594,9 +5593,8 @@ getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwne
   unless (driver.merchantId == merchant.id && driver.merchantOperatingCityId == merchantOpCityId) $
     throwError (PersonDoesNotExist personId.getId)
   validateFleetDriverAssociation fleetOwner.id.getId personId
-  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   cityTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
-  pure (merchantOpCityId, fleetOwner, driver, vehicle, cityTiers)
+  pure (merchantOpCityId, fleetOwner, driver, cityTiers)
 
 getDriverFleetDriverAutoAssign ::
   ShortId DM.Merchant ->
@@ -5606,17 +5604,18 @@ getDriverFleetDriverAutoAssign ::
   Maybe Text ->
   Flow Common.DriverAutoAssignStatusRes
 getDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId = do
-  (merchantOpCityId, fleetOwner, driver, vehicle, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  (merchantOpCityId, fleetOwner, driver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  mbVehicle <- QVehicle.findById driver.id
   mbAutoAssign <- QFDAExtra.getFleetAutoAssignConfig fleetOwner.id.getId merchantOpCityId
   now <- getCurrentTime
   let hasAutoAssignTag = Yudhishthira.elemTagName (LYT.TagNameValue QFDAExtra.autoAssignTagName) (Yudhishthira.filterExpiredTags' now (fromMaybe [] driver.driverTag))
-      enabledTiers = fromMaybe [] vehicle.selectedAutoAcceptTiers
+      enabledTiers = maybe [] (fromMaybe [] . (.selectedAutoAcceptTiers)) mbVehicle
   pure $
     Common.DriverAutoAssignStatusRes
       { enabled = hasAutoAssignTag && not (null enabledTiers),
         enabledTiers,
         eligibleTiers = [tier.serviceTierType | tier <- cityTiers, QFDAExtra.isAutoAcceptEnabledTier tier],
-        autoAcceptOnlyTiers = [tier.serviceTierType | tier <- cityTiers, QFDAExtra.isAutoAcceptOnlyTier tier, vehicle.variant `elem` tier.allowedVehicleVariant],
+        autoAcceptOnlyTiers = [tier.serviceTierType | vehicle <- maybeToList mbVehicle, tier <- cityTiers, QFDAExtra.isAutoAcceptOnlyTier tier, vehicle.variant `elem` tier.allowedVehicleVariant],
         hasAutoAssignTag,
         allowDriverToToggle = maybe True (.allowDriverToToggle) mbAutoAssign
       }
@@ -5630,11 +5629,14 @@ postDriverFleetDriverAutoAssign ::
   Common.FleetDriverAutoAssignReq ->
   Flow APISuccess
 postDriverFleetDriverAutoAssign merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
-  (_, _, driver, vehicle, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
+  (_, _, validatedDriver, cityTiers) <- getFleetAutoAssignDriver merchantShortId opCity requestorId driverId mbFleetOwnerId
   when (req.enable && not (any QFDAExtra.isAutoAcceptEnabledTier cityTiers)) $
     throwError $ InvalidRequest "No service tier in this city has auto-accept enabled"
-  now <- getCurrentTime
-  Redis.withWaitOnLockRedisWithExpiry (SVST.selectedServiceTiersLockKey driver.id) 5 10 $
+  let personId = validatedDriver.id
+  Redis.withWaitOnLockRedisWithExpiry (SVST.selectedServiceTiersLockKey personId) 5 10 $ do
+    driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
+    now <- getCurrentTime
     if req.enable
       then QFDAExtra.writeFleetDriverTags True (Just DFC.AutoAssignConfig {defaultOn = True, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False}) driver
       else do

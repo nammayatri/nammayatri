@@ -426,20 +426,27 @@ makeFullVehicleFromRC mbPreviousVehicle vehicleServiceTiers driverInfo driver me
       builtVehicle = setTiers (DL.nub (availableServiceTiersForDriver <> ratingGatedTiers)) vehicle.selectedAutoAcceptTiers vehicle
       cityAutoAcceptTiers = map (.serviceTierType) (filter QFDA.isAutoAcceptEnabledTier vehicleServiceTiers)
       hadAutoAccept = maybe True (not . null . fromMaybe [] . (.selectedAutoAcceptTiers)) mbPreviousVehicle
-  mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
-  if maybe False (.defaultOn) mbFleetAutoAssign && hadAutoAccept && not (null cityAutoAcceptTiers)
-    then do
-      let oldTags = fromMaybe [] driver.driverTag
-          newTags = QFDA.fleetDriverTags now cityAutoAcceptTiers True mbFleetAutoAssign oldTags
-      when (newTags /= oldTags) $ QP.updateDriverTag (Just newTags) driver.id
-      pure $ QFDA.fleetAutoAcceptVehicle now True (Just newTags) vehicleServiceTiers builtVehicle
-    else pure $ case mbPreviousVehicle of
-      Just previousVehicle
-        | previousVehicle.variant == builtVehicle.variant,
-          previousAutoAcceptTiers@(_ : _) <- fromMaybe [] previousVehicle.selectedAutoAcceptTiers ->
-          let servableTiers = [tier.serviceTierType | tier <- vehicleServiceTiers, builtVehicle.variant `elem` tier.allowedVehicleVariant]
-           in setTiers (DL.nub (builtVehicle.selectedServiceTiers <> filter (`elem` servableTiers) previousAutoAcceptTiers)) (Just previousAutoAcceptTiers) builtVehicle
-      _ -> builtVehicle
+      carriedOverVehicle = case mbPreviousVehicle of
+        Just previousVehicle
+          | previousVehicle.variant == builtVehicle.variant,
+            previousAutoAcceptTiers@(_ : _) <- fromMaybe [] previousVehicle.selectedAutoAcceptTiers ->
+            let servableTiers = [tier.serviceTierType | tier <- vehicleServiceTiers, builtVehicle.variant `elem` tier.allowedVehicleVariant]
+             in setTiers (DL.nub (builtVehicle.selectedServiceTiers <> filter (`elem` servableTiers) previousAutoAcceptTiers)) (Just previousAutoAcceptTiers) builtVehicle
+        _ -> builtVehicle
+  fleetResult <- withTryCatch "makeFullVehicleFromRC" $ do
+    mbFleetAutoAssign <- QFDA.getDriverFleetAutoAssignConfig driver.id driver.merchantOperatingCityId
+    if maybe False (.defaultOn) mbFleetAutoAssign && hadAutoAccept && not (null cityAutoAcceptTiers)
+      then do
+        let oldTags = fromMaybe [] driver.driverTag
+            newTags = QFDA.fleetDriverTags now cityAutoAcceptTiers True mbFleetAutoAssign oldTags
+        when (newTags /= oldTags) $ QP.updateDriverTag (Just newTags) driver.id
+        pure $ QFDA.fleetAutoAcceptVehicle now True (Just newTags) vehicleServiceTiers builtVehicle
+      else pure carriedOverVehicle
+  case fleetResult of
+    Left err -> do
+      logError $ "makeFullVehicleFromRC: fleet auto-assign failed for driver " <> driver.id.getId <> ": " <> show err
+      pure carriedOverVehicle
+    Right fullVehicle -> pure fullVehicle
   where
     setTiers :: [DVST.ServiceTierType] -> Maybe [DVST.ServiceTierType] -> Vehicle -> Vehicle
     setTiers serviceTiers autoAcceptTiers Vehicle {..} = Vehicle {selectedServiceTiers = serviceTiers, selectedAutoAcceptTiers = autoAcceptTiers, ..}
@@ -1039,7 +1046,7 @@ matchesRegexSafely documentType input regexPattern = do
   result <- try @_ @SomeException $ do
     let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
     matched `seq` pure matched
-  case result of
+  case fleetResult of
     Right matched -> pure (Just matched)
     Left err -> do
       logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
