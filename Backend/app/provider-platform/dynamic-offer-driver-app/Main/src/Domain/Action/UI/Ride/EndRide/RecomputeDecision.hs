@@ -112,7 +112,7 @@ data RecomputeConfig = RecomputeConfig
     cfgNoRecomputeTripCategories :: [DTC.TripCategory],
     -- | Estimate-relative time forgiveness: the tightest matching band (by
     -- the ride's estimated duration) supplies how much overage is forgiven.
-    -- Empty list = no forgiveness. Fleet default: one catch-all 5-min band.
+    -- Empty list = no forgiveness. Fleet default: one catch-all 20-min band.
     cfgTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand],
     -- | When True, rides billed at the ESTIMATED distance also bill the
     -- estimated duration, so the per-minute extra-time charge cannot fire on
@@ -361,10 +361,14 @@ upwardBandQualifies mbBands estimatedDist distanceDiff = do
       distanceDiff > band.minThresholdDistance
         && distanceDiff.getMeters > (estimatedDist.getMeters * band.minThresholdPercentage) `div` 100
 
--- | Fleet default time forgiveness: forgive up to 5 minutes of overage on
--- every ride (single catch-all band).
+-- | Fleet default time forgiveness: forgive up to 20 minutes of overage on
+-- every ride (single catch-all band). This is also the safety net when the
+-- configured policy fails to decode or the ConfigPilot patch fails to apply,
+-- so it must match the fleet-wide configured value (2026-10-14 incident:
+-- a 5-minute default here billed actual duration on every per-min-section
+-- ride while ConfigPilot showed 20 minutes).
 defaultTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand]
-defaultTimeForgivenessBands = [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 300}]
+defaultTimeForgivenessBands = [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 1200}]
 
 -- | True when the actual duration overran the estimate by strictly less than
 -- the forgiveness of the tightest matching band (picked by estimated

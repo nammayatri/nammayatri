@@ -3,6 +3,7 @@ module Storage.Queries.Transformers.TransporterConfig
     parseFieldM,
     parseFieldWithDefaultM,
     parseAnalyticsConfig,
+    parseFareRecomputePolicy,
     parseScheduledRideConfig,
     parseDriverWalletConfig,
     parseSubscriptionConfig,
@@ -32,6 +33,14 @@ fallbackVersion =
 
 fallBackVersionInText :: Text
 fallBackVersionInText = versionToText fallbackVersion
+
+-- | Fare recompute policy decode with an ERROR log on failure. The previous
+-- inline fromTType silently mapped any aeson error to Nothing, which made the
+-- fare engine fall back to code-default forgiveness with no trace (2026-10-14
+-- duration-overcharge incident). Decode failure still yields Nothing (the
+-- defaults in RecomputeDecision.mkRecomputeConfig apply), but is now loud.
+parseFareRecomputePolicy :: (Monad m, Log m) => Text -> Maybe A.Value -> m (Maybe Extra.RecomputePolicy)
+parseFareRecomputePolicy merchantOperatingCityId = parseFieldM "transporterConfig" "fareRecomputePolicy" merchantOperatingCityId
 
 $(mkFieldParserWithDefault ''AnalyticsConfig)
 
