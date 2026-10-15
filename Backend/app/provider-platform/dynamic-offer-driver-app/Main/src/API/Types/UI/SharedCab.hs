@@ -7,28 +7,16 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Types.UI.SharedCab where
+module API.Types.UI.SharedCab (module API.Types.UI.SharedCab, module Domain.Types.SharedCabSession) where
 
 -- Proxy DTOs for the driver-app `/sharedCab/*` API: a pure pass-through onto rider-app `/internal/sharedCab/*`, so do not
 -- rename fields.
 
-import Data.Aeson (object, withObject, withText, (.:), (.=))
+import Data.Aeson (withText)
 import Data.OpenApi (ToSchema)
+import Domain.Types.SharedCabSession
 import EulerHS.Prelude hiding (force, id)
 import Kernel.Prelude (UTCTime)
-import Kernel.Types.Common (HighPrecMoney)
-
-data SharedCabRoute = SharedCabRoute
-  { code :: Text,
-    direction :: Text,
-    distanceKm :: Maybe Double,
-    fromStop :: Text,
-    isStandRoute :: Bool,
-    name :: Text,
-    toStop :: Text
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype SharedCabRoutesResp = SharedCabRoutesResp
   { routes :: [SharedCabRoute]
@@ -87,141 +75,6 @@ data SeatsReq = SeatsReq
 data CancelBookingReq = CancelBookingReq
   { reason :: Text
   }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabSessionStatus = ACTIVE | ENDED | PAUSED
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SharedCabPauseReason = ABSENT | DRIVER_OFFLINE | NO_LOCATION | OFF_ROUTE
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
--- | Mirrors rider-app SessionView.RiderStatus. A status a newer rider-app adds decodes as UNKNOWN_STATUS instead of
--- failing the driver's whole session view.
-data SharedCabRiderStatus = AT_STOP | MINUTES_AWAY | ARRIVING | BOARDED | UNKNOWN_STATUS
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, ToSchema)
-
-instance FromJSON SharedCabRiderStatus where
-  parseJSON = withText "SharedCabRiderStatus" $ \t ->
-    pure $ case t of
-      "AT_STOP" -> AT_STOP
-      "MINUTES_AWAY" -> MINUTES_AWAY
-      "ARRIVING" -> ARRIVING
-      "BOARDED" -> BOARDED
-      _ -> UNKNOWN_STATUS
-
-data BoardingRider = BoardingRider
-  { bookingId :: Text,
-    dropStop :: Text,
-    expiresAt :: Maybe UTCTime,
-    fare :: HighPrecMoney,
-    firstName :: Text,
-    minutesAway :: Maybe Int,
-    riderStatus :: SharedCabRiderStatus,
-    seats :: Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data AlightingRider = AlightingRider
-  { bookingId :: Text,
-    firstName :: Text,
-    seats :: Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data RidersAtStop = RidersAtStop
-  { alighting :: [AlightingRider],
-    boarding :: [BoardingRider],
-    stopName :: Text
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DemandAtStop = DemandAtStop
-  { searching :: Int,
-    stopName :: Text,
-    waiting :: Int,
-    windowMin :: Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype LowDemandCard = LowDemandCard
-  { alternatives :: [LowDemandAlternative]
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data LowDemandAlternative = LowDemandAlternative
-  { distanceKm :: Double,
-    name :: Text,
-    riders :: Int,
-    routeCode :: Text,
-    windowMin :: Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-newtype OffRoute = OffRoute
-  { nearestRoutes :: [SharedCabRoute]
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data SessionRoute = SessionRoute
-  { code :: Text,
-    direction :: Text,
-    name :: Text,
-    nextStops :: [Text]
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
--- contract: { tag: 'AT_STOP', sinceMin, stopName } | { tag: 'MOVING' }
-data SessionMovement
-  = SessionMovementAtStop {sinceMin :: Int, stopName :: Text}
-  | SessionMovementMoving
-  deriving stock (Generic, Show, Eq)
-
-instance ToJSON SessionMovement where
-  toJSON (SessionMovementAtStop sinceMin stopName) =
-    object ["tag" .= ("AT_STOP" :: Text), "sinceMin" .= sinceMin, "stopName" .= stopName]
-  toJSON SessionMovementMoving = object ["tag" .= ("MOVING" :: Text)]
-
-instance FromJSON SessionMovement where
-  parseJSON = withObject "SessionMovement" $ \o -> do
-    tag :: Text <- o .: "tag"
-    case tag of
-      "AT_STOP" -> SessionMovementAtStop <$> o .: "sinceMin" <*> o .: "stopName"
-      "MOVING" -> pure SessionMovementMoving
-      other -> fail $ "Unknown session movement tag: " <> show other
-
-instance ToSchema SessionMovement
-
-data SharedCabSession = SharedCabSession
-  { available :: Int,
-    capacity :: Int,
-    demandAhead :: [DemandAtStop],
-    lowDemandCard :: Maybe LowDemandCard,
-    movement :: SessionMovement,
-    offRoute :: Maybe OffRoute,
-    pauseReason :: Maybe SharedCabPauseReason,
-    queuedRoute :: Maybe SessionRoute,
-    ridersByStop :: [RidersAtStop],
-    route :: SessionRoute,
-    status :: SharedCabSessionStatus,
-    version :: Int,
-    walkupCount :: Int
-  }
-  deriving stock (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data EndRouteNext = CHANGE | END | RETURN
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

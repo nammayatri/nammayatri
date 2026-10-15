@@ -652,7 +652,6 @@ library
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
-      SharedLogic.CallSharedCabBooking
       SharedLogic.Cancel
       SharedLogic.CancellationConsequence
       SharedLogic.CancellationDues
@@ -800,6 +799,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SharedCab.Flag
       SharedLogic.SharedCab.ReconcilerSeed
+      SharedLogic.SharedCab.RiderClient
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.Subscription.BillingModel

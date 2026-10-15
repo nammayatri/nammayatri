@@ -46,20 +46,12 @@ import qualified Domain.Types.FRFSTicketStatus as TicketStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.SharedCabSession (PauseReason (..), SessionMovement (..), SessionStatus (..))
 import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.Prelude
 import Kernel.Types.Id
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import Tools.Error (SharedCabSessionError (..))
-
-data SessionStatus = ACTIVE | PAUSED | ENDED
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-data PauseReason = NO_LOCATION | DRIVER_OFFLINE | ABSENT | OFF_ROUTE
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-data SessionMovement = MOVING | AT_STOP {stopName :: Text, sinceMin :: Int}
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data SelectRouteMode = AfterLastDrop | Force
   deriving (Show, Eq, Generic)

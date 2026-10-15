@@ -4,10 +4,11 @@
 -- | The driver's cancel reason survives every layer of the driver-app proxy on its way to rider-app.
 module SharedCabProxyTests (tests) where
 
-import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..), SharedCabRiderStatus (..))
+import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..))
 import Data.Aeson (Value (..), decode, encode, object, (.=))
 import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabBooking (BookingAction (..), actionReason)
-import "dynamic-offer-driver-app" SharedLogic.CallSharedCabBooking (BAPDriverReq (..))
+import "beckn-spec" Domain.Types.SharedCabSession (RiderStatus (..))
+import "dynamic-offer-driver-app" SharedLogic.SharedCab.RiderClient (BAPDriverReq (..))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude

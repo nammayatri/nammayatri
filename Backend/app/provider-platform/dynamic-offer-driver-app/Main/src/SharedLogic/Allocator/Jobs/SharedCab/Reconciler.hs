@@ -11,7 +11,6 @@ import qualified Data.Map as M
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
-import EulerHS.Types (EulerClient, client)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -23,11 +22,11 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
-import Servant hiding (throwError)
 import SharedLogic.Allocator (AllocatorJobType (SharedCabReconciler), SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
 import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
+import SharedLogic.SharedCab.RiderClient (SessionAPI, sessionProbeClient)
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
@@ -39,21 +38,6 @@ sharedCabReconcilerBatchSize = 100
 
 clearSignalErrorCodes :: [Text]
 clearSignalErrorCodes = ["SHARED_CAB_SESSION_NOT_FOUND", "SHARED_CAB_SESSION_HELD_BY_ANOTHER_DRIVER"]
-
-type SharedCabSessionAPI =
-  "internal"
-    :> "sharedCab"
-    :> "session"
-    :> QueryParam' '[Required, Strict] "driverId" Text
-    :> QueryParam' '[Required, Strict] "vehicleNumber" Text
-    :> Header "token" Text
-    :> Get '[JSON] Aeson.Value
-
-callSessionClient :: Text -> Text -> Maybe Text -> EulerClient Aeson.Value
-callSessionClient = client (Proxy @SharedCabSessionAPI)
-
-callSessionAPI :: Proxy SharedCabSessionAPI
-callSessionAPI = Proxy
 
 data SessionProbe
   = -- | Clear, with the decoded errorCode for the audit log line.
@@ -78,7 +62,7 @@ probeSharedCabSession apiKey internalUrl driverId vehicleNumber = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   eResp <-
     withTryCatch "getSharedCabSession:sharedCabReconciler" $
-      EC.callApiUnwrappingApiError APICallError Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
+      EC.callApiUnwrappingApiError APICallError Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sessionProbeClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" (Proxy @(SessionAPI Aeson.Value))
   pure $ case eResp of
     Right _ -> SessionUnknown -- 2xx: a live session answered; nothing to do
     Left exc
@@ -149,7 +133,7 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
         [] -> pure (checked, cleared, leftFlag)
         batch -> do
           (cleared', leftFlag') <- foldM (reconcileDriver apiKey internalUrl) (0 :: Int, 0 :: Int) batch
-          reconcileAll merchantOpCity apiKey internalUrl (Just (last batch).driverId) (checked + length batch, cleared + cleared', leftFlag + leftFlag')
+          reconcileAll merchantOpCity apiKey internalUrl ((.driverId) <$> lastMay batch) (checked + length batch, cleared + cleared', leftFlag + leftFlag')
 
     reconcileDriver :: Text -> BaseUrl -> (Int, Int) -> DDI.DriverInformation -> m (Int, Int)
     reconcileDriver apiKey internalUrl (cleared, leftFlag) driverInfo = do
@@ -174,4 +158,4 @@ runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) 
               pure (cleared, leftFlag + 1)
 
     clearFlag :: Id DP.Person -> m ()
-    clearFlag driverId = SharedCabFlag.clearSharedCabSessionActive driverId
+    clearFlag = SharedCabFlag.clearSharedCabSessionActive

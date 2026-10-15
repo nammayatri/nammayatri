@@ -12,7 +12,7 @@ import API.Types.UI.SharedCab (SharedCabSession)
 import Domain.Action.UI.SharedCab (DriverAuthInfo, bapInternal, validateSharedCabDriver)
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified SharedLogic.CallSharedCabBooking as CallBooking
+import qualified SharedLogic.SharedCab.RiderClient as CallBooking
 
 data BookingAction = Cancel Text | BoardedWithoutCode | Dropped
   deriving (Show, Eq)

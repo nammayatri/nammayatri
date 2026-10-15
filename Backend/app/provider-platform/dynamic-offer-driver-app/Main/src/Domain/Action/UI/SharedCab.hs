@@ -30,10 +30,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Allocator (SharedCabReconcilerJobData (..))
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
-import qualified SharedLogic.CallBAPInternal as SharedCabBAP
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.SharedCab.Flag as SharedCabFlag
 import qualified SharedLogic.SharedCab.ReconcilerSeed as SharedCabSeed
+import qualified SharedLogic.SharedCab.RiderClient as SharedCabBAP
 import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle

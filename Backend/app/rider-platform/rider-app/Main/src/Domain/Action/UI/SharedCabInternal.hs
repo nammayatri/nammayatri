@@ -280,7 +280,7 @@ liveRiderRows stopPoints plate = do
               expiresAt
             }
 
--- | Until the tick lands: MOVING, next stops are the whole route. `available` is derived: capacity less walk-ups less held seats.
+-- | Until the tick lands: moving, next stops are the whole route. `available` is derived: capacity less walk-ups less held seats.
 mkSessionResp :: Session -> Environment.Flow View.SharedCabSession
 mkSessionResp s = do
   integratedBppConfig <- getIntegratedBppConfig s.integratedBppConfigId
@@ -296,7 +296,7 @@ mkSessionResp s = do
         queuedRoute,
         status = s.status,
         pauseReason = s.pauseReason,
-        movement = MOVING,
+        movement = SessionMovementMoving,
         capacity = s.capacity,
         walkupCount = s.walkupCount,
         available = max 0 (s.capacity - s.walkupCount - bookedSeats),
