@@ -258,6 +258,8 @@ onConfirm merchant booking' quoteCategories dOrder = do
   -- the same reason the pass debit below is guarded on it.
   unless (booking.status == Booking.CONFIRMED) $
     Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show Booking.CONFIRMED) ""
+  unless (booking.status == Booking.CONFIRMED) $
+    fork "remove new user namma tag" $ CQP.removeNewUserTag person
   -- Debit the pass here, once the ticket exists. Everything between a debit and the ticket -- a
   -- thrown BPP call, a pod restart, a journey the rider abandons -- used to strand the trip with
   -- nothing left to release it. Swallowed so a metering failure can never undo a confirmed ticket.
