@@ -175,6 +175,11 @@ request returns `500 INTERNAL_ERROR`. `passetto-db` is seeded with the
 pre-generated keys that match the encrypted values in the seed data — that's why
 the test rider's number decrypts correctly (`999...001`).
 
+**On the live server that is no longer so** (since 2026-10-13): passetto runs
+on our own keys and hash salt (`stack/key-rotation/`, its README), and the
+seeded `ny-passetto-db` was removed from it on 2026-10-15 (`cleanup.sh`). The
+seeded store is for dev and CI stacks only.
+
 ---
 
 ## Layout
