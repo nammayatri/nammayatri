@@ -467,6 +467,7 @@ isDriverOnlyConfigType = \case
   DocumentVerificationConfig -> True
   DocumentVerificationStagesConfig -> True
   RideFeedbackConfig -> True
+  FleetConfig -> True
   GoHomeConfig -> True
   LeaderBoardConfig -> True
   ReminderConfig -> True

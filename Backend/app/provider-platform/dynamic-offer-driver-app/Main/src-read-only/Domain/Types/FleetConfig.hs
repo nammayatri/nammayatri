@@ -4,6 +4,7 @@
 module Domain.Types.FleetConfig where
 
 import Data.Aeson
+import qualified Domain.Types.FleetPoolingPriority
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -15,12 +16,15 @@ import qualified Tools.Beam.UtilsTH
 
 data FleetConfig = FleetConfig
   { allowAutomaticRoundTripAssignment :: Kernel.Prelude.Bool,
+    allowCancellationByDriver :: Kernel.Prelude.Bool,
     allowEndingMidRoute :: Kernel.Prelude.Bool,
     allowStartRideFromQR :: Kernel.Prelude.Bool,
+    autoAssign :: Kernel.Prelude.Maybe Domain.Types.FleetConfig.AutoAssignConfig,
     blacklistCoinEvents :: Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType],
     directlyStartFirstTripAssignment :: Kernel.Prelude.Bool,
     endRideDistanceThreshold :: Kernel.Types.Common.HighPrecMeters,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority,
     rideEndApproval :: Kernel.Prelude.Bool,
     unlinkDriverAndVehicleOnTripTermination :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -29,3 +33,6 @@ data FleetConfig = FleetConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data AutoAssignConfig = AutoAssignConfig {allowDriverToToggle :: Kernel.Prelude.Bool, defaultOn :: Kernel.Prelude.Bool, disableDriverAreaAndDistancePreference :: Kernel.Prelude.Bool}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
