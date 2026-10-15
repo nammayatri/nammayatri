@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.MerchantAccess as QAccess
+import qualified Tools.Auth.Capability as Capability
 
 -- | One Redis key per person holding their full merchant_access set, matched
 -- directly (no merchant_pair hop). Mirrors Tools.Auth.Capability's person-keyed
@@ -61,9 +62,15 @@ enforceMerchantCityAccess ::
   City.City ->
   m ()
 enforceMerchantCityAccess personId merchantShortId city = do
-  accessSet <- resolveMerchantAccess personId
-  unless (any (\(m, c) -> m == merchantShortId && c == city) accessSet) $
-    throwError AccessDenied
+  -- SUPER_ADMIN is break-glass: it bypasses merchant/city scope entirely, the same
+  -- way it bypasses the capability check (Tools.Auth.Capability.enforce) and the
+  -- resource scope (enforceResourceScopeFromRequest). So super-admins need no
+  -- merchant_access rows at all.
+  superAdmin <- Capability.isSuperAdmin personId
+  unless superAdmin $ do
+    accessSet <- resolveMerchantAccess personId
+    unless (any (\(m, c) -> m == merchantShortId && c == city) accessSet) $
+      throwError AccessDenied
 
 -- | Drop the cached set on any merchant_access change / person disable.
 invalidateMerchantAccess :: Redis.HedisFlow m r => Id DP.Person -> m ()
