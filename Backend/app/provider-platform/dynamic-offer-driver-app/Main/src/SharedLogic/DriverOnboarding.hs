@@ -1052,7 +1052,7 @@ matchesRegexSafely documentType input regexPattern = do
   result <- try @_ @SomeException $ do
     let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
     matched `seq` pure matched
-  case fleetResult of
+  case result of
     Right matched -> pure (Just matched)
     Left err -> do
       logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
