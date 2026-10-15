@@ -191,12 +191,12 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
       (driverPoolNotOnRide, driverPoolOnRide) <- do
         case batchNum of
           -1 -> do
-            gateTaggedDrivers <- assignDriverGateTags searchReq newFilteredDriversWithFavourites
-            goHomeTaggedDrivers <- assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo
+            gateTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGateTags" $ assignDriverGateTags searchReq newFilteredDriversWithFavourites
+            goHomeTaggedDrivers <- withTimeAPI "driverPooling" "assignDriverGoHomeTags" $ assignDriverGoHomeTags gateTaggedDrivers searchReq searchTry tripQuoteDetails driverPoolCfg merchant goHomeConfig merchantOpCityId isValueAddNP transporterConfig paymentMethodInfo
             logDebug $ "GoHomeDriverPool and GateTaggedPool-" <> show goHomeTaggedDrivers
             withTimeAPI "driverPooling" "calculateNormalBatchGoHome" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig goHomeTaggedDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
           _ -> do
-            allNearbyNonGoHomeDrivers <- withTimeAPI "driverPooling" "filterM getDriverGoHomeRequestInfo" $ filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId merchantOpCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) newFilteredDriversWithFavourites
+            allNearbyNonGoHomeDrivers <- withTimeAPI "driverPooling" "filterM getDriverGoHomeRequestInfo" $ excludeActiveGoHomeDrivers merchantOpCityId newFilteredDriversWithFavourites
             logDebug $ "Calculating Normal Batch for the pool " <> show allNearbyNonGoHomeDrivers
             withTimeAPI "driverPooling" "calculateNormalBatch" $ calculateNormalBatch merchantOpCityId transporterConfig (bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers) txnId allOnRideDriverPoolResults airportEntryFee isAirportRequest
       cacheBatch driverPoolNotOnRide Nothing
@@ -281,8 +281,12 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
           withTimeAPI "driverPooling" "mkDriverPoolBatch" $ mkDriverPoolBatch mOCityId onlyNewNormalDrivers transporterConfig batchSize False searchReq.poolingLogicVersion
 
         filtersForNormalBatch mOCityId transporterConfig normalDriverPool = do
-          allNearbyNonGoHomeDrivers <- filterM (\dpr -> (CQDGR.getDriverGoHomeRequestInfo dpr.driverPoolResult.driverId mOCityId (Just goHomeConfig)) <&> (/= Just DDGR.ACTIVE) . (.status)) normalDriverPool
+          allNearbyNonGoHomeDrivers <- excludeActiveGoHomeDrivers mOCityId normalDriverPool
           pure $ bookAnyFilters transporterConfig allNearbyNonGoHomeDrivers
+
+        excludeActiveGoHomeDrivers mOCityId drivers = do
+          goHomeInfos <- Map.fromList <$> CQDGR.getDriversGoHomeRequestInfoBatch (map (\dp -> dp.driverPoolResult.driverId) drivers) mOCityId goHomeConfig
+          pure $ filter (\dp -> (Map.lookup dp.driverPoolResult.driverId goHomeInfos >>= (.status)) /= Just DDGR.ACTIVE) drivers
 
         getDriverPoolOnRide mOCityId transporterConfig poolType allDriverPoolResults airportEntryFee isAirportRequest mbPoolingVersion = do
           if poolType == NormalPool && driverPoolCfg.enableForwardBatching && searchTry.isAdvancedBookingEnabled
@@ -506,7 +510,9 @@ assignDriverGoHomeTags ::
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "enableAPILatencyLogging" r Bool,
+    HasField "enableAPIPrometheusMetricLogging" r Bool
   ) =>
   [DriverPoolWithActualDistResult] ->
   DSR.SearchRequest ->
