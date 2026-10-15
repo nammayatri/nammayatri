@@ -209,6 +209,7 @@ import qualified SharedLogic.DriverOnboarding.OnboardingComms as SOnboardingComm
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Flow as OF
 import qualified SharedLogic.DriverOnboarding.OnboardingFlags.Guard as SGuard
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import SharedLogic.DriverOnboardingDocumentVersion (saveRCVersionMetadata)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Finance.Wallet as FWallet
@@ -2599,6 +2600,7 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
             DVRC.updatedAt = now
           }
   RCQuery.updateByPrimaryKey updRc
+  saveRCVersionMetadata updRc
   QVehicleExtra.updateVehicleFromRcEdit vehicleNoGuard displayCert mbMake mbModel mbColor year
   logTagInfo "dashboard -> fleetVehicleEdit" (rc.id.getId <> " " <> vehicleNoGuard)
   pure Success

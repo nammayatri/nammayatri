@@ -66,6 +66,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
+import SharedLogic.DriverOnboardingDocumentVersion (saveDLVersionMetadata)
 import SharedLogic.Reminder.Helper (createReminder)
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -130,7 +131,7 @@ isDLNumberFormatValid transporterConfig documentVerificationConfig normalizedDLN
 verifyDL ::
   OnboardingFlow m r =>
   DPan.VerifiedBy ->
-  -- | the caller approves this submit right away (admin upload with auto-approve), so it may replace an approved DL
+  -- | the caller approves this submit right away (admin upload with auto-approve), so it may add a version to an approved DL
   Bool ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -222,6 +223,20 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
         when (isNameCompareRequired transporterConfig verifyBy) $
           validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
         mbExistingLicense <- Query.findByDLNumber driverLicenseNumber person.merchantId
+        uploadedNumberHash <- getDbHash driverLicenseNumber
+        -- A driver has one licence number. An approved licence with another number must be unlinked first; an
+        -- unapproved one is replaced once this upload passes its checks, so a refused upload keeps it.
+        mbLicenseWithOtherNumber <- mfilter (\license -> (license.licenseNumber & hash) /= uploadedNumberHash) <$> Query.findByDriverId personId
+        whenJust mbLicenseWithOtherNumber $ \licenseWithOtherNumber ->
+          when (licenseWithOtherNumber.verificationStatus == Documents.VALID) $ do
+            Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+            throwImageError imageId1 DriverAlreadyLinked
+        -- Like an unlink, but the photos of this upload stay.
+        let replaceLicenseWithOtherNumber =
+              when (isJust mbLicenseWithOtherNumber) $ do
+                licenseImages <- ImageQuery.findImagesByPersonAndType Nothing Nothing merchantId personId DTO.DriverLicense
+                Utils.cleanupUploadedImages (filter (`notElem` (imageId1 : maybeToList imageId2)) (map (.id) licenseImages)) personId
+                Query.deleteByDriverId personId
         -- let mdriverLicense =
         --       mbExistingLicense >>= \dl ->
         --         if dl.verificationStatus == Documents.INVALID
@@ -236,34 +251,44 @@ verifyDL verifyBy autoApproved mbMerchant (personId, merchantId, merchantOpCityI
             when (driverLicense.driverId /= personId && driverLicense.verificationStatus /= Documents.VALID) $ do
               otherDriver <- Person.findById driverLicense.driverId >>= fromMaybeM (PersonNotFound driverLicense.driverId.getId)
               void $ unlinkDriverDocument otherDriver.merchantOperatingCityId DTO.DriverLicense otherDriver
-            if fromMaybe False documentVerificationConfig.allowLicenseTransfer
+            -- Re-upload over an approved licence without auto-approve: only a new pending version is added, and the
+            -- approved licence stays as is until an admin approves that version.
+            let addsPendingVersion = driverLicense.verificationStatus == Documents.VALID && not autoApproved && transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+            if addsPendingVersion || fromMaybe False documentVerificationConfig.allowLicenseTransfer
               then pure ()
               else unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-            when (driverLicense.verificationStatus == Documents.VALID && not autoApproved && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
+            when (driverLicense.verificationStatus == Documents.VALID && not autoApproved && not addsPendingVersion && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwError $ DocumentAlreadyValidated "DL"
             runDlFaceMatch
-            if documentVerificationConfig.doStrictVerifcation
-              then do
-                when (driverLicense.verificationStatus == Documents.INVALID) $
-                  if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
-                    then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
-                    else throwError DLInvalid
-                verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+            if addsPendingVersion
+              then pure (Just driverLicense {Domain.documentImageId1 = imageId1, Domain.documentImageId2 = imageId2, Domain.driverDob = Just driverDateOfBirth})
+              else
+                Nothing
+                  <$ if documentVerificationConfig.doStrictVerifcation
+                    then do
+                      when (driverLicense.verificationStatus == Documents.INVALID) $
+                        if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True
+                          then Query.updateVerificationStatus Documents.PENDING driverLicense.documentImageId1
+                          else throwError DLInvalid
+                      replaceLicenseWithOtherNumber
+                      verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
+                    else do
+                      replaceLicenseWithOtherNumber
+                      onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
-            mDriverDL <- Query.findByDriverIdAndVerificationStatus personId Documents.VALID
-            -- A different number over an approved DL is a correction only an auto-approving admin may make.
-            when (isJust mDriverDL && not autoApproved) $ do
-              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-              throwImageError imageId1 DriverAlreadyLinked
             runDlFaceMatch
-            if documentVerificationConfig.doStrictVerifcation
-              then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
-              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
-  withDocumentOperationLock "DL" personId.getId runBody
+            replaceLicenseWithOtherNumber
+            Nothing
+              <$ if documentVerificationConfig.doStrictVerifcation
+                then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
+                else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
+  -- Set when the licence row was left untouched: the details to store for the new pending version.
+  mbPendingVersionDL <- withDocumentOperationLock "DL" personId.getId runBody
   -- Only an accepted submit becomes a version; a rejected one leaves its images unstamped.
   groupRegisteredImages (imageId1 : maybeToList imageId2)
+  mbRegisteredDL <- maybe (Query.findByImageId imageId1) (pure . Just) mbPendingVersionDL
+  whenJust mbRegisteredDL saveDLVersionMetadata
   return Success
   where
     getImage imageId = do
@@ -440,6 +465,7 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
           then resolveFaceMatchVerificationStatus person documentVerificationConfig imageId1 Nothing dlNumber
           else pure driverLicense.verificationStatus
       Query.upsert driverLicense {Domain.verificationStatus = finalStatus}
+      saveDLVersionMetadata driverLicense
       let docImageInvalid = any (\mbImg -> (mbImg >>= (.verificationStatus)) == Just Documents.INVALID) [image1, image2]
       when docImageInvalid $ Query.updateVerificationStatus Documents.INVALID imageId1
       case person.role of
