@@ -1085,6 +1085,8 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
           let (ownerType, ownerId) = case mbFleetAssociation of
                 Just fda -> (DSP.FLEET_OWNER, fda.fleetOwnerId)
                 Nothing -> (DSP.DRIVER, personId.getId)
+          -- SHARED_CAB is subscription-free: a driver with a SHARED_CAB vehicle needs no YATRI/prepaid plan to go online.
+          let isSharedCabVehicle = (mbVehicle <&> (.variant)) == Just DV.SHARED_CAB
           let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
               isPrepaidDriver =
                 isPrepaidDriverWithCatalogueFallback
@@ -1092,7 +1094,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                   (mbFleetAssociation <&> (.fleetOwnerId))
                   driverInfo.rideBillingModel
                   driverInfo.servicesEnabledForSubscription
-          if isPrepaidDriver
+          if isPrepaidDriver && not isSharedCabVehicle
             then checkPrepaidGoOnlineEligibility personId transporterConfig ownerType ownerId (mbVehicle >>= (.category))
             else do
               DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
@@ -1108,7 +1110,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
                     let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
                     let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
                     pure (planBasedChecks', False)
-              let isVehicleVariantDisabledForSubscription = maybe False (`elem` fromMaybe [] vehicleVariantsDisabledForSubscription) (mbVehicle <&> (.variant))
+              let isVehicleVariantDisabledForSubscription = isSharedCabVehicle || maybe False (`elem` fromMaybe [] vehicleVariantsDisabledForSubscription) (mbVehicle <&> (.variant))
               when ((planBasedChecks || changeBasedChecks) && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
               when (isSubscriptionVehicleCategoryChanged && not isOnFreeTrial && not isVehicleVariantDisabledForSubscription) $ throwError (NoPlanSelected personId.getId)
           when merchant.onlinePayment $ do
@@ -1119,7 +1121,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
             unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
           unless (driverInfo.enabled) $ throwError DriverAccountDisabled
           unless isPrepaidDriver $
-            unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+            unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked || isSharedCabVehicle) $ throwError DriverUnsubscribed
           when isPrepaidEnabled $ do
             unless (isJust mbVehicle) $
               throwError $ InvalidRequest "Cannot go online: no active vehicle linked"
@@ -1649,6 +1651,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.EV_HATCHBACK -> [DVST.EV_HATCHBACK, DVST.HATCHBACK, DVST.ECO] <> [DVST.TAXI | canDowngradeToTaxi]
               DV.EV_SEDAN -> [DVST.EV_SEDAN, DVST.SEDAN, DVST.COMFY] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
               DV.EV_SUV -> [DVST.EV_SUV, DVST.SUV] <> [DVST.SEDAN | canDowngradeToSedan] <> [DVST.COMFY | canDowngradeToSedan] <> [DVST.HATCHBACK | canDowngradeToHatchback] <> [DVST.TAXI | canDowngradeToTaxi] <> [DVST.ECO | canDowngradeToHatchback]
+              DV.SHARED_CAB -> [DVST.SHARED_CAB]
       QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-
@@ -2036,6 +2039,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
             throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo sReqFD.isForwardRequest
+            throwErrorSharedCabSession driverInfo
             when (sReqFD.response == Just Reject) $ do
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)

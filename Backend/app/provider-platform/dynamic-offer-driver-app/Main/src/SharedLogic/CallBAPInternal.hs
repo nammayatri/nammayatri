@@ -17,6 +17,7 @@ module SharedLogic.CallBAPInternal where
 import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
+import API.Types.UI.SharedCab
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -28,12 +29,15 @@ import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
+import Kernel.Types.Error (ExternalAPICallError (..))
+import qualified Kernel.Types.Error.BaseError.HTTPError.CallAPIError as CallAPIError
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
 import qualified SharedLogic.Type as SLT
+import Tools.Error (SharedCabBAPError (..))
 import Tools.Metrics (CoreMetrics)
 
 data FeedbackAnswer = FeedbackAnswer
@@ -631,3 +635,285 @@ requestTollChargeApproval apiKey internalUrl bppBookingId req = do
   logInfo $ "CallBAPInternal: Requesting toll charge approval for bppBookingId: " <> bppBookingId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (requestTollChargeApprovalClient (Just apiKey) bppBookingId req) "RequestTollChargeApproval" requestTollChargeApprovalAPI
+
+-- Shared-cab driver-app -> rider-app internal proxy client. All wrappers map the rider app's APIError envelope onto
+-- SharedCabBAPError so the driver app surfaces it verbatim (same errorCode and HTTP status).
+
+sharedCabSessionNotFoundErrorCode :: Text
+sharedCabSessionNotFoundErrorCode = "SHARED_CAB_SESSION_NOT_FOUND"
+
+data BAPSelectRouteReq = BAPSelectRouteReq
+  { mode :: Maybe SelectRouteMode,
+    routeCode :: Text,
+    walkupCount :: Int,
+    driverId :: Text,
+    vehicleNumber :: Text,
+    -- the SHARED_CAB config's agency_key (GTFS agency gtfsId like "<feed>:SHARED_CAB"), the one identity both apps'
+    -- integrated_bpp_config rows share; rider-app looks its own row up by it
+    agencyId :: Text,
+    serviceTierType :: Text,
+    capacity :: Int,
+    driverName :: Maybe Text,
+    vehicleModel :: Maybe Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON)
+
+-- contract: mode?: 'afterLastDrop' | 'force' — passed as null per rider-app endpoint convention.
+
+data BAPSeatsReq = BAPSeatsReq
+  { version :: Int,
+    walkupCount :: Int,
+    driverId :: Text,
+    vehicleNumber :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON)
+
+data BAPEndRouteReq = BAPEndRouteReq
+  { next :: EndRouteNext,
+    atLastStop :: Maybe Bool,
+    force :: Maybe Bool,
+    driverId :: Text,
+    vehicleNumber :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON)
+
+data BAPResumeReq = BAPResumeReq
+  { driverId :: Text,
+    vehicleNumber :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON)
+
+type SharedCabRoutesAPI =
+  "internal"
+    :> "sharedCab"
+    :> "routes"
+    :> QueryParam' '[Required, Strict] "agencyId" Text
+    :> QueryParam' '[Required, Strict] "lat" Double
+    :> QueryParam' '[Required, Strict] "lon" Double
+    :> Header "token" Text
+    :> Get '[JSON] SharedCabRoutesResp
+
+callRoutesClient :: Text -> Double -> Double -> Maybe Text -> EulerClient SharedCabRoutesResp
+callRoutesClient = client (Proxy @SharedCabRoutesAPI)
+
+callRoutesAPI :: Proxy SharedCabRoutesAPI
+callRoutesAPI = Proxy
+
+getSharedCabRoutes ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Double ->
+  Double ->
+  m SharedCabRoutesResp
+getSharedCabRoutes apiKey internalUrl agencyId lat lon = do
+  logInfo $ "CallSharedCabBAP: Getting routes for agencyId: " <> agencyId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callRoutesClient agencyId lat lon (Just apiKey)) "GetSharedCabRoutes" callRoutesAPI
+
+type SharedCabSelectRouteAPI =
+  "internal"
+    :> "sharedCab"
+    :> "route"
+    :> "select"
+    :> Header "token" Text
+    :> ReqBody '[JSON] BAPSelectRouteReq
+    :> Post '[JSON] SelectRouteResp
+
+callSelectRouteClient :: Maybe Text -> BAPSelectRouteReq -> EulerClient SelectRouteResp
+callSelectRouteClient = client (Proxy @SharedCabSelectRouteAPI)
+
+callSelectRouteAPI :: Proxy SharedCabSelectRouteAPI
+callSelectRouteAPI = Proxy
+
+selectSharedCabRoute ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  BAPSelectRouteReq ->
+  m SelectRouteResp
+selectSharedCabRoute apiKey internalUrl req = do
+  logInfo $ "CallSharedCabBAP: Selecting route " <> req.routeCode <> " for driverId: " <> req.driverId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSelectRouteClient (Just apiKey) req) "SelectSharedCabRoute" callSelectRouteAPI
+
+type SharedCabSessionAPI =
+  "internal"
+    :> "sharedCab"
+    :> "session"
+    :> QueryParam' '[Required, Strict] "driverId" Text
+    :> QueryParam' '[Required, Strict] "vehicleNumber" Text
+    :> Header "token" Text
+    :> Get '[JSON] (Maybe SharedCabSession)
+
+callSessionClient :: Text -> Text -> Maybe Text -> EulerClient (Maybe SharedCabSession)
+callSessionClient = client (Proxy @SharedCabSessionAPI)
+
+callSessionAPI :: Proxy SharedCabSessionAPI
+callSessionAPI = Proxy
+
+getSharedCabSession ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  m (Maybe SharedCabSession)
+getSharedCabSession apiKey internalUrl driverId vehicleNumber = do
+  logInfo $ "CallSharedCabBAP: Getting session for driverId: " <> driverId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  -- no live session arrives as SHARED_CAB_SESSION_NOT_FOUND in the error body (NOT a bare status), so decode the APIError
+  -- envelope and check the errorCode; every other error re-throws verbatim. Inlines callApiUnwrappingApiError's two halves
+  -- because the NOT_FOUND branch needs the decoded error value.
+  newInternalUrl <-
+    HM.foldrWithKey
+      ( \k v acc ->
+          if Data.Text.isInfixOf (showBaseUrl k) (showBaseUrl internalUrl)
+            then parseBaseUrl (Data.Text.replace (showBaseUrl k) (showBaseUrl v) (showBaseUrl internalUrl))
+            else acc
+      )
+      (pure internalUrl)
+      internalEndPointHashMap
+  res <- EC.callApiExtractingApiError Nothing newInternalUrl (callSessionClient driverId vehicleNumber (Just apiKey)) "GetSharedCabSession" callSessionAPI
+  case res of
+    Right mbSession -> pure mbSession
+    Left (CallAPIError.RawError clientError) -> throwError $ ExternalAPICallError (Just "BAP_INTERNAL_API_ERROR") internalUrl clientError
+    Left (CallAPIError.APIError err)
+      | fromBAPErrorCode err == sharedCabSessionNotFoundErrorCode -> pure Nothing
+      | otherwise -> throwError err
+
+type SharedCabSeatsAPI =
+  "internal"
+    :> "sharedCab"
+    :> "seats"
+    :> Header "token" Text
+    :> ReqBody '[JSON] BAPSeatsReq
+    :> Post '[JSON] SharedCabSession
+
+callSeatsClient :: Maybe Text -> BAPSeatsReq -> EulerClient SharedCabSession
+callSeatsClient = client (Proxy @SharedCabSeatsAPI)
+
+callSeatsAPI :: Proxy SharedCabSeatsAPI
+callSeatsAPI = Proxy
+
+setSharedCabSeats ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  BAPSeatsReq ->
+  m SharedCabSession
+setSharedCabSeats apiKey internalUrl req = do
+  logInfo $ "CallSharedCabBAP: Setting seats for driverId: " <> req.driverId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callSeatsClient (Just apiKey) req) "SetSharedCabSeats" callSeatsAPI
+
+type SharedCabEndRouteAPI =
+  "internal"
+    :> "sharedCab"
+    :> "route"
+    :> "end"
+    :> Header "token" Text
+    :> ReqBody '[JSON] BAPEndRouteReq
+    :> Post '[JSON] (Maybe SharedCabSession)
+
+callEndRouteClient :: Maybe Text -> BAPEndRouteReq -> EulerClient (Maybe SharedCabSession)
+callEndRouteClient = client (Proxy @SharedCabEndRouteAPI)
+
+callEndRouteAPI :: Proxy SharedCabEndRouteAPI
+callEndRouteAPI = Proxy
+
+endSharedCabRoute ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  BAPEndRouteReq ->
+  m (Maybe SharedCabSession)
+endSharedCabRoute apiKey internalUrl req = do
+  logInfo $ "CallSharedCabBAP: Ending route (next = " <> show req.next <> ") for driverId: " <> req.driverId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callEndRouteClient (Just apiKey) req) "EndSharedCabRoute" callEndRouteAPI
+
+type SharedCabResumeAPI =
+  "internal"
+    :> "sharedCab"
+    :> "resume"
+    :> Header "token" Text
+    :> ReqBody '[JSON] BAPResumeReq
+    :> Post '[JSON] SharedCabSession
+
+callResumeClient :: Maybe Text -> BAPResumeReq -> EulerClient SharedCabSession
+callResumeClient = client (Proxy @SharedCabResumeAPI)
+
+callResumeAPI :: Proxy SharedCabResumeAPI
+callResumeAPI = Proxy
+
+resumeSharedCab ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  BAPResumeReq ->
+  m SharedCabSession
+resumeSharedCab apiKey internalUrl req = do
+  logInfo $ "CallSharedCabBAP: Resuming session for driverId: " <> req.driverId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callResumeClient (Just apiKey) req) "ResumeSharedCab" callResumeAPI
+
+type SharedCabTripsAPI =
+  "internal"
+    :> "sharedCab"
+    :> "trips"
+    :> QueryParam' '[Required, Strict] "driverId" Text
+    :> QueryParam' '[Required, Strict] "date" Text -- mandatory per the rider-app contract; ISO-8601 calendar day (yyyy-mm-dd), default "today" is defaulted in Domain.Action.UI.SharedCab
+    :> Header "token" Text
+    :> Get '[JSON] SharedCabTripsResp
+
+callTripsClient :: Text -> Text -> Maybe Text -> EulerClient SharedCabTripsResp
+callTripsClient = client (Proxy @SharedCabTripsAPI)
+
+callTripsAPI :: Proxy SharedCabTripsAPI
+callTripsAPI = Proxy
+
+getSharedCabTrips ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  m SharedCabTripsResp
+getSharedCabTrips apiKey internalUrl driverId date = do
+  logInfo $ "CallSharedCabBAP: Getting trips for driverId: " <> driverId <> ", date: " <> date
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @SharedCabBAPError) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (callTripsClient driverId date (Just apiKey)) "GetSharedCabTrips" callTripsAPI

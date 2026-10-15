@@ -41,6 +41,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.Offer
+import qualified SharedLogic.SharedCab.LegState
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
@@ -224,6 +225,7 @@ data LegStatus = LegStatus
     fleetNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
+    sharedCab :: Kernel.Prelude.Maybe SharedLogic.SharedCab.LegState.SharedCabLegStatus,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
     trackingStatus :: Lib.JourneyModule.State.Types.TrackingStatus,

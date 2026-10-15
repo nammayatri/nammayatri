@@ -28,6 +28,7 @@ data PersonStatsT f = PersonStatsT
     referralEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     referredByEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     referredByEarningsPayoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.PersonStats.PayoutStatus),
+    sharedCabNoShows :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     ticketsBookedInEvent :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     userCancelledRides :: B.C f Kernel.Prelude.Int,

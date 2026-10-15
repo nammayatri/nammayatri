@@ -24,7 +24,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSRecon.FRFSRecon] -> m ())
 createMany = traverse_ create
 
-findAllByFrfsTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m [Domain.Types.FRFSRecon.FRFSRecon])
+findAllByFrfsTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ([Domain.Types.FRFSRecon.FRFSRecon]))
 findAllByFrfsTicketBookingId frfsTicketBookingId = do findAllWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 updateStatusByTicketBookingId ::
@@ -62,7 +62,7 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.destinationStationCode destinationStationCode,
       Se.Set Beam.differenceAmount (Kernel.Prelude.fmap (.amount) differenceAmount),
       Se.Set Beam.entityType entityType,
-      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) fare),
+      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) fare),
       Se.Set Beam.fare ((.amount) fare),
       Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.message message,
@@ -152,7 +152,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.destinationStationCode = destinationStationCode,
         Beam.differenceAmount = Kernel.Prelude.fmap (.amount) differenceAmount,
         Beam.entityType = entityType,
-        Beam.currency = (Kernel.Prelude.Just . (.currency)) fare,
+        Beam.currency = ((Kernel.Prelude.Just . (.currency))) fare,
         Beam.fare = (.amount) fare,
         Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,

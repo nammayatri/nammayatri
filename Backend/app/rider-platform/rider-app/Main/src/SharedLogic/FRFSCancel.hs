@@ -31,6 +31,7 @@ import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.PersonPTStats as SPUS
+import SharedLogic.SharedCab (isSharedCabBooking, refundWithheld)
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -76,7 +77,8 @@ handleCancelledStatus ::
 handleCancelledStatus _merchant booking refundAmount cancellationCharges _messageId isCounterCancellation = do
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbPaymentBooking <- QTBP.findTicketBookingPayment booking
-  unless (isJust mbPaymentBooking || FRFSPassOverride.isFullyPassCovered booking.overriddenAmount) $
+  isFree <- FRFSUtils.noPaymentDue booking
+  unless (isJust mbPaymentBooking || isFree) $
     throwError (InvalidRequest "Payment booking not found for approved TicketBookingId")
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
@@ -93,15 +95,20 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
         whenJust mbPaymentBooking $ \paymentBooking ->
           void $ SPayment.markRefundPendingWithAmount booking.riderId paymentBooking.paymentOrderId (abs refundAmount)
       else do
-        void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
+        -- shared cab: the refund policy fixed these amounts in this request (no earlier soft cancel to agree with)
+        if isSharedCabBooking booking
+          then void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
+          else void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
         void $ FRFSUtils.markFRFSBookingStatus DFRFSTicketBooking.CANCELLED "cancelled" booking
         void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
         void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
         void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
         void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
         void $ Redis.del (FRFSUtils.makecancelledTtlKey booking.id)
-        whenJust mbPaymentBooking $ \paymentBooking ->
-          void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
+        -- shared cab, no refund: the payment stays charged; pending is what makes the payment service refund it
+        unless (isSharedCabBooking booking && refundWithheld cancellationCharges refundAmount) $
+          whenJust mbPaymentBooking $ \paymentBooking ->
+            void $ SPayment.markRefundPendingAndSyncOrderStatus booking.merchantId booking.riderId paymentBooking.paymentOrderId
   -- Refund only if the booking ever reached CONFIRMED, since that is where OnConfirm debits. A
   -- cancel arriving for a booking that never confirmed must not be credited a trip it never spent,
   -- and that is reachable: OnConfirm's expiry path and onConfirmFailure both fire a Technical

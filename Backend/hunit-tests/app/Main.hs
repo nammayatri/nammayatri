@@ -21,6 +21,7 @@ import qualified FileManagementUnitTests
 import qualified RewardsCouponPoolTests
 import qualified RewardsCouponTemplatedTests
 import qualified RewardsEvaluatorTests
+import qualified SharedCabBlacklistTests
 import Test.Tasty (defaultMain, testGroup)
 import qualified TollDecisionTests
 import Prelude
@@ -54,5 +55,9 @@ main = do
           "End Ride Fare Recompute"
           [ FareRecomputeDecisionTests.tests,
             TollDecisionTests.tests
+          ],
+        testGroup
+          "SharedCab Unit Tests"
+          [ SharedCabBlacklistTests.tests
           ]
       ]

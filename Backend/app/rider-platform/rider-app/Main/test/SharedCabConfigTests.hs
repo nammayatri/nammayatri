@@ -1,0 +1,75 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
+
+module SharedCabConfigTests (tests) where
+
+import Control.Applicative ((<|>))
+import Control.Monad (mfilter)
+import Data.Text (Text)
+import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
+import "rider-app" SharedLogic.SharedCab.Config
+import "rider-app" SharedLogic.SharedCab.Enabled (sharedCabEnabledDecision)
+import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import Prelude
+
+tests :: TestTree
+tests =
+  testGroup
+    "SharedCab tunables"
+    [ testCase "no rider_config row takes the defaults" $
+        tunablesFrom Nothing @?= defaultTunables,
+      testCase "per-city switch: SHARED_CAB config and not Just False" $
+        [sharedCabEnabledDecision c s | c <- [True, False], s <- [Nothing, Just True, Just False]]
+          @?= [True, True, False, False, False, False],
+      testCase "defaults are the values the engine was built on" $
+        defaultTunables
+          @?= SharedCabTunables
+            { allocationWindowSec = 480,
+              atStopRadiusM = 100,
+              walkBufferSec = 60,
+              standTimerSec = 180,
+              movingTimerSec = 90,
+              maxAttempts = 2,
+              maxNoShows = 2,
+              fallbackAfterSec = 600,
+              noCabGraceSec = 120,
+              findingTimeoutSec = 1200,
+              tickSec = 3,
+              ltsMaxAgeSec = 60,
+              autoEndAfterDropSec = 600,
+              degradedTimeoutSec = 3600,
+              offRouteMeters = 300,
+              offRouteSec = 120,
+              boardProximityM = 150,
+              boardAttemptsPer10Min = 5,
+              noLocationSpotBookingsPerVehiclePerDay = 5
+            },
+      testGroup
+        "agency key shared by several integrated configs: each caller gets the row of its own platform"
+        [ testCase "a journey caller (MULTIMODAL) gets the MULTIMODAL row, whatever order the DB lists them in" $
+            map (fmap snd . pickAgencyRow MULTIMODAL fst) rows @?= [Just "multi", Just "multi"],
+          testCase "the driver proxy (APPLICATION) gets the APPLICATION row, whatever order" $
+            map (fmap snd . pickAgencyRow APPLICATION fst) rows @?= [Just "app", Just "app"],
+          testCase "a key shared by several rows of the caller's platform (one per city) names no row: the caller falls back to its city lookup" $
+            fmap snd (pickAgencyRow MULTIMODAL fst ([((MULTIMODAL, "a"), "chennai"), ((MULTIMODAL, "b"), "delhi"), ((APPLICATION, "c"), "app")] :: [((PlatformType, Text), String)])) @?= Nothing,
+          testCase "a caller whose platform has no row gets the key's only row, and Nothing when several rows are left to choose from" $
+            [fmap snd (pickAgencyRow PARTNERORG fst [((APPLICATION, "52"), "app")]), fmap snd (pickAgencyRow PARTNERORG fst rowsOfTwo)] @?= [Just "app", Nothing],
+          testCase "an agency with only an APPLICATION row, asked by a journey caller: the pick still names it, ConfigPilot's platform filter drops it, and the caller falls back to the city lookup" $
+            let onlyApp = [((APPLICATION, "52"), "app")] :: [((PlatformType, Text), String)]
+                picked = pickAgencyRow MULTIMODAL fst onlyApp
+                afterConfigPilotFilter = mfilter ((== MULTIMODAL) . fst . fst) picked
+                cityFallback = Just (((MULTIMODAL, "b7"), "city lookup") :: ((PlatformType, Text), String))
+             in (fmap snd picked, fmap snd (afterConfigPilotFilter <|> cityFallback)) @?= (Just "app", Just "city lookup"),
+          testCase "the driver proxy takes only an APPLICATION row: a key with only a MULTIMODAL row names none" $
+            [onlyOfPlatform APPLICATION (fst . fst) (pickAgencyRow APPLICATION fst [((MULTIMODAL, "a9" :: Text), "multi" :: String)]), onlyOfPlatform APPLICATION (fst . fst) (pickAgencyRow APPLICATION fst [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")])] @?= [Nothing, Just ((APPLICATION, "52"), "app")],
+          testCase "no rows is Nothing" $
+            fmap snd (pickAgencyRow APPLICATION fst ([] :: [((PlatformType, Text), String)])) @?= Nothing
+        ]
+    ]
+  where
+    rows :: [[((PlatformType, Text), String)]]
+    rows = [[((MULTIMODAL, "a9"), "multi"), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]]
+    rowsOfTwo :: [((PlatformType, Text), String)]
+    rowsOfTwo = head rows

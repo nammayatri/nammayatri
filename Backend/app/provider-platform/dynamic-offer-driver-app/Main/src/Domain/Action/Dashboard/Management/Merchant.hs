@@ -204,7 +204,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
-import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SupplyDemandRequestJobData)
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, RetryAutopayCollectionJobData, ScheduledBatchPayoutJobData, SendLegalPolicyNotificationJobData (..), SharedCabReconcilerJobData, SupplyDemandRequestJobData)
 import SharedLogic.Allocator.Jobs.FarePolicy.DeleteUnreferencedFarePolicies (scheduleDeleteUnreferencedFarePolicies)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DashboardAlert as SDA
@@ -214,6 +214,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.ScheduledRideVisibility as SRV
+import SharedLogic.SharedCab.ReconcilerSeed (SharedCabSeedOutcome (..), seedSharedCabReconcilerChain, sharedCabReconcilerSeededKey)
 import qualified SharedLogic.SpecialLocationUpsert as SLU
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.TollDashboard
@@ -509,6 +510,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                driverCoolOffPeriod = maybe config.driverCoolOffPeriod (.value) req.driverCoolOffPeriod,
                manualTollChargeConfig = maybe config.manualTollChargeConfig (fmap mkManualTollChargeConfig . (.value)) req.manualTollChargeConfig,
                rideEvidenceConfig = maybe config.rideEvidenceConfig (fmap mkRideEvidenceConfig . (.value)) req.rideEvidenceConfig,
+               sharedCabReconcilerEnabled = maybe config.sharedCabReconcilerEnabled (.value) req.sharedCabReconcilerEnabled,
                scheduledRideConfig =
                  DTC.ScheduledRideConfig
                    { maxHoldsPerDriver = maybe config.scheduledRideConfig.maxHoldsPerDriver (.value) req.maxScheduledHoldsPerDriver,
@@ -662,6 +664,29 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
             Just jobData -> do
               createJobIn @_ @'SendLegalPolicyNotification (Just jobData.merchantId) (Just jobData.merchantOperatingCityId) diffTimeS (jobData :: SendLegalPolicyNotificationJobData)
               pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Just Common.SharedCabReconcilerTrigger -> do
+          let jobData' = decodeFromText jobDataRaw :: Maybe SharedCabReconcilerJobData
+          case jobData' of
+            Just jobData -> do
+              merchant <- CQM.findById jobData.merchantId >>= fromMaybeM (MerchantNotFound jobData.merchantId.getId)
+              merchantOpCityId <- CQMOC.getMerchantOpCityId (Just jobData.merchantOperatingCityId) merchant Nothing
+              -- the seed is idempotent, so a second trigger or a redeploy can not start a second reconciler chain for the city.
+              -- A SKIPPED seed is NOT a success: surface it.
+              seedResult <- seedSharedCabReconcilerChain (Just merchant.id) merchantOpCityId diffTimeS jobData
+              case seedResult of
+                SharedCabChainSeeded -> pure Success
+                skipped ->
+                  throwError $
+                    InvalidRequest
+                      ( "SharedCabReconciler chain already seeded for city "
+                          <> merchantOpCityId.getId
+                          <> " (outcome="
+                          <> show skipped
+                          <> "); a dead chain self-recovers within the marker TTL + next seed hook — DEL "
+                          <> sharedCabReconcilerSeededKey merchantOpCityId
+                          <> " (cross-app key) only to force an immediate reseed"
+                      )
             Nothing -> throwError $ InternalError "invalid job data"
         _ -> throwError $ InternalError "invalid job name"
 

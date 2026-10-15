@@ -723,6 +723,7 @@ instance IsAPIError BecknConfigError
 
 data IntegratedBPPConfigError
   = IntegratedBPPConfigNotFound
+  | IntegratedBPPConfigNotFoundForAgency Text Text -- agency key, platform type
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
@@ -730,13 +731,16 @@ instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
 instance IsBaseError IntegratedBPPConfigError where
   toMessage = \case
     IntegratedBPPConfigNotFound -> Just "IntegratedBPPConfig not found"
+    IntegratedBPPConfigNotFoundForAgency agencyKey platform -> Just $ "IntegratedBPPConfig not found for agency " <> agencyKey <> " on platform " <> platform
 
 instance IsHTTPError IntegratedBPPConfigError where
   toErrorCode = \case
     IntegratedBPPConfigNotFound -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+    IntegratedBPPConfigNotFoundForAgency _ _ -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
 
   toHttpCode = \case
     IntegratedBPPConfigNotFound -> E500
+    IntegratedBPPConfigNotFoundForAgency _ _ -> E500
 
 instance IsAPIError IntegratedBPPConfigError
 
@@ -1475,3 +1479,142 @@ instance IsHTTPError WhatsappBotTranslationError where
     WhatsappBotTranslationNotFound _ _ -> E500
 
 instance IsAPIError WhatsappBotTranslationError
+
+data SharedCabSessionError
+  = SessionHeldByAnotherDriver
+  | SessionNotFound
+  | SessionNotActive
+  | SessionNotPaused
+  | SessionVersionMismatch
+  | InvalidWalkupCount
+  | NoReturnRoute
+  | RidersOnBoard Int
+  | CodeAmbiguous
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance IsAPIError SharedCabSessionError
+
+instanceExceptionWithParent 'HTTPException ''SharedCabSessionError
+
+instance IsBaseError SharedCabSessionError where
+  toMessage = \case
+    SessionHeldByAnotherDriver -> Just "Another driver has a live shared-cab session on this vehicle."
+    SessionNotFound -> Just "No live shared-cab session for this vehicle."
+    SessionNotActive -> Just "Shared-cab session is not active."
+    SessionNotPaused -> Just "Shared-cab session is not paused."
+    SessionVersionMismatch -> Just "Shared-cab session changed; refresh and retry."
+    InvalidWalkupCount -> Just "Walk-up count must be between 0 and the vehicle capacity."
+    NoReturnRoute -> Just "This route has no return route."
+    RidersOnBoard n -> Just $ show n <> " rider(s) still on board; drop them first or end with force."
+    CodeAmbiguous -> Just "More than one shared cab ends in that code. Pick your route to find the cab."
+
+instance IsHTTPError SharedCabSessionError where
+  toErrorCode = \case
+    SessionHeldByAnotherDriver -> "SHARED_CAB_SESSION_HELD_BY_ANOTHER_DRIVER"
+    SessionNotFound -> "SHARED_CAB_SESSION_NOT_FOUND"
+    SessionNotActive -> "SHARED_CAB_SESSION_NOT_ACTIVE"
+    SessionNotPaused -> "SHARED_CAB_SESSION_NOT_PAUSED"
+    SessionVersionMismatch -> "SHARED_CAB_SESSION_VERSION_MISMATCH"
+    InvalidWalkupCount -> "SHARED_CAB_INVALID_WALKUP_COUNT"
+    NoReturnRoute -> "SHARED_CAB_NO_RETURN_ROUTE"
+    RidersOnBoard _ -> "SHARED_CAB_RIDERS_ON_BOARD"
+    CodeAmbiguous -> "SHARED_CAB_CODE_AMBIGUOUS"
+  toHttpCode = \case
+    SessionHeldByAnotherDriver -> E409
+    SessionNotFound -> E404
+    SessionNotActive -> E400
+    SessionNotPaused -> E400
+    SessionVersionMismatch -> E409
+    InvalidWalkupCount -> E400
+    NoReturnRoute -> E400
+    RidersOnBoard _ -> E409
+    CodeAmbiguous -> E409
+
+-- | Shared-cab boarding engine: one generic error for every boarding failure, so callers can't tell "no cab here" from "wrong code".
+data SharedCabBoardingError
+  = BoardingFailed
+  | BoardingCodeAmbiguous
+  | BoardingLocationRequired
+  | CabFull
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance IsAPIError SharedCabBoardingError
+
+instanceExceptionWithParent 'HTTPException ''SharedCabBoardingError
+
+instance IsBaseError SharedCabBoardingError where
+  toMessage = \case
+    BoardingFailed -> Just "Couldn't board this cab. Check the code on the in-cab sticker and try again."
+    BoardingCodeAmbiguous -> Just "More than one cab matches. Enter the full registration number."
+    BoardingLocationRequired -> Just "We need your location to move you to another cab. Turn on location and try again."
+    CabFull -> Just "This cab just filled up. Take the next shared cab on your route — we'll keep your booking for it."
+
+instance IsHTTPError SharedCabBoardingError where
+  toErrorCode = \case
+    BoardingFailed -> "SHARED_CAB_BOARDING_FAILED"
+    BoardingCodeAmbiguous -> "SHARED_CAB_BOARDING_CODE_AMBIGUOUS"
+    BoardingLocationRequired -> "SHARED_CAB_BOARDING_LOCATION_REQUIRED"
+    CabFull -> "SHARED_CAB_FULL"
+  toHttpCode = \case
+    BoardingFailed -> E400
+    BoardingCodeAmbiguous -> E409
+    BoardingLocationRequired -> E400
+    CabFull -> E409
+
+data SharedCabCancelError
+  = -- | the cab is waiting at the stop and the rider is beside it: the driver decides
+    TalkToDriver
+  | -- | a seat has boarded (or the ride is over): no self-cancel, no self-refund
+    RideStarted
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SharedCabCancelError
+
+instance IsBaseError SharedCabCancelError where
+  toMessage = \case
+    TalkToDriver -> Just "Your cab is waiting at the stop. Please talk to your driver."
+    RideStarted -> Just "This shared cab ride has started and can't be cancelled."
+
+instance IsHTTPError SharedCabCancelError where
+  toErrorCode = \case
+    TalkToDriver -> "SHARED_CAB_TALK_TO_DRIVER"
+    RideStarted -> "SHARED_CAB_RIDE_STARTED"
+  toHttpCode = \case
+    TalkToDriver -> E409
+    RideStarted -> E409
+
+instance IsAPIError SharedCabCancelError
+
+data SharedCabDriverActionError
+  = BookingNotOnThisCab
+  | BookingNotLive
+  | BookingAlreadyBoarded
+  | BookingNotBoarded
+  | CancelReasonRequired
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SharedCabDriverActionError
+
+instance IsBaseError SharedCabDriverActionError where
+  toMessage = \case
+    BookingNotOnThisCab -> Just "This booking isn't on your cab."
+    BookingNotLive -> Just "This booking has no seat left to act on."
+    BookingAlreadyBoarded -> Just "The rider is already on board; mark them dropped instead."
+    BookingNotBoarded -> Just "The rider hasn't boarded yet."
+    CancelReasonRequired -> Just "Say why you are cancelling this rider."
+
+instance IsHTTPError SharedCabDriverActionError where
+  toErrorCode = \case
+    BookingNotOnThisCab -> "SHARED_CAB_BOOKING_NOT_ON_THIS_CAB"
+    BookingNotLive -> "SHARED_CAB_BOOKING_NOT_LIVE"
+    BookingAlreadyBoarded -> "SHARED_CAB_BOOKING_ALREADY_BOARDED"
+    BookingNotBoarded -> "SHARED_CAB_BOOKING_NOT_BOARDED"
+    CancelReasonRequired -> "SHARED_CAB_CANCEL_REASON_REQUIRED"
+  toHttpCode = \case
+    BookingNotOnThisCab -> E404
+    BookingNotLive -> E409
+    BookingAlreadyBoarded -> E409
+    BookingNotBoarded -> E409
+    CancelReasonRequired -> E400
+
+instance IsAPIError SharedCabDriverActionError

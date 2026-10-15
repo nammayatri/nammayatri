@@ -1,6 +1,9 @@
+{-# LANGUAGE PackageImports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
 import App
 import qualified Data.Text as T
-import Environment
+import "rider-app" Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime (withFlowRuntime)
@@ -13,8 +16,29 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import Kernel.Utils.FlowLogging
+import qualified SharedCabAllocationTests
+import qualified SharedCabBoardingTests
+import qualified SharedCabCancelRefusalTests
+import qualified SharedCabConfigTests
+import qualified SharedCabDegradedSweepTests
+import qualified SharedCabDegradedTests
+import qualified SharedCabDemandTests
+import qualified SharedCabDriverActionTests
+import qualified SharedCabEventsTests
+import qualified SharedCabExpiryTests
+import qualified SharedCabInvariantsTests
+import qualified SharedCabLegStateTests
+import qualified SharedCabNoShowTests
+import qualified SharedCabNotifyTests
+import qualified SharedCabPlateTests
+import qualified SharedCabRefundPolicyTests
+import qualified SharedCabRefundRetryTests
+import qualified SharedCabSessionTests
+import qualified SharedCabStopProgressTests
+import qualified SharedCabTicketBirthTests
 import System.Environment (lookupEnv)
 import System.Environment as Env (setEnv)
+import Test.Tasty (defaultMain, testGroup)
 
 main :: IO ()
 main = do
@@ -32,4 +56,4 @@ main = do
 
   -- -- Let the Logs be flushed
   -- threadDelaySec (Seconds 10)
-  pure ()
+  defaultMain $ testGroup "rider-app" [SharedCabPlateTests.tests, SharedCabSessionTests.tests, SharedCabLegStateTests.tests, SharedCabInvariantsTests.tests, SharedCabNotifyTests.tests, SharedCabDemandTests.tests, SharedCabConfigTests.tests, SharedCabAllocationTests.tests, SharedCabDriverActionTests.tests, SharedCabExpiryTests.tests, SharedCabEventsTests.tests, SharedCabStopProgressTests.tests, SharedCabBoardingTests.tests, SharedCabDegradedTests.tests, SharedCabNoShowTests.tests, SharedCabDegradedSweepTests.tests, SharedCabRefundPolicyTests.tests, SharedCabTicketBirthTests.tests, SharedCabRefundRetryTests.tests, SharedCabCancelRefusalTests.tests]

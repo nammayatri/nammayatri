@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
 findAllByMerchantOperatingCityIdAndIntegratedBPPConfigId merchantOperatingCityId integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -42,7 +42,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByProviderCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
 findByProviderCode providerCode merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -53,7 +53,7 @@ findByProviderCode providerCode merchantOperatingCityId = do
 
 findByProviderCodeAndTrainType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier])
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier]))
 findByProviderCodeAndTrainType providerCode trainType merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -99,6 +99,7 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
       Se.Set Beam.maxRescheduleTimeAfterStart maxRescheduleTimeAfterStart,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.payOnBoard (Kernel.Prelude.Just payOnBoard),
       Se.Set Beam.providerCode providerCode,
       Se.Set Beam.shortName shortName,
       Se.Set Beam.trainType trainType,
@@ -128,6 +129,7 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
             maxRescheduleTimeAfterStart = maxRescheduleTimeAfterStart,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            payOnBoard = fromMaybe False payOnBoard,
             providerCode = providerCode,
             shortName = shortName,
             trainType = trainType,
@@ -155,6 +157,7 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
         Beam.maxRescheduleTimeAfterStart = maxRescheduleTimeAfterStart,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.payOnBoard = Kernel.Prelude.Just payOnBoard,
         Beam.providerCode = providerCode,
         Beam.shortName = shortName,
         Beam.trainType = trainType,

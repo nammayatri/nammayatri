@@ -113,6 +113,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.GatewayLookup as GatewayLookup
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
+import qualified SharedLogic.SharedCab as SharedCab
 import qualified SharedLogic.SyncSearchDispatch as SSD
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -798,6 +799,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               _ -> return (otpResponse''.routes, Nothing)
             logDebug $ "finalRoutes: " <> show finalRoutes
             filteredRoutes <- JM.filterTransitRoutes riderConfig finalRoutes
+            fork "sharedCab demand" $ mapM_ (SharedCab.recordSearch merchantOperatingCityId.getId searchRequest.riderId.getId) (SharedCab.sharedCabBoardStops filteredRoutes)
             return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
   when (length viaRouteDetails > 1 && isJust mbIntegratedBPPConfig) $ do
     fork "Process rest of single mode routes" $ processSingleModeRoutes isSingleMode mbUserPreferredServiceTier userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) routeLiveInfo viaRouteDetails
@@ -1014,6 +1016,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> GeneralVehicleType
     allowedTransitModeToGeneralVehicleType mode = case mode of
       DTrip.Bus -> MultiModalTypes.Bus
+      DTrip.SharedCab -> MultiModalTypes.Bus -- the shared-cab agency is an OTP bus route
       DTrip.Metro -> MultiModalTypes.MetroRail
       DTrip.Subway -> MultiModalTypes.Subway
       DTrip.Walk -> MultiModalTypes.Walk

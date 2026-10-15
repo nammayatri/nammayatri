@@ -1,0 +1,177 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Day: Data.Time
+  VehicleTrip: Domain.Types.VehicleTrip
+  VehicleTripStatus: Domain.Types.VehicleTrip
+  VehicleTripEndReason: Domain.Types.VehicleTrip
+  ServiceTierType: BecknV2.FRFS.Enums
+  SelectRouteMode: SharedLogic.SharedCab.SessionState
+  SharedCabRoute: SharedLogic.SharedCab.SessionView
+  SharedCabSession: SharedLogic.SharedCab.SessionView
+  EndRouteReq: SharedLogic.SharedCab.SessionView
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+
+module: SharedCabInternal
+
+# Responses are the driver-app /sharedCab/* contract verbatim; SharedCabSession and EndRouteReq live in
+# SharedLogic.SharedCab.SessionView because their `route` / `force` fields clash with Servant.route / EulerHS.Prelude.force.
+types:
+  SharedCabRoutesResp:
+    routes: "[SharedCabRoute]"
+
+  AffectedRider:
+    bookingId: Text
+    firstName: Text
+    dropStop: Text
+
+  SelectRouteResp:
+    session: Maybe SharedCabSession
+    affectedRiders: Maybe [AffectedRider]
+
+  # agencyId is the shared-cab provider's business key across the two DBs: the GTFS agency gtfsId of the feed
+  # (integrated_bpp_config.agency_key). The caller's own row id never leaves its database.
+  SelectRouteReq:
+    driverId: Text
+    vehicleNumber: Text
+    agencyId: Text
+    serviceTierType: ServiceTierType
+    capacity: Maybe Int
+    routeCode: Text
+    walkupCount: Int
+    mode: Maybe SelectRouteMode
+    driverName: Maybe Text
+    vehicleModel: Maybe Text
+
+  SeatsReq:
+    driverId: Text
+    vehicleNumber: Text
+    walkupCount: Int
+    version: Int
+
+  SharedCabDriverReq:
+    driverId: Text
+    vehicleNumber: Text
+    reason: Maybe Text
+
+  SharedCabTrip:
+    id: Id VehicleTrip
+    routeCode: Text
+    status: VehicleTripStatus
+    startedAt: UTCTime
+    endedAt: Maybe UTCTime
+    endReason: Maybe VehicleTripEndReason
+    offlineBoardings: Int
+
+  SharedCabTripsResp:
+    trips: "[SharedCabTrip]"
+
+apis:
+  - GET:
+      endpoint: /sharedCab/routes
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        agencyId: Text
+        lat: Double
+        lon: Double
+      response:
+        type: SharedCabRoutesResp
+  - POST:
+      endpoint: /sharedCab/route/select
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SelectRouteReq
+      response:
+        type: SelectRouteResp
+  - GET:
+      endpoint: /sharedCab/session
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        driverId: Text
+        vehicleNumber: Text
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/seats
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SeatsReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/route/end
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: EndRouteReq
+      response:
+        type: "(Kernel.Prelude.Maybe SharedLogic.SharedCab.SessionView.SharedCabSession)"
+  - POST:
+      endpoint: /sharedCab/resume
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
+  - GET:
+      endpoint: /sharedCab/trips
+      auth: NoAuth
+      headers:
+        token: Text
+      mandatoryQuery:
+        driverId: Text
+        date: Day
+      response:
+        type: SharedCabTripsResp
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/cancel
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/boardedWithoutCode
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/booking/{bookingId}/dropped
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        bookingId: Id FRFSTicketBooking
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession
+  - POST:
+      endpoint: /sharedCab/cabFull
+      auth: NoAuth
+      headers:
+        token: Text
+      request:
+        type: SharedCabDriverReq
+      response:
+        type: SharedCabSession

@@ -1,0 +1,37 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
+
+-- | The driver's cancel reason survives every layer of the driver-app proxy on its way to rider-app.
+module SharedCabProxyTests (tests) where
+
+import "dynamic-offer-driver-app" API.Types.UI.SharedCab (CancelBookingReq (..), SharedCabRiderStatus (..))
+import Data.Aeson (Value (..), decode, encode, object, (.=))
+import "dynamic-offer-driver-app" Domain.Action.UI.SharedCabBooking (BookingAction (..), actionReason)
+import "dynamic-offer-driver-app" SharedLogic.CallSharedCabBooking (BAPDriverReq (..))
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import Prelude
+
+forwarded :: BAPDriverReq -> Maybe Value
+forwarded = decode . encode
+
+tests :: TestTree
+tests =
+  testGroup
+    "shared-cab driver proxy (cancel reason)"
+    [ testCase "the app's body {reason} decodes" $ decode "{\"reason\":\"rider not at stop\"}" @?= Just (CancelBookingReq {reason = "rider not at stop"}),
+      testCase "a body without a reason is rejected at the door" $ (decode "{}" :: Maybe CancelBookingReq) @?= Nothing,
+      testCase "the cancel action carries its reason on" $ actionReason (Cancel "cab breakdown") @?= Just "cab breakdown",
+      testCase "other actions carry none" $ map actionReason [BoardedWithoutCode, Dropped] @?= [Nothing, Nothing],
+      testCase "the request to rider-app has the reason under \"reason\"" $
+        forwarded (BAPDriverReq {driverId = "d1", vehicleNumber = "ML05A9999", reason = Just "cab breakdown"})
+          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= ("cab breakdown" :: String)]),
+      testCase "another action sends reason null (rider-app reads it as Nothing)" $
+        forwarded (BAPDriverReq {driverId = "d1", vehicleNumber = "ML05A9999", reason = Nothing})
+          @?= Just (object ["driverId" .= ("d1" :: String), "vehicleNumber" .= ("ML05A9999" :: String), "reason" .= Null]),
+      -- rider-app's SessionView sends all four; a missing one 500s the driver's session view
+      testCase "every rider status rider-app sends decodes" $
+        map decode ["\"AT_STOP\"", "\"MINUTES_AWAY\"", "\"ARRIVING\"", "\"BOARDED\""] @?= map Just [AT_STOP, MINUTES_AWAY, ARRIVING, BOARDED],
+      testCase "a status rider-app adds later decodes as the fallback instead of failing the session view" $
+        map decode ["\"IN_TRANSIT\"", "\"\""] @?= map Just [UNKNOWN_STATUS, UNKNOWN_STATUS]
+    ]

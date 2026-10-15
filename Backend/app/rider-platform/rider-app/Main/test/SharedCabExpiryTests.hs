@@ -1,0 +1,83 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PackageImports #-}
+
+module SharedCabExpiryTests (tests) where
+
+import "beckn-spec" BecknV2.FRFS.Enums (ServiceTierType (AC))
+import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
+import qualified "rider-app" Domain.Types.VehicleTrip as DVT
+import "mobility-core" Kernel.Types.Id (Id (..))
+import "rider-app" SharedLogic.SharedCab.SessionState
+import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
+import Prelude
+
+t0 :: UTCTime
+t0 = UTCTime (fromGregorian 2026 9 25) 0
+
+minutes :: Int -> UTCTime
+minutes n = addUTCTime (fromIntegral (n * 60)) t0
+
+-- 15 min pause, 60 min end, last ping at t0.
+decide :: Int -> SessionStatus -> Maybe ExpiryAction
+decide nowMin = expiryAction (15 * 60) (60 * 60) (minutes nowMin) t0
+
+liveTrip :: DVT.VehicleTrip
+liveTrip =
+  DVT.VehicleTrip
+    { id = Id "trip7",
+      serviceTierType = AC,
+      driverId = "d1",
+      vehicleNumber = "ML05A1234",
+      capacity = 4,
+      merchantId = Id "m",
+      merchantOperatingCityId = Id "moc",
+      integratedBppConfigId = Id "ibc",
+      routeCode = "SC-R2",
+      status = DVT.ACTIVE,
+      startedAt = t0,
+      movingAt = Nothing,
+      reachedEndAt = Nothing,
+      endedAt = Nothing,
+      endReason = Nothing,
+      offlineBoardings = 3,
+      createdAt = t0,
+      updatedAt = t0
+    }
+
+tests :: TestTree
+tests =
+  testGroup
+    "SharedCab expiry + flush recovery"
+    [ testCase "a fresh ping keeps the session" $
+        decide 14 ACTIVE @?= Nothing,
+      testCase "stale ping past pauseAfter pauses an ACTIVE session" $
+        decide 15 ACTIVE @?= Just PauseSilent,
+      testCase "an already PAUSED session isn't paused again" $
+        decide 30 PAUSED @?= Nothing,
+      testCase "stale ping past endAfter ends a PAUSED session" $
+        decide 60 PAUSED @?= Just EndSilent,
+      testCase "stale ping past endAfter ends an ACTIVE one too (missed ticks)" $
+        decide 90 ACTIVE @?= Just EndSilent,
+      testCase "an ENDED session is left alone" $
+        decide 90 ENDED @?= Nothing,
+      testCase "recovery restores route, driver, capacity and trip from the row" $
+        case sessionFromTrip liveTrip (minutes 5) of
+          Session {routeCode = r, driverId = d, capacity = c, vehicleTripId = t, status = st} ->
+            (r, d, c, t, st) @?= ("SC-R2", "d1", 4, Id "trip7", ACTIVE),
+      testCase "recovery seeds walk-ups from the run's offlineBoardings, capped at capacity" $
+        ( walkupCount (sessionFromTrip liveTrip (minutes 5)),
+          walkupCount (sessionFromTrip liveTrip {DVT.offlineBoardings = 9} (minutes 5))
+        )
+          @?= (3, 4),
+      testCase "a ping more than 5 min ahead (ms epoch, skewed clock) or missing is unreadable" $
+        map (readPing (minutes 10)) [Just (minutes 9), Just (minutes 15), Just (minutes 16), Nothing]
+          @?= [SeenAt (minutes 9), SeenAt (minutes 15), Unreadable, Unreadable],
+      testCase "an unreadable ping is skipped only until the trip is endAfter old" $
+        map (\(nowMin, ping) -> lastSeenFor (60 * 60) (minutes nowMin) t0 ping) [(30, Just Unreadable), (60, Just Unreadable), (30, Nothing), (30, Just (SeenAt (minutes 20)))]
+          @?= [Nothing, Just t0, Just t0, Just (minutes 20)],
+      testCase "a PAUSED trip comes back paused (pause is non-terminal)" $
+        status (sessionFromTrip liveTrip {DVT.status = DVT.PAUSED} (minutes 5)) @?= PAUSED,
+      testCase "recovery's version outranks any pre-flush counter" $
+        (version (sessionFromTrip liveTrip (minutes 5)) > 1000000) @?= True
+    ]
