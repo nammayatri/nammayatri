@@ -28,9 +28,9 @@ import qualified Storage.Queries.Vehicle as QV
 -- Writes are routed to the correct cloud based on each driver's cloudType.
 -- The two Bool flags gate what the cold-start builder does with its fetches:
 -- bankAccounts is only fetched/consumed when the merchant has online payment
--- enabled; fleet associations are always fetched (cash-ride eligibility needs
--- them unconditionally) but 'DriverPoolData.fleetOwnerId' itself is only
--- populated from them when prepaid wallet flow or online payment is on.
+-- enabled; fleet associations are always fetched for 'DriverPoolData.fleetOwnerId',
+-- but only feed the fleet bank-account redirect and fleet-scoped cash-ride flag
+-- when prepaid wallet flow or online payment is on.
 getOrBuildDriverPoolDataBatch ::
   ( BeamFlow m r,
     MonadFlow m,
@@ -66,10 +66,11 @@ getOrBuildDriverPoolDataBatch onlinePayment isPrepaidEnabled driverIds = do
   pure $ migratedEntries <> builtFromDB
 
 -- | Build DriverPoolData from DB tables for drivers that don't have a Redis key yet.
--- Always fetches: driver_information, vehicle, person.
--- Conditionally fetches (only when @isPrepaidEnabled || onlinePayment@):
---   - fleet_driver_association / fleet_owner_information — used for @fleetOwnerId@,
---     the fleet-owner bank-account redirect, and the fleet-scoped cash-ride flag.
+-- Always fetches: driver_information, vehicle, person, fleet_driver_association
+-- (for @fleetOwnerId@, read by fleet pooling priority).
+-- Conditionally (only when @isPrepaidEnabled || onlinePayment@) uses the fleet
+-- association for the fleet-owner bank-account redirect and the fleet-scoped
+-- cash-ride flag, fetching fleet_owner_information for the latter.
 --   driver_bank_account — only when @onlinePayment@ is true.
 --
 -- The @isPrepaidEnabled || onlinePayment@ gate is the semantic boundary of the
@@ -96,11 +97,10 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
   persons <- QP.getDriversByIdIn personIds
   let pMap = HashMap.fromList $ map (\p -> (cast p.id, p)) persons
 
-  fleetAssocs <-
-    if isPrepaidEnabled || onlinePayment
-      then QFDA.findAllByDriverIds personIds
-      else pure []
-  let faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa)) fleetAssocs
+  allFleetAssocs <- QFDA.findAllByDriverIds personIds
+  let fleetOwnerIdMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa.fleetOwnerId)) allFleetAssocs
+      fleetAssocs = if isPrepaidEnabled || onlinePayment then allFleetAssocs else []
+      faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa)) fleetAssocs
       fleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) fleetAssocs
 
   bankAccounts <-
@@ -114,9 +114,9 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
 
   now <- getClockTimeInMs
   nowUtc <- getCurrentTime
-  pure $ mapMaybe (buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap) driverIds
+  pure $ mapMaybe (buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerIdMap fleetOwnerFOIMap) driverIds
   where
-    buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerFOIMap did = do
+    buildOne now nowUtc diMap vMap pMap baMap faMap fleetOwnerIdMap fleetOwnerFOIMap did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
@@ -175,7 +175,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             vehicleTags = v.vehicleTags,
             mYManufacturing = v.mYManufacturing,
             safetyPlusEnabled = Just False,
-            fleetOwnerId = (.fleetOwnerId) <$> fa,
+            fleetOwnerId = HashMap.lookup did fleetOwnerIdMap,
             driverTripEndLocation = di.driverTripEndLocation,
             hasRideStarted = di.hasRideStarted,
             airConditionScore = di.airConditionScore,

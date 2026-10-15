@@ -780,9 +780,7 @@ mkDriverPoolWithStraightLineAsActualDistance defaultPopupDelay dpr =
       idleTimeSeconds = Nothing,
       preferenceMatchScore = 1.0,
       hasApplicablePreferences = False,
-      fleetPoolingPriority = Nothing,
-      fleetPoolingPriorityLevel = Nothing,
-      fleetPoolingPriorityKey = Nothing
+      fleetPoolingPriorityLevel = Nothing
     }
 
 partitionByIgnoreActualDistanceThreshold ::
@@ -963,9 +961,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
           hasApplicablePreferences = False,
-          fleetPoolingPriority = Nothing,
-          fleetPoolingPriorityLevel = Nothing,
-          fleetPoolingPriorityKey = Nothing
+          fleetPoolingPriorityLevel = Nothing
         }
 
     makeDriverPoolResultFromGoHome NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
@@ -1287,9 +1283,7 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
           hasApplicablePreferences = False,
-          fleetPoolingPriority = Nothing,
-          fleetPoolingPriorityLevel = Nothing,
-          fleetPoolingPriorityKey = Nothing
+          fleetPoolingPriorityLevel = Nothing
         }
 
 scheduledRideFilter :: (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) => DST.CurrentSearchInfo -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Bool -> DTC.TransporterConfig -> DriverPoolWithActualDistResult -> m Bool
@@ -1581,9 +1575,7 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
           hasApplicablePreferences = False,
-          fleetPoolingPriority = Nothing,
-          fleetPoolingPriorityLevel = Nothing,
-          fleetPoolingPriorityKey = Nothing
+          fleetPoolingPriorityLevel = Nothing
         }
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
@@ -1652,9 +1644,7 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
           hasApplicablePreferences = False,
-          fleetPoolingPriority = Nothing,
-          fleetPoolingPriorityLevel = Nothing,
-          fleetPoolingPriorityKey = Nothing
+          fleetPoolingPriorityLevel = Nothing
         }
 
 refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult)

@@ -70,7 +70,8 @@ migrations =
     MigrationEntry 4 backfillEnableForAirport,
     MigrationEntry 5 backfillEnableCashRide,
     MigrationEntry 6 backfillMerchantOperatingCityId,
-    MigrationEntry 7 backfillRideBillingModel
+    MigrationEntry 7 backfillRideBillingModel,
+    MigrationEntry 8 backfillFleetOwnerId
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -140,6 +141,23 @@ backfillRideBillingModel entries = do
   pure $
     map
       (\e -> e {rideBillingModel = HashMap.lookupDefault e.rideBillingModel (cast e.driverId :: Id Person.Person) modelMap})
+      entries
+
+-- | v8: backfill 'fleetOwnerId' from the driver's active fleet association.
+--
+-- Cold builds used to fill it only when the merchant had prepaid or online payment on,
+-- and fleet link/unlink only syncs it onto an entry that already exists, so most fleet
+-- drivers' cached entries carry Nothing. Fleet pooling priority reads it from here.
+backfillFleetOwnerId ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillFleetOwnerId entries = do
+  let personIds = map (cast . (.driverId)) entries :: [Id Person.Person]
+  fleetAssocs <- QFDA.findAllByDriverIds personIds
+  let fleetOwnerMap = HashMap.fromList $ map (\fa -> (cast fa.driverId :: Id Person.Person, fa.fleetOwnerId)) fleetAssocs
+  pure $
+    map
+      (\e -> e {fleetOwnerId = HashMap.lookup (cast e.driverId :: Id Person.Person) fleetOwnerMap})
       entries
 
 -- | v3: backfill the new 'cloudType' field from the person table.

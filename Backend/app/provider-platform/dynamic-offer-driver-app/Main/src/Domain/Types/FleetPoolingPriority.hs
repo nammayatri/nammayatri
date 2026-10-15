@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -15,16 +17,13 @@
 module Domain.Types.FleetPoolingPriority
   ( PoolingPriorityLevel (..),
     FleetPoolingPriority (..),
+    isSupportedPoolingPriorityArea,
     resolvePoolingPriority,
   )
 where
 
-import qualified Control.Lens as L
-import Data.Aeson
-import qualified Data.Aeson.Key as AesonKey
-import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Map.Strict as Map
-import Data.OpenApi (AdditionalProperties (..), NamedSchema (..), OpenApiType (..), ToSchema (..), additionalProperties, declareSchemaRef, description, type_)
+import Domain.Types.Extra.SpecialLocationArea ()
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import qualified Lib.Types.SpecialLocation as SL
@@ -36,47 +35,24 @@ data PoolingPriorityLevel = NO_PRIORITY | LOW | MEDIUM | HIGH
 newtype FleetPoolingPriority = FleetPoolingPriority
   { getFleetPoolingPriority :: Map.Map SL.Area PoolingPriorityLevel
   }
-  deriving (Show, Eq, Generic)
+  deriving stock (Show, Eq, Generic)
+  deriving newtype (ToJSON, FromJSON, ToSchema)
 
-instance ToJSON FleetPoolingPriority where
-  toJSON (FleetPoolingPriority priorities) =
-    Object . KeyMap.fromList $ [(AesonKey.fromString (show area), toJSON level) | (area, level) <- Map.toList priorities]
+-- | Keys a fleet may configure: Default, a gate-less Pickup, or a Drop.
+isSupportedPoolingPriorityArea :: SL.Area -> Bool
+isSupportedPoolingPriorityArea = \case
+  SL.Default -> True
+  SL.Pickup _ Nothing -> True
+  SL.Drop _ -> True
+  _ -> False
 
-instance FromJSON FleetPoolingPriority where
-  parseJSON = withObject "FleetPoolingPriority" $ \obj ->
-    FleetPoolingPriority . Map.fromList <$> mapM parseEntry (KeyMap.toList obj)
-    where
-      parseEntry (key, value) = do
-        area <- parseJSON (String (AesonKey.toText key))
-        unless (isSupportedArea area) $
-          fail $ "Unsupported fleetPoolingPriority key " <> show (AesonKey.toText key) <> ": expected \"Default\", \"Pickup_<specialLocationId>\" or \"Drop_<specialLocationId>\""
-        (area,) <$> parseJSON value
-      isSupportedArea = \case
-        SL.Default -> True
-        SL.Pickup _ Nothing -> True
-        SL.Drop _ -> True
-        _ -> False
-
-instance ToSchema FleetPoolingPriority where
-  declareNamedSchema _ = do
-    levelSchema <- declareSchemaRef (Proxy :: Proxy PoolingPriorityLevel)
-    pure $
-      NamedSchema (Just "FleetPoolingPriority") $
-        mempty
-          & type_ L.?~ OpenApiObject
-          & additionalProperties L.?~ AdditionalPropertiesSchema levelSchema
-          & description L.?~ "Area -> PoolingPriorityLevel. Keys: \"Default\", \"Pickup_<specialLocationId>\", \"Drop_<specialLocationId>\". Missing key = NO_PRIORITY."
-
--- | Highest level among the search's pickup and drop special-location entries (tie goes to
--- pickup), else the Default entry; also returns the matched key.
-resolvePoolingPriority :: Maybe SL.Area -> FleetPoolingPriority -> Maybe (PoolingPriorityLevel, Text)
+-- | Highest level among the search's pickup and drop special-location entries, else the Default entry.
+resolvePoolingPriority :: Maybe SL.Area -> FleetPoolingPriority -> Maybe PoolingPriorityLevel
 resolvePoolingPriority mbArea (FleetPoolingPriority priorities) =
-  case mapMaybe lookupArea candidates of
-    [] -> lookupArea SL.Default
-    firstMatch : otherMatches -> Just (foldl higher firstMatch otherMatches)
+  case mapMaybe (`Map.lookup` priorities) candidates of
+    [] -> Map.lookup SL.Default priorities
+    levels -> Just (maximum levels)
   where
     candidates =
       maybeToList ((\pickupId -> SL.Pickup (Id pickupId) Nothing) <$> (mbArea >>= SL.pickupSpecialZoneIdFromArea))
         <> maybeToList (SL.Drop . Id <$> (mbArea >>= SL.dropSpecialZoneIdFromArea))
-    lookupArea area = (,show area) <$> Map.lookup area priorities
-    higher best candidate = if fst candidate > fst best then candidate else best

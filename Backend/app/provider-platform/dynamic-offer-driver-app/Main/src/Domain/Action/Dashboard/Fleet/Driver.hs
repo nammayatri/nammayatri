@@ -160,7 +160,7 @@ import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
-import Domain.Types.FleetPoolingPriority (FleetPoolingPriority (..))
+import Domain.Types.FleetPoolingPriority (FleetPoolingPriority (..), isSupportedPoolingPriorityArea)
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -5656,6 +5656,9 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
 
 validatePoolingPrioritySpecialLocations :: Id DMOC.MerchantOperatingCity -> FleetPoolingPriority -> Flow ()
 validatePoolingPrioritySpecialLocations merchantOpCityId priority = do
+  let unsupportedKeys = map show $ filter (not . isSupportedPoolingPriorityArea) (Map.keys priority.getFleetPoolingPriority)
+  unless (null unsupportedKeys) $
+    throwError $ InvalidRequest $ "Unsupported fleetPoolingPriority keys " <> T.intercalate ", " unsupportedKeys <> ": expected \"Default\", \"Pickup_<specialLocationId>\" or \"Drop_<specialLocationId>\""
   let specialLocationIds = nub $ mapMaybe areaSpecialLocationId (Map.keys priority.getFleetPoolingPriority)
   unknownIds <- filterM (fmap (not . inCity) . QSpecialLocation.findById . Id) specialLocationIds
   unless (null unknownIds) $

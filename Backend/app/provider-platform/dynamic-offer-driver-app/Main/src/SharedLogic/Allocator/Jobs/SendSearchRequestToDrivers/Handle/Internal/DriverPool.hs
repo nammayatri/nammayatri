@@ -75,7 +75,6 @@ import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.FleetConfig (FleetConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
@@ -186,7 +185,8 @@ ensurePoolingLogicVersion searchReq
     whenJust mbVersion $ \_ -> QSR.updatePoolingLogicVersion mbVersion searchReq.id
     pure $ searchReq {DSR.poolingLogicVersion = mbVersion}
 
--- | Pooling priority of each driver's active fleet. Never throws.
+-- | Pooling priority of each driver's fleet, keyed off the 'fleetOwnerId' cached in the
+-- driver's LTS pool data (kept in sync on fleet link/unlink). Never throws.
 getFleetPoolingPriorities ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id MerchantOperatingCity ->
@@ -194,14 +194,7 @@ getFleetPoolingPriorities ::
   m (Map.Map (Id Driver) FleetPoolingPriority)
 getFleetPoolingPriorities mOCityId drivers = do
   result <- withTryCatch "getFleetPoolingPriorities" $ do
-    let withoutFleetOwner = [cast d.driverPoolResult.driverId | d <- drivers, isNothing d.driverPoolResult.fleetOwnerId]
-    assocs <- if null withoutFleetOwner then pure [] else QFDA.findAllByDriverIds withoutFleetOwner
-    let assocFleetOwners = Map.fromList [(cast assoc.driverId, assoc.fleetOwnerId) | assoc <- assocs]
-        driverFleetOwners =
-          [ (d.driverPoolResult.driverId, fleetOwnerId)
-            | d <- drivers,
-              Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId <|> Map.lookup d.driverPoolResult.driverId assocFleetOwners]
-          ]
+    let driverFleetOwners = [(d.driverPoolResult.driverId, fleetOwnerId) | d <- drivers, Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId]]
     ownerPriorities <- forM (DL.nub (map snd driverFleetOwners)) $ \fleetOwnerId -> do
       mbFleetConfig <- getOneConfig (FleetConfigDimensions {fleetOwnerId, merchantOperatingCityId = mOCityId.getId}) Nothing
       pure (fleetOwnerId, mbFleetConfig >>= (.fleetPoolingPriority))
@@ -320,16 +313,12 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
         ( \driver ->
             let personId = cast driver.driverPoolResult.driverId
                 preferenceChecks = mkDriverPreferenceChecks searchReq driver
-                mbFleetPriority = Map.lookup driver.driverPoolResult.driverId fleetPriorities
-                mbResolvedPriority = mbFleetPriority >>= resolvePoolingPriority searchReq.area
              in driver
                   { searchReqDriverStatsCounters = Map.lookup personId countersMap,
                     idleTimeSeconds = Map.lookup personId idleMap,
                     preferenceMatchScore = computePreferenceMatchScore preferenceChecks,
                     hasApplicablePreferences = any (.isApplicable) preferenceChecks,
-                    fleetPoolingPriority = mbFleetPriority,
-                    fleetPoolingPriorityLevel = fst <$> mbResolvedPriority,
-                    fleetPoolingPriorityKey = snd <$> mbResolvedPriority
+                    fleetPoolingPriorityLevel = Map.lookup driver.driverPoolResult.driverId fleetPriorities >>= resolvePoolingPriority searchReq.area
                   }
         )
         onlyNewDriversWithCustomerInfo

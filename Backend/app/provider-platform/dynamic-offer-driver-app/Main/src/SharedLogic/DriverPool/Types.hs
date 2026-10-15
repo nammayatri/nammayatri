@@ -28,7 +28,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
-import Domain.Types.FleetPoolingPriority (FleetPoolingPriority, PoolingPriorityLevel)
+import Domain.Types.FleetPoolingPriority (PoolingPriorityLevel)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
@@ -310,10 +310,8 @@ data DriverPoolWithActualDistResult = DriverPoolWithActualDistResult
     -- Whether any preference dimension applied to this driver/search. The score above is 1.0
     -- when none applies (right for ranking), so display code must gate on this flag.
     hasApplicablePreferences :: Bool,
-    fleetPoolingPriority :: Maybe FleetPoolingPriority,
-    fleetPoolingPriorityLevel :: Maybe PoolingPriorityLevel,
-    -- | Map key the level came from ("Default" or a special-location key).
-    fleetPoolingPriorityKey :: Maybe Text
+    -- | The driver's fleet pooling priority resolved for this search's area; read by POOLING rules.
+    fleetPoolingPriorityLevel :: Maybe PoolingPriorityLevel
   }
   deriving (Generic, Show, ToJSON)
 
@@ -341,9 +339,7 @@ instance Default DriverPoolWithActualDistResult where
         idleTimeSeconds = Nothing,
         preferenceMatchScore = 1.0,
         hasApplicablePreferences = False,
-        fleetPoolingPriority = Nothing,
-        fleetPoolingPriorityLevel = Nothing,
-        fleetPoolingPriorityKey = Nothing
+        fleetPoolingPriorityLevel = Nothing
       }
 
 -- | One preference dimension's outcome for a single driver/ride pairing.
