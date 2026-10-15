@@ -1,0 +1,86 @@
+imports:
+  Chakra: Lib.Yudhishthira.Types.KaalChakra
+  Merchant: Lib.Yudhishthira.Types.Common
+  MerchantOperatingCity: Lib.Yudhishthira.Types.Common
+  Event: Lib.Yudhishthira.Types.Common
+  Value: Data.Aeson
+
+# Run-history row for the Kaal Chakra scheduler jobs (Daily/Weekly/Monthly/Quarterly,
+# fetch-user-data and update-tags phases). One row per phase per run, keyed by its own
+# id; eventId ties the fetch and update-tags rows of a single cycle together.
+# The scheduler (lib/scheduler) remains the executor; this table is the only source
+# for the Control Center Jobs tab's list/detail/history views.
+KaalChakraJobRun:
+  tableName: kaal_chakra_job_run
+
+  types:
+    KaalChakraJobRunPhase:
+      enum: "FetchUserData, UpdateTags"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+    KaalChakraJobRunStatus:
+      enum: "Running, Completed, Failed, Cancelled"
+      derive': "Generic, Show, Read, Eq, Ord, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <KaalChakraJobRunPhase>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <KaalChakraJobRunPhase>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <KaalChakraJobRunStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <KaalChakraJobRunStatus>
+
+  fields:
+    id: Id KaalChakraJobRun
+    eventId: Id Event
+    chakra: Chakra
+    phase: KaalChakraJobRunPhase
+    schedulerJobId: Maybe Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    status: KaalChakraJobRunStatus
+    startedAt: UTCTime
+    endedAt: Maybe UTCTime
+    usersProcessed: Maybe Int
+    batchesProcessed: Maybe Int
+    retryCount: Maybe Int
+    failureReason: Maybe Text
+    failedQueryName: Maybe Text
+    queryOutcomes: Maybe Value
+    tagStats: Maybe Value
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    batchesProcessed: "0"
+    retryCount: "0"
+    failureReason: "NULL"
+    failedQueryName: "NULL"
+    queryOutcomes: "NULL"
+    tagStats: "NULL"
+    schedulerJobId: "NULL"
+
+  constraints:
+    id: PrimaryKey
+    eventId: SecondaryKey
+
+  sqlType:
+    queryOutcomes: json
+    tagStats: json
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByEventId:
+      kvFunction: findAllWithKV
+      where: eventId
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId]
+    - columns: [merchantOperatingCityId, chakra, status]
+    - columns: [eventId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  beamInstance: MakeTableInstancesGenericSchema
+  defaultQueryTypeConstraint: "(Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r)"

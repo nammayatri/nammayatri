@@ -22,6 +22,15 @@ imports:
   RolloutGroupInfo: Lib.Yudhishthira.Types
   TimeBoundResp: Lib.Yudhishthira.Types
   Chakra: Lib.Yudhishthira.Types
+  KaalChakraJobRunStatus: Lib.Yudhishthira.Types.KaalChakraJobRun
+  KaalChakraJobRunPhase: Lib.Yudhishthira.Types.KaalChakraJobRun
+  ChakraRunListItem: Lib.Yudhishthira.Types
+  ChakraRunListRes: Lib.Yudhishthira.Types
+  ChakraRunDetailRes: Lib.Yudhishthira.Types
+  ChakraJobRescheduleReq: Lib.Yudhishthira.Types
+  ChakraJobCancelReq: Lib.Yudhishthira.Types
+  ChakraJobDeleteReq: Lib.Yudhishthira.Types
+  ChakraUpcomingJobsRes: Lib.Yudhishthira.Types
   DomainSchemaResp: Lib.Yudhishthira.Types
   ChakraQueryResp: Lib.Yudhishthira.Types
   AppDynamicLogicDomainResp: Lib.Yudhishthira.Types
@@ -469,3 +478,61 @@ apis:
         entityId: Text
       response:
         type: EntityBehaviorVisibility
+  - GET: # ChakraRunsListAPI — paginated Kaal Chakra run history, newest first
+      endpoint: /chakra/runs
+      auth: ApiAuthV2
+      mandatoryQuery:
+        chakra: Chakra
+      query:
+        status: KaalChakraJobRunStatus
+        from: UTCTime
+        to: UTCTime
+        limit: Int
+        offset: Int
+      response:
+        type: ChakraRunListRes
+      migrate:
+        capability: system-config.kaal_chakra.read
+  - GET: # ChakraRunDetailAPI — both phase rows (fetch + update-tags) for one run
+      endpoint: /chakra/run/{eventId}
+      auth: ApiAuthV2
+      params:
+        eventId: Text
+      response:
+        type: ChakraRunDetailRes
+      migrate:
+        capability: system-config.kaal_chakra.read
+  - POST: # ChakraJobRescheduleAPI
+      endpoint: /chakra/jobs/reschedule
+      auth: ApiAuthV2
+      request:
+        type: ChakraJobRescheduleReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.kaal_chakra.write
+  - POST: # ChakraJobCancelAPI
+      endpoint: /chakra/jobs/cancel
+      auth: ApiAuthV2
+      request:
+        type: ChakraJobCancelReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.kaal_chakra.write
+  - POST: # ChakraJobDeleteAPI — removes a scheduled (not yet started) chakra job
+      endpoint: /chakra/jobs/delete
+      auth: ApiAuthV2
+      request:
+        type: ChakraJobDeleteReq
+      response:
+        type: APISuccess
+      migrate:
+        capability: system-config.kaal_chakra.write
+  - GET: # ChakraUpcomingJobsAPI — pending chakra jobs for the city, with their job ids
+      endpoint: /chakra/jobs/upcoming
+      auth: ApiAuthV2
+      response:
+        type: ChakraUpcomingJobsRes
+      migrate:
+        capability: system-config.kaal_chakra.read

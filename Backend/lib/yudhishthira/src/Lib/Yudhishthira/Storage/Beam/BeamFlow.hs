@@ -21,6 +21,7 @@ import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn as BeamAD
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as BeamADLE
 import qualified Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as BeamADLR
 import qualified Lib.Yudhishthira.Storage.Beam.ChakraQueries as BeamCQ
+import qualified Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun as BeamKCJR
 import qualified Lib.Yudhishthira.Storage.Beam.NammaTag as BeamNT
 import qualified Lib.Yudhishthira.Storage.Beam.NammaTagTrigger as BeamNTT
 import qualified Lib.Yudhishthira.Storage.Beam.NammaTagTriggerV2 as BeamNTTV2
@@ -41,6 +42,7 @@ type HasYudhishthiraTablesSchema =
     HasSchemaName BeamADLR.AppDynamicLogicRolloutT,
     HasSchemaName BeamADLE.AppDynamicLogicElementT,
     HasSchemaName BeamCQ.ChakraQueriesT,
+    HasSchemaName BeamKCJR.KaalChakraJobRunT,
     HasSchemaName BeamNT.NammaTagT,
     HasSchemaName BeamNTT.NammaTagTriggerT,
     HasSchemaName BeamNTTV2.NammaTagTriggerV2T,

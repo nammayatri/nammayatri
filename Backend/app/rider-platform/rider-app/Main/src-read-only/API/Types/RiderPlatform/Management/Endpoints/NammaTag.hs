@@ -14,6 +14,7 @@ import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.KaalChakraJobRun
 import Servant
 import Servant.Client
 
@@ -38,7 +39,7 @@ data BulkUpdateCustomerTagRes = BulkUpdateCustomerTagRes {success :: Kernel.Prel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> PostNammaTagTagVerify :<|> DeleteNammaTagTagDelete :<|> GetNammaTagTagAll :<|> GetNammaTagTagDetails :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> GetNammaTagQueryDetails :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> PostNammaTagAppDynamicLogicBulkUpsertLogicRollout :<|> PostNammaTagAppDynamicLogicUpdateExperimentGroup :<|> GetNammaTagAppDynamicLogicExperimentGroups :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagAppDynamicLogicDomainsAndEvents :<|> GetNammaTagAppDynamicLogicGetDomainSchema :<|> GetNammaTagQueryAll :<|> PostNammaTagUpdateCustomerTag :<|> PostNammaTagBulkUpdateCustomerTag :<|> PostNammaTagConfigPilotGetVersion :<|> PostNammaTagConfigPilotGetConfig :<|> PostNammaTagConfigPilotCreateUiConfig :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData :<|> GetNammaTagConfigPilotGetTableDataFromDB :<|> GetNammaTagConfigPilotAllUiConfigs :<|> GetNammaTagConfigPilotUiConfigDetails :<|> GetNammaTagConfigPilotGetUiTableData :<|> GetNammaTagConfigPilotAlwaysOnList :<|> PostNammaTagConfigPilotActionChange :<|> PostNammaTagConfigPilotGetConfigWithDimensions :<|> GetNammaTagConfigPilotGetDimensionSchema :<|> PostNammaTagConfigPilotCreateRow :<|> PostNammaTagConfigPilotVerify :<|> PostNammaTagConfigPilotUpsertLogicRollout :<|> PostNammaTagConfigPilotRolloutAction))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagUpdate :<|> PostNammaTagTagVerify :<|> DeleteNammaTagTagDelete :<|> GetNammaTagTagAll :<|> GetNammaTagTagDetails :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> GetNammaTagQueryDetails :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> PostNammaTagAppDynamicLogicBulkUpsertLogicRollout :<|> PostNammaTagAppDynamicLogicUpdateExperimentGroup :<|> GetNammaTagAppDynamicLogicExperimentGroups :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagAppDynamicLogicDomainsAndEvents :<|> GetNammaTagAppDynamicLogicGetDomainSchema :<|> GetNammaTagQueryAll :<|> PostNammaTagUpdateCustomerTag :<|> PostNammaTagBulkUpdateCustomerTag :<|> PostNammaTagConfigPilotGetVersion :<|> PostNammaTagConfigPilotGetConfig :<|> PostNammaTagConfigPilotCreateUiConfig :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData :<|> GetNammaTagConfigPilotGetTableDataFromDB :<|> GetNammaTagConfigPilotAllUiConfigs :<|> GetNammaTagConfigPilotUiConfigDetails :<|> GetNammaTagConfigPilotGetUiTableData :<|> GetNammaTagConfigPilotAlwaysOnList :<|> PostNammaTagConfigPilotActionChange :<|> PostNammaTagConfigPilotGetConfigWithDimensions :<|> GetNammaTagConfigPilotGetDimensionSchema :<|> PostNammaTagConfigPilotCreateRow :<|> PostNammaTagConfigPilotVerify :<|> PostNammaTagConfigPilotUpsertLogicRollout :<|> PostNammaTagConfigPilotRolloutAction :<|> GetNammaTagChakraRuns :<|> GetNammaTagChakraRun :<|> PostNammaTagChakraJobsReschedule :<|> PostNammaTagChakraJobsCancel :<|> PostNammaTagChakraJobsDelete :<|> GetNammaTagChakraJobsUpcoming))
 
 type PostNammaTagTagCreate = ("tag" :> "create" :> ReqBody ('[JSON]) Lib.Yudhishthira.Types.CreateNammaTagRequest :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
 
@@ -171,11 +172,7 @@ type GetNammaTagConfigPilotConfigDetails = ("configPilot" :> Capture "tableName"
 
 type GetNammaTagConfigPilotGetTableData = ("configPilot" :> Capture "tableName" Lib.Yudhishthira.Types.ConfigType :> "getTableData" :> Get ('[JSON]) Lib.Yudhishthira.Types.TableDataResp)
 
-type GetNammaTagConfigPilotGetTableDataFromDB =
-  ( "configPilot" :> Capture "tableName" Lib.Yudhishthira.Types.ConfigType
-      :> "getTableDataFromDB"
-      :> Get ('[JSON]) Lib.Yudhishthira.Types.TableDataResp
-  )
+type GetNammaTagConfigPilotGetTableDataFromDB = ("configPilot" :> Capture "tableName" Lib.Yudhishthira.Types.ConfigType :> "getTableDataFromDB" :> Get ('[JSON]) Lib.Yudhishthira.Types.TableDataResp)
 
 type GetNammaTagConfigPilotAllUiConfigs = ("configPilot" :> "allUiConfigs" :> QueryParam "underExperiment" Kernel.Prelude.Bool :> Get ('[JSON]) [Lib.Yudhishthira.Types.LogicDomain])
 
@@ -239,6 +236,32 @@ type PostNammaTagConfigPilotRolloutAction =
       :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
   )
 
+type GetNammaTagChakraRuns =
+  ( "chakra" :> "runs" :> QueryParam "from" Kernel.Prelude.UTCTime :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "status"
+           Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRunStatus
+      :> QueryParam
+           "to"
+           Kernel.Prelude.UTCTime
+      :> MandatoryQueryParam
+           "chakra"
+           Lib.Yudhishthira.Types.Chakra
+      :> Get
+           ('[JSON])
+           Lib.Yudhishthira.Types.ChakraRunListRes
+  )
+
+type GetNammaTagChakraRun = ("chakra" :> "run" :> Capture "eventId" Kernel.Prelude.Text :> Get ('[JSON]) Lib.Yudhishthira.Types.ChakraRunDetailRes)
+
+type PostNammaTagChakraJobsReschedule = ("chakra" :> "jobs" :> "reschedule" :> ReqBody ('[JSON]) Lib.Yudhishthira.Types.ChakraJobRescheduleReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
+type PostNammaTagChakraJobsCancel = ("chakra" :> "jobs" :> "cancel" :> ReqBody ('[JSON]) Lib.Yudhishthira.Types.ChakraJobCancelReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
+type PostNammaTagChakraJobsDelete = ("chakra" :> "jobs" :> "delete" :> ReqBody ('[JSON]) Lib.Yudhishthira.Types.ChakraJobDeleteReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+
+type GetNammaTagChakraJobsUpcoming = ("chakra" :> "jobs" :> "upcoming" :> Get ('[JSON]) Lib.Yudhishthira.Types.ChakraUpcomingJobsRes)
+
 data NammaTagAPIs = NammaTagAPIs
   { postNammaTagTagCreate :: (Lib.Yudhishthira.Types.CreateNammaTagRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postNammaTagTagUpdate :: (Lib.Yudhishthira.Types.UpdateNammaTagRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
@@ -285,13 +308,19 @@ data NammaTagAPIs = NammaTagAPIs
     postNammaTagConfigPilotCreateRow :: (Lib.Yudhishthira.Types.ConfigType -> Lib.Yudhishthira.Types.ConfigPilotCreateRowRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     postNammaTagConfigPilotVerify :: (Lib.Yudhishthira.Types.ConfigType -> Lib.Yudhishthira.Types.ConfigPilotVerifyReq -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.AppDynamicLogicResp),
     postNammaTagConfigPilotUpsertLogicRollout :: (Lib.Yudhishthira.Types.ConfigType -> Lib.Yudhishthira.Types.ConfigPilotRolloutReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postNammaTagConfigPilotRolloutAction :: (Lib.Yudhishthira.Types.ConfigType -> Lib.Yudhishthira.Types.ConfigPilotActionChangeRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+    postNammaTagConfigPilotRolloutAction :: (Lib.Yudhishthira.Types.ConfigType -> Lib.Yudhishthira.Types.ConfigPilotActionChangeRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getNammaTagChakraRuns :: (Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRunStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Lib.Yudhishthira.Types.Chakra -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.ChakraRunListRes),
+    getNammaTagChakraRun :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Yudhishthira.Types.ChakraRunDetailRes),
+    postNammaTagChakraJobsReschedule :: (Lib.Yudhishthira.Types.ChakraJobRescheduleReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postNammaTagChakraJobsCancel :: (Lib.Yudhishthira.Types.ChakraJobCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    postNammaTagChakraJobsDelete :: (Lib.Yudhishthira.Types.ChakraJobDeleteReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
+    getNammaTagChakraJobsUpcoming :: (EulerHS.Types.EulerClient Lib.Yudhishthira.Types.ChakraUpcomingJobsRes)
   }
 
 mkNammaTagAPIs :: (Client EulerHS.Types.EulerClient API -> NammaTagAPIs)
 mkNammaTagAPIs nammaTagClient = (NammaTagAPIs {..})
   where
-    postNammaTagTagCreate :<|> postNammaTagTagUpdate :<|> postNammaTagTagVerify :<|> deleteNammaTagTagDelete :<|> getNammaTagTagAll :<|> getNammaTagTagDetails :<|> postNammaTagQueryCreate :<|> postNammaTagQueryUpdate :<|> deleteNammaTagQueryDelete :<|> getNammaTagQueryDetails :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> postNammaTagAppDynamicLogicBulkUpsertLogicRollout :<|> postNammaTagAppDynamicLogicUpdateExperimentGroup :<|> getNammaTagAppDynamicLogicExperimentGroups :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagAppDynamicLogicDomainsAndEvents :<|> getNammaTagAppDynamicLogicGetDomainSchema :<|> getNammaTagQueryAll :<|> postNammaTagUpdateCustomerTag :<|> postNammaTagBulkUpdateCustomerTag :<|> postNammaTagConfigPilotGetVersion :<|> postNammaTagConfigPilotGetConfig :<|> postNammaTagConfigPilotCreateUiConfig :<|> getNammaTagConfigPilotAllConfigs :<|> getNammaTagConfigPilotConfigDetails :<|> getNammaTagConfigPilotGetTableData :<|> getNammaTagConfigPilotGetTableDataFromDB :<|> getNammaTagConfigPilotAllUiConfigs :<|> getNammaTagConfigPilotUiConfigDetails :<|> getNammaTagConfigPilotGetUiTableData :<|> getNammaTagConfigPilotAlwaysOnList :<|> postNammaTagConfigPilotActionChange :<|> postNammaTagConfigPilotGetConfigWithDimensions :<|> getNammaTagConfigPilotGetDimensionSchema :<|> postNammaTagConfigPilotCreateRow :<|> postNammaTagConfigPilotVerify :<|> postNammaTagConfigPilotUpsertLogicRollout :<|> postNammaTagConfigPilotRolloutAction = nammaTagClient
+    postNammaTagTagCreate :<|> postNammaTagTagUpdate :<|> postNammaTagTagVerify :<|> deleteNammaTagTagDelete :<|> getNammaTagTagAll :<|> getNammaTagTagDetails :<|> postNammaTagQueryCreate :<|> postNammaTagQueryUpdate :<|> deleteNammaTagQueryDelete :<|> getNammaTagQueryDetails :<|> postNammaTagAppDynamicLogicVerify :<|> getNammaTagAppDynamicLogic :<|> postNammaTagRunJob :<|> getNammaTagTimeBounds :<|> postNammaTagTimeBoundsCreate :<|> deleteNammaTagTimeBoundsDelete :<|> getNammaTagAppDynamicLogicGetLogicRollout :<|> postNammaTagAppDynamicLogicUpsertLogicRollout :<|> postNammaTagAppDynamicLogicBulkUpsertLogicRollout :<|> postNammaTagAppDynamicLogicUpdateExperimentGroup :<|> getNammaTagAppDynamicLogicExperimentGroups :<|> getNammaTagAppDynamicLogicVersions :<|> getNammaTagAppDynamicLogicDomains :<|> getNammaTagAppDynamicLogicDomainsAndEvents :<|> getNammaTagAppDynamicLogicGetDomainSchema :<|> getNammaTagQueryAll :<|> postNammaTagUpdateCustomerTag :<|> postNammaTagBulkUpdateCustomerTag :<|> postNammaTagConfigPilotGetVersion :<|> postNammaTagConfigPilotGetConfig :<|> postNammaTagConfigPilotCreateUiConfig :<|> getNammaTagConfigPilotAllConfigs :<|> getNammaTagConfigPilotConfigDetails :<|> getNammaTagConfigPilotGetTableData :<|> getNammaTagConfigPilotGetTableDataFromDB :<|> getNammaTagConfigPilotAllUiConfigs :<|> getNammaTagConfigPilotUiConfigDetails :<|> getNammaTagConfigPilotGetUiTableData :<|> getNammaTagConfigPilotAlwaysOnList :<|> postNammaTagConfigPilotActionChange :<|> postNammaTagConfigPilotGetConfigWithDimensions :<|> getNammaTagConfigPilotGetDimensionSchema :<|> postNammaTagConfigPilotCreateRow :<|> postNammaTagConfigPilotVerify :<|> postNammaTagConfigPilotUpsertLogicRollout :<|> postNammaTagConfigPilotRolloutAction :<|> getNammaTagChakraRuns :<|> getNammaTagChakraRun :<|> postNammaTagChakraJobsReschedule :<|> postNammaTagChakraJobsCancel :<|> postNammaTagChakraJobsDelete :<|> getNammaTagChakraJobsUpcoming = nammaTagClient
 
 data NammaTagUserActionType
   = POST_NAMMA_TAG_TAG_CREATE
@@ -328,6 +357,7 @@ data NammaTagUserActionType
   | GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS
   | GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS
   | GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA
+  | GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA_FROM_DB
   | GET_NAMMA_TAG_CONFIG_PILOT_ALL_UI_CONFIGS
   | GET_NAMMA_TAG_CONFIG_PILOT_UI_CONFIG_DETAILS
   | GET_NAMMA_TAG_CONFIG_PILOT_GET_UI_TABLE_DATA
@@ -339,6 +369,12 @@ data NammaTagUserActionType
   | POST_NAMMA_TAG_CONFIG_PILOT_VERIFY
   | POST_NAMMA_TAG_CONFIG_PILOT_UPSERT_LOGIC_ROLLOUT
   | POST_NAMMA_TAG_CONFIG_PILOT_ROLLOUT_ACTION
+  | GET_NAMMA_TAG_CHAKRA_RUNS
+  | GET_NAMMA_TAG_CHAKRA_RUN
+  | POST_NAMMA_TAG_CHAKRA_JOBS_RESCHEDULE
+  | POST_NAMMA_TAG_CHAKRA_JOBS_CANCEL
+  | POST_NAMMA_TAG_CHAKRA_JOBS_DELETE
+  | GET_NAMMA_TAG_CHAKRA_JOBS_UPCOMING
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

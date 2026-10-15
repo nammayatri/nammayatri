@@ -124,6 +124,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Scheduler.Types (AnyJob)
 import Lib.Yudhishthira.Types.Application as Reexport
+import Lib.Yudhishthira.Types.ChakraDashboard as Reexport
 import Lib.Yudhishthira.Types.Common as Reexport
 import Lib.Yudhishthira.Types.ConfigPilot as Reexport
 import Lib.Yudhishthira.Types.KaalChakra as Reexport
@@ -1164,7 +1165,10 @@ data RunKaalChakraJobRes = RunKaalChakraJobRes
   { eventId :: Maybe (Id Event),
     tags :: Maybe [TagAPIEntity],
     users :: Maybe [RunKaalChakraJobResForUser],
-    chakraBatchState :: ChakraBatchState
+    chakraBatchState :: ChakraBatchState,
+    failedQueryName :: Maybe Text,
+    failureReason :: Maybe Text,
+    batchUsersCount :: Maybe Int
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

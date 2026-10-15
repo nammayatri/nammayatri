@@ -55,6 +55,12 @@ module Domain.Action.Dashboard.Management.NammaTag
     postNammaTagBehaviorEnable,
     postNammaTagBehaviorDisable,
     postNammaTagBehaviorMarkCanonical,
+    getNammaTagChakraRuns,
+    getNammaTagChakraRun,
+    postNammaTagChakraJobsReschedule,
+    postNammaTagChakraJobsCancel,
+    postNammaTagChakraJobsDelete,
+    getNammaTagChakraJobsUpcoming,
   )
 where
 
@@ -116,6 +122,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
+import qualified Lib.Yudhishthira.Event.KaalChakra.JobControl as ChakraJobControl
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.SchemaInstances ()
 import Lib.Yudhishthira.SchemaTH
@@ -128,6 +135,7 @@ import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Lib.Yudhishthira.Types.Common as C
+import qualified Lib.Yudhishthira.Types.KaalChakraJobRun as DKCJR
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DTANC
 import qualified Lib.Yudhishthira.TypesTH as YTH
@@ -619,7 +627,7 @@ postNammaTagRunJob merchantShortId opCity req = do
       kaalChakraHandle.createFetchUserDataJob req.chakra jobData scheduledTime
 
       logInfo $ "Scheduled new " <> show req.chakra <> " job"
-      pure $ LYT.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = LYT.Completed}
+      pure $ LYT.RunKaalChakraJobRes {eventId = Nothing, tags = Nothing, users = Nothing, chakraBatchState = LYT.Completed, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Nothing}
   where
     castChakra :: AllocatorJobType -> Maybe LYT.Chakra
     castChakra Daily = Just LYT.Daily
@@ -1547,3 +1555,76 @@ postNammaTagBehaviorMarkCanonical merchantShortId _opCity domain requestorId _re
   CADLR.clearDomainCache (Id "default") domain
   logInfo $ "Behaviour " <> show domain <> " canonical version set to " <> show req.version <> " by " <> requestorId
   pure Kernel.Types.APISuccess.Success
+
+getNammaTagChakraRuns ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe DKCJR.KaalChakraJobRunStatus ->
+  Maybe UTCTime ->
+  LYT.Chakra ->
+  Environment.Flow LYT.ChakraRunListRes
+getNammaTagChakraRuns merchantShortId opCity from limit offset status to chakra = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  YudhishthiraFlow.getChakraRuns (cast merchantOpCityId) from limit offset status to chakra
+
+getNammaTagChakraRun ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text ->
+  Environment.Flow LYT.ChakraRunDetailRes
+getNammaTagChakraRun merchantShortId opCity eventIdText = do
+  (_, merchantOpCityId) <- resolveChakraCaller merchantShortId opCity
+  YudhishthiraFlow.getChakraRunDetail merchantOpCityId eventIdText
+
+postNammaTagChakraJobsReschedule ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  LYT.ChakraJobRescheduleReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagChakraJobsReschedule merchantShortId opCity req = do
+  (_, merchantOpCityId) <- resolveChakraCaller merchantShortId opCity
+  ChakraJobControl.rescheduleChakraJob @AllocatorJobType merchantOpCityId (Id req.jobId) req.scheduledAt >>= chakraJobControlResult
+
+postNammaTagChakraJobsCancel ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  LYT.ChakraJobCancelReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagChakraJobsCancel merchantShortId opCity req = do
+  (merchantId, merchantOpCityId) <- resolveChakraCaller merchantShortId opCity
+  ChakraJobControl.cancelChakraJob @AllocatorJobType merchantId merchantOpCityId (Id req.jobId) >>= chakraJobControlResult
+
+postNammaTagChakraJobsDelete ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  LYT.ChakraJobDeleteReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postNammaTagChakraJobsDelete merchantShortId opCity req = do
+  (merchantId, merchantOpCityId) <- resolveChakraCaller merchantShortId opCity
+  ChakraJobControl.deleteChakraJob @AllocatorJobType merchantId merchantOpCityId (Id req.jobId) >>= chakraJobControlResult
+
+getNammaTagChakraJobsUpcoming ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow LYT.ChakraUpcomingJobsRes
+getNammaTagChakraJobsUpcoming merchantShortId opCity = do
+  (_, merchantOpCityId) <- resolveChakraCaller merchantShortId opCity
+  ChakraJobControl.listUpcomingChakraJobs @AllocatorJobType merchantOpCityId
+
+resolveChakraCaller ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow (Id LYT.Merchant, Id LYT.MerchantOperatingCity)
+resolveChakraCaller merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  pure (cast merchant.id, cast merchantOpCityId)
+
+chakraJobControlResult :: Either Text () -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+chakraJobControlResult = \case
+  Left err -> throwError (InvalidRequest err)
+  Right () -> pure Kernel.Types.APISuccess.Success

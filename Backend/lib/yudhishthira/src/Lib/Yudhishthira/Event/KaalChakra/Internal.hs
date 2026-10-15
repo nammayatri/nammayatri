@@ -2,6 +2,8 @@ module Lib.Yudhishthira.Event.KaalChakra.Internal
   ( Handle (..),
     kaalChakraEvent,
     clearEventData,
+    clearRunState,
+    clearTestRunState,
     canRetry,
     decrChakraBatchNumber,
     resetRetryCounter,
@@ -34,7 +36,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWCTypes
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import Lib.Yudhishthira.Event.KaalChakra.Metrics (withChakraQueryMetric)
+import Lib.Yudhishthira.Event.KaalChakra.Metrics (ChakraQueryFailure (..), withChakraQueryMetric)
 import qualified Lib.Yudhishthira.Event.KaalChakra.Parse as Parse
 import qualified Lib.Yudhishthira.Event.KaalChakra.Template as Template
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
@@ -56,7 +58,8 @@ data Handle m action = Handle
     createFetchUserDataJob :: Yudhishthira.Chakra -> Yudhishthira.KaalChakraJobData -> UTCTime -> m (),
     createUpdateUserTagDataJob :: Yudhishthira.Chakra -> Yudhishthira.UpdateKaalBasedTagsData -> UTCTime -> m (),
     action :: Id Yudhishthira.User -> Maybe action -> Text -> m (),
-    merchantOperatingCityId :: Maybe (Id Yudhishthira.MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id Yudhishthira.MerchantOperatingCity),
+    merchantId :: Maybe (Id Yudhishthira.Merchant)
   }
 
 type ChakraEvent m r action =
@@ -76,30 +79,47 @@ skipUpdateUserTagsHandler =
       createFetchUserDataJob = \chakra updateTagData _scheduledTime -> logInfo $ "Skip generateUserData job for: " <> show updateTagData <> "; chakra: " <> show chakra,
       createUpdateUserTagDataJob = \chakra kaalChakraData _scheduledTime -> logInfo $ "Skip updateTag job for: " <> show kaalChakraData <> "; chakra: " <> show chakra,
       action = \userId action _ -> logInfo $ "Skip action: " <> show action <> "; userId: " <> show userId,
-      merchantOperatingCityId = Nothing
+      merchantOperatingCityId = Nothing,
+      merchantId = Nothing
     }
 
+isTestRunAction :: Yudhishthira.KaalChakraAction -> Bool
+isTestRunAction Yudhishthira.RUN = True
+isTestRunAction (Yudhishthira.SCHEDULE _) = False
+
 kaalChakraEvent ::
-  forall m r.
+  forall m r action.
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Handle m action ->
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
-kaalChakraEvent req = do
-  eventId <- getEventId req.chakra
-  handle (errHandler eventId) (kaalChakraEventInternal eventId req)
+kaalChakraEvent h req = do
+  let isTestRun = isTestRunAction req.action
+  eventId <- getEventId isTestRun h.merchantId h.merchantOperatingCityId req.chakra
+  handle (errHandler eventId) (kaalChakraEventInternal h eventId req)
   where
     errHandler eventId err = case req.action of
       Yudhishthira.RUN -> throwM @m @SomeException err
       Yudhishthira.SCHEDULE _ -> do
         logError $ "Fetch user data job failed: " <> show err
-        pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
+        let (failedQueryName, failureReason) = extractChakraFailureDetail err
+        pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed, failedQueryName, failureReason, batchUsersCount = Nothing}
+
+-- Picks out the query name when the failure came from withChakraQueryMetric;
+-- otherwise just keeps the generic error text (e.g. a Redis/DB failure
+-- outside any single query).
+extractChakraFailureDetail :: SomeException -> (Maybe Text, Maybe Text)
+extractChakraFailureDetail err = case fromException err of
+  Just (ChakraQueryFailure queryName errorText) -> (Just queryName, Just errorText)
+  Nothing -> (Nothing, Just (show err))
 
 kaalChakraEventInternal ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
+  Handle m action ->
   Id Yudhishthira.Event ->
   Yudhishthira.RunKaalChakraJobReq ->
   m Yudhishthira.RunKaalChakraJobRes
-kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) do
+kaalChakraEventInternal h eventId req = withLogTag ("EventId-" <> eventId.getId) do
   startTime <- getCurrentTime
   logInfo $
     "Running kaal-chakra event: chakra: "
@@ -115,15 +135,15 @@ kaalChakraEventInternal eventId req = withLogTag ("EventId-" <> eventId.getId) d
       <> "; max batches: "
       <> show req.maxBatches
   chakraQueries <- QChakraQueries.findAllByChakra req.chakra
-  bn <- nextChakraBatchNumber req.chakra
+  bn <- nextChakraBatchNumber (isTestRunAction req.action) h.merchantId h.merchantOperatingCityId req.chakra
   let batchesNumber = bn - 1
-  batchedUserData <- fetchUserDataBatch req eventId chakraQueries batchesNumber
+  batchedUserData <- fetchUserDataBatch h req eventId chakraQueries batchesNumber
   let usersNumber = length batchedUserData.userIds
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
   logInfo $ "User data fetched successfully: batches number: " <> show batchesNumber <> "; users number: " <> show usersNumber
   logDebug $ "took time: " <> show durationInSeconds
-  pure $ Yudhishthira.RunKaalChakraJobRes (Just eventId) Nothing Nothing batchedUserData.chakraBatchState
+  pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = batchedUserData.chakraBatchState, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just usersNumber}
 
 updateUserTagsHandler ::
   forall m r action.
@@ -139,7 +159,8 @@ updateUserTagsHandler h req = do
   where
     errHandler eventId (err :: SomeException) = do
       logError $ "Update user tags job failed: " <> show err
-      pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed}
+      let (failedQueryName, failureReason) = extractChakraFailureDetail err
+      pure Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Failed, failedQueryName, failureReason, batchUsersCount = Nothing}
 
 updateUserTagsHandlerInternal ::
   ChakraEvent m r action =>
@@ -164,7 +185,7 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
       logError $ "LLM is not implemented: tag: " <> tag.name <> "; skipping."
       pure False
 
-  bn <- nextChakraBatchNumber req.chakra
+  bn <- nextChakraBatchNumber False h.merchantId h.merchantOperatingCityId req.chakra
   let batchNumber = bn - 1
   let limit = Just $ req.usersInBatch
   let offset = Just $ batchNumber * req.usersInBatch
@@ -177,22 +198,22 @@ updateUserTagsHandlerInternal h req = withLogTag ("EventId-" <> req.eventId.getI
   res <- case req.usersSet of
     Yudhishthira.ALL_USERS -> do
       if null batchedUserData
-        then pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed}
+        then pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just 0}
         else do
           if batchNumber > req.maxBatches
             then do
-              void $ decrChakraBatchNumber req.chakra
+              void $ decrChakraBatchNumber False h.merchantId h.merchantOperatingCityId req.chakra
               logError $ "Reached max batch size: " <> show batchNumber <> "; for updateTags job."
-              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed}
+              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Completed, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just 0}
             else do
               forM_ batchedUserData $
                 kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now . (.userId)
-              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Continue req.batchDelayInSec}
+              pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Nothing, users = Nothing, chakraBatchState = Yudhishthira.Continue req.batchDelayInSec, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just (length batchedUserData)}
     _ -> do
       usersAPIEntity <- forM batchedUserData $ \(DUserData.UserData {userId}) -> do
         kaalChakraEventUser h filteredTags mbAllTags eventId defaultUserDataMap now userId
       let tagsAPIEntity = mkTagAPIEntity <$> filteredTags
-      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity, chakraBatchState = Yudhishthira.Completed}
+      pure $ Yudhishthira.RunKaalChakraJobRes {eventId = Just eventId, tags = Just tagsAPIEntity, users = Just usersAPIEntity, chakraBatchState = Yudhishthira.Completed, failedQueryName = Nothing, failureReason = Nothing, batchUsersCount = Just (length batchedUserData)}
   endTime <- getCurrentTime
   let durationInSeconds = Time.nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
   logInfo $ "User tags updated successfully in " <> show durationInSeconds <> " seconds; batches number: " <> show batchNumber
@@ -206,12 +227,13 @@ data ChakraBatchedUserData = ChakraBatchedUserData
 
 fetchUserDataBatch ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, CacheFlow m r) =>
+  Handle m action ->
   Yudhishthira.RunKaalChakraJobReq ->
   Id Yudhishthira.Event ->
   [Lib.Yudhishthira.Types.ChakraQueries.ChakraQueries] ->
   Int ->
   m ChakraBatchedUserData
-fetchUserDataBatch req eventId chakraQueries batchNumber = do
+fetchUserDataBatch h req eventId chakraQueries batchNumber = do
   logInfo $ "Running batch: " <> show batchNumber
   when (req.usersInBatch < 1) $ throwError (InvalidRequest "Quantity of users in batch should be more than 0")
 
@@ -279,7 +301,7 @@ fetchUserDataBatch req eventId chakraQueries batchNumber = do
       if batchNumber > req.maxBatches
         then do
           logError $ "Exceeded number of batched, reached:" <> show batchNumber <> ", finishing job"
-          void $ decrChakraBatchNumber req.chakra
+          void $ decrChakraBatchNumber (isTestRunAction req.action) h.merchantId h.merchantOperatingCityId req.chakra
           pure $ ChakraBatchedUserData S.empty Yudhishthira.Completed
         else do
           userDataList <- buildUserDataList req.chakra eventId batchNumber notEmptyResults
@@ -984,65 +1006,139 @@ checkForMissingFieldsInQueryResponse queryResults (obj : _) = do
 
 clearEventData ::
   (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Bool ->
+  Maybe (Id Yudhishthira.Merchant) ->
+  Maybe (Id Yudhishthira.MerchantOperatingCity) ->
   Yudhishthira.Chakra ->
   Maybe (Id Yudhishthira.Event) ->
   m ()
-clearEventData chakra (Just eventId) = do
+clearEventData isTestRun merchantId merchantOperatingCityId chakra (Just eventId) = do
   logInfo $ "finished update tag job for event " <> show eventId
-  resetChakraBatchNumber chakra
+  resetChakraBatchNumber isTestRun merchantId merchantOperatingCityId chakra
   logInfo "batch number reset now"
-  delChakraEventId chakra
+  delChakraEventId isTestRun merchantId merchantOperatingCityId chakra
   QUserDataE.deleteUserDataWithEventId eventId
   logInfo "deleted all event user data"
-clearEventData chakra Nothing = do
+clearEventData isTestRun merchantId merchantOperatingCityId chakra Nothing = do
   logInfo "finished get user data job"
-  resetChakraBatchNumber chakra
+  resetChakraBatchNumber isTestRun merchantId merchantOperatingCityId chakra
   logInfo "batch number reset now"
 
+-- Drops everything an abandoned (cancelled/deleted) scheduled run left behind, so
+-- the next scheduled run of this chakra starts from batch 0 with a fresh eventId.
+clearRunState ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Maybe (Id Yudhishthira.Merchant) ->
+  Maybe (Id Yudhishthira.MerchantOperatingCity) ->
+  Yudhishthira.Chakra ->
+  Maybe (Id Yudhishthira.Event) ->
+  m ()
+clearRunState merchantId merchantOperatingCityId chakra mbEventId = do
+  resetChakraBatchNumber False merchantId merchantOperatingCityId chakra
+  resetRetryCounter False merchantId merchantOperatingCityId chakra
+  delChakraEventId False merchantId merchantOperatingCityId chakra
+  whenJust mbEventId QUserDataE.deleteUserDataWithEventId
+
+-- A dashboard RUN (test) keeps its own test: keys across calls while it returns
+-- Continue; once it ends, they and its user data are dropped so the next test
+-- starts from batch 0 instead of skipping past its users.
+clearTestRunState ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Maybe (Id Yudhishthira.Merchant) ->
+  Maybe (Id Yudhishthira.MerchantOperatingCity) ->
+  Yudhishthira.Chakra ->
+  m ()
+clearTestRunState merchantId merchantOperatingCityId chakra = do
+  mbEventId :: Maybe Text <- Hedis.withCrossAppRedis $ Hedis.get (mkChakraEventIdKey True merchantId merchantOperatingCityId chakra)
+  resetChakraBatchNumber True merchantId merchantOperatingCityId chakra
+  resetRetryCounter True merchantId merchantOperatingCityId chakra
+  delChakraEventId True merchantId merchantOperatingCityId chakra
+  whenJust mbEventId (QUserDataE.deleteUserDataWithEventId . Id)
+
 -- keeping chakra event in redis
-getEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> m (Id Yudhishthira.Event)
-getEventId chakra = do
-  mbOngoingEventId <- Hedis.get $ mkChakraEventIdKey chakra
+getEventId ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Bool ->
+  Maybe (Id Yudhishthira.Merchant) ->
+  Maybe (Id Yudhishthira.MerchantOperatingCity) ->
+  Yudhishthira.Chakra ->
+  m (Id Yudhishthira.Event)
+getEventId isTestRun merchantId merchantOperatingCityId chakra = do
+  mbOngoingEventId <- Hedis.withCrossAppRedis $ Hedis.get $ mkChakraEventIdKey isTestRun merchantId merchantOperatingCityId chakra
   case mbOngoingEventId of
     Just ongoingEventId -> pure $ Id ongoingEventId
     Nothing -> do
       eventId <- Id <$> generateGUID
-      cacheChakraEventId chakra eventId
+      cacheChakraEventId isTestRun merchantId merchantOperatingCityId chakra eventId
       pure eventId
 
-cacheChakraEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> Id Yudhishthira.Event -> m ()
-cacheChakraEventId chakra eventId = Hedis.setExp (mkChakraEventIdKey chakra) eventId.getId 64800
+cacheChakraEventId ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Bool ->
+  Maybe (Id Yudhishthira.Merchant) ->
+  Maybe (Id Yudhishthira.MerchantOperatingCity) ->
+  Yudhishthira.Chakra ->
+  Id Yudhishthira.Event ->
+  m ()
+cacheChakraEventId isTestRun merchantId merchantOperatingCityId chakra eventId =
+  Hedis.withCrossAppRedis $ Hedis.setExp (mkChakraEventIdKey isTestRun merchantId merchantOperatingCityId chakra) eventId.getId 64800
 
-mkChakraEventIdKey :: Yudhishthira.Chakra -> Text
-mkChakraEventIdKey chakra = "chakra_event_id:" <> show chakra
+-- Shared by all three chakra Redis keys below: isolates RUN (test) runs from
+-- SCHEDULE (real) runs, and scopes by merchant+city so different
+-- cities/merchants never share a batch counter, event id or retry count.
+-- These keys are read and written via withCrossAppRedis: the dashboard API and
+-- the job runner are separate processes with different key prefixes (rider-app
+-- vs rider-app-scheduler), and both must see the same run state.
+chakraKeyPrefix :: Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Text
+chakraKeyPrefix isTestRun merchantId merchantOperatingCityId =
+  (if isTestRun then "test:" else "")
+    <> maybe "" (\i -> i.getId) merchantId
+    <> ":"
+    <> maybe "" (\i -> i.getId) merchantOperatingCityId
+    <> ":"
 
-delChakraEventId :: (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) => Yudhishthira.Chakra -> m ()
-delChakraEventId chakra = Hedis.del (mkChakraEventIdKey chakra)
+mkChakraEventIdKey :: Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> Text
+mkChakraEventIdKey isTestRun merchantId merchantOperatingCityId chakra =
+  chakraKeyPrefix isTestRun merchantId merchantOperatingCityId <> "chakra_event_id:" <> show chakra
+
+delChakraEventId ::
+  (BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  Bool ->
+  Maybe (Id Yudhishthira.Merchant) ->
+  Maybe (Id Yudhishthira.MerchantOperatingCity) ->
+  Yudhishthira.Chakra ->
+  m ()
+delChakraEventId isTestRun merchantId merchantOperatingCityId chakra =
+  Hedis.withCrossAppRedis $ Hedis.del (mkChakraEventIdKey isTestRun merchantId merchantOperatingCityId chakra)
 
 -- resetting chakra batchNumber for next days chakra as all users are exhausted
-batchNumberKey :: Yudhishthira.Chakra -> Text
-batchNumberKey chakra = "kaal_chkra_batch_number:" <> show chakra
+batchNumberKey :: Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> Text
+batchNumberKey isTestRun merchantId merchantOperatingCityId chakra =
+  chakraKeyPrefix isTestRun merchantId merchantOperatingCityId <> "kaal_chkra_batch_number:" <> show chakra
 
 maxRetriesAllowedKey :: Text
 maxRetriesAllowedKey = "maxRetriesAllowedKeyForChakraJobs"
 
-retryCounter :: Yudhishthira.Chakra -> Text
-retryCounter chakra = "retryCounter:" <> show chakra
+retryCounter :: Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> Text
+retryCounter isTestRun merchantId merchantOperatingCityId chakra =
+  chakraKeyPrefix isTestRun merchantId merchantOperatingCityId <> "retryCounter:" <> show chakra
 
-resetChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m ()
-resetChakraBatchNumber = Hedis.del . batchNumberKey
+resetChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> m ()
+resetChakraBatchNumber isTestRun merchantId merchantOperatingCityId = Hedis.withCrossAppRedis . Hedis.del . batchNumberKey isTestRun merchantId merchantOperatingCityId
 
-resetRetryCounter :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m ()
-resetRetryCounter = Hedis.del . retryCounter
+resetRetryCounter :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> m ()
+resetRetryCounter isTestRun merchantId merchantOperatingCityId = Hedis.withCrossAppRedis . Hedis.del . retryCounter isTestRun merchantId merchantOperatingCityId
 
-decrChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Int
-decrChakraBatchNumber = fmap fromIntegral . (\a -> Hedis.decr a <* Hedis.expire a 64800) . batchNumberKey
+decrChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> m Int
+decrChakraBatchNumber isTestRun merchantId merchantOperatingCityId =
+  fmap fromIntegral . (\a -> Hedis.withCrossAppRedis $ Hedis.decr a <* Hedis.expire a 64800) . batchNumberKey isTestRun merchantId merchantOperatingCityId
 
-nextChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Int
-nextChakraBatchNumber = fmap fromIntegral . (\a -> Hedis.incr a <* Hedis.expire a 64800) . batchNumberKey
+nextChakraBatchNumber :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> m Int
+nextChakraBatchNumber isTestRun merchantId merchantOperatingCityId =
+  fmap fromIntegral . (\a -> Hedis.withCrossAppRedis $ Hedis.incr a <* Hedis.expire a 64800) . batchNumberKey isTestRun merchantId merchantOperatingCityId
 
-canRetry :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Yudhishthira.Chakra -> m Bool
-canRetry chakra = do
-  retriedTimes :: Integer <- (\a -> Hedis.incr a <* Hedis.expire a 64800) $ retryCounter chakra
+canRetry :: (CacheFlow m r, Monad m, Log m, MonadFlow m) => Bool -> Maybe (Id Yudhishthira.Merchant) -> Maybe (Id Yudhishthira.MerchantOperatingCity) -> Yudhishthira.Chakra -> m Bool
+canRetry isTestRun merchantId merchantOperatingCityId chakra = do
+  retriedTimes :: Integer <- (\a -> Hedis.withCrossAppRedis $ Hedis.incr a <* Hedis.expire a 64800) $ retryCounter isTestRun merchantId merchantOperatingCityId chakra
   maxRetriesAllowed :: Integer <- fromMaybe 5 <$> Hedis.safeGet maxRetriesAllowedKey
   pure $ retriedTimes < maxRetriesAllowed

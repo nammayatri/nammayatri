@@ -22,7 +22,7 @@ module Lib.Scheduler.JobStorageType.DB.Queries where
 
 import qualified Data.ByteString as BS
 import Data.Time as T hiding (getCurrentTime)
-import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
+import Kernel.Beam.Functions (FromTType'' (..), ToTType'' (..), createWithKVScheduler, deleteWithKV, findAllWithKVScheduler, findAllWithOptionsKVScheduler, findOneWithKVScheduler, updateWithKVScheduler)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Common (Log, MonadTime (getCurrentTime))
@@ -221,6 +221,31 @@ markAsComplete = updateStatus Completed
 
 markAsFailed :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
 markAsFailed = updateStatus Failed
+
+markAsCancelled :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
+markAsCancelled = updateStatus Cancelled
+
+deleteById :: forall m r. (JobMonad r m) => Id AnyJob -> m ()
+deleteById (Id jobId) = deleteWithKV [Se.Is BeamST.id (Se.Eq jobId)]
+
+findPendingByTypesAndCity ::
+  forall m r t.
+  (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) =>
+  [Text] ->
+  Text ->
+  Maybe Int ->
+  m [AnyJob t]
+findPendingByTypesAndCity jobTypes merchantOperatingCityId mbLimit =
+  findAllWithOptionsKVScheduler
+    [ Se.And
+        [ Se.Is BeamST.status $ Se.Eq Pending,
+          Se.Is BeamST.jobType $ Se.In jobTypes,
+          Se.Is BeamST.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId)
+        ]
+    ]
+    (Se.Asc BeamST.scheduledAt)
+    mbLimit
+    Nothing
 
 updateErrorCountAndFail :: forall m r. (JobMonad r m) => Id AnyJob -> Int -> m ()
 updateErrorCountAndFail (Id jobId) fCount = do
