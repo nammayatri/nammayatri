@@ -29,6 +29,7 @@ types:
     - disabledReasonFlag: Maybe DisabledReasonFlag
     - mobileCountryCode: Maybe Text
     - createdAt: Maybe UTCTime
+    - docsVerificationStatusUpdatedAt: UTCTime
 
 apis:
   - GET:

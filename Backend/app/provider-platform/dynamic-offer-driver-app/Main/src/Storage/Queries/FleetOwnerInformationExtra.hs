@@ -256,11 +256,12 @@ updateByPrimaryKey fleetOwnerInfo = do
 
 -- | Kept in step with verified / approved by the onboarding recompute. The UI APIs and the legacy
 --   ClickHouse status counts still read this column, so it must not go stale under the unified flow.
+--   Called only on a status change, so it also stamps docsVerificationStatusUpdatedAt (the onboarding lists' sort key).
 updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id DP.Person -> m ()
 updateDocsVerificationStatus docsVerificationStatus fleetOwnerPersonId = do
   now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.docsVerificationStatus docsVerificationStatus, Se.Set Beam.updatedAt now]
+    [Se.Set Beam.docsVerificationStatus docsVerificationStatus, Se.Set Beam.docsVerificationStatusUpdatedAt (Just now), Se.Set Beam.updatedAt now]
     [Se.Is Beam.fleetOwnerPersonId (Se.Eq $ getId fleetOwnerPersonId)]
 
 findEligibleFleetOwnersForScheduledPayout ::

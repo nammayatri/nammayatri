@@ -25,6 +25,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     dateOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.DocsVerificationStatus),
+    docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     documentImageId :: B.C f Kernel.Prelude.Text,
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     failedRules :: B.C f [Kernel.Prelude.Text],

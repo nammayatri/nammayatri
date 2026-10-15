@@ -490,11 +490,12 @@ updateApproved approved driverId = do
 
 -- | Kept in step with verified / approved by the onboarding recompute. The UI APIs and the legacy
 --   ClickHouse status counts still read this column, so it must not go stale under the unified flow.
+--   Called only on a status change, so it also stamps docsVerificationStatusUpdatedAt (the onboarding lists' sort key).
 updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id Person.Driver -> m ()
 updateDocsVerificationStatus docsVerificationStatus driverId = do
   now <- getCurrentTime
   updateWithKV
-    [Se.Set BeamDI.docsVerificationStatus docsVerificationStatus, Se.Set BeamDI.updatedAt now]
+    [Se.Set BeamDI.docsVerificationStatus docsVerificationStatus, Se.Set BeamDI.docsVerificationStatusUpdatedAt (Just now), Se.Set BeamDI.updatedAt now]
     [Se.Is BeamDI.driverId (Se.Eq $ getId driverId)]
 
 updateOnboardingAs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.OnboardingAs -> Id Person.Driver -> m ()

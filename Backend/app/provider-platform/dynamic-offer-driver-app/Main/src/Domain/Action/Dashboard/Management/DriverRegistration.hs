@@ -1490,6 +1490,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                         if transporterConfig.enableManualDocumentStatusCheck == Just True
                           then Just DDVS.ADMIN_APPROVED
                           else Nothing,
+                      DRC.docsVerificationStatusUpdatedAt = Nothing,
                       DRC.pendingChallan = Nothing,
                       DRC.initiatedBy = Nothing,
                       DRC.rcVehicleType = Nothing
