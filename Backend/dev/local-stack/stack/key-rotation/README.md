@@ -103,3 +103,17 @@ rollback -- `window.sh rollback`), and `/root/key-rotation.*` (the window's
 safety dump). Both can go once the new keys have run without trouble for a
 while.
 
+
+**2026-10-15: the overlay had fallen out of `COMPOSE_FILE`.** The website's
+release of 14 Oct ran its `install.sh`, which wrote `.env`'s `COMPOSE_FILE`
+as exactly the stack plus its own overlay, and dropped `compose.keys.yml`.
+Nothing broke -- running containers keep the settings they were created with
+-- but the next `docker compose up` of passetto, rider or driver would have
+brought them back on the old keys and salt, and no number could have been
+read. Found by the morning check (`docker compose --dry-run up -d --no-deps
+passetto rider-app driver-app` said *Recreate* for all three); the file was
+put back on the line the same morning, and the same dry run then said
+*Running* for all three: nothing restarted. Since then the website's
+installer keeps every file the line lists, and `ops/release-remote.py`
+refuses a release (and `plan`, the checks and `status` say so) while
+passetto runs on the new keys and the line does not name this overlay.

@@ -16,7 +16,8 @@ restructuring plan (2026-10-06).
 ── What a release may touch, and what it never does ───────────────────────────
 Only files the repository ships: stack/ of one commit, listed with their hashes
 in the release's MANIFEST. Everything else in /opt/ny/local-stack is the box's
-own and is never read, written or deleted here: .env and the secrets, the
+own and is never written or deleted here (of .env, only the COMPOSE_FILE line
+is ever read: the key check below): .env and the secrets, the
 certificates, the website's build in edge-web/, the binaries, the map data,
 the bot's state, the drivers' codes.
 
@@ -157,6 +158,36 @@ def compose_services():
     """The resolved config of each service, with the website's overlay (COMPOSE_FILE in .env)."""
     r = run(f'cd {STACK} && docker compose config --format json', quiet=True)
     return {k: json.dumps(v, sort_keys=True) for k, v in json.loads(r.stdout)['services'].items()}
+
+
+KEY_OVERLAY = 'key-rotation/compose.keys.yml'
+
+
+def key_overlay_problem():
+    """None, or why compose would put passetto, rider and driver back on the old keys.
+
+    Since the key rotation (2026-10-13) the live passetto reads
+    ny-passetto-keys-db, and only key-rotation/compose.keys.yml, named in
+    .env's COMPOSE_FILE, says so. Without it, the next `compose up` of passetto,
+    rider or driver brings them back on the old keys and salt, and no phone
+    number can be read. The website's install.sh dropped it from that line on
+    2026-10-14 (fixed in the website 2026-10-15): this makes a release, its
+    plan, its checks and `status` say so instead of passing quietly."""
+    r = run("docker inspect ny-passetto --format '{{range .Config.Env}}{{println .}}{{end}}'",
+            check=False, quiet=True)
+    if '@ny-passetto-keys-db' not in (r.stdout or ''):
+        return None
+    files = ''
+    env = os.path.join(STACK, '.env')
+    if os.path.exists(env):
+        for line in open(env, encoding='utf-8'):
+            if line.startswith('COMPOSE_FILE='):
+                files = line.strip().split('=', 1)[1]     # the last wins, as compose reads it
+    if any(f == KEY_OVERLAY or f.endswith('/' + KEY_OVERLAY) for f in files.split(':')):
+        return None
+    return (f'passetto runs on the new keys, but COMPOSE_FILE in .env does not name {KEY_OVERLAY}: '
+            'the next compose up of passetto, rider or driver would put them back on the old keys. '
+            f'Add ":{KEY_OVERLAY}" to that line first (stack/key-rotation/README.md)')
 
 
 def running():
@@ -433,6 +464,9 @@ def checks(before_running, manifest):
         failed.append(f'installed systemd units differ from the release: {", ".join(stale)}')
     elif units:
         ok(f'{len(units)} systemd units installed exactly as shipped')
+    problem = key_overlay_problem()
+    if problem:
+        failed.append(problem)
     for f in failed:
         bad(f)
     return not failed
@@ -445,6 +479,9 @@ def apply(rel_dir):
     if plan['conflict'] and not plan['force']:
         die('stopping: a file above was changed on the server since it was shipped. '
             'Bring that change into git first, or re-run with --force to overwrite it.')
+    problem = key_overlay_problem()
+    if problem:
+        die(f'stopping, nothing written: {problem}')
 
     before_running = running()
     before_cfg = compose_services()
@@ -578,6 +615,9 @@ def status():
     for n, d in sorted(shipped_units(shipped).items()):
         if unit_sha(n) != d:
             warn(f'{UNITS}/{n} differs from what was shipped')
+    problem = key_overlay_problem()
+    if problem:
+        warn(problem)
 
 
 # ── hashes ──────────────────────────────────────────────────────────────────
@@ -638,6 +678,10 @@ def main():
         show(plan, info)
         if plan['conflict']:
             bad('a real release would STOP here (see above)')
+        problem = key_overlay_problem()
+        if problem:
+            bad(problem)
+            bad('a real release would STOP here')
         print('\n   dry run: nothing was written')
     elif mode == 'apply':
         apply(sys.argv[2])

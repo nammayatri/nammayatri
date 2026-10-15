@@ -18,6 +18,8 @@
 #   6. `rollback` puts the previous version back exactly
 #   7. `tidy` archives the .bak copies and nothing else
 #   8. a container compose recreates is not also restarted (one interruption)
+#   9. once passetto runs on the new keys, a release stops if .env's COMPOSE_FILE
+#      no longer names the key overlay (the website's install.sh dropped it, 14 Oct)
 # and, through 2 and 6, the systemd units in stack/systemd/: installed by the
 # release, put back by rollback (phase 4: the nightly backup runs the shipped copy)
 set -uo pipefail
@@ -188,6 +190,32 @@ assert not any(c.startswith('docker restart ny-maps-shim') for c in cmds), 'rest
 assert any(c.startswith('docker restart ny-auth-guard') for c in cmds), 'other restarts lost'
 PY
 [ $? -eq 0 ] && pass "a recreated container is not restarted again; others still are" || { fail "double interruption"; tail -8 "$T/once.log"; }
+
+echo "== 9. the key overlay must stay in COMPOSE_FILE"
+python3 - "$HERE/ops/release-remote.py" "$T/keys" > "$T/keys.log" 2>&1 <<'PY'
+import importlib.util, inspect, os, subprocess, sys
+spec = importlib.util.spec_from_file_location('rr', sys.argv[1])
+rr = importlib.util.module_from_spec(spec); spec.loader.exec_module(rr)
+rr.STACK = sys.argv[2]; os.makedirs(rr.STACK, exist_ok=True)
+conn = {'v': ''}
+rr.run = lambda cmd, check=True, quiet=False: subprocess.CompletedProcess(cmd, 0, conn['v'], '')
+def case(db, env):
+    conn['v'] = f'PATH=/bin\nPASSETTO_PG_BACKEND_CONN_STRING=postgresql://passetto:passetto@{db}:5432/passetto\n'
+    open(os.path.join(rr.STACK, '.env'), 'w').write(env)
+    return rr.key_overlay_problem()
+S, A = '/opt/ny/local-stack/docker-compose.yml', '/opt/ny/movin-website/ops/deploy/compose.admin.yml'
+K = 'key-rotation/compose.keys.yml'
+assert case('ny-passetto-keys-db', f'X=1\nCOMPOSE_FILE={S}:{A}\n'), 'missed: overlay dropped (14 Oct)'
+assert case('ny-passetto-keys-db', f'COMPOSE_FILE={S}:{A}:{K}\n') is None, 'false alarm: relative'
+assert case('ny-passetto-keys-db', f'COMPOSE_FILE={S}:/opt/ny/local-stack/{K}\n') is None, 'false alarm: absolute'
+assert case('ny-passetto-keys-db', f'COMPOSE_FILE={S}:{K}\nCOMPOSE_FILE={S}:{A}\n'), 'missed: last line wins'
+assert case('ny-passetto-keys-db', f'COMPOSE_FILE={S}:{K}.old\n'), 'missed: a longer name'
+assert case('ny-passetto-db', f'COMPOSE_FILE={S}:{A}\n') is None, 'false alarm: old keys, no overlay needed'
+for fn in (rr.apply, rr.checks, rr.status, rr.main):
+    assert 'key_overlay_problem()' in inspect.getsource(fn), f'{fn.__name__} does not check'
+print('ok')
+PY
+[ $? -eq 0 ] && pass "a release, its plan, checks and status catch a dropped key overlay; no false alarm" || { fail "key overlay check"; tail -8 "$T/keys.log"; }
 
 echo
 [ $fails -eq 0 ] && echo "release rehearsal: all checks passed" || { echo "release rehearsal: $fails FAILED"; exit 1; }

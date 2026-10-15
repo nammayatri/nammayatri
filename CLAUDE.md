@@ -422,6 +422,16 @@ rclone sees only what it uploaded since then; older backups are in Drive's
   A release keeps each image it replaces as `<container>:previous`.
   `local-stack/docs/releasing.md`, and step by step `docs/runbooks/release.md`
   and `rollback.md` (rollback does NOT undo SQL).
+- **`COMPOSE_FILE` in the server's `.env` is shared, and losing a file from it
+  breaks nothing until the next `compose up`.** It names the stack, the
+  website's `compose.admin.yml` and, since the key rotation (2026-10-13),
+  `key-rotation/compose.keys.yml` -- the only thing that keeps passetto, rider
+  and driver on the new keys and salt. The website's `install.sh` rewrote the
+  line without it on 2026-10-14; the containers ran on, and a dry run caught it
+  the next morning. Both sides now refuse to drop it (the website keeps every
+  file listed; a backend release stops). Before touching that line, or after
+  any website rollback: `docker compose --dry-run up -d --no-deps passetto
+  rider-app driver-app` must say *Running* for all three.
 - **The shims are split by subject and guarded by golden files (phase 5).**
   `tests/maps-shim-routes.test.js` and `tests/auth-guard-routes.test.js` replay
   recorded requests and compare every answer, query and outgoing call. A change
