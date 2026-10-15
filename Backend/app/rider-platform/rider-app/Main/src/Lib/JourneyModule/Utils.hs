@@ -1821,9 +1821,27 @@ getVehicleMetadataFromInMem ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, NandiTypes.VehicleMetadataResponse))
 getVehicleMetadataFromInMem integratedBPPConfigs vehicleNumber =
-  IM.withInMemCache ("CACHED_VEHICLE_METADATA" : vehicleNumber : map (.id.getId) integratedBPPConfigs) 43200 $
-    SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config ->
-      fmap (config,) <$> OTPRest.getVehicleMetadata config vehicleNumber Nothing
+  SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config ->
+    fmap (config,) <$> getConfigVehicleMetadataFromInMem config vehicleNumber
+
+data VehicleMetadataNotFound = VehicleMetadataNotFound
+  deriving (Show)
+
+instance Exception VehicleMetadataNotFound
+
+getConfigVehicleMetadataFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Text ->
+  m (Maybe NandiTypes.VehicleMetadataResponse)
+getConfigVehicleMetadataFromInMem integratedBPPConfig vehicleNumber =
+  IM.withInMemCache ["CACHED_VEHICLE_METADATA_LOOKUP", integratedBPPConfig.id.getId, vehicleNumber] 30 $
+    either (\VehicleMetadataNotFound -> Nothing) Just
+      <$> try
+        ( IM.withInMemCache ["CACHED_VEHICLE_METADATA", integratedBPPConfig.id.getId, vehicleNumber] 43200 $
+            OTPRest.getVehicleMetadata integratedBPPConfig vehicleNumber Nothing
+              >>= maybe (throwM VehicleMetadataNotFound) pure
+        )
 
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
