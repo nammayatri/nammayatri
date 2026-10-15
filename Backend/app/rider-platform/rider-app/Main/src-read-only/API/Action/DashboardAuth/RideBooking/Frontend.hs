@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Frontend
 where
 
 import qualified API.Types.Dashboard.RideBooking.Frontend
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Frontend
 import qualified "this" Domain.Action.UI.Frontend
 import qualified Domain.Types.Merchant
@@ -33,12 +34,18 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getFrontendFlowStatus merchantId city :<|> postFrontendNotifyEvent merchantId city
 
 getFrontendFlowStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler Domain.Action.UI.Frontend.GetPersonFlowStatusRes)
-getFrontendFlowStatus a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Frontend.getFrontendFlowStatus a6 a5 a3 a2 a1
+getFrontendFlowStatus a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
+        Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Frontend.getFrontendFlowStatus a6 a5 a3 a2 a1
+    )
 
 postFrontendNotifyEvent :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Frontend.NotifyEventReq -> Environment.FlowHandler Domain.Action.UI.Frontend.NotifyEventResp)
 postFrontendNotifyEvent a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/FRONTEND/POST_FRONTEND_NOTIFY_EVENT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Frontend.postFrontendNotifyEvent a5 a4 a2 a1
     )

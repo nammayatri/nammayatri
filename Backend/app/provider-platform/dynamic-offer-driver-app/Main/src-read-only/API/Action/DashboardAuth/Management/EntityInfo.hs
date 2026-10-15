@@ -8,8 +8,10 @@ module API.Action.DashboardAuth.Management.EntityInfo
 where
 
 import qualified API.Types.ProviderPlatform.Management.EntityInfo
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Management.EntityInfo
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -37,12 +39,18 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getEntityInfoList merchantId city :<|> postEntityInfoUpdate merchantId city
 
 getEntityInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.EntityInfo.EntityExtraInformation)
-getEntityInfoList a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.EntityInfo.getEntityInfoList a5 a4 a2 a1
+getEntityInfoList a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.EntityInfo.getEntityInfoList a5 a4 a2 a1
+    )
 
 postEntityInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.EntityInfo.UpdateEntityInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postEntityInfoUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/ENTITY_INFO/POST_ENTITY_INFO_UPDATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.EntityInfo.postEntityInfoUpdate a4 a3 a1
     )

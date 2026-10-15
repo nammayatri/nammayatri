@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Registration
 where
 
 import qualified API.Types.Dashboard.RideBooking.Registration
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Registration
 import qualified "this" Domain.Action.UI.Registration
 import qualified Domain.Types.Merchant
@@ -47,6 +48,7 @@ postRegistrationAuth :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 postRegistrationAuth a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_AUTH" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Registration.postRegistrationAuth a4 a3 a1
     )
@@ -55,6 +57,7 @@ postRegistrationVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 postRegistrationVerify a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_VERIFY" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Registration.postRegistrationVerify a5 a4 a2 a1
     )
@@ -63,6 +66,7 @@ postRegistrationOtpResend :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postRegistrationOtpResend a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_OTP_RESEND" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Registration.postRegistrationOtpResend a4 a3 a1
     )
@@ -71,6 +75,7 @@ postRegistrationLogout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 postRegistrationLogout a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/REGISTRATION/POST_REGISTRATION_LOGOUT" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.RideBooking.Registration.postRegistrationLogout a4 a3 a1
     )

@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.AppManagement.TicketDashboard
 where
 
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AppManagement.TicketDashboard
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.TicketPlace
@@ -60,6 +61,7 @@ ticketDashboardUploadAsset :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 ticketDashboardUploadAsset a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_UPLOAD_ASSET" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.TicketDashboard.ticketDashboardUploadAsset a5 a4 a2 a1
     )
@@ -68,6 +70,7 @@ ticketDashboardDeleteAsset :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 ticketDashboardDeleteAsset a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_DELETE_ASSET" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.TicketDashboard.ticketDashboardDeleteAsset a5 a4 a2 a1
     )
@@ -76,6 +79,7 @@ ticketDashboardCurrentSeatStatus :: (Kernel.Types.Id.ShortId Domain.Types.Mercha
 ticketDashboardCurrentSeatStatus a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_CURRENT_SEAT_STATUS" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.TicketDashboard.ticketDashboardCurrentSeatStatus a5 a4 a2 a1
     )
@@ -84,6 +88,7 @@ ticketDashboardSeatManagement :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 ticketDashboardSeatManagement a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/TICKET_DASHBOARD/TICKET_DASHBOARD_SEAT_MANAGEMENT" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.TicketDashboard.ticketDashboardSeatManagement a5 a4 a2 a1
     )

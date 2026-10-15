@@ -692,8 +692,13 @@ generateNewToken ::
   m Text
 generateNewToken personId merchantId city = do
   regToken <- buildRegistrationToken personId merchantId city
-  Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
-  QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
+  -- One token per person: wipe ALL of this person's existing tokens (across any
+  -- merchant/city) and mint exactly one. The token carries a landing merchant/city
+  -- but no longer binds scope -- URL + merchant_access govern access (the old
+  -- Tools.Auth.Verify.verifyUrlScope URL-vs-token check is removed; scope is now
+  -- enforced at handler entry by Tools.Auth.Scope.enforceMerchantCityAccess).
+  Auth.cleanCachedTokens personId
+  QR.deleteAllByPersonId personId
   QR.create regToken
   pure $ regToken.token
 
