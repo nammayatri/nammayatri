@@ -73,7 +73,32 @@ getShardKey = do
   setName <- asks (.schedulerSetName)
   maxShards <- asks (.maxShards)
   myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
-  return $ setName <> "{" <> show myShardId <> "}"
+  return $ mkShardSetKey setName myShardId
+
+mkShardSetKey :: Text -> Int -> Text
+mkShardSetKey setName shardId = setName <> "{" <> show shardId <> "}"
+
+-- Shard is chosen round-robin at enqueue time and not stored, so every shard is
+-- checked. The score is the job's scheduledAt; a +/-1ms window absorbs the DB's
+-- microsecond truncation of that time. Copies already moved onto the stream by the
+-- producer are out of reach here.
+removeQueuedCopies :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => Id AnyJob -> UTCTime -> m Int
+removeQueuedCopies jobId scheduledAt = do
+  setName <- asks (.schedulerSetName)
+  maxShards <- asks (.maxShards)
+  let score = utcToMilliseconds scheduledAt
+  removedPerShard <- forM [0 .. maxShards - 1] $ \shardId -> do
+    let key = mkShardSetKey setName shardId
+    members <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore key (score - 1) (score + 1)
+    let matching = filter isThisJob members
+    unless (null matching) $
+      void $ Hedis.withNonCriticalCrossAppRedis $ Hedis.zRem key (DT.decodeUtf8 <$> matching)
+    pure (length matching)
+  pure (sum removedPerShard)
+  where
+    isThisJob member = case A.decodeStrict member of
+      Just (A.Object obj) -> AKM.lookup "id" obj == Just (A.String jobId.getId)
+      _ -> False
 
 createJobByTime ::
   forall t (e :: t) m r.

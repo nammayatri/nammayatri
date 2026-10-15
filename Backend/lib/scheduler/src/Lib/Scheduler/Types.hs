@@ -146,7 +146,7 @@ data Job (e :: t) = JobFlow t e =>
     merchantOperatingCityId :: Maybe (Id (MerchantOperatingCityType t))
   }
 
-data JobStatus = Pending | Completed | Failed | Revived
+data JobStatus = Pending | Completed | Failed | Revived | Cancelled
   deriving (Show, Eq, Read, Generic, FromJSON, ToJSON, Ord)
   deriving (PrettyShow) via Showable JobStatus
 

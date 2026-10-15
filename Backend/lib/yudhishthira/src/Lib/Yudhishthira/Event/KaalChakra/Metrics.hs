@@ -1,5 +1,6 @@
 module Lib.Yudhishthira.Event.KaalChakra.Metrics
   ( withChakraQueryMetric,
+    ChakraQueryFailure (..),
   )
 where
 
@@ -8,6 +9,16 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types.ChakraQueries as DCQ
 import qualified Prometheus as P
+
+-- Wraps a query failure with the query's name, so the caller (kaalChakraEvent's
+-- errHandler) can record which query broke a run, not just that one did.
+data ChakraQueryFailure = ChakraQueryFailure
+  { queryName :: Text,
+    errorText :: Text
+  }
+  deriving (Show)
+
+instance Exception ChakraQueryFailure
 
 -- | KaalChakra query executions, labelled by query_name from chakra_queries so a failing query can be identified.
 {-# NOINLINE chakraQueryCounter #-}
@@ -33,7 +44,7 @@ withChakraQueryMetric chakra chakraQuery isEmpty action = do
     Left err -> do
       logError $ "Chakra query failed: chakra=" <> show chakra <> "; query_name=" <> chakraQuery.queryName <> "; error=" <> show err
       incrementQueryCounter "failed"
-      throwM err
+      throwM $ ChakraQueryFailure chakraQuery.queryName (show err)
     Right queryResult -> do
       incrementQueryCounter (if isEmpty queryResult then "empty" else "success")
       pure queryResult

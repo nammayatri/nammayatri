@@ -29,6 +29,7 @@ library
       Lib.Yudhishthira.Event
       Lib.Yudhishthira.Event.KaalChakra
       Lib.Yudhishthira.Event.KaalChakra.Internal
+      Lib.Yudhishthira.Event.KaalChakra.JobControl
       Lib.Yudhishthira.Event.KaalChakra.Jobs
       Lib.Yudhishthira.Event.KaalChakra.Metrics
       Lib.Yudhishthira.Event.KaalChakra.Parse
@@ -45,6 +46,7 @@ library
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicAlwaysOnExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRolloutExtra
+      Lib.Yudhishthira.Storage.Queries.KaalChakraJobRunExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagExtra
       Lib.Yudhishthira.Storage.Queries.NammaTagV2Extra
       Lib.Yudhishthira.Storage.Queries.TimeBoundConfigExtra
@@ -58,6 +60,7 @@ library
       Lib.Yudhishthira.Tools.Utils
       Lib.Yudhishthira.Types
       Lib.Yudhishthira.Types.Application
+      Lib.Yudhishthira.Types.ChakraDashboard
       Lib.Yudhishthira.Types.Common
       Lib.Yudhishthira.Types.ConfigPilot
       Lib.Yudhishthira.Types.KaalChakra
@@ -69,6 +72,7 @@ library
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Beam.ChakraQueries
+      Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun
       Lib.Yudhishthira.Storage.Beam.NammaTag
       Lib.Yudhishthira.Storage.Beam.NammaTagTrigger
       Lib.Yudhishthira.Storage.Beam.NammaTagTriggerV2
@@ -80,6 +84,7 @@ library
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Queries.AppDynamicLogicRollout
       Lib.Yudhishthira.Storage.Queries.ChakraQueries
+      Lib.Yudhishthira.Storage.Queries.KaalChakraJobRun
       Lib.Yudhishthira.Storage.Queries.NammaTag
       Lib.Yudhishthira.Storage.Queries.NammaTagTrigger
       Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2
@@ -87,6 +92,7 @@ library
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicAlwaysOn
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicElement
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.AppDynamicLogicRollout
+      Lib.Yudhishthira.Storage.Queries.OrphanInstances.KaalChakraJobRun
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTag
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.NammaTagV2
       Lib.Yudhishthira.Storage.Queries.OrphanInstances.TimeBoundConfig
@@ -98,6 +104,7 @@ library
       Lib.Yudhishthira.Types.AppDynamicLogicElement
       Lib.Yudhishthira.Types.AppDynamicLogicRollout
       Lib.Yudhishthira.Types.ChakraQueries
+      Lib.Yudhishthira.Types.KaalChakraJobRun
       Lib.Yudhishthira.Types.NammaTag
       Lib.Yudhishthira.Types.NammaTagTrigger
       Lib.Yudhishthira.Types.NammaTagTriggerV2
