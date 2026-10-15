@@ -1,0 +1,10 @@
+{
+  "name": "movin-local-stack-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "The shims' tests. PGlite is real Postgres compiled to WebAssembly: the money path's SQL runs for real, with no database server and no Docker. Tests only -- the shims never load it.",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8"
+  }
+}

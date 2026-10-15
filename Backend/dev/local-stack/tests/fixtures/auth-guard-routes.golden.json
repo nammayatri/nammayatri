@@ -1,0 +1,1188 @@
+[
+ {
+  "label": "health at start",
+  "request": "GET /healthz",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "ok": true,
+   "whatsapp": {
+    "ready": false,
+    "verifyToken": false,
+    "signatureChecked": false,
+    "replies": false,
+    "received": 0,
+    "rejected": 0,
+    "waiting": 0
+   },
+   "smsInbox": {
+    "configured": true,
+    "countries": [
+     "+213"
+    ],
+    "received": 0,
+    "withCode": 0,
+    "rejected": 0,
+    "outgoing": 0,
+    "waiting": 0,
+    "lastAt": null
+   },
+   "trustedPhones": {
+    "phones": 0,
+    "ttlDays": 365
+   },
+   "routes": [
+    {
+     "prefix": "/v2/",
+     "upstream": "<backend>",
+     "personalCodes": null,
+     "sms": true,
+     "codeDigits": 6,
+     "signupOpen": null
+    },
+    {
+     "prefix": "/ui/",
+     "upstream": "<backend>",
+     "personalCodes": 0,
+     "sms": true,
+     "codeDigits": 6,
+     "signupOpen": true
+    }
+   ],
+   "sessions": 0,
+   "numbers": 0,
+   "countries": {
+    "open": [
+     "+222",
+     "+213"
+    ],
+    "sms": [
+     "+222"
+    ]
+   },
+   "gateway": {
+    "configured": true,
+    "mode": "verify",
+    "sender": null,
+    "sent": 0,
+    "budget": {
+     "hour": 0,
+     "hourMax": 60,
+     "day": 0,
+     "dayMax": 400,
+     "exhausted": false
+    },
+    "lastError": null,
+    "bypassNumbers": 0
+   }
+  },
+  "said": []
+ },
+ {
+  "label": "channels",
+  "request": "GET /v2/auth/channels",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "sms": [
+    "+222"
+   ],
+   "smsIn": [
+    "+213"
+   ],
+   "whatsapp": false
+  },
+  "said": []
+ },
+ {
+  "label": "sms-in countries",
+  "request": "GET /v2/auth/sms-in/countries",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "countries": [
+    "+213"
+   ]
+  },
+  "said": []
+ },
+ {
+  "label": "not a route",
+  "request": "GET /dashboard/anything",
+  "status": 404,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "NOT_FOUND",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "rider start +222",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-1",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778801",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778801"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "wrong code 1",
+  "request": "POST /v2/auth/auth-1/verify",
+  "status": 400,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "INVALID_AUTH_DATA",
+   "errorMessage": null
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-1",
+     "code": "<code1>"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "wrong code 2",
+  "request": "POST /v2/auth/auth-1/verify",
+  "status": 400,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "INVALID_AUTH_DATA",
+   "errorMessage": null
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-1",
+     "code": "<code1>"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "wrong code 3",
+  "request": "POST /v2/auth/auth-1/verify",
+  "status": 429,
+  "retryAfter": true,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "TOO_MANY_ATTEMPTS",
+   "errorMessage": null
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-1",
+     "code": "<code1>"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "right code, but locked",
+  "request": "POST /v2/auth/auth-1/verify",
+  "status": 429,
+  "retryAfter": true,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "TOO_MANY_ATTEMPTS",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "rider start, second number",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-2",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778802",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778802"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "right code",
+  "request": "POST /v2/auth/auth-2/verify",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "token": "tok-1",
+   "person": {
+    "firstName": "Test"
+   },
+   "deviceTrust": "<trust1>"
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-2",
+     "code": "<code2>"
+    },
+    "token": null
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth/auth-2/verify",
+    "body": {
+     "otp": "7891",
+     "deviceToken": "d1"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "verify again after success",
+  "request": "POST /v2/auth/auth-2/verify",
+  "status": 400,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "INVALID_AUTH_DATA",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "start to resend",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-3",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778803",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778803"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "resend",
+  "request": "POST /v2/auth/otp/auth-3/resend",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-3"
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778803"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "unknown session",
+  "request": "POST /v2/auth/no-such-session/verify",
+  "status": 400,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "INVALID_AUTH_DATA",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "Algeria by SMS: refused",
+  "request": "POST /v2/auth",
+  "status": 403,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "SMS_NOT_AVAILABLE",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "a closed country",
+  "request": "POST /v2/auth",
+  "status": 403,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "COUNTRY_NOT_OPEN",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "not JSON",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-4",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": "not json",
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": null
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "too large",
+  "request": "POST /v2/auth",
+  "status": 0,
+  "body": "TypeError: fetch failed",
+  "said": []
+ },
+ {
+  "label": "Algeria by SMS-in",
+  "request": "POST /v2/auth/sms-in",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-5",
+   "attempts": 3,
+   "smsIn": {
+    "code": "<code3>",
+    "number": "+213783<code1>",
+    "text": "MOVIN <code3>"
+   }
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+213",
+     "mobileNumber": "0555000102",
+     "merchantId": "m"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "sms-in status, before",
+  "request": "GET /v2/auth/auth-5/sms-in",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "confirmed": false
+  },
+  "said": []
+ },
+ {
+  "label": "the office SIM forwards his SMS",
+  "request": "POST /sms/inbox",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "ok": true,
+   "accepted": 1,
+   "withCode": 1
+  },
+  "said": []
+ },
+ {
+  "label": "the inbox, wrong token",
+  "request": "POST /sms/inbox",
+  "status": 401,
+  "retryAfter": false,
+  "body": {
+   "ok": false,
+   "error": "bad token"
+  },
+  "said": []
+ },
+ {
+  "label": "sms-in status, after",
+  "request": "GET /v2/auth/auth-5/sms-in",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "confirmed": true
+  },
+  "said": []
+ },
+ {
+  "label": "sms-in verify",
+  "request": "POST /v2/auth/auth-5/verify",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "token": "tok-2",
+   "person": {
+    "firstName": "Test"
+   },
+   "deviceTrust": "<trust2>"
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth/auth-5/verify",
+    "body": {
+     "otp": "7891",
+     "deviceToken": "d2"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "trusted phone",
+  "request": "POST /v2/auth/trusted",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "token": "tok-3",
+   "person": {
+    "firstName": "Test"
+   },
+   "deviceTrust": "<trust1>"
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778802",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth/auth-6/verify",
+    "body": {
+     "otp": "7891",
+     "deviceToken": "d1"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "trusted, no key",
+  "request": "POST /v2/auth/trusted",
+  "status": 401,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "PHONE_NOT_TRUSTED",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "trusted, wrong number",
+  "request": "POST /v2/auth/trusted",
+  "status": 401,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "PHONE_NOT_TRUSTED",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "number change, not signed in",
+  "request": "POST /v2/number/change",
+  "status": 401,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "NOT_SIGNED_IN",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "number change start",
+  "request": "POST /v2/number/change",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "changeId": "<change1>"
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "POST",
+    "url": "/internal/number-change",
+    "body": {
+     "step": "check",
+     "side": "rider",
+     "token": "tok-person",
+     "dialCode": "+222",
+     "number": "22778855"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778855"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "number change status",
+  "request": "GET /v2/number/change/<change1>",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "confirmed": false
+  },
+  "said": []
+ },
+ {
+  "label": "number change, wrong code",
+  "request": "POST /v2/number/change/<change1>/confirm",
+  "status": 400,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "INVALID_AUTH_DATA",
+   "errorMessage": null
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-6",
+     "code": "<code1>"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "number change confirm",
+  "request": "POST /v2/number/change/<change1>/confirm",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "ok": true,
+   "deviceTrust": "<trust3>"
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-6",
+     "code": "<code2>"
+    },
+    "token": null
+   },
+   {
+    "to": "maps-shim",
+    "method": "POST",
+    "url": "/internal/number-change",
+    "body": {
+     "step": "apply",
+     "side": "rider",
+     "token": "tok-person",
+     "dialCode": "+222",
+     "number": "22778855"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "driver start",
+  "request": "POST /ui/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-7",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "33000001",
+     "merchantId": "d"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22233000001"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "driver verify",
+  "request": "POST /ui/auth/auth-7/verify",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "token": "tok-4",
+   "person": {
+    "firstName": "Test"
+   },
+   "deviceTrust": "<trust4>"
+  },
+  "said": [
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/check",
+    "body": {
+     "verificationId": "ver-7",
+     "code": "<code2>"
+    },
+    "token": null
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/auth/auth-7/verify",
+    "body": {
+     "otp": "7891",
+     "deviceToken": "dd"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "online, no credit",
+  "request": "POST /ui/driver/setActivity?active=true",
+  "status": 403,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "WALLET_EMPTY",
+   "errorMessage": null
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "GET",
+    "url": "/wallet/status",
+    "body": null,
+    "token": "tok-poor"
+   }
+  ]
+ },
+ {
+  "label": "online, credit",
+  "request": "POST /ui/driver/setActivity?active=true",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "GET",
+    "url": "/wallet/status",
+    "body": null,
+    "token": "tok-rich"
+   },
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/driver/setActivity?active=true",
+    "body": {},
+    "token": "tok-rich"
+   }
+  ]
+ },
+ {
+  "label": "offline, no credit",
+  "request": "POST /ui/driver/setActivity?active=false",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/driver/setActivity?active=false",
+    "body": {},
+    "token": "tok-poor"
+   }
+  ]
+ },
+ {
+  "label": "accept, no credit",
+  "request": "POST /ui/driver/searchRequest/quote/respond",
+  "status": 403,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "WALLET_EMPTY",
+   "errorMessage": null
+  },
+  "said": [
+   {
+    "to": "maps-shim",
+    "method": "GET",
+    "url": "/wallet/status",
+    "body": null,
+    "token": "tok-poor"
+   }
+  ]
+ },
+ {
+  "label": "rate the passenger",
+  "request": "POST /ui/driver/ride/r1/rateCustomer",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/ui/driver/ride/r1/rateCustomer",
+    "body": {
+     "ratingValue": 4
+    },
+    "token": "tok-rich"
+   },
+   {
+    "to": "admin-api",
+    "method": "POST",
+    "url": "/internal/driver-rating",
+    "body": {
+     "rideId": "r1",
+     "stars": 4
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "reply too long",
+  "request": "PUT /ui/message/m1/response",
+  "status": 400,
+  "retryAfter": false,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "REPLY_TOO_LONG",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "reply fine",
+  "request": "PUT /ui/message/m1/response",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "PUT",
+    "url": "/ui/message/m1/response",
+    "body": {
+     "reply": "merci"
+    },
+    "token": "tok-rich"
+   }
+  ]
+ },
+ {
+  "label": "anything else, forwarded",
+  "request": "POST /v2/rideSearch",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "result": "Success"
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/rideSearch",
+    "body": {
+     "contents": {}
+    },
+    "token": "tok-person"
+   }
+  ]
+ },
+ {
+  "label": "starts for one number, 1",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-8",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778810",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778810"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "starts for one number, 2",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-9",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778810",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778810"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "starts for one number, 3",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-10",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778810",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778810"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "starts for one number, 4",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-11",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778810",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778810"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "starts for one number, 5",
+  "request": "POST /v2/auth",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "authId": "auth-12",
+   "attempts": 3
+  },
+  "said": [
+   {
+    "to": "backend",
+    "method": "POST",
+    "url": "/v2/auth",
+    "body": {
+     "mobileCountryCode": "+222",
+     "mobileNumber": "22778810",
+     "merchantId": "m"
+    },
+    "token": null
+   },
+   {
+    "to": "moorsyl",
+    "method": "POST",
+    "url": "/verify/send",
+    "body": {
+     "to": "+22222778810"
+    },
+    "token": null
+   }
+  ]
+ },
+ {
+  "label": "starts for one number, 6",
+  "request": "POST /v2/auth",
+  "status": 429,
+  "retryAfter": true,
+  "body": {
+   "errorPayload": null,
+   "errorCode": "TOO_MANY_REQUESTS",
+   "errorMessage": null
+  },
+  "said": []
+ },
+ {
+  "label": "health at end",
+  "request": "GET /healthz",
+  "status": 200,
+  "retryAfter": false,
+  "body": {
+   "ok": true,
+   "whatsapp": {
+    "ready": false,
+    "verifyToken": false,
+    "signatureChecked": false,
+    "replies": false,
+    "received": 0,
+    "rejected": 0,
+    "waiting": 0
+   },
+   "smsInbox": {
+    "configured": true,
+    "countries": [
+     "+213"
+    ],
+    "received": 1,
+    "withCode": 1,
+    "rejected": 1,
+    "outgoing": 0,
+    "waiting": 1,
+    "lastAt": "<time>"
+   },
+   "trustedPhones": {
+    "phones": 4,
+    "ttlDays": 365
+   },
+   "routes": [
+    {
+     "prefix": "/v2/",
+     "upstream": "<backend>",
+     "personalCodes": null,
+     "sms": true,
+     "codeDigits": 6,
+     "signupOpen": null
+    },
+    {
+     "prefix": "/ui/",
+     "upstream": "<backend>",
+     "personalCodes": 0,
+     "sms": true,
+     "codeDigits": 6,
+     "signupOpen": true
+    }
+   ],
+   "sessions": 8,
+   "numbers": 8,
+   "countries": {
+    "open": [
+     "+222",
+     "+213"
+    ],
+    "sms": [
+     "+222"
+    ]
+   },
+   "gateway": {
+    "configured": true,
+    "mode": "verify",
+    "sender": null,
+    "sent": 12,
+    "budget": {
+     "hour": 12,
+     "hourMax": 60,
+     "day": 12,
+     "dayMax": 400,
+     "exhausted": false
+    },
+    "lastError": null,
+    "bypassNumbers": 0
+   }
+  },
+  "said": []
+ }
+]

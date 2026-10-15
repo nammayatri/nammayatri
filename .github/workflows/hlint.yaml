@@ -1,4 +1,12 @@
-on: [push, pull_request]
+# Movin fork (2026-10-06): not on our `algeria/*` branches. We never edit the
+# Haskell -- our changes to it are patches applied at build time -- so on our
+# branches this scanned upstream's code on every push and made a green tick
+# mean nothing about ours. Upstream's own branches are unaffected.
+on:
+  push:
+    branches-ignore: ['algeria/**']
+  pull_request:
+    branches-ignore: ['algeria/**']
 
 jobs:
   scan:
