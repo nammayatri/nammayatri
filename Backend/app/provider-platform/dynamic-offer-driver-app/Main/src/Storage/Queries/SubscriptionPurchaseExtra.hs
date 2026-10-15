@@ -52,6 +52,20 @@ findActiveDistinctOwnersByOwnerIds ownerIds ownerType = do
           [Se.And [Se.Is Beam.ownerId $ Se.In ownerIds, Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.status $ Se.Eq ACTIVE]]
       pure $ Set.size $ Set.fromList $ map (.ownerId) subs
 
+findActiveOwnerIdsByOwnerIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Text] ->
+  SubscriptionOwnerType ->
+  m [Text]
+findActiveOwnerIdsByOwnerIds ownerIds ownerType =
+  if null ownerIds
+    then pure []
+    else do
+      subs <-
+        findAllWithKV
+          [Se.And [Se.Is Beam.ownerId $ Se.In ownerIds, Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.status $ Se.Eq ACTIVE]]
+      pure $ map (.ownerId) subs
+
 findAllActiveByOwnersAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [Text] ->

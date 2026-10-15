@@ -21,6 +21,9 @@ FleetOperatorStats:
     totalDistance : Maybe Meters
     totalCompletedRides : Maybe Int
     totalEarning : Maybe HighPrecMoney
+    totalAssociatedDriver : Maybe Int
+    totalActiveDrivers : Maybe Int
+    totalEnabledDrivers : Maybe Int
     currency : Maybe Currency
     distanceUnit : Maybe DistanceUnit
 
