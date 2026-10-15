@@ -1187,6 +1187,7 @@ buildJourneyAndLeg booking fareParameters = do
               busConductorId = routeLiveInfo >>= (.busConductorId),
               busDriverId = routeLiveInfo >>= (.busDriverId),
               busTagNumber = routeLiveInfo >>= (.busTagNumber),
+              busVehicleVariant = routeLiveInfo >>= (.busVehicleVariant),
               providerRouteId = Nothing
             }
 
