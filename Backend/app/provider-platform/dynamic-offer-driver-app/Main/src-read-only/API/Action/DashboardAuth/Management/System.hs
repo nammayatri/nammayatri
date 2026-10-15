@@ -8,8 +8,10 @@ module API.Action.DashboardAuth.Management.System
 where
 
 import qualified API.Types.ProviderPlatform.Management.System
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Management.System
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -33,6 +35,7 @@ postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
 postSystemRunQuery a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/SYSTEM/POST_SYSTEM_RUN_QUERY" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.System.postSystemRunQuery a4 a3 a1
     )

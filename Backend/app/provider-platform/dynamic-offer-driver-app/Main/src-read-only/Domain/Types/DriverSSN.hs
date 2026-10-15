@@ -20,9 +20,9 @@ data DriverSSNE e = DriverSSN
   }
   deriving (Generic)
 
-type DriverSSN = DriverSSNE ('AsEncrypted)
+type DriverSSN = DriverSSNE 'AsEncrypted
 
-type DecryptedDriverSSN = DriverSSNE ('AsUnencrypted)
+type DecryptedDriverSSN = DriverSSNE 'AsUnencrypted
 
 instance EncryptedItem DriverSSN where
   type Unencrypted DriverSSN = (DecryptedDriverSSN, HashSalt)

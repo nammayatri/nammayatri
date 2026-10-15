@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.Management.Booking
 where
 
 import qualified API.Types.ProviderPlatform.Management.Booking
+import qualified Control.Lens
 import qualified Dashboard.Common.Booking
 import qualified Domain.Action.Dashboard.Management.Booking
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -45,6 +47,7 @@ postBookingCancelAllStuck :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postBookingCancelAllStuck a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Booking.postBookingCancelAllStuck a4 a3 a1
     )
@@ -53,6 +56,7 @@ postBookingSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postBookingSyncMultiple a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/BOOKING/POST_BOOKING_SYNC_MULTIPLE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Booking.postBookingSyncMultiple a4 a3 a1
     )

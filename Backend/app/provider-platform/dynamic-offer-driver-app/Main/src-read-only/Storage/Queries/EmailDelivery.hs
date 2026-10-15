@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.EmailDelivery.EmailDelivery] -> m ())
 createMany = traverse_ create
 
-findAllByOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.EmailDelivery.EmailDelivery]))
+findAllByOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.EmailDelivery.EmailDelivery])
 findAllByOwnerId ownerId = do findAllWithKV [Se.Is Beam.ownerId $ Se.Eq ownerId]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.EmailDelivery.EmailDelivery -> m (Maybe Domain.Types.EmailDelivery.EmailDelivery))

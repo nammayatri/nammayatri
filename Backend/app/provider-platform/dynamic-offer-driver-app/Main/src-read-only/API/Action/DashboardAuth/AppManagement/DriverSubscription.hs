@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.AppManagement.DriverSubscription
 where
 
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.AppManagement.DriverSubscription
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -46,6 +48,7 @@ postDriverSubscriptionSendSms :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 postDriverSubscriptionSendSms a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_SUBSCRIPTION/POST_DRIVER_SUBSCRIPTION_SEND_SMS" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.DriverSubscription.postDriverSubscriptionSendSms a5 a4 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3) a1
     )
@@ -54,6 +57,7 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo :: (Kernel.Types.Id.ShortId 
 postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/DRIVER_SUBSCRIPTION/POST_DRIVER_SUBSCRIPTION_UPDATE_DRIVER_FEE_AND_INVOICE_INFO" a4 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.AppManagement.DriverSubscription.postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo a6 a5 a3 a2 a1
     )

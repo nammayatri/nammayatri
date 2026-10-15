@@ -27,8 +27,8 @@ data PersonSocialIdentity = PersonSocialIdentity
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data SocialLoginProvider = GOOGLE | APPLE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SocialLoginProvider))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SocialLoginProvider)

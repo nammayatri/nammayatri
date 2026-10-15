@@ -25,15 +25,15 @@ createMany = traverse_ create
 
 findAllByBatchId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionBatch.TDSDistributionBatch) -> m ([Domain.Types.TDSDistributionRecord.TDSDistributionRecord]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionBatch.TDSDistributionBatch) -> m [Domain.Types.TDSDistributionRecord.TDSDistributionRecord])
 findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
 
 findAllByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.TDSDistributionRecord.TDSDistributionRecord]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.TDSDistributionRecord.TDSDistributionRecord])
 findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TDSDistributionRecord.TDSDistributionStatus -> m ([Domain.Types.TDSDistributionRecord.TDSDistributionRecord]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TDSDistributionRecord.TDSDistributionStatus -> m [Domain.Types.TDSDistributionRecord.TDSDistributionRecord])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findById ::

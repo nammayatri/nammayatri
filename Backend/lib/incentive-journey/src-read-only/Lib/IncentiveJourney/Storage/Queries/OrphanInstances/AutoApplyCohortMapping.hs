@@ -27,7 +27,7 @@ instance FromTType' Beam.AutoApplyCohortMapping Lib.IncentiveJourney.Domain.Type
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             updatedAt = updatedAt,
-            vehicleCategory = ((Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack))) vehicleCategory
+            vehicleCategory = Kernel.Prelude.maybe Nothing (Kernel.Prelude.readMaybe . Data.Text.unpack) vehicleCategory
           }
 
 instance ToTType' Beam.AutoApplyCohortMapping Lib.IncentiveJourney.Domain.Types.AutoApplyCohortMapping.AutoApplyCohortMapping where
@@ -41,5 +41,5 @@ instance ToTType' Beam.AutoApplyCohortMapping Lib.IncentiveJourney.Domain.Types.
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.updatedAt = updatedAt,
-        Beam.vehicleCategory = ((Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show))) vehicleCategory
+        Beam.vehicleCategory = Kernel.Prelude.fmap (Data.Text.pack . Kernel.Prelude.show) vehicleCategory
       }

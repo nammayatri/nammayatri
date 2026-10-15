@@ -84,7 +84,7 @@ data RideFeedbackActionType
   | SLACK_ALERT
   | NOTIFY_RIDER
   | SAFETY_ESCALATION
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data RideFeedbackQuestionType
   = SINGLE_SELECT
@@ -98,12 +98,12 @@ data RideFeedbackQuestionType
   | NUMBER_INPUT
   | IMAGE_UPLOAD
   | AUDIO
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
-data RideFeedbackStage = BOOKING_CONFIRMED | AWAITING_REASSIGNMENT | RIDE_ASSIGNED | RIDE_IN_PROGRESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+data RideFeedbackStage = BOOKING_CONFIRMED | AWAITING_REASSIGNMENT | RIDE_ASSIGNED | RIDE_IN_PROGRESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackActionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideFeedbackActionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackQuestionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideFeedbackQuestionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackStage))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideFeedbackStage)

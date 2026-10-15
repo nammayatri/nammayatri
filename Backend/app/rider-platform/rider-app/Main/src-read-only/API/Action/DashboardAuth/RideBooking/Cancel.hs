@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Cancel
 where
 
 import qualified API.Types.Dashboard.RideBooking.Cancel
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Cancel
 import qualified "this" Domain.Action.UI.Cancel
 import qualified "this" Domain.Types.Booking
@@ -36,6 +37,7 @@ postCancelBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> 
 postCancelBooking a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/CANCEL/POST_CANCEL_BOOKING" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.RideBooking.Cancel.postCancelBooking a6 a5 a3 a2 a1
     )

@@ -30,7 +30,7 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.PartnerInvoiceDataLog.PartnerInvoiceDataLog -> m (Maybe Domain.Types.PartnerInvoiceDataLog.PartnerInvoiceDataLog))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findUnexportedSince :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.UTCTime -> m ([Domain.Types.PartnerInvoiceDataLog.PartnerInvoiceDataLog]))
+findUnexportedSince :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.UTCTime -> m [Domain.Types.PartnerInvoiceDataLog.PartnerInvoiceDataLog])
 findUnexportedSince requestedAt = do findAllWithKV [Se.And [Se.Is Beam.exportedAt $ Se.Eq Nothing, Se.Is Beam.requestedAt $ Se.GreaterThanOrEq requestedAt]]
 
 markAsExported :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.PartnerInvoiceDataLog.PartnerInvoiceDataLog -> m ())

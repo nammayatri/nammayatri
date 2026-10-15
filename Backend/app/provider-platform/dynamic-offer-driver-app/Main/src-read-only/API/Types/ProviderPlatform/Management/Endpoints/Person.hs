@@ -46,9 +46,9 @@ data PersonAPIEntity = PersonAPIEntity
 
 type API = ("person" :> GetPersonList)
 
-type GetPersonList = ("list" :> QueryParam "searchString" Kernel.Prelude.Text :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) ListPersonRes)
+type GetPersonList = ("list" :> QueryParam "searchString" Kernel.Prelude.Text :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] ListPersonRes)
 
-newtype PersonAPIs = PersonAPIs {getPersonList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient ListPersonRes)}
+newtype PersonAPIs = PersonAPIs {getPersonList :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient ListPersonRes}
 
 mkPersonAPIs :: (Client EulerHS.Types.EulerClient API -> PersonAPIs)
 mkPersonAPIs personClient = (PersonAPIs {..})
@@ -61,10 +61,10 @@ data PersonUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON PersonUserActionType where
-  toJSON (GET_PERSON_LIST) = Data.Aeson.String "GET_PERSON_LIST"
+  toJSON GET_PERSON_LIST = Data.Aeson.String "GET_PERSON_LIST"
 
 instance FromJSON PersonUserActionType where
   parseJSON (Data.Aeson.String "GET_PERSON_LIST") = pure GET_PERSON_LIST
   parseJSON _ = fail "GET_PERSON_LIST expected"
 
-$(Data.Singletons.TH.genSingletons [(''PersonUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PersonUserActionType])

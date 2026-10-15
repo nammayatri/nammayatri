@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByPersonIdAndFinancialYear ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> m ([Domain.Types.DriverFyEarnings.DriverFyEarnings]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Int -> m [Domain.Types.DriverFyEarnings.DriverFyEarnings])
 findAllByPersonIdAndFinancialYear personId financialYear = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.financialYear $ Se.Eq financialYear]]
 
 findByPersonIdAndFinancialYearAndQuarter ::

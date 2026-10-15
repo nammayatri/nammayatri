@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.RideFeedbackConfig.RideFeedbackConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.RideFeedbackConfig.RideFeedbackConfig])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findAllByMerchantOperatingCityIdAndEnabled ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m ([Domain.Types.RideFeedbackConfig.RideFeedbackConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Bool -> m [Domain.Types.RideFeedbackConfig.RideFeedbackConfig])
 findAllByMerchantOperatingCityIdAndEnabled merchantOperatingCityId enabled = do
   findAllWithKV
     [ Se.And
@@ -97,7 +97,7 @@ instance FromTType' Beam.RideFeedbackConfig Domain.Types.RideFeedbackConfig.Ride
             priority = priority,
             questionKey = questionKey,
             questionType = questionType,
-            stages = (Kernel.Prelude.mapMaybe (Kernel.Prelude.readMaybe . Data.Text.unpack) <$> stages),
+            stages = Kernel.Prelude.mapMaybe (Kernel.Prelude.readMaybe . Data.Text.unpack) <$> stages,
             title = Kernel.Prelude.fromMaybe [] (Kernel.Utils.JSON.valueToMaybe title),
             uiConfig = uiConfig,
             updatedAt = updatedAt

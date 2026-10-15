@@ -42,7 +42,7 @@ findByFromAccount fromAccountId = do findAllWithKV [Se.Is Beam.fromAccountId $ S
 
 findByFromAccountAndStatusAndReferenceType ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry])
 findByFromAccountAndStatusAndReferenceType fromAccountId status referenceType = do
   findAllWithKV
     [ Se.And

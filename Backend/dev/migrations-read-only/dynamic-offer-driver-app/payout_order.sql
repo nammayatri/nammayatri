@@ -89,3 +89,7 @@ ALTER TABLE atlas_driver_offer_bpp.payout_order ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN settlement_ref_type text ;
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN settlement_ref text ;
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN batch_id character varying(36) ;
+
+
+------- SQL updates -------
+

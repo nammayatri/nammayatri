@@ -27,4 +27,4 @@ data BookingPayment = BookingPayment
 
 data BookingPaymentStatus = PENDING | SUCCESS | FAILED | REFUND_PENDING | REFUNDED | REFUND_FAILED | REFUND_INITIATED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingPaymentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingPaymentStatus)

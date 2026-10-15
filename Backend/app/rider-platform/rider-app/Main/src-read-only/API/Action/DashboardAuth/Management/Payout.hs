@@ -26,18 +26,18 @@ import Tools.Auth.DashboardUserAuth
 
 type API = ("payout" :> (GetPayoutPayoutOrder :<|> GetPayoutTransferNeedsReview :<|> PostPayoutTransferResolve))
 
-type GetPayoutPayoutOrder = (DashboardUserAuth ('APP_BACKEND_MANAGEMENT) "RIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER" :> API.Types.RiderPlatform.Management.Payout.GetPayoutPayoutOrder)
+type GetPayoutPayoutOrder = (DashboardUserAuth 'APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_PAYOUT_ORDER" :> API.Types.RiderPlatform.Management.Payout.GetPayoutPayoutOrder)
 
 type GetPayoutTransferNeedsReview =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/PAYOUT/GET_PAYOUT_TRANSFER_NEEDS_REVIEW"
       :> API.Types.RiderPlatform.Management.Payout.GetPayoutTransferNeedsReview
   )
 
 type PostPayoutTransferResolve =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_TRANSFER_RESOLVE"
       :> API.Types.RiderPlatform.Management.Payout.PostPayoutTransferResolve
   )
@@ -46,15 +46,26 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getPayoutPayoutOrder merchantId city :<|> getPayoutTransferNeedsReview merchantId city :<|> postPayoutTransferResolve merchantId city
 
 getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.API.Payout.Types.PayoutOrderResp)
-getPayoutPayoutOrder a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Payout.getPayoutPayoutOrder a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
+getPayoutPayoutOrder a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Payout.getPayoutPayoutOrder a4 a3 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2))
+    )
 
-getPayoutTransferNeedsReview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.RiderPlatform.Management.Payout.TransferReviewListRes)
-getPayoutTransferNeedsReview a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Payout.getPayoutTransferNeedsReview a5 a4 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3))
+getPayoutTransferNeedsReview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.RiderPlatform.Management.Payout.TransferReviewListRes)
+getPayoutTransferNeedsReview a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Payout.getPayoutTransferNeedsReview a5 a4 a2 a1 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3))
+    )
 
 postPayoutTransferResolve :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> API.Types.RiderPlatform.Management.Payout.TransferResolveReq -> Environment.FlowHandler API.Types.RiderPlatform.Management.Payout.TransferResolveRes)
 postPayoutTransferResolve a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/PAYOUT/POST_PAYOUT_TRANSFER_RESOLVE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Payout.postPayoutTransferResolve a5 a4 a2 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)) a1
     )

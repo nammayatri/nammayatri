@@ -15,31 +15,31 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data OverlayT f = OverlayT
-  { actions :: (B.C f [Kernel.Prelude.Text]),
-    actions2 :: (B.C f Data.Aeson.Value),
-    cancelButtonText :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    contactSupportNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    delay :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    endPoint :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    imageUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    language :: (B.C f Kernel.External.Types.Language),
-    link :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    method :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    okButtonText :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    overlayKey :: (B.C f Kernel.Prelude.Text),
-    reqBody :: (B.C f Data.Aeson.Value),
-    secondaryActions :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    secondaryActions2 :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    showPushNotification :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    socialMediaLinks :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    title :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    toastMessage :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    udf1 :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory))
+  { actions :: B.C f [Kernel.Prelude.Text],
+    actions2 :: B.C f Data.Aeson.Value,
+    cancelButtonText :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    contactSupportNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    delay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    endPoint :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    imageUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    language :: B.C f Kernel.External.Types.Language,
+    link :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    method :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    okButtonText :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    overlayKey :: B.C f Kernel.Prelude.Text,
+    reqBody :: B.C f Data.Aeson.Value,
+    secondaryActions :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    secondaryActions2 :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    showPushNotification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    socialMediaLinks :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    title :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    toastMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    udf1 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)
   }
   deriving (Generic, B.Beamable)
 
@@ -49,8 +49,8 @@ instance B.Table OverlayT where
 
 type Overlay = OverlayT Identity
 
-$(enableKVPG (''OverlayT) [('id)] [[('overlayKey)]])
+$(enableKVPG ''OverlayT ['id] [['overlayKey]])
 
-$(mkTableInstances (''OverlayT) "merchant_overlay")
+$(mkTableInstances ''OverlayT "merchant_overlay")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''OverlayT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''OverlayT)

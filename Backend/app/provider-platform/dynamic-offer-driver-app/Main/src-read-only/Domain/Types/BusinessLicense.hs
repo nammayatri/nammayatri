@@ -28,9 +28,9 @@ data BusinessLicenseE e = BusinessLicense
   }
   deriving (Generic)
 
-type BusinessLicense = BusinessLicenseE ('AsEncrypted)
+type BusinessLicense = BusinessLicenseE 'AsEncrypted
 
-type DecryptedBusinessLicense = BusinessLicenseE ('AsUnencrypted)
+type DecryptedBusinessLicense = BusinessLicenseE 'AsUnencrypted
 
 instance EncryptedItem BusinessLicense where
   type Unencrypted BusinessLicense = (DecryptedBusinessLicense, HashSalt)

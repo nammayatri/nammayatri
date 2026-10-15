@@ -28,7 +28,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "driver" :> "communication" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.DriverCommunication.DriverCommunicationListRes
       :<|> TokenAuth
       :> "driver"
@@ -38,7 +38,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Communication.Communication)
       :> "read"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -50,8 +50,8 @@ getDriverCommunicationList ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler API.Types.UI.DriverCommunication.DriverCommunicationListRes
   )
 getDriverCommunicationList a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.DriverCommunication.getDriverCommunicationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

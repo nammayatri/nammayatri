@@ -23,3 +23,10 @@ ALTER TABLE atlas_app.finance_audit_entry ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_app.finance_audit_entry ALTER COLUMN previous_state TYPE jsonb USING previous_state::jsonb;
 ALTER TABLE atlas_app.finance_audit_entry ALTER COLUMN new_state TYPE jsonb USING new_state::jsonb;
 ALTER TABLE atlas_app.finance_audit_entry ALTER COLUMN metadata TYPE jsonb USING metadata::jsonb;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_audit_entry ALTER COLUMN previous_state TYPE jsonb;
+ALTER TABLE atlas_app.finance_audit_entry ALTER COLUMN new_state TYPE jsonb;
+ALTER TABLE atlas_app.finance_audit_entry ALTER COLUMN metadata TYPE jsonb;

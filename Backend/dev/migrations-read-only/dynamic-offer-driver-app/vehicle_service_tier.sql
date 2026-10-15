@@ -500,3 +500,7 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN spot_ride_all
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN region_condition json ;
+
+
+------- SQL updates -------
+

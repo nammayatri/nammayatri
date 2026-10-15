@@ -19,11 +19,11 @@ type API = ("rideFeedback" :> PostRideFeedbackBookingResponseRetryActions)
 type PostRideFeedbackBookingResponseRetryActions =
   ( "booking" :> Capture "bookingId" Kernel.Prelude.Text :> "response" :> Capture "responseId" Kernel.Prelude.Text :> "retryActions"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-newtype RideFeedbackAPIs = RideFeedbackAPIs {postRideFeedbackBookingResponseRetryActions :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)}
+newtype RideFeedbackAPIs = RideFeedbackAPIs {postRideFeedbackBookingResponseRetryActions :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess}
 
 mkRideFeedbackAPIs :: (Client EulerHS.Types.EulerClient API -> RideFeedbackAPIs)
 mkRideFeedbackAPIs rideFeedbackClient = (RideFeedbackAPIs {..})
@@ -36,10 +36,10 @@ data RideFeedbackUserActionType
   deriving anyclass (ToSchema)
 
 instance ToJSON RideFeedbackUserActionType where
-  toJSON (POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS) = Data.Aeson.String "POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS"
+  toJSON POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS = Data.Aeson.String "POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS"
 
 instance FromJSON RideFeedbackUserActionType where
   parseJSON (Data.Aeson.String "POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS") = pure POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS
   parseJSON _ = fail "POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS expected"
 
-$(Data.Singletons.TH.genSingletons [(''RideFeedbackUserActionType)])
+$(Data.Singletons.TH.genSingletons [''RideFeedbackUserActionType])

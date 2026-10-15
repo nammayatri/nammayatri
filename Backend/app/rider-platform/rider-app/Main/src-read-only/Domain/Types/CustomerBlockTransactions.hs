@@ -33,6 +33,6 @@ data ActionType = BLOCK | UNBLOCK deriving (Eq, Ord, Show, Read, Generic, ToJSON
 
 data BlockedBy = Dashboard | Application deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ActionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ActionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BlockedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BlockedBy)

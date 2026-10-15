@@ -13,24 +13,24 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RewardUnlockT f = RewardUnlockT
-  { campaignId :: (B.C f Kernel.Prelude.Text),
-    claimedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    cohortId :: (B.C f Kernel.Prelude.Text),
-    couponCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    couponSource :: (B.C f Domain.Types.RewardCampaign.CouponSourceType),
-    couponValidTill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    reclaimedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    redeemedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    status :: (B.C f Domain.Types.RewardUnlock.UnlockStatus),
-    unlockSeq :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    unlockedAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    viewedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { campaignId :: B.C f Kernel.Prelude.Text,
+    claimedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    cohortId :: B.C f Kernel.Prelude.Text,
+    couponCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    couponSource :: B.C f Domain.Types.RewardCampaign.CouponSourceType,
+    couponValidTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    reclaimedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    redeemedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    status :: B.C f Domain.Types.RewardUnlock.UnlockStatus,
+    unlockSeq :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    unlockedAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    viewedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +40,6 @@ instance B.Table RewardUnlockT where
 
 type RewardUnlock = RewardUnlockT Identity
 
-$(enableKVPG (''RewardUnlockT) [('id)] [[('campaignId)], [('personId)]])
+$(enableKVPG ''RewardUnlockT ['id] [['campaignId], ['personId]])
 
-$(mkTableInstances (''RewardUnlockT) "reward_unlock")
+$(mkTableInstances ''RewardUnlockT "reward_unlock")

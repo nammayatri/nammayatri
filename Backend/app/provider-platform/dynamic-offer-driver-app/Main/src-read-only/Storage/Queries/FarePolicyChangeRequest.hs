@@ -23,12 +23,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FarePolicyChangeRequest.FarePolicyChangeRequest] -> m ())
 createMany = traverse_ create
 
-findAllByFareProductId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m ([Domain.Types.FarePolicyChangeRequest.FarePolicyChangeRequest]))
+findAllByFareProductId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FareProduct.FareProduct -> m [Domain.Types.FarePolicyChangeRequest.FarePolicyChangeRequest])
 findAllByFareProductId fareProductId = do findAllWithKV [Se.Is Beam.fareProductId $ Se.Eq (Kernel.Types.Id.getId fareProductId)]
 
 findAllByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FarePolicyChangeRequest.FarePolicyChangeRequest]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FarePolicyChangeRequest.FarePolicyChangeRequest])
 findAllByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateStatusById ::

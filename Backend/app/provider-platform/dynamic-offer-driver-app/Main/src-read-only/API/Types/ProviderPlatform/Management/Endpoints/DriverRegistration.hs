@@ -1060,7 +1060,12 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     postDriverRegistrationGenerateTempAppCode :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TempAppCodeRes,
     postDriverRegistrationOnboardingLink :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient OnboardingLinkRes,
     postDriverRegistrationAddDrivers :: Dashboard.Common.Driver.OnboardingAs -> (Data.ByteString.Lazy.ByteString, AddDriversReq) -> EulerHS.Types.EulerClient AddDriversResp,
-    postDriverRegistrationAddVehicles :: Kernel.Types.Id.Id Dashboard.Common.Driver -> (Data.ByteString.Lazy.ByteString, AddVehiclesReq) -> EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+    postDriverRegistrationAddVehicles ::
+      Kernel.Types.Id.Id Dashboard.Common.Driver ->
+        ( Data.ByteString.Lazy.ByteString,
+          AddVehiclesReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp,
     postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationVerifyBankAccount :: Kernel.Types.Id.Id Dashboard.Common.Driver -> VerifyBankAccountReq -> EulerHS.Types.EulerClient Kernel.External.Verification.Interface.Types.VerifyAsyncResp,

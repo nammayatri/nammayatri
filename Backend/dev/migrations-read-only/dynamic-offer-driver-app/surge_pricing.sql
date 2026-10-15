@@ -74,3 +74,8 @@ ALTER TABLE atlas_driver_offer_bpp.surge_pricing ADD COLUMN vehicle_service_tier
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

@@ -714,3 +714,8 @@ ALTER TABLE atlas_app.estimate ADD COLUMN negative_fare_suggestion double precis
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

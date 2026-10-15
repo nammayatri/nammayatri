@@ -12,20 +12,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CustomerBlockTransactionsT f = CustomerBlockTransactionsT
-  { actionType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.CustomerBlockTransactions.ActionType)),
-    blockLiftTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    blockReason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    blockTimeInHours :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    blockedBy :: (B.C f Domain.Types.CustomerBlockTransactions.BlockedBy),
-    customerId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    reasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    reportedAt :: (B.C f Kernel.Prelude.UTCTime),
-    requestorId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { actionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.CustomerBlockTransactions.ActionType),
+    blockLiftTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    blockReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    blockTimeInHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    blockedBy :: B.C f Domain.Types.CustomerBlockTransactions.BlockedBy,
+    customerId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    reasonCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reportedAt :: B.C f Kernel.Prelude.UTCTime,
+    requestorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table CustomerBlockTransactionsT where
 
 type CustomerBlockTransactions = CustomerBlockTransactionsT Identity
 
-$(enableKVPG (''CustomerBlockTransactionsT) [('id)] [[('customerId)]])
+$(enableKVPG ''CustomerBlockTransactionsT ['id] [['customerId]])
 
-$(mkTableInstances (''CustomerBlockTransactionsT) "customer_block_transactions")
+$(mkTableInstances ''CustomerBlockTransactionsT "customer_block_transactions")

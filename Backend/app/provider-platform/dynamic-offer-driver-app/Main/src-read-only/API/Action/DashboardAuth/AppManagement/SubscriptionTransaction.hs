@@ -8,10 +8,14 @@ module API.Action.DashboardAuth.AppManagement.SubscriptionTransaction
 where
 
 import qualified API.Types.Dashboard.AppManagement.SubscriptionTransaction
+import qualified API.Types.ProviderPlatform.Fleet.Driver
 import qualified API.Types.UI.SubscriptionTransaction
+import qualified Control.Lens
 import qualified Data.Time
+import qualified Domain.Action.Dashboard.AppManagement.SubscriptionTransaction
 import qualified Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -38,4 +42,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getSubscriptionTransactionSubscriptionTransactions merchantId city
 
 getSubscriptionTransactionSubscriptionTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Environment.FlowHandler API.Types.UI.SubscriptionTransaction.SubscriptionTransactionResponse)
-getSubscriptionTransactionSubscriptionTransactions a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction.getSubscriptionTransactionSubscriptionTransactions a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getSubscriptionTransactionSubscriptionTransactions a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a8 a10 a9
+        Tools.ActorInfo.withDashboardUserActorInfo a8 $ Domain.Action.DashboardAuth.AppManagement.SubscriptionTransaction.getSubscriptionTransactionSubscriptionTransactions a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )

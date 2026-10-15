@@ -15,22 +15,22 @@ import Servant.Client
 type API = ("FrfsFleetOperator" :> (PostFrfsFleetOperatorCurrentOperation :<|> PostFrfsFleetOperatorTripAction))
 
 type PostFrfsFleetOperatorCurrentOperation =
-  ( "currentOperation" :> ReqBody ('[JSON]) API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
+  ( "currentOperation" :> ReqBody '[JSON] API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   )
 
 type PostFrfsFleetOperatorTripAction =
-  ( "tripAction" :> ReqBody ('[JSON]) API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
+  ( "tripAction" :> ReqBody '[JSON] API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
   )
 
 data FrfsTripOperationsAPIs = FrfsTripOperationsAPIs
-  { postFrfsFleetOperatorCurrentOperation :: (API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp),
-    postFrfsFleetOperatorTripAction :: (API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp)
+  { postFrfsFleetOperatorCurrentOperation :: API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp,
+    postFrfsFleetOperatorTripAction :: API.Types.UI.FRFSTicketService.FleetOperatorTripActionReq -> EulerHS.Types.EulerClient API.Types.UI.FRFSTicketService.FleetOperatorTripActionResp
   }
 
 mkFrfsTripOperationsAPIs :: (Client EulerHS.Types.EulerClient API -> FrfsTripOperationsAPIs)
@@ -44,4 +44,4 @@ data FrfsTripOperationsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''FrfsTripOperationsUserActionType)])
+$(Data.Singletons.TH.genSingletons [''FrfsTripOperationsUserActionType])

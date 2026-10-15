@@ -13,15 +13,15 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Tools.Beam.UtilsTH
 
 data BookingPaymentT f = BookingPaymentT
-  { bookingId :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    paymentOrderId :: (B.C f Kernel.Prelude.Text),
-    paymentServiceType :: (B.C f Lib.Payment.Domain.Types.PaymentOrder.PaymentServiceType),
-    status :: (B.C f Domain.Types.BookingPayment.BookingPaymentStatus),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { bookingId :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    paymentOrderId :: B.C f Kernel.Prelude.Text,
+    paymentServiceType :: B.C f Lib.Payment.Domain.Types.PaymentOrder.PaymentServiceType,
+    status :: B.C f Domain.Types.BookingPayment.BookingPaymentStatus,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table BookingPaymentT where
 
 type BookingPayment = BookingPaymentT Identity
 
-$(enableKVPG (''BookingPaymentT) [('id)] [[('bookingId)], [('paymentOrderId)]])
+$(enableKVPG ''BookingPaymentT ['id] [['bookingId], ['paymentOrderId]])
 
-$(mkTableInstances (''BookingPaymentT) "booking_payment")
+$(mkTableInstances ''BookingPaymentT "booking_payment")

@@ -45,6 +45,6 @@ data IngestionStatus = INGESTION_PENDING | INGESTED deriving (Eq, Ord, Show, Rea
 
 data SettlementBatchStatus = PENDING | PROCESSED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''IngestionStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''IngestionStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementBatchStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementBatchStatus)

@@ -17,3 +17,9 @@ UPDATE atlas_dashboard.transaction
 UPDATE atlas_dashboard.transaction
   SET endpoint = 'PROVIDER_RIDE_BOOKING/RIDE/POST_RIDE_BOOKING_WITH_VEHICLE_NUMBER_AND_PHONE'
   WHERE endpoint = 'RideAPI BookingWithVehicleNumberAndPhoneEndpoint';
+
+
+------- SQL updates -------
+
+-- {"api":"PostRideScheduledActivate","migration":"capability","param":"PUBLIC","schema":"atlas_dashboard"}
+-- capability: PUBLIC - no capability_endpoint row; every authenticated caller may call this endpoint.

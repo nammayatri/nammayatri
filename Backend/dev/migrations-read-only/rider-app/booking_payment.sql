@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.booking_payment ADD COLUMN updated_at timestamp with time 
 ALTER TABLE atlas_app.booking_payment ADD PRIMARY KEY ( id);
 
 CREATE INDEX idx_booking_payment_booking_id_payment_service_type_created_at ON atlas_app.booking_payment USING btree (booking_id, payment_service_type, created_at DESC);
+
+
+
+------- SQL updates -------
+
+DROP INDEX idx_booking_payment_booking_id_payment_service_type_created_at;

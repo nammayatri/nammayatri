@@ -20,7 +20,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m ())
 createMany = traverse_ create
 
-findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m ([Domain.Types.FRFSFarePolicy.FRFSFarePolicy]))
+findAllByIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy] -> m [Domain.Types.FRFSFarePolicy.FRFSFarePolicy])
 findAllByIds id = do findAllWithKV [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m (Maybe Domain.Types.FRFSFarePolicy.FRFSFarePolicy))

@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByMainAssignmentId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FleetBookingInformation.FleetBookingInformation -> m ([Domain.Types.FleetBookingAssignments.FleetBookingAssignments]))
+  (Kernel.Types.Id.Id Domain.Types.FleetBookingInformation.FleetBookingInformation -> m [Domain.Types.FleetBookingAssignments.FleetBookingAssignments])
 findAllByMainAssignmentId mainAssignmentId = do findAllWithKV [Se.Is Beam.mainAssignmentId $ Se.Eq (Kernel.Types.Id.getId mainAssignmentId)]
 
 updateAssignmentTiming ::

@@ -12,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingBreakupT f = FRFSTicketBookingBreakupT
-  { id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    quoteCategoryId :: (B.C f Kernel.Prelude.Text),
-    tag :: (B.C f Domain.Types.FRFSQuoteCategorySpec.FRFSCategoryTag),
-    ticketBookingId :: (B.C f Kernel.Prelude.Text),
-    value :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    quoteCategoryId :: B.C f Kernel.Prelude.Text,
+    tag :: B.C f Domain.Types.FRFSQuoteCategorySpec.FRFSCategoryTag,
+    ticketBookingId :: B.C f Kernel.Prelude.Text,
+    value :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table FRFSTicketBookingBreakupT where
 
 type FRFSTicketBookingBreakup = FRFSTicketBookingBreakupT Identity
 
-$(enableKVPG (''FRFSTicketBookingBreakupT) [('id)] [[('quoteCategoryId)]])
+$(enableKVPG ''FRFSTicketBookingBreakupT ['id] [['quoteCategoryId]])
 
-$(mkTableInstances (''FRFSTicketBookingBreakupT) "frfs_ticket_booking_breakup")
+$(mkTableInstances ''FRFSTicketBookingBreakupT "frfs_ticket_booking_breakup")

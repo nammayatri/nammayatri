@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByMerchantOperatingCityIdAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m ([Domain.Types.Faq.Faq]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.External.Types.Language -> m [Domain.Types.Faq.Faq])
 findAllByMerchantOperatingCityIdAndLanguage merchantOperatingCityId language = do
   findAllWithKV
     [ Se.And

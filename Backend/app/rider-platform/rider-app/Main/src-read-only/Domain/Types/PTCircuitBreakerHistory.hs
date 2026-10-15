@@ -31,8 +31,8 @@ data CircuitState = Open | Closed | HalfOpen deriving (Eq, Ord, Show, Read, Gene
 
 data PTMode = Metro | Bus | Subway deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''APIType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''APIType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CircuitState))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CircuitState)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PTMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PTMode)

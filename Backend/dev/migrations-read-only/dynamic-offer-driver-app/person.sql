@@ -184,3 +184,8 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN email_source text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

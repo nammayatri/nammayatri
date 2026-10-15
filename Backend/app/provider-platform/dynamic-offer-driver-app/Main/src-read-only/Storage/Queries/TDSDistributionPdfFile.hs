@@ -27,12 +27,12 @@ createMany = traverse_ create
 
 findAllByBatchId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionBatch.TDSDistributionBatch) -> m ([Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionBatch.TDSDistributionBatch) -> m [Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile])
 findAllByBatchId batchId = do findAllWithKV [Se.Is Beam.batchId $ Se.Eq (Kernel.Types.Id.getId <$> batchId)]
 
 findAllByTdsDistributionRecordId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionRecord.TDSDistributionRecord) -> m ([Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TDSDistributionRecord.TDSDistributionRecord) -> m [Domain.Types.TDSDistributionPdfFile.TDSDistributionPdfFile])
 findAllByTdsDistributionRecordId tdsDistributionRecordId = do findAllWithKV [Se.Is Beam.tdsDistributionRecordId $ Se.Eq (Kernel.Types.Id.getId <$> tdsDistributionRecordId)]
 
 findById ::

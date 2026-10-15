@@ -30,3 +30,7 @@ ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD PRIMARY KEY ( i
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ledger_adjustment_request ADD COLUMN rejection_reason text ;
+
+
+------- SQL updates -------
+

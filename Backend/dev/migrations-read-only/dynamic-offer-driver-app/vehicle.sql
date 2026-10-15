@@ -82,3 +82,7 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN selected_auto_accept_tiers
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN exempt_parking_fee boolean  default false;
+
+
+------- SQL updates -------
+

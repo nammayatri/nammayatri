@@ -409,3 +409,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_billing_mo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN docs_verification_status_updated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+

@@ -12,14 +12,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data DriverFyEarningsT f = DriverFyEarningsT
-  { financialYear :: (B.C f Kernel.Prelude.Int),
-    id :: (B.C f Kernel.Prelude.Text),
-    netEarningsTotal :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    personId :: (B.C f Kernel.Prelude.Text),
-    quarter :: (B.C f Kernel.Prelude.Int),
-    tdsAmountTotal :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { financialYear :: B.C f Kernel.Prelude.Int,
+    id :: B.C f Kernel.Prelude.Text,
+    netEarningsTotal :: B.C f Kernel.Types.Common.HighPrecMoney,
+    personId :: B.C f Kernel.Prelude.Text,
+    quarter :: B.C f Kernel.Prelude.Int,
+    tdsAmountTotal :: B.C f Kernel.Types.Common.HighPrecMoney,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table DriverFyEarningsT where
 
 type DriverFyEarnings = DriverFyEarningsT Identity
 
-$(enableKVPG (''DriverFyEarningsT) [('id)] [[('personId)]])
+$(enableKVPG ''DriverFyEarningsT ['id] [['personId]])
 
-$(mkTableInstances (''DriverFyEarningsT) "driver_fy_earnings")
+$(mkTableInstances ''DriverFyEarningsT "driver_fy_earnings")

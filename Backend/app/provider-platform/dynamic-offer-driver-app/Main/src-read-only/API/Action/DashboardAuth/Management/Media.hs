@@ -8,11 +8,14 @@ module API.Action.DashboardAuth.Management.Media
 where
 
 import qualified API.Types.ProviderPlatform.Management.Media
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Management.Media
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified "shared-services" IssueManagement.Domain.Types.MediaFile
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -29,4 +32,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getMediaMediaImage merchantId city
 
 getMediaMediaImage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Media.GetImageResponse)
-getMediaMediaImage a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Media.getMediaMediaImage a4 a3 a1
+getMediaMediaImage a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.Media.getMediaMediaImage a4 a3 a1
+    )

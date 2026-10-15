@@ -13,16 +13,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PaymentCustomerT f = PaymentCustomerT
-  { clientAuthToken :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    clientAuthTokenExpiry :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    customerId :: (B.C f Kernel.Prelude.Text),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    paymentServiceName :: (B.C f Domain.Types.MerchantServiceConfig.ServiceName),
-    serviceName :: (B.C f Domain.Types.Extra.Plan.ServiceNames),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { clientAuthToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientAuthTokenExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    customerId :: B.C f Kernel.Prelude.Text,
+    driverId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    paymentServiceName :: B.C f Domain.Types.MerchantServiceConfig.ServiceName,
+    serviceName :: B.C f Domain.Types.Extra.Plan.ServiceNames,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table PaymentCustomerT where
 
 type PaymentCustomer = PaymentCustomerT Identity
 
-$(enableKVPG (''PaymentCustomerT) [('driverId), ('serviceName)] [])
+$(enableKVPG ''PaymentCustomerT ['driverId, 'serviceName] [])
 
-$(mkTableInstances (''PaymentCustomerT) "payment_customer")
+$(mkTableInstances ''PaymentCustomerT "payment_customer")

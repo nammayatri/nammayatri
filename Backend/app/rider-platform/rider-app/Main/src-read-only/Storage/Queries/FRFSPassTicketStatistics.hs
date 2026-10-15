@@ -27,7 +27,7 @@ createMany = traverse_ create
 
 findAllByPurchasedPassPaymentIdAndDates ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> [Data.Time.Calendar.Day] -> m ([Domain.Types.FRFSPassTicketStatistics.FRFSPassTicketStatistics]))
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment -> [Data.Time.Calendar.Day] -> m [Domain.Types.FRFSPassTicketStatistics.FRFSPassTicketStatistics])
 findAllByPurchasedPassPaymentIdAndDates purchasedPassPaymentId date = do
   findAllWithKV
     [ Se.And

@@ -8,3 +8,8 @@ ALTER TABLE atlas_driver_offer_bpp.vendor_fee ADD COLUMN updated_at timestamp wi
 ALTER TABLE atlas_driver_offer_bpp.vendor_fee ADD PRIMARY KEY ( driver_fee_id, vendor_id);
 
 CREATE INDEX idx_driver_fee ON atlas_driver_offer_bpp.vendor_fee USING btree (driver_fee_id);
+
+
+------- SQL updates -------
+
+DROP INDEX idx_driver_fee;

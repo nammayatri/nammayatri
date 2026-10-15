@@ -45,8 +45,8 @@ import qualified Data.Text as T
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
-import Domain.Types.FleetPoolingPriority (FleetPoolingPriority, resolvePoolingPriority)
 import Domain.Types.Extra.LeanFlow (LeanFlowFeature (DRIVER_ACCEPTANCE_SCORES))
+import Domain.Types.FleetPoolingPriority (FleetPoolingPriority, resolvePoolingPriority)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RiderDetails as DRD
@@ -74,8 +74,8 @@ import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
-import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import qualified Storage.CachedQueries.SystemConfigs.LeanFlow as CQLF
+import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic

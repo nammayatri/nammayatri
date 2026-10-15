@@ -10,7 +10,6 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun as Beam
-import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.KaalChakraJobRun
 
 instance FromTType' Beam.KaalChakraJobRun Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRun where

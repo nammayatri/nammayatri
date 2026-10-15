@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.Booking
 where
 
 import qualified API.Types.Dashboard.RideBooking.Booking
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.Booking
 import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking
@@ -46,6 +47,7 @@ postBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> 
 postBookingStatus a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/BOOKING/POST_BOOKING_STATUS" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.Booking.postBookingStatus a5 a4 a2 a1
     )
@@ -54,10 +56,25 @@ getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> 
 getBookingBooking a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withRequestIdActorInfo $ Domain.Action.Dashboard.RideBooking.Booking.getBookingBooking a5 a4 a3 a2 a1
 
 getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
-getBookingList a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.RideBooking.Booking.getBookingList a8 a7 a5 a4 a3 a2 a1
+getBookingList a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a6 a8 a7
+        Tools.ActorInfo.withDashboardUserActorInfo a6 $ Domain.Action.Dashboard.RideBooking.Booking.getBookingList a8 a7 a5 a4 a3 a2 a1
+    )
 
 getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
-getBookingAgentL1List a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.RideBooking.Booking.getBookingAgentL1List a9 a8 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a7)) a6 a5 a4 a3 a2 a1
+getBookingAgentL1List a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a7 a9 a8
+        Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.RideBooking.Booking.getBookingAgentL1List a9 a8 (Kernel.Prelude.Just (Tools.Auth.DashboardUserAuth.dashboardRequestorId a7)) a6 a5 a4 a3 a2 a1
+    )
 
 getBookingAgentL2List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
-getBookingAgentL2List a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.RideBooking.Booking.getBookingAgentL2List a9 a8 a6 a5 a4 a3 a2 a1
+getBookingAgentL2List a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a7 a9 a8
+        Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.RideBooking.Booking.getBookingAgentL2List a9 a8 a6 a5 a4 a3 a2 a1
+    )
