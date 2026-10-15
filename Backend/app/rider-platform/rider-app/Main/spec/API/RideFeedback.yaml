@@ -36,6 +36,7 @@ types:
     options: Maybe [FeedbackOptionItem]
     inputConfig: Maybe FeedbackInputConfigRes
     acknowledgement: Maybe Text
+    iconUrl: Maybe Text
     isSkippable: Bool
     showAt: UTCTime
     autoDismissAfterSeconds: Maybe Int
@@ -44,6 +45,7 @@ types:
   FeedbackOptionItem:
     key: Text
     label: Text
+    iconUrl: Maybe Text
     nextQuestionKey: Maybe Text
     requiresText: Bool
     isExclusive: Bool

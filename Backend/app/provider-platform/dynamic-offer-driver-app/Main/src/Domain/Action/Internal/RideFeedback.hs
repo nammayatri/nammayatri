@@ -68,6 +68,7 @@ data FeedbackQuestionItem = FeedbackQuestionItem
     options :: Maybe [FeedbackOptionItem],
     inputConfig :: Maybe FeedbackInputConfigRes,
     acknowledgement :: Maybe Text,
+    iconUrl :: Maybe Text,
     isSkippable :: Bool,
     showAt :: UTCTime,
     autoDismissAfterSeconds :: Maybe Int,
@@ -78,6 +79,7 @@ data FeedbackQuestionItem = FeedbackQuestionItem
 data FeedbackOptionItem = FeedbackOptionItem
   { key :: Text,
     label :: Text,
+    iconUrl :: Maybe Text,
     nextQuestionKey :: Maybe Text,
     requiresText :: Bool,
     isExclusive :: Bool
@@ -194,6 +196,7 @@ mkQuestionItem language showAt config =
       options = map mkOption <$> config.options,
       inputConfig = mkInputConfig <$> config.inputConfig,
       acknowledgement = pick config.acknowledgement,
+      iconUrl = config.iconUrl,
       isSkippable = fromMaybe True config.isSkippable,
       showAt,
       autoDismissAfterSeconds = config.displayTrigger >>= (.autoDismissAfterSeconds),
@@ -205,6 +208,7 @@ mkQuestionItem language showAt config =
       FeedbackOptionItem
         { key = o.key,
           label = fromMaybe o.key (pickTranslation language o.label),
+          iconUrl = o.iconUrl,
           nextQuestionKey = o.nextQuestionKey,
           requiresText = fromMaybe False o.requiresText,
           isExclusive = fromMaybe False o.isExclusive

@@ -22,6 +22,7 @@ RideFeedbackConfig:
     options: Maybe [QuestionOption]
     inputConfig: Maybe InputConfig
     acknowledgement: Maybe [Translation]
+    iconUrl: Maybe Text # image on the right of the question card
     uiConfig: Maybe Value
     isSkippable: Maybe Bool
     isFollowUpOnly: Maybe Bool
@@ -46,6 +47,7 @@ RideFeedbackConfig:
     QuestionOption:
       key: Text
       label: "[Translation]"
+      iconUrl: Maybe Text
       nextQuestionKey: Maybe Text
       requiresText: Maybe Bool
       isExclusive: Maybe Bool

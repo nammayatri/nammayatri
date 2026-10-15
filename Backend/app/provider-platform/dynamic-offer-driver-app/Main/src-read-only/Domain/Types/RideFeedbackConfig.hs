@@ -18,6 +18,7 @@ data RideFeedbackConfig = RideFeedbackConfig
     description :: Kernel.Prelude.Maybe [IssueManagement.Common.Translation],
     displayTrigger :: Kernel.Prelude.Maybe Domain.Types.RideFeedbackConfig.DisplayTrigger,
     enabled :: Kernel.Prelude.Bool,
+    iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.RideFeedbackConfig.RideFeedbackConfig,
     inputConfig :: Kernel.Prelude.Maybe Domain.Types.RideFeedbackConfig.InputConfig,
     isFollowUpOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -66,7 +67,8 @@ data InputConfig = InputConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data QuestionOption = QuestionOption
-  { isExclusive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isExclusive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     key :: Kernel.Prelude.Text,
     label :: [IssueManagement.Common.Translation],
     nextQuestionKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
