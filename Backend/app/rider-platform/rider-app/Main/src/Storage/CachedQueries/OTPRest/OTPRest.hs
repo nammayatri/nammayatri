@@ -548,9 +548,21 @@ getVehicleMetadata ::
   Text ->
   Maybe Bool ->
   m (Maybe VehicleMetadataResponse)
-getVehicleMetadata integratedBPPConfig vehicleNumber mbPassVerifyReq = do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getVehicleMetadata baseUrl integratedBPPConfig.feedKey vehicleNumber mbPassVerifyReq
+getVehicleMetadata integratedBPPConfig vehicleNumber mbPassVerifyReq =
+  case mbPassVerifyReq of
+    Just _ -> fetch
+    Nothing ->
+      Hedis.safeGet vehicleMetadataKey >>= \case
+        Just res -> pure (Just res)
+        Nothing -> do
+          mbRes <- fetch
+          whenJust mbRes $ \res -> Hedis.setExp vehicleMetadataKey res 3600
+          pure mbRes
+  where
+    vehicleMetadataKey = "CachedQueries:VehicleMetadata:" <> integratedBPPConfig.feedKey <> ":" <> vehicleNumber
+    fetch = do
+      baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      Flow.getVehicleMetadata baseUrl integratedBPPConfig.feedKey vehicleNumber mbPassVerifyReq
 
 getVehicleInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
