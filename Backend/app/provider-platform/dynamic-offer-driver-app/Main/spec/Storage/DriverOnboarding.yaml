@@ -653,6 +653,10 @@ DocumentVersionMetadata:
     deleteByPersonId:
       kvFunction: deleteWithKV
       where: personId
+  extraIndexes:
+    - columns: [personId]
+  extraOperations:
+    - GENERATE_INDEXES
 
 MediaFileDocument:
   tableName: media_file_document
