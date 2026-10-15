@@ -186,6 +186,18 @@ findAllNonTerminalOrders duration = do
       Se.Is BeamPO.paymentFulfillmentStatus $ Se.In [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Just DPayment.FulfillmentRefundPending, Just DPayment.FulfillmentRefundInitiated, Nothing]
     ]
 
+-- | Booking-deposit orders whose last attempt failed. The order stays payable at the gateway, so a retry
+--   charged after the booking was cancelled is reachable only through the status sweep.
+findAllFailedAttemptDepositOrders :: BeamFlow m r => UTCTime -> m [DOrder.PaymentOrder]
+findAllFailedAttemptDepositOrders duration = do
+  findAllWithKV
+    [ Se.Is BeamPO.validTill $ Se.GreaterThanOrEq (Just duration),
+      Se.Is BeamPO.validTill $ Se.Not $ Se.Eq Nothing,
+      Se.Is BeamPO.paymentServiceType $ Se.Eq (Just DOrder.BookingDeposit),
+      Se.Is BeamPO.status $ Se.In [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED, Payment.CLIENT_AUTH_TOKEN_EXPIRED],
+      Se.Is BeamPO.paymentFulfillmentStatus $ Se.In [Just DPayment.FulfillmentPending, Just DPayment.FulfillmentFailed, Nothing]
+    ]
+
 findAllByGroupId :: BeamFlow m r => Text -> UTCTime -> m [DOrder.PaymentOrder]
 findAllByGroupId groupId now = do
   findAllWithKV
@@ -254,6 +266,15 @@ updatePaymentFulfillmentStatus orderId paymentFulfillmentStatus domainEntityId d
     [ Se.Set BeamPO.paymentFulfillmentStatus paymentFulfillmentStatus,
       Se.Set BeamPO.domainEntityId domainEntityId,
       Se.Set BeamPO.domainTransactionId domainTransactionId,
+      Se.Set BeamPO.updatedAt now
+    ]
+    [Se.Is BeamPO.id $ Se.Eq $ getId orderId]
+
+updateDomainEntityId :: BeamFlow m r => Id DOrder.PaymentOrder -> Text -> m ()
+updateDomainEntityId orderId domainEntityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamPO.domainEntityId (Just domainEntityId),
       Se.Set BeamPO.updatedAt now
     ]
     [Se.Is BeamPO.id $ Se.Eq $ getId orderId]

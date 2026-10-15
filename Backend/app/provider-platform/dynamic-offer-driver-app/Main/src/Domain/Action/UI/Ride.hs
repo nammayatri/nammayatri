@@ -58,7 +58,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.TransporterConfig as DTC
-import Domain.Types.Trip (isInterCityTrip, isRideOtpTrip)
+import Domain.Types.Trip (isInterCityTrip, isRentalTrip, isRideOtpTrip)
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified EulerHS.Language as L
@@ -423,23 +423,40 @@ arrivedAtStop rideId pt = do
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
-  unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
-  case booking.stopLocationId of
-    Nothing -> throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)
-    Just nextStopId -> do
-      stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
-      let curPt = LatLong stopLoc.lat stopLoc.lon
-          distance = distanceBetweenInMeters pt curPt
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-      unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
-      -- Notify BEFORE the write: updateStopArrival nulls stopLocationId, so with the
-      -- old order a failed on_update made the driver's retry throw "No stop present"
-      -- forever and the customer never learned the stop was reached.
-      BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
-      QBooking.updateStopArrival booking.id
-      pure Success
+  let ensureDriverAt stopLocId = do
+        stopLoc <- runInReplica $ QLoc.findById stopLocId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
+        let distance = distanceBetweenInMeters pt (LatLong stopLoc.lat stopLoc.lon)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+        unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
+  mbPendingBookedStop <- if isRentalTrip booking.tripCategory && ride.hasStops == Just True then findPendingBookedStop else pure Nothing
+  case mbPendingBookedStop of
+    -- Rentals have no per-stop waiting: arriving at a booked stop also departs it, so the driver moves straight to the next one.
+    Just (stopLM, mbStopInfo) -> do
+      when (isNothing mbStopInfo) $ do
+        ensureDriverAt stopLM.locationId
+        void $ stopAction rideId pt stopLM.locationId ARRIVE
+      stopAction rideId pt stopLM.locationId DEPART
+    Nothing -> do
+      unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
+      case booking.stopLocationId of
+        Nothing -> throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)
+        Just nextStopId -> do
+          ensureDriverAt nextStopId
+          -- Notify BEFORE the write: updateStopArrival nulls stopLocationId, so with the
+          -- old order a failed on_update made the driver's retry throw "No stop present"
+          -- forever and the customer never learned the stop was reached.
+          BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
+          QBooking.updateStopArrival booking.id
+          pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS
+
+    findPendingBookedStop = do
+      stopsLM <- QLM.getLatestStopsByEntityId rideId.getId
+      stopsInfo <- QSI.findAllByRideId rideId
+      let stopInfoOf lm = find (\stopInfo -> stopInfo.stopLocId == lm.locationId) stopsInfo
+          isDeparted lm = maybe False (isJust . (.waitingTimeEnd)) (stopInfoOf lm)
+      pure $ (\lm -> (lm, stopInfoOf lm)) <$> find (not . isDeparted) stopsLM
 
 stopAction :: Id DRide.Ride -> LatLong -> Id DLoc.Location -> StopAction -> Flow APISuccess
 stopAction rideId pt stopLocId action = do

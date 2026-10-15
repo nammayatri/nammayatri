@@ -344,13 +344,21 @@ arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatin
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
 
 arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
-arrivedAtStop (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtStop rideId req
+arrivedAtStop (_, _, _) rideId req = withFlowHandlerAPI . withStopLock rideId $ DRide.arrivedAtStop rideId req
 
 arrivedStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Id DL.Location -> LatLong -> FlowHandler APISuccess
-arrivedStop (_, _, _) rideId stopId req = withFlowHandlerAPI $ DRide.stopAction rideId req stopId DRide.ARRIVE
+arrivedStop (_, _, _) rideId stopId req = withFlowHandlerAPI . withStopLock rideId $ DRide.stopAction rideId req stopId DRide.ARRIVE
 
 departedStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Id DL.Location -> LatLong -> FlowHandler APISuccess
-departedStop (_, _, _) rideId stopId req = withFlowHandlerAPI $ DRide.stopAction rideId req stopId DRide.DEPART
+departedStop (_, _, _) rideId stopId req = withFlowHandlerAPI . withStopLock rideId $ DRide.stopAction rideId req stopId DRide.DEPART
+
+-- One stop update per ride at a time: concurrent taps would otherwise both see a stop as unreached and record it twice.
+withStopLock :: Id Ride.Ride -> Flow APISuccess -> Flow APISuccess
+withStopLock rideId action = do
+  let lockKey = "RideStopUpdate:RideId:" <> rideId.getId
+  isLocked <- Redis.tryLockRedis lockKey 30
+  unless isLocked $ throwError (InvalidRequest "Stop update already in progress for this ride")
+  finally action (Redis.unlockRedis lockKey)
 
 uploadOdometerReading :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> DRide.UploadOdometerReq -> FlowHandler DRide.UploadOdometerResp
 uploadOdometerReading (_, _, cityId) rideId req = withFlowHandlerAPI $ DRide.uploadOdometerReading cityId rideId req

@@ -1245,7 +1245,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
-  void $ withTryCatch "rideCompleted:captureBookingDeposit" $ BookingDeposit.captureBookingDeposit booking
+  -- A completed ride returns the deposit; only a fee-bearing cancellation captures it.
+  void $ withTryCatch "rideCompleted:refundBookingDeposit" $ BookingDeposit.refundBookingDeposit booking
   fork "Increment completed count + evaluate rewards" $ do
     void $ CCR.incrementCompletedCount booking.riderId 1
     RewardsConsumer.evaluateRewardsIfEnabled

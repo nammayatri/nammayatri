@@ -92,6 +92,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.JourneyLeg as QJL
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.OfferEntity as QOfferEntity
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.QueriesExtra.RideLite as QRideLite
@@ -214,9 +215,6 @@ data RideRefundInfo = RideRefundInfo
     arnGeneratedAt :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-getBookingApiDeposit :: BookingAPIEntity -> Maybe HighPrecMoney
-getBookingApiDeposit BookingAPIEntity {bookingDepositAmount} = bookingDepositAmount
 
 data BookingCancellationReasonAPIEntity = BookingCancellationReasonAPIEntity
   { additionalInfo :: Maybe Text,
@@ -515,7 +513,11 @@ lookupFleetEngineEnabled merchantId merchantOpCityId = do
 mkBookingAPIDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => Booking -> Id Person.Person -> m BookingAPIDetails
 mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
   OneWayDetails details -> return $ OneWayAPIDetails . mkOneWayAPIDetails $ details
-  RentalDetails details -> return $ RentalAPIDetails . mkRentalAPIDetails $ details
+  RentalDetails details -> do
+    -- Only the stops picked at search: destinations reached and replaced mid-ride also end up in the
+    -- booking's stops, without a stop record, and would read as not yet visited.
+    searchStopsCount <- length <$> QLM.getLatestStopsByEntityId booking.transactionId
+    return $ RentalAPIDetails . mkRentalAPIDetails $ keepSearchStops searchStopsCount details
   DriverOfferDetails details -> return $ DriverOfferAPIDetails . mkOneWayAPIDetails $ details
   OneWaySpecialZoneDetails details -> return $ OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
   InterCityDetails details -> return $ InterCityAPIDetails . mkInterCityAPIDetails $ details
@@ -532,6 +534,7 @@ mkBookingAPIDetails booking requesterId = case booking.bookingDetails of
           isUpgradedToCab = isUpgradedToCab,
           stops = map SLoc.makeLocationAPIEntity stops
         }
+    keepSearchStops n RentalBookingDetails {..} = RentalBookingDetails {stops = take n stops, ..}
     mkRentalAPIDetails RentalBookingDetails {..} =
       RentalBookingAPIDetails
         { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation,

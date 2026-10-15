@@ -203,9 +203,9 @@ hasExactlyOneRide booking =
 -- | Calculate total amount from actual ride computed prices
 calculateTotalFromRides :: [DBAPI.BookingAPIEntity] -> Maybe HighPrecMoney
 calculateTotalFromRides bookings =
+  -- The booking deposit is refunded when the ride completes, so it is not part of what the rider paid.
   let amounts = mapMaybe getRideComputedPrice bookings
-      fees = mapMaybe (fmap toRational . (.bookingDepositAmount)) bookings
-   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts + sum fees)
+   in if null amounts then Nothing else Just $ HighPrecMoney (sum amounts)
   where
     getRideComputedPrice :: DBAPI.BookingAPIEntity -> Maybe Rational
     getRideComputedPrice booking = do
