@@ -408,6 +408,14 @@ updateDistance driverId distance googleSnapCalls osrmSnapsCalls selfTunedCount i
     )
     [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
 
+updateTrueTravelledDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> HighPrecMeters -> Bool -> m ()
+updateTrueTravelledDistance driverId trueTravelledDistance isDistanceCalculationFailed = do
+  now <- getCurrentTime
+  unless isDistanceCalculationFailed $
+    updateWithKV
+      [Se.Set BeamR.trueTravelledDistance (Just trueTravelledDistance), Se.Set BeamR.updatedAt now]
+      [Se.And [Se.Is BeamR.driverId (Se.Eq $ getId driverId), Se.Is BeamR.status (Se.Eq Ride.INPROGRESS)]]
+
 updateDistanceToPickup :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> HighPrecMeters -> Bool -> m ()
 updateDistanceToPickup rideId distanceToPickup isPickupDistanceCalculationFailed = do
   now <- getCurrentTime

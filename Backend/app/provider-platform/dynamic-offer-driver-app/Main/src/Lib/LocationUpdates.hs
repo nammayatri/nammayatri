@@ -330,6 +330,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo
       )
       (RD.mkRecomputeConfig transportConfig).cfgRecomputeIfPickupDropNotOutsideOfThreshold
+      (\driverId dist isDistCalcFailed -> QRide.updateTrueTravelledDistance driverId dist isDistCalcFailed)
       snapToRoad'
       ( \driverId -> do
           person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
@@ -373,6 +374,7 @@ buildRidePickupInterpolationHandler _merchantId merchantOpCityId rideId isEndRid
       (\_mbDriverId _mbPreviousRouteSegment -> const (pure Nothing)) -- no toll detection on the pickup leg
       (\_driverId estimatedDistance estimatedTollInfo -> pure (estimatedDistance, estimatedTollInfo))
       False -- getRecomputeIfPickupDropNotOutsideOfThreshold
+      (\_driverId _dist _isDistCalcFailed -> pure ())
       snapToRoad'
       (\_driverId -> pure ())
       (\_driverId -> pure ())
