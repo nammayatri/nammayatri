@@ -1775,7 +1775,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
             serviceTierType = reqJourneyLeg.finalBoardedBusServiceTierType,
             busConductorId = reqJourneyLeg.busConductorId,
             busDriverId = reqJourneyLeg.busDriverId,
-            busTagNumber = reqJourneyLeg.busTagNumber
+            busTagNumber = reqJourneyLeg.busTagNumber,
+            busVehicleVariant = reqJourneyLeg.busVehicleVariant
           }
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
@@ -2173,6 +2174,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
       let mbServiceTier = mbVehicleMetadata <&> (\(_, metadata) -> metadata.serviceType)
           mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
           mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
+          mbVehicleVariant = mbVehicleMetadata >>= (\(_, metadata) -> metadata.vehicleVariant)
       -- Get service tier name from FRFS config (shared)
       frfsServiceTierName <- case mbServiceTier of
         Just serviceTier -> do
@@ -2209,6 +2211,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                     isActiveTrip = detail.is_active_trip,
                     serviceSubTypes = mbServiceSubTypes,
                     vehicleTagNumber = mbVehicleTagNumber,
+                    vehicleVariant = mbVehicleVariant,
                     availableSeats = Nothing,
                     seatSelectionType = seatSelType
                   }
@@ -2239,6 +2242,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                       currentTripId = fallbackTripId,
                       serviceSubTypes = mbServiceSubTypes,
                       vehicleTagNumber = mbVehicleTagNumber,
+                      vehicleVariant = mbVehicleVariant,
                       seatSelectionType = seatSelType,
                       isUpcomingTrip = Nothing,
                       previousRouteId = Nothing
@@ -2267,6 +2271,7 @@ postMultimodalRouteServiceability (mbPersonId, merchantId) mbAllPassingRoutes re
                       currentTripId = mbCurrentTripId,
                       serviceSubTypes = mbServiceSubTypes,
                       vehicleTagNumber = mbVehicleTagNumber,
+                      vehicleVariant = mbVehicleVariant,
                       seatSelectionType = seatSelType,
                       isUpcomingTrip = singleBus.busData.is_upcoming_trip,
                       previousRouteId = singleBus.busData.previous_route_id
@@ -3095,7 +3100,8 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
             DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
             DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
             DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
-            DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType
+            DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType,
+            DJourneyLeg.busVehicleVariant = vehicleLiveRouteInfo.busVehicleVariant
           }
       -- Sync journey leg data to frfs_ticket_booking for analytics
       fork "FRFS Analytics: sync vehicle data to ticket booking" $

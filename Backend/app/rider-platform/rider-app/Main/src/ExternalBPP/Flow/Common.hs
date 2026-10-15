@@ -385,6 +385,7 @@ buildInterchangeJourney searchReq integratedBPPConfig transitRoute legsRouteDeta
                 busConductorId = Nothing,
                 busDriverId = Nothing,
                 busTagNumber = Nothing,
+                busVehicleVariant = Nothing,
                 providerRouteId = Nothing
               }
       QLocation.createMany [fromLocation, toLocation]

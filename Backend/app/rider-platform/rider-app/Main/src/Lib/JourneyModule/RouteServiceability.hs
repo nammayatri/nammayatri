@@ -182,6 +182,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                   let frfsServiceTier = lookup serviceTier frfsTierMap'
                   let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
                       mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
+                      mbVehicleVariant = mbVehicleMetadata >>= (\(_, metadata) -> metadata.vehicleVariant)
 
                   let combinedTripId = do
                         waybill <- detail.waybill_no
@@ -218,6 +219,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             isActiveTrip = detail.is_active_trip,
                             serviceSubTypes = mbServiceSubTypes,
                             vehicleTagNumber = mbVehicleTagNumber,
+                            vehicleVariant = mbVehicleVariant,
                             availableSeats = availableSeatsCount,
                             seatSelectionType = seatSelType
                           }
@@ -242,6 +244,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                     let frfsServiceTier = lookup serviceTier frfsTierMap'
                     let mbServiceSubTypes = mbVehicleMetadata >>= (\(_, metadata) -> metadata.serviceSubTypes)
                         mbVehicleTagNumber = mbVehicleMetadata >>= (\(_, metadata) -> metadata.busTagNumber)
+                        mbVehicleVariant = mbVehicleMetadata >>= (\(_, metadata) -> metadata.vehicleVariant)
 
                     logDebug $ "getLiveVehicles: vehicle=" <> bus.vehicleNumber <> ", routeId=" <> bus.busData.route_id <> ", serviceTier=" <> show serviceTier <> ", frfsName=" <> show ((.shortName) <$> frfsServiceTier) <> ", position=(" <> show bus.busData.latitude <> "," <> show bus.busData.longitude <> ")" <> ", timestamp=" <> show bus.busData.timestamp <> ", eta=" <> show bus.busData.eta_data <> ", routeState=" <> show bus.busData.route_state <> ", routeNumber=" <> show bus.busData.route_number
                     enrichedEta <-
@@ -266,6 +269,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           currentTripId = Map.lookup bus.vehicleNumber activeTripIdByVehicleNo',
                           serviceSubTypes = mbServiceSubTypes,
                           vehicleTagNumber = mbVehicleTagNumber,
+                          vehicleVariant = mbVehicleVariant,
                           seatSelectionType = seatSelType,
                           isUpcomingTrip = bus.busData.is_upcoming_trip,
                           previousRouteId = bus.busData.previous_route_id
