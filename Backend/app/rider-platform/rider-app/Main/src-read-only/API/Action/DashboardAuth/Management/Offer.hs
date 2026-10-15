@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.Offer
 where
 
 import qualified API.Types.RiderPlatform.Management.Offer
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Offer
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -54,6 +55,7 @@ postOfferCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Ke
 postOfferCreate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/OFFER/POST_OFFER_CREATE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Offer.postOfferCreate a4 a3 a1
     )
@@ -62,17 +64,24 @@ postOfferUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Ke
 postOfferUpdate a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/OFFER/POST_OFFER_UPDATE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Offer.postOfferUpdate a5 a4 a2 a1
     )
 
 getOfferList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler [API.Types.RiderPlatform.Management.Offer.OfferResp])
-getOfferList a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Offer.getOfferList a3 a2
+getOfferList a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Offer.getOfferList a3 a2
+    )
 
 postOfferToggle :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.Offer.Offer -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postOfferToggle a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/OFFER/POST_OFFER_TOGGLE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Offer.postOfferToggle a4 a3 a1
     )
@@ -81,9 +90,15 @@ postOfferValidateEligibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 postOfferValidateEligibility a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/OFFER/POST_OFFER_VALIDATE_ELIGIBILITY" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Offer.postOfferValidateEligibility a4 a3 a1
     )
 
 getOfferEligibilitySchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.RiderPlatform.Management.Offer.OfferEligibilitySchemaResp)
-getOfferEligibilitySchema a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Offer.getOfferEligibilitySchema a3 a2
+getOfferEligibilitySchema a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Offer.getOfferEligibilitySchema a3 a2
+    )

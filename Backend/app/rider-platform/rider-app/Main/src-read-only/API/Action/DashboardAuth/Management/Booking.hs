@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.Booking
 where
 
 import qualified API.Types.RiderPlatform.Management.Booking
+import qualified Control.Lens
 import qualified Dashboard.Common.Booking
 import qualified Domain.Action.Dashboard.Booking
 import qualified Domain.Types.Merchant
@@ -40,6 +41,7 @@ postBookingCancelAllStuck :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merc
 postBookingCancelAllStuck a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/BOOKING/POST_BOOKING_CANCEL_ALL_STUCK" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Booking.postBookingCancelAllStuck a4 a3 a1
     )
@@ -48,6 +50,7 @@ postBookingSyncMultiple :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postBookingSyncMultiple a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/BOOKING/POST_BOOKING_SYNC_MULTIPLE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Booking.postBookingSyncMultiple a4 a3 a1
     )

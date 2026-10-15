@@ -8,11 +8,13 @@ module API.Action.DashboardAuth.Management.SosMedia
 where
 
 import qualified API.Types.RiderPlatform.Management.SosMedia
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.SosMedia
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -29,4 +31,9 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getSosMediaSosMedia merchantId city
 
 getSosMediaSosMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.FlowHandler [API.Types.RiderPlatform.Management.SosMedia.GetSosMediaResponse])
-getSosMediaSosMedia a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.SosMedia.getSosMediaSosMedia a4 a3 a1
+getSosMediaSosMedia a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.SosMedia.getSosMediaSosMedia a4 a3 a1
+    )

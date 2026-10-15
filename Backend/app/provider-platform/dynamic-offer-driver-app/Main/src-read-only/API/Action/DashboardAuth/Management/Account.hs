@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.Management.Account
 where
 
 import qualified API.Types.ProviderPlatform.Management.Account
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.DashboardAuth.Management.Account
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -50,12 +52,18 @@ handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Typ
 handler merchantId city = getAccountFetchUnverifiedAccounts merchantId city :<|> postAccountVerifyAccount merchantId city :<|> putAccountUpdateRole merchantId city
 
 getAccountFetchUnverifiedAccounts :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Account.FleetOwnerStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Account.UnverifiedAccountsResp)
-getAccountFetchUnverifiedAccounts a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.DashboardAuth.Management.Account.getAccountFetchUnverifiedAccounts a9 a8 a7 a6 a5 a4 a3 a2 a1
+getAccountFetchUnverifiedAccounts a9 a8 a7 a6 a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a7 a9 a8
+        Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.DashboardAuth.Management.Account.getAccountFetchUnverifiedAccounts a9 a8 a7 a6 a5 a4 a3 a2 a1
+    )
 
 postAccountVerifyAccount :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Management.Account.VerifyAccountReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postAccountVerifyAccount a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/ACCOUNT/POST_ACCOUNT_VERIFY_ACCOUNT" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Management.Account.postAccountVerifyAccount a4 a3 a2 a1
     )
@@ -64,6 +72,7 @@ putAccountUpdateRole :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 putAccountUpdateRole a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/ACCOUNT/PUT_ACCOUNT_UPDATE_ROLE" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.DashboardAuth.Management.Account.putAccountUpdateRole a5 a4 a3 a2 a1
     )

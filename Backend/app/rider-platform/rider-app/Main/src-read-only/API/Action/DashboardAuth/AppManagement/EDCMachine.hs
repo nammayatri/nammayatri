@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.AppManagement.EDCMachine
 where
 
 import qualified API.Types.Dashboard.AppManagement.EDCMachine
+import qualified Control.Lens
 import qualified Data.Bool
 import qualified Domain.Action.Dashboard.AppManagement.EDCMachine
 import qualified "this" Domain.Types.EDCMachineMapping
@@ -42,17 +43,24 @@ assignEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> K
 assignEDCMachine a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EDC_MACHINE/ASSIGN_EDC_MACHINE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EDCMachine.assignEDCMachine a4 a3 a1
     )
 
 listEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Data.Bool.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Environment.FlowHandler API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineMappingListResp)
-listEDCMachine a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EDCMachine.listEDCMachine a5 a4 a2 a1
+listEDCMachine a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EDCMachine.listEDCMachine a5 a4 a2 a1
+    )
 
 updateEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Types.Id.Id Domain.Types.EDCMachineMapping.EDCMachineMapping -> API.Types.Dashboard.AppManagement.EDCMachine.UpdateEDCMachineReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 updateEDCMachine a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EDC_MACHINE/UPDATE_EDC_MACHINE" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.AppManagement.EDCMachine.updateEDCMachine a5 a4 a2 a1
     )
@@ -61,6 +69,7 @@ deleteEDCMachine :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> K
 deleteEDCMachine a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/EDC_MACHINE/DELETE_EDC_MACHINE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.EDCMachine.deleteEDCMachine a4 a3 a1
     )

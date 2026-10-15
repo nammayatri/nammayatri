@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.System
 where
 
 import qualified API.Types.RiderPlatform.Management.System
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.System
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -33,6 +34,7 @@ postSystemRunQuery :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
 postSystemRunQuery a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/SYSTEM/POST_SYSTEM_RUN_QUERY" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.System.postSystemRunQuery a4 a3 a1
     )

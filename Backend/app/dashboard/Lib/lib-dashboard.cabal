@@ -131,6 +131,7 @@ library
       Tools.Auth.Dashboard
       Tools.Auth.DashboardLoginFlow
       Tools.Auth.Merchant
+      Tools.Auth.Scope
       Tools.Auth.Verify
       Tools.Client
       Tools.DashboardTopic

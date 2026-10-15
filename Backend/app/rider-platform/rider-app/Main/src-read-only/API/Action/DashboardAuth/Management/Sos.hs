@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.Sos
 where
 
 import qualified API.Types.RiderPlatform.Management.Sos
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Sos
 import qualified Domain.Types.Merchant
@@ -46,6 +47,7 @@ postSosCallExternalSOS :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchan
 postSosCallExternalSOS a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/SOS/POST_SOS_CALL_EXTERNAL_SOS" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Sos.postSosCallExternalSOS a5 a4 a2 a1
     )
@@ -54,6 +56,7 @@ postSosErssStatusUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mercha
 postSosErssStatusUpdate a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/SOS/POST_SOS_ERSS_STATUS_UPDATE" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Sos.postSosErssStatusUpdate a4 a3 a1
     )

@@ -8,11 +8,13 @@ module API.Action.DashboardAuth.Fleet.RegistrationV2
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2
 import qualified Domain.Action.DashboardAuth.Fleet.RegistrationV2
 import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.PaymentMode
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -79,6 +81,7 @@ postRegistrationV2Register :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Mer
 postRegistrationV2Register a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.postRegistrationV2Register a4 a3 a2 a1
     )
@@ -87,20 +90,32 @@ postRegistrationV2RegisterBankAccountLink :: (Kernel.Types.Id.ShortId Domain.Typ
 postRegistrationV2RegisterBankAccountLink a6 a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a4 a6 a5
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER_BANK_ACCOUNT_LINK" a4 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Fleet.RegistrationV2.postRegistrationV2RegisterBankAccountLink a6 a5 a3 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a4)
     )
 
 getRegistrationV2RegisterBankAccountStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetBankAccountResp)
-getRegistrationV2RegisterBankAccountStatus a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Fleet.RegistrationV2.getRegistrationV2RegisterBankAccountStatus a5 a4 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)
+getRegistrationV2RegisterBankAccountStatus a5 a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
+        Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Fleet.RegistrationV2.getRegistrationV2RegisterBankAccountStatus a5 a4 a2 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a3)
+    )
 
 putRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerUpdateLanguageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 putRegistrationV2ProfileLanguage a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_FLEET/REGISTRATION_V2/PUT_REGISTRATION_V2_PROFILE_LANGUAGE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.DashboardAuth.Fleet.RegistrationV2.putRegistrationV2ProfileLanguage a4 a3 a2 a1
     )
 
 getRegistrationV2ProfileLanguage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler API.Types.ProviderPlatform.Fleet.RegistrationV2.FleetOwnerLanguageRes)
-getRegistrationV2ProfileLanguage a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Fleet.RegistrationV2.getRegistrationV2ProfileLanguage a3 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a1)
+getRegistrationV2ProfileLanguage a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a1 a3 a2
+        Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Fleet.RegistrationV2.getRegistrationV2ProfileLanguage a3 a2 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a1)
+    )
