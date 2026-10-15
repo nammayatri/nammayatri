@@ -8,6 +8,7 @@ import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Pass
+import qualified Domain.Types.PassOverrideConfig
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
@@ -27,12 +28,14 @@ data PurchasedPassPayment = PurchasedPassPayment
     benefitType :: Kernel.Prelude.Maybe Domain.Types.PurchasedPass.BenefitType,
     benefitValue :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     clientSdkVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     endDate :: Data.Time.Calendar.Day,
     id :: Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment,
     isDashboard :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    overrideBenefitConfigJson :: Kernel.Prelude.Maybe Domain.Types.PassOverrideConfig.OverrideBenefitConfig,
     passCode :: Kernel.Prelude.Text,
     passEnum :: Kernel.Prelude.Maybe Domain.Types.PassType.PassEnum,
     passId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Pass.Pass),
@@ -42,8 +45,11 @@ data PurchasedPassPayment = PurchasedPassPayment
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     profilePicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     purchasedPassId :: Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass,
+    referenceFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    sourceStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDate :: Data.Time.Calendar.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
+    validityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

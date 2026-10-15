@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PassOverrideConfig
 import qualified Domain.Types.PassType
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
@@ -39,13 +40,15 @@ data Pass = Pass
     minTripsAllowingOverlap :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     order :: Kernel.Prelude.Int,
-    overrideBenefitConfigJson :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    overrideBenefitConfigJson :: Kernel.Prelude.Maybe Domain.Types.PassOverrideConfig.OverrideBenefitConfig,
     passConfig :: Kernel.Prelude.Maybe Domain.Types.Pass.PassConfig,
     passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
     pricingTiers :: Kernel.Prelude.Maybe Data.Aeson.Value,
     purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
     redeemEligibilityJsonLogic :: [Data.Aeson.Value],
     timeOverlappingFrfsBookingsLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    validityDaysRecommendations :: Kernel.Prelude.Maybe [Kernel.Prelude.Int],
+    variableValidityDays :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationValidity :: Kernel.Types.Common.Seconds,
     createdAt :: Kernel.Prelude.UTCTime,

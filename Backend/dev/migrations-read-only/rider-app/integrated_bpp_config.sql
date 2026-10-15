@@ -55,3 +55,9 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN operator_config jsonb ;
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN ondc_registry_public_key text ;
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN ondc_encryption_private_key text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN auto_enforce_frfs_pass boolean  default true;
