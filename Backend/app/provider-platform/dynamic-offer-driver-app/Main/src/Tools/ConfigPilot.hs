@@ -43,7 +43,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.Overlay (OverlayDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
-import Storage.ConfigPilot.Config.RideFeedbackConfig (RideFeedbackConfigDimensions (..))
+import qualified Storage.ConfigPilot.Config.RideFeedbackConfig as RFC
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TagActionNotificationConfig (TagActionNotificationConfigDimensions (..))
@@ -99,7 +99,8 @@ returnConfigs logicDomain merchantOpCityId merchantId opCity = do
       dvsCfg <- getConfigList (DocumentVerificationStagesConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, applicableTo = Nothing, documentCategory = Nothing})
       return LYT.TableDataResp {configs = map A.toJSON dvsCfg}
     LYT.DRIVER_CONFIG LYT.RideFeedbackConfig -> do
-      rfCfg <- getConfigList (RideFeedbackConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, enabled = Nothing, questionKey = Nothing})
+      -- Uncached, so the dashboard sees a question it just created whichever pod serves the read.
+      rfCfg <- RFC.findAllServedUncached merchantOpCityId
       return LYT.TableDataResp {configs = map A.toJSON rfCfg}
     LYT.DRIVER_CONFIG LYT.GoHomeConfig -> do
       goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing

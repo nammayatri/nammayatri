@@ -43,6 +43,7 @@ validateConfig cityConfigs c =
       translations "title" (Just c.title),
       translations "description" c.description,
       translations "acknowledgement" c.acknowledgement,
+      check (maybe True validIconUrl c.iconUrl) "iconUrl must be an https:// URL",
       optionErrors,
       inputConfigErrors,
       check (maybe True (not . null) c.stages) "stages must not be empty",
@@ -74,6 +75,7 @@ validateConfig cityConfigs c =
           <> check (length (nub optionKeys) == length optionKeys) "option keys must be unique"
           <> check (all validKey optionKeys) "option keys must be 2-64 characters of A-Z, 0-9 and _, starting with a letter"
           <> check (all (maybe True (\x -> x >= 0 && x <= 1) . (.score)) options) "option scores must be between 0 and 1"
+          <> concat [check (validIconUrl url) ("option " <> o.key <> " iconUrl must be an https:// URL") | o <- options, Just url <- [o.iconUrl]]
           <> concatMap (\o -> translations ("option " <> o.key <> " label") (Just o.label)) options
           <> concat
             [ check (next /= c.questionKey) ("option " <> o.key <> " cannot open its own question")
@@ -167,6 +169,10 @@ validKey k =
   T.length k >= 2 && T.length k <= 64
     && maybe False (isAsciiUpper . fst) (T.uncons k)
     && T.all (\ch -> isAsciiUpper ch || isDigit ch || ch == '_') k
+
+-- | Images are loaded by the rider app, which only fetches https.
+validIconUrl :: Text -> Bool
+validIconUrl url = "https://" `T.isPrefixOf` url && T.length url > 8 && not (T.any (== ' ') url)
 
 textParam :: Text -> Maybe A.Value -> Maybe Text
 textParam key = \case

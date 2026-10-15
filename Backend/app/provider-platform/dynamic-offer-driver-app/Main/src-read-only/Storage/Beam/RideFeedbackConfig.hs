@@ -19,6 +19,7 @@ data RideFeedbackConfigT f = RideFeedbackConfigT
     description :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     displayTrigger :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     enabled :: (B.C f Kernel.Prelude.Bool),
+    iconUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     id :: (B.C f Kernel.Prelude.Text),
     inputConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     isFollowUpOnly :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
