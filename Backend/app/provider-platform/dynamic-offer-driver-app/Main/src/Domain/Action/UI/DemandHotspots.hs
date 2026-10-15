@@ -1,7 +1,8 @@
 module Domain.Action.UI.DemandHotspots
   ( getDriverDemandHotspots,
+    hotspotProduct,
     updateDemandHotspotsOnSearch,
-    updateDemandHotspotsOnBooking,
+    removeDemandHotspot,
     getActiveSearchLocations,
   )
 where
@@ -10,7 +11,7 @@ import API.Types.UI.DemandHotspots
 import Data.Aeson (withArray)
 import qualified Data.Aeson as Ae
 import qualified Data.Geohash as Geohash
-import Data.List (nub)
+import Data.List (groupBy, nub)
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Time as T
@@ -20,6 +21,7 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import Domain.Types.SearchRequest
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.Trip as Trip
 import Environment
 import EulerHS.Prelude hiding (foldr', id, length, map, mapM_, sum, whenJust)
 import GHC.Num.Integer (integerToInt)
@@ -39,35 +41,74 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- What it is:
--- Entire city is divided into geohashes, whenever we encounter a search, we increase the frequency and whenver a booking happens
--- we decrease the frequency, so hotpsots depics unserved searches in that geohash.
---
--- How it works:
+-- Entire city is divided into geohashes. A search adds a member and a ride start
+-- removes that same member, so hotspots depict searches that have not started.
 --
 -- Redis data structures we are using - set and sorted set
 -- Set - For storing all geohashes we have in a city
 -- Sorted Set - Storing searches categorised by cityId and geohash
 --
--- On Search - We add a uuid to the sorted set of that city and geohash
--- On Booking - We reomve the uuid with highest score from sorted set of that city and geohash
+-- On Search - We add the search to the sorted set of that city and geohash
+-- On Ride start - We remove that search. Booking no longer removes it.
+--
+-- Member encoding:
+--   new writes: ["id6", lat, lon, product, isScheduled]
+--   older writes still in Redis: ["id6", lat, lon]
+-- Removal tries the 5-element member, then the 3-element one. zRem matches the exact JSON.
 
-newtype HotspotObject = HotspotObject (Text, Double, Double) -- (first 6 chars of SearchRequestId, Lat, Long)
+data HotspotObject = HotspotObject
+  { hotspotSearchId :: Text,
+    hotspotLat :: Double,
+    hotspotLon :: Double,
+    hotspotProduct :: Maybe Text,
+    hotspotIsScheduled :: Bool
+  }
   deriving (Show)
 
 instance ToJSON HotspotObject where
-  toJSON (HotspotObject (name, lat, long)) =
-    toJSON [toJSON name, toJSON lat, toJSON long]
+  toJSON HotspotObject {..} =
+    toJSON [toJSON hotspotSearchId, toJSON hotspotLat, toJSON hotspotLon, toJSON (fromMaybe "Unknown" hotspotProduct), toJSON hotspotIsScheduled]
+
+-- Same bytes as members written before product and isScheduled were stored.
+newtype LegacyHotspotObject = LegacyHotspotObject HotspotObject
+
+instance ToJSON LegacyHotspotObject where
+  toJSON (LegacyHotspotObject HotspotObject {..}) =
+    toJSON [toJSON hotspotSearchId, toJSON hotspotLat, toJSON hotspotLon]
 
 instance FromJSON HotspotObject where
   parseJSON = withArray "HotspotObject" $ \vec ->
-    if V.length vec == 3
-      then
+    case V.length vec of
+      3 ->
         HotspotObject
-          <$> ( (,,) <$> parseJSON (vec V.! 0)
-                  <*> parseJSON (vec V.! 1)
-                  <*> parseJSON (vec V.! 2)
-              )
-      else fail "Expected an array of exactly three elements"
+          <$> parseJSON (vec V.! 0)
+          <*> parseJSON (vec V.! 1)
+          <*> parseJSON (vec V.! 2)
+          <*> pure Nothing
+          <*> pure False
+      5 ->
+        HotspotObject
+          <$> parseJSON (vec V.! 0)
+          <*> parseJSON (vec V.! 1)
+          <*> parseJSON (vec V.! 2)
+          <*> (Just <$> parseJSON (vec V.! 3))
+          <*> parseJSON (vec V.! 4)
+      _ -> fail "Expected an array of three or five elements"
+
+-- One search is one product. Offer modes (RideOtp vs DynamicOffer) are not stored.
+hotspotProduct :: [Trip.TripCategory] -> Text
+hotspotProduct categories = case categories of
+  Trip.OneWay Trip.MeterRide : _ -> "MeterRide"
+  Trip.OneWay _ : _ -> "OneWay"
+  Trip.Rental _ : _ -> "Rental"
+  Trip.RideShare _ : _ -> "RideShare"
+  Trip.InterCity _ _ : _ -> "InterCity"
+  Trip.CrossCity _ _ : _ -> "CrossCity"
+  Trip.Ambulance _ : _ -> "Ambulance"
+  Trip.Delivery _ : _ -> "Delivery"
+  Trip.EasyBooking _ : _ -> "EasyBooking"
+  Trip.IntercityRental _ _ : _ -> "IntercityRental"
+  [] -> "Unknown"
 
 getDriverDemandHotspots ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -109,12 +150,12 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
                 expiryTimeForSSObjects = T.addUTCTime (- 1 * 60 * fromIntegral configs.analysisDurationMinutes) now
             mapM_ (\(key, _) -> Redis.zRemRangeByScore key 0 (utcToMilliseconds expiryTimeForSSObjects)) allSortedSetsKeysWithGeohash
             freqWithSortedSetKey :: [(Int, Text)] <- mapM getFrequencyWithSSKey allSortedSetsKeysWithGeohash
-            finalResults :: [(Int, Maps.LatLong)] <- mapM calculateResult $ take configs.noOfGeohashesToReturn $ sortBy (flip compare) $ filter (\(freq, _) -> freq > 0) freqWithSortedSetKey
+            finalResults <- mapM calculateResult $ take configs.noOfGeohashesToReturn $ sortBy (flip compare) $ filter (\(freq, _) -> freq > 0) freqWithSortedSetKey
             let resp =
                   GetDemandHotspotsResp
                     { createdAt = now,
                       expiryAt = T.addUTCTime (60 * fromIntegral configs.resultDurationMinutes) now,
-                      hotspotsDetails = map (uncurry HotspotsDetails) finalResults
+                      hotspotsDetails = finalResults
                     }
             Redis.setExp cachedResultKey resp (60 * configs.resultDurationMinutes)
             return resp
@@ -128,13 +169,32 @@ getDriverDemandHotspots (_, _, merchantOpCityId) = do
     calculateResult (_, sortedSetKey) = do
       res <- Redis.zRange sortedSetKey 0 1000000
       members :: [HotspotObject] <- mapM (\a -> fromMaybeM (HedisDecodeError $ cs a) . Ae.decode $ cs a) res
-      let freq = fromIntegral $ length members
-          (sumLat, sumLong) = foldr' (\(HotspotObject (_, lat, long)) (accLat, accLong) -> (accLat + lat, accLong + long)) (0, 0) members
-          avgLatLong = LatLong (sumLat / freq) (sumLong / freq)
-      return (floor freq, avgLatLong)
+      let freq = length members
+          (sumLat, sumLong) = foldr' (\member (accLat, accLong) -> (accLat + member.hotspotLat, accLong + member.hotspotLon)) (0, 0) members
+          avgLatLong = LatLong (sumLat / fromIntegral freq) (sumLong / fromIntegral freq)
+      return
+        HotspotsDetails
+          { frequency = freq,
+            location = avgLatLong,
+            categories = hotspotCategories members
+          }
 
-updateDemandHotspotsOnSearch :: Id SearchRequest -> Id MerchantOperatingCity -> TransporterConfig -> Maps.LatLong -> Flow ()
-updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latlong = do
+    hotspotCategories members =
+      let sorted = sortBy (\a b -> compare (categoryKey a) (categoryKey b)) members
+          grouped = groupBy (\a b -> categoryKey a == categoryKey b) sorted
+       in map toCategory grouped
+      where
+        categoryKey member = (fromMaybe "Unknown" member.hotspotProduct, member.hotspotIsScheduled)
+        toCategory (member : rest) =
+          HotspotCategoryCount
+            { tripOption = fromMaybe "Unknown" member.hotspotProduct,
+              isScheduled = member.hotspotIsScheduled,
+              frequency = 1 + length rest
+            }
+        toCategory [] = HotspotCategoryCount {tripOption = "Unknown", isScheduled = False, frequency = 0}
+
+updateDemandHotspotsOnSearch :: Id SearchRequest -> Id MerchantOperatingCity -> TransporterConfig -> Maps.LatLong -> Text -> Bool -> Flow ()
+updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latlong product isScheduled = do
   now <- getCurrentTime
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
@@ -144,13 +204,15 @@ updateDemandHotspotsOnSearch searchReqId merchantOpCityId transporterConfig latl
           let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
               geohashSetKey = mkGeohashSetKey merchantOpCityId.getId
               expirationSecond = 60 * configs.analysisDurationMinutes
-              object = HotspotObject (T.take 6 searchReqId.getId, latlong.lat, latlong.lon)
+              object = mkHotspotObject searchReqId latlong (Just product) isScheduled
           Redis.zAdd sortedSetKey [(utcToMilliseconds now, object)]
           Redis.expire sortedSetKey expirationSecond
           Redis.sAddExp geohashSetKey [geohash] expirationSecond
     _ -> logDebug "Demand hotspots not enabled or configs not set on search"
 
-updateDemandHotspotsOnBooking ::
+-- Removes one search from its geohash. Pass the product stored at search time so the
+-- 5-element member matches. Nothing only removes a member written before the product was stored.
+removeDemandHotspot ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
@@ -158,21 +220,36 @@ updateDemandHotspotsOnBooking ::
   Id MerchantOperatingCity ->
   TransporterConfig ->
   Maps.LatLong ->
+  Maybe Text ->
+  Bool ->
   m ()
-updateDemandHotspotsOnBooking searchReqId merchantOpCityId transporterConfig latlong = do
+removeDemandHotspot searchReqId merchantOpCityId transporterConfig latlong mbProduct isScheduled = do
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
       when configs.enableDemandHotspots $ do
         let mbGeohash = Geohash.encode configs.precisionOfGeohash (latlong.lat, latlong.lon)
         whenJust mbGeohash $ \geohash -> do
           let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
-              object = HotspotObject (T.take 6 searchReqId.getId, latlong.lat, latlong.lon)
-          res <- Redis.zRem' sortedSetKey [object]
-          logDebug $ "deleted members count " <> show res
-    _ -> logDebug "Demand hotspots not enabled or configs not set on booking"
+              object = mkHotspotObject searchReqId latlong mbProduct isScheduled
+          removed <- forM mbProduct $ \_ -> Redis.zRem' sortedSetKey [object]
+          -- A search written before this change is still the 3-element array.
+          legacyRemoved <- Redis.zRem' sortedSetKey [LegacyHotspotObject object]
+          logDebug $ "deleted demand hotspot members " <> show removed <> " legacy " <> show legacyRemoved
+    _ -> logDebug "Demand hotspots not enabled or configs not set"
 
+mkHotspotObject :: Id SearchRequest -> Maps.LatLong -> Maybe Text -> Bool -> HotspotObject
+mkHotspotObject searchReqId latlong product isScheduled =
+  HotspotObject
+    { hotspotSearchId = T.take 6 searchReqId.getId,
+      hotspotLat = latlong.lat,
+      hotspotLon = latlong.lon,
+      hotspotProduct = product,
+      hotspotIsScheduled = isScheduled
+    }
+
+-- CK2: cached aggregate now includes the product breakdown. DH:CK still holds the old shape until it expires.
 mkDemandHotspotCachedKey :: Text -> Text
-mkDemandHotspotCachedKey opCityId = "DH:CK:cityId:" <> opCityId
+mkDemandHotspotCachedKey opCityId = "DH:CK2:cityId:" <> opCityId
 
 mkGeohashSetKey :: Text -> Text
 mkGeohashSetKey opCityId = "DH:GSK:cityId:" <> opCityId
@@ -204,7 +281,7 @@ getActiveSearchLocations merchantOpCityId center radiusMeters cutoffScore geohas
     processGeohash geohash = do
       let sortedSetKey = mkDemandHotspotSortedSetKey merchantOpCityId.getId (T.pack geohash)
       rawItems <- Redis.zRangeByScore sortedSetKey cutoffScore (1 / 0 :: Double)
-      pure $ mapMaybe (\r -> fmap (\(HotspotObject t) -> t) (Ae.decode $ cs r)) rawItems
+      pure $ mapMaybe (\r -> fmap (\member -> (member.hotspotSearchId, member.hotspotLat, member.hotspotLon)) (Ae.decode $ cs r)) rawItems
 
     isWithinRadius cl r (_, slat, slon) =
       highPrecMetersToMeters (distanceBetweenInMeters cl (Maps.LatLong slat slon)) <= fromIntegral r

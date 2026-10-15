@@ -2,6 +2,8 @@ imports:
   LatLong: Kernel.External.Maps.Types
   UTCTime: Kernel.Prelude
   Int: Kernel.Prelude
+  Text: Kernel.Prelude
+  Bool: Kernel.Prelude
 
 module: DemandHotspots
 types:
@@ -11,6 +13,11 @@ types:
     expiryAt: UTCTime
   HotspotsDetails:
     location: LatLong
+    frequency: Int
+    categories: [HotspotCategoryCount]
+  HotspotCategoryCount:
+    tripOption: Text
+    isScheduled: Bool
     frequency: Int
 
 apis:

@@ -45,6 +45,30 @@ data RideRelatedInfo = RideRelatedInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DemandHotspotsResp = DemandHotspotsResp
+  { createdAt :: Kernel.Prelude.UTCTime,
+    expiryAt :: Kernel.Prelude.UTCTime,
+    hotspotsDetails :: [DemandHotspotDetails]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DemandHotspotDetails = DemandHotspotDetails
+  { frequency :: Kernel.Prelude.Int,
+    location :: Kernel.External.Maps.Types.LatLong,
+    categories :: [DemandHotspotCategory]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DemandHotspotCategory = DemandHotspotCategory
+  { tripOption :: Kernel.Prelude.Text,
+    isScheduled :: Kernel.Prelude.Bool,
+    frequency :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data Status
   = ON_PICKUP
   | ON_RIDE
@@ -56,7 +80,9 @@ data Status
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("liveMap" :> GetLiveMapDriversHelper)
+type API = ("liveMap" :> (GetLiveMapDriversHelper :<|> GetDemandHotspots))
+
+type GetDemandHotspots = ("demandHotspots" :> Get ('[JSON]) DemandHotspotsResp)
 
 type GetLiveMapDrivers =
   ( "drivers" :> Capture "radius" Kernel.Types.Common.Meters :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
@@ -81,23 +107,29 @@ type GetLiveMapDriversHelper =
            [MapDriverInfoRes]
   )
 
-newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> EulerHS.Types.EulerClient [MapDriverInfoRes]}
+data LiveMapAPIs = LiveMapAPIs
+  { getLiveMapDrivers :: Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> EulerHS.Types.EulerClient [MapDriverInfoRes],
+    getDemandHotspots :: EulerHS.Types.EulerClient DemandHotspotsResp
+  }
 
 mkLiveMapAPIs :: (Client EulerHS.Types.EulerClient API -> LiveMapAPIs)
 mkLiveMapAPIs liveMapClient = (LiveMapAPIs {..})
   where
-    getLiveMapDrivers = liveMapClient
+    getLiveMapDrivers :<|> getDemandHotspots = liveMapClient
 
 data LiveMapUserActionType
   = GET_LIVE_MAP_DRIVERS
+  | GET_DEMAND_HOTSPOTS
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToSchema)
 
 instance ToJSON LiveMapUserActionType where
   toJSON GET_LIVE_MAP_DRIVERS = Data.Aeson.String "GET_LIVE_MAP_DRIVERS"
+  toJSON GET_DEMAND_HOTSPOTS = Data.Aeson.String "GET_DEMAND_HOTSPOTS"
 
 instance FromJSON LiveMapUserActionType where
   parseJSON (Data.Aeson.String "GET_LIVE_MAP_DRIVERS") = pure GET_LIVE_MAP_DRIVERS
-  parseJSON _ = fail "GET_LIVE_MAP_DRIVERS expected"
+  parseJSON (Data.Aeson.String "GET_DEMAND_HOTSPOTS") = pure GET_DEMAND_HOTSPOTS
+  parseJSON _ = fail "LiveMapUserActionType expected"
 
 $(Data.Singletons.TH.genSingletons [''LiveMapUserActionType])

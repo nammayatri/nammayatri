@@ -1,9 +1,11 @@
-module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers) where
+module Domain.Action.Dashboard.Fleet.LiveMap (getLiveMapDrivers, getDemandHotspots) where
 
 import qualified "this" API.Types.ProviderPlatform.Fleet.Driver as ATD
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
+import qualified API.Types.UI.DemandHotspots as UIHotspots
 import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)
+import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import Domain.Action.UI.Invoice (getSourceAndDestination, notAvailableText)
 import Domain.Action.UI.Person (getPersonNumber)
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
@@ -190,6 +192,40 @@ buildMapDriverInfo country (mbRideId, position, driverInformation) = do
           mobileNumber,
           rideRelatedInfo
         }
+
+getDemandHotspots ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow Common.DemandHotspotsResp
+getDemandHotspots merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found for merchant: " <> merchant.id.getId <> " and city: " <> show opCity)
+  resp <- DemandHotspots.getDriverDemandHotspots (Nothing, merchant.id, merchantOpCity.id)
+  pure $ toDashboardHotspots resp
+
+toDashboardHotspots :: UIHotspots.GetDemandHotspotsResp -> Common.DemandHotspotsResp
+toDashboardHotspots resp =
+  Common.DemandHotspotsResp
+    { createdAt = resp.createdAt,
+      expiryAt = resp.expiryAt,
+      hotspotsDetails = map toDashboardHotspot resp.hotspotsDetails
+    }
+
+toDashboardHotspot :: UIHotspots.HotspotsDetails -> Common.DemandHotspotDetails
+toDashboardHotspot details =
+  Common.DemandHotspotDetails
+    { frequency = details.frequency,
+      location = details.location,
+      categories = map toDashboardCategory details.categories
+    }
+
+toDashboardCategory :: UIHotspots.HotspotCategoryCount -> Common.DemandHotspotCategory
+toDashboardCategory category =
+  Common.DemandHotspotCategory
+    { tripOption = category.tripOption,
+      isScheduled = category.isScheduled,
+      frequency = category.frequency
+    }
 
 castStatus :: DDFS.DriverFlowStatus -> Common.Status
 castStatus = \case
