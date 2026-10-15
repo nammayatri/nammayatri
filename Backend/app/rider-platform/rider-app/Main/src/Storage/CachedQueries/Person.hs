@@ -16,6 +16,8 @@ module Storage.CachedQueries.Person
   ( findCityInfoById,
     updateCityInfoById,
     updateCustomerTags,
+    newUserTag,
+    removeNewUserTag,
     findPersonStatsById,
     clearPSCache,
     clearCityInfoCache,
@@ -33,6 +35,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 import qualified Lib.Yudhishthira.Types as YTypes
 import qualified Storage.Queries.Person as Queries
 import qualified Storage.Queries.PersonStats as QPS
@@ -68,6 +71,23 @@ updateCustomerTags tags personId = do
   let tagsNubbed = nub <$> tags
   Queries.updateCustomerTags tagsNubbed personId
   clearCityInfoCache personId
+
+-- | Added on account creation, removed once the person takes their first ride or ticket.
+newUserTag :: YTypes.TagNameValueExpiry
+newUserTag = YTypes.TagNameValueExpiry "NewUser#Yes"
+
+-- | Takes the person as already loaded by the caller to skip the DB read for the common
+--   (non-new) case; re-reads before writing so concurrent tag updates aren't clobbered.
+removeNewUserTag :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Person -> m ()
+removeNewUserTag person =
+  when (hasNewUserTag person.customerNammaTags) $ do
+    mbLatest <- Queries.findById person.id
+    whenJust mbLatest $ \latest ->
+      when (hasNewUserTag latest.customerNammaTags) $ do
+        updateCustomerTags (Just $ YUtils.removeTagName latest.customerNammaTags newUserTag) person.id
+        logInfo $ "Removed NewUser tag for personId: " <> person.id.getId
+  where
+    hasNewUserTag = maybe False (YUtils.elemTagName newUserTag)
 
 cachePersonCityInfo :: (CacheFlow m r, MonadFlow m) => PersonCityInformation -> m ()
 cachePersonCityInfo personCityInfo = do

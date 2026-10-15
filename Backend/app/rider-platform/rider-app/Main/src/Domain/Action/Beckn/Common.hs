@@ -1093,6 +1093,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     fork "event_tracking: first_ride_completed" $
       ET.trackEvent booking.merchantId booking.merchantOperatingCityId (ET.FirstRideCompleted (getId booking.riderId))
 
+  fork "remove new user namma tag" $
+    CQPerson.removeNewUserTag person
+
   when (riderConfig.enableRideEndOffers) $ do
     fork "computing offers namma tag" $
       addOffersNammaTags updRide person
