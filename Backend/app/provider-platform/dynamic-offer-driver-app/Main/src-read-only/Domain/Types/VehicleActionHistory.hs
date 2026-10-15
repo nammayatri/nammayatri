@@ -31,6 +31,6 @@ data VehicleActionHistory = VehicleActionHistory
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data VehicleActionType = DISPATCHER | BLOCKER deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data VehicleActionType = DISPATCHER | BLOCKER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''VehicleActionType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''VehicleActionType)

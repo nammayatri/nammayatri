@@ -482,7 +482,6 @@ data DemandHotspotsConfig = DemandHotspotsConfig
     noOfGeohashesToReturn :: Kernel.Prelude.Int,
     precisionOfGeohash :: Kernel.Prelude.Int,
     resultDurationMinutes :: Kernel.Prelude.Int,
-    -- Just True → write 5-element members; missing/False → legacy 3-element (safe for old pods).
     storeHotspotProductInMember :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
@@ -665,7 +664,12 @@ data ScheduledRideVisibilityRules = ScheduledRideVisibilityRules
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage {rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules, stage :: Kernel.Prelude.Text, untilRemainingMinutes :: Kernel.Prelude.Int, vehicleServiceTiers :: Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType]}
+data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage
+  { rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules,
+    stage :: Kernel.Prelude.Text,
+    untilRemainingMinutes :: Kernel.Prelude.Int,
+    vehicleServiceTiers :: Kernel.Prelude.Maybe [Domain.Types.Common.ServiceTierType]
+  }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}

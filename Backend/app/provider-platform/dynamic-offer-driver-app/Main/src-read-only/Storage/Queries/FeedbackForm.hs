@@ -26,12 +26,12 @@ createMany = traverse_ create
 
 findAllFeedbackByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
 findAllFeedbackByMerchantOpCityIdAndRating ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m ([Domain.Types.FeedbackForm.FeedbackForm]))
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> m [Domain.Types.FeedbackForm.FeedbackForm])
 findAllFeedbackByMerchantOpCityIdAndRating merchantOperatingCityId rating = do
   findAllWithKV
     [ Se.And

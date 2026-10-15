@@ -206,3 +206,7 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN do_no
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN allow_non_transport_vehicle boolean ;
+
+
+------- SQL updates -------
+

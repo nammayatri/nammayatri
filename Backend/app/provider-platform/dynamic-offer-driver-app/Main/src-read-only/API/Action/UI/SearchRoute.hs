@@ -26,9 +26,9 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "search" :> Capture "searchTryId" (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry) :> "route" :> ReqBody ('[JSON]) Kernel.External.Maps.GetRoutesReq
+  ( TokenAuth :> "search" :> Capture "searchTryId" (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry) :> "route" :> ReqBody '[JSON] Kernel.External.Maps.GetRoutesReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SearchRoute.SearchRouteResp
   )
 

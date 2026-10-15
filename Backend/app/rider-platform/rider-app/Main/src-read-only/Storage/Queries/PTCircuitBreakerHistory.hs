@@ -28,7 +28,7 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.PTCircuitBreakerHistory.PTCircuitBreakerHistory]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.PTCircuitBreakerHistory.PTCircuitBreakerHistory])
 findByMerchantOperatingCityId limit offset merchantOperatingCityId = do findAllWithOptionsDb [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]] (Se.Desc Beam.createdAt) limit offset
 
 findByPrimaryKey ::

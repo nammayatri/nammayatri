@@ -197,50 +197,50 @@ type GetRadarTicketsList =
            "stageName"
            Kernel.Prelude.Text
       :> QueryParam "reporterEmail" Kernel.Prelude.Text
-      :> Get ('[JSON]) RadarTicketListRes
+      :> Get '[JSON] RadarTicketListRes
   )
 
-type GetRadarTicketsSummary = ("summary" :> Get ('[JSON]) RadarSummaryRes)
+type GetRadarTicketsSummary = ("summary" :> Get '[JSON] RadarSummaryRes)
 
-type GetRadarTicketsReporters = ("reporters" :> Get ('[JSON]) RadarReportersRes)
+type GetRadarTicketsReporters = ("reporters" :> Get '[JSON] RadarReportersRes)
 
-type GetRadarTicketsTicket = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> Get ('[JSON]) RadarTicketDetailRes)
+type GetRadarTicketsTicket = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> Get '[JSON] RadarTicketDetailRes)
 
-type GetRadarTicketsTicketConversation = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "conversation" :> Get ('[JSON]) RadarConversationRes)
+type GetRadarTicketsTicketConversation = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "conversation" :> Get '[JSON] RadarConversationRes)
 
-type GetRadarTicketsTicketAttachment = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "attachment" :> Capture "attachmentId" Kernel.Prelude.Text :> Get ('[JSON]) RadarAttachmentUrlRes)
+type GetRadarTicketsTicketAttachment = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "attachment" :> Capture "attachmentId" Kernel.Prelude.Text :> Get '[JSON] RadarAttachmentUrlRes)
 
-type PostRadarTicketsTicketReply = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "reply" :> ReqBody ('[JSON]) RadarReplyReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostRadarTicketsTicketReply = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "reply" :> ReqBody '[JSON] RadarReplyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostRadarTicketsTicketReplyHelper = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "reply" :> ReqBody ('[JSON]) RadarReplyByUserReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostRadarTicketsTicketReplyHelper = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "reply" :> ReqBody '[JSON] RadarReplyByUserReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostRadarTicketsUpload = ("upload" :> ReqBody ('[JSON]) RadarUploadReq :> Post ('[JSON]) RadarUploadRes)
+type PostRadarTicketsUpload = ("upload" :> ReqBody '[JSON] RadarUploadReq :> Post '[JSON] RadarUploadRes)
 
-type PostRadarTicketsCreate = ("create" :> ReqBody ('[JSON]) RadarCreateTicketReq :> Post ('[JSON]) RadarCreateTicketRes)
+type PostRadarTicketsCreate = ("create" :> ReqBody '[JSON] RadarCreateTicketReq :> Post '[JSON] RadarCreateTicketRes)
 
-type PostRadarTicketsCreateHelper = ("create" :> ReqBody ('[JSON]) RadarCreateTicketByUserReq :> Post ('[JSON]) RadarCreateTicketRes)
+type PostRadarTicketsCreateHelper = ("create" :> ReqBody '[JSON] RadarCreateTicketByUserReq :> Post '[JSON] RadarCreateTicketRes)
 
 type PostRadarTicketsTicketUpdateStatus =
-  ( "ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "updateStatus" :> ReqBody ('[JSON]) RadarUpdateStatusReq
+  ( "ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "updateStatus" :> ReqBody '[JSON] RadarUpdateStatusReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type PostRadarTicketsTicketCsat = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "csat" :> ReqBody ('[JSON]) RadarCsatReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostRadarTicketsTicketCsat = ("ticket" :> Capture "ticketId" Kernel.Prelude.Text :> "csat" :> ReqBody '[JSON] RadarCsatReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data RadarTicketsAPIs = RadarTicketsAPIs
-  { getRadarTicketsList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient RadarTicketListRes),
-    getRadarTicketsSummary :: (EulerHS.Types.EulerClient RadarSummaryRes),
-    getRadarTicketsReporters :: (EulerHS.Types.EulerClient RadarReportersRes),
-    getRadarTicketsTicket :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarTicketDetailRes),
-    getRadarTicketsTicketConversation :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarConversationRes),
-    getRadarTicketsTicketAttachment :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarAttachmentUrlRes),
-    postRadarTicketsTicketReply :: (Kernel.Prelude.Text -> RadarReplyByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postRadarTicketsUpload :: (RadarUploadReq -> EulerHS.Types.EulerClient RadarUploadRes),
-    postRadarTicketsCreate :: (RadarCreateTicketByUserReq -> EulerHS.Types.EulerClient RadarCreateTicketRes),
-    postRadarTicketsTicketUpdateStatus :: (Kernel.Prelude.Text -> RadarUpdateStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postRadarTicketsTicketCsat :: (Kernel.Prelude.Text -> RadarCsatReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { getRadarTicketsList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarTicketListRes,
+    getRadarTicketsSummary :: EulerHS.Types.EulerClient RadarSummaryRes,
+    getRadarTicketsReporters :: EulerHS.Types.EulerClient RadarReportersRes,
+    getRadarTicketsTicket :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarTicketDetailRes,
+    getRadarTicketsTicketConversation :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarConversationRes,
+    getRadarTicketsTicketAttachment :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient RadarAttachmentUrlRes,
+    postRadarTicketsTicketReply :: Kernel.Prelude.Text -> RadarReplyByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postRadarTicketsUpload :: RadarUploadReq -> EulerHS.Types.EulerClient RadarUploadRes,
+    postRadarTicketsCreate :: RadarCreateTicketByUserReq -> EulerHS.Types.EulerClient RadarCreateTicketRes,
+    postRadarTicketsTicketUpdateStatus :: Kernel.Prelude.Text -> RadarUpdateStatusReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postRadarTicketsTicketCsat :: Kernel.Prelude.Text -> RadarCsatReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkRadarTicketsAPIs :: (Client EulerHS.Types.EulerClient API -> RadarTicketsAPIs)
@@ -263,4 +263,4 @@ data RadarTicketsUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''RadarTicketsUserActionType)])
+$(Data.Singletons.TH.genSingletons [''RadarTicketsUserActionType])

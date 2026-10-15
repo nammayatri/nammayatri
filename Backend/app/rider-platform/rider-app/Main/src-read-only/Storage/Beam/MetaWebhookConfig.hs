@@ -12,19 +12,19 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MetaWebhookConfigT f = MetaWebhookConfigT
-  { accessToken :: (B.C f Kernel.Prelude.Text),
-    apiVersion :: (B.C f Kernel.Prelude.Text),
-    appSecret :: (B.C f Kernel.Prelude.Text),
-    baseUrl :: (B.C f Kernel.Prelude.Text),
-    botConfig :: (B.C f Data.Aeson.Value),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    phoneNumberId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    verifyToken :: (B.C f Kernel.Prelude.Text)
+  { accessToken :: B.C f Kernel.Prelude.Text,
+    apiVersion :: B.C f Kernel.Prelude.Text,
+    appSecret :: B.C f Kernel.Prelude.Text,
+    baseUrl :: B.C f Kernel.Prelude.Text,
+    botConfig :: B.C f Data.Aeson.Value,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    phoneNumberId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    verifyToken :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table MetaWebhookConfigT where
 
 type MetaWebhookConfig = MetaWebhookConfigT Identity
 
-$(enableKVPG (''MetaWebhookConfigT) [('id)] [[('phoneNumberId)]])
+$(enableKVPG ''MetaWebhookConfigT ['id] [['phoneNumberId]])
 
-$(mkTableInstances (''MetaWebhookConfigT) "meta_config")
+$(mkTableInstances ''MetaWebhookConfigT "meta_config")

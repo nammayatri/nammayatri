@@ -72,16 +72,16 @@ data RideFeedbackResponseItem = RideFeedbackResponseItem
 
 type API = ("rideFeedback" :> (GetRideFeedbackInspectPreview :<|> GetRideFeedbackInspectResponses :<|> GetRideFeedbackMeta))
 
-type GetRideFeedbackInspectPreview = ("inspect" :> Capture "rideOrBookingId" Data.Text.Text :> "preview" :> Get ('[JSON]) RideFeedbackPreviewRes)
+type GetRideFeedbackInspectPreview = ("inspect" :> Capture "rideOrBookingId" Data.Text.Text :> "preview" :> Get '[JSON] RideFeedbackPreviewRes)
 
-type GetRideFeedbackInspectResponses = ("inspect" :> Capture "rideOrBookingId" Data.Text.Text :> "responses" :> Get ('[JSON]) [RideFeedbackResponseItem])
+type GetRideFeedbackInspectResponses = ("inspect" :> Capture "rideOrBookingId" Data.Text.Text :> "responses" :> Get '[JSON] [RideFeedbackResponseItem])
 
-type GetRideFeedbackMeta = ("meta" :> Get ('[JSON]) RideFeedbackMetaRes)
+type GetRideFeedbackMeta = ("meta" :> Get '[JSON] RideFeedbackMetaRes)
 
 data RideFeedbackAPIs = RideFeedbackAPIs
-  { getRideFeedbackInspectPreview :: (Data.Text.Text -> EulerHS.Types.EulerClient RideFeedbackPreviewRes),
-    getRideFeedbackInspectResponses :: (Data.Text.Text -> EulerHS.Types.EulerClient [RideFeedbackResponseItem]),
-    getRideFeedbackMeta :: (EulerHS.Types.EulerClient RideFeedbackMetaRes)
+  { getRideFeedbackInspectPreview :: Data.Text.Text -> EulerHS.Types.EulerClient RideFeedbackPreviewRes,
+    getRideFeedbackInspectResponses :: Data.Text.Text -> EulerHS.Types.EulerClient [RideFeedbackResponseItem],
+    getRideFeedbackMeta :: EulerHS.Types.EulerClient RideFeedbackMetaRes
   }
 
 mkRideFeedbackAPIs :: (Client EulerHS.Types.EulerClient API -> RideFeedbackAPIs)
@@ -96,4 +96,4 @@ data RideFeedbackUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''RideFeedbackUserActionType)])
+$(Data.Singletons.TH.genSingletons [''RideFeedbackUserActionType])

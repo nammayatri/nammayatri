@@ -26,9 +26,9 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "support" :> "bot" :> "conversation" :> ReqBody ('[JSON]) API.Types.UI.SupportBot.SupportBotConversationReq
+  ( TokenAuth :> "support" :> "bot" :> "conversation" :> ReqBody '[JSON] API.Types.UI.SupportBot.SupportBotConversationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Data.Aeson.Value
       :<|> TokenAuth
       :> "support"
@@ -37,7 +37,7 @@ type API =
       :> Capture "conversationId" Data.Text.Text
       :> "end"
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

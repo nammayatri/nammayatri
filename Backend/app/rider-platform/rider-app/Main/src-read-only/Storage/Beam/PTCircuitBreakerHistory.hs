@@ -12,17 +12,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PTCircuitBreakerHistoryT f = PTCircuitBreakerHistoryT
-  { apiType :: (B.C f Domain.Types.PTCircuitBreakerHistory.APIType),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    failureCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    newState :: (B.C f Domain.Types.PTCircuitBreakerHistory.CircuitState),
-    previousState :: (B.C f Domain.Types.PTCircuitBreakerHistory.CircuitState),
-    ptMode :: (B.C f Domain.Types.PTCircuitBreakerHistory.PTMode),
-    reason :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { apiType :: B.C f Domain.Types.PTCircuitBreakerHistory.APIType,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    failureCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    newState :: B.C f Domain.Types.PTCircuitBreakerHistory.CircuitState,
+    previousState :: B.C f Domain.Types.PTCircuitBreakerHistory.CircuitState,
+    ptMode :: B.C f Domain.Types.PTCircuitBreakerHistory.PTMode,
+    reason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -32,6 +32,6 @@ instance B.Table PTCircuitBreakerHistoryT where
 
 type PTCircuitBreakerHistory = PTCircuitBreakerHistoryT Identity
 
-$(enableKVPG (''PTCircuitBreakerHistoryT) [('id)] [])
+$(enableKVPG ''PTCircuitBreakerHistoryT ['id] [])
 
-$(mkTableInstances (''PTCircuitBreakerHistoryT) "pt_circuit_breaker_history")
+$(mkTableInstances ''PTCircuitBreakerHistoryT "pt_circuit_breaker_history")

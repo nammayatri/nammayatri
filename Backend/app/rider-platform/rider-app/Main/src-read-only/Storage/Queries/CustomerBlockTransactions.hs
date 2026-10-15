@@ -21,7 +21,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.CustomerBlockTransactions.CustomerBlockTransactions] -> m ())
 createMany = traverse_ create
 
-findByCustomerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.CustomerBlockTransactions.CustomerBlockTransactions]))
+findByCustomerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.CustomerBlockTransactions.CustomerBlockTransactions])
 findByCustomerId customerId = do findAllWithKV [Se.Is Beam.customerId $ Se.Eq (Kernel.Types.Id.getId customerId)]
 
 findByPrimaryKey ::

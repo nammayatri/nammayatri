@@ -12,23 +12,23 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TDSDistributionBatchT f = TDSDistributionBatchT
-  { completedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    confirmedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    confirmedById :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    confirmedByName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    financialYear :: (B.C f Kernel.Prelude.Text),
-    folderName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    quarter :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.TDSDistributionBatch.TDSDistributionBatchStatus),
-    totalFiles :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    uploadedById :: (B.C f Kernel.Prelude.Text),
-    uploadedByName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    validatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
+  { completedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    confirmedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    confirmedById :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    confirmedByName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    financialYear :: B.C f Kernel.Prelude.Text,
+    folderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    quarter :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.TDSDistributionBatch.TDSDistributionBatchStatus,
+    totalFiles :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    uploadedById :: B.C f Kernel.Prelude.Text,
+    uploadedByName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    validatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +38,6 @@ instance B.Table TDSDistributionBatchT where
 
 type TDSDistributionBatch = TDSDistributionBatchT Identity
 
-$(enableKVPG (''TDSDistributionBatchT) [('id)] [])
+$(enableKVPG ''TDSDistributionBatchT ['id] [])
 
-$(mkTableInstances (''TDSDistributionBatchT) "tds_distribution_batch")
+$(mkTableInstances ''TDSDistributionBatchT "tds_distribution_batch")

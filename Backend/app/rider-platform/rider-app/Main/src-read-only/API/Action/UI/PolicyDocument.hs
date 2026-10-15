@@ -24,18 +24,18 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "policy" :> "latest" :> Get ('[JSON]) API.Types.UI.PolicyDocument.PolicyLatestResp :<|> TokenAuth :> "policy" :> "list"
+  ( TokenAuth :> "policy" :> "latest" :> Get '[JSON] API.Types.UI.PolicyDocument.PolicyLatestResp :<|> TokenAuth :> "policy" :> "list"
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PolicyDocument.PolicyListResp
       :<|> TokenAuth
       :> "policy"
       :> "accept"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PolicyDocument.PolicyAcceptReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

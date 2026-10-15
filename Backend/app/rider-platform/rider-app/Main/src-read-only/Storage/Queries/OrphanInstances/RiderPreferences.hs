@@ -16,7 +16,6 @@ import qualified Storage.Beam.RiderPreferences as Beam
 
 instance FromTType' Beam.RiderPreferences Domain.Types.RiderPreferences.RiderPreferences where
   fromTType' (Beam.RiderPreferencesT {..}) = do
-    preferenceData' <- Kernel.Utils.JSON.valueToMaybe preferenceData & fromMaybeM (InternalError $ "Failed to decode preferenceData for RiderPreferences id=" <> id)
     pure $
       Just
         Domain.Types.RiderPreferences.RiderPreferences
@@ -24,7 +23,7 @@ instance FromTType' Beam.RiderPreferences Domain.Types.RiderPreferences.RiderPre
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
-            preferenceData = preferenceData',
+            preferenceData = Kernel.Utils.JSON.valueToMaybe preferenceData >>= Just,
             preferenceType = preferenceType,
             riderId = Kernel.Types.Id.Id riderId,
             updatedAt = updatedAt

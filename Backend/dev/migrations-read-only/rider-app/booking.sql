@@ -606,3 +606,7 @@ ALTER TABLE atlas_app.booking ADD COLUMN superseded_by_booking_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN better_driver_abort_radius_meters integer ;
+
+
+------- SQL updates -------
+

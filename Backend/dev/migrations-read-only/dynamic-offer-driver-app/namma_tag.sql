@@ -49,3 +49,8 @@ ALTER TABLE atlas_driver_offer_bpp.namma_tag ALTER COLUMN validity TYPE integer;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

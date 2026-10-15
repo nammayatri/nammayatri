@@ -14,17 +14,17 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSCancellationConfigT f = FRFSCancellationConfigT
-  { cancellationChargeType :: (B.C f Domain.Types.FRFSCancellationConfig.CancellationChargeType),
-    cancellationChargeValue :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    id :: (B.C f Kernel.Prelude.Text),
-    maxMinutesBeforeDeparture :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    minMinutesBeforeDeparture :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleCategory :: (B.C f BecknV2.FRFS.Enums.VehicleCategory)
+  { cancellationChargeType :: B.C f Domain.Types.FRFSCancellationConfig.CancellationChargeType,
+    cancellationChargeValue :: B.C f Kernel.Types.Common.HighPrecMoney,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f Kernel.Types.Common.Currency,
+    id :: B.C f Kernel.Prelude.Text,
+    maxMinutesBeforeDeparture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    minMinutesBeforeDeparture :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table FRFSCancellationConfigT where
 
 type FRFSCancellationConfig = FRFSCancellationConfigT Identity
 
-$(enableKVPG (''FRFSCancellationConfigT) [('id)] [[('vehicleCategory)]])
+$(enableKVPG ''FRFSCancellationConfigT ['id] [['vehicleCategory]])
 
-$(mkTableInstances (''FRFSCancellationConfigT) "frfs_cancellation_config")
+$(mkTableInstances ''FRFSCancellationConfigT "frfs_cancellation_config")

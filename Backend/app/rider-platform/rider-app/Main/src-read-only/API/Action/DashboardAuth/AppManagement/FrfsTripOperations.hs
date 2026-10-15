@@ -9,8 +9,10 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.FrfsTripOperations
 import qualified "this" API.Types.UI.FRFSTicketService
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.AppManagement.FrfsTripOperations
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -26,14 +28,14 @@ type API = ("FrfsFleetOperator" :> (PostFrfsFleetOperatorCurrentOperation :<|> P
 
 type PostFrfsFleetOperatorCurrentOperation =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_APP_MANAGEMENT/FRFS_TRIP_OPERATIONS/POST_FRFS_FLEET_OPERATOR_CURRENT_OPERATION"
       :> API.Types.Dashboard.AppManagement.FrfsTripOperations.PostFrfsFleetOperatorCurrentOperation
   )
 
 type PostFrfsFleetOperatorTripAction =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_APP_MANAGEMENT/FRFS_TRIP_OPERATIONS/POST_FRFS_FLEET_OPERATOR_TRIP_ACTION"
       :> API.Types.Dashboard.AppManagement.FrfsTripOperations.PostFrfsFleetOperatorTripAction
   )
@@ -45,6 +47,7 @@ postFrfsFleetOperatorCurrentOperation :: (Kernel.Types.Id.ShortId Domain.Types.M
 postFrfsFleetOperatorCurrentOperation a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/FRFS_TRIP_OPERATIONS/POST_FRFS_FLEET_OPERATOR_CURRENT_OPERATION" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.FrfsTripOperations.postFrfsFleetOperatorCurrentOperation a4 a3 a1
     )
@@ -53,6 +56,7 @@ postFrfsFleetOperatorTripAction :: (Kernel.Types.Id.ShortId Domain.Types.Merchan
 postFrfsFleetOperatorTripAction a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_APP_MANAGEMENT/FRFS_TRIP_OPERATIONS/POST_FRFS_FLEET_OPERATOR_TRIP_ACTION" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.FrfsTripOperations.postFrfsFleetOperatorTripAction a4 a3 a1
     )

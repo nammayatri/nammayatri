@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FareAlertSubscriptionT f = FareAlertSubscriptionT
-  { alertType :: (B.C f Domain.Types.FareAlertSubscription.FareAlertType),
-    email :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    subscribedBy :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { alertType :: B.C f Domain.Types.FareAlertSubscription.FareAlertType,
+    email :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    subscribedBy :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table FareAlertSubscriptionT where
 
 type FareAlertSubscription = FareAlertSubscriptionT Identity
 
-$(enableKVPG (''FareAlertSubscriptionT) [('id)] [])
+$(enableKVPG ''FareAlertSubscriptionT ['id] [])
 
-$(mkTableInstances (''FareAlertSubscriptionT) "fare_alert_subscription")
+$(mkTableInstances ''FareAlertSubscriptionT "fare_alert_subscription")

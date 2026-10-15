@@ -30,9 +30,7 @@ type API =
       :> QueryParam
            "enabled"
            Kernel.Prelude.Bool
-      :> QueryParam
-           "fleetType"
-           Domain.Types.FleetOwnerInformation.FleetType
+      :> QueryParam "fleetType" Domain.Types.FleetOwnerInformation.FleetType
       :> QueryParam
            "fromDate"
            Kernel.Prelude.UTCTime

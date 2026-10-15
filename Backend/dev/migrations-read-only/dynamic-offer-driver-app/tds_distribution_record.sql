@@ -44,3 +44,8 @@ ALTER TABLE atlas_driver_offer_bpp.tds_distribution_record ADD COLUMN attempt_co
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

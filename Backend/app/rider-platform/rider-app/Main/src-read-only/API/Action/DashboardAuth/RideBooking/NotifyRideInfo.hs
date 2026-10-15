@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.RideBooking.NotifyRideInfo
 where
 
 import qualified API.Types.Dashboard.RideBooking.NotifyRideInfo
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideBooking.NotifyRideInfo
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
@@ -39,6 +40,7 @@ postNotifyRideInfoNotifyRideInfo :: (Kernel.Types.Id.ShortId Domain.Types.Mercha
 postNotifyRideInfoNotifyRideInfo a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND "RIDER_RIDE_BOOKING/NOTIFY_RIDE_INFO/POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO" a3 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideBooking.NotifyRideInfo.postNotifyRideInfoNotifyRideInfo a5 a4 a2 a1
     )

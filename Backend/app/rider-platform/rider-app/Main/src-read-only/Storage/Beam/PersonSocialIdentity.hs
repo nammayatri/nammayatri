@@ -12,20 +12,20 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PersonSocialIdentityT f = PersonSocialIdentityT
-  { appleRefreshToken :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    clientId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    email :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isPrivateEmail :: (B.C f Kernel.Prelude.Bool),
-    issuer :: (B.C f Kernel.Prelude.Text),
-    lastLoginAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    personId :: (B.C f Kernel.Prelude.Text),
-    provider :: (B.C f Domain.Types.PersonSocialIdentity.SocialLoginProvider),
-    providerSubject :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    validTill :: (B.C f Kernel.Prelude.UTCTime)
+  { appleRefreshToken :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    email :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    isPrivateEmail :: B.C f Kernel.Prelude.Bool,
+    issuer :: B.C f Kernel.Prelude.Text,
+    lastLoginAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    personId :: B.C f Kernel.Prelude.Text,
+    provider :: B.C f Domain.Types.PersonSocialIdentity.SocialLoginProvider,
+    providerSubject :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validTill :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table PersonSocialIdentityT where
 
 type PersonSocialIdentity = PersonSocialIdentityT Identity
 
-$(enableKVPG (''PersonSocialIdentityT) [('id)] [[('personId)], [('providerSubject)]])
+$(enableKVPG ''PersonSocialIdentityT ['id] [['personId], ['providerSubject]])
 
-$(mkTableInstances (''PersonSocialIdentityT) "person_social_identity")
+$(mkTableInstances ''PersonSocialIdentityT "person_social_identity")

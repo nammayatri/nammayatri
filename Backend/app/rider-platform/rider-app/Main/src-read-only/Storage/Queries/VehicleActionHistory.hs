@@ -23,7 +23,7 @@ createMany = traverse_ create
 
 findAllByDispatcherIdAndAction ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.VehicleActionHistory.VehicleActionType -> m ([Domain.Types.VehicleActionHistory.VehicleActionHistory]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.VehicleActionHistory.VehicleActionType -> m [Domain.Types.VehicleActionHistory.VehicleActionHistory])
 findAllByDispatcherIdAndAction limit offset dispatcherId action = do
   findAllWithOptionsDb
     [ Se.And

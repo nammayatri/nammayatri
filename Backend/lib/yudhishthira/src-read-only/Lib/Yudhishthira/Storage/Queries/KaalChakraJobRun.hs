@@ -13,7 +13,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun as Beam
 import Lib.Yudhishthira.Storage.Queries.KaalChakraJobRunExtra as ReExport
-import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.Common
 import qualified Lib.Yudhishthira.Types.KaalChakraJobRun
 import qualified Sequelize as Se
 
@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRun] -> m ())
 createMany = traverse_ create
 
-findAllByEventId :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Yudhishthira.Types.Event -> m ([Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRun]))
+findAllByEventId :: (Lib.Yudhishthira.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Yudhishthira.Types.Common.Event -> m [Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRun])
 findAllByEventId eventId = do findAllWithKV [Se.Is Beam.eventId $ Se.Eq (Kernel.Types.Id.getId eventId)]
 
 findById ::

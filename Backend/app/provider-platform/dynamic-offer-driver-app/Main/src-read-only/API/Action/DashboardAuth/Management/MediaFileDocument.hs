@@ -8,8 +8,10 @@ module API.Action.DashboardAuth.Management.MediaFileDocument
 where
 
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Management.MediaFileDocument
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -59,6 +61,7 @@ postMediaFileDocumentUploadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchan
 postMediaFileDocumentUploadLink a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/POST_MEDIA_FILE_DOCUMENT_UPLOAD_LINK" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.MediaFileDocument.postMediaFileDocumentUploadLink a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
@@ -67,6 +70,7 @@ postMediaFileDocumentConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.M
 postMediaFileDocumentConfirm a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/POST_MEDIA_FILE_DOCUMENT_CONFIRM" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.MediaFileDocument.postMediaFileDocumentConfirm a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
@@ -75,9 +79,15 @@ postMediaFileDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Me
 postMediaFileDocumentDelete a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/MEDIA_FILE_DOCUMENT/POST_MEDIA_FILE_DOCUMENT_DELETE" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.MediaFileDocument.postMediaFileDocumentDelete a4 a3 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2) a1
     )
 
 getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
-getMediaFileDocumentDownloadLink a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.MediaFileDocument.getMediaFileDocumentDownloadLink a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+getMediaFileDocumentDownloadLink a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.MediaFileDocument.getMediaFileDocumentDownloadLink a4 a3 a1 (Tools.Auth.DashboardUserAuth.dashboardRequestorId a2)
+    )

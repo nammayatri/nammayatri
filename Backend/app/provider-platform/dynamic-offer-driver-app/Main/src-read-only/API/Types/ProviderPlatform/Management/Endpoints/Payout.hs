@@ -357,7 +357,7 @@ type GetPayoutPayoutHistory =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutHistoryRes
   )
 
@@ -380,7 +380,7 @@ type GetPayoutPayoutHistoryHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutHistoryRes
   )
 
@@ -389,7 +389,7 @@ type GetPayoutPayoutReferralHistory =
       :> QueryParam
            "customerPhoneNo"
            Kernel.Prelude.Text
-      :> QueryParam "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver))
+      :> QueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> QueryParam
            "driverPhoneCountryCode"
            Kernel.Prelude.Text
@@ -409,7 +409,7 @@ type GetPayoutPayoutReferralHistory =
            "to"
            Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            PayoutReferralHistoryRes
   )
 
@@ -418,7 +418,7 @@ type GetPayoutPayoutReferralHistoryHelper =
       :> QueryParam
            "customerPhoneNo"
            Kernel.Prelude.Text
-      :> QueryParam "driverId" ((Kernel.Types.Id.Id Dashboard.Common.Driver))
+      :> QueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> QueryParam
            "driverPhoneCountryCode"
            Kernel.Prelude.Text
@@ -441,16 +441,16 @@ type GetPayoutPayoutReferralHistoryHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            PayoutReferralHistoryRes
   )
 
-type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get ('[JSON]) Lib.Payment.API.Payout.Types.PayoutOrderResp)
+type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutOrderResp)
 
 type GetPayoutPayoutOrderHelper =
   ( "payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> QueryParam "requestorId" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutOrderResp
   )
 
@@ -489,7 +489,7 @@ type GetPayoutPayoutScheduledPayoutConfig =
            "timeOfDay"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            ScheduledPayoutConfigViewResp
   )
 
@@ -531,24 +531,24 @@ type GetPayoutPayoutScheduledPayoutConfigHelper =
            "requestorId"
            Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            ScheduledPayoutConfigViewResp
   )
 
-type GetPayoutPayout = ("payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> Get ('[JSON]) Lib.Payment.API.Payout.Types.PayoutRequestResp)
+type GetPayoutPayout = ("payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutRequestResp)
 
 type GetPayoutPayoutHelper =
   ( "payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest)
       :> QueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> Get ('[JSON]) Lib.Payment.API.Payout.Types.PayoutRequestResp
+      :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutRequestResp
   )
 
 type PostPayoutPayoutRetry =
   ( "payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> "retry"
       :> Post
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
@@ -557,15 +557,15 @@ type PostPayoutPayoutRetryHelper =
       :> QueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> Post ('[JSON]) Lib.Payment.API.Payout.Types.PayoutSuccess
+      :> Post '[JSON] Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutCancel =
   ( "payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> "cancel"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutCancelReq
-      :> Post ('[JSON]) Lib.Payment.API.Payout.Types.PayoutSuccess
+      :> Post '[JSON] Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutCancelHelper =
@@ -573,18 +573,18 @@ type PostPayoutPayoutCancelHelper =
       :> QueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.PayoutCancelReq
+      :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.PayoutCancelReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutCash =
   ( "payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> "cash"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutCashUpdateReq
-      :> Post ('[JSON]) Lib.Payment.API.Payout.Types.PayoutSuccess
+      :> Post '[JSON] Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutCashHelper =
@@ -592,58 +592,58 @@ type PostPayoutPayoutCashHelper =
       :> QueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.PayoutCashUpdateReq
+      :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.PayoutCashUpdateReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
-type PostPayoutPayoutVpaDelete = ("payout" :> "vpa" :> "delete" :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.DeleteVpaReq :> Post ('[JSON]) Lib.Payment.API.Payout.Types.PayoutSuccess)
+type PostPayoutPayoutVpaDelete = ("payout" :> "vpa" :> "delete" :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.DeleteVpaReq :> Post '[JSON] Lib.Payment.API.Payout.Types.PayoutSuccess)
 
 type PostPayoutPayoutVpaDeleteHelper =
-  ( "payout" :> "vpa" :> "delete" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.DeleteVpaReq
+  ( "payout" :> "vpa" :> "delete" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.DeleteVpaReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
-type PostPayoutPayoutVpaUpdate = ("payout" :> "vpa" :> "update" :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.UpdateVpaReq :> Post ('[JSON]) Lib.Payment.API.Payout.Types.PayoutSuccess)
+type PostPayoutPayoutVpaUpdate = ("payout" :> "vpa" :> "update" :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.UpdateVpaReq :> Post '[JSON] Lib.Payment.API.Payout.Types.PayoutSuccess)
 
 type PostPayoutPayoutVpaUpdateHelper =
-  ( "payout" :> "vpa" :> "update" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.UpdateVpaReq
+  ( "payout" :> "vpa" :> "update" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.UpdateVpaReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutVpaRefundRegistration =
-  ( "payout" :> "vpa" :> "refundRegistration" :> ReqBody ('[JSON]) Lib.Payment.API.Payout.Types.RefundRegAmountReq
+  ( "payout" :> "vpa" :> "refundRegistration" :> ReqBody '[JSON] Lib.Payment.API.Payout.Types.RefundRegAmountReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutVpaRefundRegistrationHelper =
   ( "payout" :> "vpa" :> "refundRegistration" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.RefundRegAmountReq
-      :> Post ('[JSON]) Lib.Payment.API.Payout.Types.PayoutSuccess
+      :> Post '[JSON] Lib.Payment.API.Payout.Types.PayoutSuccess
   )
 
 type PostPayoutPayoutScheduledPayoutConfigUpsert =
-  ( "payout" :> "scheduledPayoutConfig" :> "upsert" :> ReqBody ('[JSON]) UpdateScheduledPayoutConfigReq
+  ( "payout" :> "scheduledPayoutConfig" :> "upsert" :> ReqBody '[JSON] UpdateScheduledPayoutConfigReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 type PostPayoutPayoutScheduledPayoutConfigUpsertHelper =
   ( "payout" :> "scheduledPayoutConfig" :> "upsert" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            UpdateScheduledPayoutConfigReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type GetPayoutAdhocLookup =
@@ -651,7 +651,7 @@ type GetPayoutAdhocLookup =
       :> QueryParam
            "personId"
            Kernel.Prelude.Text
-      :> Get ('[JSON]) AdhocPayoutLookupResp
+      :> Get '[JSON] AdhocPayoutLookupResp
   )
 
 type GetPayoutAdhocLookupHelper =
@@ -660,12 +660,12 @@ type GetPayoutAdhocLookupHelper =
            "personId"
            Kernel.Prelude.Text
       :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> Get ('[JSON]) AdhocPayoutLookupResp
+      :> Get '[JSON] AdhocPayoutLookupResp
   )
 
-type PostPayoutAdhocInitiate = ("adhoc" :> "initiate" :> ReqBody ('[JSON]) AdhocPayoutInitiateReq :> Post ('[JSON]) AdhocPayoutInitiateResp)
+type PostPayoutAdhocInitiate = ("adhoc" :> "initiate" :> ReqBody '[JSON] AdhocPayoutInitiateReq :> Post '[JSON] AdhocPayoutInitiateResp)
 
-type PostPayoutAdhocInitiateHelper = ("adhoc" :> "initiate" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) AdhocPayoutInitiateReq :> Post ('[JSON]) AdhocPayoutInitiateResp)
+type PostPayoutAdhocInitiateHelper = ("adhoc" :> "initiate" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] AdhocPayoutInitiateReq :> Post '[JSON] AdhocPayoutInitiateResp)
 
 type GetPayoutBatchList =
   ( "batch" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
@@ -683,7 +683,7 @@ type GetPayoutBatchList =
            "toDate"
            Data.Time.Day
       :> Get
-           ('[JSON])
+           '[JSON]
            PayoutBatchListRes
   )
 
@@ -708,20 +708,20 @@ type GetPayoutBatchListHelper =
            "toDate"
            Data.Time.Day
       :> Get
-           ('[JSON])
+           '[JSON]
            PayoutBatchListRes
   )
 
-type GetPayoutBatchOrders = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "orders" :> Get ('[JSON]) PayoutBatchOrdersRes)
+type GetPayoutBatchOrders = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "orders" :> Get '[JSON] PayoutBatchOrdersRes)
 
-type GetPayoutBatchOrdersHelper = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "orders" :> QueryParam "requestorId" Kernel.Prelude.Text :> Get ('[JSON]) PayoutBatchOrdersRes)
+type GetPayoutBatchOrdersHelper = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "orders" :> QueryParam "requestorId" Kernel.Prelude.Text :> Get '[JSON] PayoutBatchOrdersRes)
 
 type GetPayoutExcluded =
   ( "excluded" :> QueryParam "from" Data.Time.Day :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "to"
            Data.Time.Day
-      :> Get ('[JSON]) PayoutExcludedRes
+      :> Get '[JSON] PayoutExcludedRes
   )
 
 type GetPayoutExcludedHelper =
@@ -730,65 +730,65 @@ type GetPayoutExcludedHelper =
            "to"
            Data.Time.Day
       :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> Get ('[JSON]) PayoutExcludedRes
+      :> Get '[JSON] PayoutExcludedRes
   )
 
-type PostPayoutPayoutReleaseHold = ("payout" :> "releaseHold" :> ReqBody ('[JSON]) PayoutReleaseHoldReq :> Post ('[JSON]) PayoutReleaseHoldResp)
+type PostPayoutPayoutReleaseHold = ("payout" :> "releaseHold" :> ReqBody '[JSON] PayoutReleaseHoldReq :> Post '[JSON] PayoutReleaseHoldResp)
 
-type PostPayoutPayoutReleaseHoldHelper = ("payout" :> "releaseHold" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) PayoutReleaseHoldReq :> Post ('[JSON]) PayoutReleaseHoldResp)
+type PostPayoutPayoutReleaseHoldHelper = ("payout" :> "releaseHold" :> QueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] PayoutReleaseHoldReq :> Post '[JSON] PayoutReleaseHoldResp)
 
-type PostPayoutBatchRecheck = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "recheck" :> ReqBody ('[JSON]) PayoutBatchRecheckReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostPayoutBatchRecheck = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "recheck" :> ReqBody '[JSON] PayoutBatchRecheckReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostPayoutBatchRecheckHelper =
   ( "batch" :> Capture "batchId" Kernel.Prelude.Text :> "recheck" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            PayoutBatchRecheckReq
-      :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type GetPayoutTransferNeedsReview = ("transfer" :> "needsReview" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) TransferReviewListRes)
+type GetPayoutTransferNeedsReview = ("transfer" :> "needsReview" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] TransferReviewListRes)
 
 type GetPayoutTransferNeedsReviewHelper =
   ( "transfer" :> "needsReview" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> Get ('[JSON]) TransferReviewListRes
+      :> Get '[JSON] TransferReviewListRes
   )
 
-type PostPayoutTransferResolve = ("transfer" :> Capture "transferId" Kernel.Prelude.Text :> "resolve" :> ReqBody ('[JSON]) TransferResolveReq :> Post ('[JSON]) TransferResolveRes)
+type PostPayoutTransferResolve = ("transfer" :> Capture "transferId" Kernel.Prelude.Text :> "resolve" :> ReqBody '[JSON] TransferResolveReq :> Post '[JSON] TransferResolveRes)
 
 type PostPayoutTransferResolveHelper =
   ( "transfer" :> Capture "transferId" Kernel.Prelude.Text :> "resolve" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            TransferResolveReq
-      :> Post ('[JSON]) TransferResolveRes
+      :> Post '[JSON] TransferResolveRes
   )
 
 data PayoutAPIs = PayoutAPIs
-  { getPayoutPayoutHistory :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutHistoryRes),
-    getPayoutPayoutReferralHistory :: (Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe ((Kernel.Types.Id.Id Dashboard.Common.Driver)) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient PayoutReferralHistoryRes),
-    getPayoutPayoutOrder :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp),
-    getPayoutPayoutScheduledPayoutConfig :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient ScheduledPayoutConfigViewResp),
-    getPayoutPayout :: (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutRequestResp),
-    postPayoutPayoutRetry :: (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess),
-    postPayoutPayoutCancel :: (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Payment.API.Payout.Types.PayoutCancelReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess),
-    postPayoutPayoutCash :: (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Payment.API.Payout.Types.PayoutCashUpdateReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess),
-    postPayoutPayoutVpaDelete :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Payment.API.Payout.Types.DeleteVpaReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess),
-    postPayoutPayoutVpaUpdate :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Payment.API.Payout.Types.UpdateVpaReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess),
-    postPayoutPayoutVpaRefundRegistration :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Payment.API.Payout.Types.RefundRegAmountReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess),
-    postPayoutPayoutScheduledPayoutConfigUpsert :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> UpdateScheduledPayoutConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getPayoutAdhocLookup :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient AdhocPayoutLookupResp),
-    postPayoutAdhocInitiate :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> AdhocPayoutInitiateReq -> EulerHS.Types.EulerClient AdhocPayoutInitiateResp),
-    getPayoutBatchList :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchOrigin) -> Kernel.Prelude.Maybe (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchRail) -> Kernel.Prelude.Maybe (Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient PayoutBatchListRes),
-    getPayoutBatchOrders :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient PayoutBatchOrdersRes),
-    getPayoutExcluded :: (Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Day) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient PayoutExcludedRes),
-    postPayoutPayoutReleaseHold :: (Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> PayoutReleaseHoldReq -> EulerHS.Types.EulerClient PayoutReleaseHoldResp),
-    postPayoutBatchRecheck :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> PayoutBatchRecheckReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getPayoutTransferNeedsReview :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient TransferReviewListRes),
-    postPayoutTransferResolve :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> TransferResolveReq -> EulerHS.Types.EulerClient TransferResolveRes)
+  { getPayoutPayoutHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutHistoryRes,
+    getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
+    getPayoutPayoutOrder :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp,
+    getPayoutPayoutScheduledPayoutConfig :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ScheduledPayoutConfigViewResp,
+    getPayoutPayout :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutRequestResp,
+    postPayoutPayoutRetry :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
+    postPayoutPayoutCancel :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.PayoutCancelReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
+    postPayoutPayoutCash :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.PayoutCashUpdateReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
+    postPayoutPayoutVpaDelete :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.DeleteVpaReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
+    postPayoutPayoutVpaUpdate :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.UpdateVpaReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
+    postPayoutPayoutVpaRefundRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Payment.API.Payout.Types.RefundRegAmountReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
+    postPayoutPayoutScheduledPayoutConfigUpsert :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> UpdateScheduledPayoutConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getPayoutAdhocLookup :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AdhocPayoutLookupResp,
+    postPayoutAdhocInitiate :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> AdhocPayoutInitiateReq -> EulerHS.Types.EulerClient AdhocPayoutInitiateResp,
+    getPayoutBatchList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchOrigin -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchRail -> Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PayoutBatch.PayoutBatchStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient PayoutBatchListRes,
+    getPayoutBatchOrders :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutBatchOrdersRes,
+    getPayoutExcluded :: Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient PayoutExcludedRes,
+    postPayoutPayoutReleaseHold :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> PayoutReleaseHoldReq -> EulerHS.Types.EulerClient PayoutReleaseHoldResp,
+    postPayoutBatchRecheck :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> PayoutBatchRecheckReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getPayoutTransferNeedsReview :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TransferReviewListRes,
+    postPayoutTransferResolve :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> TransferResolveReq -> EulerHS.Types.EulerClient TransferResolveRes
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
@@ -821,8 +821,8 @@ data PayoutUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''PayoutConfigCommand))
+$(mkHttpInstancesForEnum ''PayoutConfigCommand)
 
-$(mkHttpInstancesForEnum (''ScheduledPayoutFrequency))
+$(mkHttpInstancesForEnum ''ScheduledPayoutFrequency)
 
-$(Data.Singletons.TH.genSingletons [(''PayoutUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PayoutUserActionType])

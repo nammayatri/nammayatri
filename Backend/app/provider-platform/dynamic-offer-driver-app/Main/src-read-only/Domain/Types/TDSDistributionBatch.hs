@@ -32,6 +32,6 @@ data TDSDistributionBatch = TDSDistributionBatch
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data TDSDistributionBatchStatus = DRAFT | VALIDATED | SENDING | COMPLETED | CANCELLED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data TDSDistributionBatchStatus = DRAFT | VALIDATED | SENDING | COMPLETED | CANCELLED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''TDSDistributionBatchStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TDSDistributionBatchStatus)

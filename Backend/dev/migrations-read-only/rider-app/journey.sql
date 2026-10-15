@@ -560,3 +560,8 @@ ALTER TABLE atlas_app.journey ADD COLUMN skip_create_order_call boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

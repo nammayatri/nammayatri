@@ -112,3 +112,8 @@ ALTER TABLE atlas_driver_offer_bpp.trip_transaction ADD COLUMN trip_estimated_ro
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

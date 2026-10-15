@@ -12,18 +12,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TDSDistributionPdfFileT f = TDSDistributionPdfFileT
-  { batchId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    fileName :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    issue :: (B.C f (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSFileIssue)),
-    matchedPersonId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    recipientType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSRecipientType)),
-    s3FilePath :: (B.C f Kernel.Prelude.Text),
-    sizeBytes :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    tdsDistributionRecordId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    validationStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSFileValidationStatus))
+  { batchId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    fileName :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    issue :: B.C f (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSFileIssue),
+    matchedPersonId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    recipientType :: B.C f (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSRecipientType),
+    s3FilePath :: B.C f Kernel.Prelude.Text,
+    sizeBytes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    tdsDistributionRecordId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.TDSDistributionPdfFile.TDSFileValidationStatus)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table TDSDistributionPdfFileT where
 
 type TDSDistributionPdfFile = TDSDistributionPdfFileT Identity
 
-$(enableKVPG (''TDSDistributionPdfFileT) [('id)] [[('batchId)], [('tdsDistributionRecordId)]])
+$(enableKVPG ''TDSDistributionPdfFileT ['id] [['batchId], ['tdsDistributionRecordId]])
 
-$(mkTableInstances (''TDSDistributionPdfFileT) "tds_distribution_pdf_file")
+$(mkTableInstances ''TDSDistributionPdfFileT "tds_distribution_pdf_file")

@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PayoutStatusHistoryT f = PayoutStatusHistoryT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    message :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    scheduledPayoutId :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.ScheduledPayout.ScheduledPayoutStatus),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    message :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    scheduledPayoutId :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.ScheduledPayout.ScheduledPayoutStatus,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table PayoutStatusHistoryT where
 
 type PayoutStatusHistory = PayoutStatusHistoryT Identity
 
-$(enableKVPG (''PayoutStatusHistoryT) [('id)] [[('scheduledPayoutId)]])
+$(enableKVPG ''PayoutStatusHistoryT ['id] [['scheduledPayoutId]])
 
-$(mkTableInstances (''PayoutStatusHistoryT) "payout_status_history")
+$(mkTableInstances ''PayoutStatusHistoryT "payout_status_history")

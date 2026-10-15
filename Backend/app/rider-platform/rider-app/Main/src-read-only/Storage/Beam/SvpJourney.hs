@@ -13,20 +13,20 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data SvpJourneyT f = SvpJourneyT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    entryStationCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    entryTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    exitStationCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    exitTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    fareCharged :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    riderId :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.SvpJourney.SvpJourneyStatus),
-    tktSlNo :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    entryStationCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    entryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    exitStationCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    exitTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    fareCharged :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    riderId :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.SvpJourney.SvpJourneyStatus,
+    tktSlNo :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +36,6 @@ instance B.Table SvpJourneyT where
 
 type SvpJourney = SvpJourneyT Identity
 
-$(enableKVPG (''SvpJourneyT) [('id)] [[('riderId)]])
+$(enableKVPG ''SvpJourneyT ['id] [['riderId]])
 
-$(mkTableInstances (''SvpJourneyT) "svp_journey")
+$(mkTableInstances ''SvpJourneyT "svp_journey")

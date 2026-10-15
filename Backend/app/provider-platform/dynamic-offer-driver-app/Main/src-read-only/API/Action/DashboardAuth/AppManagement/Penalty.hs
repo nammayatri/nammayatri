@@ -8,9 +8,11 @@ module API.Action.DashboardAuth.AppManagement.Penalty
 where
 
 import qualified API.Types.Dashboard.AppManagement.Penalty
+import qualified Control.Lens
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.AppManagement.Penalty
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -39,6 +41,7 @@ postPenaltyTriggerJobCancellationPenaltyServiceName :: (Kernel.Types.Id.ShortId 
 postPenaltyTriggerJobCancellationPenaltyServiceName a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_APP_MANAGEMENT/PENALTY/POST_PENALTY_TRIGGER_JOB_CANCELLATION_PENALTY_SERVICE_NAME" a2 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.AppManagement.Penalty.postPenaltyTriggerJobCancellationPenaltyServiceName a4 a3 a1
     )

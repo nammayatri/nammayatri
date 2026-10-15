@@ -58,9 +58,9 @@ data StclMembershipE e = StclMembership
   }
   deriving (Generic)
 
-type StclMembership = StclMembershipE ('AsEncrypted)
+type StclMembership = StclMembershipE 'AsEncrypted
 
-type DecryptedStclMembership = StclMembershipE ('AsUnencrypted)
+type DecryptedStclMembership = StclMembershipE 'AsUnencrypted
 
 instance EncryptedItem StclMembership where
   type Unencrypted StclMembership = (DecryptedStclMembership, HashSalt)
@@ -172,4 +172,4 @@ instance EncryptedItem' StclMembership where
 
 data ApplicationStatus = SUBMITTED | PENDING | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ApplicationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ApplicationStatus)

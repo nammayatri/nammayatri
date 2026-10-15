@@ -263,13 +263,13 @@ data TdsSummaryResp = TdsSummaryResp {financialYear :: Kernel.Prelude.Text, quar
 
 type API = ("tdsDistribution" :> (PostTdsDistributionBatchHelper :<|> PostTdsDistributionBatchValidate :<|> GetTdsDistributionBatch :<|> GetTdsDistributionBatchFiles :<|> PostTdsDistributionBatchCancel :<|> PostTdsDistributionBatchConfirmHelper :<|> GetTdsDistributionBatchRecords :<|> PostTdsDistributionBatchRetryFailedHelper :<|> GetTdsDistributionBatches :<|> GetTdsDistributionSummary :<|> GetTdsDistributionPersonCertificates :<|> GetTdsDistributionRecordDownloadUrl :<|> PostTdsDistributionRecordRetryHelper))
 
-type PostTdsDistributionBatch = ("batch" :> ReqBody ('[JSON]) CreateTdsBatchReq :> Post ('[JSON]) CreateTdsBatchResp)
+type PostTdsDistributionBatch = ("batch" :> ReqBody '[JSON] CreateTdsBatchReq :> Post '[JSON] CreateTdsBatchResp)
 
-type PostTdsDistributionBatchHelper = ("batch" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) CreateTdsBatchReq :> Post ('[JSON]) CreateTdsBatchResp)
+type PostTdsDistributionBatchHelper = ("batch" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] CreateTdsBatchReq :> Post '[JSON] CreateTdsBatchResp)
 
-type PostTdsDistributionBatchValidate = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "validate" :> Post ('[JSON]) TdsBatchResp)
+type PostTdsDistributionBatchValidate = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "validate" :> Post '[JSON] TdsBatchResp)
 
-type GetTdsDistributionBatch = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> Get ('[JSON]) TdsBatchResp)
+type GetTdsDistributionBatch = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> Get '[JSON] TdsBatchResp)
 
 type GetTdsDistributionBatchFiles =
   ( "batch" :> Capture "batchId" Kernel.Prelude.Text :> "files" :> QueryParam "fileFilter" TdsFileFilter
@@ -278,19 +278,19 @@ type GetTdsDistributionBatchFiles =
            Kernel.Prelude.Text
       :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
-      :> Get ('[JSON]) TdsFileListResp
+      :> Get '[JSON] TdsFileListResp
   )
 
-type PostTdsDistributionBatchCancel = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "cancel" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostTdsDistributionBatchCancel = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "cancel" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type PostTdsDistributionBatchConfirm = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "confirm" :> ReqBody ('[JSON]) TdsConfirmReq :> Post ('[JSON]) TdsBatchResp)
+type PostTdsDistributionBatchConfirm = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "confirm" :> ReqBody '[JSON] TdsConfirmReq :> Post '[JSON] TdsBatchResp)
 
 type PostTdsDistributionBatchConfirmHelper =
   ( "batch" :> Capture "batchId" Kernel.Prelude.Text :> "confirm" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            TdsConfirmReq
-      :> Post ('[JSON]) TdsBatchResp
+      :> Post '[JSON] TdsBatchResp
   )
 
 type GetTdsDistributionBatchRecords =
@@ -300,55 +300,55 @@ type GetTdsDistributionBatchRecords =
            Kernel.Prelude.Text
       :> QueryParam "limit" Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
-      :> Get ('[JSON]) TdsRecordListResp
+      :> Get '[JSON] TdsRecordListResp
   )
 
-type PostTdsDistributionBatchRetryFailed = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "retryFailed" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostTdsDistributionBatchRetryFailed = ("batch" :> Capture "batchId" Kernel.Prelude.Text :> "retryFailed" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostTdsDistributionBatchRetryFailedHelper =
   ( "batch" :> Capture "batchId" Kernel.Prelude.Text :> "retryFailed" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetTdsDistributionBatches = ("batches" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) TdsBatchListResp)
+type GetTdsDistributionBatches = ("batches" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] TdsBatchListResp)
 
-type GetTdsDistributionSummary = ("summary" :> MandatoryQueryParam "financialYear" Kernel.Prelude.Text :> Get ('[JSON]) TdsSummaryResp)
+type GetTdsDistributionSummary = ("summary" :> MandatoryQueryParam "financialYear" Kernel.Prelude.Text :> Get '[JSON] TdsSummaryResp)
 
 type GetTdsDistributionPersonCertificates =
   ( "person" :> Capture "personId" Kernel.Prelude.Text :> "certificates" :> MandatoryQueryParam "financialYear" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            TdsPersonCertificatesResp
   )
 
-type GetTdsDistributionRecordDownloadUrl = ("record" :> Capture "recordId" Kernel.Prelude.Text :> "downloadUrl" :> Get ('[JSON]) TdsDownloadUrlResp)
+type GetTdsDistributionRecordDownloadUrl = ("record" :> Capture "recordId" Kernel.Prelude.Text :> "downloadUrl" :> Get '[JSON] TdsDownloadUrlResp)
 
-type PostTdsDistributionRecordRetry = ("record" :> Capture "recordId" Kernel.Prelude.Text :> "retry" :> ReqBody ('[JSON]) TdsRetryReq :> Post ('[JSON]) TdsRecordItem)
+type PostTdsDistributionRecordRetry = ("record" :> Capture "recordId" Kernel.Prelude.Text :> "retry" :> ReqBody '[JSON] TdsRetryReq :> Post '[JSON] TdsRecordItem)
 
 type PostTdsDistributionRecordRetryHelper =
   ( "record" :> Capture "recordId" Kernel.Prelude.Text :> "retry" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            TdsRetryReq
-      :> Post ('[JSON]) TdsRecordItem
+      :> Post '[JSON] TdsRecordItem
   )
 
 data TdsDistributionAPIs = TdsDistributionAPIs
-  { postTdsDistributionBatch :: (Kernel.Prelude.Text -> CreateTdsBatchReq -> EulerHS.Types.EulerClient CreateTdsBatchResp),
-    postTdsDistributionBatchValidate :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsBatchResp),
-    getTdsDistributionBatch :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsBatchResp),
-    getTdsDistributionBatchFiles :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (TdsFileFilter) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient TdsFileListResp),
-    postTdsDistributionBatchCancel :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postTdsDistributionBatchConfirm :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> TdsConfirmReq -> EulerHS.Types.EulerClient TdsBatchResp),
-    getTdsDistributionBatchRecords :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (TdsRecordFilter) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient TdsRecordListResp),
-    postTdsDistributionBatchRetryFailed :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getTdsDistributionBatches :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient TdsBatchListResp),
-    getTdsDistributionSummary :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsSummaryResp),
-    getTdsDistributionPersonCertificates :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsPersonCertificatesResp),
-    getTdsDistributionRecordDownloadUrl :: (Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsDownloadUrlResp),
-    postTdsDistributionRecordRetry :: (Kernel.Prelude.Text -> Kernel.Prelude.Text -> TdsRetryReq -> EulerHS.Types.EulerClient TdsRecordItem)
+  { postTdsDistributionBatch :: Kernel.Prelude.Text -> CreateTdsBatchReq -> EulerHS.Types.EulerClient CreateTdsBatchResp,
+    postTdsDistributionBatchValidate :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsBatchResp,
+    getTdsDistributionBatch :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsBatchResp,
+    getTdsDistributionBatchFiles :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe TdsFileFilter -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient TdsFileListResp,
+    postTdsDistributionBatchCancel :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postTdsDistributionBatchConfirm :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> TdsConfirmReq -> EulerHS.Types.EulerClient TdsBatchResp,
+    getTdsDistributionBatchRecords :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe TdsRecordFilter -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient TdsRecordListResp,
+    postTdsDistributionBatchRetryFailed :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getTdsDistributionBatches :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient TdsBatchListResp,
+    getTdsDistributionSummary :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsSummaryResp,
+    getTdsDistributionPersonCertificates :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsPersonCertificatesResp,
+    getTdsDistributionRecordDownloadUrl :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient TdsDownloadUrlResp,
+    postTdsDistributionRecordRetry :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> TdsRetryReq -> EulerHS.Types.EulerClient TdsRecordItem
   }
 
 mkTdsDistributionAPIs :: (Client EulerHS.Types.EulerClient API -> TdsDistributionAPIs)
@@ -373,10 +373,10 @@ data TdsDistributionUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''TdsFileFilter))
+$(mkHttpInstancesForEnum ''TdsFileFilter)
 
-$(mkHttpInstancesForEnum (''TdsQuarter))
+$(mkHttpInstancesForEnum ''TdsQuarter)
 
-$(mkHttpInstancesForEnum (''TdsRecordFilter))
+$(mkHttpInstancesForEnum ''TdsRecordFilter)
 
-$(Data.Singletons.TH.genSingletons [(''TdsDistributionUserActionType)])
+$(Data.Singletons.TH.genSingletons [''TdsDistributionUserActionType])

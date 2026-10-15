@@ -8,8 +8,10 @@ module API.Action.DashboardAuth.Management.RideFeedback
 where
 
 import qualified API.Types.RiderPlatform.Management.RideFeedback
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.RideFeedback
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -26,7 +28,7 @@ type API = ("rideFeedback" :> PostRideFeedbackBookingResponseRetryActions)
 
 type PostRideFeedbackBookingResponseRetryActions =
   ( DashboardUserAuth
-      ('APP_BACKEND_MANAGEMENT)
+      'APP_BACKEND_MANAGEMENT
       "RIDER_MANAGEMENT/RIDE_FEEDBACK/POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS"
       :> API.Types.RiderPlatform.Management.RideFeedback.PostRideFeedbackBookingResponseRetryActions
   )
@@ -38,6 +40,7 @@ postRideFeedbackBookingResponseRetryActions :: (Kernel.Types.Id.ShortId Domain.T
 postRideFeedbackBookingResponseRetryActions a5 a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a3 a5 a4
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/RIDE_FEEDBACK/POST_RIDE_FEEDBACK_BOOKING_RESPONSE_RETRY_ACTIONS" a3 (Kernel.Prelude.Nothing :: Kernel.Prelude.Maybe ())
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.RideFeedback.postRideFeedbackBookingResponseRetryActions a5 a4 a2 a1
     )

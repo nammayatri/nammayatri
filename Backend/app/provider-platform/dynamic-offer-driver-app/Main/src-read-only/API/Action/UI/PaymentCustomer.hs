@@ -24,7 +24,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Tools.ActorInfo
 import Tools.Auth
 
-type API = (TokenAuth :> "payment" :> "customer" :> QueryParam "serviceName" Domain.Types.Plan.ServiceNames :> Get ('[JSON]) API.Types.UI.PaymentCustomer.PaymentCustomerResp)
+type API = (TokenAuth :> "payment" :> "customer" :> QueryParam "serviceName" Domain.Types.Plan.ServiceNames :> Get '[JSON] API.Types.UI.PaymentCustomer.PaymentCustomerResp)
 
 handler :: Environment.FlowServer API
 handler = getPaymentCustomer
@@ -34,7 +34,7 @@ getPaymentCustomer ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Domain.Types.Plan.ServiceNames) ->
+    Kernel.Prelude.Maybe Domain.Types.Plan.ServiceNames ->
     Environment.FlowHandler API.Types.UI.PaymentCustomer.PaymentCustomerResp
   )
 getPaymentCustomer a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a2) $ Domain.Action.UI.PaymentCustomer.getPaymentCustomer (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

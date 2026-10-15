@@ -47,7 +47,7 @@ data TDSDistributionStatus
   | MISSING_FILE
   | MISSING_MANIFEST
   | MISMATCH
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TDSFailureReason
   = MISSING_EMAIL
@@ -58,10 +58,10 @@ data TDSFailureReason
   | SUPPRESSED
   | TIMEOUT
   | SEND_ERROR
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''TDSDistributionStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TDSDistributionStatus)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''TDSDistributionStatus))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''TDSDistributionStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''TDSFailureReason))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TDSFailureReason)

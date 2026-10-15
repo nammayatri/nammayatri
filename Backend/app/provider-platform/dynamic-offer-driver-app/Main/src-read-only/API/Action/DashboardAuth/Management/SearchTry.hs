@@ -8,8 +8,10 @@ module API.Action.DashboardAuth.Management.SearchTry
 where
 
 import qualified API.Types.ProviderPlatform.Management.SearchTry
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.Management.SearchTry
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -37,6 +39,7 @@ postSearchTryRecentSearchTries :: (Kernel.Types.Id.ShortId Domain.Types.Merchant
 postSearchTryRecentSearchTries a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/SEARCH_TRY/POST_SEARCH_TRY_RECENT_SEARCH_TRIES" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.SearchTry.postSearchTryRecentSearchTries a4 a3 a1
     )

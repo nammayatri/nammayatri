@@ -15,19 +15,19 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data AddOnConfigT f = AddOnConfigT
-  { addOnType :: (B.C f Domain.Types.AddOnConfig.AddOnType),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    descriptorName :: (B.C f Kernel.Prelude.Text),
-    descriptorShortDesc :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    id :: (B.C f Kernel.Prelude.Text),
-    maxQuantity :: (B.C f Kernel.Prelude.Int),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    pricePerQuantity :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleServiceTier :: (B.C f [Domain.Types.Common.ServiceTierType])
+  { addOnType :: B.C f Domain.Types.AddOnConfig.AddOnType,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    descriptorName :: B.C f Kernel.Prelude.Text,
+    descriptorShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    enabled :: B.C f Kernel.Prelude.Bool,
+    id :: B.C f Kernel.Prelude.Text,
+    maxQuantity :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    pricePerQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleServiceTier :: B.C f [Domain.Types.Common.ServiceTierType]
   }
   deriving (Generic, B.Beamable)
 
@@ -37,6 +37,6 @@ instance B.Table AddOnConfigT where
 
 type AddOnConfig = AddOnConfigT Identity
 
-$(enableKVPG (''AddOnConfigT) [('id)] [])
+$(enableKVPG ''AddOnConfigT ['id] [])
 
-$(mkTableInstances (''AddOnConfigT) "add_on_config")
+$(mkTableInstances ''AddOnConfigT "add_on_config")

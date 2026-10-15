@@ -281,3 +281,7 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN auto_ass
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN display_duration_to_pickup bigint ;
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN display_distance_to_pickup bigint ;
+
+
+------- SQL updates -------
+

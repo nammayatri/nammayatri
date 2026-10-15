@@ -31,4 +31,4 @@ data MediaFileDocument = MediaFileDocument
 
 data MediaFileDocumentStatus = PENDING | DELETED | FAILED | CONFIRMED | COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''MediaFileDocumentStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaFileDocumentStatus)

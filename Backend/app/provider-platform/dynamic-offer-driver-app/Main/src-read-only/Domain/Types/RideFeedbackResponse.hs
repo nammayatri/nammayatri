@@ -51,7 +51,7 @@ data RideFeedbackActionResult = RideFeedbackActionResult
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RideFeedbackActionStatus = PENDING | SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+data RideFeedbackActionStatus = PENDING | SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 data RideFeedbackAnswer = RideFeedbackAnswer
   { mediaFileIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
@@ -62,8 +62,8 @@ data RideFeedbackAnswer = RideFeedbackAnswer
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RideFeedbackResponseStatus = SHOWN | ANSWERED | SKIPPED | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
+data RideFeedbackResponseStatus = SHOWN | ANSWERED | SKIPPED | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackActionStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideFeedbackActionStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackResponseStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideFeedbackResponseStatus)

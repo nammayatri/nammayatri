@@ -11,12 +11,12 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DepotT f = DepotT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -26,6 +26,6 @@ instance B.Table DepotT where
 
 type Depot = DepotT Identity
 
-$(enableKVPG (''DepotT) [('id)] [])
+$(enableKVPG ''DepotT ['id] [])
 
-$(mkTableInstances (''DepotT) "depot")
+$(mkTableInstances ''DepotT "depot")

@@ -64,39 +64,39 @@ data TransferReviewListRes = TransferReviewListRes {items :: [TransferReviewItem
 
 type API = ("payout" :> (GetPayoutPayoutOrderHelper :<|> GetPayoutTransferNeedsReviewHelper :<|> PostPayoutTransferResolveHelper))
 
-type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get ('[JSON]) Lib.Payment.API.Payout.Types.PayoutOrderResp)
+type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutOrderResp)
 
 type GetPayoutPayoutOrderHelper =
   ( "payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> QueryParam "requestorId" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Lib.Payment.API.Payout.Types.PayoutOrderResp
   )
 
-type GetPayoutTransferNeedsReview = ("transfer" :> "needsReview" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get ('[JSON]) TransferReviewListRes)
+type GetPayoutTransferNeedsReview = ("transfer" :> "needsReview" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> Get '[JSON] TransferReviewListRes)
 
 type GetPayoutTransferNeedsReviewHelper =
   ( "transfer" :> "needsReview" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
            "requestorId"
            Kernel.Prelude.Text
-      :> Get ('[JSON]) TransferReviewListRes
+      :> Get '[JSON] TransferReviewListRes
   )
 
-type PostPayoutTransferResolve = ("transfer" :> Capture "transferId" Kernel.Prelude.Text :> "resolve" :> ReqBody ('[JSON]) TransferResolveReq :> Post ('[JSON]) TransferResolveRes)
+type PostPayoutTransferResolve = ("transfer" :> Capture "transferId" Kernel.Prelude.Text :> "resolve" :> ReqBody '[JSON] TransferResolveReq :> Post '[JSON] TransferResolveRes)
 
 type PostPayoutTransferResolveHelper =
   ( "transfer" :> Capture "transferId" Kernel.Prelude.Text :> "resolve" :> QueryParam "requestorId" Kernel.Prelude.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            TransferResolveReq
-      :> Post ('[JSON]) TransferResolveRes
+      :> Post '[JSON] TransferResolveRes
   )
 
 data PayoutAPIs = PayoutAPIs
-  { getPayoutPayoutOrder :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp),
-    getPayoutTransferNeedsReview :: (Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient TransferReviewListRes),
-    postPayoutTransferResolve :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> TransferResolveReq -> EulerHS.Types.EulerClient TransferResolveRes)
+  { getPayoutPayoutOrder :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp,
+    getPayoutTransferNeedsReview :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TransferReviewListRes,
+    postPayoutTransferResolve :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> TransferResolveReq -> EulerHS.Types.EulerClient TransferResolveRes
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
@@ -111,4 +111,4 @@ data PayoutUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PayoutUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PayoutUserActionType])

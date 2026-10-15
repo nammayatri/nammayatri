@@ -37,12 +37,12 @@ deleteBySopTypeAndMerchantOperatingCityId sopType merchantOperatingCityId = do
         ]
     ]
 
-findAllBySopType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m ([Domain.Types.KnowledgeCenter.KnowledgeCenter]))
+findAllBySopType :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m [Domain.Types.KnowledgeCenter.KnowledgeCenter])
 findAllBySopType limit offset sopType = do findAllWithOptionsKV [Se.Is Beam.sopType $ Se.Eq sopType] (Se.Desc Beam.createdAt) limit offset
 
 findAllBySopTypeAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.KnowledgeCenter.KnowledgeCenter]))
+  (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.KnowledgeCenter.KnowledgeCenter])
 findAllBySopTypeAndMerchantOperatingCityId limit offset sopType merchantOperatingCityId = do
   findAllWithOptionsKV
     [ Se.And

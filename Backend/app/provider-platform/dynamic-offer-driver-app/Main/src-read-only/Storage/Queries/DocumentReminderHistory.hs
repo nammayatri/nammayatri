@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByDocumentTypeAndEntity ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> m ([Domain.Types.DocumentReminderHistory.DocumentReminderHistory]))
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.Prelude.Text -> Domain.Types.DocumentReminderHistory.EntityType -> m [Domain.Types.DocumentReminderHistory.DocumentReminderHistory])
 findAllByDocumentTypeAndEntity documentType entityId entityType = do
   findAllWithKV
     [ Se.And
@@ -37,12 +37,12 @@ findAllByDocumentTypeAndEntity documentType entityId entityType = do
 
 findAllByDocumentTypeAndEntityType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.DocumentVerificationConfig.DocumentType -> Domain.Types.DocumentReminderHistory.EntityType -> m ([Domain.Types.DocumentReminderHistory.DocumentReminderHistory]))
+  (Domain.Types.DocumentVerificationConfig.DocumentType -> Domain.Types.DocumentReminderHistory.EntityType -> m [Domain.Types.DocumentReminderHistory.DocumentReminderHistory])
 findAllByDocumentTypeAndEntityType documentType entityType = do findAllWithKV [Se.And [Se.Is Beam.documentType $ Se.Eq documentType, Se.Is Beam.entityType $ Se.Eq entityType]]
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.DocumentReminderHistory.DocumentReminderHistory]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.DocumentReminderHistory.DocumentReminderHistory])
 findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.And [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]]
 
 findByDocumentTypeAndEntity ::

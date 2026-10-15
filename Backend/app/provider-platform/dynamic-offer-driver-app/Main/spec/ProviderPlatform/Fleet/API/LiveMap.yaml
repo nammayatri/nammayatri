@@ -75,3 +75,6 @@ types:
     - tripOption: Text
     - isScheduled: Bool
     - frequency: Int
+
+
+

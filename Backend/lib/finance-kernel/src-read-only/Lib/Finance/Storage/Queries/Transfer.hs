@@ -25,7 +25,7 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.Transfer.Transfer] -> m ())
 createMany = traverse_ create
 
-findAllByAccountId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ([Lib.Finance.Domain.Types.Transfer.Transfer]))
+findAllByAccountId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m [Lib.Finance.Domain.Types.Transfer.Transfer])
 findAllByAccountId accountId = do findAllWithKV [Se.Is Beam.accountId $ Se.Eq (Kernel.Types.Id.getId accountId)]
 
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Transfer.Transfer -> m (Maybe Lib.Finance.Domain.Types.Transfer.Transfer))

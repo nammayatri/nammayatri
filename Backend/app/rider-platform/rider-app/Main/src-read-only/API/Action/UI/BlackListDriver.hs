@@ -21,16 +21,14 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
+import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "driver"
-      :> "blackList"
-      :> Capture
-           "driverId"
-           Data.Text.Text
-      :> ReqBody '[JSON] API.Types.UI.BlackListDriver.BlackListDriverReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  ( TokenAuth :> "driver" :> "blackList" :> Capture "driverId" Data.Text.Text :> ReqBody '[JSON] API.Types.UI.BlackListDriver.BlackListDriverReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
@@ -44,4 +42,4 @@ postDriverBlackList ::
     API.Types.UI.BlackListDriver.BlackListDriverReq ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postDriverBlackList a3 a1 a2 = withFlowHandlerAPI $ Domain.Action.UI.BlackListDriver.postDriverBlackList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a1 a2
+postDriverBlackList a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a3) $ Domain.Action.UI.BlackListDriver.postDriverBlackList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

@@ -54,7 +54,21 @@ instance FromTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
     logoUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) logoUrl
     staticTermsUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) staticTermsUrl
     supportUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) supportUrl
-    pure $ Just Domain.Types.BapMetadata.BapMetadata {domain = domain, id = Kernel.Types.Id.Id id, logoUrl = logoUrl', name = name, offlineContract = offlineContract, staticTermsUrl = staticTermsUrl', supportEmail = supportEmail, supportPhone = supportPhone, supportUrl = supportUrl', createdAt = createdAt, updatedAt = updatedAt}
+    pure $
+      Just
+        Domain.Types.BapMetadata.BapMetadata
+          { domain = domain,
+            id = Kernel.Types.Id.Id id,
+            logoUrl = logoUrl',
+            name = name,
+            offlineContract = offlineContract,
+            staticTermsUrl = staticTermsUrl',
+            supportEmail = supportEmail,
+            supportPhone = supportPhone,
+            supportUrl = supportUrl',
+            createdAt = createdAt,
+            updatedAt = updatedAt
+          }
 
 instance ToTType' Beam.BapMetadata Domain.Types.BapMetadata.BapMetadata where
   toTType' (Domain.Types.BapMetadata.BapMetadata {..}) = do

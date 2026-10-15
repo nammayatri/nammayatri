@@ -12,15 +12,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data KnowledgeCenterT f = KnowledgeCenterT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    documentName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    fileType :: (B.C f AWS.S3.Types.FileType),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    s3Path :: (B.C f Kernel.Prelude.Text),
-    sopType :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    documentName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fileType :: B.C f AWS.S3.Types.FileType,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    s3Path :: B.C f Kernel.Prelude.Text,
+    sopType :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table KnowledgeCenterT where
 
 type KnowledgeCenter = KnowledgeCenterT Identity
 
-$(enableKVPG (''KnowledgeCenterT) [('id)] [[('sopType)]])
+$(enableKVPG ''KnowledgeCenterT ['id] [['sopType]])
 
-$(mkTableInstances (''KnowledgeCenterT) "knowledge_center")
+$(mkTableInstances ''KnowledgeCenterT "knowledge_center")

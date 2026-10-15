@@ -353,3 +353,7 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN cancellation_additional_info 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN route_deviated_at_ride_end boolean ;
+
+
+------- SQL updates -------
+

@@ -14,16 +14,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DocumentVersionMetadataT f = DocumentVersionMetadataT
-  { documentNumberEncrypted :: (B.C f Kernel.Prelude.Text),
-    documentNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
-    documentType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
-    documentVersionId :: (B.C f Kernel.Prelude.Text),
-    metadata :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    personId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { documentNumberEncrypted :: B.C f Kernel.Prelude.Text,
+    documentNumberHash :: B.C f Kernel.External.Encryption.DbHash,
+    documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
+    documentVersionId :: B.C f Kernel.Prelude.Text,
+    metadata :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    personId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table DocumentVersionMetadataT where
 
 type DocumentVersionMetadata = DocumentVersionMetadataT Identity
 
-$(enableKVPG (''DocumentVersionMetadataT) [('documentVersionId)] [[('personId)]])
+$(enableKVPG ''DocumentVersionMetadataT ['documentVersionId] [['personId]])
 
-$(mkTableInstances (''DocumentVersionMetadataT) "document_version_metadata")
+$(mkTableInstances ''DocumentVersionMetadataT "document_version_metadata")

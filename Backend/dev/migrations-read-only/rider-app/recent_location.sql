@@ -126,3 +126,8 @@ ALTER TABLE atlas_app.recent_location ADD COLUMN fare double precision ;
 
 ALTER TABLE atlas_app.recent_location ADD COLUMN to_geohash text ;
 ALTER TABLE atlas_app.recent_location ADD COLUMN from_geohash text ;
+
+
+
+------- SQL updates -------
+

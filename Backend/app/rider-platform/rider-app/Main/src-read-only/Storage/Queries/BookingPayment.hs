@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.BookingPayment.BookingPayment] -> m ())
 createMany = traverse_ create
 
-findAllByOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m ([Domain.Types.BookingPayment.BookingPayment]))
+findAllByOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Domain.Types.BookingPayment.BookingPayment])
 findAllByOrderId paymentOrderId = do findAllWithKV [Se.Is Beam.paymentOrderId $ Se.Eq (Kernel.Types.Id.getId paymentOrderId)]
 
 updateStatusById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.BookingPayment.BookingPaymentStatus -> Kernel.Types.Id.Id Domain.Types.BookingPayment.BookingPayment -> m ())

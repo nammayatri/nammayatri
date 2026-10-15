@@ -2670,3 +2670,4 @@ ScheduledPayoutConfig:
 #     returnType: List
 #     queryModule: Storage.Queries.ScheduledPayoutConfig
 #     filterDimensions: [isEnabled, payoutCategory]
+

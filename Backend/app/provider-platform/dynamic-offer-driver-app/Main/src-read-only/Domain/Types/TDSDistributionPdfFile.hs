@@ -39,14 +39,14 @@ data TDSFileIssue
   | PAN_NOT_FOUND
   | AMBIGUOUS_PAN
   | ALREADY_SENT
-  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data TDSFileValidationStatus = PENDING | READY | SKIPPED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data TDSFileValidationStatus = PENDING | READY | SKIPPED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data TDSRecipientType = DRIVER | FLEET_OWNER deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data TDSRecipientType = DRIVER | FLEET_OWNER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''TDSFileValidationStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TDSFileValidationStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''TDSFileIssue))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TDSFileIssue)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''TDSRecipientType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''TDSRecipientType)
