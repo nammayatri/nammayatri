@@ -9,7 +9,9 @@ No top-up, no work: the wallet, the top-up gateways, the daily charge and the di
 **30 MRU a day, taken at his first ride.** The client's model, 2026-09-06, and
 it replaces the subscription entirely.
 
-A driver loads credit — never less than 30 MRU, as much above as he likes — and
+A driver loads credit — never less than **two days** (60 MRU / 200 DA) since
+2026-10-15, the client's rule; one day (30 MRU / 100 DA) before that — as
+much above as he likes, and
 **nothing is taken until he works**. At his first ride of a day 30 MRU comes off
 and he is covered for 24 hours; every ride inside that window is free.
 

@@ -57,9 +57,10 @@ const restricted = require('./restricted');
     below this to represent -- a second scale would only be somewhere for the
     two to disagree. */
 const PRICE     = Number(process.env.WALLET_DAY_PRICE || 30);
-/** The floor on a top-up. The client's number, and it is also PRICE: loading
-    less than one day buys nothing and would only produce a confused driver. */
-const MIN_TOPUP = Number(process.env.WALLET_MIN_TOPUP || 30);
+/** The floor on a top-up: two days' credit since 2026-10-15, the client's rule
+    (one day until then -- less than one buys nothing). The day's price, the
+    charge and the dispatch gate are unchanged: one day's credit still works. */
+const MIN_TOPUP = Number(process.env.WALLET_MIN_TOPUP || 60);
 /** How long one charge covers. 24h from the ride's own start. */
 const DAY_HOURS = Number(process.env.WALLET_DAY_HOURS || 24);
 const CURRENCY  = 'MRU';
@@ -103,7 +104,7 @@ const COUNTRIES = {
   MR: { price: PRICE, minTopup: MIN_TOPUP, currency: CURRENCY, gateway: 'moosyl' },
   DZ: {
     price: Number(process.env.WALLET_DAY_PRICE_DZ || 100),
-    minTopup: Number(process.env.WALLET_MIN_TOPUP_DZ || 100),
+    minTopup: Number(process.env.WALLET_MIN_TOPUP_DZ || 200),
     currency: 'DZD',
     gateway: 'chargily',
   },

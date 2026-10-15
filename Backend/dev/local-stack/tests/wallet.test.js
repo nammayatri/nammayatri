@@ -67,10 +67,11 @@ const HOUR = 3600 * 1000;
     'MR, day ended an hour ago, empty wallet: may not work');
   {
     const s = (await status(await driver(DZ, { balance: 250 }))).json();
-    t.ok(s.currency === 'DZD' && s.dayPrice === 100 && s.minTopup === 100 && s.gateway === 'chargily',
-      'DZ status names DZD, 100 a day, Chargily', JSON.stringify(s));
+    t.ok(s.currency === 'DZD' && s.dayPrice === 100 && s.minTopup === 200 && s.gateway === 'chargily',
+      'DZ status names DZD, 100 a day, at least 200 (two days), Chargily', JSON.stringify(s));
     const m = (await status(await driver(MR, { balance: 0 }))).json();
-    t.ok(m.currency === 'MRU' && m.dayPrice === 30 && m.gateway === 'moosyl', 'MR status names MRU, 30 a day, Moosyl', JSON.stringify(m));
+    t.ok(m.currency === 'MRU' && m.dayPrice === 30 && m.minTopup === 60 && m.gateway === 'moosyl',
+      'MR status names MRU, 30 a day, at least 60 (two days), Moosyl', JSON.stringify(m));
     t.ok(m.maxTopup === 3000 && s.maxTopup === 10000, 'the top-up ceiling is 100 days in each country');
   }
   {
@@ -89,17 +90,18 @@ const HOUR = 3600 * 1000;
   t.section('2. the top-up: bounds, and our row exists before the driver is sent anywhere');
   const topup = async (d, amount, method) => { const r = fakes.res(); await wallet.topup(db.pool, d.token, amount, method, r); return r; };
   const payer = await driver(MR);
-  let r = await topup(payer, 29);
-  t.ok(r.status === 400 && r.json().error === 'amount_too_small' && r.json().minTopup === 30, 'MR 29: refused, too small');
+  let r = await topup(payer, 59);
+  t.ok(r.status === 400 && r.json().error === 'amount_too_small' && r.json().minTopup === 60,
+    'MR 59: refused, too small (the floor is two days since 2026-10-15)');
   r = await topup(payer, 3001);
   t.ok(r.status === 400 && r.json().error === 'amount_too_large', 'MR 3001: refused, too large');
   r = await topup(payer, 'abc');
   t.ok(r.status === 400, 'MR "abc": refused');
   t.ok(gw.created.length === 0, 'no refused amount ever reached a gateway');
-  r = await topup(payer, 30.9);
+  r = await topup(payer, 60.9);
   const mrTx = r.json();
-  t.ok(r.status === 200 && mrTx.amount === 30 && mrTx.currency === 'MRU' && /^https:\/\/pay\.example\//.test(mrTx.url),
-    'MR 30.9: a Moosyl checkout for 30 MRU (whole MRU, rounded down)', r.text);
+  t.ok(r.status === 200 && mrTx.amount === 60 && mrTx.currency === 'MRU' && /^https:\/\/pay\.example\//.test(mrTx.url),
+    'MR 60.9: a Moosyl checkout for 60 MRU (whole MRU, rounded down)', r.text);
   t.ok(gw.created.map((c) => c.url).join(',') === '/payment-request,/checkout-session'
     && gw.created[0].auth === 'moosyl-test', 'Moosyl: payment request, then session, with our raw key');
   let tx = (await db.sql('SELECT * FROM movin.wallet_topup WHERE transaction_id = $1', [mrTx.transactionId]))[0];
@@ -107,8 +109,8 @@ const HOUR = 3600 * 1000;
     'the row: pending, the session id kept, nothing credited', JSON.stringify(tx));
 
   const dzPayer = await driver(DZ);
-  r = await topup(dzPayer, 99, 'cib');
-  t.ok(r.status === 400 && r.json().minTopup === 100, 'DZ 99 DA: refused (the floor is a 100 DA day)');
+  r = await topup(dzPayer, 199, 'cib');
+  t.ok(r.status === 400 && r.json().minTopup === 200, 'DZ 199 DA: refused (the floor is two 100 DA days)');
   r = await topup(dzPayer, 500, 'cib');
   const dzTx = r.json();
   const chk = gw.created[gw.created.length - 1];
@@ -145,15 +147,15 @@ const HOUR = 3600 * 1000;
   gw.paid.add('sess_2');
   const before = redis.sets;
   await wallet.webhook(db.pool, fakes.req({ data: { id: 'sess_2' } }), fakes.res());
-  t.ok((await row(payer.id)).balance === 30, 'paid at Moosyl, then the webhook: 30 MRU credited');
+  t.ok((await row(payer.id)).balance === 60, 'paid at Moosyl, then the webhook: 60 MRU credited');
   r = await poll(payer, mrTx.transactionId);
   await wallet.webhook(db.pool, fakes.req({ data: { id: 'sess_2' } }), fakes.res());
-  t.ok((await row(payer.id)).balance === 30 && r.json().credited === true,
-    'the app\'s poll and a second webhook after it: still 30, never twice');
+  t.ok((await row(payer.id)).balance === 60 && r.json().credited === true,
+    'the app\'s poll and a second webhook after it: still 60, never twice');
   const entries = await db.sql("SELECT kind, amount FROM movin.wallet_entry WHERE driver_id = $1", [payer.id]);
   tx = (await db.sql('SELECT status, invoice_no FROM movin.wallet_topup WHERE transaction_id = $1', [mrTx.transactionId]))[0];
-  t.ok(entries.length === 1 && entries[0].kind === 'topup' && entries[0].amount === 30,
-    'one ledger entry, kind topup, +30', JSON.stringify(entries));
+  t.ok(entries.length === 1 && entries[0].kind === 'topup' && entries[0].amount === 60,
+    'one ledger entry, kind topup, +60', JSON.stringify(entries));
   t.ok(tx.status === 'paid' && /^\d+$/.test(tx.invoice_no), 'the top-up is paid and numbered for the invoice', JSON.stringify(tx));
   for (let i = 0; i < 50 && redis.sets === before; i += 1) await new Promise((ok) => setTimeout(ok, 20));
   t.ok(redis.sets > before && !JSON.parse(redis.values.get('dynamic-offer-driver-app:movin:unpaid')).includes(payer.id),

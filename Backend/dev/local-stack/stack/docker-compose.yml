@@ -395,7 +395,12 @@ services:
       # driver's problem.
       MOOSYL_BASE: "${MOOSYL_BASE:-https://api.moosyl.com}"
       WALLET_DAY_PRICE: "${WALLET_DAY_PRICE:-30}"
-      WALLET_MIN_TOPUP: "${WALLET_MIN_TOPUP:-30}"
+      # The smallest top-up: TWO days since 2026-10-15 (the client: « the
+      # payment for at least 2 days »). Only the floor of one payment moved; a
+      # day still costs WALLET_DAY_PRICE, and the dispatch gate still lets a
+      # driver with one day's credit work.
+      WALLET_MIN_TOPUP: "${WALLET_MIN_TOPUP:-60}"
+      WALLET_MIN_TOPUP_DZ: "${WALLET_MIN_TOPUP_DZ:-200}"
       WALLET_DAY_HOURS: "${WALLET_DAY_HOURS:-24}"
     # The payment key, and only that. `required: false` so a checkout without
     # the secret still starts -- it reports itself unconfigured, which is the
