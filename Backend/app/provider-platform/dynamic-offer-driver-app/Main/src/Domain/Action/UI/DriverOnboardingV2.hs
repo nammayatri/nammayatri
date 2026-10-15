@@ -657,7 +657,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
     person <- PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     now <- getCurrentTime
     let hasAutoAssignTag tier =
-          Yudhishthira.elemTagValue (LYT.TagName "AutoAssign") (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
+          Yudhishthira.elemTagValue (LYT.TagName FDA.autoAssignTagName) (show tier) (Yudhishthira.filterExpiredTags' now (fromMaybe [] person.driverTag))
 
     -- Single pass over the driver's own filtered tier list, not cityVehicleServiceTiers -- force-select must never bypass isUsageRestricted.
     driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction AllowedVariants (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
@@ -677,7 +677,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
             -- runs in the debit-driven auto-revoke either (PostActions.runPostActionsForAccount
             -- gates the call on the same flag). Dispatch time never wallet-checks (see attemptPriorityDirectAssign).
             walletGateEnabled = fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck
-            isFleetLockedTier = fleetLocksAutoAssign && maybe False (.enabled) driverServiceTier.autoAcceptanceConfig
+            isFleetLockedTier = fleetLocksAutoAssign && FDA.isAutoAcceptEnabledTier driverServiceTier
             keepIfPreviously tierTypes = if driverServiceTier.serviceTierType `elem` tierTypes then Just driverServiceTier.serviceTierType else Nothing
         if
             | isUsageRestricted -> pure (Nothing, Nothing)

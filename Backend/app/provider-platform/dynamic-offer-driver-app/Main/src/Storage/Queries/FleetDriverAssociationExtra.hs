@@ -99,7 +99,9 @@ fleetDriverTags now cityAutoAcceptTiers joined mbAutoAssign tags
     disablePreference = maybe False (.disableDriverAreaAndDistancePreference) mbAutoAssign
     disabled = LYT.TextValue (mkEnabledTagValue False)
     removeTag name ts = Yudhishthira.removeTagName (Just ts) (LYT.TagNameValue name)
-    setTag name value ts = removeTag name ts <> [Yudhishthira.mkTagNameValueExpiryAt (LYT.TagName name) value Nothing]
+    setTag name value ts =
+      let tag = Yudhishthira.mkTagNameValueExpiryAt (LYT.TagName name) value Nothing
+       in if tag `elem` ts then ts else removeTag name ts <> [tag]
     autoAssignValues =
       [ value
         | (name : values : _) <- map (T.splitOn "#" . LYT.getTagNameValue . Yudhishthira.convertToTagNameValue) (Yudhishthira.filterExpiredTags' now tags),
@@ -139,6 +141,7 @@ updateFleetDriverTags joined driverId ownerId = do
     mbAutoAssign <- getFleetAutoAssignConfig ownerId driver.merchantOperatingCityId
     writeFleetDriverTags joined mbAutoAssign driver
 
+-- Person tag write mirrors PersonExtra.updateDriverTag: Storage.Queries.Person imports this module, so it cannot be imported here.
 writeFleetDriverTags :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Maybe DFC.AutoAssignConfig -> Person -> m ()
 writeFleetDriverTags joined mbAutoAssign driver = do
   now <- getCurrentTime
@@ -646,13 +649,19 @@ endFleetDriverAssociation fleetOwnerId (Id driverId) = do
     updateWithKV
       [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
       [Se.And pairUnexpired]
-    mbDriverInfo <- QDIE.findById (Id driverId)
-    let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
-    LTSSync.syncDriverPoolDataToLTS (Id driverId) $
-      LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
-    when (any (.isActive) unexpiredAssociations) $ do
-      mbOtherActive <- findByDriverId (Id driverId) True
-      when (isNothing mbOtherActive) $ updateFleetDriverTags False (Id driverId) fleetOwnerId
+    mbOtherActive <- findByDriverId (Id driverId) True
+    case mbOtherActive of
+      Just other -> do
+        mbOtherOwnerInfo <- FOI.findByPrimaryKey (Id other.fleetOwnerId)
+        let effective = effectiveEnableCashRide now Nothing (Just other) (mbOtherOwnerInfo >>= (.enableCashRide))
+        LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+          LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set (Just other.fleetOwnerId), LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+      Nothing -> do
+        mbDriverInfo <- QDIE.findById (Id driverId)
+        let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
+        LTSSync.syncDriverPoolDataToLTS (Id driverId) $
+          LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+        when (any (.isActive) unexpiredAssociations) $ updateFleetDriverTags False (Id driverId) fleetOwnerId
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
