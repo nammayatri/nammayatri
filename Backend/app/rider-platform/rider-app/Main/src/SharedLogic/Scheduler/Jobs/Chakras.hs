@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import qualified Lib.Yudhishthira.Event.KaalChakra as Event
+import qualified Lib.Yudhishthira.Event.KaalChakra.JobControl as JobControl
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified SharedLogic.KaalChakra.Actions as Actions
@@ -51,72 +52,81 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
       action = Actions.kaalChakraAction merchantOperatingCityId . cast @LYT.User @DPerson.Person,
       createFetchUserDataJob = createFetchUserDataJob merchantId merchantOperatingCityId,
       createUpdateUserTagDataJob = createUpdateUserTagDataJob merchantId merchantOperatingCityId,
-      merchantOperatingCityId = fmap cast merchantOperatingCityId
+      merchantOperatingCityId = fmap cast merchantOperatingCityId,
+      merchantId = fmap cast merchantId
     }
 
 runDailyJob ::
   ChakraJobs m r =>
   Job 'Daily ->
   m ExecutionResult
-runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Daily jobInfo.jobData
+runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle id isStillActive LYT.Daily jobInfo.jobData
 
 runWeeklyJob ::
   ChakraJobs m r =>
   Job 'Weekly ->
   m ExecutionResult
-runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Weekly jobInfo.jobData
+runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle id isStillActive LYT.Weekly jobInfo.jobData
 
 runQuarterlyJob ::
   ChakraJobs m r =>
   Job 'Quarterly ->
   m ExecutionResult
-runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
+runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle id isStillActive LYT.Quarterly jobInfo.jobData
 
 runMonthlyJob ::
   ChakraJobs m r =>
   Job 'Monthly ->
   m ExecutionResult
-runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Monthly jobInfo.jobData
+runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraAndRescheduleJob kaalChakraHandle id isStillActive LYT.Monthly jobInfo.jobData
 
 runDailyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
-runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Daily jobInfo.jobData
+runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle id isStillActive LYT.Daily jobInfo.jobData
 
 runWeeklyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
-runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Weekly jobInfo.jobData
+runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle id isStillActive LYT.Weekly jobInfo.jobData
 
 runQuarterlyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
-runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
+runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle id isStillActive LYT.Quarterly jobInfo.jobData
 
 runMonthlyUpdateTagJob ::
   ChakraJobs m r =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult
-runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) do
-  let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
-  Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Monthly jobInfo.jobData
+runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId, scheduledAt} = withLogTag ("JobId-" <> id.getId) do
+  JobControl.withChakraJobGuard @RiderJobType id scheduledAt $ \isStillActive -> do
+    let kaalChakraHandle = mkKaalChakraHandle merchantId merchantOperatingCityId
+    Event.runKaalChakraUpdateTagsJob kaalChakraHandle id isStillActive LYT.Monthly jobInfo.jobData
 
 createFetchUserDataJob ::
   ChakraJobs m r =>

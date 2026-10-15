@@ -1,0 +1,25 @@
+CREATE TABLE atlas_app.kaal_chakra_job_run ();
+
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN batches_processed integer  default 0;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN chakra text NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN ended_at timestamp with time zone ;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN event_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN failed_query_name text  default NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN failure_reason text  default NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN phase text NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN query_outcomes json  default NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN retry_count integer  default 0;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN scheduler_job_id text  default NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN started_at timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN tag_stats json  default NULL;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD COLUMN users_processed integer ;
+ALTER TABLE atlas_app.kaal_chakra_job_run ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY kaal_chakra_job_run_idx_merchant_operating_city_id ON atlas_app.kaal_chakra_job_run USING btree (merchant_operating_city_id);
+CREATE INDEX CONCURRENTLY kaal_chakra_job_run_idx_chakra_merchant_operating_city_id_status ON atlas_app.kaal_chakra_job_run USING btree (chakra, merchant_operating_city_id, status);
+CREATE INDEX CONCURRENTLY kaal_chakra_job_run_idx_event_id ON atlas_app.kaal_chakra_job_run USING btree (event_id);

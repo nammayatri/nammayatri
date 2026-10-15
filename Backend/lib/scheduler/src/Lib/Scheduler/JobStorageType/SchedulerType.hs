@@ -209,6 +209,18 @@ getReadyTask = do
     RedisBased -> RQ.getReadyTask
     DbBased -> DBQ.getReadyTask
 
+-- Returns how many queued Redis copies were removed. Copies the producer has
+-- already moved onto the stream are not reachable, so callers must still guard
+-- execution of a deleted job.
+deleteJob :: forall m r. (JobCreator r m) => Text -> Id AnyJob -> UTCTime -> m Int
+deleteJob jobType id scheduledAt = do
+  schedulerType <- asks (.schedulerType)
+  case schedulerType of
+    RedisBased -> do
+      whenM (isLongRunning jobType) $ DBQ.deleteById id
+      RQ.removeQueuedCopies id scheduledAt
+    DbBased -> DBQ.deleteById id $> 0
+
 updateStatus :: forall m r. (JobExecutor r m, HasField "jobInfoMap" r (M.Map Text Bool)) => Text -> JobStatus -> Id AnyJob -> m ()
 updateStatus jobType status id = do
   schedulerType <- asks (.schedulerType)

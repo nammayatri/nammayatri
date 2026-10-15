@@ -20,355 +20,398 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorTracker.Types
 import qualified Lib.Yudhishthira.Types
+import qualified Lib.Yudhishthira.Types.KaalChakraJobRun
 import Servant
 import qualified Tools.ActorInfo
 import Tools.Auth
 import Tools.Auth.DashboardUserAuth
 
-type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagVerify :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> GetNammaTagTagAll :<|> GetNammaTagTagDetails :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> GetNammaTagQueryDetails :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> PostNammaTagAppDynamicLogicBulkUpsertLogicRollout :<|> GetNammaTagBehaviorStatus :<|> PostNammaTagBehaviorEnable :<|> PostNammaTagBehaviorDisable :<|> PostNammaTagBehaviorMarkCanonical :<|> PostNammaTagAppDynamicLogicUpdateExperimentGroup :<|> GetNammaTagAppDynamicLogicExperimentGroups :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagAppDynamicLogicDomainsAndEvents :<|> GetNammaTagAppDynamicLogicGetDomainSchema :<|> GetNammaTagQueryAll :<|> PostNammaTagConfigPilotGetVersion :<|> PostNammaTagConfigPilotGetConfig :<|> PostNammaTagConfigPilotCreateUiConfig :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData :<|> GetNammaTagConfigPilotGetTableDataFromDB :<|> GetNammaTagConfigPilotAllUiConfigs :<|> GetNammaTagConfigPilotUiConfigDetails :<|> GetNammaTagConfigPilotGetUiTableData :<|> GetNammaTagConfigPilotAlwaysOnList :<|> PostNammaTagConfigPilotActionChange :<|> PostNammaTagConfigPilotGetPatchedElement :<|> PostNammaTagConfigPilotGetConfigWithDimensions :<|> GetNammaTagConfigPilotGetDimensionSchema :<|> PostNammaTagConfigPilotCreateRow :<|> PostNammaTagConfigPilotVerify :<|> PostNammaTagConfigPilotUpsertLogicRollout :<|> PostNammaTagConfigPilotRolloutAction :<|> GetNammaTagBehaviorVisibility))
+type API = ("nammaTag" :> (PostNammaTagTagCreate :<|> PostNammaTagTagVerify :<|> PostNammaTagTagUpdate :<|> DeleteNammaTagTagDelete :<|> GetNammaTagTagAll :<|> GetNammaTagTagDetails :<|> PostNammaTagQueryCreate :<|> PostNammaTagQueryUpdate :<|> DeleteNammaTagQueryDelete :<|> GetNammaTagQueryDetails :<|> PostNammaTagAppDynamicLogicVerify :<|> GetNammaTagAppDynamicLogic :<|> PostNammaTagRunJob :<|> GetNammaTagTimeBounds :<|> PostNammaTagTimeBoundsCreate :<|> DeleteNammaTagTimeBoundsDelete :<|> GetNammaTagAppDynamicLogicGetLogicRollout :<|> PostNammaTagAppDynamicLogicUpsertLogicRollout :<|> PostNammaTagAppDynamicLogicBulkUpsertLogicRollout :<|> GetNammaTagBehaviorStatus :<|> PostNammaTagBehaviorEnable :<|> PostNammaTagBehaviorDisable :<|> PostNammaTagBehaviorMarkCanonical :<|> PostNammaTagAppDynamicLogicUpdateExperimentGroup :<|> GetNammaTagAppDynamicLogicExperimentGroups :<|> GetNammaTagAppDynamicLogicVersions :<|> GetNammaTagAppDynamicLogicDomains :<|> GetNammaTagAppDynamicLogicDomainsAndEvents :<|> GetNammaTagAppDynamicLogicGetDomainSchema :<|> GetNammaTagQueryAll :<|> PostNammaTagConfigPilotGetVersion :<|> PostNammaTagConfigPilotGetConfig :<|> PostNammaTagConfigPilotCreateUiConfig :<|> GetNammaTagConfigPilotAllConfigs :<|> GetNammaTagConfigPilotConfigDetails :<|> GetNammaTagConfigPilotGetTableData :<|> GetNammaTagConfigPilotGetTableDataFromDB :<|> GetNammaTagConfigPilotAllUiConfigs :<|> GetNammaTagConfigPilotUiConfigDetails :<|> GetNammaTagConfigPilotGetUiTableData :<|> GetNammaTagConfigPilotAlwaysOnList :<|> PostNammaTagConfigPilotActionChange :<|> PostNammaTagConfigPilotGetPatchedElement :<|> PostNammaTagConfigPilotGetConfigWithDimensions :<|> GetNammaTagConfigPilotGetDimensionSchema :<|> PostNammaTagConfigPilotCreateRow :<|> PostNammaTagConfigPilotVerify :<|> PostNammaTagConfigPilotUpsertLogicRollout :<|> PostNammaTagConfigPilotRolloutAction :<|> GetNammaTagBehaviorVisibility :<|> GetNammaTagChakraRuns :<|> GetNammaTagChakraRun :<|> PostNammaTagChakraJobsReschedule :<|> PostNammaTagChakraJobsCancel :<|> PostNammaTagChakraJobsDelete :<|> GetNammaTagChakraJobsUpcoming))
 
 type PostNammaTagTagCreate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_CREATE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagCreate
   )
 
 type PostNammaTagTagVerify =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_VERIFY"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagVerify
   )
 
 type PostNammaTagTagUpdate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TAG_UPDATE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTagUpdate
   )
 
 type DeleteNammaTagTagDelete =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_TAG_DELETE"
       :> API.Types.ProviderPlatform.Management.NammaTag.DeleteNammaTagTagDelete
   )
 
-type GetNammaTagTagAll = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_ALL" :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagTagAll)
+type GetNammaTagTagAll = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_ALL" :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagTagAll)
 
 type GetNammaTagTagDetails =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TAG_DETAILS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagTagDetails
   )
 
 type PostNammaTagQueryCreate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_QUERY_CREATE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagQueryCreate
   )
 
 type PostNammaTagQueryUpdate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_QUERY_UPDATE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagQueryUpdate
   )
 
 type DeleteNammaTagQueryDelete =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_QUERY_DELETE"
       :> API.Types.ProviderPlatform.Management.NammaTag.DeleteNammaTagQueryDelete
   )
 
 type GetNammaTagQueryDetails =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_QUERY_DETAILS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagQueryDetails
   )
 
 type PostNammaTagAppDynamicLogicVerify =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERIFY"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicVerify
   )
 
 type GetNammaTagAppDynamicLogic =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogic
   )
 
-type PostNammaTagRunJob = (DashboardUserAuth 'DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_RUN_JOB" :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagRunJob)
+type PostNammaTagRunJob = (DashboardUserAuth ('DRIVER_OFFER_BPP_MANAGEMENT) "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_RUN_JOB" :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagRunJob)
 
 type GetNammaTagTimeBounds =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_TIME_BOUNDS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagTimeBounds
   )
 
 type PostNammaTagTimeBoundsCreate =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_TIME_BOUNDS_CREATE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagTimeBoundsCreate
   )
 
 type DeleteNammaTagTimeBoundsDelete =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/DELETE_NAMMA_TAG_TIME_BOUNDS_DELETE"
       :> API.Types.ProviderPlatform.Management.NammaTag.DeleteNammaTagTimeBoundsDelete
   )
 
 type GetNammaTagAppDynamicLogicGetLogicRollout =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_LOGIC_ROLLOUT"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicGetLogicRollout
   )
 
 type PostNammaTagAppDynamicLogicUpsertLogicRollout =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPSERT_LOGIC_ROLLOUT"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicUpsertLogicRollout
   )
 
 type PostNammaTagAppDynamicLogicBulkUpsertLogicRollout =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_BULK_UPSERT_LOGIC_ROLLOUT"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicBulkUpsertLogicRollout
   )
 
 type GetNammaTagBehaviorStatus =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_BEHAVIOR_STATUS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagBehaviorStatus
   )
 
 type PostNammaTagBehaviorEnable =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_ENABLE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagBehaviorEnable
   )
 
 type PostNammaTagBehaviorDisable =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_DISABLE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagBehaviorDisable
   )
 
 type PostNammaTagBehaviorMarkCanonical =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_BEHAVIOR_MARK_CANONICAL"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagBehaviorMarkCanonical
   )
 
 type PostNammaTagAppDynamicLogicUpdateExperimentGroup =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_APP_DYNAMIC_LOGIC_UPDATE_EXPERIMENT_GROUP"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagAppDynamicLogicUpdateExperimentGroup
   )
 
 type GetNammaTagAppDynamicLogicExperimentGroups =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_EXPERIMENT_GROUPS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicExperimentGroups
   )
 
 type GetNammaTagAppDynamicLogicVersions =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_VERSIONS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicVersions
   )
 
 type GetNammaTagAppDynamicLogicDomains =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicDomains
   )
 
 type GetNammaTagAppDynamicLogicDomainsAndEvents =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_DOMAINS_AND_EVENTS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicDomainsAndEvents
   )
 
 type GetNammaTagAppDynamicLogicGetDomainSchema =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_APP_DYNAMIC_LOGIC_GET_DOMAIN_SCHEMA"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagAppDynamicLogicGetDomainSchema
   )
 
 type GetNammaTagQueryAll =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_QUERY_ALL"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagQueryAll
   )
 
 type PostNammaTagConfigPilotGetVersion =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_VERSION"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotGetVersion
   )
 
 type PostNammaTagConfigPilotGetConfig =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotGetConfig
   )
 
 type PostNammaTagConfigPilotCreateUiConfig =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_UI_CONFIG"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotCreateUiConfig
   )
 
 type GetNammaTagConfigPilotAllConfigs =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_CONFIGS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotAllConfigs
   )
 
 type GetNammaTagConfigPilotConfigDetails =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_CONFIG_DETAILS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotConfigDetails
   )
 
 type GetNammaTagConfigPilotGetTableData =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotGetTableData
   )
 
 type GetNammaTagConfigPilotGetTableDataFromDB =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_TABLE_DATA_FROM_DB"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotGetTableDataFromDB
   )
 
 type GetNammaTagConfigPilotAllUiConfigs =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALL_UI_CONFIGS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotAllUiConfigs
   )
 
 type GetNammaTagConfigPilotUiConfigDetails =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_UI_CONFIG_DETAILS"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotUiConfigDetails
   )
 
 type GetNammaTagConfigPilotGetUiTableData =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_UI_TABLE_DATA"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotGetUiTableData
   )
 
 type GetNammaTagConfigPilotAlwaysOnList =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_ALWAYS_ON_LIST"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotAlwaysOnList
   )
 
 type PostNammaTagConfigPilotActionChange =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ACTION_CHANGE"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotActionChange
   )
 
 type PostNammaTagConfigPilotGetPatchedElement =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_PATCHED_ELEMENT"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotGetPatchedElement
   )
 
 type PostNammaTagConfigPilotGetConfigWithDimensions =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_GET_CONFIG_WITH_DIMENSIONS"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotGetConfigWithDimensions
   )
 
 type GetNammaTagConfigPilotGetDimensionSchema =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CONFIG_PILOT_GET_DIMENSION_SCHEMA"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagConfigPilotGetDimensionSchema
   )
 
 type PostNammaTagConfigPilotCreateRow =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_CREATE_ROW"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotCreateRow
   )
 
 type PostNammaTagConfigPilotVerify =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_VERIFY"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotVerify
   )
 
 type PostNammaTagConfigPilotUpsertLogicRollout =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_UPSERT_LOGIC_ROLLOUT"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotUpsertLogicRollout
   )
 
 type PostNammaTagConfigPilotRolloutAction =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CONFIG_PILOT_ROLLOUT_ACTION"
       :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagConfigPilotRolloutAction
   )
 
 type GetNammaTagBehaviorVisibility =
   ( DashboardUserAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
       "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_BEHAVIOR_VISIBILITY"
       :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagBehaviorVisibility
   )
 
+type GetNammaTagChakraRuns =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CHAKRA_RUNS"
+      :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagChakraRuns
+  )
+
+type GetNammaTagChakraRun =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CHAKRA_RUN"
+      :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagChakraRun
+  )
+
+type PostNammaTagChakraJobsReschedule =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CHAKRA_JOBS_RESCHEDULE"
+      :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagChakraJobsReschedule
+  )
+
+type PostNammaTagChakraJobsCancel =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CHAKRA_JOBS_CANCEL"
+      :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagChakraJobsCancel
+  )
+
+type PostNammaTagChakraJobsDelete =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CHAKRA_JOBS_DELETE"
+      :> API.Types.ProviderPlatform.Management.NammaTag.PostNammaTagChakraJobsDelete
+  )
+
+type GetNammaTagChakraJobsUpcoming =
+  ( DashboardUserAuth
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      "PROVIDER_MANAGEMENT/NAMMA_TAG/GET_NAMMA_TAG_CHAKRA_JOBS_UPCOMING"
+      :> API.Types.ProviderPlatform.Management.NammaTag.GetNammaTagChakraJobsUpcoming
+  )
+
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagVerify merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> getNammaTagTagAll merchantId city :<|> getNammaTagTagDetails merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagQueryUpdate merchantId city :<|> deleteNammaTagQueryDelete merchantId city :<|> getNammaTagQueryDetails merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> getNammaTagTimeBounds merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicBulkUpsertLogicRollout merchantId city :<|> getNammaTagBehaviorStatus merchantId city :<|> postNammaTagBehaviorEnable merchantId city :<|> postNammaTagBehaviorDisable merchantId city :<|> postNammaTagBehaviorMarkCanonical merchantId city :<|> postNammaTagAppDynamicLogicUpdateExperimentGroup merchantId city :<|> getNammaTagAppDynamicLogicExperimentGroups merchantId city :<|> getNammaTagAppDynamicLogicVersions merchantId city :<|> getNammaTagAppDynamicLogicDomains merchantId city :<|> getNammaTagAppDynamicLogicDomainsAndEvents merchantId city :<|> getNammaTagAppDynamicLogicGetDomainSchema merchantId city :<|> getNammaTagQueryAll merchantId city :<|> postNammaTagConfigPilotGetVersion merchantId city :<|> postNammaTagConfigPilotGetConfig merchantId city :<|> postNammaTagConfigPilotCreateUiConfig merchantId city :<|> getNammaTagConfigPilotAllConfigs merchantId city :<|> getNammaTagConfigPilotConfigDetails merchantId city :<|> getNammaTagConfigPilotGetTableData merchantId city :<|> getNammaTagConfigPilotGetTableDataFromDB merchantId city :<|> getNammaTagConfigPilotAllUiConfigs merchantId city :<|> getNammaTagConfigPilotUiConfigDetails merchantId city :<|> getNammaTagConfigPilotGetUiTableData merchantId city :<|> getNammaTagConfigPilotAlwaysOnList merchantId city :<|> postNammaTagConfigPilotActionChange merchantId city :<|> postNammaTagConfigPilotGetPatchedElement merchantId city :<|> postNammaTagConfigPilotGetConfigWithDimensions merchantId city :<|> getNammaTagConfigPilotGetDimensionSchema merchantId city :<|> postNammaTagConfigPilotCreateRow merchantId city :<|> postNammaTagConfigPilotVerify merchantId city :<|> postNammaTagConfigPilotUpsertLogicRollout merchantId city :<|> postNammaTagConfigPilotRolloutAction merchantId city :<|> getNammaTagBehaviorVisibility merchantId city
+handler merchantId city = postNammaTagTagCreate merchantId city :<|> postNammaTagTagVerify merchantId city :<|> postNammaTagTagUpdate merchantId city :<|> deleteNammaTagTagDelete merchantId city :<|> getNammaTagTagAll merchantId city :<|> getNammaTagTagDetails merchantId city :<|> postNammaTagQueryCreate merchantId city :<|> postNammaTagQueryUpdate merchantId city :<|> deleteNammaTagQueryDelete merchantId city :<|> getNammaTagQueryDetails merchantId city :<|> postNammaTagAppDynamicLogicVerify merchantId city :<|> getNammaTagAppDynamicLogic merchantId city :<|> postNammaTagRunJob merchantId city :<|> getNammaTagTimeBounds merchantId city :<|> postNammaTagTimeBoundsCreate merchantId city :<|> deleteNammaTagTimeBoundsDelete merchantId city :<|> getNammaTagAppDynamicLogicGetLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicUpsertLogicRollout merchantId city :<|> postNammaTagAppDynamicLogicBulkUpsertLogicRollout merchantId city :<|> getNammaTagBehaviorStatus merchantId city :<|> postNammaTagBehaviorEnable merchantId city :<|> postNammaTagBehaviorDisable merchantId city :<|> postNammaTagBehaviorMarkCanonical merchantId city :<|> postNammaTagAppDynamicLogicUpdateExperimentGroup merchantId city :<|> getNammaTagAppDynamicLogicExperimentGroups merchantId city :<|> getNammaTagAppDynamicLogicVersions merchantId city :<|> getNammaTagAppDynamicLogicDomains merchantId city :<|> getNammaTagAppDynamicLogicDomainsAndEvents merchantId city :<|> getNammaTagAppDynamicLogicGetDomainSchema merchantId city :<|> getNammaTagQueryAll merchantId city :<|> postNammaTagConfigPilotGetVersion merchantId city :<|> postNammaTagConfigPilotGetConfig merchantId city :<|> postNammaTagConfigPilotCreateUiConfig merchantId city :<|> getNammaTagConfigPilotAllConfigs merchantId city :<|> getNammaTagConfigPilotConfigDetails merchantId city :<|> getNammaTagConfigPilotGetTableData merchantId city :<|> getNammaTagConfigPilotGetTableDataFromDB merchantId city :<|> getNammaTagConfigPilotAllUiConfigs merchantId city :<|> getNammaTagConfigPilotUiConfigDetails merchantId city :<|> getNammaTagConfigPilotGetUiTableData merchantId city :<|> getNammaTagConfigPilotAlwaysOnList merchantId city :<|> postNammaTagConfigPilotActionChange merchantId city :<|> postNammaTagConfigPilotGetPatchedElement merchantId city :<|> postNammaTagConfigPilotGetConfigWithDimensions merchantId city :<|> getNammaTagConfigPilotGetDimensionSchema merchantId city :<|> postNammaTagConfigPilotCreateRow merchantId city :<|> postNammaTagConfigPilotVerify merchantId city :<|> postNammaTagConfigPilotUpsertLogicRollout merchantId city :<|> postNammaTagConfigPilotRolloutAction merchantId city :<|> getNammaTagBehaviorVisibility merchantId city :<|> getNammaTagChakraRuns merchantId city :<|> getNammaTagChakraRun merchantId city :<|> postNammaTagChakraJobsReschedule merchantId city :<|> postNammaTagChakraJobsCancel merchantId city :<|> postNammaTagChakraJobsDelete merchantId city :<|> getNammaTagChakraJobsUpcoming merchantId city
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.CreateNammaTagRequest -> Environment.FlowHandler Lib.Yudhishthira.Types.CreateNammaTagResponse)
 postNammaTagTagCreate a4 a3 a2 a1 =
@@ -443,7 +486,7 @@ postNammaTagAppDynamicLogicVerify a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.postNammaTagAppDynamicLogicVerify a4 a3 a1
     )
 
-getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.GetLogicsResp])
+getNammaTagAppDynamicLogic :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.GetLogicsResp])
 getNammaTagAppDynamicLogic a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagAppDynamicLogic a5 a4 a2 a1
 
 postNammaTagRunJob :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.RunKaalChakraJobReq -> Environment.FlowHandler Lib.Yudhishthira.Types.RunKaalChakraJobRes)
@@ -473,7 +516,7 @@ deleteNammaTagTimeBoundsDelete a5 a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.NammaTag.deleteNammaTagTimeBoundsDelete a5 a4 a2 a1
     )
 
-getNammaTagAppDynamicLogicGetLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.LogicRolloutObject])
+getNammaTagAppDynamicLogicGetLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.LogicRolloutObject])
 getNammaTagAppDynamicLogicGetLogicRollout a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagAppDynamicLogicGetLogicRollout a6 a5 a3 a2 a1
 
 postNammaTagAppDynamicLogicUpsertLogicRollout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.LogicRolloutReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
@@ -527,16 +570,16 @@ postNammaTagAppDynamicLogicUpdateExperimentGroup a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.postNammaTagAppDynamicLogicUpdateExperimentGroup a4 a3 a1
     )
 
-getNammaTagAppDynamicLogicExperimentGroups :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler [Lib.Yudhishthira.Types.RolloutGroupInfo])
+getNammaTagAppDynamicLogicExperimentGroups :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Lib.Yudhishthira.Types.LogicDomain) -> Environment.FlowHandler [Lib.Yudhishthira.Types.RolloutGroupInfo])
 getNammaTagAppDynamicLogicExperimentGroups a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagAppDynamicLogicExperimentGroups a4 a3 a1
 
-getNammaTagAppDynamicLogicVersions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler Lib.Yudhishthira.Types.AppDynamicLogicVersionResp)
+getNammaTagAppDynamicLogicVersions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler Lib.Yudhishthira.Types.AppDynamicLogicVersionResp)
 getNammaTagAppDynamicLogicVersions a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a4 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagAppDynamicLogicVersions a6 a5 a3 a2 a1
 
 getNammaTagAppDynamicLogicDomains :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler Lib.Yudhishthira.Types.AppDynamicLogicDomainResp)
 getNammaTagAppDynamicLogicDomains a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagAppDynamicLogicDomains a3 a2
 
-getNammaTagAppDynamicLogicDomainsAndEvents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler Lib.Yudhishthira.Types.NammaTagEventsOrNammaTagNamesResp)
+getNammaTagAppDynamicLogicDomainsAndEvents :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler Lib.Yudhishthira.Types.NammaTagEventsOrNammaTagNamesResp)
 getNammaTagAppDynamicLogicDomainsAndEvents a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagAppDynamicLogicDomainsAndEvents a4 a3 a1
 
 getNammaTagAppDynamicLogicGetDomainSchema :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.LogicDomain -> Environment.FlowHandler Lib.Yudhishthira.Types.DomainSchemaResp)
@@ -569,7 +612,7 @@ postNammaTagConfigPilotCreateUiConfig a4 a3 a2 a1 =
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.postNammaTagConfigPilotCreateUiConfig a4 a3 a1
     )
 
-getNammaTagConfigPilotAllConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler [Lib.Yudhishthira.Types.ConfigType])
+getNammaTagConfigPilotAllConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler [Lib.Yudhishthira.Types.ConfigType])
 getNammaTagConfigPilotAllConfigs a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagConfigPilotAllConfigs a4 a3 a1
 
 getNammaTagConfigPilotConfigDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.ConfigType -> Environment.FlowHandler [Lib.Yudhishthira.Types.ConfigDetailsResp])
@@ -581,7 +624,7 @@ getNammaTagConfigPilotGetTableData a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ T
 getNammaTagConfigPilotGetTableDataFromDB :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.ConfigType -> Environment.FlowHandler Lib.Yudhishthira.Types.TableDataResp)
 getNammaTagConfigPilotGetTableDataFromDB a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagConfigPilotGetTableDataFromDB a4 a3 a1
 
-getNammaTagConfigPilotAllUiConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler [Lib.Yudhishthira.Types.LogicDomain])
+getNammaTagConfigPilotAllUiConfigs :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Environment.FlowHandler [Lib.Yudhishthira.Types.LogicDomain])
 getNammaTagConfigPilotAllUiConfigs a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagConfigPilotAllUiConfigs a4 a3 a1
 
 getNammaTagConfigPilotUiConfigDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.UiDevicePlatformReq -> Environment.FlowHandler [Lib.Yudhishthira.Types.ConfigDetailsResp])
@@ -654,3 +697,36 @@ postNammaTagConfigPilotRolloutAction a5 a4 a3 a2 a1 =
 
 getNammaTagBehaviorVisibility :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.BehaviorTracker.Types.EntityBehaviorVisibility)
 getNammaTagBehaviorVisibility a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a3 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagBehaviorVisibility a5 a4 a2 a1
+
+getNammaTagChakraRuns :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Lib.Yudhishthira.Types.KaalChakraJobRun.KaalChakraJobRunStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Lib.Yudhishthira.Types.Chakra -> Environment.FlowHandler Lib.Yudhishthira.Types.ChakraRunListRes)
+getNammaTagChakraRuns a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a7 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagChakraRuns a9 a8 a6 a5 a4 a3 a2 a1
+
+getNammaTagChakraRun :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Yudhishthira.Types.ChakraRunDetailRes)
+getNammaTagChakraRun a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagChakraRun a4 a3 a1
+
+postNammaTagChakraJobsReschedule :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.ChakraJobRescheduleReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postNammaTagChakraJobsReschedule a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CHAKRA_JOBS_RESCHEDULE" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.postNammaTagChakraJobsReschedule a4 a3 a1
+    )
+
+postNammaTagChakraJobsCancel :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.ChakraJobCancelReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postNammaTagChakraJobsCancel a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CHAKRA_JOBS_CANCEL" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.postNammaTagChakraJobsCancel a4 a3 a1
+    )
+
+postNammaTagChakraJobsDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Lib.Yudhishthira.Types.ChakraJobDeleteReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postNammaTagChakraJobsDelete a4 a3 a2 a1 =
+  withDashboardFlowHandlerAPI $
+    ( do
+        Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.DRIVER_OFFER_BPP_MANAGEMENT "PROVIDER_MANAGEMENT/NAMMA_TAG/POST_NAMMA_TAG_CHAKRA_JOBS_DELETE" a2 (Kernel.Prelude.Just a1)
+        Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.Management.NammaTag.postNammaTagChakraJobsDelete a4 a3 a1
+    )
+
+getNammaTagChakraJobsUpcoming :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> DashboardUser -> Environment.FlowHandler Lib.Yudhishthira.Types.ChakraUpcomingJobsRes)
+getNammaTagChakraJobsUpcoming a3 a2 a1 = withDashboardFlowHandlerAPI $ Tools.ActorInfo.withDashboardUserActorInfo a1 $ Domain.Action.Dashboard.Management.NammaTag.getNammaTagChakraJobsUpcoming a3 a2
