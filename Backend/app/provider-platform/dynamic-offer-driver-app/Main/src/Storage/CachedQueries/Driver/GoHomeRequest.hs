@@ -1,6 +1,7 @@
 module Storage.CachedQueries.Driver.GoHomeRequest where
 
 import Control.Monad
+import qualified Data.Map.Strict as Map
 import Data.Text (pack)
 import Domain.Action.UI.DriverGoHomeRequest
 import Domain.Types.DriverGoHomeRequest as DDGR
@@ -52,6 +53,21 @@ getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
           QDGR.finishWithStatus (bool DDGR.FAILED DDGR.SUCCESS (isJust succRide)) (bool Nothing (Just False) (isJust succRide)) dghr.id driverId
         withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
         return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
+
+getDriversGoHomeRequestInfoBatch :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => [Id DP.Driver] -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> m [(Id DP.Driver, CachedGoHomeRequest)]
+getDriversGoHomeRequestInfoBatch [] _ _ = pure []
+getDriversGoHomeRequestInfoBatch driverIds merchantOpCityId goHomeCfg = do
+  currTime <- getLocalCurrentTime =<< ((getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
+  cached <- Map.fromList <$> withCrossAppRedis (Hedis.mGetClusterWithKeys @CachedGoHomeRequest (makeGoHomeReqKey <$> driverIds))
+  forM driverIds $ \driverId ->
+    case Map.lookup (makeGoHomeReqKey driverId) cached of
+      Just ghrData | isUsableAsIs currTime ghrData -> pure (driverId, ghrData)
+      _ -> (\ghrData -> (driverId, ghrData)) <$> getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeCfg)
+  where
+    isUsableAsIs :: UTCTime -> CachedGoHomeRequest -> Bool
+    isUsableAsIs currTime ghrData =
+      maybe False (\validTill -> validTill > currTime || ghrData.isOnRide) ghrData.validTill
+        || (isNothing ghrData.validTill && ghrData.goHomeReferenceTime > currTime)
 
 checkInvalidReqData :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> Int -> m CachedGoHomeRequest
 checkInvalidReqData ghrData currTime ghkey driverId merchantOpCityId goHomeCfg expTime = do
