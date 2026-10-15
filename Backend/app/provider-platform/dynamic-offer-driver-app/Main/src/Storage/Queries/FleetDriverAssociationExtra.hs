@@ -1,9 +1,13 @@
 module Storage.Queries.FleetDriverAssociationExtra where
 
 import Control.Applicative (liftA2, liftA3)
+import qualified Dashboard.Common as DC
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as DL
 import Data.List.Split (chunksOf)
 import qualified Data.Map as M
 import Data.Text (takeEnd, toLower)
+import qualified Data.Text as T
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import qualified Domain.Types.Common as DI
@@ -16,7 +20,9 @@ import qualified Domain.Types.FleetDriverAssociation as DFDA
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person
+import qualified Domain.Types.Vehicle as DV
 import Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleServiceTier as DVST
 import Domain.Utils
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -26,7 +32,10 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
+import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified Sequelize as Se
+import SharedLogic.DriverPool.AreaPreference (areaPreferenceEnabledTagName, distancePreferenceEnabledTagName, mkEnabledTagValue)
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverBankAccount as BeamDBA
@@ -34,6 +43,8 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
+import qualified Storage.CachedQueries.CoinsConfig as CQCoinsConfig
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -41,6 +52,8 @@ import Storage.Queries.OrphanInstances.DriverBankAccount ()
 import Storage.Queries.OrphanInstances.DriverInformation ()
 import Storage.Queries.OrphanInstances.FleetDriverAssociation ()
 import Storage.Queries.OrphanInstances.Person ()
+import Storage.Queries.Person.GetNearestDrivers (isTierEligibleForDriver)
+import qualified Storage.Queries.Vehicle as QVehicle
 
 -- Extra code goes here --
 
@@ -63,12 +76,95 @@ effectiveEnableCashRide now driverFlag mbFda fleetOwnerFlag = case mfilter (isAc
   Just fda -> fromMaybe True fleetOwnerFlag && fromMaybe True fda.enableCashRide
   Nothing -> fromMaybe True driverFlag
 
+autoAssignTagName :: Text
+autoAssignTagName = "AutoAssign"
+
+-- | Driver tags after joining (True) or leaving (False) a fleet with these auto-assign settings.
+fleetDriverTags :: UTCTime -> [DI.ServiceTierType] -> Bool -> Maybe DFC.AutoAssignConfig -> [LYT.TagNameValueExpiry] -> [LYT.TagNameValueExpiry]
+fleetDriverTags now cityAutoAcceptTiers joined mbAutoAssign tags
+  | joined =
+    let withAutoAssign =
+          if defaultOn && not (null cityAutoAcceptTiers)
+            then setTag autoAssignTagName (LYT.ArrayValue (DL.nub (autoAssignValues <> map show cityAutoAcceptTiers))) tags
+            else tags
+     in if disablePreference
+          then setTag distancePreferenceEnabledTagName disabled (setTag areaPreferenceEnabledTagName disabled withAutoAssign)
+          else withAutoAssign
+  | otherwise =
+    foldr removeTag tags $
+      [autoAssignTagName, distancePreferenceEnabledTagName]
+        <> [areaPreferenceEnabledTagName | disablePreference && Yudhishthira.elemTagNameValue (LYT.TagNameValue (areaPreferenceEnabledTagName <> "#" <> mkEnabledTagValue False)) tags]
+  where
+    defaultOn = maybe False (.defaultOn) mbAutoAssign
+    disablePreference = maybe False (.disableDriverAreaAndDistancePreference) mbAutoAssign
+    disabled = LYT.TextValue (mkEnabledTagValue False)
+    removeTag name ts = Yudhishthira.removeTagName (Just ts) (LYT.TagNameValue name)
+    setTag name value ts = removeTag name ts <> [Yudhishthira.mkTagNameValueExpiryAt (LYT.TagName name) value Nothing]
+    autoAssignValues =
+      [ value
+        | (name : values : _) <- map (T.splitOn "#" . LYT.getTagNameValue . Yudhishthira.convertToTagNameValue) (Yudhishthira.filterExpiredTags' now tags),
+          name == autoAssignTagName,
+          value <- T.splitOn "&" values,
+          not (T.null value)
+      ]
+
+-- | Vehicle tiers on joining (all city auto-accept tiers, plus the AutoAcceptOnly ones the vehicle serves) or leaving (cleared).
+fleetAutoAcceptVehicle :: UTCTime -> Bool -> Maybe [LYT.TagNameValueExpiry] -> [DVST.VehicleServiceTier] -> DV.Vehicle -> DV.Vehicle
+fleetAutoAcceptVehicle now joined driverTags cityTiers vehicle
+  | joined =
+    vehicle
+      { DV.selectedAutoAcceptTiers = Just (DL.nub (fromMaybe [] vehicle.selectedAutoAcceptTiers <> map (.serviceTierType) (filter isAutoAcceptEnabledTier cityTiers))),
+        DV.selectedServiceTiers = DL.nub (vehicle.selectedServiceTiers <> [tier.serviceTierType | tier <- autoAcceptOnlyTiers, vehicle.variant `elem` tier.allowedVehicleVariant, isTierEligibleForDriver now driverTags tierByType tier.serviceTierType])
+      }
+  | otherwise =
+    vehicle
+      { DV.selectedAutoAcceptTiers = Just [],
+        DV.selectedServiceTiers = filter (`notElem` map (.serviceTierType) autoAcceptOnlyTiers) vehicle.selectedServiceTiers
+      }
+  where
+    autoAcceptOnlyTiers = filter isAutoAcceptOnlyTier cityTiers
+    tierByType = HashMap.fromList [(tier.serviceTierType, tier) | tier <- cityTiers]
+
+isAutoAcceptEnabledTier :: DVST.VehicleServiceTier -> Bool
+isAutoAcceptEnabledTier tier = maybe False (.enabled) tier.autoAcceptanceConfig
+
+isAutoAcceptOnlyTier :: DVST.VehicleServiceTier -> Bool
+isAutoAcceptOnlyTier tier = maybe False (\cfg -> cfg.enabled && cfg.mode == DC.AutoAcceptOnly) tier.autoAcceptanceConfig
+
+-- | Applies the fleet's auto-assign settings to the driver's tags and vehicle tiers on join / leave.
+updateFleetDriverTags :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person -> Text -> m ()
+updateFleetDriverTags joined driverId ownerId = do
+  mbDriver <- findOneWithKV [Se.Is BeamP.id $ Se.Eq driverId.getId]
+  whenJust mbDriver $ \driver -> do
+    mbAutoAssign <- getFleetAutoAssignConfig ownerId driver.merchantOperatingCityId
+    writeFleetDriverTags joined mbAutoAssign driver
+
+writeFleetDriverTags :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Maybe DFC.AutoAssignConfig -> Person -> m ()
+writeFleetDriverTags joined mbAutoAssign driver = do
+  now <- getCurrentTime
+  cityTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
+  let cityAutoAcceptTiers = map (.serviceTierType) (filter isAutoAcceptEnabledTier cityTiers)
+      oldTags = fromMaybe [] driver.driverTag
+      newTags = fleetDriverTags now cityAutoAcceptTiers joined mbAutoAssign oldTags
+      updatesVehicle
+        | joined = maybe False (.defaultOn) mbAutoAssign && not (null cityAutoAcceptTiers)
+        | otherwise = Yudhishthira.elemTagName (LYT.TagNameValue autoAssignTagName) oldTags
+  when (newTags /= oldTags) $ do
+    updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType (Just newTags)), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq driver.id.getId]
+    LTSSync.syncDriverPoolDataToLTS (cast driver.id) $ LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set (Just newTags)}
+    CQCoinsConfig.clearDriverIncentiveConfigHashForDriver driver.id
+  when updatesVehicle $
+    QVehicle.findById driver.id >>= mapM_ \vehicle -> do
+      let updated = fleetAutoAcceptVehicle now joined (Just newTags) cityTiers vehicle
+      unless (updated.selectedServiceTiers == vehicle.selectedServiceTiers && updated.selectedAutoAcceptTiers == vehicle.selectedAutoAcceptTiers) $
+        QVehicle.updateSelectedServiceTiersAndAutoAcceptTiers updated.selectedServiceTiers (fromMaybe [] updated.selectedAutoAcceptTiers) driver.id
+
 createFleetDriverAssociationIfNotExists ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id Person ->
   Maybe (Id Person) ->
-  VehicleCategory ->
+  Maybe VehicleCategory ->
   Bool ->
   Maybe Text ->
   Maybe (Id Merchant) ->
@@ -86,9 +182,9 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
     mbFleetDriverAssociation <- findAllWithOptionsKV [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq isActive, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]] (Se.Desc BeamFDVA.createdAt) (Just 1) Nothing <&> listToMaybe
     case mbFleetDriverAssociation of
       Just fleetDriverAssociation ->
-        when (isNothing fleetDriverAssociation.onboardingVehicleCategory) $ do
+        when (isNothing fleetDriverAssociation.onboardingVehicleCategory && isJust onboardingVehicleCategory) $ do
           updateWithKV
-            [ Se.Set BeamFDVA.onboardingVehicleCategory (Just onboardingVehicleCategory),
+            [ Se.Set BeamFDVA.onboardingVehicleCategory onboardingVehicleCategory,
               Se.Set BeamFDVA.updatedAt now
             ]
             [Se.And [Se.Is BeamFDVA.id $ Se.Eq fleetDriverAssociation.id.getId]]
@@ -100,7 +196,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
                   driverId = driverId,
                   fleetOwnerId = fleetOwnerId.getId,
                   associatedOn = Just now,
-                  onboardingVehicleCategory = Just onboardingVehicleCategory,
+                  onboardingVehicleCategory = onboardingVehicleCategory,
                   enableCashRide = Nothing,
                   onboardedOperatorId,
                   createdAt = now,
@@ -120,6 +216,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
               LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
               LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
             }
+        when isActive $ updateFleetDriverTags True driverId fleetOwnerId.getId
         onCreated
 
 findAllActiveByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [FleetDriverAssociation]
@@ -544,13 +641,18 @@ endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.H
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   now <- getCurrentTime
   Redis.withWaitOnLockRedisWithExpiry (driverFleetLockKey driverId fleetOwnerId) 10 10 $ do
+    let pairUnexpired = [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]
+    (unexpiredAssociations :: [FleetDriverAssociation]) <- findAllWithKV [Se.And pairUnexpired]
     updateWithKV
       [Se.Set BeamFDVA.associatedTill $ Just now, Se.Set BeamFDVA.isActive False]
-      [Se.And [Se.Is BeamFDVA.fleetOwnerId (Se.Eq fleetOwnerId), Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now), Se.Is BeamFDVA.driverId (Se.Eq driverId)]]
+      [Se.And pairUnexpired]
     mbDriverInfo <- QDIE.findById (Id driverId)
     let effective = effectiveEnableCashRide now (mbDriverInfo >>= (.enableCashRide)) Nothing Nothing
     LTSSync.syncDriverPoolDataToLTS (Id driverId) $
       LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set Nothing, LTSSync.enableCashRide = LTSSync.Set (Just effective)}
+    when (any (.isActive) unexpiredAssociations) $ do
+      mbOtherActive <- findByDriverId (Id driverId) True
+      when (isNothing mbOtherActive) $ updateFleetDriverTags False (Id driverId) fleetOwnerId
 
 findAllDriversByFleetOwnerIdByMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DI.DriverMode -> Maybe Bool -> Integer -> Integer -> m [FleetDriverAssociation]
 findAllDriversByFleetOwnerIdByMode fleetOwnerId mode mbIsActive limitVal offsetVal = do
@@ -942,7 +1044,7 @@ approveFleetDriverAssociation driverId fleetOwnerId responseReason = do
         Se.Set BeamFDVA.responseReason responseReason,
         Se.Set BeamFDVA.updatedAt now
       ]
-      [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+      [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]]
     (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
     mbFleetOwnerInfo <- FOI.findByPrimaryKey fleetOwnerId
     mbAssociation <- findByDriverIdAndFleetOwnerIdWithStatus driverId fleetOwnerId.getId
@@ -954,6 +1056,7 @@ approveFleetDriverAssociation driverId fleetOwnerId responseReason = do
           LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa),
           LTSSync.enableCashRide = LTSSync.Set (Just cashRideEffective)
         }
+    when (isJust mbAssociation) $ updateFleetDriverTags True driverId fleetOwnerId.getId
 
 rejectFleetDriverAssociation ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -969,7 +1072,7 @@ rejectFleetDriverAssociation driverId fleetOwnerId responseReason = do
       Se.Set BeamFDVA.associatedTill (Just now),
       Se.Set BeamFDVA.updatedAt now
     ]
-    [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
+    [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId, Se.Is BeamFDVA.isActive $ Se.Eq False, Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)]]
 
 revokeFleetDriverAssociation ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>

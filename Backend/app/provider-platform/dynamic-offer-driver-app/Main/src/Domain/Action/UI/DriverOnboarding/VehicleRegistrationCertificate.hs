@@ -742,7 +742,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
                     vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                    let updatedVehicle = (makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing) {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
+                    rebuiltVehicle <- makeFullVehicleFromRC (Just vehicle) vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
+                    let updatedVehicle = rebuiltVehicle {DVeh.exemptParkingFee = vehicle.exemptParkingFee}
                     when (updatedVehicle.category /= vehicle.category) $
                       forceDriverOffline vehicle.driverId
                     VQuery.upsert updatedVehicle
@@ -954,14 +955,14 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       throwError (InvalidRequest "Vehicle is not approved")
   mbOldVehicle <- VQuery.findById driverInfo.driverId
   deactivateCurrentRC transporterConfig driverInfo.driverId
-  newVehicle <- addVehicleToDriver
+  newVehicle <- addVehicleToDriver mbOldVehicle
   DAQuery.activateRCForDriver driverInfo.driverId rc.id now
   when (maybe False (\oldVehicle -> oldVehicle.category /= newVehicle.category) mbOldVehicle) $
     forceDriverOffline driverInfo.driverId
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.incrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverInfo.driverId
   return ()
   where
-    addVehicleToDriver = do
+    addVehicleToDriver mbPreviousVehicle = do
       rcNumber <- decrypt rc.certificateNumber
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == DV.SUV) $
@@ -969,7 +970,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
-      let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
+      vehicle <- makeFullVehicleFromRC mbPreviousVehicle cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing
       VQuery.create vehicle
       pure vehicle
 

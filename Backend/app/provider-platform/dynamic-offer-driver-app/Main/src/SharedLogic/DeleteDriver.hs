@@ -87,6 +87,8 @@ deleteDriver merchantShortId reqDriverId = do
           whenJust mbFleetOwnerInfo $ OF.removeFleetOwnerFromOnboardingCounters (transporterConfig.unifiedOnboardingFlagsRecompute == Just True) person
           QFleetOperatorAssociation.deleteByFleetOwnerId person.id.getId
           QFleetRCAssociation.deleteByFleetOwnerId person.id
+          activeAssociations <- QFleetDriverAssociation.findAllActiveByFleetOwnerIds [person.id.getId]
+          forM_ activeAssociations $ \association -> QFleetDriverAssociation.endFleetDriverAssociation person.id.getId association.driverId
           QFleetDriverAssociation.deleteByFleetOwnerId person.id.getId
           QVehicleRC.deleteByFleetOwnerId person.id.getId
           QAadhaarCard.deleteByPersonId person.id

@@ -1023,7 +1023,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
         -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
         unless skipVehicleCreationAndOffline $ do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-          let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
+          vehicle <- makeFullVehicleFromRC Nothing cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
           QVehicle.create vehicle
           DDriverMode.forceDriverOfflineOnVehicleChange personId transporterConfig driverInfo'
           when (vehicle.variant == DV.SUV) $

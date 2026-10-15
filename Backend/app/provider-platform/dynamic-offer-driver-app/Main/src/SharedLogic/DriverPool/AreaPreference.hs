@@ -44,6 +44,8 @@ module SharedLogic.DriverPool.AreaPreference
     matchesRadius,
     isAreaPreferenceEnabled,
     isAreaPreferenceEnabledJson,
+    distancePreferenceEnabledTagName,
+    isDistancePreferenceEnabledJson,
   )
 where
 
@@ -182,6 +184,18 @@ isAreaPreferenceEnabledJson (A.Object tagsObj) =
       KM.member (A.fromText areaPreferenceRadiusTagName) tagsObj
         || any (T.isPrefixOf areaPreferenceCellTagPrefix . A.toText) (KM.keys tagsObj)
 isAreaPreferenceEnabledJson _ = False
+
+-- | Set to "false" by a fleet that disables its drivers' trip-distance preference.
+distancePreferenceEnabledTagName :: Text
+distancePreferenceEnabledTagName = "DistancePreferenceEnabled"
+
+isDistancePreferenceEnabledJson :: A.Value -> Bool
+isDistancePreferenceEnabledJson (A.Object tagsObj) =
+  case KM.lookup (A.fromText distancePreferenceEnabledTagName) tagsObj of
+    Just (A.Bool enabled) -> enabled
+    Just (A.String value) -> fromMaybe True (parseEnabledTagValue value)
+    _ -> True
+isDistancePreferenceEnabledJson _ = True
 
 -- | Every tag name that must be cleared before writing a new selection --
 -- both the radius tag and every existing cell tag, regardless of which
