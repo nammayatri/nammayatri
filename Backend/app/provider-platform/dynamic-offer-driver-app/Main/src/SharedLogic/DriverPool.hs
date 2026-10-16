@@ -779,7 +779,8 @@ mkDriverPoolWithStraightLineAsActualDistance defaultPopupDelay dpr =
       searchReqDriverStatsCounters = Nothing,
       idleTimeSeconds = Nothing,
       preferenceMatchScore = 1.0,
-      hasApplicablePreferences = False
+      hasApplicablePreferences = False,
+      fleetPoolingPriorityLevel = Nothing
     }
 
 partitionByIgnoreActualDistanceThreshold ::
@@ -959,7 +960,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
-          hasApplicablePreferences = False
+          hasApplicablePreferences = False,
+          fleetPoolingPriorityLevel = Nothing
         }
 
     makeDriverPoolResultFromGoHome NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
@@ -1280,7 +1282,8 @@ calculateDriverPoolWithActualDist CalculateDriverPoolReq {..} poolType currentSe
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
-          hasApplicablePreferences = False
+          hasApplicablePreferences = False,
+          fleetPoolingPriorityLevel = Nothing
         }
 
 scheduledRideFilter :: (MonadFlow m, MonadTime m, LT.HasLocationService m r, ServiceFlow m r) => DST.CurrentSearchInfo -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Bool -> DTC.TransporterConfig -> DriverPoolWithActualDistResult -> m Bool
@@ -1571,7 +1574,8 @@ computeActualDistance distanceUnit orgId merchantOpCityId prevRideDropLatLn pick
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
-          hasApplicablePreferences = False
+          hasApplicablePreferences = False,
+          fleetPoolingPriorityLevel = Nothing
         }
 
 computeActualDistanceOneToOneSrcAndDestMapping ::
@@ -1639,7 +1643,8 @@ computeActualDistanceOneToOneSrcAndDestMapping distanceUnit orgId merchantOpCity
           searchReqDriverStatsCounters = Nothing,
           idleTimeSeconds = Nothing,
           preferenceMatchScore = 1.0,
-          hasApplicablePreferences = False
+          hasApplicablePreferences = False,
+          fleetPoolingPriorityLevel = Nothing
         }
 
 refactorRoutesResp :: GoHomeConfig -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult) -> (NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, Maybe (Id SL.SpecialLocation), DriverPoolWithActualDistResult)

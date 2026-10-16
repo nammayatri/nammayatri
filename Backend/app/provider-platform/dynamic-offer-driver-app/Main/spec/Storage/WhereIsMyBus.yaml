@@ -11,6 +11,7 @@ imports:
   FleetBadge: Domain.Types.FleetBadge
   DriverCoinsFunctionType: Lib.DriverCoins.Types
   Value: Data.Aeson
+  FleetPoolingPriority: Domain.Types.FleetPoolingPriority
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -210,6 +211,13 @@ TripAlertRequest:
 FleetConfig:
   tableName: fleet_config
 
+  types:
+    AutoAssignConfig:
+      defaultOn: Bool
+      allowDriverToToggle: Bool
+      disableDriverAreaAndDistancePreference: Bool
+      derive: Eq
+
   fields:
     rideEndApproval: Bool
     allowEndingMidRoute: Bool
@@ -220,25 +228,45 @@ FleetConfig:
     directlyStartFirstTripAssignment: Bool
     unlinkDriverAndVehicleOnTripTermination: Bool
     blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
+    autoAssign: Maybe AutoAssignConfig
+    allowCancellationByDriver: Bool
+    fleetPoolingPriority: Maybe FleetPoolingPriority
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
     directlyStartFirstTripAssignment: Maybe Bool
     unlinkDriverAndVehicleOnTripTermination: Maybe Bool
+    autoAssign: Maybe Value
+    allowCancellationByDriver: Maybe Bool
+    fleetPoolingPriority: Maybe Value
   toTType:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: Just unlinkDriverAndVehicleOnTripTermination|E
+    autoAssign: Data.Aeson.toJSON <$> autoAssign|E
+    allowCancellationByDriver: Just allowCancellationByDriver|E
+    fleetPoolingPriority: Data.Aeson.toJSON <$> fleetPoolingPriority|E
   fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
+    autoAssign: Kernel.Utils.JSON.valueToMaybe =<< autoAssign|E
+    allowCancellationByDriver: fromMaybe True allowCancellationByDriver|E
+    fleetPoolingPriority: Kernel.Utils.JSON.valueToMaybe =<< fleetPoolingPriority|E
   sqlType:
     endRideDistanceThreshold: double precision
     blacklistCoinEvents: text[]
+    autoAssign: jsonb
+    fleetPoolingPriority: jsonb
   default:
     endRideDistanceThreshold: "100"
     directlyStartFirstTripAssignment: "true"
     unlinkDriverAndVehicleOnTripTermination: "true"
     blacklistCoinEvents: "'{}'"
+    allowCancellationByDriver: "true"
   constraints:
     fleetOwnerId: PrimaryKey
+
+  queries:
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
