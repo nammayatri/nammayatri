@@ -1,6 +1,12 @@
-# Suspended-city, before the flip: a cab is running, one booking is FINDING (the cab does not ping LTS, so nothing allocates it),
+# Suspended-city, before the flip: a cab is running but full (4 walk-ups, so nothing can allocate it and the itinerary still shows), one booking is FINDING,
 # and a second journey is initiated but not confirmed. run.sh passes the captures to suspended-city-after.hurl.
 # Needs --variable token=<rider token>. The city must have a short finding timeout (seed/05-local-config.sql, 25 s).
+
+# any other running cab (the boarding flow's cab B) would take the waiting booking, so it is ended too
+POST {{base_url}}/internal/sharedCab/route/end
+token: {{internal_key}}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "next": "END", "force": true}
+HTTP *
 
 POST {{base_url}}/internal/sharedCab/route/end
 token: {{internal_key}}
@@ -9,10 +15,11 @@ HTTP *
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 4}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
+jsonpath "$.session.available" == 0
 
 # journey 1: booked, FINDING
 POST {{base_url}}/v2/multimodalSearch
