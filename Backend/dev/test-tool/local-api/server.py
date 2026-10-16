@@ -81,6 +81,7 @@ if str(_DEVBOX_CORE_PARENT) not in sys.path:
     sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
 from devbox_core import fleet as _dc_fleet  # noqa: E402
 from devbox_core import ssh as _dc_ssh  # noqa: E402
+from devbox_core import workspace as _dc_workspace  # noqa: E402
 
 KNOWN_REPOS: dict = {
     "nammayatri/ny-react-native": PROJECT_ROOT / "data" / "ny-react-native",
@@ -1546,52 +1547,15 @@ def _is_localhost(host: str) -> bool:
 # ── Registry helpers ──
 
 
-def _remote_read_registry(ssh_user: str, host: str, port: int, identity: str | None) -> dict:
-    """Read the devbox registry JSON from the remote host via SSH."""
-    cmd = f'cat {REGISTRY_FILE} 2>/dev/null || echo \'{{"users": {{}}}}\''
-    argv = _ssh_argv(ssh_user, host, port, identity, want_tty=False) + [cmd]
-    try:
-        result = subprocess.run(argv, capture_output=True, timeout=10)
-        if result.returncode == 0 and result.stdout.strip():
-            return json.loads(result.stdout)
-    except Exception:
-        pass
-    return {"users": {}}
-
-
-def _remote_write_registry(ssh_user: str, host: str, port: int, identity: str | None, registry: dict) -> bool:
-    """Write the devbox registry JSON to the remote host via SSH."""
-    data = json.dumps(registry, indent=2)
-    cmd = f"cat > {REGISTRY_FILE}"
-    argv = _ssh_argv(ssh_user, host, port, identity, want_tty=False) + [cmd]
-    try:
-        result = subprocess.run(argv, input=data.encode(), capture_output=True, timeout=10)
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
-
-
 def _register_dev_user(ssh_user: str, host: str, port: int, identity: str | None, dev_name: str) -> dict:
-    """Ensure dev_name is in the remote registry; return their entry."""
-    if not _SAFE_NAME_RE.match(dev_name):
-        raise ValueError(f"devName contains unsafe characters: {dev_name!r}")
-    registry = _remote_read_registry(ssh_user, host, port, identity)
-    users = registry.get("users", {})
+    """Ensure dev_name is in the remote registry; return their entry.
 
-    if dev_name in users:
-        return users[dev_name]
-
-    entry = {
-        "dir": f"/tmp/{dev_name}/nammayatri",
-    }
-    users[dev_name] = entry
-    registry["users"] = users
-    _remote_write_registry(ssh_user, host, port, identity, registry)
-
-    return entry
+    Locked read-modify-write in devbox_core.workspace. A failed write still
+    returns the default dir, as before, so callers can go on."""
+    try:
+        return _dc_workspace.register(_dc_ssh.Target(ssh_user, host, port, identity), dev_name)
+    except RuntimeError:
+        return {"dir": _dc_workspace.workspace_dir(dev_name)}
 
 
 # ── Devbox port discovery (single source of truth) ──

@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 
-from . import fleet, ssh
+from . import fleet, ssh, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -62,6 +62,51 @@ def cmd_pick(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_registry(args: argparse.Namespace) -> int:
+    print(json.dumps(workspace.read_registry(_target(args)), indent=2))
+    return 0
+
+
+def _owner(args: argparse.Namespace) -> dict | None:
+    if args.owner_user or args.owner_release:
+        return {"by": args.owner_by, "user": args.owner_user, "release": args.owner_release}
+    return None
+
+
+def cmd_register(args: argparse.Namespace) -> int:
+    try:
+        entry = workspace.register(_target(args), args.name, _owner(args))
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    print(json.dumps(entry))
+    return 0
+
+
+def cmd_release(args: argparse.Namespace) -> int:
+    try:
+        removed = workspace.release(_target(args), args.name, _owner(args))
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    print(json.dumps({"released": removed} if removed else {"released": False, "note": "already gone"}))
+    return 0
+
+
+def _add_owner_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--name", required=True, help="workspace name")
+    p.add_argument("--owner-by", default="scc")
+    p.add_argument("--owner-user", default="")
+    p.add_argument("--owner-release", default="")
+
+
+def _add_target_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--host", required=True)
+    p.add_argument("--user", required=True)
+    p.add_argument("--port", type=int, default=22)
+    p.add_argument("--key", help="private key file (default: DEVBOX_SSH_KEY_FILE or ~/.ssh/id_*)")
+
+
 def main(argv: list | None = None) -> int:
     p = argparse.ArgumentParser(prog="devbox_core")
     sub = p.add_subparsers(dest="command", required=True)
@@ -80,6 +125,20 @@ def main(argv: list | None = None) -> int:
         c.add_argument("--base-host", default=base_host, help="service discovery host (env BASE_API_HOST)")
         c.add_argument("--base-port", default=base_port, help="service discovery port (env BASE_API_PORT)")
         c.set_defaults(func=func)
+
+    reg = sub.add_parser("registry", help="show the devbox's workspace registry")
+    _add_target_args(reg)
+    reg.set_defaults(func=cmd_registry)
+
+    rg = sub.add_parser("register", help="add/update one workspace in the registry (locked)")
+    _add_target_args(rg)
+    _add_owner_args(rg)
+    rg.set_defaults(func=cmd_register)
+
+    rl = sub.add_parser("release", help="remove one workspace from the registry (owner must match)")
+    _add_target_args(rl)
+    _add_owner_args(rl)
+    rl.set_defaults(func=cmd_release)
 
     args = p.parse_args(argv)
     return args.func(args)
