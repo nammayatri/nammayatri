@@ -8,6 +8,7 @@ module API.Action.DashboardAuth.Management.SearchTry
 where
 
 import qualified API.Types.RiderPlatform.Management.SearchTry
+import qualified Control.Lens
 import qualified Domain.Action.Dashboard.SearchTry
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -37,6 +38,7 @@ postSearchTryRecentSearchTries :: (Kernel.Types.Id.ShortId Domain.Types.Merchant
 postSearchTryRecentSearchTries a4 a3 a2 a1 =
   withDashboardFlowHandlerAPI $
     ( do
+        Tools.Auth.DashboardUserAuth.enforceMerchantCityAccessForUser a2 a4 a3
         Tools.Auth.DashboardUserAuth.auditDashboardAction Tools.Auth.DashboardUserAuth.APP_BACKEND_MANAGEMENT "RIDER_MANAGEMENT/SEARCH_TRY/POST_SEARCH_TRY_RECENT_SEARCH_TRIES" a2 (Kernel.Prelude.Just a1)
         Tools.ActorInfo.withDashboardUserActorInfo a2 $ Domain.Action.Dashboard.SearchTry.postSearchTryRecentSearchTries a4 a3 a1
     )

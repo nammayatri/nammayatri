@@ -21,4 +21,9 @@ in      common.defaultConfigs
     //  { _output = outputPath
         , _serverName = serverName
         , _folderName = Some folderName
+        , _packageMapping =
+          [ { _1 = common.GeneratorType.SERVANT_API
+            , _2 = "dynamic-offer-driver-app"
+            }
+          ]
         }

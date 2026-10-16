@@ -32,6 +32,11 @@ module Tools.Auth.DashboardUserAuth
     verifyDashboardUserAction,
     auditDashboardAction,
     DashboardUser,
+    -- Handler-entry merchant/city authorization (one-token-per-person). The
+    -- generated handler calls this first, passing the verified operator and its
+    -- own typed merchant/city Capture args. Re-exported here so generated
+    -- modules resolve it the same way they already resolve auditDashboardAction.
+    enforceMerchantCityAccessForUser,
     -- Re-exported so the generated DashboardAuth modules can fill in
     -- session-derived path captures without importing a second module.
     requestorFleetFlag,
@@ -66,7 +71,7 @@ import Kernel.Prelude
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import Kernel.Utils.Servant.HeaderAuth (VerificationMethod (..))
 import Servant
-import Tools.Auth.DashboardUser (DashboardAccountVerification, DashboardAuthFlow, DashboardUser, FleetOwnerRegistration (..), applyDashboardAccountVerification, auditDashboardAction, beginFleetOwnerRegistration, checkFleetOwnerVerification, completeFleetOwnerRegistration, dashboardRequestorEmail, dashboardRequestorId, dashboardRequestorIdForDriver, dashboardRequestorName, requestorCityAccess, requestorFleetFlag, requestorHasFleetMemberHierarchy, requestorIsFleetOwner, resolveRequestorTopic, syncDashboardPersonVerified, updateDashboardPersonRole, updateDashboardPersonVerified, validateDashboardAccountVerification)
+import Tools.Auth.DashboardUser (DashboardAccountVerification, DashboardAuthFlow, DashboardUser, FleetOwnerRegistration (..), applyDashboardAccountVerification, auditDashboardAction, beginFleetOwnerRegistration, checkFleetOwnerVerification, completeFleetOwnerRegistration, dashboardRequestorEmail, dashboardRequestorId, dashboardRequestorIdForDriver, dashboardRequestorName, enforceMerchantCityAccessForUser, requestorCityAccess, requestorFleetFlag, requestorHasFleetMemberHierarchy, requestorIsFleetOwner, resolveRequestorTopic, syncDashboardPersonVerified, updateDashboardPersonRole, updateDashboardPersonVerified, validateDashboardAccountVerification)
 import qualified Tools.Auth.DashboardUser as DashboardUser
 import "lib-dashboard" Tools.Servant.HeaderAuth
 
