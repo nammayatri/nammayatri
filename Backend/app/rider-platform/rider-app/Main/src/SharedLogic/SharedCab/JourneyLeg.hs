@@ -63,7 +63,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   -- the fallback gate and the arrival deadline both live in the cross-app Redis cell the allocation tick writes to
   cfg <- Config.getTunables booking.merchantOperatingCityId
   findingSince <- Claim.readFindingSince booking.id booking.createdAt
-  attempts <- SharedCabBooking.shared $ fromMaybe 0 <$> Redis.safeGet (Keys.attemptsKey booking.id)
+  attempts <- Claim.readAttempts booking.id
   mbAllocState <- SharedCabBooking.shared $ Redis.safeGet @AllocationState (Keys.allocKey booking.id)
   cabTrack <- readCabTrack now cfg booking mbSession
   mbDriverInfo <- readLiveDriverInfo mbSession

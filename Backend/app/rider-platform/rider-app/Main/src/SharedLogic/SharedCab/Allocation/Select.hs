@@ -2,6 +2,7 @@
 module SharedLogic.SharedCab.Allocation.Select
   ( FindingBooking (..),
     findingOf,
+    isFinding,
     allocatedPlate,
     closable,
     claimable,
@@ -49,17 +50,19 @@ data FindingBooking = FindingBooking
     routeCode :: Text,
     boardStopCode :: Text, -- == frfs_ticket_booking.fromStationCode
     dropStopCode :: Text, -- == frfs_ticket_booking.toStationCode
-    seats :: Int, -- number of ticket rows (quantity = seats); 1-4
+    seats :: Int, -- the party's size: every rider booked together needs a seat in the same cab
     findingSince :: UTCTime -- drives fallbackAfterSec / findingTimeoutSec
   }
   deriving (Show, Eq, Generic)
 
-findingOf :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe FindingBooking
-findingOf (b, statuses) = do
-  guard (isNothing b.vehicleNumber)
+-- | A live booking that still needs a cab: no plate, a route, a ticket not yet used.
+isFinding :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Bool
+isFinding (b, statuses) = isNothing b.vehicleNumber && isJust b.routeCode && DFRFSTicket.ACTIVE `elem` statuses
+
+findingOf :: (DFTB.FRFSTicketBooking -> Int) -> (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe FindingBooking
+findingOf seatsOf entry@(b, _) = do
+  guard (isFinding entry)
   route <- b.routeCode
-  let seatCount = length (filter (== DFRFSTicket.ACTIVE) statuses)
-  guard (seatCount > 0)
   pure
     FindingBooking
       { bookingId = b.id,
@@ -67,7 +70,7 @@ findingOf (b, statuses) = do
         routeCode = route,
         boardStopCode = b.fromStationCode,
         dropStopCode = b.toStationCode,
-        seats = seatCount,
+        seats = seatsOf b,
         findingSince = b.createdAt
       }
 

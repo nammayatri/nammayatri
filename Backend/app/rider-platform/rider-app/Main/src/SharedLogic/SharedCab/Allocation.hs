@@ -29,13 +29,13 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, readAttempts, readFindingSince)
 import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
-import SharedLogic.SharedCab.Keys (attemptsKey, skippedKey)
+import SharedLogic.SharedCab.Keys (skippedKey)
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -134,7 +134,7 @@ allocationPass cityId = do
   enabled <- sharedCabEnabled cityId
   live <- cityLiveBookings cityId
   now <- getCurrentTime
-  let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
+  let routes = nub [route | entry@(b, _) <- live, isFinding entry || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
   positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
     try (readRoutePositions routeCode) >>= \case
       -- Known limitation: an LTS outage is not told apart from every cab being silent. A failed read skips the route, which is
@@ -145,11 +145,10 @@ allocationPass cityId = do
       movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
       silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
   expireTimers cfg now movingOn silentOn live
-  let findingEntries = mapMaybe (\entry -> (fst entry,) <$> findingOf entry) live
-  parties <- partySizes (map fst findingEntries) -- one query for the tick; a party needs all its seats
-  findings <- forM findingEntries $ \(b, fb) -> do
+  parties <- partySizes (map fst (filter isFinding live)) -- one query for the tick; a party needs all its seats
+  findings <- forM (mapMaybe (\entry -> (fst entry,) <$> findingOf (partyOf parties) entry) live) $ \(b, fb) -> do
     since <- readFindingSince fb.bookingId fb.findingSince
-    pure (b, fb {findingSince = since, seats = partyOf parties b})
+    pure (b, fb {findingSince = since})
   -- a suspended city drains (timers above, timeouts and refunds in the job) but allocates nothing new
   when enabled $ do
     pushTimeFallbacks cfg now findings
@@ -157,7 +156,7 @@ allocationPass cityId = do
       whenJust (lookup routeCode positionsByRoute) $ \positions -> do
         sessions <- Session.activeSessionsOnRoute routeCode
         forM_ bookings $ \booking -> do
-          attempts <- readAttempts (attemptsKey booking.bookingId)
+          attempts <- readAttempts booking.bookingId
           skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
           void $ claimFirst cfg booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))
   pure (live, positionsByRoute)

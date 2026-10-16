@@ -52,7 +52,7 @@ type AllocFlow m r =
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Events.EventFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    InternalEndpointFlow m r
   )
 
 -- Lock order, Phase 2: target cab lock FIRST (`sharedcab:lock:{plate}`, shared with walk-up writes), then the booking
@@ -82,7 +82,7 @@ attemptClaim cfg booking cand = do
         | s.status == ACTIVE && s.routeCode == booking.routeCode -> do
           withBookingLock booking.bookingId $ do
             now <- getCurrentTime
-            attempts <- readAttempts (attemptsKey booking.bookingId)
+            attempts <- readAttempts booking.bookingId
             skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
             liveSeats <- liveSeatsOnVehicle plate
             let available = s.capacity - s.walkupCount - liveSeats
@@ -138,8 +138,8 @@ warnAllocKeyTtlOnce cfg site =
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
 claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId) cfg.findingTimeoutSec
 
-readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Text -> m Int
-readAttempts key = shared $ fromMaybe 0 <$> Redis.safeGet key
+readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> m Int
+readAttempts bookingId = shared $ fromMaybe 0 <$> Redis.safeGet (attemptsKey bookingId)
 
 clearAllocationKeys :: (MonadFlow m, Redis.HedisFlow m r) => Id DFTB.FRFSTicketBooking -> m ()
 clearAllocationKeys bookingId =

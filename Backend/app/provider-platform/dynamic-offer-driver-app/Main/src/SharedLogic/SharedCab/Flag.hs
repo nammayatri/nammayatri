@@ -15,35 +15,22 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverInformationExtra as QDriverInformationExtra
 
+type FlagFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r)
+
 setSharedCabSessionActive ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
-  ) =>
+  FlagFlow m r =>
   Id DP.Person ->
   m ()
 setSharedCabSessionActive = writeSharedCabSessionActive True
 
 clearSharedCabSessionActive ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
-  ) =>
+  FlagFlow m r =>
   Id DP.Person ->
   m ()
 clearSharedCabSessionActive = writeSharedCabSessionActive False
 
 writeSharedCabSessionActive ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
-  ) =>
+  FlagFlow m r =>
   Bool ->
   Id DP.Person ->
   m ()
