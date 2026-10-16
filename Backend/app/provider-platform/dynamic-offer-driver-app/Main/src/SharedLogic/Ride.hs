@@ -15,7 +15,6 @@
 module SharedLogic.Ride where
 
 import Control.Applicative ((<|>))
-import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -76,7 +75,6 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
-import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -212,17 +210,6 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
-  -- Decided per assignment (fare policy, or this driver's fleet forbidding it) and set both ways,
-  -- so a booking reused after reallocation never keeps a previous driver's fleet rule.
-  fleetForbidsCancellation <- case mFleetOwnerId of
-    Just fleetOwnerId -> fleetForbidsDriverCancellation . Map.lookup fleetOwnerId.getId <$> getCityFleetConfigs booking.merchantOperatingCityId
-    Nothing -> pure False
-  let currentCancellationFlag = booking.fareParams.driverCancellationNotAllowed
-      -- the cached fare policy carries the resolved (vehicle-tier) flag; on a cache miss keep the booking's
-      policyCancellationFlag = maybe currentCancellationFlag (.driverCancellationNotAllowed) mbFarePolicy
-      resolvedCancellationFlag = if fleetForbidsCancellation then Just True else policyCancellationFlag
-  when (resolvedCancellationFlag /= currentCancellationFlag) $
-    QFP.updateDriverCancellationNotAllowed resolvedCancellationFlag booking.fareParams.id
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone

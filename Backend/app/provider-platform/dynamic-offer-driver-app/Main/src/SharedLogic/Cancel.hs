@@ -221,13 +221,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
           driverPickUpCharge = USRD.extractDriverPickupCharges . (.farePolicyDetails) =<< (quote.farePolicy)
           driverParkingCharge = (.parkingCharge) =<< (quote.farePolicy)
       tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge newQuote.id.getId [] False booking.fareParams.congestionCharge booking.fareParams.petCharges booking.fareParams.priorityCharges booking.commission booking.fareParams.tollCharges booking.fareParams.govtCharges booking.fareParams.driverCancellationNotAllowed booking.fareParams.bufferedFare
-      -- Carry the resolved fare policy over to the new quote: initializeRide reads the policy's own
-      -- cancellation flag from it, since the booking's flag can hold the previous driver's fleet rule.
-      mbCachedFarePolicy <- getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-      whenJust mbCachedFarePolicy $ \cachedFarePolicy ->
-        if targetBooking.isScheduled
-          then cacheFarePolicyByScheduledEstOrQuoteId newQuote.id.getId targetBooking.startTime searchReq.returnTime cachedFarePolicy
-          else cacheFarePolicyByQuoteId newQuote.id.getId cachedFarePolicy
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       QQuote.create newQuote
       if singleBooking

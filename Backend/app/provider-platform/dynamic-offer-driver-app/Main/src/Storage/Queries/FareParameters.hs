@@ -56,12 +56,6 @@ updateCancellationCharges cancellationFeeTaxExclusive cancellationTax (Id farePa
     ]
     [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
-updateDriverCancellationNotAllowed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Bool -> Id FareParameters -> m ()
-updateDriverCancellationNotAllowed driverCancellationNotAllowed (Id fareParametersId) =
-  updateOneWithKV
-    [Se.Set BeamFP.driverCancellationNotAllowed driverCancellationNotAllowed]
-    [Se.Is BeamFP.id $ Se.Eq fareParametersId]
-
 findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 
