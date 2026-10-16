@@ -174,3 +174,22 @@ INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy
 INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy_id,integrated_bpp_config_id,merchant_id,merchant_operating_city_id,start_stop_code,category,created_at,updated_at) VALUES (10,'INR','SC_NONGTHYMMAI',md5('e2e-sc-fp')::uuid::text,'a9f70a47-6bf9-6c26-f04e-d2a21c3628b5','4b17bd06-ae7e-48e9-85bf-282fb310209c','c7e3c3eb-cc15-46d4-ba04-5af55ac87874','SC_FIREBRIGADE','ADULT',now(),now());
 -- every SHARED_CAB tier (the MULTIMODAL and the APPLICATION IBC rows) is pay on board: no payment order, no refund
 UPDATE atlas_app.frfs_vehicle_service_tier SET pay_on_board = true WHERE type = 'SHARED_CAB';
+
+-- The shuttle (standalone) flow searches the APPLICATION config, the multimodal flows the MULTIMODAL one. Fares and tiers are looked up
+-- per config, so the APPLICATION config gets its own copy: service tier, fare policy, route fare products and stop fares.
+CREATE TEMP TABLE sc_tier_app AS SELECT * FROM atlas_app.frfs_vehicle_service_tier WHERE id = md5('e2e-sc-tier')::uuid::text;
+UPDATE sc_tier_app SET id = md5('e2e-sc-tier-app')::uuid::text, integrated_bpp_config_id = (SELECT id FROM atlas_app.integrated_bpp_config WHERE agency_key = 'shillong_shared_cab:SHARED_CAB' AND platform_type = 'APPLICATION');
+INSERT INTO atlas_app.frfs_vehicle_service_tier SELECT * FROM sc_tier_app ON CONFLICT DO NOTHING;
+DROP TABLE sc_tier_app;
+CREATE TEMP TABLE sc_policy_app AS SELECT * FROM atlas_app.frfs_fare_policy WHERE id = md5('e2e-sc-fp')::uuid::text;
+UPDATE sc_policy_app SET id = md5('e2e-sc-fp-app')::uuid::text;
+INSERT INTO atlas_app.frfs_fare_policy SELECT * FROM sc_policy_app ON CONFLICT DO NOTHING;
+DROP TABLE sc_policy_app;
+INSERT INTO atlas_app.frfs_route_fare_product (fare_policy_id,id,integrated_bpp_config_id,merchant_id,merchant_operating_city_id,route_code,time_bounds,vehicle_service_tier_id,vehicle_type,created_at,updated_at)
+SELECT md5('e2e-sc-fp-app')::uuid::text, md5(id || '-app')::uuid::text, (SELECT id FROM atlas_app.integrated_bpp_config WHERE agency_key = 'shillong_shared_cab:SHARED_CAB' AND platform_type = 'APPLICATION'), merchant_id, merchant_operating_city_id, route_code, time_bounds, md5('e2e-sc-tier-app')::uuid::text, vehicle_type, now(), now()
+FROM atlas_app.frfs_route_fare_product WHERE integrated_bpp_config_id = (SELECT id FROM atlas_app.integrated_bpp_config WHERE agency_key = 'shillong_shared_cab:SHARED_CAB' AND platform_type = 'MULTIMODAL')
+ON CONFLICT DO NOTHING;
+INSERT INTO atlas_app.route_stop_fare (amount,currency,end_stop_code,fare_policy_id,integrated_bpp_config_id,merchant_id,merchant_operating_city_id,start_stop_code,category,created_at,updated_at)
+SELECT amount, currency, end_stop_code, md5('e2e-sc-fp-app')::uuid::text, (SELECT id FROM atlas_app.integrated_bpp_config WHERE agency_key = 'shillong_shared_cab:SHARED_CAB' AND platform_type = 'APPLICATION'), merchant_id, merchant_operating_city_id, start_stop_code, category, now(), now()
+FROM atlas_app.route_stop_fare WHERE integrated_bpp_config_id = (SELECT id FROM atlas_app.integrated_bpp_config WHERE agency_key = 'shillong_shared_cab:SHARED_CAB' AND platform_type = 'MULTIMODAL')
+ON CONFLICT DO NOTHING;
