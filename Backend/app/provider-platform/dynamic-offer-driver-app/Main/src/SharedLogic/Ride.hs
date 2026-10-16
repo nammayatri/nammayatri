@@ -86,6 +86,7 @@ import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverRidePayoutBankAccount as QDRPB
 import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
 import qualified Storage.Queries.RiderDetails as QRiderD
@@ -218,9 +219,12 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Just fleetOwnerId -> fleetForbidsDriverCancellation . Map.lookup fleetOwnerId.getId <$> getCityFleetConfigs booking.merchantOperatingCityId
     Nothing -> pure False
   let currentCancellationFlag = booking.fareParams.driverCancellationNotAllowed
-      resolvedCancellationFlag
-        | fleetForbidsCancellation = Just True
-        | otherwise = maybe currentCancellationFlag (.driverCancellationNotAllowed) mbFarePolicy
+  -- fare policy's own flag; on a cache miss a static booking's quote still carries its fare policy
+  -- (a dynamic booking's fare params were priced for this driver at accept)
+  policyCancellationFlag <- case mbFarePolicy of
+    Just cachedFarePolicy -> pure cachedFarePolicy.driverCancellationNotAllowed
+    Nothing -> maybe currentCancellationFlag (\staticQuote -> staticQuote.farePolicy >>= (.driverCancellationNotAllowed)) <$> QQuote.findById (Id booking.quoteId)
+  let resolvedCancellationFlag = if fleetForbidsCancellation then Just True else policyCancellationFlag
   when (resolvedCancellationFlag /= currentCancellationFlag) $
     QFP.updateDriverCancellationNotAllowed resolvedCancellationFlag booking.fareParams.id
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
