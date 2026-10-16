@@ -43,7 +43,10 @@ data FRFSPassTicketStatisticsResp = FRFSPassTicketStatisticsResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FrfsOverrideConfigAPIEntity = FrfsOverrideConfigAPIEntity
-  { fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+  { allowCheaperStopPairs :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    allowRoundTrip :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    enforceStopPair :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    fixedApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTicketQuantityPerOverride :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maximumTripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
     percentageApplicable :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -75,11 +78,30 @@ data PassAPIEntity = PassAPIEntity
     offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
     referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    routePassConfig :: Data.Maybe.Maybe RoutePassConfigAPIEntity,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     timeOverlappingFrfsBookingsLimit :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    validityDaysRecommendations :: Data.Maybe.Maybe [Kernel.Prelude.Int],
+    variableValidityDays :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassCalculateFareReq = PassCalculateFareReq {destinationStopCode :: Data.Text.Text, sourceStopCode :: Data.Text.Text, tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int, validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassCalculateFareResp = PassCalculateFareResp
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    originalAmount :: Kernel.Types.Common.HighPrecMoney,
+    perTripAmount :: Kernel.Types.Common.HighPrecMoney,
+    referenceFare :: Kernel.Types.Common.HighPrecMoney,
+    serviceTier :: BecknV2.FRFS.Enums.ServiceTierType,
+    tripCount :: Kernel.Prelude.Int,
+    validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -92,15 +114,19 @@ data PassDetailsAPIEntity = PassDetailsAPIEntity {category :: PassCategoryAPIEnt
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PassInfoAPIEntity = PassInfoAPIEntity {passCategory :: PassCategoryAPIEntity, passTypes :: [PassTypeAPIEntity], passes :: [PassAPIEntity]}
+data PassInfoAPIEntity = PassInfoAPIEntity {dynamicPasses :: [PassAPIEntity], passCategory :: PassCategoryAPIEntity, passTypes :: [PassTypeAPIEntity], passes :: [PassAPIEntity]}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassSelectReq = PassSelectReq
-  { imeiNumber :: Data.Text.Text,
+  { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    imeiNumber :: Data.Text.Text,
     passPhotoMediaId :: Data.Maybe.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
-    startDate :: Data.Time.Day
+    sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    startDate :: Data.Time.Day,
+    tripCount :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    validityDays :: Data.Maybe.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -162,6 +188,7 @@ data PurchasedPassAPIEntity = PurchasedPassAPIEntity
     profilePicture :: Data.Maybe.Maybe Data.Text.Text,
     purchaseDate :: Data.Time.Day,
     purchasedPassPaymentId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.PurchasedPassPayment.PurchasedPassPayment),
+    routePass :: Data.Maybe.Maybe RoutePassAPIEntity,
     startDate :: Data.Time.Day,
     status :: Domain.Types.PurchasedPass.StatusType,
     tripsLeft :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -195,6 +222,24 @@ data RefundAPIEntity = RefundAPIEntity
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds,
     status :: Kernel.External.Payment.Interface.RefundStatus,
     updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RoutePassAPIEntity = RoutePassAPIEntity
+  { destinationStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    destinationStopName :: Data.Maybe.Maybe Data.Text.Text,
+    sourceStopCode :: Data.Maybe.Maybe Data.Text.Text,
+    sourceStopName :: Data.Maybe.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RoutePassConfigAPIEntity = RoutePassConfigAPIEntity
+  { maximumPurchaseableTripCount :: Kernel.Prelude.Int,
+    primaryServiceTier :: BecknV2.FRFS.Enums.ServiceTierType,
+    tripCountRecommendations :: [Kernel.Prelude.Int],
+    variableTripCount :: Kernel.Prelude.Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

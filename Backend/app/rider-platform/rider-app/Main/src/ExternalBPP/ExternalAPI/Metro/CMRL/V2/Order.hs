@@ -4,6 +4,7 @@
 
 module ExternalBPP.ExternalAPI.Metro.CMRL.V2.Order where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Char (isAlphaNum, isAscii)
@@ -30,6 +31,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeller.Common as FRFSSellerCommon
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -180,7 +182,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber mbFa
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   logDebug $ "[CMRLV2:Order] OrderId: " <> orderId
-  paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError "Payment Transaction Id Missing")
+  paymentTxnId <- (booking.paymentTxnId <|> FRFSPassOverride.passCoveredBankRef booking) & fromMaybeM (InternalError "Payment Transaction Id Missing")
   logDebug $ "[CMRLV2:Order] PaymentTxnId: " <> paymentTxnId
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode)

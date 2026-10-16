@@ -3,6 +3,7 @@
 
 module ExternalBPP.ExternalAPI.Metro.CMRL.Order where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Data.UUID as UU
@@ -22,6 +23,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
@@ -31,7 +33,7 @@ createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
-  paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
+  paymentTxnId <- (booking.paymentTxnId <|> FRFSPassOverride.passCoveredBankRef booking) & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let fareParameters = mkFareParameters (mkCategoryPriceItemFromQuoteCategories quoteCategories)
