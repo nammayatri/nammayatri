@@ -267,7 +267,6 @@ FleetConfig:
     fleetOwnerId: PrimaryKey
 
   queries:
-    findByFleetOwnerIdAndMerchantOperatingCityId:
-      kvFunction: findOneWithKV
-      where:
-        and: [fleetOwnerId, merchantOperatingCityId]
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId

@@ -23,7 +23,6 @@ module Domain.Types.FleetPoolingPriority
 where
 
 import qualified Data.Map.Strict as Map
-import Domain.Types.Extra.SpecialLocationArea ()
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import qualified Lib.Types.SpecialLocation as SL

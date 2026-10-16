@@ -174,7 +174,7 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
       then SPFE.isParkingFeeExemptForDriver driver.id
       else pure False
   addOnCharges <- SAddOn.addOnChargesTotal searchTry.addOnData
-  fareParams <- do
+  pricedFareParams <- do
     FC.calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = farePolicy',
@@ -220,6 +220,11 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
           isScheduled = searchTry.isScheduled,
           ..
         }
+  -- The search request carries the driver-specific flag (fare policy or the driver's fleet).
+  let fareParams =
+        if sReqFD.driverCancellationNotAllowed == Just True
+          then pricedFareParams {Fare.driverCancellationNotAllowed = Just True}
+          else pricedFareParams
   mbReusedBooking <-
     if transporterConfig.enableBppReallocation == Just True
       then QBooking.findById (Id searchTry.messageId)

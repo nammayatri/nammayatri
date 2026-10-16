@@ -153,7 +153,8 @@ backfillFleetOwnerId ::
   Migrator m
 backfillFleetOwnerId entries = do
   let personIds = map (cast . (.driverId)) entries :: [Id Person.Person]
-  fleetAssocs <- QFDA.findAllByDriverIds personIds
+  -- oldest first, so the newest active link wins (same rule as 'QFDA.findByDriverId')
+  fleetAssocs <- sortOn (.createdAt) <$> QFDA.findAllByDriverIds personIds
   let fleetOwnerMap = HashMap.fromList $ map (\fa -> (cast fa.driverId :: Id Person.Person, fa.fleetOwnerId)) fleetAssocs
   pure $
     map

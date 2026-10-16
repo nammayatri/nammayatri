@@ -1,8 +1,15 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.ConfigPilot.Config.FleetConfig (FleetConfigDimensions (..)) where
+module Storage.ConfigPilot.Config.FleetConfig
+  ( FleetConfigDimensions (..),
+    getCityFleetConfigs,
+    fleetForbidsDriverCancellation,
+  )
+where
 
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.FleetConfig as DT
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
@@ -13,9 +20,10 @@ import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.FleetConfig as QFC
 
+-- | All fleet configs of a city, optionally narrowed to one fleet owner.
 data FleetConfigDimensions = FleetConfigDimensions
-  { fleetOwnerId :: Text,
-    merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -26,19 +34,30 @@ instance ConfigTypeInfo 'FleetConfig where
 
 instance ConfigDimensions FleetConfigDimensions where
   type ConfigTypeOf FleetConfigDimensions = 'FleetConfig
-  type ConfigValueTypeOf FleetConfigDimensions = Maybe DT.FleetConfig
+  type ConfigValueTypeOf FleetConfigDimensions = [DT.FleetConfig]
   getConfigType _ = FleetConfig
-  configDBFetch a = Just (fetchFleetConfig a)
+  configDBFetch a = Just (fetchFleetConfigs a)
   getConfigList a =
-    listToMaybe
-      <$> LCP.resolveConfigList
-        a
-        (LYT.DRIVER_CONFIG FleetConfig)
-        (Id a.merchantOperatingCityId)
-        (maybeToList <$> fetchFleetConfig a)
-        ([] :: [LCP.DimMatcher FleetConfigDimensions DT.FleetConfig])
-        Nothing
-  configFallback a = Just (fetchFleetConfig a)
+    LCP.resolveConfigList
+      a
+      (LYT.DRIVER_CONFIG FleetConfig)
+      (Id a.merchantOperatingCityId)
+      (QFC.findAllByMerchantOperatingCityId (Just (Id a.merchantOperatingCityId)))
+      [LCP.DimMatcher (.fleetOwnerId) (Just . (.fleetOwnerId.getId)) (==)]
+      Nothing
+  configFallback a = Just (fetchFleetConfigs a)
 
-fetchFleetConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetConfigDimensions -> m (Maybe DT.FleetConfig)
-fetchFleetConfig a = QFC.findByFleetOwnerIdAndMerchantOperatingCityId (Id a.fleetOwnerId) (Just (Id a.merchantOperatingCityId))
+fetchFleetConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetConfigDimensions -> m [DT.FleetConfig]
+fetchFleetConfigs a =
+  filter (\cfg -> maybe True (== cfg.fleetOwnerId.getId) a.fleetOwnerId)
+    <$> QFC.findAllByMerchantOperatingCityId (Just (Id a.merchantOperatingCityId))
+
+-- | Every fleet's config in the city, keyed by fleet owner id, from one cached ConfigPilot read.
+getCityFleetConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Map.Map Text DT.FleetConfig)
+getCityFleetConfigs merchantOpCityId = do
+  fleetConfigs <- getConfig (FleetConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, fleetOwnerId = Nothing}) Nothing
+  pure $ Map.fromList [(fleetConfig.fleetOwnerId.getId, fleetConfig) | fleetConfig <- fleetConfigs]
+
+-- | A fleet without a config row, or with the flag on, lets its drivers cancel.
+fleetForbidsDriverCancellation :: Maybe DT.FleetConfig -> Bool
+fleetForbidsDriverCancellation = maybe False (not . (.allowCancellationByDriver))

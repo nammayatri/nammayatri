@@ -15,6 +15,7 @@
 module SharedLogic.Ride where
 
 import Control.Applicative ((<|>))
+import qualified Data.Map.Strict as Map
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -75,6 +76,7 @@ import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
@@ -124,6 +126,13 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  -- The driver's fleet can forbid driver cancellation. Static quotes are priced before a driver is
+  -- known, so record it on the booking's fare params here, where every cancellation check reads it.
+  whenJust mFleetOwnerId $ \fleetOwnerId ->
+    unless (booking.fareParams.driverCancellationNotAllowed == Just True) $ do
+      fleetConfigs <- getCityFleetConfigs booking.merchantOperatingCityId
+      when (fleetForbidsDriverCancellation (Map.lookup fleetOwnerId.getId fleetConfigs)) $
+        QFP.updateDriverCancellationNotAllowed (Just True) booking.fareParams.id
   mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of

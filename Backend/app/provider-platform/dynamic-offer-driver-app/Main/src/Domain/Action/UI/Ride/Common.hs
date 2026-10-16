@@ -89,7 +89,6 @@ import SharedLogic.ManualTollCharge (isManualTollChargeEnabled)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
-import Storage.ConfigPilot.Config.FleetConfig (FleetConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -523,11 +522,6 @@ mkDriverRideRes ::
   ResolvedCalling ->
   m DriverRideRes
 mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo resolvedCalling = do
-  fleetForbidsCancellation <- case ride.fleetOwnerId of
-    Just rideFleetOwnerId
-      | ride.status `elem` [DRide.UPCOMING, DRide.NEW, DRide.INPROGRESS] ->
-        maybe False (not . (.allowCancellationByDriver)) <$> getConfig (FleetConfigDimensions {fleetOwnerId = rideFleetOwnerId.getId, merchantOperatingCityId = ride.merchantOperatingCityId.getId}) Nothing
-    _ -> pure False
   let estimatedFareParams = booking.fareParams
       bearerFlags mbT =
         let mb = (mbT >>= (readMaybe . T.unpack)) :: Maybe DTConf.PaymentChargeBearer
@@ -703,7 +697,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fromMaybe 0 estimatedFareParams.customerCancellationDues,
-        driverCancellationNotAllowed = if fleetForbidsCancellation then Just True else estimatedFareParams.driverCancellationNotAllowed,
+        driverCancellationNotAllowed = estimatedFareParams.driverCancellationNotAllowed,
         estimatedTollCharges = estimatedFareParams.tollCharges,
         parkingCharge = displayParkingCharge,
         tollCharges = ride.tollCharges,

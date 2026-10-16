@@ -97,7 +97,9 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
   persons <- QP.getDriversByIdIn personIds
   let pMap = HashMap.fromList $ map (\p -> (cast p.id, p)) persons
 
-  allFleetAssocs <- QFDA.findAllByDriverIds personIds
+  -- oldest first, so for a driver with several active links the newest one wins in the maps
+  -- below (same rule as 'QFDA.findByDriverId')
+  allFleetAssocs <- DL.sortOn (.createdAt) <$> QFDA.findAllByDriverIds personIds
   let fleetOwnerIdMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa.fleetOwnerId)) allFleetAssocs
       fleetAssocs = if isPrepaidEnabled || onlinePayment then allFleetAssocs else []
       faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa)) fleetAssocs

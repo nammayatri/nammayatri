@@ -73,7 +73,7 @@ import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
-import Storage.ConfigPilot.Config.FleetConfig (FleetConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
@@ -194,12 +194,14 @@ getFleetPoolingPriorities ::
   m (Map.Map (Id Driver) FleetPoolingPriority)
 getFleetPoolingPriorities mOCityId drivers = do
   result <- withTryCatch "getFleetPoolingPriorities" $ do
-    let driverFleetOwners = [(d.driverPoolResult.driverId, fleetOwnerId) | d <- drivers, Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId]]
-    ownerPriorities <- forM (DL.nub (map snd driverFleetOwners)) $ \fleetOwnerId -> do
-      mbFleetConfig <- getOneConfig (FleetConfigDimensions {fleetOwnerId, merchantOperatingCityId = mOCityId.getId}) Nothing
-      pure (fleetOwnerId, mbFleetConfig >>= (.fleetPoolingPriority))
-    let priorityByOwner = Map.fromList [(fleetOwnerId, priority) | (fleetOwnerId, Just priority) <- ownerPriorities]
-    pure $ Map.fromList [(driverId, priority) | (driverId, fleetOwnerId) <- driverFleetOwners, Just priority <- [Map.lookup fleetOwnerId priorityByOwner]]
+    fleetConfigs <- getCityFleetConfigs mOCityId
+    pure $
+      Map.fromList
+        [ (d.driverPoolResult.driverId, priority)
+          | d <- drivers,
+            Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId],
+            Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
+        ]
   case result of
     Left err -> do
       logError $ "getFleetPoolingPriorities failed: " <> show err

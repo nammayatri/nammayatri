@@ -518,7 +518,6 @@ library
       Domain.Types.Extra.MessageReport
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
-      Domain.Types.Extra.SpecialLocationArea
       Domain.Types.Extra.SurgeConfig
       Domain.Types.Extra.TransporterConfig
       Domain.Types.Extra.WalletTransaction

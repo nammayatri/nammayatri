@@ -103,6 +103,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.Coins.CoinsConfig as SQCC
@@ -458,6 +459,10 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
     _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
   deploymentVersion <- asks (.version)
   isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
+  -- The driver's fleet can forbid driver cancellation on top of the fare policy's flag.
+  fleetForbidsCancellation <- case dpRes.fleetOwnerId of
+    Just fleetOwnerId -> fleetForbidsDriverCancellation . Map.lookup fleetOwnerId <$> getCityFleetConfigs searchReq.merchantOperatingCityId
+    Nothing -> pure False
   let searchRequestForDriver =
         SearchRequestForDriver
           { id = guid,
@@ -546,7 +551,7 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
             isSafetyPlus = Just isEligibleForSafetyPlusCharge,
             coinsRewardedOnGoldTierRide = driverCoinsRewardedOnGoldTierRideRequest,
             commissionCharges = tripQuoteDetail.commissionCharges,
-            driverCancellationNotAllowed = tripQuoteDetail.driverCancellationNotAllowed,
+            driverCancellationNotAllowed = if fleetForbidsCancellation then Just True else tripQuoteDetail.driverCancellationNotAllowed,
             isAutoAccepted = Just isAutoAccepted,
             hasAvailableForRidesTag = Just $ AvailableForRides.hasAvailableForRidesTag dpRes.driverTags,
             ..
