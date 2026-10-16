@@ -1107,7 +1107,7 @@ buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) 
     buildHopRouteDetails = do
       eHopLegs <- withTryCatch "buildSingleModeDirectRoutes:getMetroHop" (OTPRest.getMetroHop integratedBppConfig originStopCode destinationStopCode)
       case eHopLegs of
-        Right (Just hopLegs@(_ : _ : _)) -> do
+        Right (Just (hopLegs@(_ : _ : _) : _)) -> do
           logInfo $ "Metro hop legs for " <> originStopCode <> " -> " <> destinationStopCode <> ": " <> show (map (.routeCode) hopLegs)
           builtLegs <- mapM buildHopLeg (zip [1 ..] hopLegs)
           pure $ case sequence builtLegs of

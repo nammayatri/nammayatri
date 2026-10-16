@@ -828,7 +828,7 @@ data MetroHopLeg = MetroHopLeg
 -- about -- a real answer, not an error -- and an empty list when source and destination are
 -- the same station. Both mean there is no journey to offer.
 newtype MetroHopResponse = MetroHopResponse
-  { legs :: Maybe [MetroHopLeg]
+  { legs :: Maybe [[MetroHopLeg]]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
