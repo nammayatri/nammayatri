@@ -1,5 +1,7 @@
 module SharedLogic.SharedCab.Plate
   ( canonicalisePlate,
+    samePlate,
+    findByPlate,
   )
 where
 
@@ -13,3 +15,11 @@ canonicalisePlate :: Text -> Text
 canonicalisePlate = T.toUpper . T.filter keep
   where
     keep c = not (Char.isSpace c) && c /= '-' && c /= '.'
+
+-- | The one way to match a session to an LTS position (or any other plate source): never compare raw plates.
+samePlate :: Text -> Text -> Bool
+samePlate a b = canonicalisePlate a == canonicalisePlate b
+
+-- | The entry carrying the plate, whatever its spelling.
+findByPlate :: (a -> Text) -> Text -> [a] -> Maybe a
+findByPlate plateOf plate = find (samePlate plate . plateOf)

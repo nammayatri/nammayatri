@@ -30,7 +30,7 @@ import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (allocKey, degradedKey, dropClockKey, offRouteKey)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.Plate (findByPlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (PauseReason (OFF_ROUTE), Session (..), SessionStatus (..))
 import SharedLogic.SharedCab.StopProgress.Rules
@@ -102,7 +102,7 @@ stepCab ::
   m ()
 stepCab cfg spc now live positions route s = do
   let plate = s.vehicleNumber
-      mbInfo = (.vehicleInfo) <$> find ((== canonicalisePlate plate) . canonicalisePlate . (.vehicleNumber)) positions
+      mbInfo = (.vehicleInfo) <$> findByPlate (.vehicleNumber) plate positions
       mbCab = cabFix <$> mbInfo
       freshCab = mfilter (const $ any (isFreshPosition now cfg.ltsMaxAgeSec) mbInfo) mbCab
       bookings = [entry | entry@(b, _) <- live, b.vehicleNumber == Just plate]

@@ -40,7 +40,7 @@ import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (allocKey)
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
 import qualified SharedLogic.SharedCab.Schedule as Schedule
 import qualified SharedLogic.SharedCab.Session as Session
@@ -71,7 +71,7 @@ data BoardingSummary = BoardingSummary
 boardingCodeMatches :: Text -> Text -> Bool
 boardingCodeMatches code plate
   | T.length code <= 4 = canonicalisePlate code `T.isSuffixOf` canonicalisePlate plate
-  | otherwise = canonicalisePlate code == canonicalisePlate plate
+  | otherwise = samePlate code plate
 
 -- | An unknown code never boards on its own (a typo would consume the ticket); the rider confirms an unlisted cab via forceCheckIn.
 data UnknownCodeStep = AskToConfirmUnlisted | BoardUnlisted
@@ -128,7 +128,7 @@ lookupCabPosition session = do
   pure $ case outcome of
     Left _ -> Nothing -- LTS outage behaves identically to NO_LIVE_CAB_DATA (8.2 ladder floor)
     Right tracked ->
-      find (\v -> canonicalisePlate v.vehicleNumber == session.vehicleNumber) tracked
+      findByPlate (.vehicleNumber) session.vehicleNumber tracked
         <&> (\v -> LatLong v.vehicleInfo.latitude v.vehicleInfo.longitude)
 
 -- TODO: freshness gate on VehicleInfo.timestamp vs ltsMaxAgeSec; a stale cab position should behave like NO_LIVE_CAB_DATA.

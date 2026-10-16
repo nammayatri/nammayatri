@@ -45,7 +45,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.LegState (fallbackReached)
-import SharedLogic.SharedCab.Plate (canonicalisePlate)
+import SharedLogic.SharedCab.Plate (findByPlate, samePlate)
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 
 data FindingBooking = FindingBooking
@@ -126,7 +126,7 @@ eligibleCandidates now cfg tracking sessions booking =
       s.status == ACTIVE,
       queuedRouteStillServes s booking.boardStopCode,
       s.capacity - s.walkupCount >= booking.seats,
-      Just veh <- [find (\vt -> vt.vehicleNumber == s.vehicleNumber) tracking],
+      Just veh <- [findByPlate (.vehicleNumber) s.vehicleNumber tracking],
       isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
       Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
       let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
@@ -169,7 +169,7 @@ silentReleaseMult = 5
 silentCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
 silentCab now maxAgeSec plate tracking =
   any (isFreshPosition now maxAgeSec . (.vehicleInfo)) tracking
-    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (find ((== canonicalisePlate plate) . canonicalisePlate . (.vehicleNumber)) tracking)
+    && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (findByPlate (.vehicleNumber) plate tracking)
 
 -- | TODO: a queued route must still serve the board stop; needs its stop list from OTPRest. Tolerant for one tick (Phase 2 re-reads).
 queuedRouteStillServes :: Session -> Text -> Bool
@@ -214,4 +214,4 @@ groupAllOn f = map (\grp -> (f (NE.head grp), NE.toList grp)) . NE.groupBy ((==)
 -- | A fresh, moving report for the plate: its stand timer is cleared rather than expired.
 movingCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
 movingCab now maxAgeSec plate =
-  any (\vt -> canonicalisePlate vt.vehicleNumber == canonicalisePlate plate && isFreshPosition now maxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed)
+  any (\vt -> samePlate vt.vehicleNumber plate && isFreshPosition now maxAgeSec vt.vehicleInfo && isMovingSpeed vt.vehicleInfo.speed)

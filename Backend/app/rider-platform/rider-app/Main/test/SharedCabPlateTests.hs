@@ -6,7 +6,7 @@ module SharedCabPlateTests (tests) where
 import qualified "rider-app" API.Types.UI.FRFSTicketService as ApiFRFS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
-import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate)
+import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteStations, chooseWalkUp, isStickerCode, probeBus, resolveCode)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -24,6 +24,10 @@ tests =
         canonicalisePlate "ML05A1234" @?= "ML05A1234",
       testCase "empty stays empty" $
         canonicalisePlate "" @?= "",
+      testCase "a spaced and an unspaced plate are the same cab, a different plate is not" $
+        [samePlate "ML 05 A 1234" "ML05A1234", samePlate "ml05a1234" "ML05A1234", samePlate "ML05A1235" "ML05A1234"] @?= [True, True, False],
+      testCase "a position is found by its plate whatever its spelling" $
+        findByPlate id "ML05A1234" ["ML05B9999", "ml 05 a 1234"] @?= Just "ml 05 a 1234",
       testGroup
         "walk-up: a typed sticker code resolves among the live cabs"
         [ testCase "exactly one cab ends in the code" $ resolveCode "9999" ["ML05A9999", "ML05B8888"] @?= OneCab "ML05A9999",

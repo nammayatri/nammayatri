@@ -191,6 +191,11 @@ tests =
               silentCab t0 60 "P1" []
             ]
               @?= [False, False, True, True, False, False],
+      testCase "a cab whose LTS position spells the plate differently is still eligible and still silent-checked" $
+        ( map (\c -> c.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [cabFix "p 1" nearStop (Just 0) 5] [(candidate "P1").rcSession] finding),
+          movingCab t0 60 "P1" [cabFix "p 1" nearStop (Just 8) 5]
+        )
+          @?= (["P1"], True),
       testCase "a cab counts as moving only on a fresh report above the speed threshold" $
         [ movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 8) 5],
           movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 0) 5],
