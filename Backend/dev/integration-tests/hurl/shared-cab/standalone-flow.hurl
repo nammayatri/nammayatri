@@ -13,6 +13,15 @@ HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
 
+# the app's stop search: two stop codes, no route. The cab feed's routes between them answer it, not the bus path.
+POST {{base_url}}/v2/multimodal/routeServiceability
+token: {{token}}
+Content-Type: application/json
+{"sourceStopCode": "SC_POLO", "destinationStopCode": "SC_NONGTHYMMAI", "allowClusteredStops": true}
+HTTP 200
+[Asserts]
+jsonpath "$.legs[0].routeWithLiveVehicles[0].routeCode" == "{{route_a}}"
+
 # the enum query value is JSON-quoted (mkHttpInstancesForEnum), as on the vehicleData path
 POST {{base_url}}/v2/frfs/search?vehicleType=%22BUS%22
 token: {{token}}

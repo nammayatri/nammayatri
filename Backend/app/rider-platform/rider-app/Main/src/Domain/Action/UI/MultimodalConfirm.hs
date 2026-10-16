@@ -2103,7 +2103,7 @@ postMultimodalRouteServiceabilityBus (mbPersonId, merchantId) mbAllPassingRoutes
       now <- getCurrentTime
       fork "RouteServiceability: record rider location" $
         addPoint (Id journeyIdText) (ApiTypes.RiderLocationReq {latLong, currTime = fromMaybe now req.timestamp}) req.vehicleNumber
-    integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+    integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe . SharedCab.withoutCabRows (.agencyKey) <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
     riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
     let routeServiceabilityContext =
           RouteServiceabilityContext

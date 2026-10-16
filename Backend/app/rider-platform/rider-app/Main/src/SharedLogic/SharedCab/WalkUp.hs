@@ -6,6 +6,8 @@ module SharedLogic.SharedCab.WalkUp
     resolveCode,
     WalkUpChoice (..),
     cabRouteRequest,
+    stopPairLegs,
+    withoutCabRows,
     chooseWalkUp,
     probeBus,
     cabRouteStations,
@@ -69,6 +71,16 @@ resolveCode code plates = case nub (filter ((== code) . T.takeEnd 4) plates) of
 cabRouteRequest :: Maybe [Text] -> [Text] -> Bool
 cabRouteRequest Nothing _ = False
 cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`elem` feedRouteCodes) requested
+
+-- | A stop-search request names no route: the cab feed's routes between the two stops make it a cab request. No route between
+-- them leaves it on the bus path.
+stopPairLegs :: Maybe Text -> Maybe Text -> [Text] -> Maybe [ApiTypes.RouteCodesWithLeg]
+stopPairLegs (Just _) (Just _) routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
+stopPairLegs _ _ _ = Nothing
+
+-- | The bus fleet's configs of a city: the shared-cab feed shares the BUS category but is never a bus.
+withoutCabRows :: (a -> Text) -> [a] -> [a]
+withoutCabRows agencyKeyOf = filter (not . isSharedCabAgency . agencyKeyOf)
 
 -- | The bus fleet's lookup of a typed code, once. A failure counts as "the bus does not know it" (failing walk-ups on a transient error hurts riders more).
 probeBus :: (Monad m, TryException m) => m (Maybe a) -> m (Maybe a)
@@ -234,6 +246,13 @@ routeServiceability mbPersonId req =
                   IM.withInMemCache ["SharedCabFeedRoutes:" <> cabIbc.id.getId] 300 (map (.code) <$> OTPRest.getRoutesByGtfsId cabIbc)
               pure $ Just (cabIbc, legReqs, either (const Nothing) Just feed)
             _ -> pure Nothing
+      _ -> stopPairRoutes
+    -- The app's stop search sends the two stop codes and no route.
+    stopPairRoutes = case (req.sourceStopCode, req.destinationStopCode) of
+      (Just src, Just dest) ->
+        withTryCatch "routeServiceability:sharedCabStopPair" (findSharedCabConfig mbPersonId >>= traverse (\cabIbc -> (,) cabIbc <$> JLU.getRouteCodesFromTo src dest cabIbc)) >>= \case
+          Right (Just (cabIbc, routes)) -> pure $ (\legs -> (cabIbc, legs, Just routes)) <$> stopPairLegs req.sourceStopCode req.destinationStopCode routes
+          _ -> pure Nothing
       _ -> pure Nothing
 
 sharedCabRouteServiceability ::

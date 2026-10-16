@@ -11,6 +11,7 @@ module SharedLogic.SharedCab
     sharedCabBoardStops,
     walkUpVehicleData,
     routeServiceability,
+    withoutCabRows,
     cabRouteStations,
     SharedCabConfirmFlow,
     onBookingCreated,
@@ -40,4 +41,4 @@ import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, noBookingLegState
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
 import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, readRefundDecision, refundAmounts, refundWithheld)
 import SharedLogic.SharedCab.Session (filterCabLegs)
-import SharedLogic.SharedCab.WalkUp (cabRouteStations, routeServiceability, walkUpVehicleData)
+import SharedLogic.SharedCab.WalkUp (cabRouteStations, routeServiceability, walkUpVehicleData, withoutCabRows)
