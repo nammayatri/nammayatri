@@ -24,6 +24,7 @@ import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
+import qualified API.Action.UI.Dispatcher as Dispatcher
 import qualified API.Action.UI.DriverAreaPreference as DriverAreaPreference
 import qualified API.Action.UI.DriverDocument as DriverDocument
 import qualified API.Action.UI.DriverFyEarnings as DriverFyEarnings
@@ -56,6 +57,7 @@ import qualified API.Action.UI.PersonDefaultEmergencyContact as PersonDefaultEme
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PolicyDocument as PolicyDocument
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
+import qualified API.Action.UI.PublicTransport as PublicTransport
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
@@ -65,6 +67,7 @@ import qualified API.Action.UI.SpecialZoneQueue as SpecialZoneQueue
 import qualified API.Action.UI.StclMembership as StclMembership
 import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
 import qualified API.Action.UI.TicketKapture as TicketKapture
+import qualified API.Action.UI.TicketVerify as TicketVerify
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
@@ -208,6 +211,9 @@ type API =
            :<|> PolicyDocument.API
            :<|> DriverFyEarnings.API
            :<|> PaymentCustomer.API
+           :<|> Dispatcher.API
+           :<|> PublicTransport.API
+           :<|> TicketVerify.API
        )
 
 handler :: FlowServer API
@@ -297,3 +303,6 @@ handler =
     :<|> PolicyDocument.handler
     :<|> DriverFyEarnings.handler
     :<|> PaymentCustomer.handler
+    :<|> Dispatcher.handler
+    :<|> PublicTransport.handler
+    :<|> TicketVerify.handler

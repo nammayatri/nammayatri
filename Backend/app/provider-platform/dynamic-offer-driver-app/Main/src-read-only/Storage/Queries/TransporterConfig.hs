@@ -380,6 +380,7 @@ updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.payoutBatchLimit payoutBatchLimit,
       Se.Set Beam.payoutRideMoneyToDriver payoutRideMoneyToDriver,
       Se.Set Beam.payoutRideScheduleTimeBuffer payoutRideScheduleTimeBuffer,
+      Se.Set Beam.peerBapMerchantShortId peerBapMerchantShortId,
       Se.Set Beam.pickupLocThreshold pickupLocThreshold,
       Se.Set Beam.pickupStallMonitoringConfig (Data.Aeson.toJSON <$> pickupStallMonitoringConfig),
       Se.Set Beam.placeNameCacheExpiryDays placeNameCacheExpiryDays,

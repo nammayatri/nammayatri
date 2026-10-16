@@ -50,6 +50,24 @@ type OperatorVerifyAPI =
     :> ReqBody '[JSON] GimsVerifyReq
     :> Post '[JSON] GimsVerifyResp
 
+-- v2 is gtfs_id-scoped: the v1 depot endpoints answer for whichever feed the server loaded, so a
+-- wrong feed silently returned data.
+type FleetOperationV2API =
+  "v2" :> Capture "gtfs_id" Text :> "fleet" :> Capture "fleet_no" Text
+    :> Get '[JSON] FleetOperationInfo
+
+type DepotsV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Get '[JSON] [DepotInfo]
+
+type DepotByIdV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Capture "depot_id" Text
+    :> Get '[JSON] DepotInfo
+
+type DepotVehiclesV2API =
+  "v2" :> Capture "gtfs_id" Text :> "depots" :> Capture "depot_id" Text :> "vehicles"
+    :> QueryParam "status" Text
+    :> Get '[JSON] [DepotVehicleInfo]
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -89,6 +107,18 @@ stopCodeAPI = Proxy
 operatorVerifyAPI :: Proxy OperatorVerifyAPI
 operatorVerifyAPI = Proxy
 
+nandiFleetOperationV2API :: Proxy FleetOperationV2API
+nandiFleetOperationV2API = Proxy
+
+nandiDepotsV2API :: Proxy DepotsV2API
+nandiDepotsV2API = Proxy
+
+nandiDepotByIdV2API :: Proxy DepotByIdV2API
+nandiDepotByIdV2API = Proxy
+
+nandiDepotVehiclesV2API :: Proxy DepotVehiclesV2API
+nandiDepotVehiclesV2API = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -127,3 +157,15 @@ getNandiStopCode = ET.client stopCodeAPI
 
 postOperatorVerify :: Text -> GimsVerifyReq -> ET.EulerClient GimsVerifyResp
 postOperatorVerify = ET.client operatorVerifyAPI
+
+getNandiFleetOperationV2 :: Text -> Text -> ET.EulerClient FleetOperationInfo
+getNandiFleetOperationV2 = ET.client nandiFleetOperationV2API
+
+getNandiDepotsV2 :: Text -> ET.EulerClient [DepotInfo]
+getNandiDepotsV2 = ET.client nandiDepotsV2API
+
+getNandiDepotByIdV2 :: Text -> Text -> ET.EulerClient DepotInfo
+getNandiDepotByIdV2 = ET.client nandiDepotByIdV2API
+
+getNandiDepotVehiclesV2 :: Text -> Text -> Maybe Text -> ET.EulerClient [DepotVehicleInfo]
+getNandiDepotVehiclesV2 = ET.client nandiDepotVehiclesV2API
