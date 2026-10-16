@@ -24,7 +24,7 @@ import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.FindingTimeout as FindingTimeout
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
-import SharedLogic.SharedCab.Schedule (claimRefundRetryRun, claimSweepRun, ownSweepChain, scanWindowStart, scheduleNextSweep, withSweepLease)
+import SharedLogic.SharedCab.Schedule (claimRefundRetryRun, claimSweepRun, ensureExpiryJob, ownSweepChain, scanWindowStart, scheduleNextSweep, withSweepLease)
 import qualified SharedLogic.SharedCab.Session as Session
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -48,6 +48,8 @@ sharedCabDegradedSweep ::
 sharedCabDegradedSweep Job {jobInfo} = do
   let SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId, chainId = mbChainId} = jobInfo.jobData
   ownSweepChain merchantId merchantOperatingCityId mbChainId $ \chainId -> do
+    -- the expiry chain's watchdog: its job may have been lost (see Schedule.watchPlan)
+    withTryCatch "sharedCab:sweepWatchesExpiry" (ensureExpiryJob merchantId merchantOperatingCityId) >>= either (logError . ("sharedCab sweep: expiry watchdog failed: " <>) . show) pure
     -- not gated on the city switch: degraded rides and owed refunds drain in a suspended city too
     swept <- withTryCatch "sharedCabDegradedSweep" (sweepCity merchantOperatingCityId)
     case swept of

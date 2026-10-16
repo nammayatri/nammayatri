@@ -7,6 +7,7 @@ where
 
 import Data.List (nub)
 import qualified Data.Map.Strict as M
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleTrip as DVT
 import Kernel.External.Types (ServiceFlow)
@@ -21,7 +22,7 @@ import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
-import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ownExpiryChain, scheduleNextExpiry)
+import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ensureAllocationTick, ensureDegradedSweep, ownExpiryChain, scheduleNextExpiry, watchPlan)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.Queries.VehicleTrip as QVT
@@ -41,9 +42,23 @@ sharedCabSessionExpiry Job {jobInfo} = do
   ownExpiryChain jobData.merchantId jobData.merchantOperatingCityId jobData.chainId $ \chainId -> do
     claimedTick
       (claimExpiryRun jobData.merchantOperatingCityId)
-      (expireSilentSessions jobData.merchantOperatingCityId)
+      (expireSilentSessions jobData.merchantOperatingCityId >> watchChains jobData.merchantId jobData.merchantOperatingCityId)
       (scheduleNextExpiry jobData.merchantId jobData.merchantOperatingCityId chainId)
   pure Complete
+
+-- | Re-seeds the allocation and sweep chains if their jobs were lost (see 'watchPlan'); a failure here never costs the expiry pass.
+watchChains :: ExpiryFlow m r c => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+watchChains merchantId mocId =
+  withTryCatch "sharedCab:watchChains" watch >>= \case
+    Left err -> logError $ "sharedCab expiry: chain watchdog failed: " <> show err
+    Right () -> pure ()
+  where
+    watch = do
+      liveBookings <- length <$> Allocation.cityLiveBookings mocId
+      liveTrips <- length <$> QVT.findAllLiveByMerchantOperatingCityId mocId
+      let plan = watchPlan liveBookings liveTrips
+      when plan.seedAllocation $ ensureAllocationTick merchantId mocId
+      when plan.seedSweep $ ensureDegradedSweep merchantId mocId
 
 expireSilentSessions :: ExpiryFlow m r c => Id DMOC.MerchantOperatingCity -> m ()
 expireSilentSessions mocId = do

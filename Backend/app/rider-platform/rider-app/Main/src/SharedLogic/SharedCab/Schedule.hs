@@ -14,6 +14,8 @@ module SharedLogic.SharedCab.Schedule
     claimedTick,
     withCityTickLease,
     ensureExpiryJob,
+    WatchPlan (..),
+    watchPlan,
     ownExpiryChain,
     claimExpiryRun,
     scheduleNextExpiry,
@@ -155,6 +157,16 @@ expiryChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity
 expiryChain merchantId mocId =
   chain @'SharedCabSessionExpiry (expiryJobGuardKey mocId) (guardTickMultiple * expiryTickSec) expiryTickSec merchantId mocId $
     \chainId -> SharedCabSessionExpiryJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
+
+-- | The expiry tick doubles as the other chains' watchdog, and the sweep tick as the expiry chain's: a job that was lost or wedged
+-- ends its chain silently, and a chain is otherwise re-seeded only by new demand. Each seed is a set-if-absent on the chain's guard,
+-- so watching a live chain is a no-op and cannot double it.
+data WatchPlan = WatchPlan {seedAllocation :: Bool, seedSweep :: Bool}
+  deriving (Eq, Show)
+
+-- | An allocation chain is wanted while the city has a live booking, a sweep chain while cabs are on shift.
+watchPlan :: Int -> Int -> WatchPlan
+watchPlan liveBookings liveTrips = WatchPlan {seedAllocation = liveBookings > 0, seedSweep = liveTrips > 0}
 
 ensureExpiryJob :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureExpiryJob merchantId mocId = ensureChain (expiryChain merchantId mocId)

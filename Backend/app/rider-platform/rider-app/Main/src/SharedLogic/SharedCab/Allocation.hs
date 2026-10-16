@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.Allocation
     skipSharedCabAllocation,
     releaseUnboarded,
     allocationPass,
+    cityLiveBookings,
   )
 where
 
