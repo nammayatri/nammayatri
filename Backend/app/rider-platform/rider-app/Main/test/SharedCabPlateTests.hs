@@ -5,10 +5,11 @@ module SharedCabPlateTests (tests) where
 
 import qualified "rider-app" API.Types.UI.FRFSTicketService as ApiFRFS
 import qualified "rider-app" API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified BecknV2.FRFS.Enums as Spec
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import "rider-app" SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
-import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteStations, chooseWalkUp, isStickerCode, probeBus, resolveCode, stopPairLegs, withoutCabRows)
+import "rider-app" SharedLogic.SharedCab.WalkUp (CodeResolution (..), WalkUpChoice (..), cabRouteRequest, cabRouteServiceTier, cabRouteStations, chooseWalkUp, isStickerCode, probeBus, resolveCode, stopPairLegs, withoutCabRows)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 import Prelude
@@ -54,6 +55,13 @@ tests =
               @?= [Just [(0, ["SC-PRD-F"])], Nothing, Nothing, Nothing],
           testCase "the bus fleet's configs never include the shared-cab feed" $
             withoutCabRows fst [("chennai_data_bus", 1 :: Int), ("shillong_shared_cab:SHARED_CAB", 2)] @?= [("chennai_data_bus", 1)],
+          testCase "a shared-cab route advertises SHARED_CAB only to a client that declared the tier; other routes and clients are untouched" $
+            [ cabRouteServiceTier True (Just [Spec.PREMIUM, Spec.SHUTTLE, Spec.SHARED_CAB]),
+              cabRouteServiceTier True (Just [Spec.PREMIUM, Spec.SHUTTLE]),
+              cabRouteServiceTier True Nothing,
+              cabRouteServiceTier False (Just [Spec.SHARED_CAB])
+            ]
+              @?= [Just Spec.SHARED_CAB, Nothing, Nothing, Nothing],
           testCase "a failed or absent feed read (OTP down, no shared-cab feed) leaves the request on the bus path" $
             cabRouteRequest Nothing ["SC-A-F"] @?= False,
           testCase "the bus probe passes a found vehicle on, reports an unknown number as Nothing, and counts a failed lookup as not found (so a transient error can let exactly one live cab win, but never fails the walk-up)" $ do

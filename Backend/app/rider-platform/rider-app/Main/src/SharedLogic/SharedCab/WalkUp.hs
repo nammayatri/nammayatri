@@ -8,6 +8,7 @@ module SharedLogic.SharedCab.WalkUp
     cabRouteRequest,
     stopPairLegs,
     withoutCabRows,
+    cabRouteServiceTier,
     chooseWalkUp,
     probeBus,
     cabRouteStations,
@@ -77,6 +78,11 @@ cabRouteRequest (Just feedRouteCodes) requested = not (null requested) && all (`
 stopPairLegs :: Maybe Text -> Maybe Text -> [Text] -> Maybe [ApiTypes.RouteCodesWithLeg]
 stopPairLegs (Just _) (Just _) routes@(_ : _) = Just [ApiTypes.RouteCodesWithLeg {legOrder = 0, routeCodes = routes}]
 stopPairLegs _ _ _ = Nothing
+
+-- | The tier a route of this feed advertises in the public-transport data: a shared-cab route says SHARED_CAB, but only to a client
+-- that declared the tier (`newServiceTiers`), so every other client gets exactly the data it got before.
+cabRouteServiceTier :: Bool -> Maybe [Spec.ServiceTierType] -> Maybe Spec.ServiceTierType
+cabRouteServiceTier isCabFeed declared = Spec.SHARED_CAB <$ guard (isCabFeed && maybe False (Spec.SHARED_CAB `elem`) declared)
 
 -- | The bus fleet's configs of a city: the shared-cab feed shares the BUS category but is never a bus.
 withoutCabRows :: (a -> Text) -> [a] -> [a]

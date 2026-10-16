@@ -1224,7 +1224,9 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   busStationListHackEnabled <- liftIO $ fromMaybe False . (>>= readMaybe) <$> lookupEnv "BUS_STATION_LIST_HACK_ENABLED"
 
   let mkResponse stations routes routeStops bppConfig mbServiceType = do
-        frfsServiceTier <- maybe (pure Nothing) (\serviceType -> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceType person.merchantOperatingCityId bppConfig.id) mbServiceType
+        -- a shared-cab feed's routes carry the SHARED_CAB tier and its name for a client that declared the tier (see cabRouteServiceTier)
+        let cabTier = SharedCab.cabRouteServiceTier (SharedCab.isSharedCabAgency bppConfig.agencyKey) mbNewServiceTiers
+        frfsServiceTier <- maybe (pure Nothing) (\serviceType -> CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceType person.merchantOperatingCityId bppConfig.id) (mbServiceType <|> cabTier)
         gtfsVersion <-
           withTryCatch "getGtfsVersion:mkResponse" (OTPRest.getGtfsVersion bppConfig) >>= \case
             Left _ -> return bppConfig.feedKey
@@ -1273,7 +1275,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                           lN = r.longName,
                           dTC = r.dailyTripCount,
                           stC = r.stopCount,
-                          st = mbServiceType <|> r.serviceTierType,
+                          st = mbServiceType <|> r.serviceTierType <|> cabTier,
                           stn = frfsServiceTier <&> (.shortName),
                           sst = mbServiceSubTypes,
                           vt = show r.vehicleType,

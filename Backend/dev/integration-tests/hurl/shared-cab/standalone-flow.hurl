@@ -22,6 +22,27 @@ HTTP 200
 [Asserts]
 jsonpath "$.legs[0].routeWithLiveVehicles[0].routeCode" == "{{route_a}}"
 
+# the route list's data: a cab route says SHARED_CAB to a client that declares the tier, and says nothing to one that does not
+GET {{base_url}}/v2/publicTransport/data
+token: {{token}}
+[QueryStringParams]
+newServiceTiers: ["PREMIUM","SHUTTLE","SHARED_CAB"]
+enableSwitchRoute: true
+HTTP 200
+[Asserts]
+jsonpath "$.rs[?(@.cd == '{{route_a}}')].st" == "SHARED_CAB"
+jsonpath "$.rs[?(@.cd == '{{route_a}}')].stn" == "Shared Cab"
+
+GET {{base_url}}/v2/publicTransport/data
+token: {{token}}
+[QueryStringParams]
+newServiceTiers: ["PREMIUM","SHUTTLE"]
+enableSwitchRoute: true
+HTTP 200
+[Asserts]
+jsonpath "$.rs[?(@.cd == '{{route_a}}')].st" not exists
+jsonpath "$.rs[?(@.cd == '{{route_a}}')].stn" not exists
+
 # the enum query value is JSON-quoted (mkHttpInstancesForEnum), as on the vehicleData path
 POST {{base_url}}/v2/frfs/search?vehicleType=%22BUS%22
 token: {{token}}
