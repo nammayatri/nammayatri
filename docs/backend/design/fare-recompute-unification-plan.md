@@ -113,6 +113,43 @@ ACCEPTED + DOCUMENTED (not bugs, but real semantics to know):
   ceiling), so up to 59s of actual overage per ride is uncharged — relevant
   now that sections bill actual minutes.
 
+### Extra-time precedence + forgiveness deduction (2026-10-15)
+
+Three semantic changes (live + shadow + tests):
+
+- **Extra-time charge wins over perMinRateSections.** A fare policy that
+  configures `perMinuteRideExtraTimeCharge` bills time overage through the
+  extra-time charge alone; its perMinRateSections (if any) stay pinned to the
+  ESTIMATED minutes, exactly as quoted (no double counting; the within-threshold
+  time floor goes dormant since sections can no longer move with actuals).
+  Only a policy with sections and NO extra-time charge keeps billing the
+  sections on the chargeable minutes. This replaces the former "sections only,
+  never both" rule that forced `perMinuteRideExtraTimeCharge = Nothing`
+  whenever sections existed. New `ProductFlags.extraTimeChargeConfigured`.
+- **Forgiveness is a deductible window, not a cliff.** The matching
+  forgiveness band's window is DEDUCTED from an overrun's billed duration,
+  clamped at the estimate (`forgivenessAdjustedDuration`, replacing the binary
+  `forgivenDurationOverage`): overage inside the window bills the estimate
+  (as before), overage beyond it bills only the excess — a 21-min overrun
+  against a 20-min window now charges 1 min, not 21. Boundary softened:
+  overage exactly equal to the window now bills the estimate (previously
+  billed in full). New `DurationSource UseForgivenessAdjustedDuration` +
+  modifier `DurationForgivenessDeducted` in the shadow record.
+- **Symmetric band gating outside the threshold.** When pickup/drop land
+  outside the threshold, ONE band table (`upward.bands`) now gates recompute
+  in BOTH directions (`recomputeBandQualifies`, formerly
+  `upwardBandQualifies`): the actual (or approx) distance is billed only when
+  |traveled − estimate| clears the tightest band for the estimate; sub-band
+  deltas keep the estimate, repriced on the latest policy. Example: 10km
+  estimate on a 30% band → only rides shorter than 7km or longer than 13km
+  rebill; 7–13km bills the estimate. Previously ANY shortfall rebilled
+  downward, and overage used the flat `smallOverageForgivenessMeters` —
+  that lever is RETIRED (removed from `UpwardRecomputePolicy` /
+  `RecomputeConfig`; stored JSON keys are ignored on decode; the dashboard
+  API field reports 0). New reasons `OutsideThresholdSmallShortfallEstimate`
+  / `FailedOutsideSmallShortfallEstimate`. The fare-step
+  `downward.forgivenessMeters` tolerance is unchanged and stacks on top.
+
 ### Scenario-matrix gaps (not yet expressible; follow-ups)
 
 | Gap | Scenarios | Needed |

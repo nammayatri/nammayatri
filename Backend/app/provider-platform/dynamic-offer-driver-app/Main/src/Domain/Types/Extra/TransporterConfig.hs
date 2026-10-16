@@ -142,7 +142,7 @@ instance FromBackendRow Postgres KnowledgeCenterSopTypesConfig
 -- Backfill mapping (policy field <- old legacy column):
 --   upward.allowWithinThreshold          <- recomputeIfPickupDropNotOutsideOfThreshold
 --   upward.bands                         <- recomputeDistanceThresholds
---   upward.smallOverageForgivenessMeters <- actualRideDistanceDiffThreshold
+--   upward.smallOverageForgivenessMeters <- actualRideDistanceDiffThreshold (RETIRED 2026-10-15: bands gate both directions now)
 --   upward.bufferMeters                  <- upwardsRecomputeBuffer
 --   upward.bufferPercentage              <- upwardsRecomputeBufferPercentage
 --   upward.dailyExtraKmsBudget           <- fareRecomputeDailyExtraKmsThreshold
@@ -170,11 +170,15 @@ data RecomputePolicy = RecomputePolicy
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
--- | When and how far the billed distance may grow above the estimate.
+-- | When and how far the billed distance may move away from the estimate.
+-- The band table gates BOTH directions: within the pickup/drop threshold it
+-- qualifies upward recompute; outside the threshold the actual is billed only
+-- when |traveled - estimate| clears the band (shortfalls included — sub-band
+-- deltas keep the estimate). The former smallOverageForgivenessMeters flat
+-- threshold is retired; a stored JSON key is ignored on decode.
 data UpwardRecomputePolicy = UpwardRecomputePolicy
   { allowWithinThreshold :: Maybe Bool,
     bands :: Maybe [RecomputeBand],
-    smallOverageForgivenessMeters :: Maybe HighPrecMeters,
     bufferMeters :: Maybe HighPrecMeters,
     bufferPercentage :: Maybe Int,
     dailyExtraKmsBudget :: Maybe HighPrecMeters,
@@ -195,28 +199,32 @@ data DownwardRecomputePolicy = DownwardRecomputePolicy
 
 -- | Time-overage billing controls.
 data TimeRecomputePolicy = TimeRecomputePolicy
-  { -- | Flat forgiveness: time overage strictly below this bills the
-    -- estimated duration (no time charge). Fleet default: 300s (5 min).
-    -- Ignored when 'forgivenessBands' is set.
+  { -- | Flat forgiveness window: deducted from an overrun's billed duration,
+    -- clamped at the estimate — overage inside the window bills the
+    -- estimated duration, overage beyond it bills only the excess.
+    -- Fleet default: 300s (5 min). Ignored when 'forgivenessBands' is set.
     overageForgivenessSeconds :: Maybe Seconds,
     -- | Estimate-relative forgiveness, mirroring the distance bands: the band
     -- whose estimatedDurationUpper is the tightest fit for the ride's
-    -- estimated duration supplies the forgiveness. Wins over the flat value.
+    -- estimated duration supplies the window. Wins over the flat value.
     forgivenessBands :: Maybe [TimeForgivenessBand],
     gateExtraTimeOnEstimateBilled :: Maybe Bool,
     -- | Rides ending within the pickup/drop threshold never bill BELOW the
     -- estimated duration (no time refunds at the booked destination).
-    -- Default ON. Binds only when the fare policy bills time via
-    -- perMinRateSections (the time-billing MECHANISM is not a config: a
-    -- policy WITH perMinRateSections bills them on the chargeable/actual
-    -- minutes at recompute and the extra-time charge is disabled; a policy
-    -- WITHOUT them uses perMinuteRideExtraTimeCharge + grace as before).
+    -- Default ON. Binds only when perMinRateSections actually bill the
+    -- chargeable minutes (the time-billing MECHANISM is not a config: a
+    -- policy that configures perMinuteRideExtraTimeCharge bills overage
+    -- through that charge alone — grace + forgiveness window deducted — with
+    -- any sections pinned to the estimated minutes; only a policy with
+    -- sections and no extra-time charge bills the sections on the
+    -- chargeable/actual minutes at recompute).
     floorAtEstimateWithinThreshold :: Maybe Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 -- | One time-forgiveness band: rides with estimated duration up to
--- estimatedDurationUpper forgive overage below forgivenessSeconds.
+-- estimatedDurationUpper get a forgivenessSeconds window deducted from any
+-- duration overage (billing never drops below the estimate).
 data TimeForgivenessBand = TimeForgivenessBand
   { estimatedDurationUpper :: Seconds,
     forgivenessSeconds :: Seconds

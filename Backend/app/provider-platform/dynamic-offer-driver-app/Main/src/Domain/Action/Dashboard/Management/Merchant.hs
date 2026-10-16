@@ -391,10 +391,12 @@ mkMerchantCommonConfigRes tc@DTC.TransporterConfig {..} = do
       scheduledRideMaxLeadTime = scheduledRideConfig.maxLeadTime,
       pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
       dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
-      actualRideDistanceDiffThreshold = rcfg.cfgActualRideDistanceDiffThreshold,
+      -- Retired lever (2026-10-15): the recompute bands gate sub-band deltas
+      -- in both directions now; the API field is kept for compatibility.
+      actualRideDistanceDiffThreshold = 0,
       upwardsRecomputeBuffer = rcfg.cfgUpwardsRecomputeBuffer,
       upwardsRecomputeBufferPercentage = rcfg.cfgUpwardsRecomputeBufferPercentage,
-      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgActualRideDistanceDiffThreshold,
+      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit 0,
       upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgUpwardsRecomputeBuffer,
       ..
     }
