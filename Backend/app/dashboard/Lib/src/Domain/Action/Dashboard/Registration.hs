@@ -672,14 +672,13 @@ generateToken ::
   DMerchant.Merchant ->
   City.City ->
   m Text
-generateToken personId merchant city = do
-  case merchant.singleActiveSessionOnly of
-    Just True -> generateNewToken personId merchant.id city
-    _ -> do
-      findPreviousToken <- QR.findByPersonIdAndMerchantIdAndCity personId merchant.id city
-      case findPreviousToken of
-        Just token -> pure token.token
-        Nothing -> generateNewToken personId merchant.id city
+generateToken personId merchant city =
+  -- One token per person: a single identity-only token addresses every MOC the
+  -- person is provisioned for (URL + merchant_access govern access), so there is
+  -- no per-(merchant,city) token to reuse and no multi-session case to preserve.
+  -- generateNewToken wipes any existing tokens and mints exactly one, which makes
+  -- merchant.singleActiveSessionOnly a no-op here -- every login is single-session.
+  generateNewToken personId merchant.id city
 
 generateNewToken ::
   ( BeamFlow m r,

@@ -74,6 +74,7 @@ import Tools.Auth.Capability (isSuperAdmin)
 import qualified Tools.Auth.Common as Auth
 import Tools.Auth.Dashboard
 import Tools.Auth.Merchant
+import qualified Tools.Auth.Scope as DashboardScope
 import qualified Tools.Auth.Verify as Verify
 import Tools.Error
 import qualified Tools.InternalClient as InternalClient
@@ -536,6 +537,7 @@ assignRole tokenInfo personId roleId = do
 assignMerchantCityAccess ::
   ( BeamFlow m r,
     EncFlow m r,
+    Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
@@ -567,6 +569,8 @@ assignMerchantCityAccess tokenInfo personId req = do
     throwError $ InvalidRequest "Merchant access already assigned."
   merchantAccess <- buildMerchantAccess personId merchant.id merchant.shortId req.operatingCity
   QAccess.create merchantAccess
+  -- Drop the person's cached merchant_access set so the newly granted MOC is usable immediately.
+  DashboardScope.invalidateMerchantAccess personId
   pure Success
 
 resetMerchantAccess ::
@@ -594,6 +598,8 @@ resetMerchantAccess tokenInfo personId req = do
       Auth.cleanCachedTokensByMerchantId personId merchant.id
       QAccess.deleteById x.id
       QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
+      -- Drop the person's cached merchant_access set so the revoked access stops authorizing at once.
+      DashboardScope.invalidateMerchantAccess personId
       pure Success
 
 resetMerchantCityAccess ::
@@ -621,6 +627,8 @@ resetMerchantCityAccess tokenInfo personId req = do
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
       QAccess.deleteById merchantAccess.id
       QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
+      -- Drop the person's cached merchant_access set so the revoked city stops authorizing at once.
+      DashboardScope.invalidateMerchantAccess personId
       pure Success
 
 changePassword ::
@@ -893,6 +901,8 @@ deletePerson tokenInfo personId mbDeleteReason = do
   QAccess.deleteAllByPersonId personId
   QEntityAccess.deleteAllByPersonId personId
   Auth.cleanCachedTokens personId
+  -- Drop the deleted person's cached merchant_access set so nothing authorizes past the delete.
+  DashboardScope.invalidateMerchantAccess personId
   QReg.deleteAllByPersonId personId
   -- person_capability.person_id (subject) is a NOT NULL FK to person, so delete the
   -- user's own overrides before the person delete. granted_by rows (capabilities this
@@ -1152,7 +1162,10 @@ bulkUpsert tokenInfo merchantShortId req = do
             UpdateExistingPerson pers accAction _ -> do
               QP.updatePersonUpsertableFields pers
               case accAction of
-                AccessCreate acc -> QAccess.create acc
+                AccessCreate acc -> do
+                  QAccess.create acc
+                  -- Existing person gaining a new MOC: drop their cached merchant_access set.
+                  DashboardScope.invalidateMerchantAccess pers.id
                 AccessUnchanged -> pure ()
           syncEntityGrants merchant.id now heldByPerson builtOps
           pure builtOps
