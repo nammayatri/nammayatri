@@ -103,6 +103,20 @@ countEnabledByDriverIds driverIds =
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
       pure $ fromMaybe 0 (listToMaybe res)
 
+getEnabledDriverIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m [Id DP.Person]
+getEnabledDriverIds driverIds =
+  if null driverIds
+    then pure []
+    else
+      CH.findAll $
+        CH.select_ (\info -> CH.notGrouped info.driverId) $
+          CH.filter_
+            (\info -> info.driverId `CH.in_` driverIds CH.&&. info.enabled CH.==. True)
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+
 getStatusCountsByDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DP.Person] ->

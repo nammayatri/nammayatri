@@ -107,6 +107,7 @@ import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.FleetOperatorStats as QFleetOps
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.Image as IQuery
@@ -749,7 +750,7 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   logTagInfo "mbAllTimeKeysRes" (show mbAllTimeKeysRes)
 
   -- fallback to ClickHouse and populate cache when missing
-  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, mbTotalAssociatedDriver, mbTotalActiveDrivers, mbTotalEnabledDrivers) <- do
+  (totalRides, ratingSum, ratingCount, cancelCount, acceptationCount, totalRequestCount, _, _, _) <- do
     if all isJust mbAllTimeKeysRes
       then do
         let res = AnalyticsExtra.convertToAllTimeFallbackRes (zip AnalyticsExtra.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
@@ -766,7 +767,11 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   logTagInfo "Cancel count" (show cancelCount)
   logTagInfo "Acceptation count" (show acceptationCount)
   logTagInfo "Total request count" (show totalRequestCount)
-  let rating =
+  mbStats <- QFleetOps.findByPrimaryKey operator.id.getId
+  let mbTotalAssociatedDriver = mbStats >>= (.totalAssociatedDriver)
+      mbTotalActiveDrivers = mbStats >>= (.totalActiveDrivers)
+      mbTotalEnabledDrivers = mbStats >>= (.totalEnabledDrivers)
+      rating =
         ratingSum >>= \rs ->
           ratingCount >>= \rc ->
             if rc > 0 then Just (fromIntegral rs / fromIntegral rc) else Nothing
