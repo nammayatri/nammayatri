@@ -15,7 +15,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, allocationPass)
-import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
+import SharedLogic.SharedCab.Enabled (sharedCabEnabled, tickChainContinues)
 import SharedLogic.SharedCab.FindingTimeout (CancelFlow, cancelTimedOutFindings)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import SharedLogic.SharedCab.Schedule (claimTickRun, scheduleNextTick, thenReschedule, withCityTickLease)
@@ -45,10 +45,13 @@ sharedCabAllocationTick ::
   m ExecutionResult
 sharedCabAllocationTick Job {jobInfo} = do
   let SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId} = jobInfo.jobData
-  -- a duplicate chain finds this tick claimed and ends; the city switching off ends the chain too
+  -- a duplicate chain finds this tick claimed and ends. A suspended city allocates nothing new, but its chain keeps draining
+  -- (timeouts, refunds, timers) until no live booking is left.
   claimed <- claimTickRun merchantOperatingCityId
   enabled <- sharedCabEnabled merchantOperatingCityId
-  when (claimed && enabled) $ do
+  when claimed $ do
+    -- stays True until a pass proves the chain can lapse, so a throwing tick still reschedules
+    keepGoingRef <- liftIO $ newIORef True
     liveRef <- liftIO $ newIORef []
     -- the next tick is scheduled even when this one throws, or one DB hiccup ends the city's chain for good
     thenReschedule
@@ -57,9 +60,10 @@ sharedCabAllocationTick Job {jobInfo} = do
           withCityTickLease merchantOperatingCityId $
             allocationPass merchantOperatingCityId >>= \(live, positions) -> do
               liftIO (writeIORef liveRef live)
+              liftIO (writeIORef keepGoingRef (tickChainContinues enabled (length live)))
               runStopProgress merchantOperatingCityId live positions
           -- after the lease, so the refund's network calls never hold up the city's tick
           liftIO (readIORef liveRef) >>= cancelTimedOutFindings merchantOperatingCityId
       )
-      (scheduleNextTick merchantId merchantOperatingCityId)
+      (liftIO (readIORef keepGoingRef) >>= \keepGoing -> when keepGoing (scheduleNextTick merchantId merchantOperatingCityId))
   pure Complete

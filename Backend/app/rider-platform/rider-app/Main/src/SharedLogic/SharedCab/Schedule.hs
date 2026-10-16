@@ -67,12 +67,18 @@ withCityLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int 
 withCityLease key ttl action =
   whenM (shared $ Redis.tryLockRedis key ttl) $ action `finally` shared (Redis.unlockRedis key)
 
+-- | A lease outlives its holder by this many ticks at most; a job guard outlives a missed tick by this many.
+leaseTickMultiple, guardTickMultiple, scanWindowHorizons :: Int
+leaseTickMultiple = 10
+guardTickMultiple = 2
+scanWindowHorizons = 3
+
 tickSecOf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Int
 tickSecOf mocId = (.tickSec) <$> Config.getTunables mocId
 
 allocChain :: JobCreator r m => Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 allocChain tickSec merchantId mocId =
-  chain @'SharedCabAllocationTick (allocJobGuardKey mocId) (10 * tickSec) tickSec merchantId mocId $
+  chain @'SharedCabAllocationTick (allocJobGuardKey mocId) (leaseTickMultiple * tickSec) tickSec merchantId mocId $
     SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId}
 
 ensureAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
@@ -98,14 +104,14 @@ thenReschedule body reschedule = body `finally` reschedule
 withCityTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m () -> m ()
 withCityTickLease cityId action = do
   tickSec <- tickSecOf cityId
-  withCityLease (allocLeaseKey cityId) (10 * tickSec) action
+  withCityLease (allocLeaseKey cityId) (leaseTickMultiple * tickSec) action
 
 expiryTickSec :: Int
 expiryTickSec = 60
 
 expiryChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 expiryChain merchantId mocId =
-  chain @'SharedCabSessionExpiry (expiryJobGuardKey mocId) (2 * expiryTickSec) expiryTickSec merchantId mocId $
+  chain @'SharedCabSessionExpiry (expiryJobGuardKey mocId) (guardTickMultiple * expiryTickSec) expiryTickSec merchantId mocId $
     SharedCabSessionExpiryJobData {merchantId, merchantOperatingCityId = mocId}
 
 ensureExpiryJob :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
@@ -124,17 +130,17 @@ sweepTickSec = 120
 -- | The scan's updatedAt front bound is 3x the degraded horizon h: a ride degraded at t is killable from t+h and scanned until t+3h,
 -- so a sweep-down gap shorter than 2h loses nothing.
 scanWindowStart :: Int -> UTCTime -> UTCTime
-scanWindowStart horizonSec = addUTCTime (negate (intToNominalDiffTime (3 * horizonSec)))
+scanWindowStart horizonSec = addUTCTime (negate (intToNominalDiffTime (scanWindowHorizons * horizonSec)))
 
 sweepChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 sweepChain merchantId mocId =
-  chain @'SharedCabDegradedSweep (sweepJobGuardKey mocId) (2 * sweepTickSec) sweepTickSec merchantId mocId $
+  chain @'SharedCabDegradedSweep (sweepJobGuardKey mocId) (guardTickMultiple * sweepTickSec) sweepTickSec merchantId mocId $
     SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId = mocId}
 
 -- | Armed by a degraded boarding, a session open and a failed refund start. An empty scan window lets the chain lapse; the next armer re-seeds it.
 ensureDegradedSweep :: (JobCreator r m, Redis.HedisFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureDegradedSweep merchantId mocId =
-  whenM (sharedCabEnabled mocId) $ ensureChain (sweepChain merchantId mocId)
+  ensureChain (sweepChain merchantId mocId)
 
 claimSweepRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
 claimSweepRun mocId = setNx (sweepRunKey mocId) (sweepTickSec - 5)
@@ -147,7 +153,7 @@ withSweepLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Id DMOC.Mer
 withSweepLease mocId action = do
   owner <- generateGUIDText
   let key = Redis.buildLockResourceName (sweepLeaseKey mocId)
-  acquired <- shared $ Redis.setNxExpire key (10 * sweepTickSec) owner
+  acquired <- shared $ Redis.setNxExpire key (leaseTickMultiple * sweepTickSec) owner
   if not acquired
     then pure Nothing
     else

@@ -3,6 +3,9 @@
 module SharedLogic.SharedCab.Enabled
   ( sharedCabEnabled,
     sharedCabEnabledDecision,
+    requireSharedCabEnabled,
+    tickChainContinues,
+    cabItineraryShown,
   )
 where
 
@@ -16,6 +19,20 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import Tools.Error (GenericError (InvalidRequest))
+
+-- | A suspended city takes no new intake (sessions, bookings, boardings, walk-ups, search results); what is already in flight
+-- still drains: finding timeouts, refunds, session expiry and degraded-ride expiry keep running.
+requireSharedCabEnabled :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+requireSharedCabEnabled cityId = sharedCabEnabled cityId >>= \enabled -> unless enabled $ throwError (InvalidRequest "Shared cab is suspended in your city")
+
+-- | The allocation chain lives while the city is on, or while live bookings still need draining.
+tickChainContinues :: Bool -> Int -> Bool
+tickChainContinues enabled liveBookings = enabled || liveBookings > 0
+
+-- | A cab itinerary is offered only in an enabled city and only while a cab runs every cab leg's route.
+cabItineraryShown :: Bool -> [Bool] -> Bool
+cabItineraryShown enabled cabsComing = null cabsComing || (enabled && and cabsComing)
 
 sharedCabEnabledDecision :: Bool -> Maybe Bool -> Bool
 sharedCabEnabledDecision hasSharedCabConfig opsSwitch = hasSharedCabConfig && opsSwitch /= Just False

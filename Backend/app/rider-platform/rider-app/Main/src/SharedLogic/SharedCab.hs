@@ -5,6 +5,7 @@ module SharedLogic.SharedCab
     isSharedCabBooking,
     isSharedCabAgency,
     filterCabLegs,
+    requireSharedCabEnabled,
     sharedCabFareTiers,
     recordSearch,
     sharedCabBoardStops,
@@ -34,6 +35,7 @@ import SharedLogic.SharedCab.Boarding (SharedCabBoardOutcome (..), boardingRespo
 import SharedLogic.SharedCab.Cancel (CancelStage (..), dropRider, guardRiderCancel)
 import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, confirmHook, onBookingCreated)
 import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
+import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, noBookingLegState)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
 import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, readRefundDecision, refundAmounts, refundWithheld)

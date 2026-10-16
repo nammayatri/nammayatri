@@ -132,33 +132,32 @@ allocationPass ::
 allocationPass cityId = do
   cfg <- Config.getTunables cityId
   enabled <- sharedCabEnabled cityId
-  if not enabled
-    then ([], []) <$ logDebug "shared-cab is off for this city; allocation tick is a no-op"
-    else do
-      live <- cityLiveBookings cityId
-      now <- getCurrentTime
-      let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
-      positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
-        try (readRoutePositions routeCode) >>= \case
-          -- TODO: "LTS outage != everyone silent": most sessions of a city stale in the same minute must suspend the freshness
-          -- gate. Skipping the route is fail-safe: no allocation from stale data, no stand timer cleared.
-          Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
-          Right positions -> pure (Just (routeCode, positions))
-      let onRoute route = fromMaybe [] (lookup route positionsByRoute)
-          movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
-          silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
-      expireTimers cfg now movingOn silentOn live
-      let findingEntries = mapMaybe (\entry -> (fst entry,) <$> findingOf entry) live
-      parties <- partySizes (map fst findingEntries) -- one query for the tick; a party needs all its seats
-      findings <- forM findingEntries $ \(b, fb) -> do
-        since <- readFindingSince fb.bookingId fb.findingSince
-        pure (b, fb {findingSince = since, seats = partyOf parties b})
-      pushTimeFallbacks cfg now findings
-      forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
-        whenJust (lookup routeCode positionsByRoute) $ \positions -> do
-          sessions <- Session.activeSessionsOnRoute routeCode
-          forM_ bookings $ \booking -> do
-            attempts <- readAttempts (attemptsKey booking.bookingId)
-            skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
-            void $ claimFirst cfg booking (withoutSkipped skipped (planRouteAllocation now cfg positions sessions booking))
-      pure (live, positionsByRoute)
+  live <- cityLiveBookings cityId
+  now <- getCurrentTime
+  let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
+  positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
+    try (readRoutePositions routeCode) >>= \case
+      -- TODO: "LTS outage != everyone silent": most sessions of a city stale in the same minute must suspend the freshness
+      -- gate. Skipping the route is fail-safe: no allocation from stale data, no stand timer cleared.
+      Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
+      Right positions -> pure (Just (routeCode, positions))
+  let onRoute route = fromMaybe [] (lookup route positionsByRoute)
+      movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
+      silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
+  expireTimers cfg now movingOn silentOn live
+  let findingEntries = mapMaybe (\entry -> (fst entry,) <$> findingOf entry) live
+  parties <- partySizes (map fst findingEntries) -- one query for the tick; a party needs all its seats
+  findings <- forM findingEntries $ \(b, fb) -> do
+    since <- readFindingSince fb.bookingId fb.findingSince
+    pure (b, fb {findingSince = since, seats = partyOf parties b})
+  -- a suspended city drains (timers above, timeouts and refunds in the job) but allocates nothing new
+  when enabled $ do
+    pushTimeFallbacks cfg now findings
+    forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
+      whenJust (lookup routeCode positionsByRoute) $ \positions -> do
+        sessions <- Session.activeSessionsOnRoute routeCode
+        forM_ bookings $ \booking -> do
+          attempts <- readAttempts (attemptsKey booking.bookingId)
+          skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
+          void $ claimFirst cfg booking (withoutSkipped skipped (planRouteAllocation now cfg positions sessions booking))
+  pure (live, positionsByRoute)

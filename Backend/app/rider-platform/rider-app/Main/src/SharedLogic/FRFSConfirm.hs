@@ -577,6 +577,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       whenJust mbPassWindowCtx $ \(appliedPass, paymentId, parentOwnerId, tripWindow) ->
         FRFSPassOverride.checkOverlappingBookingLimit rider appliedPass paymentId parentOwnerId tripWindow
 
+      when (SharedCab.isSharedCabBooking booking) $ SharedCab.requireSharedCabEnabled booking.merchantOperatingCityId
       QFRFSTicketBooking.create booking
       Metrics.incrementFRFSBookingCount booking.merchantId.getId booking.merchantOperatingCityId.getId (show booking.vehicleType) (show booking.status) "created"
 

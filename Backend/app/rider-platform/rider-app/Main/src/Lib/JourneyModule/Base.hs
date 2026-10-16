@@ -112,7 +112,7 @@ filterTransitRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m
 filterTransitRoutes riderConfig = filterM keepRoute
   where
     keepRoute route =
-      SharedCab.filterCabLegs (filter (\leg -> leg.mode == MultiModalTypes.Bus) route.legs) >>= \case
+      SharedCab.filterCabLegs riderConfig.merchantOperatingCityId (filter (\leg -> leg.mode == MultiModalTypes.Bus) route.legs) >>= \case
         Just busLegs | riderConfig.enableBusFiltering == Just True -> filterBusRoutes busLegs
         mbBusLegs -> return (isJust mbBusLegs)
 

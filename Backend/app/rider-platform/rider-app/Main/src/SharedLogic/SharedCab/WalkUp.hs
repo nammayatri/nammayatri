@@ -40,6 +40,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import qualified SharedLogic.SharedCab.Config as Config
+import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled, sharedCabEnabled)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -173,8 +174,10 @@ findSharedCabConfig :: Maybe (Id DP.Person) -> Environment.Flow (Maybe DIBC.Inte
 findSharedCabConfig mbPersonId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   city <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  find (isSharedCabAgency . (.agencyKey))
-    <$> SIBC.findAllIntegratedBPPConfig city.merchantOperatingCityId Enums.BUS DIBC.APPLICATION
+  cabConfig <- find (isSharedCabAgency . (.agencyKey)) <$> SIBC.findAllIntegratedBPPConfig city.merchantOperatingCityId Enums.BUS DIBC.APPLICATION
+  -- a suspended city lists no routes and resolves no codes
+  enabled <- sharedCabEnabled city.merchantOperatingCityId
+  pure (cabConfig <* guard enabled)
 
 -- | A plate with a live shared-cab session is a spot booking's first step, whatever vehicleType the app sent.
 walkUpVehicleData ::
@@ -184,7 +187,7 @@ walkUpVehicleData ::
   Environment.Flow ApiTypes.PublicTransportData
 walkUpVehicleData mbPersonId vehicleNumber busPathWith =
   liveSharedCab vehicleNumber >>= \case
-    Just session -> sharedCabVehicleData session
+    Just session -> requireSharedCabEnabled session.merchantOperatingCityId >> sharedCabVehicleData session
     Nothing
       | isStickerCode vehicleNumber -> do
         mbBusVehicle <- probeBus busKnowsVehicle

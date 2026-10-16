@@ -22,20 +22,21 @@ module SharedLogic.SharedCab.Session
   )
 where
 
-import Control.Monad.Extra (allM)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
 import Lib.Scheduler (JobCreator)
 import SharedLogic.SharedCab.Booking (ridersOnBoard, shared)
 import qualified SharedLogic.SharedCab.Booking as Booking
-import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
+import SharedLogic.SharedCab.Enabled (cabItineraryShown, requireSharedCabEnabled, sharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (driverInfoKey, plateLockKey, routeKey, sessionKey)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
@@ -47,7 +48,7 @@ import SharedLogic.SharedCab.SessionState
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QBooking
 import qualified Storage.Queries.VehicleTrip as QVT
-import Tools.Error (GenericError (InvalidRequest), SharedCabSessionError (..))
+import Tools.Error (SharedCabSessionError (..))
 
 data CabDriverInfo = CabDriverInfo {driverName :: Maybe Text, vehicleModel :: Maybe Text}
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -118,10 +119,13 @@ activeSessionsOnRoute route = do
         _ -> void $ shared $ Redis.srem (routeKey route) [plate]
 
 -- | A shared-cab itinerary is shown only while a cab is running its route. TODO: also require the cab not to have passed the board stop.
-filterCabLegs :: (Redis.HedisFlow m r, MonadFlow m) => [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
-filterCabLegs legs = do
-  cabsComing <- allM hasCabComing (filter isSharedCabLeg legs)
-  pure $ if cabsComing then Just (filter (not . isSharedCabLeg) legs) else Nothing
+filterCabLegs :: (Redis.HedisFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [MultiModalTypes.MultiModalLeg] -> m (Maybe [MultiModalTypes.MultiModalLeg])
+filterCabLegs cityId legs = case filter isSharedCabLeg legs of
+  [] -> pure (Just legs)
+  cabLegs -> do
+    enabled <- sharedCabEnabled cityId
+    cabsComing <- mapM hasCabComing cabLegs
+    pure $ if cabItineraryShown enabled cabsComing then Just (filter (not . isSharedCabLeg) legs) else Nothing
   where
     isSharedCabLeg leg = maybe False isSharedCabAgency (leg.agency >>= (.gtfsId))
     hasCabComing leg =
@@ -193,8 +197,7 @@ finish reason s = do
 -- | Open a session, or change route if this driver already has one. A change with riders on board needs a mode.
 selectRoute :: Maybe SelectRouteMode -> OpenSessionReq -> Environment.Flow (Either [DFRFSTicketBooking.FRFSTicketBooking] Session)
 selectRoute mode req = withPlateLock plate $ do
-  enabled <- sharedCabEnabled req.merchantOperatingCityId
-  unless enabled $ throwError (InvalidRequest "Shared cab is not enabled in this city")
+  requireSharedCabEnabled req.merchantOperatingCityId
   prior <- readSession plate
   liftSession (planSelect req.driverId req.routeCode prior) >>= \case
     KeepRoute s -> pure (Right s)
@@ -274,7 +277,9 @@ resume :: Text -> Text -> Environment.Flow Session
 resume driver rawPlate = do
   resumed <- withPlateLock plate $ do
     prior <- readSession plate
-    s <- liftSession $ ownedSession driver prior >>= resumeSession
+    owned <- liftSession $ ownedSession driver prior
+    requireSharedCabEnabled owned.merchantOperatingCityId
+    s <- liftSession $ resumeSession owned
     QVT.updateStatus DVT.ACTIVE s.vehicleTripId
     saveSession prior s
   Events.forSession Events.Resumed resumed
@@ -286,6 +291,7 @@ setWalkupCount :: Text -> Text -> Int -> Int -> Environment.Flow Session
 setWalkupCount driver rawPlate expectedVersion count = withPlateLock plate $ do
   prior <- readSession plate
   s <- liftSession $ ownedSession driver prior
+  requireSharedCabEnabled s.merchantOperatingCityId
   s' <- liftSession $ setWalkup expectedVersion count s
   saveWalkups DriverCounted prior s s'
   where

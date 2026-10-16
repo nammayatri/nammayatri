@@ -21,7 +21,6 @@ import SharedLogic.JobScheduler
 import SharedLogic.SharedCab.Booking (isSharedCabBooking)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import qualified SharedLogic.SharedCab.FindingTimeout as FindingTimeout
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
@@ -48,15 +47,14 @@ sharedCabDegradedSweep ::
   m ExecutionResult
 sharedCabDegradedSweep Job {jobInfo} = do
   let SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId} = jobInfo.jobData
-  enabled <- sharedCabEnabled merchantOperatingCityId
-  when enabled $ do
-    swept <- withTryCatch "sharedCabDegradedSweep" (sweepCity merchantOperatingCityId)
-    case swept of
-      -- an empty window in all passes lets the chain lapse; a new degrade, session open or refund marker re-seeds it
-      Right (Just [scan, refund])
-        | scan /= PassBusy && refund /= PassBusy ->
-          logInfo "sharedCab degraded sweep: chain ends (every enabled pass found an empty workspace; a new degrade, session open or refund marker re-seeds it)"
-      _ -> scheduleNextSweep merchantId merchantOperatingCityId
+  -- not gated on the city switch: degraded rides and owed refunds drain in a suspended city too
+  swept <- withTryCatch "sharedCabDegradedSweep" (sweepCity merchantOperatingCityId)
+  case swept of
+    -- an empty window in all passes lets the chain lapse; a new degrade, session open or refund marker re-seeds it
+    Right (Just [scan, refund])
+      | scan /= PassBusy && refund /= PassBusy ->
+        logInfo "sharedCab degraded sweep: chain ends (every pass found an empty workspace; a new degrade, session open or refund marker re-seeds it)"
+    _ -> scheduleNextSweep merchantId merchantOperatingCityId
   pure Complete
 
 -- | The city's window, under its lease. Each pass is claimed and wrapped in its own try, so a throw costs only that pass this tick.

@@ -8,7 +8,7 @@ import Control.Monad (mfilter)
 import Data.Text (Text)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.SharedCab.Config
-import "rider-app" SharedLogic.SharedCab.Enabled (sharedCabEnabledDecision)
+import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
 import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -23,6 +23,11 @@ tests =
       testCase "per-city switch: SHARED_CAB config and not Just False" $
         [sharedCabEnabledDecision c s | c <- [True, False], s <- [Nothing, Just True, Just False]]
           @?= [True, True, False, False, False, False],
+      testCase "a suspended city keeps its allocation chain only while live bookings need draining" $
+        [tickChainContinues e n | e <- [True, False], n <- [0, 3]] @?= [True, True, False, True],
+      testCase "a suspended city offers no cab itinerary; an enabled one needs a cab on every cab leg; no cab leg is always fine" $
+        [cabItineraryShown e legs | e <- [True, False], legs <- [[], [True], [True, False]]]
+          @?= [True, True, False, True, False, False],
       testCase "defaults are the values the engine was built on" $
         defaultTunables
           @?= SharedCabTunables

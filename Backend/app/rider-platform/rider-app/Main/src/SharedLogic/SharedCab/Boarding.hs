@@ -37,7 +37,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SharedCab.Booking (bookingSeats, isSharedCabBooking, liveSeatsOnVehicle, partyOf, partySizes, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
-import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
+import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.Keys (allocKey)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
@@ -262,9 +262,7 @@ tryBoardSharedCab ::
 tryBoardSharedCab _ _ booking _ _
   | not (isSharedCabBooking booking) = pure Nothing
 tryBoardSharedCab journey journeyLeg booking mbPersonId req =
-  sharedCabEnabled booking.merchantOperatingCityId >>= \case
-    False -> pure Nothing
-    True -> boardSharedCab journey journeyLeg booking mbPersonId req
+  requireSharedCabEnabled booking.merchantOperatingCityId >> boardSharedCab journey journeyLeg booking mbPersonId req
 
 boardingResponse :: SharedCabBoardOutcome -> API.JourneyInfoResp -> API.JourneyInfoResp
 boardingResponse outcome journeyInfoResp = case outcome of
