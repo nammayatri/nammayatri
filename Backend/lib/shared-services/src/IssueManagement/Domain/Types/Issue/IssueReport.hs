@@ -25,6 +25,8 @@ data IssueReport = IssueReport
     assignee :: Maybe Text,
     status :: IssueStatus,
     categoryId :: Maybe (Id D.IssueCategory),
+    -- | Category name from a pre-ticket bot; shown instead of the category row when set.
+    categoryName :: Maybe Text,
     optionId :: Maybe (Id D.IssueOption),
     deleted :: Bool,
     mediaFiles :: [Id D.MediaFile],

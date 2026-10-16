@@ -15,22 +15,29 @@ import Kernel.Types.Id
 create :: BeamFlow m r => IssueReport.IssueReport -> m ()
 create = createWithKV
 
-findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id MerchantOperatingCity -> m (Int, [IssueReport])
-findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee mbPersonId mbRideId mbDescriptionSearch mbFromDate mbToDate merchantOperatingCityId = do
+-- | Matches by categoryId or, for pre-ticket bot reports without one, by categoryName.
+findAllWithOptions :: BeamFlow m r => Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Maybe Text -> Maybe (Id Person) -> Maybe (Id Ride) -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id MerchantOperatingCity -> m (Int, [IssueReport])
+findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbCategoryName mbAssignee mbPersonId mbRideId mbDescriptionSearch mbFromDate mbToDate merchantOperatingCityId = do
+  let categoryCond = case (mbCategoryId, mbCategoryName) of
+        (Nothing, Nothing) -> []
+        (Just cid, Nothing) -> [Is BeamIR.categoryId $ Eq (Just cid.getId)]
+        (Nothing, Just name) -> [Is BeamIR.categoryName $ Eq (Just name)]
+        (Just cid, Just name) -> [Or [Is BeamIR.categoryId $ Eq (Just cid.getId), Is BeamIR.categoryName $ Eq (Just name)]]
   let conditions =
         [ And $
             catMaybes
               [ fmap (Is BeamIR.status . Eq) mbStatus,
                 fmap (Is BeamIR.assignee . Eq . Just) mbAssignee,
-                fmap (Is BeamIR.categoryId . Eq . Just . getId) mbCategoryId,
                 fmap (Is BeamIR.personId . Eq . getId) mbPersonId,
                 fmap (Is BeamIR.rideId . Eq . Just . getId) mbRideId,
                 fmap (\search -> Is BeamIR.description $ Like ("%" <> search <> "%")) mbDescriptionSearch,
                 fmap (Is BeamIR.createdAt . GreaterThanOrEq . T.utcToLocalTime T.utc) mbFromDate,
                 fmap (Is BeamIR.createdAt . LessThanOrEq . T.utcToLocalTime T.utc) mbToDate
               ]
+              <> categoryCond
               <> [ Is BeamIR.merchantOperatingCityId $ Eq (Just merchantOperatingCityId.getId),
-                   Is BeamIR.categoryId $ Not $ Eq Nothing,
+                   -- Reports filed under a category name alone (pre-ticket bot) have no categoryId.
+                   Or [Is BeamIR.categoryId $ Not $ Eq Nothing, Is BeamIR.categoryName $ Not $ Eq Nothing],
                    Is BeamIR.scheduledBookingTransactionId $ Eq Nothing
                  ]
         ]
@@ -240,6 +247,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
         BeamIR.assignee = assignee,
         BeamIR.status = status,
         BeamIR.categoryId = getId <$> categoryId,
+        BeamIR.categoryName = categoryName,
         BeamIR.optionId = getId <$> optionId,
         BeamIR.deleted = deleted,
         BeamIR.mediaFiles = getId <$> mediaFiles,

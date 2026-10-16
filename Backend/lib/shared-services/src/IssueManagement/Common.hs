@@ -194,6 +194,8 @@ data RideInfoRes = RideInfoRes
     actualFare :: Maybe Money,
     bookingStatus :: Maybe BookingStatus,
     rideStatus :: RideStatus,
+    -- | Trip type label for tickets (OneWay, Rental, InterCity, ...).
+    rideType :: Maybe Text,
     merchantOperatingCityId :: Maybe Text,
     estimatedDistance :: Maybe HighPrecMeters,
     chargeableDistance :: Maybe HighPrecMeters,

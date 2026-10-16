@@ -267,6 +267,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             merchantOperatingCityId = Just mocId,
             optionId = Nothing,
             categoryId = Nothing,
+            categoryName = Nothing,
             mediaFiles = [],
             assignee = Nothing,
             status = OPEN,
@@ -326,7 +327,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
       issueHandle.findByMobileNumberAndMerchantId mobileCountryCode numHash merchantId
         >>= fromMaybeM (PersonWithPhoneNotFound phoneNumber)
   mbRide <- maybe (pure Nothing) (issueHandle.findRideByRideShortId merchantOperatingCity.merchantId) mbRideShortId
-  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch mbFromDate mbToDate (cast merchantOperatingCity.id)
+  (totalCount, issueReports) <- B.runInReplica $ QIR.findAllWithOptions mbLimit mbOffset mbStatus mbCategoryIdFromName mbCategoryName mbAssignee ((.id) <$> mbPerson) ((.id) <$> mbRide) mbDescriptionSearch mbFromDate mbToDate (cast merchantOperatingCity.id)
   let count = length issueReports
   let summary = Common.Summary {totalCount, count}
   issues <-
@@ -349,7 +350,8 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
   where
     mkIssueReport :: (Esq.EsqDBReplicaFlow m r, BeamFlow m r) => DIR.IssueReport -> m Common.IssueReportListItem
     mkIssueReport issueReport = do
-      category <- CQIC.findById (fromJust issueReport.categoryId) identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
+      mbCategory <- forM issueReport.categoryId $ \catId -> CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
+      let categoryText = fromMaybe (maybe "" (.category) mbCategory) issueReport.categoryName
       unread <- B.runInReplica $ QCM.countUnread issueReport.id DCM.SENDER_RIDER
       pure $
         Common.IssueReportListItem
@@ -359,7 +361,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbCatego
             rideId = cast <$> issueReport.rideId,
             ticketBookingId = cast <$> issueReport.ticketBookingId,
             deleted = issueReport.deleted,
-            category = category.category,
+            category = categoryText,
             categoryId = cast <$> issueReport.categoryId,
             assignee = issueReport.assignee,
             status = issueReport.status,
