@@ -612,7 +612,7 @@ verifyAndUpdateUIDynamicLogic mbMerchantId merchantOpCityId proxy req logicData 
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain merchantOpCityId mbVersion domain = do
-  allRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain
+  allRollouts <- CADLR.findByMerchantOpCityAndDomainWithFallback merchantOpCityId domain
   let rolloutStatusMap = buildVersionStatusMap allRollouts
   case mbVersion of
     Just version -> do
@@ -679,7 +679,7 @@ deleteTimeBounds merchantOpCityId domain name = do
 
 getLogicRollout :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Text -> Maybe Bool -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.LogicRolloutObject]
 getLogicRollout merchantOpCityId _ mbActiveOnly domain = do
-  allDomainRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain
+  allDomainRollouts <- CADLR.findByMerchantOpCityAndDomainWithFallback merchantOpCityId domain
   let rollouts =
         case mbActiveOnly of
           Just True ->
@@ -724,7 +724,7 @@ getExperimentGroups ::
   m [Lib.Yudhishthira.Types.RolloutGroupInfo]
 getExperimentGroups merchantOpCityId mbDomain = do
   allDomainRollouts <- case mbDomain of
-    Just domain -> CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain
+    Just domain -> CADLR.findByMerchantOpCityAndDomainWithFallback merchantOpCityId domain
     Nothing -> LYSQADLR.findAllByMerchantOpCityId merchantOpCityId
   let activeRollouts =
         filter
@@ -921,7 +921,7 @@ upsertLogicRollout mbMerchantId merchantOpCityId rolloutReq _giveConfigs opCity 
 getAppDynamicLogicVersions :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Maybe Int -> Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m Lib.Yudhishthira.Types.AppDynamicLogicVersionResp
 getAppDynamicLogicVersions merchantOpCityId mbLimit mbOffset domain_ = do
   elements <- QADLE.findLatestVersion mbLimit mbOffset domain_
-  allRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain_
+  allRollouts <- CADLR.findByMerchantOpCityAndDomainWithFallback merchantOpCityId domain_
   let rolloutStatusMap = buildVersionStatusMap allRollouts
       hasDemotedBase = any (\r -> r.isBaseVersion /= Just True && r.experimentStatus == Just LYT.CONCLUDED) allRollouts
       rolloutMap = map (\r -> (r.version, r)) allRollouts
@@ -1034,7 +1034,7 @@ getNammaTagConfigPilotAllUiConfigs merchantOpCityId mbUnderExp configChoice = do
 
 getNammaTagConfigPilotConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
 getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
-  allConfigRollouts <- LYSQADLR.findRunningByMerchantOpCityAndDomain merchantOpCityId domain'
+  allConfigRollouts <- CADLR.resolveWithDefaultFallback domain' (\c -> LYSQADLR.findRunningByMerchantOpCityAndDomain c domain') merchantOpCityId
   let runningConfigRollouts = filter (\rollout -> rollout.isBaseVersion == Just True || rollout.percentageRollout /= 0 || rollout.experimentStatus == Just LYT.RUNNING) allConfigRollouts
       -- canRevert is true only for the current base version that was promoted via conclude
       -- (i.e. there exists a previous demoted base with isBaseVersion=Nothing and experimentStatus=CONCLUDED)
@@ -1057,7 +1057,7 @@ getNammaTagConfigPilotConfigDetails merchantOpCityId domain' = do
 
 getNammaTagConfigPilotUiConfigDetails :: BeamFlow m r => Id Lib.Yudhishthira.Types.MerchantOperatingCity -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.ConfigDetailsResp]
 getNammaTagConfigPilotUiConfigDetails merchantOpCityId domain' = do
-  configRollouts <- CADLR.findByMerchantOpCityAndDomain merchantOpCityId domain'
+  configRollouts <- CADLR.findByMerchantOpCityAndDomainWithFallback merchantOpCityId domain'
   let hasDemotedBase = any (\r -> r.isBaseVersion /= Just True && r.experimentStatus == Just LYT.CONCLUDED) configRollouts
   mapM (makeConfigDetailResp hasDemotedBase) configRollouts
   where
@@ -1077,9 +1077,12 @@ getNammaTagConfigPilotUiConfigDetails merchantOpCityId domain' = do
 
 getNammaTagConfigPilotAlwaysOnList :: (BeamFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.LogicDomain -> m LYT.AlwaysOnListResp
 getNammaTagConfigPilotAlwaysOnList merchantOpCityId domain' = do
-  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomain merchantOpCityId domain'
-  alwaysOnRows <- CADLAO.findByMerchantOpCityAndDomainOrdered merchantOpCityId domain'
-  patchInfos <- mapM (makeAlwaysOnPatchInfo domain') alwaysOnRows
+  baseRollout <- CADLR.findBaseRolloutByMerchantOpCityAndDomainWithFallback merchantOpCityId domain'
+  -- Keep the always-on rows and inner rollout lookups keyed to the city the base resolved from
+  -- (the real city, or the inherited "default" city), so the whole response is one coherent source.
+  let sourceCityId = maybe merchantOpCityId (.merchantOperatingCityId) baseRollout
+  alwaysOnRows <- CADLAO.findByMerchantOpCityAndDomainOrdered sourceCityId domain'
+  patchInfos <- mapM (makeAlwaysOnPatchInfo sourceCityId domain') alwaysOnRows
   return $
     LYT.AlwaysOnListResp
       { baseVersion = (.version) <$> baseRollout,
@@ -1087,10 +1090,10 @@ getNammaTagConfigPilotAlwaysOnList merchantOpCityId domain' = do
         alwaysOnPatches = patchInfos
       }
   where
-    makeAlwaysOnPatchInfo :: (BeamFlow m r, CacheFlow m r) => LYT.LogicDomain -> DTADAO.AppDynamicLogicAlwaysOn -> m LYT.AlwaysOnPatchInfo
-    makeAlwaysOnPatchInfo domain'' row = do
+    makeAlwaysOnPatchInfo :: (BeamFlow m r, CacheFlow m r) => Id LYT.MerchantOperatingCity -> LYT.LogicDomain -> DTADAO.AppDynamicLogicAlwaysOn -> m LYT.AlwaysOnPatchInfo
+    makeAlwaysOnPatchInfo sourceCityId domain'' row = do
       elements <- CADLE.findByDomainAndVersion domain'' row.version
-      mRollout <- LYSQADLR.findByPrimaryKey domain'' merchantOpCityId "Unbounded" row.version
+      mRollout <- LYSQADLR.findByPrimaryKey domain'' sourceCityId "Unbounded" row.version
       return $
         LYT.AlwaysOnPatchInfo
           { version = row.version,

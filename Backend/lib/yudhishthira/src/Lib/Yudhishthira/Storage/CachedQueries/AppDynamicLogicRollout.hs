@@ -84,6 +84,53 @@ findByMerchantOpCityAndDomain merchantOperatingCityId domain =
       )
         /=<< Queries.findByMerchantOpCityAndDomain merchantOperatingCityId domain
 
+-- | Resolve a city's rollouts with the reserved "default"-city fallback: use the city's own
+-- rows, else fall back to the "default" city. Behaviour domains are opt-in per city and never
+-- fall back. Shared by the app runtime (Tools.DynamicLogic) and the dashboard read handlers so
+-- both resolve the same effective config.
+resolveWithDefaultFallback ::
+  BeamFlow.BeamFlow m r =>
+  Lib.Yudhishthira.Types.LogicDomain ->
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m [a]) ->
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  m [a]
+resolveWithDefaultFallback domain fetchForCity merchantOperatingCityId = do
+  rows <- fetchForCity merchantOperatingCityId
+  if not (null rows) || Lib.Yudhishthira.Types.isBehaviourDomain domain
+    then pure rows
+    else fetchForCity (Kernel.Types.Id.Id "default")
+
+-- | 'Maybe'-returning variant of 'resolveWithDefaultFallback' (e.g. for the base rollout).
+resolveMaybeWithDefaultFallback ::
+  BeamFlow.BeamFlow m r =>
+  Lib.Yudhishthira.Types.LogicDomain ->
+  (Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity -> m (Maybe a)) ->
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  m (Maybe a)
+resolveMaybeWithDefaultFallback domain fetchForCity merchantOperatingCityId = do
+  mbRow <- fetchForCity merchantOperatingCityId
+  case mbRow of
+    Just _ -> pure mbRow
+    Nothing
+      | Lib.Yudhishthira.Types.isBehaviourDomain domain -> pure Nothing
+      | otherwise -> fetchForCity (Kernel.Types.Id.Id "default")
+
+findByMerchantOpCityAndDomainWithFallback ::
+  BeamFlow.BeamFlow m r =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m [Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout]
+findByMerchantOpCityAndDomainWithFallback merchantOperatingCityId domain =
+  resolveWithDefaultFallback domain (\city -> findByMerchantOpCityAndDomain city domain) merchantOperatingCityId
+
+findBaseRolloutByMerchantOpCityAndDomainWithFallback ::
+  BeamFlow.BeamFlow m r =>
+  Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
+  Lib.Yudhishthira.Types.LogicDomain ->
+  m (Maybe Lib.Yudhishthira.Types.AppDynamicLogicRollout.AppDynamicLogicRollout)
+findBaseRolloutByMerchantOpCityAndDomainWithFallback merchantOperatingCityId domain =
+  resolveMaybeWithDefaultFallback domain (\city -> findBaseRolloutByMerchantOpCityAndDomain city domain) merchantOperatingCityId
+
 findActiveByMerchantOpCityAndDomain ::
   BeamFlow.BeamFlow m r =>
   Kernel.Types.Id.Id Lib.Yudhishthira.Types.MerchantOperatingCity ->
