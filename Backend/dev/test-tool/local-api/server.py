@@ -79,6 +79,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 _DEVBOX_CORE_PARENT = SCRIPT_DIR.parent.parent  # Backend/dev
 if str(_DEVBOX_CORE_PARENT) not in sys.path:
     sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
+from devbox_core import fleet as _dc_fleet  # noqa: E402
 from devbox_core import ssh as _dc_ssh  # noqa: E402
 
 KNOWN_REPOS: dict = {
@@ -1072,119 +1073,10 @@ def _fetch_machines() -> dict:
     Transforms that into:
       { "machines": [MachineInfo, …], "myIps": [...] }
     where MachineInfo = {name, role, localIp, awsIp, bestIp, user, type, resources}
+
+    The logic lives in devbox_core.fleet; this passes the cached reachability probe.
     """
-    if not BASE_API_HOST:
-        return {"machines": [], "myIps": [],
-                "error": "BASE_API_HOST not set — cannot reach base station API"}
-
-    url = f"http://{BASE_API_HOST}:{BASE_API_PORT}/api/status"
-    try:
-        with urllib.request.urlopen(url, timeout=5) as r:
-            data = json.loads(r.read().decode())
-    except Exception as e:
-        return {"machines": [], "myIps": [], "error": f"base station API unreachable: {e}"}
-
-    # Collect this machine's IPs + networks so we can pick the best route.
-    import ipaddress
-    my_networks: list[tuple[str, ipaddress.IPv4Network]] = []
-    try:
-        if sys.platform == "darwin":
-            out = subprocess.check_output(["ifconfig"], text=True, timeout=3)
-            # "inet <ip> netmask <hex>", plus the point-to-point form tunnels use:
-            # "inet 10.4.1.13 --> 10.4.1.13 netmask 0xffffffe0". Skipping the
-            # peer field lost every VPN interface, which made VPN addresses look
-            # like a different network however wide the tunnel's mask was.
-            for m in re.finditer(
-                    r"inet (\d+\.\d+\.\d+\.\d+)(?: --> \d+\.\d+\.\d+\.\d+)? netmask (0x[0-9a-fA-F]+)",
-                    out):
-                ip_str, mask_hex = m.group(1), m.group(2)
-                if ip_str == "127.0.0.1":
-                    continue
-                mask_int = int(mask_hex, 16)
-                prefix = bin(mask_int).count("1")
-                net = ipaddress.ip_network(f"{ip_str}/{prefix}", strict=False)
-                my_networks.append((ip_str, net))
-        else:
-            out = subprocess.check_output(["hostname", "-I"], text=True, timeout=3).strip()
-            for ip_str in out.split():
-                ip_str = ip_str.strip()
-                if ip_str:
-                    # Default /24 for Linux (hostname -I doesn't give netmask)
-                    net = ipaddress.ip_network(f"{ip_str}/24", strict=False)
-                    my_networks.append((ip_str, net))
-    except Exception:
-        pass
-    my_ips = [ip for ip, _ in my_networks]
-    # Our own interfaces as CIDRs — the left-hand side of every same-subnet
-    # comparison below, published so the mask a verdict used is on record.
-    my_networks_cidr = [f"{ip}/{net.prefixlen}" for ip, net in my_networks]
-
-    def _shared_subnet(ip: str) -> str:
-        """CIDR of one of our own interfaces that contains ip, else "".
-
-        This is the same-subnet rule — (mine AND mask) == (theirs AND mask) —
-        evaluated through *our* mask, which is the only mask we know: discovery
-        reports addresses without prefixes. A remote host configured with a wider
-        mask can therefore consider us local while we consider it remote, so this
-        answers "can I deliver directly?" and nothing more."""
-        if not ip:
-            return ""
-        try:
-            target = ipaddress.ip_address(ip)
-        except ValueError:
-            return ""
-        for _, net in my_networks:
-            if target in net:
-                return str(net)
-        return ""
-
-    def _shape_machine(m: dict, role: str, default_name: str) -> dict:
-        local_ip = m.get("localIp", "")
-        aws_ip = m.get("awsIp", "")
-        lan_subnet = _shared_subnet(local_ip)
-        vpn_subnet = _shared_subnet(aws_ip)
-        lan_ok = bool(local_ip) and _reachable_cached(local_ip)
-        # Skip the VPN probe when the local address already answered — same box.
-        vpn_ok = bool(aws_ip) and (False if lan_ok else _reachable_cached(aws_ip))
-        # The local address wins when both answer (no tunnel hop). Neither → no
-        # route from here; the addresses are still reported (for display) but
-        # bestIp/route stay empty so callers can refuse to assign it.
-        if lan_ok:
-            best, route = local_ip, "local"
-        elif vpn_ok:
-            best, route = aws_ip, "vpn"
-        else:
-            best, route = "", ""
-        return {
-            "name":        m.get("name", default_name),
-            "role":        role,
-            "localIp":     local_ip,
-            "awsIp":       aws_ip,
-            "bestIp":      best,
-            "localSubnet": lan_subnet,
-            "vpnSubnet":   vpn_subnet,
-            "route":       route,
-            "localReachable": lan_ok,
-            "vpnReachable": vpn_ok,
-            "user":        m.get("username", "ubuntu"),
-            "type":        m.get("type", ""),
-            "resources":   m.get("resources", {}),
-            "usage":       m.get("usage", {}),
-        }
-
-    machines: list[dict] = []
-    raw_machines = [(data.get("base") or {}, "base", "base")] if data.get("base") else []
-    raw_machines += [(w, "worker", "") for w in data.get("workers", [])]
-
-    # Probe the fleet concurrently: serially this would be
-    # (machines × addresses × timeout) of dead air on every poll.
-    from concurrent.futures import ThreadPoolExecutor
-    if raw_machines:
-        with ThreadPoolExecutor(max_workers=min(8, len(raw_machines) * 2)) as pool:
-            machines = list(pool.map(lambda a: _shape_machine(*a), raw_machines))
-
-    return {"machines": machines, "myIps": my_ips,
-            "myNetworks": my_networks_cidr}
+    return _dc_fleet.fetch_machines(BASE_API_HOST, BASE_API_PORT, _reachable_cached)
 
 
 # ── Devbox auto-assignment ────────────────────────────────────────────────────
@@ -1193,11 +1085,7 @@ DEVBOX_ID_FILE = PROJECT_ROOT / ".devbox-id.json"
 
 def _parse_ram_pct(usage: dict) -> float:
     """'27.5Gi (88%)' -> 88.0. Unknown/missing -> 100.0 (least preferred)."""
-    try:
-        m = re.search(r"\((\d+(?:\.\d+)?)%\)", str((usage or {}).get("ram", "")))
-        return float(m.group(1)) if m else 100.0
-    except Exception:
-        return 100.0
+    return _dc_fleet.ram_pct(usage)
 
 
 NO_DEVBOX_ERROR = (
@@ -1343,8 +1231,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
     res = _fetch_machines()
     if res.get("error"):
         return {"error": res["error"]}
-    devboxes = [m for m in res.get("machines", [])
-                if m.get("type") == "dev-box" and m.get("role") == "worker"]
+    devboxes = _dc_fleet.devboxes(res.get("machines", []))
     if not devboxes:
         return {"error": NO_DEVBOX_ERROR}
 
@@ -1391,7 +1278,7 @@ def _devbox_resolve(force_new: bool = False) -> dict:
                                  f"Join the VPN / check the fleet, or run with "
                                  f"Run on = Local."}
             return {"error": NO_DEVBOX_ERROR}
-        machine = min(assignable, key=lambda m: _parse_ram_pct(m.get("usage")))
+        machine = _dc_fleet.pick(assignable)
         local_user = re.sub(r"[^a-z0-9]+", "",
                             (os.environ.get("USER") or "dev").lower()) or "dev"
         mslug = re.sub(r"[^a-z0-9]+", "-", machine["name"].lower()).strip("-")[:24]
