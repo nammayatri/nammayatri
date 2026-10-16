@@ -285,9 +285,12 @@ postMultimodalConfirm (_mbPersonId, _merchantId) journeyId forcedBookLegOrder mb
               Just paymentOrder -> do
                 person <- QP.findById journey.riderId >>= fromMaybeM (InvalidRequest "Person not found")
                 let isSingleMode = fromMaybe False journey.isSingleMode
-                let mbQuoteId = case legs of
-                      [leg] -> Id <$> leg.legPricingId
-                      _ -> Nothing
+                let frfsLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) legs
+                    mbQuoteId
+                      | isSingleMode = case frfsLegs of
+                        [leg] -> Id <$> leg.legPricingId
+                        _ -> Nothing
+                      | otherwise = Nothing
                 if paymentOrder.isExternalOrder == Just True
                   then do
                     bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
@@ -426,6 +429,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
     nwAddress <- asks (.nwAddress)
     udf1 <- SLUtils.getPersonUdf1 person
     udf2 <- FRFSUtils.getOfferSegmentUdf2 isSingleMode mbQuoteId
+    mbVehicleCategory <- if isSingleMode then fmap (.vehicleType) . join <$> mapM QFRFSQuote.findById mbQuoteId else pure Nothing
+    let udf3 = FRFSUtils.mkTicketingTypeUdf3 isSingleMode mbVehicleCategory
     offerBasket <- Payment.mkOfferBasket (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType paymentOrder.amount 1
     let createOrderReq =
           Payment.CreateOrderReq
@@ -452,7 +457,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
               autoRefundPostSuccess = Nothing,
               paymentFilter = Nothing,
               udf1 = udf1,
-              udf2 = udf2
+              udf2 = udf2,
+              udf3 = udf3
             }
     mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
     isMetroTestTransaction <- asks (.isMetroTestTransaction)
