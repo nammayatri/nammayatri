@@ -10,7 +10,6 @@ module SharedLogic.SharedCab.LegState
     fallbackTimeElapsed,
     isSharedCabAgency,
     sharedCabLegMode,
-    onlyTransitLeg,
     sharedCabFareTiers,
     deriveSharedCabState,
     isDroppable,
@@ -84,10 +83,6 @@ instance FromJSON SharedCabLegStatus where
 
 isSharedCabAgency :: Text -> Bool
 isSharedCabAgency agencyGtfsId = gtfsIdtoDomainCode agencyGtfsId == "SHARED_CAB"
-
--- | Only a journey with exactly one non-walk leg ends when that leg is cancelled.
-onlyTransitLeg :: [DTrip.MultimodalTravelMode] -> Bool
-onlyTransitLeg modes = length (filter (/= DTrip.Walk) modes) == 1
 
 -- | A booking on the SHARED_CAB tier has the last word on the leg's mode, whatever the search stamped.
 sharedCabLegMode :: Maybe ServiceTierType -> DTrip.MultimodalTravelMode -> DTrip.MultimodalTravelMode

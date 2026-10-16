@@ -1,5 +1,5 @@
 -- A rider's last allowed no-show cancels the booking and pushes SHARED_CAB_BOOKING_CANCELLED with {#missedCabs#}.
--- ENGLISH only, like 0067. Same city scope and guards as 0067. Idempotent.
+-- ENGLISH only, like 0070. Same city scope and guards as 0070. Idempotent.
 
 INSERT INTO atlas_app.merchant_push_notification (
     fcm_notification_type,

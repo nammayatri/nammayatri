@@ -1,5 +1,5 @@
 -- A FINDING booking older than findingTimeoutSec is cancelled by the system with a full refund and pushes
--- SHARED_CAB_FINDING_TIMEOUT. ENGLISH only, like 0067. Same city scope and guards as 0067. Idempotent.
+-- SHARED_CAB_FINDING_TIMEOUT. ENGLISH only, like 0070. Same city scope and guards as 0070. Idempotent.
 
 INSERT INTO atlas_app.merchant_push_notification (
     fcm_notification_type,

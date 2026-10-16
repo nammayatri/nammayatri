@@ -1,7 +1,7 @@
 -- SHARED_CAB_ARRIVING now carries a boarding countdown ({#boardDeadlineSec#}, {#vehicleLast4#}), and SHARED_CAB_REASSIGNED's
 -- copy is reworded to also read right for the "missed the cab" timeout case. Idempotent.
 
--- UPDATE of the rows 0067 seeded. ENGLISH only, like 0067. No city scoping: 0067 seeded exactly the shared-cab cities.
+-- UPDATE of the rows 0070 seeded. ENGLISH only, like 0070. No city scoping: 0070 seeded exactly the shared-cab cities.
 UPDATE atlas_app.merchant_push_notification
 SET title = 'Your cab is here',
     body = 'Cab {#vehicleLast4#} is at {#boardStop#}. Board within {#boardDeadlineSec#}s and enter the code inside.',
@@ -16,7 +16,7 @@ SET title = 'You missed your cab',
 WHERE key = 'SHARED_CAB_REASSIGNED'
   AND language = 'ENGLISH';
 
--- Cities onboarded after 0067 ran (same WHERE EXISTS / NOT EXISTS guard as 0067).
+-- Cities onboarded after 0070 ran (same WHERE EXISTS / NOT EXISTS guard as 0070).
 INSERT INTO atlas_app.merchant_push_notification (
     fcm_notification_type,
     key,

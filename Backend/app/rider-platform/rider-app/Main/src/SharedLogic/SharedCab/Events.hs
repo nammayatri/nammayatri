@@ -34,7 +34,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 data Blame = BlameDriver | BlameRider | BlameNone
   deriving (Show, Eq)
 
-data BoardSource = ByCode | ByDriverFallback | ByFallbackR10
+data BoardSource = ByCode | ByDriverFallback | ByFallback
   deriving (Show, Eq)
 
 data DropBy = DroppedByDriver | DroppedByRider | DroppedByTick
@@ -112,7 +112,7 @@ boardSourceText :: BoardSource -> Text
 boardSourceText = \case
   ByCode -> "code"
   ByDriverFallback -> "driver_fallback"
-  ByFallbackR10 -> "fallback_R10"
+  ByFallback -> "fallback"
 
 dropByText :: DropBy -> Text
 dropByText = \case

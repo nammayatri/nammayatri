@@ -38,7 +38,7 @@ tests =
             forceHonoured (Just True) (Just "ML05A9999") "ML05A1234" @?= False,
           testCase "no force asked" $
             forceHonoured Nothing Nothing "ML05A1234" @?= False,
-          testCase "MED-5: only a forced boarding with no cab counts as a no-location boarding" $
+          testCase "only a forced boarding with no cab counts as a no-location boarding" $
             map forcedNoLocation [Nothing, Just "ML05A1234"] @?= [True, False]
         ],
       testGroup

@@ -16,6 +16,7 @@ import qualified "beckn-spec" Domain.Types.Trip as DTrip
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import qualified "mobility-core" Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified "rider-app" Lib.JourneyModule.State.Types as JMState
+import "rider-app" Lib.JourneyModule.State.Utils (onlyTransitLeg)
 import qualified "rider-app" Lib.JourneyModule.Utils as JMU
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.Booking (bookingSeats, partyMap)

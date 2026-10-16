@@ -1,4 +1,4 @@
--- | Every shared-cab Redis key and lock name. They are unprefixed and live in the cross-app master cell
+-- | Every rider-app shared-cab Redis key and lock name (the driver app's one key, the reconciler seed marker, lives in its ReconcilerSeed). They are unprefixed and live in the cross-app master cell
 -- (`Booking.shared`), because the API and the scheduler use different key prefixes and must see the same keys.
 module SharedLogic.SharedCab.Keys
   ( -- * Session (per plate / route)

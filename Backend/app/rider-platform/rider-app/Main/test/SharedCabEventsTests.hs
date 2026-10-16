@@ -51,6 +51,6 @@ tests =
         )
           @?= (Just "b1", Just "ML05A1234"),
       testCase "every kind has its wire name" $
-        map eventName [SessionStarted, Resumed, Boarded ByFallbackR10, Dropped DroppedByTick, NoShow, SeatLost, CabFull 3, InvariantViolation "r" "d"]
+        map eventName [SessionStarted, Resumed, Boarded ByFallback, Dropped DroppedByTick, NoShow, SeatLost, CabFull 3, InvariantViolation "r" "d"]
           @?= ["session_started", "resumed", "boarded", "dropped", "no_show", "seat_lost", "cab_full", "invariant_violation"]
     ]

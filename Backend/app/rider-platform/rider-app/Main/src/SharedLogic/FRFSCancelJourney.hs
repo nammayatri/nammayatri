@@ -7,9 +7,9 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.State.Types as JMState
+import Lib.JourneyModule.State.Utils (onlyTransitLeg)
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import SharedLogic.FRFSUtils (getJourneyIdFromBooking)
-import SharedLogic.SharedCab.LegState (onlyTransitLeg)
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
