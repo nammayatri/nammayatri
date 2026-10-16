@@ -5080,21 +5080,34 @@ postMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> Context.Cit
 postMerchantConfigAllowedDestinationStates merchantShortId _ req = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  merchantStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
-  let invalidStates = filter (`notElem` merchantStates) (DL.nub (req.state : req.allowedDestinationStates))
-  unless (null invalidStates) $
-    throwError $ InvalidRequest $ "States not operated by this merchant: " <> T.intercalate ", " (map show invalidStates)
+  addNonOperatingStatesToDestinationGeofence merchant req.allowedDestinationStates
   upsertMerchantAllowedDestinationStates merchant.id req.state req.allowedDestinationStates now
   CQMerchantState.clearCache merchant.id req.state
   pure Success
+
+addNonOperatingStatesToDestinationGeofence :: DM.Merchant -> [Context.IndianState] -> Flow ()
+addNonOperatingStatesToDestinationGeofence merchant destinationStates =
+  case merchant.geofencingConfig.destination of
+    Unrestricted -> pure ()
+    Regions regions -> do
+      operatingStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
+      let nonOperatingStates = filter (`notElem` operatingStates) (DL.nub destinationStates)
+      stateRegions <-
+        forM nonOperatingStates $ \state ->
+          (.region)
+            <$> ( QGeo.findGeometryByStateAndCity (Context.City "AnyCity") state
+                    >>= fromMaybeM (InvalidRequest $ "No AnyCity geometry found for state: " <> show state)
+                )
+      let missingRegions = filter (`notElem` regions) (DL.nub stateRegions)
+      unless (null missingRegions) $ do
+        logInfo $ "Adding regions to destination geofence of merchant " <> merchant.id.getId <> ": " <> show missingRegions
+        CQM.updateGeofencingConfig merchant.id merchant.geofencingConfig.origin (Regions $ regions <> missingRegions)
+        CQM.clearCache merchant
 
 getMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.AllowedDestinationStatesResp
 getMerchantConfigAllowedDestinationStates merchantShortId _ stateText = do
   merchant <- findMerchantByShortId merchantShortId
   state <- readMaybe (T.unpack stateText) & fromMaybeM (InvalidRequest $ "Invalid IndianState: " <> stateText)
-  merchantStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
-  unless (state `elem` merchantStates) $
-    throwError $ InvalidRequest $ "State not operated by this merchant: " <> show state
   mbMerchantState <- QMerchantState.findByMerchantIdAndState merchant.id state
   pure
     Common.AllowedDestinationStatesResp
