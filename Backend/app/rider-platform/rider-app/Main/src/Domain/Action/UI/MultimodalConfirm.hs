@@ -957,7 +957,7 @@ postPublicTransportVehicleDataBlock (mbPersonId, _merchantId) vehicleNumber isBl
   -- Authorization: only depot managers explicitly allowed may block/unblock buses
   depotManager <- QDepotManager.findByPersonId personId >>= fromMaybeM (BusBlockNotAllowed personId.getId)
   unless (depotManager.isBlockAllowed == Just True) $ throwError (BusBlockNotAllowed personId.getId)
-  configs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  configs <- SharedCab.withoutCabRows (.agencyKey) <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   blockedVehicleNumbers <-
     if isBlock
       then do
