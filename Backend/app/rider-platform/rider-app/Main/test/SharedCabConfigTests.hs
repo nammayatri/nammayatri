@@ -9,7 +9,7 @@ import Data.Text (Text)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
-import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, watchPlan)
+import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), NextStep (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, nextStepFor, watchPlan)
 import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -38,6 +38,8 @@ tests =
                 WatchPlan True True,
                 WatchPlan True True
               ],
+      testCase "a tick that could not read the guard enqueues its next tick without writing the guard" $
+        map nextStepFor [True, False] @?= [RefreshGuard, EnqueueOnly],
       testCase "a suspended city with live bookings still gets its allocation chain re-seeded; new demand needs the city on" $
         ( [allocationSeedWanted Watchdog e n | e <- [True, False], n <- [0, 3]],
           [allocationSeedWanted OnDemand e n | e <- [True, False], n <- [0, 3]],
