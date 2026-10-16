@@ -1,6 +1,10 @@
 -- | Pure allocation decisions: who is eligible, in what order, and which timer a claim arms.
 module SharedLogic.SharedCab.Allocation.Select
   ( FindingBooking (..),
+    LiveBooking (..),
+    Phase (..),
+    phase,
+    liveBookingPhase,
     findingOf,
     isFinding,
     allocatedPlate,
@@ -53,13 +57,36 @@ data FindingBooking = FindingBooking
   }
   deriving (Show, Eq, Generic)
 
--- | A live booking that still needs a cab: no plate, a route, a ticket not yet used.
-isFinding :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Bool
-isFinding (b, statuses) = isNothing b.vehicleNumber && isJust b.routeCode && DFRFSTicket.ACTIVE `elem` statuses
+-- | A CONFIRMED shared-cab booking with the status of each of its tickets.
+data LiveBooking = LiveBooking
+  { booking :: DFTB.FRFSTicketBooking,
+    ticketStatuses :: [DFRFSTicket.FRFSTicketStatus]
+  }
 
-findingOf :: (DFTB.FRFSTicketBooking -> Int) -> (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe FindingBooking
-findingOf seatsOf entry@(b, _) = do
-  guard (isFinding entry)
+-- | Where a booking stands: needing a cab, holding one nobody has boarded, or neither (boarded, cancelled, no live ticket).
+data Phase = Finding | AllocatedTo Text | NotWaiting
+  deriving (Show, Eq)
+
+-- | The one definition of the phase; every gate below reads it. A cab holds a booking only while every ticket is still ACTIVE.
+phase :: FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Phase
+phase status mbPlate statuses
+  | status /= CONFIRMED = NotWaiting
+  | otherwise = case mbPlate of
+    Nothing | DFRFSTicket.ACTIVE `elem` statuses -> Finding
+    Just plate | all (== DFRFSTicket.ACTIVE) statuses, not (null statuses) -> AllocatedTo plate
+    _ -> NotWaiting
+
+liveBookingPhase :: LiveBooking -> Phase
+liveBookingPhase lb = phase lb.booking.status lb.booking.vehicleNumber lb.ticketStatuses
+
+-- | A live booking the tick should find a cab for: it also needs a route to look on.
+isFinding :: LiveBooking -> Bool
+isFinding lb = liveBookingPhase lb == Finding && isJust lb.booking.routeCode
+
+findingOf :: (DFTB.FRFSTicketBooking -> Int) -> LiveBooking -> Maybe FindingBooking
+findingOf seatsOf lb = do
+  guard (isFinding lb)
+  let b = lb.booking
   route <- b.routeCode
   pure
     FindingBooking
@@ -72,24 +99,19 @@ findingOf seatsOf entry@(b, _) = do
         findingSince = b.createdAt
       }
 
-allocatedPlate :: (DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus]) -> Maybe Text
-allocatedPlate (b, statuses) = plateIfUnboarded b.vehicleNumber statuses
-
-plateIfUnboarded :: Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Maybe Text
-plateIfUnboarded mbPlate statuses = do
-  plate <- mbPlate
-  guard (not (null statuses) && all (== DFRFSTicket.ACTIVE) statuses)
-  pure plate
+allocatedPlate :: LiveBooking -> Maybe Text
+allocatedPlate lb = case liveBookingPhase lb of
+  AllocatedTo plate -> Just plate
+  Finding -> Nothing
+  NotWaiting -> Nothing
 
 -- | The under-lock gate of every close: still live, still holding the plate the closer believes, nobody boarded since.
 closable :: Text -> FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool
-closable expectedPlate status mbPlate statuses =
-  status == CONFIRMED && plateIfUnboarded mbPlate statuses == Just expectedPlate
+closable expectedPlate status mbPlate statuses = phase status mbPlate statuses == AllocatedTo expectedPlate
 
 -- | The under-lock gate of a claim: still live, no cab, nobody boarded, no degrade marker (a degraded boarding can land after the tick read FINDING).
 claimable :: FRFSTicketBookingStatus -> Maybe Text -> [DFRFSTicket.FRFSTicketStatus] -> Bool -> Bool
-claimable status mbPlate statuses markerAlive =
-  status == CONFIRMED && isNothing mbPlate && not (null statuses) && all (== DFRFSTicket.ACTIVE) statuses && not markerAlive
+claimable status mbPlate statuses markerAlive = phase status mbPlate statuses == Finding && all (== DFRFSTicket.ACTIVE) statuses && not markerAlive
 
 data RankedCandidate = RankedCandidate
   { rcSession :: Session,

@@ -17,7 +17,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, phase, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
@@ -197,6 +197,17 @@ tests =
           movingCab t0 60 "P1" [cabFix "p 1" nearStop (Just 8) 5]
         )
           @?= (["P1"], True),
+      testCase "a booking is Finding with no cab and a ticket to serve, AllocatedTo while every ticket is unboarded, NotWaiting otherwise" $
+        [ phase BS.CONFIRMED Nothing [TS.ACTIVE],
+          phase BS.CONFIRMED Nothing [TS.ACTIVE, TS.INPROGRESS],
+          phase BS.CONFIRMED Nothing [TS.INPROGRESS],
+          phase BS.CONFIRMED (Just "P1") [TS.ACTIVE, TS.ACTIVE],
+          phase BS.CONFIRMED (Just "P1") [TS.ACTIVE, TS.INPROGRESS],
+          phase BS.CONFIRMED (Just "P1") [],
+          phase BS.CANCELLED Nothing [TS.ACTIVE],
+          phase BS.CANCELLED (Just "P1") [TS.ACTIVE]
+        ]
+          @?= [Finding, Finding, NotWaiting, AllocatedTo "P1", NotWaiting, NotWaiting, NotWaiting, NotWaiting],
       testCase "eligible cabs come nearest first" $
         map (.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [cabFixEta 300 "P2" nearStop (Just 0) 5, cabFixEta 60 "P1" nearStop (Just 0) 5] [(candidate "P2").rcSession, (candidate "P1").rcSession] finding)
           @?= ["P1", "P2"],

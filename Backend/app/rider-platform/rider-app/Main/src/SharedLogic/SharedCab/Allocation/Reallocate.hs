@@ -21,8 +21,8 @@ import Kernel.Utils.Common
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PersonPTStats as SPUS
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, clearAllocationKeys, readAttempts)
-import SharedLogic.SharedCab.Allocation.Select (closable, crossedMaxAttempts, isRescheduledChild)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, clearAllocationKeys, findLive, readAttempts)
+import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), closable, crossedMaxAttempts, isRescheduledChild)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -76,11 +76,9 @@ closeLocked ::
   AllocationOutcome ->
   m (Maybe Closed)
 closeLocked cfg bookingId expectedPlate outcome =
-  QFRFSTicketBooking.findById bookingId >>= \case
-    Nothing -> pure Nothing
-    Just b -> do
-      statuses <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId b.id
-      if closable expectedPlate b.status b.vehicleNumber statuses then Just <$> close b else pure Nothing
+  findLive bookingId >>= \case
+    Just (LiveBooking b statuses) | closable expectedPlate b.status b.vehicleNumber statuses -> Just <$> close b
+    _ -> pure Nothing
   where
     close b = do
       case blameFor outcome of

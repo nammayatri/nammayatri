@@ -20,16 +20,15 @@ import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
-import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, readAttempts, readFindingSince)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, liveBookingsOf, readAttempts, readFindingSince)
 import SharedLogic.SharedCab.Allocation.Reallocate (closeAllocation)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared)
@@ -38,17 +37,14 @@ import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.Keys (skippedKey)
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Session as Session
-import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 
 cityLiveBookings ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
-  m [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])]
-cityLiveBookings cityId = do
-  bookings <- QFRFSTicketBooking.findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus cityId (Just Spec.SHARED_CAB) [CONFIRMED]
-  tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
-  pure [(b, [t.status | t <- tickets, t.frfsTicketBookingId == b.id]) | b <- bookings]
+  m [LiveBooking]
+cityLiveBookings cityId =
+  QFRFSTicketBooking.findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus cityId (Just Spec.SHARED_CAB) [CONFIRMED] >>= liveBookingsOf
 
 -- | The scheduler env has no ltsCfg for the HTTP client, so the tick reads the LTS hash directly (FRFSUtils.trackVehicles uses
 -- bus next-stop logic, wrong for cabs). Fields decode one by one: a bad one is dropped, not the route.
@@ -97,9 +93,8 @@ skipSharedCabAllocation cfg bookingId plate reason = do
 -- | Releases a leaving cab's unboarded allocations without penalty. Call after the session write, outside the plate lock.
 releaseUnboarded :: AllocFlow m r => Text -> AllocationOutcome -> m ()
 releaseUnboarded plate outcome = do
-  bookings <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [CONFIRMED]
-  tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
-  let unboarded = [b | b <- bookings, isJust (allocatedPlate (b, [t.status | t <- tickets, t.frfsTicketBookingId == b.id]))]
+  live <- QFRFSTicketBooking.findAllByVehicleNumberAndServiceTierTypeAndStatus (Just plate) (Just Spec.SHARED_CAB) [CONFIRMED] >>= liveBookingsOf
+  let unboarded = [lb.booking | lb <- live, isJust (allocatedPlate lb)]
   cities <- forM unboarded $ \b -> do
     cfg <- Config.getTunables b.merchantOperatingCityId
     closeAllocation cfg b.id plate outcome (pure ())
@@ -121,13 +116,13 @@ runSharedCabAllocationTick cityId = withCityTickLease cityId . void $ allocation
 allocationPass ::
   AllocFlow m r =>
   Id DMOC.MerchantOperatingCity ->
-  m ([(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])], [(Text, [LT.VehicleTrackingOnRouteResp])])
+  m ([LiveBooking], [(Text, [LT.VehicleTrackingOnRouteResp])])
 allocationPass cityId = do
   cfg <- Config.getTunables cityId
   enabled <- sharedCabEnabled cityId
   live <- cityLiveBookings cityId
   now <- getCurrentTime
-  let routes = nub [route | entry@(b, _) <- live, isFinding entry || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
+  let routes = nub [route | lb <- live, isFinding lb || isJust (allocatedPlate lb), Just route <- [lb.booking.routeCode]]
   positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
     try (readRoutePositions routeCode) >>= \case
       -- Known limitation: an LTS outage is not told apart from every cab being silent. A failed read skips the route, which is
@@ -138,8 +133,8 @@ allocationPass cityId = do
       movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
       silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
   expireTimers cfg now movingOn silentOn live
-  parties <- partySizes (map fst (filter isFinding live)) -- one query for the tick; a party needs all its seats
-  findings <- forM (mapMaybe (\entry -> (fst entry,) <$> findingOf (partyOf parties) entry) live) $ \(b, fb) -> do
+  parties <- partySizes (map (.booking) (filter isFinding live)) -- one query for the tick; a party needs all its seats
+  findings <- forM (mapMaybe (\lb -> (lb.booking,) <$> findingOf (partyOf parties) lb) live) $ \(b, fb) -> do
     since <- readFindingSince fb.bookingId fb.findingSince
     pure (b, fb {findingSince = since})
   -- a suspended city drains (timers above, timeouts and refunds in the job) but allocates nothing new

@@ -3,6 +3,8 @@ module SharedLogic.SharedCab.Allocation.Claim
   ( InternalEndpointFlow,
     AllocFlow,
     claimFirst,
+    liveBookingsOf,
+    findLive,
     readFindingSince,
     readAttempts,
     claimFallbackPush,
@@ -22,7 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimer, claimable, skippedWhileFinding)
+import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), claimPush, claimTimer, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -63,6 +65,15 @@ type AllocFlow m r =
 -- allocation_created goes out AFTER the CAS + alloc-key write; a crash in between leaves an allocated booking with no
 -- event, bounded by the alloc key TTL (no transactional bridge KV x Redis x Kafka).
 
+-- | Tickets are read in one query per call, not one per booking.
+liveBookingsOf :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DFTB.FRFSTicketBooking] -> m [LiveBooking]
+liveBookingsOf bookings = do
+  tickets <- if null bookings then pure [] else QFRFSTicket.findAllByTicketBookingIds (map (.id) bookings)
+  pure [LiveBooking b [t.status | t <- tickets, t.frfsTicketBookingId == b.id] | b <- bookings]
+
+findLive :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DFTB.FRFSTicketBooking -> m (Maybe LiveBooking)
+findLive bookingId = QFRFSTicketBooking.findById bookingId >>= traverse (\b -> LiveBooking b . map (.status) <$> QFRFSTicket.findAllByTicketBookingId b.id)
+
 data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
 
@@ -92,9 +103,8 @@ attemptClaim cfg booking cand = do
                 if available < booking.seats
                   then pure (Left ClaimSeatsGone)
                   else do
-                    QFRFSTicketBooking.findById booking.bookingId >>= \case
-                      Just b -> do
-                        statuses <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId b.id
+                    findLive booking.bookingId >>= \case
+                      Just (LiveBooking b statuses) -> do
                         markerAlive <- Degraded.isMarkerAlive b.id
                         if claimable b.status b.vehicleNumber statuses markerAlive
                           then do

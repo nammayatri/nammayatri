@@ -96,7 +96,7 @@ postSharedCabBookingSkip (mbPersonId, _) bookingId req = do
   unless (booking.riderId == personId && isSharedCabBooking booking && booking.status == CONFIRMED) $
     throwError $ InvalidRequest "Booking not found"
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
-  plate <- Select.allocatedPlate (booking, map (.status) tickets) & fromMaybeM (InvalidRequest "This booking has no cab to skip")
+  plate <- Select.allocatedPlate (Select.LiveBooking booking (map (.status) tickets)) & fromMaybeM (InvalidRequest "This booking has no cab to skip")
   cfg <- Config.getTunables booking.merchantOperatingCityId
   skipped <- Allocation.skipSharedCabAllocation cfg booking.id plate (skipReason req.reason)
   unless skipped $ throwError $ InvalidRequest "This booking has no cab to skip"

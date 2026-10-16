@@ -21,7 +21,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Claim (warnAllocKeyTtlOnce)
-import SharedLogic.SharedCab.Allocation.Select (isFreshPosition)
+import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, allocationDeadline, passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -67,7 +67,7 @@ stopProgressConfig t =
 runStopProgress ::
   StopProgressFlow m r c =>
   Id DMOC.MerchantOperatingCity ->
-  [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] ->
+  [LiveBooking] ->
   [(Text, [LT.VehicleTrackingOnRouteResp])] ->
   m ()
 runStopProgress cityId live positionsByRoute = do
@@ -95,7 +95,7 @@ stepCab ::
   Config.SharedCabTunables ->
   StopProgressConfig ->
   UTCTime ->
-  [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] ->
+  [LiveBooking] ->
   [LT.VehicleTrackingOnRouteResp] ->
   [LatLong] ->
   Session ->
@@ -105,9 +105,9 @@ stepCab cfg spc now live positions route s = do
       mbInfo = (.vehicleInfo) <$> findByPlate (.vehicleNumber) plate positions
       mbCab = cabFix <$> mbInfo
       freshCab = mfilter (const $ any (isFreshPosition now cfg.ltsMaxAgeSec) mbInfo) mbCab
-      bookings = [entry | entry@(b, _) <- live, b.vehicleNumber == Just plate]
-      awaiting = [b | (b, statuses) <- bookings, DFRFSTicket.ACTIVE `elem` statuses, DFRFSTicket.INPROGRESS `notElem` statuses]
-      onBoard = [b | (b, statuses) <- bookings, DFRFSTicket.INPROGRESS `elem` statuses]
+      bookings = [lb | lb <- live, lb.booking.vehicleNumber == Just plate]
+      awaiting = [lb.booking | lb <- bookings, DFRFSTicket.ACTIVE `elem` lb.ticketStatuses, DFRFSTicket.INPROGRESS `notElem` lb.ticketStatuses]
+      onBoard = [lb.booking | lb <- bookings, DFRFSTicket.INPROGRESS `elem` lb.ticketStatuses]
   forM_ awaiting $ \b ->
     if any (boardStopPassed b.fromStationCode) mbCab
       then do

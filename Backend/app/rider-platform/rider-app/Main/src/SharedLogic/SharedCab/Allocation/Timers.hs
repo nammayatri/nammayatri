@@ -7,12 +7,11 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
-import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, warnAllocKeyTtlOnce)
 import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), allocatedPlate)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -27,10 +26,10 @@ expireTimers ::
   UTCTime ->
   (Text -> Text -> Bool) -> -- plate moving on route, per fresh LTS positions
   (Text -> Text -> Bool) -> -- plate silent on route
-  [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] ->
+  [LiveBooking] ->
   m ()
 expireTimers cfg now movingOn silentOn live =
-  forM_ [(b, plate) | entry@(b, _) <- live, Just plate <- [allocatedPlate entry]] $ \(b, plate) -> do
+  forM_ [(lb.booking, plate) | lb <- live, Just plate <- [allocatedPlate lb]] $ \(b, plate) -> do
     result <- withBookingLock b.id $ do
       mbState <- shared $ Redis.safeGet (allocKey b.id)
       case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of

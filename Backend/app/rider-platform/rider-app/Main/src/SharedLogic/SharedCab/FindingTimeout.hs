@@ -28,7 +28,7 @@ import SharedLogic.FRFSUtils (markFRFSBookingStatus, noPaymentDue)
 import qualified SharedLogic.Payment as SPayment
 import SharedLogic.SharedCab.Allocation.Claim (clearAllocationKeys, readFindingSince)
 import SharedLogic.SharedCab.Allocation.Reallocate (releaseCancelledBooking)
-import SharedLogic.SharedCab.Allocation.Select (claimable)
+import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), Phase (..), claimable, liveBookingPhase)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
 import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -84,12 +84,12 @@ maxFindingTimeoutBatch = 25
 cancelTimedOutFindings ::
   CancelFlow m r c =>
   Id DMOC.MerchantOperatingCity ->
-  [(DFTB.FRFSTicketBooking, [DFRFSTicket.FRFSTicketStatus])] ->
+  [LiveBooking] ->
   m ()
 cancelTimedOutFindings cityId live = do
   cfg <- Config.getTunables cityId
   now <- getCurrentTime
-  candidates <- fmap catMaybes . forM [b | (b, statuses) <- live, isNothing b.vehicleNumber, DFRFSTicket.ACTIVE `elem` statuses] $ \b -> do
+  candidates <- fmap catMaybes . forM [lb.booking | lb <- live, liveBookingPhase lb == Finding] $ \b -> do
     since <- readFindingSince b.id b.createdAt
     pure $ if findingTimeoutAction now cfg.findingTimeoutSec since b.createdAt == CancelNoCab then Just b else Nothing
   let batch = take maxFindingTimeoutBatch candidates
