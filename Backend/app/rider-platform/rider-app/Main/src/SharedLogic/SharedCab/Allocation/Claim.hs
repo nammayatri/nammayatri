@@ -3,6 +3,8 @@ module SharedLogic.SharedCab.Allocation.Claim
   ( InternalEndpointFlow,
     AllocFlow,
     claimFirst,
+    claimGate,
+    ClaimMiss (..),
     liveBookingsOf,
     findLive,
     readFindingSince,
@@ -34,7 +36,7 @@ import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (allocKey, allocKeyTtlWarnKey, attemptsKey, fallbackPushedKey, findingSinceKey, skippedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
-import SharedLogic.SharedCab.SessionState (SessionStatus (..))
+import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -77,6 +79,16 @@ findLive bookingId = QFRFSTicketBooking.findById bookingId >>= traverse (\b -> L
 data ClaimMiss = ClaimSessionGone | ClaimSeatsGone | ClaimCasLost | ClaimSkipped
   deriving (Show, Eq)
 
+-- | The claim's decision under both locks, pure: the plate was not skipped, the cab still has the seats, and the booking is still
+-- waiting for a cab with no degrade marker.
+claimGate :: Session -> FindingBooking -> [Text] -> Int -> Maybe LiveBooking -> Bool -> Either ClaimMiss ()
+claimGate s booking skipped liveSeats mbLive markerAlive
+  | s.vehicleNumber `elem` skipped = Left ClaimSkipped
+  | s.capacity - s.walkupCount - liveSeats < booking.seats = Left ClaimSeatsGone
+  | otherwise = case mbLive of
+    Just (LiveBooking b statuses) | claimable b.status b.vehicleNumber statuses markerAlive -> Right ()
+    _ -> Left ClaimCasLost
+
 -- | One candidate under both locks: re-read the session, recompute seats, CAS vehicleNumber, write the alloc key. A miss counts no attempt.
 attemptClaim ::
   (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r, MonadMask m) =>
@@ -84,42 +96,38 @@ attemptClaim ::
   FindingBooking ->
   RankedCandidate ->
   m (Either ClaimMiss UTCTime)
-attemptClaim cfg booking cand = do
-  let plate = cand.rcSession.vehicleNumber
-  Session.withPlateLock plate $ do
-    mbSession <- Session.readSession plate
-    case mbSession of
-      Just s
-        | s.status == ACTIVE && s.routeCode == booking.routeCode -> do
-          withBookingLock booking.bookingId $ do
-            now <- getCurrentTime
-            attempts <- readAttempts booking.bookingId
-            skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
-            liveSeats <- liveSeatsOnVehicle plate
-            let available = s.capacity - s.walkupCount - liveSeats
-            if plate `elem` skipped
-              then pure (Left ClaimSkipped)
-              else
-                if available < booking.seats
-                  then pure (Left ClaimSeatsGone)
-                  else do
-                    findLive booking.bookingId >>= \case
-                      Just (LiveBooking b statuses) -> do
-                        markerAlive <- Degraded.isMarkerAlive b.id
-                        if claimable b.status b.vehicleNumber statuses markerAlive
-                          then do
-                            QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
-                            -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers
-                            warnAllocKeyTtlOnce cfg "claim"
-                            shared $
-                              Redis.setExp
-                                (allocKey booking.bookingId)
-                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = claimTimer cfg now cand, attempts}
-                                (allocKeyTtl cfg)
-                            pure (Right now)
-                          else pure (Left ClaimCasLost)
-                      Nothing -> pure (Left ClaimCasLost)
+attemptClaim cfg booking cand =
+  Session.withPlateLock plate $
+    Session.readSession plate >>= \case
+      Just s | s.status == ACTIVE && s.routeCode == booking.routeCode -> withBookingLock booking.bookingId (claimUnderLocks cfg booking cand s)
       _ -> pure (Left ClaimSessionGone)
+  where
+    plate = cand.rcSession.vehicleNumber
+
+claimUnderLocks ::
+  (MonadFlow m, Redis.HedisFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+  Config.SharedCabTunables ->
+  FindingBooking ->
+  RankedCandidate ->
+  Session ->
+  m (Either ClaimMiss UTCTime)
+claimUnderLocks cfg booking cand s = do
+  now <- getCurrentTime
+  attempts <- readAttempts booking.bookingId
+  skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
+  liveSeats <- liveSeatsOnVehicle s.vehicleNumber
+  mbLive <- findLive booking.bookingId
+  markerAlive <- Degraded.isMarkerAlive booking.bookingId
+  for (claimGate s booking skipped liveSeats mbLive markerAlive) $ \() -> do
+    QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
+    -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers
+    warnAllocKeyTtlOnce cfg "claim"
+    shared $
+      Redis.setExp
+        (allocKey booking.bookingId)
+        AllocationState {vehicleNumber = s.vehicleNumber, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = claimTimer cfg now cand, attempts}
+        (allocKeyTtl cfg)
+    pure now
 
 readFindingSince :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> UTCTime -> m UTCTime
 readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.safeGet (findingSinceKey bookingId)

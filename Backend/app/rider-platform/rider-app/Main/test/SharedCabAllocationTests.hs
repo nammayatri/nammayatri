@@ -17,6 +17,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
+import "rider-app" SharedLogic.SharedCab.Allocation.Claim (ClaimMiss (..), claimGate)
 import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, phase, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
@@ -208,6 +209,10 @@ tests =
           phase BS.CANCELLED (Just "P1") [TS.ACTIVE]
         ]
           @?= [Finding, Finding, NotWaiting, AllocatedTo "P1", NotWaiting, NotWaiting, NotWaiting, NotWaiting],
+      testCase "the claim gate refuses a skipped plate first, then a cab without the seats, then a booking no longer waiting" $
+        let s = (candidate "ML05A1234").rcSession
+            gate skipped liveSeats = claimGate s finding skipped liveSeats Nothing False
+         in [gate ["ML05A1234"] 0, gate [] (4 - finding.seats + 1), gate [] 0] @?= [Left ClaimSkipped, Left ClaimSeatsGone, Left ClaimCasLost],
       testCase "eligible cabs come nearest first" $
         map (.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [cabFixEta 300 "P2" nearStop (Just 0) 5, cabFixEta 60 "P1" nearStop (Just 0) 5] [(candidate "P2").rcSession, (candidate "P1").rcSession] finding)
           @?= ["P1", "P2"],
