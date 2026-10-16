@@ -96,6 +96,7 @@ data MessageKey
   | FLEET_CONSENT_AND_ONBOARDING_DEEPLINK_MESSAGE
   | ONBOARDING_APPROVED
   | VEHICLE_APPROVED
+  | SEND_WHATSAPP_OTP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, Enum)
 
 type MerchantMessage = MerchantMessageD 'Safe

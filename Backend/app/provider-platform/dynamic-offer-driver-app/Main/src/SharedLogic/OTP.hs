@@ -21,6 +21,7 @@ module SharedLogic.OTP
 where
 
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Person as Person
 import qualified Email.Flow as Email
@@ -33,6 +34,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 import qualified Tools.SMS as Sms
@@ -85,8 +87,9 @@ sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mb
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for WHATSAPP OTP channel")
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
+        mbWhatsappOtpMessage <- QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId DMM.SEND_WHATSAPP_OTP Nothing Nothing
         void $ Whatsapp.whatsAppOptAPI merchantId merchantOpCityId (Whatsapp.OptApiReq {phoneNumber = phoneNumber, method = Whatsapp.OPT_IN})
-        result <- Whatsapp.whatsAppOtpApi merchantOpCityId (Whatsapp.SendOtpApiReq {sendTo = phoneNumber, var1 = otpCode})
+        result <- Whatsapp.whatsAppOtpApi merchantOpCityId (Whatsapp.SendOtpApiReq {sendTo = phoneNumber, var1 = otpCode, templateId = (.templateId) <$> mbWhatsappOtpMessage})
         logDebug $ "Whatsapp OTP result: " <> show result
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> do

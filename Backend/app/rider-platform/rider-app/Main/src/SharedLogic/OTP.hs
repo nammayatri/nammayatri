@@ -20,6 +20,7 @@ module SharedLogic.OTP
 where
 
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as MOC
 import qualified Domain.Types.Person as Person
 import qualified Email.Flow as Email
@@ -31,6 +32,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
@@ -82,8 +84,9 @@ sendOTP otpChannel otpCode personId merchantId merchantOperatingCityId mbCountry
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for WHATSAPP OTP channel")
       let phoneNumber = countryCode <> mobileNumber
       withLogTag ("personId_" <> getId personId) $ do
+        mbWhatsappOtpMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_WHATSAPP_OTP Nothing
         void $ Whatsapp.whatsAppOptAPI merchantId merchantOperatingCityId (Whatsapp.OptApiReq {phoneNumber = phoneNumber, method = Whatsapp.OPT_IN})
-        result <- Whatsapp.whatsAppOtpApi merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode)
+        result <- Whatsapp.whatsAppOtpApi merchantId merchantOperatingCityId (Whatsapp.SendOtpApiReq phoneNumber otpCode ((.templateId) <$> mbWhatsappOtpMessage))
         when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp OTP message")
     EMAIL -> do
       receiverEmail <- mbEmail & fromMaybeM (InvalidRequest "Email is required for EMAIL OTP channel")
