@@ -79,6 +79,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 _DEVBOX_CORE_PARENT = SCRIPT_DIR.parent.parent  # Backend/dev
 if str(_DEVBOX_CORE_PARENT) not in sys.path:
     sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
+from devbox_core import deploy as _dc_deploy  # noqa: E402
 from devbox_core import fleet as _dc_fleet  # noqa: E402
 from devbox_core import ssh as _dc_ssh  # noqa: E402
 from devbox_core import workspace as _dc_workspace  # noqa: E402
@@ -928,45 +929,15 @@ import termios as _termios
 import uuid as _uuid
 from collections import deque as _deque
 
-# Build artefacts: never copied, and exactly what `cabal clean` wipes on the
-# stack host (see remote_cabal_clean) — one list so the two can't drift.
-BUILD_STATE_EXCLUDES = [
-    "dist-newstyle",
-    "dist",
-    "_build",
-    "result", "result-*",
-    ".cabal-dir",
-    ".hie",
-    "hie",
-    ".nix-deps",
-    ".ci-project-root",
-    ".ci-cabal-dir",
-    ".ci-cache-sha",
-    "cabal.project.local",
-]
-
-# Per-machine state: never copied, and never deleted by cabal clean either.
-# Everything cabal clean wipes — the build-state list minus files a developer
-# may have hand-written (cabal.project.local is theirs, not a build artefact).
-CABAL_CLEAN_TARGETS = [e for e in BUILD_STATE_EXCLUDES if e != "cabal.project.local"]
-
-# Per-machine state: never copied, and never deleted by cabal clean either.
-# data/ holds the stack host's own published port map (data/ports.json)
-# plus its service state, so excluding it keeps a redeploy from clobbering them.
-MACHINE_STATE_EXCLUDES = [
-    "data", "node_modules", ".direnv",
-    ".git",
-    "*.log",
-    ".stack-state.json",
-    "Frontend/android-native", "Frontend/ios",
-    "Frontend/build", "Frontend/dist",
-]
-
-# Single source of truth for what never leaves this machine. Used both as the
-# rsync --exclude list AND as the filter for the workspace fingerprint that
-# decides whether a deploy is needed — adding an entry here automatically stops
+# What never leaves this machine and what cabal clean wipes: the lists live in
+# devbox_core.deploy (shared with the devbox workflow). REMOTE_EXCLUDES is both
+# the rsync --exclude list AND the filter for the workspace fingerprint that
+# decides whether a deploy is needed — adding an entry there automatically stops
 # it from triggering a redeploy.
-REMOTE_EXCLUDES = BUILD_STATE_EXCLUDES + MACHINE_STATE_EXCLUDES
+BUILD_STATE_EXCLUDES = _dc_deploy.BUILD_STATE_EXCLUDES
+CABAL_CLEAN_TARGETS = _dc_deploy.CABAL_CLEAN_TARGETS
+MACHINE_STATE_EXCLUDES = _dc_deploy.MACHINE_STATE_EXCLUDES
+REMOTE_EXCLUDES = _dc_deploy.EXCLUDES
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
 # A dev-box is shared, so its stack resolves free ports at startup and puts caddy
 # in front of them. Locally nothing has to coexist, so the fixed ports.nix map is
@@ -2165,53 +2136,8 @@ def _log_clear(body: dict) -> dict:
 
 
 def _compute_cache_commit(project_root: str, max_n: int = 30) -> str:
-    def _git(args, timeout=20):
-        return subprocess.run(
-            ["git", "-C", project_root, *args],
-            capture_output=True, text=True, timeout=timeout,
-        )
-
-    # 1. best-effort fetch (works offline with stale refs; failures are non-fatal)
-    for fetch_args in (
-        ["fetch", "--quiet", "origin",
-         "refs/tags/minio-pushed/*:refs/tags/minio-pushed/*"],
-        ["fetch", "--quiet", "origin", "main"],
-    ):
-        try:
-            _git(fetch_args, timeout=30)
-        except Exception:  # noqa: BLE001
-            pass
-
-    # 2. merge-base with main (fallback HEAD)
-    base = "HEAD"
-    try:
-        mb = _git(["merge-base", "origin/main", "HEAD"], timeout=15)
-        if mb.returncode == 0 and mb.stdout.strip():
-            base = mb.stdout.strip()
-    except Exception:  # noqa: BLE001
-        pass
-
-    # 3. walk back and return the NEAREST commit carrying a minio-pushed tag —
-    #    the single commit whose build cache cache-restore should pull. CI tags a
-    #    commit once its build is pushed to MinIO. If none of the recent ancestors
-    #    is tagged, return "" and cabal builds from scratch.
-    walk = []
-    try:
-        lg = _git(["log", "--format=%H", "-n", str(max_n), base], timeout=15)
-        if lg.returncode == 0:
-            walk = lg.stdout.split()
-    except Exception:  # noqa: BLE001
-        pass
-
-    for sha in walk:
-        try:
-            r = _git(["rev-parse", "-q", "--verify",
-                      f"refs/tags/minio-pushed/{sha}"], timeout=10)
-            if r.returncode == 0:
-                return sha
-        except Exception:  # noqa: BLE001
-            pass
-    return ""
+    """Nearest minio-pushed ancestor (devbox_core.deploy.cache_commit)."""
+    return _dc_deploy.cache_commit(project_root, max_n)
 
 
 # ── Start pre-flight: workspace fingerprint + git-history check ───────────────
@@ -2512,32 +2438,7 @@ def _deploy_plan(target: dict) -> dict:
         target["identityFile"], target["devName"],
     )
     remote_dir = entry["dir"]
-
-    ssh_cmd_parts = [
-        "ssh",
-        "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "BatchMode=yes",
-        "-o", "ConnectTimeout=10",
-        "-p", str(target["port"]),
-    ]
-    if target["identityFile"]:
-        ssh_cmd_parts += ["-i", target["identityFile"]]
-    ssh_cmd = " ".join(ssh_cmd_parts)
-
-    excludes = []
-    for ex in REMOTE_EXCLUDES:
-        excludes += ["--exclude", ex]
-
-    # Use --rsync-path to create the destination directory on the remote before
-    # rsync starts — avoids a separate SSH round-trip for mkdir.
-    rsync_path = f"mkdir -p {shlex.quote(remote_dir)} && rsync"
-
-    argv = (
-        ["rsync", "-az", "--delete", "--progress", "--stats",
-         "-e", ssh_cmd, "--rsync-path", rsync_path]
-        + excludes
-        + [f"{PROJECT_ROOT}/", f"{target['user']}@{target['host']}:{remote_dir}/"]
-    )
+    t = _dc_ssh.Target(target["user"], target["host"], target["port"], target["identityFile"])
 
     cache_commit = _compute_cache_commit(str(PROJECT_ROOT))
     notes = [
@@ -2545,32 +2446,10 @@ def _deploy_plan(target: dict) -> dict:
         "[deploy] no minio-pushed cache commit found — cabal will build from scratch"
     ]
 
-    git_ignore_cmd = (
-        "printf '%s\\n' 'dist-newstyle/' 'hie/' '.hie/' '.nix-deps/' "
-        "'.cabal-dir/' '.ci-project-root' '.ci-cabal-dir' '.ci-cache-sha' "
-        "> .git/info/exclude"
-    )
-    git_init_cmd = (
-        f"cd {shlex.quote(remote_dir)} && "
-        f"rm -rf .git && git init -q && {git_ignore_cmd} && git add -A && "
-        f"GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy "
-        f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
-        f"git commit -q -m deploy --allow-empty 2>/dev/null || true; "
-        f"mkdir -p Backend && printf '%s' {shlex.quote(cache_commit)} "
-        f"> Backend/.ci-cache-sha"
-    )
-    ssh_base = [
-        "ssh", "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
-        "-p", str(target["port"]),
-    ]
-    if target["identityFile"]:
-        ssh_base += ["-i", target["identityFile"]]
-
     return {
-        "argv": argv,
+        "argv": _dc_deploy.rsync_argv(str(PROJECT_ROOT), t, remote_dir),
         "notes": notes,
-        "post_ssh_argv": ssh_base + [f"{target['user']}@{target['host']}", git_init_cmd],
+        "post_ssh_argv": _dc_deploy.post_ssh_argv(t, remote_dir, cache_commit),
     }
 
 

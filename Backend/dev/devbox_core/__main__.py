@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 
-from . import fleet, ssh, workspace
+from . import deploy, fleet, ssh, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -93,6 +93,16 @@ def cmd_release(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sync(args: argparse.Namespace) -> int:
+    try:
+        res = deploy.sync(args.src, _target(args), args.name, _owner(args), dry_run=args.dry_run)
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    print(json.dumps(res))
+    return 0
+
+
 def _add_owner_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--name", required=True, help="workspace name")
     p.add_argument("--owner-by", default="scc")
@@ -139,6 +149,13 @@ def main(argv: list | None = None) -> int:
     _add_target_args(rl)
     _add_owner_args(rl)
     rl.set_defaults(func=cmd_release)
+
+    sy = sub.add_parser("sync", help="register + rsync a checkout into the workspace + git init")
+    _add_target_args(sy)
+    _add_owner_args(sy)
+    sy.add_argument("--src", required=True, help="nammayatri checkout to copy (its root folder)")
+    sy.add_argument("--dry-run", action="store_true", help="list what would be copied; copy nothing")
+    sy.set_defaults(func=cmd_sync)
 
     args = p.parse_args(argv)
     return args.func(args)
