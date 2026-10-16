@@ -12,7 +12,7 @@ import qualified Domain.Types.FleetConfig as DT
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError, withTryCatch)
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
@@ -53,10 +53,15 @@ fetchFleetConfigs a =
     <$> QFC.findAllByMerchantOperatingCityId (Just (Id a.merchantOperatingCityId))
 
 -- | Every fleet's config in the city, keyed by fleet owner id, from one cached ConfigPilot read.
+-- Never throws: on failure no fleet rules apply, so dispatch and assignment carry on.
 getCityFleetConfigs :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Map.Map Text DT.FleetConfig)
 getCityFleetConfigs merchantOpCityId = do
-  fleetConfigs <- getConfig (FleetConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, fleetOwnerId = Nothing}) Nothing
-  pure $ Map.fromList [(fleetConfig.fleetOwnerId.getId, fleetConfig) | fleetConfig <- fleetConfigs]
+  result <- withTryCatch "getCityFleetConfigs" $ getConfig (FleetConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, fleetOwnerId = Nothing}) Nothing
+  case result of
+    Left err -> do
+      logError $ "getCityFleetConfigs failed for " <> merchantOpCityId.getId <> ": " <> show err
+      pure Map.empty
+    Right fleetConfigs -> pure $ Map.fromList [(fleetConfig.fleetOwnerId.getId, fleetConfig) | fleetConfig <- fleetConfigs]
 
 -- | A fleet without a config row, or with the flag on, lets its drivers cancel.
 fleetForbidsDriverCancellation :: Maybe DT.FleetConfig -> Bool

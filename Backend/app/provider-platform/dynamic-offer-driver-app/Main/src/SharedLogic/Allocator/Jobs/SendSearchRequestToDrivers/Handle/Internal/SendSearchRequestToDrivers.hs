@@ -43,6 +43,7 @@ import qualified Domain.Types.ConditionalCharges as DCC
 import Domain.Types.DriverPoolConfig
 import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -207,10 +208,15 @@ sendSearchRequestToDrivers isAllocatorBatch isTopUpDispatch tripQuoteDetails old
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId (searchReq.area >>= SL.pickupSpecialZoneIdFromArea)
-  dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache driverPool
+  -- One fleet-config read per batch; a driver's fleet can forbid driver cancellation.
+  fleetConfigs <-
+    if any (isJust . (.driverPoolResult.fleetOwnerId)) driverPool
+      then getCityFleetConfigs searchReq.merchantOperatingCityId
+      else pure Map.empty
+  dispatchPool <- attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolConfig batchNumber transporterConfig coinConfigCache fleetConfigs driverPool
   dynamicPickupMetrics <- fetchDynamicPickupMetrics driverPoolConfig searchReq dispatchPool
   languageDictionary <- foldM (addLanguageToDictionary transporterConfig searchReq) M.empty dispatchPool
-  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
+  searchRequestsForDrivers <- mapM (\dp -> buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs False driverPoolConfig.autoAssignMaxPickupDistance (M.lookup dp.driverPoolResult.driverId.getId dynamicPickupMetrics) dp) dispatchPool
   let driverPoolZipSearchRequests = zip dispatchPool searchRequestsForDrivers
   (merchantLabel, cityLabel) <- SML.getMetricsLabels searchReq.providerId searchReq.merchantOperatingCityId
   let metricsDistanceBucketEdges = SML.distanceBucketEdges transporterConfig
@@ -430,12 +436,13 @@ buildSearchRequestForDriver ::
   DTR.TransporterConfig ->
   Maybe (Id RiderDetails) ->
   M.Map DVST.ServiceTierType (Maybe Int) ->
+  M.Map Text DFC.FleetConfig ->
   Bool ->
   Maybe Meters ->
   Maybe (Meters, Seconds) ->
   SDP.DriverPoolWithActualDistResult ->
   m SearchRequestForDriver
-buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
+buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache fleetConfigs isAutoAccepted autoAssignMaxPickupDistance mbDynamicPickup dpwRes = do
   let currency = searchTry.currency
   guid <- generateGUID
   now <- getCurrentTime
@@ -459,11 +466,8 @@ buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum
     _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
   deploymentVersion <- asks (.version)
   isFavourite <- maybe (pure Nothing) (\riderid -> findByRiderIdAndDriverId riderid (cast dpRes.driverId) <&> fmap (.favourite)) riderId
-  -- The driver's fleet can forbid driver cancellation on top of the fare policy's flag.
-  fleetForbidsCancellation <- case dpRes.fleetOwnerId of
-    Just fleetOwnerId -> fleetForbidsDriverCancellation . Map.lookup fleetOwnerId <$> getCityFleetConfigs searchReq.merchantOperatingCityId
-    Nothing -> pure False
-  let searchRequestForDriver =
+  let fleetForbidsCancellation = fleetForbidsDriverCancellation (dpRes.fleetOwnerId >>= (`M.lookup` fleetConfigs))
+      searchRequestForDriver =
         SearchRequestForDriver
           { id = guid,
             batchingMode = searchTry.batchingMode,
@@ -660,9 +664,10 @@ attemptPriorityDirectAssign ::
   SDP.PoolBatchNum ->
   DTR.TransporterConfig ->
   Map.Map DVST.ServiceTierType (Maybe Int) ->
+  Map.Map Text DFC.FleetConfig ->
   [SDP.DriverPoolWithActualDistResult] ->
   m [SDP.DriverPoolWithActualDistResult]
-attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolCfg batchNum transporterConfig coinConfigCache batch = do
+attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails cityServiceTiers driverPoolCfg batchNum transporterConfig coinConfigCache fleetConfigs batch = do
   if null sortedPriority
     then pure batch
     else do
@@ -724,7 +729,7 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             if onRide || inCoolOff || not isStillLive || not (null activeQuotes) || isJust mbActiveBooking
               then pure False
               else do
-                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache True driverPoolCfg.autoAssignMaxPickupDistance Nothing dp
+                sReqFD <- buildSearchRequestForDriver searchTry searchReq tripQuoteDetailsHashMap batchNum validTill transporterConfig searchReq.riderId coinConfigCache fleetConfigs True driverPoolCfg.autoAssignMaxPickupDistance Nothing dp
                 -- Nested try: a failure after the SRFD row exists must retract it, otherwise the
                 -- driver can still poll and manually accept an offer this loop already abandoned.
                 assignResult :: Either SomeException [SearchRequestForDriver] <- C.try $ do

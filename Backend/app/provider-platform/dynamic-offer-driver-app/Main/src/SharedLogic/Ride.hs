@@ -126,13 +126,6 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  -- The driver's fleet can forbid driver cancellation. Static quotes are priced before a driver is
-  -- known, so record it on the booking's fare params here, where every cancellation check reads it.
-  whenJust mFleetOwnerId $ \fleetOwnerId ->
-    unless (booking.fareParams.driverCancellationNotAllowed == Just True) $ do
-      fleetConfigs <- getCityFleetConfigs booking.merchantOperatingCityId
-      when (fleetForbidsDriverCancellation (Map.lookup fleetOwnerId.getId fleetConfigs)) $
-        QFP.updateDriverCancellationNotAllowed (Just True) booking.fareParams.id
   mbSearchTryId <- fmap ((.getId) . (.searchTryId)) <$> QDQ.findById (Id booking.quoteId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
@@ -219,6 +212,17 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   rideDetails <- buildRideDetails booking ride driver vehicle
   unless bookingPreAssigned $ QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRide.createRide ride
+  -- Decided per assignment (fare policy, or this driver's fleet forbidding it) and set both ways,
+  -- so a booking reused after reallocation never keeps a previous driver's fleet rule.
+  fleetForbidsCancellation <- case mFleetOwnerId of
+    Just fleetOwnerId -> fleetForbidsDriverCancellation . Map.lookup fleetOwnerId.getId <$> getCityFleetConfigs booking.merchantOperatingCityId
+    Nothing -> pure False
+  let currentCancellationFlag = booking.fareParams.driverCancellationNotAllowed
+      resolvedCancellationFlag
+        | fleetForbidsCancellation = Just True
+        | otherwise = maybe currentCancellationFlag (.driverCancellationNotAllowed) mbFarePolicy
+  when (resolvedCancellationFlag /= currentCancellationFlag) $
+    QFP.updateDriverCancellationNotAllowed resolvedCancellationFlag booking.fareParams.id
   cityLabel <- SML.getCityLabel booking.merchantOperatingCityId
   let (pickupZone, dropZone) = SML.specialZoneLabels booking.area
   Metrics.incrementRideCreatedCount merchant.shortId.getShortId cityLabel (show booking.vehicleServiceTier) (SML.distanceBucketLabel (SML.distanceBucketEdges transporterConfig) booking.estimatedDistance) pickupZone dropZone

@@ -186,27 +186,21 @@ ensurePoolingLogicVersion searchReq
     pure $ searchReq {DSR.poolingLogicVersion = mbVersion}
 
 -- | Pooling priority of each driver's fleet, keyed off the 'fleetOwnerId' cached in the
--- driver's LTS pool data (kept in sync on fleet link/unlink). Never throws.
+-- driver's LTS pool data (kept in sync on fleet link/unlink).
 getFleetPoolingPriorities ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id MerchantOperatingCity ->
   [DriverPoolWithActualDistResult] ->
   m (Map.Map (Id Driver) FleetPoolingPriority)
 getFleetPoolingPriorities mOCityId drivers = do
-  result <- withTryCatch "getFleetPoolingPriorities" $ do
-    fleetConfigs <- getCityFleetConfigs mOCityId
-    pure $
-      Map.fromList
-        [ (d.driverPoolResult.driverId, priority)
-          | d <- drivers,
-            Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId],
-            Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
-        ]
-  case result of
-    Left err -> do
-      logError $ "getFleetPoolingPriorities failed: " <> show err
-      pure Map.empty
-    Right priorities -> pure priorities
+  fleetConfigs <- getCityFleetConfigs mOCityId
+  pure $
+    Map.fromList
+      [ (d.driverPoolResult.driverId, priority)
+        | d <- drivers,
+          Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId],
+          Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
+      ]
 
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
