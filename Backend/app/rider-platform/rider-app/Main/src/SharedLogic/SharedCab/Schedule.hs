@@ -11,7 +11,7 @@ module SharedLogic.SharedCab.Schedule
     ownAllocationChain,
     claimTickRun,
     scheduleNextTick,
-    thenReschedule,
+    claimedTick,
     withCityTickLease,
     ensureExpiryJob,
     ownExpiryChain,
@@ -28,6 +28,7 @@ module SharedLogic.SharedCab.Schedule
   )
 where
 
+import Data.IORef (newIORef, readIORef, writeIORef)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
@@ -83,14 +84,16 @@ chainVerdict (Just live) mine = if mine == Just live then Mine else Foreign
 -- | Runs a tick's body only if its chain still holds the guard; the body gets the chain id to hand to its next tick. A tick of
 -- a chain that a lapse and a re-seed replaced finds the new id and ends here.
 ownChain :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> Maybe Text -> (Text -> m ()) -> m ()
-ownChain (Chain guardKey guardTtlSec _) mbChainId body = do
-  live <- shared $ Redis.safeGet guardKey
+ownChain chain'@(Chain guardKey guardTtlSec _) mbChainId body = do
   fresh <- generateGUIDText
   let chainId = fromMaybe fresh mbChainId
-  case chainVerdict live mbChainId of
-    Mine -> body chainId
-    Adopt -> whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (body chainId)
-    Foreign -> logInfo $ "sharedCab chain " <> guardKey <> ": guard names another chain; this one ends"
+  -- a guard that cannot be read leaves the chain's fate unknown: keep it going, a duplicate dies at its next tick
+  withTryCatch "sharedCab:ownChain" (shared $ Redis.safeGet guardKey) >>= \case
+    Left err -> logError ("sharedCab chain " <> guardKey <> ": guard unreadable, keeping the chain: " <> show err) >> scheduleNext chain' chainId
+    Right live -> case chainVerdict live mbChainId of
+      Mine -> body chainId
+      Adopt -> whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (body chainId)
+      Foreign -> logInfo $ "sharedCab chain " <> guardKey <> ": guard names another chain; this one ends"
 
 withCityLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int -> m () -> m ()
 withCityLease key ttl action =
@@ -131,8 +134,13 @@ ownAllocationChain merchantId mocId mbChainId body = do
   tickSec <- tickSecOf mocId
   ownChain (allocChain tickSec merchantId mocId) mbChainId body
 
-thenReschedule :: MonadMask m => m () -> m () -> m ()
-thenReschedule body reschedule = body `finally` reschedule
+-- | A tick's run claim and body, then the next tick even when either throws, or one Redis or DB hiccup ends the city's chain for
+-- good. A tick whose run was already claimed (the producer dispatched its job twice) ends without scheduling.
+claimedTick :: (MonadMask m, MonadIO m) => m Bool -> m () -> m () -> m ()
+claimedTick claim body next = do
+  dropped <- liftIO (newIORef False)
+  (claim >>= \claimed -> if claimed then body else liftIO (writeIORef dropped True))
+    `finally` (liftIO (readIORef dropped) >>= \isDropped -> unless isDropped next)
 
 -- | One tick per city; the lease TTL only bounds a crashed holder.
 withCityTickLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m () -> m ()

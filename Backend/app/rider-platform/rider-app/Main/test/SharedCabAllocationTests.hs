@@ -25,7 +25,7 @@ import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeo
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
-import "rider-app" SharedLogic.SharedCab.Schedule (thenReschedule)
+import "rider-app" SharedLogic.SharedCab.Schedule (claimedTick)
 import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE, PAUSED))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -264,13 +264,16 @@ tests =
         map cancellableStatus [BS.CONFIRMED, BS.CANCELLED, BS.COUNTER_CANCELLED, BS.CANCEL_INITIATED, BS.FAILED, BS.RESCHEDULED] @?= [True, False, False, False, False, False],
       testCase "a booking with a parent (rescheduled) never counted its tickets at confirm, so none are reversed" $
         (isRescheduledChild (Nothing :: Maybe ()), isRescheduledChild (Just ())) @?= (False, True),
-      testCase "the next tick is scheduled even when the tick body throws" $ do
-        ran <- newIORef False
-        r <- try (thenReschedule (throwIO (userError "db down")) (writeIORef ran True)) :: IO (Either IOException ())
-        wasRescheduled <- readIORef ran
-        (either (const True) (const False) r, wasRescheduled) @?= (True, True)
-        ran' <- newIORef False
-        thenReschedule (pure ()) (writeIORef ran' True) >> readIORef ran' >>= (@?= True),
+      testCase "the next tick is scheduled even when the run claim or the tick body throws, but not when the run was already claimed" $ do
+        let runWith claim body = do
+              next <- newIORef False
+              r <- try (claimedTick claim body (writeIORef next True)) :: IO (Either IOException ())
+              (,) (either (const True) (const False) r) <$> readIORef next
+        claimDown <- runWith (throwIO (userError "redis down")) (pure ())
+        bodyDown <- runWith (pure True) (throwIO (userError "db down"))
+        fine <- runWith (pure True) (pure ())
+        duplicate <- runWith (pure False) (throwIO (userError "never runs"))
+        [claimDown, bodyDown, fine, duplicate] @?= [(True, True), (True, True), (False, True), (False, False)],
       testCase "a finding-timeout cancel refunds in full, unless a no-show is already booked against the booking" $
         map (\noShows -> findingTimeoutRefund noShows [TS.ACTIVE]) [0, 1, 2]
           @?= [FullRefund, NoRefund, NoRefund],

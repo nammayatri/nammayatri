@@ -21,7 +21,7 @@ import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
-import SharedLogic.SharedCab.Schedule (claimExpiryRun, ownExpiryChain, scheduleNextExpiry)
+import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ownExpiryChain, scheduleNextExpiry)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.Queries.VehicleTrip as QVT
@@ -39,10 +39,10 @@ sharedCabSessionExpiry :: ExpiryFlow m r c => Job 'SharedCabSessionExpiry -> m E
 sharedCabSessionExpiry Job {jobInfo} = do
   let jobData = jobInfo.jobData
   ownExpiryChain jobData.merchantId jobData.merchantOperatingCityId jobData.chainId $ \chainId -> do
-    claimed <- claimExpiryRun jobData.merchantOperatingCityId
-    if claimed
-      then expireSilentSessions jobData.merchantOperatingCityId `finally` scheduleNextExpiry jobData.merchantId jobData.merchantOperatingCityId chainId
-      else logInfo "sharedCab expiry: this tick was already run; dropping it"
+    claimedTick
+      (claimExpiryRun jobData.merchantOperatingCityId)
+      (expireSilentSessions jobData.merchantOperatingCityId)
+      (scheduleNextExpiry jobData.merchantId jobData.merchantOperatingCityId chainId)
   pure Complete
 
 expireSilentSessions :: ExpiryFlow m r c => Id DMOC.MerchantOperatingCity -> m ()
