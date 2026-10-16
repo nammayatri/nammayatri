@@ -139,6 +139,7 @@ data Ride = Ride
     tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     tripStartPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    trueTravelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     uiDistanceCalculationWithAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     uiDistanceCalculationWithoutAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     updatedAt :: Kernel.Prelude.UTCTime,
@@ -162,12 +163,12 @@ data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (
 
 data ScheduledAcceptanceMode = AcceptedAsScheduled | AcceptedFromBroadcast | AssignedByOps | AssignedByFleetOwner deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PickupBehaviour)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PickupBehaviour))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ScheduledAcceptanceMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ScheduledAcceptanceMode))

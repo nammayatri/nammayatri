@@ -596,6 +596,7 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         currency = booking.currency,
         distanceUnit = booking.distanceUnit,
         traveledDistance = 0,
+        trueTravelledDistance = Nothing,
         distanceToPickup = Nothing,
         pickupDistanceCalculationFailed = Nothing,
         chargeableDistance = Nothing,

@@ -34,18 +34,6 @@ updateCancellationChargesOnCancel cancellationChargesOnCancel id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationChargesOnCancel cancellationChargesOnCancel, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationFaultVerdict ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationFaultVerdict cancellationFaultVerdict cancellationFaultRule id = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set Beam.cancellationFaultVerdict cancellationFaultVerdict,
-      Se.Set Beam.cancellationFaultRule cancellationFaultRule,
-      Se.Set Beam.updatedAt _now
-    ]
-    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateCancellationDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.CancellationReason.CancellationReasonCode -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
@@ -55,6 +43,18 @@ updateCancellationDetails cancelledBy cancellationReasonCode cancellationAdditio
     [ Se.Set Beam.cancelledBy cancelledBy,
       Se.Set Beam.cancellationReasonCode ((\(Domain.Types.CancellationReason.CancellationReasonCode x) -> x) <$> cancellationReasonCode),
       Se.Set Beam.cancellationAdditionalInfo cancellationAdditionalInfo,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCancellationFaultVerdict ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCancellationFaultVerdict cancellationFaultVerdict cancellationFaultRule id = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.cancellationFaultVerdict cancellationFaultVerdict,
+      Se.Set Beam.cancellationFaultRule cancellationFaultRule,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

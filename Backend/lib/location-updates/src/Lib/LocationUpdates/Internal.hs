@@ -86,6 +86,7 @@ data RideInterpolationHandler person m = RideInterpolationHandler
     updateRouteDeviation :: Id person -> [LatLong] -> [LatLong] -> Maybe LineSegment -> m (Bool, Bool, Bool),
     getTravelledDistanceAndTollInfo :: Id person -> Meters -> Maybe TollInfo -> m (Meters, Maybe TollInfo),
     getRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
+    updateTrueTravelledDistance :: Id person -> HighPrecMeters -> Bool -> m (),
     sendTollCrossedNotificationToDriver :: Id person -> m (),
     sendTollCrossedUpdateToBAP :: Id person -> m ()
   }
@@ -231,6 +232,7 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
           then do
             currSnapToRoadState <- processSnapToRoadCall mbPreviousRouteSegment
             updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
+            updateTrueTravelledDistance driverId currSnapToRoadState.distanceTravelled calculationFailed
             when isTollApplicable $ do
               mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
               tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
@@ -247,22 +249,33 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
             whenJust tollChargesInfo $ \tollInfo ->
               when isTollApplicable $
                 updateTollChargesAndNamesAndIds driverId tollInfo.tollCharges tollInfo.tollNames tollInfo.tollIds
+            (trueState, trueSnapFailed) <- runSnapToRoad False mbPreviousRouteSegment
+            unless trueSnapFailed $
+              updateTrueTravelledDistance driverId trueState.distanceTravelled calculationFailed
       else do
         isAtLeastBatchPlusOne <- atLeastBatchPlusOne
-        when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
-          currSnapToRoadState <- processSnapToRoadCall mbPreviousRouteSegment
-          updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
-          Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 86400 -- 24 hours
+        when isAtLeastBatchPlusOne $
+          if snapToRoadCallCondition
+            then do
+              currSnapToRoadState <- processSnapToRoadCall mbPreviousRouteSegment
+              updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
+              updateTrueTravelledDistance driverId currSnapToRoadState.distanceTravelled calculationFailed
+              Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 86400 -- 24 hours
+            else do
+              (trueState, trueSnapFailed) <- runSnapToRoad False mbPreviousRouteSegment
+              unless trueSnapFailed $ do
+                updateTrueTravelledDistance driverId trueState.distanceTravelled calculationFailed
+                Redis.setExp (onRideSnapToRoadStateKey driverId) trueState 86400 -- 24 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
     continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
     atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
 
-    recalcDistanceBatches' mbPreviousRouteSegment isFirstCall snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do
+    recalcDistanceBatches' writeTollCharges mbPreviousRouteSegment isFirstCall snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do
       batchLeft <- continueCondition
       if (batchLeft && not isMeterRide) || (batchLeft && isMeterRide && isFirstCall)
         then do
-          (dist, newReferencePoint, startPatching, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId mbPreviousRouteSegment
+          (dist, newReferencePoint, startPatching, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable writeTollCharges driverId mbPreviousRouteSegment
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
               selfTunedCount = SelfTuned `elem` servicesUsed
@@ -270,18 +283,21 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist es
               updDistance = bool dist (distanceTravelled + dist) (startPatching || fromMaybe True startPatchingDistance)
           if snapCallFailed
             then pure (SnapToRoadState distanceTravelled (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop (Just (startPatching || fromMaybe True startPatchingDistance)) newReferencePoint, snapCallFailed)
-            else recalcDistanceBatches' mbPreviousRouteSegment False (SnapToRoadState updDistance (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop (Just (startPatching || fromMaybe True startPatchingDistance)) newReferencePoint) snapCallFailed
+            else recalcDistanceBatches' writeTollCharges mbPreviousRouteSegment False (SnapToRoadState updDistance (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) ((\numberOfSelfTuned' -> fromBool selfTunedCount + numberOfSelfTuned') <$> numberOfSelfTuned) isPassedThroughDrop (Just (startPatching || fromMaybe True startPatchingDistance)) newReferencePoint) snapCallFailed
         else pure (snapToRoad', snapToRoadCallFailed)
 
     processSnapToRoadCall mbPreviousRouteSegment = do
-      prevSnapToRoadState :: SnapToRoadState <-
-        Redis.safeGet (onRideSnapToRoadStateKey driverId)
-          <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just passedThroughDrop) (Just False) Nothing)
-      (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' mbPreviousRouteSegment True prevSnapToRoadState False
+      (currSnapToRoadState, snapToRoadCallFailed) <- runSnapToRoad True mbPreviousRouteSegment
       when snapToRoadCallFailed $ do
         updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls currSnapToRoadState.numberOfSelfTuned calculationFailed
         throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
       return currSnapToRoadState
+
+    runSnapToRoad writeTollCharges mbPreviousRouteSegment = do
+      prevSnapToRoadState :: SnapToRoadState <-
+        Redis.safeGet (onRideSnapToRoadStateKey driverId)
+          <&> fromMaybe (SnapToRoadState 0 0 0 (Just 0) (Just passedThroughDrop) (Just False) Nothing)
+      recalcDistanceBatches' writeTollCharges mbPreviousRouteSegment True prevSnapToRoadState False
 
     processPassedThroughDrop = do
       prevSnapToRoadState :: SnapToRoadState <-
@@ -298,10 +314,11 @@ recalcDistanceBatchStep ::
   Maybe LatLong ->
   Maybe MapsServiceConfig ->
   Bool ->
+  Bool ->
   Id person ->
   Maybe LineSegment ->
   m (HighPrecMeters, Maybe LatLong, Bool, [MapsService], Bool)
-recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable driverId mbPreviousRouteSegment = do
+recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcReferencePoint rectifyDistantPointsFailureUsing isTollApplicable writeTollCharges driverId mbPreviousRouteSegment = do
   (startPatching, distanceCalcReferencePoint') <-
     if isMeterRide
       then do
@@ -326,7 +343,7 @@ recalcDistanceBatchStep RideInterpolationHandler {..} isMeterRide distanceCalcRe
   unless snapToRoadFailed $ do
     logInfo $ mconcat ["points interpolation: input=", show batchWaypoints, "; output=", show interpolatedWps]
     logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
-    when isTollApplicable $ do
+    when (isTollApplicable && writeTollCharges) $ do
       mbTollCharges :: Maybe HighPrecMoney <- Redis.safeGet (onRideTollChargesKey driverId)
       tollNames :: [Text] <- Redis.lRange (onRideTollNamesKey driverId) 0 (-1)
       tollIds :: [Text] <- Redis.lRange (onRideTollIdsKey driverId) 0 (-1)
@@ -365,11 +382,12 @@ mkRideInterpolationHandler ::
   (Maybe (Id person) -> Maybe LineSegment -> RoutePoints -> m (Maybe TollInfo)) ->
   (Id person -> Meters -> Maybe TollInfo -> m (Meters, Maybe TollInfo)) ->
   Bool ->
+  (Id person -> HighPrecMeters -> Bool -> m ()) ->
   (Maybe MapsServiceConfig -> Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->
   (Id person -> m ()) ->
   (Id person -> m ()) ->
   RideInterpolationHandler person m
-mkRideInterpolationHandler batchSize maxSnapToRoadReqPoints isEndRide updateDistance updateTollChargesAndNamesAndIds updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
+mkRideInterpolationHandler batchSize maxSnapToRoadReqPoints isEndRide updateDistance updateTollChargesAndNamesAndIds updateRouteDeviation getTollInfoOnTheRoute getTravelledDistanceAndTollInfo getRecomputeIfPickupDropNotOutsideOfThreshold updateTrueTravelledDistance snapToRoadCall sendTollCrossedNotificationToDriver sendTollCrossedUpdateToBAP =
   RideInterpolationHandler
     { batchSize = batchSize,
       maxSnapToRoadReqPoints = maxSnapToRoadReqPoints,

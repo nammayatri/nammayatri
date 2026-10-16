@@ -71,6 +71,7 @@ Ride:
     currency: Currency
     traveledDistance: HighPrecMeters
     distanceToPickup: Maybe HighPrecMeters
+    trueTravelledDistance: Maybe HighPrecMeters # snapped distance, always computed irrespective of route deviation; NEVER read by fare recomputation
     chargeableDistance: Maybe Meters
     distanceUnit: DistanceUnit
     driverArrivalTime: Maybe UTCTime
@@ -177,6 +178,7 @@ Ride:
     trackingUrl: character varying(255)
     traveledDistance: double precision
     distanceToPickup: double precision
+    trueTravelledDistance: double precision
     fareParametersId: character(36)
     merchantId: character(36)
     merchantOperatingCityId: character(36)
