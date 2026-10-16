@@ -244,8 +244,11 @@ verifyRC isDashboard autoApproved mbMerchant (personId, _, merchantOpCityId) req
   when (person.role == Person.DRIVER) $ do
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
-    let validLinkedRCs = Kernel.Prelude.filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
-    unless (length validLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
+    -- Re-uploading a vehicle the driver is already linked to adds no link, so the limit does not apply to it.
+    certNumberHash <- getDbHash req.vehicleRegistrationCertNumber
+    let alreadyLinked = any (\rc -> (rc.certificateNumber & (.hash)) == certNumberHash) rcs
+        validLinkedRCs = Kernel.Prelude.filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
+    unless (alreadyLinked || length validLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
   when
     ( person.role == Person.DRIVER && isNothing mbFleetOwnerId
         && transporterConfig.blockDriverOwnRCForFleetDrivers == Just True

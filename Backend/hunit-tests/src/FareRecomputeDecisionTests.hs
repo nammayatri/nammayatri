@@ -28,7 +28,6 @@ baseCfg =
   RD.RecomputeConfig
     { RD.cfgRecomputeIfPickupDropNotOutsideOfThreshold = True,
       RD.cfgRecomputeThresholds = Just [band],
-      RD.cfgActualRideDistanceDiffThreshold = 1200,
       RD.cfgUpwardsRecomputeBuffer = 2000,
       RD.cfgUpwardsRecomputeBufferPercentage = Nothing,
       RD.cfgFareRecomputeDailyExtraKmsThreshold = 5000,
@@ -87,6 +86,7 @@ cityFlags =
     { RD.disableRecompute = False,
       RD.disableDownwardRecompute = False,
       RD.hasPerMinRateSections = False,
+      RD.extraTimeChargeConfigured = False,
       RD.timeLeversApplicable = True
     }
 
@@ -139,6 +139,10 @@ tests =
         [ testCase "shorter ride bills actual on latest pricing" $
             summary (decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 8000})
               @?= (RD.OutsideThresholdShorterActual, RD.UseActual, RD.LatestPolicy, Just 8000),
+          testCase "sub-band shortfall keeps the estimate (same bands gate both directions)" $
+            -- 500m short of a 10km estimate misses the 1km/10% band -> no downward recompute
+            summary (decide baseInput {RD.pickupDropOutsideOfThreshold = True, RD.traveledDistance = 9500})
+              @?= (RD.OutsideThresholdSmallShortfallEstimate, RD.UseEstimate, RD.LatestPolicy, Just 10000),
           testCase "shorter OTP ride keeps estimate when downward recompute disabled" $
             summary
               ( decide
@@ -168,6 +172,9 @@ tests =
           testCase "shorter approx route bills the approximation" $
             summary (decide baseInput {RD.distanceCalculationFailed = True, RD.rideFlagDistanceCalculationFailed = Just True, RD.pickupDropOutsideOfThreshold = True, RD.approxTraveledDistance = Just 8000})
               @?= (RD.FailedOutsideShorterApprox, RD.UseApproxRoute, RD.LatestPolicy, Just 8000),
+          testCase "sub-band approx shortfall keeps the estimate" $
+            summary (decide baseInput {RD.distanceCalculationFailed = True, RD.rideFlagDistanceCalculationFailed = Just True, RD.pickupDropOutsideOfThreshold = True, RD.approxTraveledDistance = Just 9500})
+              @?= (RD.FailedOutsideSmallShortfallEstimate, RD.UseEstimate, RD.LatestPolicy, Just 10000),
           testCase "small approx overage keeps estimate on latest pricing" $
             summary (decide baseInput {RD.distanceCalculationFailed = True, RD.rideFlagDistanceCalculationFailed = Just True, RD.pickupDropOutsideOfThreshold = True, RD.approxTraveledDistance = Just 11000})
               @?= (RD.FailedOutsideSmallOverageEstimate, RD.UseEstimate, RD.LatestPolicy, Just 10000),
@@ -253,8 +260,20 @@ tests =
             -- est 1800s matches the <=2400s band (forgive 120s), not the catch-all 600s
             let bands = [TimeForgivenessBand {estimatedDurationUpper = 2400, forgivenessSeconds = 120}, TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}]
                 d = decide baseInput {RD.actualDuration = Just 2100, RD.cfg = baseCfg {RD.cfgTimeForgivenessBands = bands}}
-            -- 300s overage > 120s band forgiveness -> NOT forgiven
-            RD.durationSource d @?= RD.UseActualDuration,
+            -- 300s overage > 120s band window -> billed with the window deducted (2100 - 120)
+            RD.durationSource d @?= RD.UseForgivenessAdjustedDuration
+            RD.modifiers d @?= [RD.DurationForgivenessDeducted],
+          testCase "overage beyond the window bills actual minus the window, clamped at the estimate" $ do
+            -- est 1800s, actual 2500s, default 300s window: billed 2200s, so
+            -- the charged overage is 400s, not the raw 700s
+            RD.forgivenessAdjustedDuration RD.defaultTimeForgivenessBands (Just 1800) (Just 2500)
+              @?= Just 2200
+            RD.forgivenessAdjustedDuration [TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 600}] (Just 1800) (Just 1900)
+              @?= Just 1800 -- inside the window: clamped to the estimate
+            RD.forgivenessAdjustedDuration [] (Just 1800) (Just 2500)
+              @?= Nothing -- no bands: billed duration untouched
+            RD.forgivenessAdjustedDuration RD.defaultTimeForgivenessBands (Just 1800) (Just 1700)
+              @?= Nothing, -- underrun: forgiveness never fires
           testCase "extra-time gating pins estimate-billed rides to estimated duration" $ do
             let d =
                   decide
@@ -277,6 +296,15 @@ tests =
                       }
             RD.durationSource d @?= RD.UseEstimatedDuration
             RD.modifiers d @?= [RD.TimeFlooredAtEstimate],
+          testCase "time floor is dormant when the extra-time charge is configured (sections stay on estimated minutes)" $ do
+            let d =
+                  decide
+                    baseInput
+                      { RD.actualDuration = Just 1500,
+                        RD.productFlags = cityFlags {RD.hasPerMinRateSections = True, RD.extraTimeChargeConfigured = True}
+                      }
+            RD.durationSource d @?= RD.UseActualDuration
+            RD.modifiers d @?= [],
           testCase "time floor is dormant when the policy has no perMinRateSections (rental safety)" $ do
             let d = decide baseInput {RD.actualDuration = Just 1500}
             RD.durationSource d @?= RD.UseActualDuration

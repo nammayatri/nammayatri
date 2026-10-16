@@ -84,6 +84,7 @@ library
       API.Internal.PopulateTipAmount
       API.Internal.ProdLoopStatus
       API.Internal.QuoteRespond
+      API.Internal.RadarXyneWebhook
       API.Internal.RefundLedger
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
@@ -441,6 +442,7 @@ library
       Domain.Action.UI.PolicyDocument
       Domain.Action.UI.PriceBreakup
       Domain.Action.UI.QueueRank
+      Domain.Action.UI.RadarXyneWebhook
       Domain.Action.UI.Rating
       Domain.Action.UI.Reels
       Domain.Action.UI.ReferralPayout
@@ -776,6 +778,7 @@ library
       SharedLogic.ScheduledBooking.OverlapCheck
       SharedLogic.ScheduledBooking.WindowValidation
       SharedLogic.ScheduledNotifications
+      SharedLogic.ScheduledRideVisibility
       SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker

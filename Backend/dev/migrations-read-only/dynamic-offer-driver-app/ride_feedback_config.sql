@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN ui_config jso
 ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD CONSTRAINT ride_feedback_config_unique_idx_merchant_operating_city_id_question_key UNIQUE (merchant_operating_city_id, question_key);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride_feedback_config ADD COLUMN icon_url text ;

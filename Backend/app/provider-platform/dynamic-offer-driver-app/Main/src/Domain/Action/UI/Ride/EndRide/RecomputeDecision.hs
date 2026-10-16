@@ -28,10 +28,10 @@
 -- change once shadow mismatches are zero in production.
 --
 -- The time levers (forgiveness bands, the within-threshold floor, the
--- distance-forgiven gate) are mirrored here AND wired into the live path
--- ('getChargeableDistanceAndDuration' / 'shouldUpwardRecompute' in
--- EndRide.hs delegate their predicates to this module: single source of
--- truth).
+-- distance-forgiven gate) and the band predicate are mirrored here AND wired
+-- into the live path ('getChargeableDistanceAndDuration' and the ladders in
+-- EndRide.hs delegate to 'recomputeBandQualifies' /
+-- 'forgivenessAdjustedDuration': single source of truth).
 module Domain.Action.UI.Ride.EndRide.RecomputeDecision
   ( RequestSource (..),
     ProductFlags (..),
@@ -51,8 +51,8 @@ module Domain.Action.UI.Ride.EndRide.RecomputeDecision
     defaultNoRecomputeTripCategories,
     defaultRecomputeBands,
     defaultTimeForgivenessBands,
-    upwardBandQualifies,
-    forgivenDurationOverage,
+    recomputeBandQualifies,
+    forgivenessAdjustedDuration,
     reasonText,
   )
 where
@@ -76,10 +76,16 @@ data RequestSource = DriverSource | DashboardSource | CallBasedSource | CronJobS
 data ProductFlags = ProductFlags
   { disableRecompute :: Bool,
     disableDownwardRecompute :: Bool,
-    -- | The fare policy defines perMinRateSections: time is billed through
-    -- them on the chargeable (actual) minutes at recompute, the extra-time
-    -- charge is disabled, and the within-threshold time floor binds.
+    -- | The fare policy defines perMinRateSections. They bill time on the
+    -- chargeable (actual) minutes at recompute — and the within-threshold
+    -- time floor binds — ONLY when 'extraTimeChargeConfigured' is False;
+    -- a configured extra-time charge wins and pins the sections to the
+    -- estimated minutes, exactly as quoted.
     hasPerMinRateSections :: Bool,
+    -- | The fare policy configures perMinuteRideExtraTimeCharge: time overage
+    -- is billed through the extra-time charge (grace + forgiveness window
+    -- deducted), never through perMinRateSections.
+    extraTimeChargeConfigured :: Bool,
     -- | City pricing (Progressive/Slabs): the duration levers
     -- (forgiveness/gating) apply. Rental/intercity/ambulance time billing is
     -- contractual and exempt.
@@ -100,8 +106,11 @@ data ExtraKmBudgetState = ExtraKmBudgetState
 -- directly.
 data RecomputeConfig = RecomputeConfig
   { cfgRecomputeIfPickupDropNotOutsideOfThreshold :: Bool,
+    -- | One band table gates recompute in BOTH directions: within the
+    -- threshold it qualifies upward recompute; outside the threshold the
+    -- actual (or approx) is billed only when |delta| clears the band,
+    -- shortfalls included.
     cfgRecomputeThresholds :: Maybe [ExtraTC.RecomputeBand],
-    cfgActualRideDistanceDiffThreshold :: HighPrecMeters,
     cfgUpwardsRecomputeBuffer :: HighPrecMeters,
     cfgUpwardsRecomputeBufferPercentage :: Maybe Int,
     cfgFareRecomputeDailyExtraKmsThreshold :: HighPrecMeters,
@@ -111,8 +120,11 @@ data RecomputeConfig = RecomputeConfig
     cfgDownwardRecomputeDistanceThreshold :: Maybe HighPrecMeters,
     cfgNoRecomputeTripCategories :: [DTC.TripCategory],
     -- | Estimate-relative time forgiveness: the tightest matching band (by
-    -- the ride's estimated duration) supplies how much overage is forgiven.
-    -- Empty list = no forgiveness. Fleet default: one catch-all 5-min band.
+    -- the ride's estimated duration) supplies the forgiveness window. The
+    -- window is DEDUCTED from an overrun's billed duration (clamped at the
+    -- estimate): overage inside the window bills the estimate, overage beyond
+    -- it bills only the excess. Empty list = no forgiveness. Fleet default:
+    -- one catch-all 5-min band.
     cfgTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand],
     -- | When True, rides billed at the ESTIMATED distance also bill the
     -- estimated duration, so the per-minute extra-time charge cannot fire on
@@ -174,7 +186,7 @@ data DistanceSource
   | UseEstimatePlusBuffer
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data DurationSource = UseActualDuration | UseEstimatedDuration | UseFlooredDuration
+data DurationSource = UseActualDuration | UseEstimatedDuration | UseFlooredDuration | UseForgivenessAdjustedDuration
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data PricingSource = QuotedPolicy | LatestPolicy
@@ -193,11 +205,13 @@ data RecomputeReason
   | WithinThresholdBudgetExhausted
   | OutsideThresholdShorterActual
   | OutsideThresholdDownwardDisabled
+  | OutsideThresholdSmallShortfallEstimate
   | OutsideThresholdSmallOverageEstimate
   | OutsideThresholdLargeOverageActual
   | FailedWithinThresholdEstimate
   | FailedOutsideShorterApprox
   | FailedOutsideDownwardDisabled
+  | FailedOutsideSmallShortfallEstimate
   | FailedOutsideSmallOverageEstimate
   | FailedOutsideApproxRecompute
   | FailedOutsideCappedBuffer
@@ -211,6 +225,7 @@ data RecomputeModifier
   | DownwardRecomputeFloored
   | DownwardToleranceForgiven
   | DurationOverageForgiven
+  | DurationForgivenessDeducted
   | ExtraTimeGatedOnEstimateBilledRide
   | TimeFlooredAtEstimate
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
@@ -267,7 +282,6 @@ mkRecomputeConfig tc = do
   RecomputeConfig
     { cfgRecomputeIfPickupDropNotOutsideOfThreshold = fromMaybe True (up >>= (.allowWithinThreshold)),
       cfgRecomputeThresholds = Just $ fromMaybe defaultRecomputeBands (up >>= (.bands)),
-      cfgActualRideDistanceDiffThreshold = fromMaybe 1200 (up >>= (.smallOverageForgivenessMeters)),
       cfgUpwardsRecomputeBuffer = fromMaybe 2000 (up >>= (.bufferMeters)),
       cfgUpwardsRecomputeBufferPercentage = up >>= (.bufferPercentage),
       cfgFareRecomputeDailyExtraKmsThreshold = fromMaybe 5000 (up >>= (.dailyExtraKmsBudget)),
@@ -342,44 +356,56 @@ mkShadowRecordText d billed =
         srMismatch = maybe False (/= billed) d.predictedChargeableDistance
       }
 
--- | Band predicate shared by the live 'shouldUpwardRecompute' and the shadow
--- decision: the tightest band for the ride's estimate decides when a distance
--- overage qualifies for upward recompute. Distance-only by design: TIME
--- overage is billed through the forgiveness bands + per-min sections and must
--- never unlock sub-band distance overage.
-upwardBandQualifies ::
+-- | Band predicate shared by the live ladder and the shadow decision: the
+-- tightest band for the ride's estimate decides when a distance DELTA
+-- qualifies for recompute. Pass the absolute delta — the same bands gate the
+-- upward (overage) and, outside the pickup/drop threshold, the downward
+-- (shortfall) direction. Distance-only by design: TIME overage is billed
+-- through the forgiveness bands + per-min sections and must never unlock
+-- sub-band distance deltas.
+recomputeBandQualifies ::
   Maybe [ExtraTC.RecomputeBand] ->
   Meters ->
   Meters ->
   Bool
-upwardBandQualifies mbBands estimatedDist distanceDiff = do
+recomputeBandQualifies mbBands estimatedDist distanceDelta = do
   let filteredThresholds = maybe [] (filter (\band -> band.estimatedDistanceUpper > estimatedDist)) mbBands
       mbBand = listToMaybe $ sortBy (comparing \band -> band.estimatedDistanceUpper - estimatedDist) filteredThresholds
   case mbBand of
     Nothing -> False
     Just band ->
-      distanceDiff > band.minThresholdDistance
-        && distanceDiff.getMeters > (estimatedDist.getMeters * band.minThresholdPercentage) `div` 100
+      distanceDelta > band.minThresholdDistance
+        && distanceDelta.getMeters > (estimatedDist.getMeters * band.minThresholdPercentage) `div` 100
 
--- | Fleet default time forgiveness: forgive up to 5 minutes of overage on
--- every ride (single catch-all band).
+-- | Fleet default time forgiveness: a 5-minute window on every ride (single
+-- catch-all band) — sub-5-min overruns bill the estimate, larger overruns
+-- bill with the first 5 minutes deducted.
 defaultTimeForgivenessBands :: [ExtraTC.TimeForgivenessBand]
 defaultTimeForgivenessBands = [ExtraTC.TimeForgivenessBand {estimatedDurationUpper = 9999999, forgivenessSeconds = 300}]
 
--- | True when the actual duration overran the estimate by strictly less than
--- the forgiveness of the tightest matching band (picked by estimated
--- duration, mirroring the distance-band selection). No matching band or an
--- empty list = nothing forgiven.
-forgivenDurationOverage :: [ExtraTC.TimeForgivenessBand] -> Maybe Seconds -> Maybe Seconds -> Bool
-forgivenDurationOverage bands mbEstimatedDur mbActualDur =
-  case (mbEstimatedDur, mbActualDur) of
-    (Just estDur, Just actDur) -> do
-      let matching = filter (\band -> band.estimatedDurationUpper > estDur) bands
-          mbBand = listToMaybe $ sortBy (comparing \band -> band.estimatedDurationUpper - estDur) matching
-      case mbBand of
-        Just band -> actDur > estDur && (actDur - estDur) < band.forgivenessSeconds
-        Nothing -> False
-    _ -> False
+-- | Forgiveness window of the tightest band matching the ride's estimated
+-- duration (band upper strictly above the estimate, mirroring the
+-- distance-band selection). Nothing = no matching band or no estimate.
+matchingForgivenessSeconds :: [ExtraTC.TimeForgivenessBand] -> Maybe Seconds -> Maybe Seconds
+matchingForgivenessSeconds bands mbEstimatedDur = do
+  estDur <- mbEstimatedDur
+  let matching = filter (\band -> band.estimatedDurationUpper > estDur) bands
+  band <- listToMaybe $ sortBy (comparing \band -> band.estimatedDurationUpper - estDur) matching
+  pure band.forgivenessSeconds
+
+-- | The billed duration after applying the forgiveness window to an overrun:
+-- the window is deducted from the actual duration, never going below the
+-- estimate. Overage within the window therefore bills the estimate outright;
+-- overage beyond it bills only the part past the window. Nothing = no
+-- overrun, or no matching band (bill the input duration unchanged).
+forgivenessAdjustedDuration :: [ExtraTC.TimeForgivenessBand] -> Maybe Seconds -> Maybe Seconds -> Maybe Seconds
+forgivenessAdjustedDuration bands mbEstimatedDur mbActualDur = do
+  window <- matchingForgivenessSeconds bands mbEstimatedDur
+  estDur <- mbEstimatedDur
+  actDur <- mbActualDur
+  if actDur > estDur
+    then pure (max estDur (actDur - window))
+    else Nothing
 
 decideRecompute :: RecomputeInput -> RecomputeDecision
 decideRecompute input = applyFareStepAdjustments input (basePick input)
@@ -411,7 +437,7 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
     downwardEnabled =
       tripCategory `notElem` cfgNoRecomputeTripCategories
         || fromMaybe True cfgEnableDownwardRecomputeForDifferentDestination
-    shouldRecompute diff = upwardBandQualifies cfgRecomputeThresholds estimate diff
+    shouldRecompute diff = recomputeBandQualifies cfgRecomputeThresholds estimate diff
     -- Same fallback semantics as legacy checkExtraKmsThreshold: unknown = ok.
     budgetOk = case budgetState of
       Nothing -> True
@@ -437,16 +463,24 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
                     | not upwardQualifies = WithinThresholdNoUpwardBand
                     | otherwise = WithinThresholdBudgetExhausted
               pick UseEstimate QuotedPolicy why (Just estimate)
-        else
+        else do
+          -- Outside the threshold the SAME bands gate both directions: the
+          -- actual is billed only when |traveled - estimate| clears the
+          -- tightest band for the estimate; sub-band deltas keep the
+          -- estimate (repriced on the latest policy, destination changed).
+          let deltaQualifies = shouldRecompute (abs (highPrecMetersToMeters distanceDiff))
           if distanceDiff < 0
             then
-              if downwardEnabled
-                then pick UseActual LatestPolicy OutsideThresholdShorterActual (Just traveledRounded)
-                else pick UseEstimate QuotedPolicy OutsideThresholdDownwardDisabled (Just estimate)
+              if not downwardEnabled
+                then pick UseEstimate QuotedPolicy OutsideThresholdDownwardDisabled (Just estimate)
+                else
+                  if deltaQualifies
+                    then pick UseActual LatestPolicy OutsideThresholdShorterActual (Just traveledRounded)
+                    else pick UseEstimate LatestPolicy OutsideThresholdSmallShortfallEstimate (Just estimate)
             else
-              if distanceDiff < cfgActualRideDistanceDiffThreshold
-                then pick UseEstimate LatestPolicy OutsideThresholdSmallOverageEstimate (Just estimate)
-                else pick UseActual LatestPolicy OutsideThresholdLargeOverageActual (Just traveledRounded)
+              if deltaQualifies
+                then pick UseActual LatestPolicy OutsideThresholdLargeOverageActual (Just traveledRounded)
+                else pick UseEstimate LatestPolicy OutsideThresholdSmallOverageEstimate (Just estimate)
 
     failedLadder = do
       let maxDistanceFailed = case (estimatedDistance, cfgUpwardsRecomputeBufferPercentage) of
@@ -458,16 +492,20 @@ basePick RecomputeInput {cfg = RecomputeConfig {..}, ..}
           Nothing -> pick UseApproxRoute LatestPolicy FailedOutsideUnknownApprox Nothing
           Just approx -> do
             let distanceDiff = metersToHighPrecMeters (approx - estimate)
+                deltaQualifies = shouldRecompute (abs (highPrecMetersToMeters distanceDiff))
             if distanceDiff < 0
               then
-                if downwardEnabled
-                  then pick UseApproxRoute LatestPolicy FailedOutsideShorterApprox (Just approx)
-                  else pick UseEstimate QuotedPolicy FailedOutsideDownwardDisabled (Just estimate)
+                if not downwardEnabled
+                  then pick UseEstimate QuotedPolicy FailedOutsideDownwardDisabled (Just estimate)
+                  else
+                    if deltaQualifies
+                      then pick UseApproxRoute LatestPolicy FailedOutsideShorterApprox (Just approx)
+                      else pick UseEstimate LatestPolicy FailedOutsideSmallShortfallEstimate (Just estimate)
               else
-                if distanceDiff < cfgActualRideDistanceDiffThreshold
+                if not deltaQualifies
                   then pick UseEstimate LatestPolicy FailedOutsideSmallOverageEstimate (Just estimate)
                   else
-                    if highPrecMetersToMeters distanceDiff < maxDistanceFailed && shouldRecompute (highPrecMetersToMeters distanceDiff)
+                    if highPrecMetersToMeters distanceDiff < maxDistanceFailed
                       then pick UseApproxRoute LatestPolicy FailedOutsideApproxRecompute (Just approx)
                       else pick UseEstimatePlusBuffer LatestPolicy FailedOutsideCappedBuffer (Just (estimate + maxDistanceFailed))
 
@@ -539,18 +577,25 @@ applyFareStepAdjustments RecomputeInput {cfg = RecomputeConfig {..}, ..} base = 
               && estimateBilled
               && withFloor.durationSource /= UseEstimatedDuration
               && maybe False (\act -> maybe False (act >) estimatedDuration) actualDuration
-          forgivenScoped =
-            productFlags.timeLeversApplicable
+          -- The forgiveness window is deducted from an overrun's billed
+          -- duration (clamped at the estimate): fully inside the window ->
+          -- estimate billed; beyond it -> only the excess past the window.
+          mbForgivenessAdjusted =
+            if productFlags.timeLeversApplicable
               && not gated
               && withFloor.durationSource == UseActualDuration
-              && forgivenDurationOverage cfgTimeForgivenessBands estimatedDuration actualDuration
+              then forgivenessAdjustedDuration cfgTimeForgivenessBands estimatedDuration actualDuration
+              else Nothing
           -- Within the pickup/drop threshold, never bill below the estimated
-          -- duration. Default-on, but binds only when the fare policy bills
-          -- time via perMinRateSections (otherwise it has no fare effect on
-          -- city rides and would wrongly inflate rental billing).
+          -- duration. Default-on, but binds only when perMinRateSections
+          -- actually bill the chargeable minutes — i.e. sections present and
+          -- no extra-time charge configured (a configured extra-time charge
+          -- pins sections to the estimated minutes, and below-estimate
+          -- durations have no fare effect on city rides anyway).
           timeFloored =
             cfgFloorTimeAtEstimateWithinThreshold
               && productFlags.hasPerMinRateSections
+              && not productFlags.extraTimeChargeConfigured
               && not dropOutsideOfThreshold
               && withFloor.durationSource == UseActualDuration
               && maybe False (\act -> maybe False (act <) estimatedDuration) actualDuration
@@ -560,11 +605,18 @@ applyFareStepAdjustments RecomputeInput {cfg = RecomputeConfig {..}, ..} base = 
                 { durationSource = UseEstimatedDuration,
                   modifiers = withFloor.modifiers <> [ExtraTimeGatedOnEstimateBilledRide]
                 }
-            | forgivenScoped =
-              withFloor
-                { durationSource = UseEstimatedDuration,
-                  modifiers = withFloor.modifiers <> [DurationOverageForgiven]
-                }
+            | Just adj <- mbForgivenessAdjusted =
+              if Just adj == estimatedDuration
+                then
+                  withFloor
+                    { durationSource = UseEstimatedDuration,
+                      modifiers = withFloor.modifiers <> [DurationOverageForgiven]
+                    }
+                else
+                  withFloor
+                    { durationSource = UseForgivenessAdjustedDuration,
+                      modifiers = withFloor.modifiers <> [DurationForgivenessDeducted]
+                    }
             | timeFloored =
               withFloor
                 { durationSource = UseEstimatedDuration,

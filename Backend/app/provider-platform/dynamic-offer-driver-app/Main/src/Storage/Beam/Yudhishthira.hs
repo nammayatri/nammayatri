@@ -20,6 +20,7 @@ import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicAlwaysOn as Reexport
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicElement as Reexport
 import Lib.Yudhishthira.Storage.Beam.AppDynamicLogicRollout as Reexport
 import Lib.Yudhishthira.Storage.Beam.ChakraQueries as Reexport
+import Lib.Yudhishthira.Storage.Beam.KaalChakraJobRun as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTag as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTagTrigger as Reexport
 import Lib.Yudhishthira.Storage.Beam.NammaTagTriggerV2 as Reexport
@@ -51,6 +52,9 @@ instance HasSchemaName NammaTagV2T where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName ChakraQueriesT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName KaalChakraJobRunT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName UserDataT where

@@ -213,6 +213,7 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.ScheduledRideVisibility as SRV
 import qualified SharedLogic.SpecialLocationUpsert as SLU
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import SharedLogic.TollDashboard
@@ -389,12 +390,15 @@ mkMerchantCommonConfigRes tc@DTC.TransporterConfig {..} = do
       scheduledRideAvgSpeedKmph = scheduledRideConfig.avgSpeedKmph,
       scheduledRideMinLeadTime = scheduledRideConfig.minLeadTime,
       scheduledRideMaxLeadTime = scheduledRideConfig.maxLeadTime,
+      scheduledRideVisibilityStages = A.toJSON <$> scheduledRideConfig.scheduledRideVisibilityStages,
       pickupLocThresholdWithUnit = convertMetersToDistance distanceUnit pickupLocThreshold,
       dropLocThresholdWithUnit = convertMetersToDistance distanceUnit dropLocThreshold,
-      actualRideDistanceDiffThreshold = rcfg.cfgActualRideDistanceDiffThreshold,
+      -- Retired lever (2026-10-15): the recompute bands gate sub-band deltas
+      -- in both directions now; the API field is kept for compatibility.
+      actualRideDistanceDiffThreshold = 0,
       upwardsRecomputeBuffer = rcfg.cfgUpwardsRecomputeBuffer,
       upwardsRecomputeBufferPercentage = rcfg.cfgUpwardsRecomputeBufferPercentage,
-      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgActualRideDistanceDiffThreshold,
+      actualRideDistanceDiffThresholdWithUnit = convertHighPrecMetersToDistance distanceUnit 0,
       upwardsRecomputeBufferWithUnit = convertHighPrecMetersToDistance distanceUnit rcfg.cfgUpwardsRecomputeBuffer,
       ..
     }
@@ -418,6 +422,11 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  visibilityStages <- case req.scheduledRideVisibilityStages of
+    Nothing -> pure config.scheduledRideConfig.scheduledRideVisibilityStages
+    Just optionalStages -> case optionalStages.value of
+      Nothing -> pure Nothing
+      Just stagesJson -> either (throwError . InvalidRequest) (pure . Just) (SRV.parseVisibilityStagesJson stagesJson)
   let updConfig =
         config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
                dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
@@ -467,7 +476,8 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
                      minLeadTime = maybe config.scheduledRideConfig.minLeadTime (.value) req.scheduledRideMinLeadTime,
                      maxLeadTime = maybe config.scheduledRideConfig.maxLeadTime (.value) req.scheduledRideMaxLeadTime,
                      enableScheduledRideActivationChecks = config.scheduledRideConfig.enableScheduledRideActivationChecks,
-                     driverActivationWindow = config.scheduledRideConfig.driverActivationWindow
+                     driverActivationWindow = config.scheduledRideConfig.driverActivationWindow,
+                     scheduledRideVisibilityStages = visibilityStages
                    }
               }
   whenJust ((,) <$> updConfig.scheduledRideConfig.minLeadTime <*> updConfig.scheduledRideConfig.maxLeadTime) $ \(mn, mx) ->
@@ -5078,21 +5088,34 @@ postMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> Context.Cit
 postMerchantConfigAllowedDestinationStates merchantShortId _ req = do
   merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-  merchantStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
-  let invalidStates = filter (`notElem` merchantStates) (DL.nub (req.state : req.allowedDestinationStates))
-  unless (null invalidStates) $
-    throwError $ InvalidRequest $ "States not operated by this merchant: " <> T.intercalate ", " (map show invalidStates)
+  addNonOperatingStatesToDestinationGeofence merchant req.allowedDestinationStates
   upsertMerchantAllowedDestinationStates merchant.id req.state req.allowedDestinationStates now
   CQMerchantState.clearCache merchant.id req.state
   pure Success
+
+addNonOperatingStatesToDestinationGeofence :: DM.Merchant -> [Context.IndianState] -> Flow ()
+addNonOperatingStatesToDestinationGeofence merchant destinationStates =
+  case merchant.geofencingConfig.destination of
+    Unrestricted -> pure ()
+    Regions regions -> do
+      operatingStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
+      let nonOperatingStates = filter (`notElem` operatingStates) (DL.nub destinationStates)
+      stateRegions <-
+        forM nonOperatingStates $ \state ->
+          (.region)
+            <$> ( QGeo.findGeometryByStateAndCity (Context.City "AnyCity") state
+                    >>= fromMaybeM (InvalidRequest $ "No AnyCity geometry found for state: " <> show state)
+                )
+      let missingRegions = filter (`notElem` regions) (DL.nub stateRegions)
+      unless (null missingRegions) $ do
+        logInfo $ "Adding regions to destination geofence of merchant " <> merchant.id.getId <> ": " <> show missingRegions
+        CQM.updateGeofencingConfig merchant.id merchant.geofencingConfig.origin (Regions $ regions <> missingRegions)
+        CQM.clearCache merchant
 
 getMerchantConfigAllowedDestinationStates :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.AllowedDestinationStatesResp
 getMerchantConfigAllowedDestinationStates merchantShortId _ stateText = do
   merchant <- findMerchantByShortId merchantShortId
   state <- readMaybe (T.unpack stateText) & fromMaybeM (InvalidRequest $ "Invalid IndianState: " <> stateText)
-  merchantStates <- DL.nub . map (.state) <$> QMOC.findAllByMerchantId merchant.id
-  unless (state `elem` merchantStates) $
-    throwError $ InvalidRequest $ "State not operated by this merchant: " <> show state
   mbMerchantState <- QMerchantState.findByMerchantIdAndState merchant.id state
   pure
     Common.AllowedDestinationStatesResp

@@ -841,6 +841,7 @@ shadowRecomputeDecision req booking ride mbOdometer mbPickupDropOutside mbDistan
                                   _ -> False
                               )
                               mbFarePolicy,
+                          extraTimeChargeConfigured = maybe False (\fp -> isJust fp.perMinuteRideExtraTimeCharge) mbFarePolicy,
                           timeLeversApplicable =
                             maybe
                               True
@@ -901,16 +902,21 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       -- Fare can go up but never below the estimate: charge at least the estimated distance and duration
-      -- Time-billing mechanism is NOT a config: a fare policy WITH
-      -- perMinRateSections bills time through them, on the CHARGEABLE
-      -- (actual, post floor/forgiveness) minutes — fed via the calculator's
-      -- duration input, so TrafficDelay basis becomes actual-minus-static —
-      -- and the extra-time charge is disabled outright (sections only, never
-      -- both). A policy WITHOUT sections keeps today's behavior: estimated
-      -- duration for the (absent) sections, extra-time charge + grace on top.
+      -- Time-billing mechanism is NOT a config; precedence per fare policy:
+      -- a policy that configures perMinuteRideExtraTimeCharge bills time
+      -- overage through the extra-time charge alone (grace + forgiveness
+      -- window deducted via the chargeable duration) and its
+      -- perMinRateSections, if any, stay pinned to the ESTIMATED minutes —
+      -- exactly as quoted, so sections never double-bill the overage. Only a
+      -- policy WITH sections and WITHOUT the extra-time charge bills the
+      -- sections on the CHARGEABLE (actual, post floor/forgiveness) minutes —
+      -- fed via the calculator's duration input, so TrafficDelay basis
+      -- becomes actual-minus-static.
       let hasPerMinSections = case farePolicy.farePolicyDetails of
             DFP.ProgressiveDetails det -> isJust det.perMinRateSections
             _ -> False
+          extraTimeChargeConfigured = isJust farePolicy.perMinuteRideExtraTimeCharge
+          sectionsBillChargeableMinutes = hasPerMinSections && not extraTimeChargeConfigured
           -- Duration levers (forgiveness/gating/floor) are CITY-pricing rules:
           -- rental/intercity/ambulance time billing is contractual
           -- (per-extra-minute, per-hour) and must never be forgiven or floored.
@@ -918,9 +924,9 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
             DFP.ProgressiveDetails _ -> True
             DFP.SlabsDetails _ -> True
             _ -> False
-          (chargeableDistance, chargeableDuration) = getChargeableDistanceAndDuration farePolicy.disableDownwardRecompute rcfg hasPerMinSections timeLeversApplicable (not pickupDropOutsideOfThreshold) booking.estimatedDuration oldDistance recalcDistance finalDuration
+          (chargeableDistance, chargeableDuration) = getChargeableDistanceAndDuration farePolicy.disableDownwardRecompute rcfg sectionsBillChargeableMinutes timeLeversApplicable (not pickupDropOutsideOfThreshold) booking.estimatedDuration oldDistance recalcDistance finalDuration
           durationForTimeFare =
-            if hasPerMinSections
+            if sectionsBillChargeableMinutes
               then chargeableDuration <|> booking.estimatedDuration
               else booking.estimatedDuration
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
@@ -975,10 +981,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
       let farePolicy' =
             farePolicyWithCongestion
               { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-                DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage,
-                -- sections-only rule: with perMinRateSections present the
-                -- extra-time charge must never fire, floored rides included
-                DFP.perMinuteRideExtraTimeCharge = if hasPerMinSections then Nothing else farePolicy.perMinuteRideExtraTimeCharge
+                DFP.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
               } ::
               DFP.FullFarePolicy
       rcParkingFeeExempt <-
@@ -1094,7 +1097,7 @@ isDownwardRecomputeEnabledForRide booking thresholdConfig = do
   booking.tripCategory `notElem` rcfg.cfgNoRecomputeTripCategories || fromMaybe True rcfg.cfgEnableDownwardRecomputeForDifferentDestination
 
 getChargeableDistanceAndDuration :: Maybe Bool -> RD.RecomputeConfig -> Bool -> Bool -> Bool -> Maybe Seconds -> Meters -> Meters -> Maybe Seconds -> (Meters, Maybe Seconds)
-getChargeableDistanceAndDuration disableDownwardRecompute rcfg hasPerMinSections timeLeversApplicable withinThreshold estimatedDuration estimatedDistance recalcDistance finalDuration =
+getChargeableDistanceAndDuration disableDownwardRecompute rcfg sectionsBillChargeableMinutes timeLeversApplicable withinThreshold estimatedDuration estimatedDistance recalcDistance finalDuration =
   (chargeableDistance, adjustedDuration)
   where
     (chargeableDistance, baseDuration)
@@ -1105,7 +1108,7 @@ getChargeableDistanceAndDuration disableDownwardRecompute rcfg hasPerMinSections
     downwardRecomputeTolerance =
       recalcDistance < estimatedDistance
         && metersToHighPrecMeters (estimatedDistance - recalcDistance) < fromMaybe 0 rcfg.cfgDownwardRecomputeDistanceThreshold
-    -- Duration levers, both default-off. Billing the estimated duration keeps
+    -- Duration levers. Billing the estimated duration keeps
     -- calculateExtraTimeFare at zero: it only charges actual > estimated + grace.
     isFloored = disableDownwardRecompute == Just True || downwardRecomputeTolerance
     overran = fromMaybe False ((>) <$> finalDuration <*> estimatedDuration)
@@ -1113,17 +1116,23 @@ getChargeableDistanceAndDuration disableDownwardRecompute rcfg hasPerMinSections
     -- when the gating lever is on: the distance ladder already decided to
     -- forgive this ride.
     gated = timeLeversApplicable && rcfg.cfgGateExtraTimeChargeByRecompute && chargeableDistance == estimatedDistance && overran
-    -- Duration overage below the matching forgiveness band is forgiven
+    -- The matching forgiveness window is deducted from an overrun's billed
+    -- duration, clamped at the estimate: overage inside the window bills the
+    -- estimate, overage beyond it bills only the excess past the window
     -- (city pricing only; rental/intercity time is contractual).
-    forgiven = timeLeversApplicable && not isFloored && RD.forgivenDurationOverage rcfg.cfgTimeForgivenessBands estimatedDuration finalDuration
+    mbForgivenessAdjusted =
+      if timeLeversApplicable && not isFloored
+        then RD.forgivenessAdjustedDuration rcfg.cfgTimeForgivenessBands estimatedDuration finalDuration
+        else Nothing
     -- Within the pickup/drop threshold, never bill below the estimated
-    -- duration. Default-on, but binds only when the policy bills time via
-    -- perMinRateSections (otherwise no fare effect on city rides; would
-    -- inflate rental billing).
+    -- duration. Default-on, but binds only when perMinRateSections actually
+    -- bill the chargeable minutes (otherwise no fare effect on city rides;
+    -- would inflate rental billing).
     underran = fromMaybe False ((<) <$> finalDuration <*> estimatedDuration)
-    timeFloored = rcfg.cfgFloorTimeAtEstimateWithinThreshold && hasPerMinSections && withinThreshold && not isFloored && underran
+    timeFloored = rcfg.cfgFloorTimeAtEstimateWithinThreshold && sectionsBillChargeableMinutes && withinThreshold && not isFloored && underran
     adjustedDuration
-      | gated || forgiven || timeFloored = estimatedDuration
+      | gated || timeFloored = estimatedDuration
+      | Just adj <- mbForgivenessAdjusted = Just adj
       | otherwise = baseDuration
 
 calculateFinalValuesForCorrectDistanceCalculations ::
@@ -1131,8 +1140,11 @@ calculateFinalValuesForCorrectDistanceCalculations ::
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
-  shouldRecompute <- shouldUpwardRecompute rcfg estimatedDistance (highPrecMetersToMeters distanceDiff)
-  let thresholdChecks = rcfg.cfgRecomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
+      shouldRecompute = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (highPrecMetersToMeters distanceDiff)
+      -- Outside the threshold the same bands gate BOTH directions: a
+      -- sub-band |delta| (overage or shortfall) keeps the estimate.
+      deltaQualifies = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
+      thresholdChecks = rcfg.cfgRecomputeIfPickupDropNotOutsideOfThreshold && shouldRecompute
   (mbDailyExtraKms, mbWeeklyExtraKms) <- if thresholdChecks then handleExtraKmsRecomputation distanceDiff else return (Nothing, Nothing)
   fork "Send Extra Kms Limit Exceeded Overlay" $
     when (rcfg.cfgNotifyDriverOnBudgetExceeded && not (checkExtraKmsThreshold mbDailyExtraKms mbWeeklyExtraKms)) notifyDriverOnExtraKmsLimitExceed
@@ -1146,12 +1158,15 @@ calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDist
       if distanceDiff < 0
         then
           if isDownwardRecomputeEnabledForRide booking thresholdConfig
-            then recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
+            then
+              if deltaQualifies
+                then recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
+                else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
             else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig False tripEndPoint
         else
-          if distanceDiff < rcfg.cfgActualRideDistanceDiffThreshold
-            then recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
-            else recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
+          if deltaQualifies
+            then recalculateFareForDistance handle booking ride (roundToIntegral ride.traveledDistance) thresholdConfig True tripEndPoint
+            else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
   where
     rcfg = RD.mkRecomputeConfig thresholdConfig
     maxUpwardBuffer = case (booking.estimatedDistance, rcfg.cfgUpwardsRecomputeBufferPercentage) of
@@ -1195,19 +1210,24 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
       (_routePoints, approxTraveledDistance) <- getRouteAndDistanceBetweenPoints tripStartPoint tripEndPoint interpolatedPoints estimatedDistance
       logTagInfo "endRide" $ "approxTraveledDistance when pickup and drop are not outside threshold: " <> show approxTraveledDistance
       distanceDiff <- getDistanceDiff booking approxTraveledDistance
-      shouldRecompute <- shouldUpwardRecompute rcfg estimatedDistance (highPrecMetersToMeters distanceDiff)
+      -- Same bands gate both directions on the approx route: a sub-band
+      -- delta (overage or shortfall) keeps the estimate.
+      let deltaQualifies = RD.recomputeBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance (abs (highPrecMetersToMeters distanceDiff))
       (d, f, p) <-
         if distanceDiff < 0
           then do
             if isDownwardRecomputeEnabledForRide booking thresholdConfig
-              then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
+              then
+                if deltaQualifies
+                  then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
+                  else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
               else recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig False tripEndPoint
           else
-            if distanceDiff < rcfg.cfgActualRideDistanceDiffThreshold
+            if not deltaQualifies
               then do
                 recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig True tripEndPoint
               else do
-                if highPrecMetersToMeters distanceDiff < maxDistance && shouldRecompute
+                if highPrecMetersToMeters distanceDiff < maxDistance
                   then recalculateFareForDistance handle booking ride approxTraveledDistance thresholdConfig True tripEndPoint -- TODO :: Recompute Toll Charges Here ?
                   else do
                     logTagInfo "Inaccurate Location Updates and Pickup/Drop Deviated." ("DistanceDiff: " <> show distanceDiff)
@@ -1221,12 +1241,6 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
     maxDistance = case (booking.estimatedDistance, rcfg.cfgUpwardsRecomputeBufferPercentage) of
       (Just estDistance, Just percentage) -> Meters $ max (round $ (toRational estDistance.getMeters) * (toRational percentage / 100)) (round rcfg.cfgUpwardsRecomputeBuffer.getHighPrecMeters)
       _ -> highPrecMetersToMeters rcfg.cfgUpwardsRecomputeBuffer
-
--- | Band predicate for upward recompute; delegates to the shared pure
--- implementation so the live path and the shadow decision can never drift.
-shouldUpwardRecompute :: (MonadFlow m, MonadThrow m, Log m) => RD.RecomputeConfig -> Meters -> Meters -> m Bool
-shouldUpwardRecompute rcfg estimatedDistance distanceDiff =
-  pure $ RD.upwardBandQualifies rcfg.cfgRecomputeThresholds estimatedDistance distanceDiff
 
 isUnloadingTimeRequired :: DVST.ServiceTierType -> Bool
 isUnloadingTimeRequired str =

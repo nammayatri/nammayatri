@@ -27,7 +27,8 @@ data FeedbackInputConfigRes = FeedbackInputConfigRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FeedbackOptionItem = FeedbackOptionItem
-  { isExclusive :: Kernel.Prelude.Bool,
+  { iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    isExclusive :: Kernel.Prelude.Bool,
     key :: Kernel.Prelude.Text,
     label :: Kernel.Prelude.Text,
     nextQuestionKey :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -40,6 +41,7 @@ data FeedbackQuestionItem = FeedbackQuestionItem
   { acknowledgement :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     autoDismissAfterSeconds :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     inputConfig :: Kernel.Prelude.Maybe FeedbackInputConfigRes,
     isSkippable :: Kernel.Prelude.Bool,
     options :: Kernel.Prelude.Maybe [FeedbackOptionItem],
