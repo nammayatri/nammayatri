@@ -53,8 +53,8 @@ ORDER BY (merchant_local_date, driver_id, id);
 CREATE TABLE atlas_driver_offer_bpp.driver_information (
     `driver_id` String,
     `driver_flow_status` Nullable(String),
-    `verified` Nullable(Bool),
-    `approved` Nullable(Bool),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `enabled` Boolean,
     `enabled_at` Nullable(DateTime),
     `version` DateTime DEFAULT now()
@@ -166,8 +166,8 @@ create table atlas_driver_offer_bpp.vehicle_registration_certificate (
     `unencrypted_certificate_number` Nullable(String),
     `vehicle_model` Nullable(String),
     `vehicle_manufacturer` Nullable(String),
-    `verified` Nullable(Bool),
-    `approved` Nullable(Bool),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `fleet_owner_id` Nullable(String),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
@@ -188,8 +188,8 @@ ORDER BY (merchant_local_date, fleet_owner_id, rc_id);
 CREATE TABLE atlas_driver_offer_bpp.fleet_owner_information (
     `fleet_owner_person_id` String,
     `fleet_name` Nullable(String),
-    `verified` Nullable(Bool),
-    `approved` Nullable(Bool),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `merchant_operating_city_id` Nullable(String),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
@@ -310,8 +310,8 @@ FROM atlas_driver_offer_bpp.daily_stats_queue;
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.driver_information_queue (
     `driver_id` String,
     `driver_flow_status` Nullable(String),
-    `verified` Nullable(Bool),
-    `approved` Nullable(Bool),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `enabled` Boolean,
     `enabled_at` Nullable(DateTime),
     `updated_at` Nullable(DateTime)
@@ -459,8 +459,8 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.vehicle_registration_certifica
     `unencrypted_certificate_number` Nullable(String),
     `vehicle_model` Nullable(String),
     `vehicle_manufacturer` Nullable(String),
-    `verified` Nullable(Bool),
-    `approved` Nullable(Bool),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `fleet_owner_id` Nullable(String),
     `updated_at` Nullable(DateTime)
 ) ENGINE = Kafka
@@ -493,8 +493,8 @@ FROM atlas_driver_offer_bpp.fleet_rc_daily_stats_queue;
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.fleet_owner_information_queue (
     `fleet_owner_person_id` String,
     `fleet_name` Nullable(String),
-    `verified` Nullable(Bool),
-    `approved` Nullable(Bool),
+    `verified` Nullable(String),
+    `approved` Nullable(String),
     `merchant_operating_city_id` Nullable(String),
     `updated_at` Nullable(DateTime)
 ) ENGINE = Kafka

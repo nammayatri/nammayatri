@@ -7,14 +7,15 @@ import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
+import Storage.Clickhouse.DriverInformation (flagCountRow)
 
 data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: C f (Id DRC.VehicleRegistrationCertificate),
     unencryptedCertificateNumber :: C f (Maybe Text),
     vehicleModel :: C f (Maybe Text),
     vehicleManufacturer :: C f (Maybe Text),
-    verified :: C f (Maybe Bool),
-    approved :: C f (Maybe Bool),
+    verified :: C f (Maybe Text),
+    approved :: C f (Maybe Text),
     fleetOwnerId :: C f (Maybe Text)
   }
   deriving (Generic)
@@ -47,18 +48,20 @@ findByIds ids = do
       CH.filter_ (\rc -> rc.id `CH.in_` ids) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE vehicleRegistrationCertificateTTable)
 
 -- | Vehicle counts per (verified, approved) for the legacy statusSummary; the caller buckets them
---   with the same rule as the Redis onboarding counters.
+--   with the same rule as the Redis onboarding counters. Flags are read as text, see `flagFromText`.
 getStatusCountsByFleetOwnerIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Text] ->
   m [(Maybe Bool, Maybe Bool, Int)]
 getStatusCountsByFleetOwnerIds fleetOwnerIds =
-  CH.findAll $
-    CH.select_
-      ( \info -> do
-          let countVehicles = CH.count_ info.id
-          CH.groupBy (info.verified, info.approved) $ \(verified, approved) -> (verified, approved, countVehicles)
+  map flagCountRow
+    <$> CH.findAll
+      ( CH.select_
+          ( \info -> do
+              let countVehicles = CH.count_ info.id
+              CH.groupBy (info.verified, info.approved) $ \(verified, approved) -> (verified, approved, countVehicles)
+          )
+          $ CH.filter_
+            (\info -> info.fleetOwnerId `CH.in_` (map Just fleetOwnerIds))
+            (CH.all_ @CH.APP_SERVICE_CLICKHOUSE vehicleRegistrationCertificateTTable)
       )
-      $ CH.filter_
-        (\info -> info.fleetOwnerId `CH.in_` (map Just fleetOwnerIds))
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE vehicleRegistrationCertificateTTable)
