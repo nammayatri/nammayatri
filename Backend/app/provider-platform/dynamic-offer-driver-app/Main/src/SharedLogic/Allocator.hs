@@ -121,6 +121,7 @@ data AllocatorJobType
   | DeleteUnreferencedFarePolicies
   | GenerateInvoicePdf
   | SendLegalPolicyNotification
+  | SendAutoAcceptOverlay
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 -- | Environment constraints required to enqueue any SchedulerJob via 'createJobIn'.
@@ -202,6 +203,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SDeleteUnreferencedFarePolicies jobData = AnyJobInfo <$> restoreJobInfo SDeleteUnreferencedFarePolicies jobData
   restoreAnyJobInfo SGenerateInvoicePdf jobData = AnyJobInfo <$> restoreJobInfo SGenerateInvoicePdf jobData
   restoreAnyJobInfo SSendLegalPolicyNotification jobData = AnyJobInfo <$> restoreJobInfo SSendLegalPolicyNotification jobData
+  restoreAnyJobInfo SSendAutoAcceptOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendAutoAcceptOverlay jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -909,3 +911,15 @@ data SendLegalPolicyNotificationJobData = SendLegalPolicyNotificationJobData
 instance JobInfoProcessor 'SendLegalPolicyNotification
 
 type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificationJobData
+
+data SendAutoAcceptOverlayJobData = SendAutoAcceptOverlayJobData
+  { bookingId :: Id DB.Booking,
+    driverId :: Id DP.Person,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SendAutoAcceptOverlay
+
+type instance JobContent 'SendAutoAcceptOverlay = SendAutoAcceptOverlayJobData

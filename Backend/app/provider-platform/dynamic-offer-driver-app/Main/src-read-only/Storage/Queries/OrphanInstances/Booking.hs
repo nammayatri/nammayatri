@@ -37,6 +37,8 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
         Domain.Types.Booking.Booking
           { addOnData = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< addOnData),
             area = area,
+            autoAcceptAcknowledged = autoAcceptAcknowledged,
+            autoAcceptOverlaySentAt = autoAcceptOverlaySentAt,
             bapCity = bapCity,
             bapCountry = bapCountry,
             bapId = bapId,
@@ -137,6 +139,8 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
     Beam.BookingT
       { Beam.addOnData = Just $ toJSON addOnData,
         Beam.area = area,
+        Beam.autoAcceptAcknowledged = autoAcceptAcknowledged,
+        Beam.autoAcceptOverlaySentAt = autoAcceptOverlaySentAt,
         Beam.bapCity = bapCity,
         Beam.bapCountry = bapCountry,
         Beam.bapId = bapId,

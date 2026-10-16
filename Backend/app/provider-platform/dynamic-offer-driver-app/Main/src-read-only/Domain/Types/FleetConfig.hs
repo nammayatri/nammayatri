@@ -22,6 +22,7 @@ data FleetConfig = FleetConfig
     autoAssign :: Kernel.Prelude.Maybe Domain.Types.FleetConfig.AutoAssignConfig,
     blacklistCoinEvents :: Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType],
     directlyStartFirstTripAssignment :: Kernel.Prelude.Bool,
+    enableAutoAcceptCta :: Kernel.Prelude.Bool,
     endRideDistanceThreshold :: Kernel.Types.Common.HighPrecMeters,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     fleetPoolingPriority :: Kernel.Prelude.Maybe Domain.Types.FleetPoolingPriority.FleetPoolingPriority,

@@ -33,6 +33,8 @@ import qualified Tools.Maps
 data Booking = Booking
   { addOnData :: [Domain.Types.AddOnConfig.AddOnData],
     area :: Kernel.Prelude.Maybe Lib.Types.SpecialLocation.Area,
+    autoAcceptAcknowledged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    autoAcceptOverlaySentAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     bapCity :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City,
     bapCountry :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.Country,
     bapId :: Kernel.Prelude.Text,

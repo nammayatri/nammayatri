@@ -231,6 +231,7 @@ FleetConfig:
     autoAssign: Maybe AutoAssignConfig
     allowCancellationByDriver: Bool
     fleetPoolingPriority: Maybe FleetPoolingPriority
+    enableAutoAcceptCta: Bool
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
     directlyStartFirstTripAssignment: Maybe Bool
@@ -238,6 +239,7 @@ FleetConfig:
     autoAssign: Maybe Value
     allowCancellationByDriver: Maybe Bool
     fleetPoolingPriority: Maybe Value
+    enableAutoAcceptCta: Maybe Bool
   toTType:
     endRideDistanceThreshold: Just endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: Just directlyStartFirstTripAssignment|E
@@ -245,6 +247,7 @@ FleetConfig:
     autoAssign: Data.Aeson.toJSON <$> autoAssign|E
     allowCancellationByDriver: Just allowCancellationByDriver|E
     fleetPoolingPriority: Data.Aeson.toJSON <$> fleetPoolingPriority|E
+    enableAutoAcceptCta: Just enableAutoAcceptCta|E
   fromTType:
     endRideDistanceThreshold: fromMaybe 100 endRideDistanceThreshold|E
     directlyStartFirstTripAssignment: fromMaybe True directlyStartFirstTripAssignment|E
@@ -252,6 +255,7 @@ FleetConfig:
     autoAssign: Kernel.Utils.JSON.valueToMaybe =<< autoAssign|E
     allowCancellationByDriver: fromMaybe True allowCancellationByDriver|E
     fleetPoolingPriority: Kernel.Utils.JSON.valueToMaybe =<< fleetPoolingPriority|E
+    enableAutoAcceptCta: fromMaybe False enableAutoAcceptCta|E
   sqlType:
     endRideDistanceThreshold: double precision
     blacklistCoinEvents: text[]
@@ -263,6 +267,7 @@ FleetConfig:
     unlinkDriverAndVehicleOnTripTermination: "true"
     blacklistCoinEvents: "'{}'"
     allowCancellationByDriver: "true"
+    enableAutoAcceptCta: "false"
   constraints:
     fleetOwnerId: PrimaryKey
 

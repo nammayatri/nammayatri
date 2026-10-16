@@ -5649,6 +5649,7 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
             autoAssign = Just autoAssign,
             allowCancellationByDriver = fromMaybe True req.allowCancellationByDriver,
             fleetPoolingPriority = poolingPriority Nothing,
+            enableAutoAcceptCta = False,
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCityId,
             createdAt = now,

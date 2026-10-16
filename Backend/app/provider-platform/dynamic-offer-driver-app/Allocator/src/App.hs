@@ -47,6 +47,7 @@ import Lib.Scheduler.InMemManagement (withInMemManagement)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation (runAggregatedCommissionInvoiceCreationJob)
+import SharedLogic.Allocator.Jobs.AutoAccept.SendAutoAcceptOverlay (sendAutoAcceptOverlayToDriver)
 import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
 import SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -205,6 +206,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInListWrapper flowRt env deleteUnreferencedFarePolicies
           & putJobHandlerInListWrapper flowRt env runGenerateInvoicePdfJob
           & putJobHandlerInListWrapper flowRt env handleSendLegalPolicyNotification
+          & putJobHandlerInListWrapper flowRt env sendAutoAcceptOverlayToDriver
     }
 
 runDriverOfferAllocator ::
