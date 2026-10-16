@@ -12,6 +12,7 @@ module Domain.Action.UI.Payout
   )
 where
 
+import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -204,12 +205,50 @@ refreshPayoutOrderWithSettlement payoutOrder =
             >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchantOperatingCityId.getId)
         let payoutStatusServiceReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = payoutConfig.expand}
             createPayoutOrderStatusCall = PayoutTools.payoutOrderStatus person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
-        void $ DPayment.payoutStatusService (cast merchantId) (cast person.id) payoutStatusServiceReq createPayoutOrderStatusCall
+        statusRes <- withTryCatch "refreshPayoutOrderWithSettlement:payoutStatusService" $ DPayment.payoutStatusService (cast merchantId) (cast person.id) payoutStatusServiceReq createPayoutOrderStatusCall
+        case statusRes of
+          Right _ -> pure ()
+          Left err -> do
+            now <- getCurrentTime
+            let isUnknownCashbackOrder =
+                  payoutOrder.entityName == Just DPayment.RIDE_OFFER_CASHBACK
+                    && isProviderOrderNotFound err
+                    && diffUTCTime now payoutOrder.createdAt > unknownOrderGracePeriod
+            unless isUnknownCashbackOrder $ throwM err
+            markUnknownCashbackOrderFailed payoutOrder err
         refreshed <- QPayoutOrder.findByOrderId payoutOrder.orderId >>= fromMaybeM (PayoutOrderNotFound payoutOrder.orderId)
         runRiderPayoutSettlement merchantId merchantOperatingCityId refreshed.status refreshed
         QPayoutOrder.findByOrderId payoutOrder.orderId >>= \case
           Nothing -> throwError $ PayoutOrderNotFound payoutOrder.orderId
           Just finalOrder -> pure finalOrder
+
+-- | How long after creation an order the provider does not know is treated as never created.
+--   Covers the gap between the provider accepting an order and it being visible to a status lookup.
+unknownOrderGracePeriod :: NominalDiffTime
+unknownOrderGracePeriod = 10 * 60
+
+-- | True when Juspay answered the status lookup with 404 E09 ("order not found"). mobility-core turns
+--   the HTTP error into an InternalError carrying the shown servant error, so it is read from that text.
+isProviderOrderNotFound :: SomeException -> Bool
+isProviderOrderNotFound err = case fromException err of
+  Just (InternalError msg) ->
+    "Failed to call payout order status API" `T.isPrefixOf` msg
+      && "statusCode = 404" `T.isInfixOf` msg
+      && "E09" `T.isInfixOf` msg
+  _ -> False
+
+-- | The create call failed with an unknown outcome and the provider has no such order, so nothing
+--   was paid: fail the order and its request. The caller then runs the failure settlement, which
+--   releases the reserved cashback entries for the next payout run.
+markUnknownCashbackOrderFailed :: (PayoutSettlementFlow m r) => DPayoutOrder.PayoutOrder -> SomeException -> m ()
+markUnknownCashbackOrderFailed payoutOrder err = do
+  logError $ "Provider has no payout order " <> payoutOrder.orderId <> ", marking it failed: " <> show err
+  QPayoutOrder.updatePayoutOrderStatus Payout.FULFILLMENTS_FAILURE payoutOrder.orderId
+  forM_ (listToMaybe =<< payoutOrder.entityIds) $ \payoutRequestId ->
+    QPR.findById (Id payoutRequestId) >>= \mbPayoutRequest ->
+      whenJust mbPayoutRequest $ \payoutRequest ->
+        when (payoutRequest.status `elem` [PayoutRequest.INITIATED, PayoutRequest.PROCESSING]) $
+          PayoutRequest.updateStatusWithHistoryById PayoutRequest.AUTO_PAY_FAILED (Just "Payout order not found at provider") payoutRequest
 
 callPayoutService :: (PayoutSettlementFlow m r) => DPayoutOrder.PayoutOrder -> DPayoutConfig.PayoutConfig -> DP.Person -> m ()
 callPayoutService payoutOrder payoutConfig person = do

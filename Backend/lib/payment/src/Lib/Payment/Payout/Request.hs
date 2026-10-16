@@ -47,6 +47,7 @@ import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import Lib.Payment.Domain.Types.PayoutRequest
 import Lib.Payment.Payout.RequestStatus (getStatusMessage, recordHistory, toPaymentState, updatePayoutRequestStatusWithHistory)
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 
 -- | Flat data record supplied by the domain to request a payout.
@@ -336,13 +337,36 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
       case result of
         Left (err :: SomeException) -> do
           logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
-          updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
-          pure $ PayoutExecutionFailed $ "Payout service error: " <> show err
+          -- The payout order row is saved before the provider is called. If it exists, the provider may
+          -- have accepted the order (e.g. the response timed out), so the outcome is unknown: keep the
+          -- request open and let the status check settle or release it. Failing it here would free the
+          -- payee's entries for the next run while the provider can still pay this order.
+          mbPayoutOrder <- QPayoutOrder.findByOrderId orderId
+          case mbPayoutOrder of
+            Nothing -> do
+              updateStatusWithHistoryById AUTO_PAY_FAILED (Just $ "Payout service error: " <> show err) payoutRequest
+              pure $ PayoutExecutionFailed $ "Payout service error: " <> show err
+            Just payoutOrder -> do
+              QPR.updatePayoutTransactionIdById (Just payoutOrder.id.getId) payoutRequest.id
+              updateStatusWithHistoryById PROCESSING (Just $ "Payout outcome unknown after service error, awaiting status check: " <> show err) payoutRequest
+              scheduled <- try $ afterPayoutOrderCreated payoutOrder
+              case scheduled of
+                Left (scheduleErr :: SomeException) -> logError $ "Failed to schedule status check for orderId " <> orderId <> ": " <> show scheduleErr
+                Right () -> pure ()
+              pure $ PayoutNotExecutable PROCESSING
         Right (_mbResp, mbPayoutOrder) -> do
           let payoutOrderIdText = maybe "unknown" (\po -> po.id.getId) mbPayoutOrder
           QPR.updatePayoutTransactionIdById (Just payoutOrderIdText) payoutRequest.id
-          updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) payoutRequest
-          pure $ maybe (PayoutNotExecutable PROCESSING) PayoutExecuted mbPayoutOrder
+          -- A fast provider webhook can settle the order before the create call returns here.
+          -- Keep the status it wrote instead of moving the request back to PROCESSING.
+          currentRequest <- fromMaybe payoutRequest <$> QPR.findById payoutRequest.id
+          if currentRequest.status /= INITIATED
+            then do
+              logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " already " <> show currentRequest.status <> " before the create call returned"
+              pure $ PayoutNotExecutable currentRequest.status
+            else do
+              updateStatusWithHistoryById PROCESSING (Just $ "Payout request sent to Bank. OrderId: " <> payoutOrderIdText) currentRequest
+              pure $ maybe (PayoutNotExecutable PROCESSING) PayoutExecuted mbPayoutOrder
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.

@@ -69,12 +69,17 @@ findCashbackPayoutAmount personId = do
       logError $ "Skipping cashback payout — missing payout VPA for person: " <> person.id.getId
       pure Nothing
     Just payoutVpa -> do
-      (_walletBalance, unsettledWithNet) <- RidePaymentFinance.getPayoutEligibilityData DA.RIDER personId
+      (walletBalance, unsettledWithNet) <- RidePaymentFinance.getPayoutEligibilityData DA.RIDER personId
       let cashbackEntries =
             filter
               (\(e, _) -> e.referenceType == RidePaymentFinance.ridePaymentRefCashbackPayout)
               unsettledWithNet
-          totalAmount = sum (map snd cashbackEntries)
+          entriesAmount = sum (map snd cashbackEntries)
+          -- Never pay more than the wallet holds: a paid payout whose success was not recorded leaves
+          -- its entries unsettled, but its amount already left the wallet at PayoutInitiated.
+          totalAmount = min walletBalance entriesAmount
+      when (totalAmount < entriesAmount) $
+        logError $ "Cashback payout capped at wallet balance " <> show walletBalance <> " (entries " <> show entriesAmount <> ") for person=" <> personId.getId
       if null cashbackEntries
         then do
           logInfo $ "No eligible cashback entries for person=" <> personId.getId
@@ -157,9 +162,12 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
           <> show totalAmount
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_INITIATED" totalAmount
     PayoutRequest.PayoutProcessing pr status -> do
-      -- Also returned when Juspay accepted the order but it could not be read back, so an order may be
-      -- in flight: keep the entries reserved under this request until a status check resolves it.
-      RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
+      -- Returned when the order may be in flight (Juspay accepted it but it could not be read back, or
+      -- the create call failed with an unknown outcome): keep the entries reserved under this request
+      -- until a status check resolves it. A final status means the webhook already settled or released
+      -- the entries before the create call returned, so they must not be reserved again.
+      when (status `elem` [DPR.INITIATED, DPR.PROCESSING, DPR.RETRYING]) $
+        RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
       logInfo $
         "Cashback payout already in flight. person="
           <> person.id.getId

@@ -182,7 +182,7 @@ import qualified Lib.Finance.Core.Types as Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as FInvoiceService
-import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome (..), settlePayoutLedger)
+import Lib.Finance.Ledger.PayoutSettlement (PayoutLedgerRefs (..), PayoutOutcome (..), postOnceByReference, settlePayoutLedger)
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
@@ -803,13 +803,16 @@ releaseCashbackEntriesReservation = Lib.Finance.Ledger.Service.markEntriesAsUnse
 -- | PayoutInitiated: move the cashback amount out of the rider's wallet into the merchant's
 --   OwnerPayoutLiability liability account (PROCESSING) until the PG confirms or fails the payout.
 --   Keyed by ctx.referenceId (the PayoutRequest id), like every other leg of the payout.
+--   Posted only once per payout: a success webhook that lands first posts this leg itself
+--   (see 'settlePayoutLedger'), and a second hold would never be settled.
 postCashbackOwnerPayoutLiability ::
   (BeamFlow.BeamFlow m r, Finance.HasActorInfo m r) =>
   FinanceCtx ->
   HighPrecMoney ->
   m (Either FinanceError [Id LE.LedgerEntry])
 postCashbackOwnerPayoutLiability ctx amount =
-  fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount ridePaymentRefCashbackPayoutTransfer Nothing)
+  postOnceByReference ridePaymentRefCashbackPayoutTransfer ctx $
+    fmap snd <$> runFinance ctx (void $ transferInProcessing OwnerLiability OwnerPayoutLiability amount ridePaymentRefCashbackPayoutTransfer Nothing)
 
 cashbackPayoutLedgerRefs :: PayoutLedgerRefs
 cashbackPayoutLedgerRefs =
