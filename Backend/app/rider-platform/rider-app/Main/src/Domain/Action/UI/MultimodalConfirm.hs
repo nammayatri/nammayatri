@@ -3396,7 +3396,7 @@ getMultimodalTrackStopRoutes (mbPersonId, _merchantId) stopCode mbAllowClusters 
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-
-    fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
+    fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe . SharedCab.withoutCabRows (.agencyKey)
       =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   mappings <- OTPRest.getRouteStopMappingByStopCodeWithClusters mbAllowClusters stopCode integratedBPPConfig
   -- GIMS already expands a station (and, with clusters, its nearby stops) into the platforms each
