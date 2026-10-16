@@ -1,6 +1,7 @@
 -- | Closing an allocation under the booking lock: back to FINDING with a bumped attempt count, or the rider's last no-show cancelling the booking.
 module SharedLogic.SharedCab.Allocation.Reallocate
   ( Closed (..),
+    closeAllocation,
     CloseResult (..),
     closeLocked,
     afterClose,
@@ -23,7 +24,7 @@ import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, clearAllocationKeys, readAttempts)
 import SharedLogic.SharedCab.Allocation.Select (closable, crossedMaxAttempts, isRescheduledChild)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (recordCancelReason, shared)
+import SharedLogic.SharedCab.Booking (recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
@@ -54,6 +55,17 @@ data CloseResult
   | -- | the rider's last allowed no-show: the booking is cancelled, not FINDING
     AutoCancelled
   deriving (Show, Eq)
+
+-- | The one close path: close under the booking lock (`inLock` runs there too, only if this call won the close), then the effects
+-- outside it. The caller re-ticks the city.
+closeAllocation :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> AllocationOutcome -> m () -> m (Maybe Closed)
+closeAllocation cfg bookingId plate outcome inLock = do
+  closed <- withBookingLock bookingId $ do
+    mbClosed <- closeLocked cfg bookingId plate outcome
+    when (isJust mbClosed) inLock
+    pure mbClosed
+  afterClose cfg bookingId plate outcome closed
+  pure closed
 
 -- | Inside the booking lock: CAS plate -> null (back to FINDING), clear the alloc key, bump attempts. Nothing when another closer won.
 closeLocked ::

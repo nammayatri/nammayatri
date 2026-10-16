@@ -28,11 +28,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, readAttempts, readFindingSince)
-import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
+import SharedLogic.SharedCab.Allocation.Reallocate (closeAllocation)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.Keys (skippedKey)
@@ -82,8 +82,7 @@ releaseSharedCabAllocation ::
   AllocationOutcome ->
   m Bool
 releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
-  closed <- withBookingLock bookingId $ closeLocked cfg bookingId expectedPlate outcome
-  afterClose cfg bookingId expectedPlate outcome closed
+  closed <- closeAllocation cfg bookingId expectedPlate outcome (pure ())
   whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
@@ -91,11 +90,7 @@ releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
 skipSharedCabAllocation :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> SkipReason -> m Bool
 skipSharedCabAllocation cfg bookingId plate reason = do
   let outcome = RiderSkipped reason
-  closed <- withBookingLock bookingId $ do
-    closedInfo <- closeLocked cfg bookingId plate outcome
-    when (isJust closedInfo) $ shared $ Redis.sAddExp (skippedKey bookingId) [plate] cfg.findingTimeoutSec
-    pure closedInfo
-  afterClose cfg bookingId plate outcome closed
+  closed <- closeAllocation cfg bookingId plate outcome (shared $ Redis.sAddExp (skippedKey bookingId) [plate] cfg.findingTimeoutSec)
   whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
@@ -107,9 +102,7 @@ releaseUnboarded plate outcome = do
   let unboarded = [b | b <- bookings, isJust (allocatedPlate (b, [t.status | t <- tickets, t.frfsTicketBookingId == b.id]))]
   cities <- forM unboarded $ \b -> do
     cfg <- Config.getTunables b.merchantOperatingCityId
-    closed <- withBookingLock b.id $ closeLocked cfg b.id plate outcome
-    afterClose cfg b.id plate outcome closed
-    pure closed
+    closeAllocation cfg b.id plate outcome (pure ())
   mapM_ triggerSharedCabAllocation (nub (map (.closedCity) (catMaybes cities)))
 
 triggerSharedCabAllocation ::
