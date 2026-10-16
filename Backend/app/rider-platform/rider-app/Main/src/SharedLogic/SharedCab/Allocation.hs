@@ -29,7 +29,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, readAttempts, readFindingSince)
 import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, findingOf, groupAllOn, movingCab, planRouteAllocation, silentCab, skippedWhileFinding, withoutSkipped)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared, withBookingLock)
@@ -159,5 +159,5 @@ allocationPass cityId = do
         forM_ bookings $ \booking -> do
           attempts <- readAttempts (attemptsKey booking.bookingId)
           skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
-          void $ claimFirst cfg booking (withoutSkipped skipped (planRouteAllocation now cfg positions sessions booking))
+          void $ claimFirst cfg booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))
   pure (live, positionsByRoute)

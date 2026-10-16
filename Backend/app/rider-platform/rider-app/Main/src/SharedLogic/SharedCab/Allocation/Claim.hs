@@ -22,7 +22,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, isSkipped, skippedWhileFinding)
+import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -86,7 +86,7 @@ attemptClaim cfg booking cand = do
             skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
             liveSeats <- liveSeatsOnVehicle plate
             let available = s.capacity - s.walkupCount - liveSeats
-            if plate `isSkipped` skipped
+            if plate `elem` skipped
               then pure (Left ClaimSkipped)
               else
                 if available < booking.seats

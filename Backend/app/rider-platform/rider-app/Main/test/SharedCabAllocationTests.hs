@@ -17,7 +17,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isSkipped, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, standTimerOnClaim, ticketsCountedAtConfirm, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, standTimerOnClaim, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
@@ -75,7 +75,11 @@ candidate plate =
 
 -- a cab at `pos` doing `speed` m/s whose last fix was `agoSec` before t0, with S1 as its upcoming board stop
 cabFix :: Text -> LatLong -> Maybe Double -> Int -> LT.VehicleTrackingOnRouteResp
-cabFix plate pos speed agoSec =
+cabFix = cabFixEta 120
+
+-- as cabFix, reaching the board stop `etaSec` after t0
+cabFixEta :: Int -> Text -> LatLong -> Maybe Double -> Int -> LT.VehicleTrackingOnRouteResp
+cabFixEta etaSec plate pos speed agoSec =
   LT.VehicleTrackingOnRouteResp
     plate
     LT.VehicleInfo
@@ -86,7 +90,7 @@ cabFix plate pos speed agoSec =
         longitude = pos.lon,
         speed,
         timestamp = Just (T.pack (iso8601Show (addUTCTime (fromIntegral (negate agoSec)) t0))),
-        upcomingStops = Just [LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) (addUTCTime 120 t0) LT.Upcoming Nothing]
+        upcomingStops = Just [LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) (addUTCTime (fromIntegral etaSec) t0) LT.Upcoming Nothing]
       }
 
 finding :: FindingBooking
@@ -157,8 +161,6 @@ tests =
           claimable BS.CONFIRMED Nothing [] False
         ]
           @?= [True, False, False, False, False, False, False],
-      testCase "the claim's under-lock check sees only the plate the rider skipped" $
-        map (`isSkipped` ["ML05B2222"]) ["ML05A1111", "ML05B2222"] @?= [False, True],
       testCase "the fallback push fires on the close that crosses maxAttempts, not before or after" $
         map (uncurry (crossedMaxAttempts 2)) [(0, 1), (1, 2), (2, 3), (0, 0)] @?= [False, True, False, False],
       testCase "only the two timer outcomes push the missed-cab copy" $
@@ -196,6 +198,9 @@ tests =
           movingCab t0 60 "P1" [cabFix "p 1" nearStop (Just 8) 5]
         )
           @?= (["P1"], True),
+      testCase "eligible cabs come nearest first" $
+        map (.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [cabFixEta 300 "P2" nearStop (Just 0) 5, cabFixEta 60 "P1" nearStop (Just 0) 5] [(candidate "P2").rcSession, (candidate "P1").rcSession] finding)
+          @?= ["P1", "P2"],
       testCase "a cab counts as moving only on a fresh report above the speed threshold" $
         [ movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 8) 5],
           movingCab t0 60 "P1" [cabFix "P1" nearStop (Just 0) 5],
@@ -233,7 +238,7 @@ tests =
       testCase "a booking already cancelled is not cancelled (or refunded) again" $
         map cancellableStatus [BS.CONFIRMED, BS.CANCELLED, BS.COUNTER_CANCELLED, BS.CANCEL_INITIATED, BS.FAILED, BS.RESCHEDULED] @?= [True, False, False, False, False, False],
       testCase "a booking with a parent (rescheduled) never counted its tickets at confirm, so none are reversed" $
-        (ticketsCountedAtConfirm (Nothing :: Maybe ()), ticketsCountedAtConfirm (Just ())) @?= (True, False),
+        (isRescheduledChild (Nothing :: Maybe ()), isRescheduledChild (Just ())) @?= (False, True),
       testCase "the next tick is scheduled even when the tick body throws" $ do
         ran <- newIORef False
         r <- try (thenReschedule (throwIO (userError "db down")) (writeIORef ran True)) :: IO (Either IOException ())

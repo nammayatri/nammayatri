@@ -20,7 +20,7 @@ import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, clearAllocationKeys, readAttempts)
-import SharedLogic.SharedCab.Allocation.Select (closable, crossedMaxAttempts, ticketsCountedAtConfirm)
+import SharedLogic.SharedCab.Allocation.Select (closable, crossedMaxAttempts, isRescheduledChild)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (recordCancelReason, shared)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -125,7 +125,7 @@ releaseCancelledBooking b = do
           purchaseEvent <- SPUS.mkPurchaseEvent person (Just b.vehicleType) b.serviceTierType DPUS.TICKET Nothing (Just quantity) b.merchantId b.merchantOperatingCityId
           SPUS.reversePurchase purchaseEvent
       either (\e -> logError $ "Failed to reverse PersonPTStats for booking " <> b.id.getId <> ": " <> show e) pure reverseStatsResult
-  when (ticketsCountedAtConfirm b.parentBookingId) . void . withTryCatch "sharedCab:releaseCancelledBooking:ticketsBooked" $
+  unless (isRescheduledChild b.parentBookingId) . void . withTryCatch "sharedCab:releaseCancelledBooking:ticketsBooked" $
     QPS.incrementTicketsBookedInEvent b.riderId (- quantity)
 
 eventBlame :: Blame -> Events.Blame

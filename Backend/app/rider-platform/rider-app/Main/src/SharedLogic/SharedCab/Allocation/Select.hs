@@ -17,14 +17,11 @@ module SharedLogic.SharedCab.Allocation.Select
     silentReleaseMult,
     silentCab,
     movingCab,
-    rankCandidates,
-    planRouteAllocation,
     withoutSkipped,
-    isSkipped,
     skippedWhileFinding,
-    ticketsCountedAtConfirm,
     crossedMaxAttempts,
     groupAllOn,
+    isRescheduledChild,
   )
 where
 
@@ -109,7 +106,7 @@ isFreshPosition now maxAgeSec vi = case vi.timestamp >>= parseLtsTimestamp of
   Nothing -> False -- silent-by-absence must not read as fresh
   Just ts -> let age = diffUTCTime now ts in 0 <= age && age <= fromIntegral maxAgeSec
 
--- | Cab not past the board stop (LTS keeps the stop Upcoming while the cab stands at it), an optimistic seat screen
+-- | Nearest first. A cab not past the board stop (LTS keeps the stop Upcoming while the cab stands at it), an optimistic seat screen
 -- (Phase 2 recounts under the lock), and ETA within allocationWindowSec.
 eligibleCandidates ::
   UTCTime ->
@@ -119,16 +116,18 @@ eligibleCandidates ::
   FindingBooking ->
   [RankedCandidate]
 eligibleCandidates now cfg tracking sessions booking =
-  [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed, rcAtStop = distanceBetweenInMeters (LatLong veh.vehicleInfo.latitude veh.vehicleInfo.longitude) stop.stop.coordinate <= fromIntegral cfg.atStopRadiusM}
-    | s <- sessions,
-      s.status == ACTIVE,
-      s.capacity - s.walkupCount >= booking.seats,
-      Just veh <- [findByPlate (.vehicleNumber) s.vehicleNumber tracking],
-      isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
-      Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
-      let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
-      etaSec <= cfg.allocationWindowSec
-  ]
+  sortOn
+    rcEtaToBoardStopSec
+    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed, rcAtStop = distanceBetweenInMeters (LatLong veh.vehicleInfo.latitude veh.vehicleInfo.longitude) stop.stop.coordinate <= fromIntegral cfg.atStopRadiusM}
+      | s <- sessions,
+        s.status == ACTIVE,
+        s.capacity - s.walkupCount >= booking.seats,
+        Just veh <- [findByPlate (.vehicleNumber) s.vehicleNumber tracking],
+        isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
+        Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
+        let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
+        etaSec <= cfg.allocationWindowSec
+    ]
 
 standTimerOnClaim :: RankedCandidate -> Bool
 standTimerOnClaim c = not c.rcMoving && c.rcAtStop
@@ -164,32 +163,17 @@ silentCab now maxAgeSec plate tracking =
   any (isFreshPosition now maxAgeSec . (.vehicleInfo)) tracking
     && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (findByPlate (.vehicleNumber) plate tracking)
 
-rankCandidates :: [RankedCandidate] -> [RankedCandidate]
-rankCandidates = sortOn rcEtaToBoardStopSec
-
-planRouteAllocation ::
-  UTCTime ->
-  Config.SharedCabTunables ->
-  [LT.VehicleTrackingOnRouteResp] ->
-  [Session] ->
-  FindingBooking ->
-  [RankedCandidate]
-planRouteAllocation now cfg tracking sessions booking =
-  rankCandidates (eligibleCandidates now cfg tracking sessions booking)
-
 withoutSkipped :: [Text] -> [RankedCandidate] -> [RankedCandidate]
-withoutSkipped skipped = filter (not . (`isSkipped` skipped) . (.rcSession.vehicleNumber))
-
-isSkipped :: Text -> [Text] -> Bool
-isSkipped = elem
+withoutSkipped skipped = filter ((`notElem` skipped) . (.rcSession.vehicleNumber))
 
 skippedWhileFinding :: Config.SharedCabTunables -> UTCTime -> Int -> UTCTime -> [Text] -> [Text]
 skippedWhileFinding cfg now attempts findingSince skipped
   | fallbackReached now cfg.maxAttempts attempts findingSince cfg.fallbackAfterSec = []
   | otherwise = skipped
 
-ticketsCountedAtConfirm :: Maybe parent -> Bool
-ticketsCountedAtConfirm = isNothing
+-- | A rescheduled booking is a child of the one it replaced; the parent already counted the rider's tickets.
+isRescheduledChild :: Maybe parent -> Bool
+isRescheduledChild = isJust
 
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
 crossedMaxAttempts maxAttempts before now = before < maxAttempts && now >= maxAttempts
