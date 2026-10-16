@@ -36,13 +36,17 @@ data IssueReportReq = IssueReportReq
   { rideId :: Maybe (Id Ride),
     mediaFiles :: [Id MediaFile],
     optionId :: Maybe (Id IssueOption),
-    categoryId :: Id IssueCategory,
+    -- | Optional when 'categoryName' is sent (pre-ticket bot flow).
+    categoryId :: Maybe (Id IssueCategory),
     description :: Text,
     chats :: Maybe [Chat],
     createTicket :: Maybe Bool,
     -- | FEEDBACK_TICKET: store the report as CLOSED, no ticket raised.
     isFeedback :: Maybe Bool,
-    ticketBookingId :: Maybe (Id FRFSTicketBooking)
+    ticketBookingId :: Maybe (Id FRFSTicketBooking),
+    categoryName :: Maybe Text,
+    -- | Pre-ticket bot choice shown as the ticket's sub category when no option applies.
+    subCategoryName :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema, Show)
 

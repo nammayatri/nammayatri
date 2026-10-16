@@ -321,7 +321,7 @@ issueReportList ::
 issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifier = do
   language <- getLanguage personId mbLanguage issueHandle
   issueReports <- QIR.findAllByPerson personId
-  let validIssueReports = filter (isJust . (.categoryId)) issueReports
+  let validIssueReports = filter (\r -> isJust r.categoryId || isJust r.categoryName) issueReports
   issueConfig <- issueHandle.findIssueConfig merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let rideIds = mapMaybe (.rideId) validIssueReports
@@ -362,13 +362,14 @@ issueReportList (personId, _, merchantOpCityId) mbLanguage issueHandle identifie
       Map.Map (Id Ride) Common.IssueReportRideInfo ->
       m Common.IssueReportListItem
     mkIssueReport issueReport issueStatus language rideInfoMap = do
-      (issueCategory, issueCategoryTranslation) <- CQIC.findByIdAndLanguage (fromJust issueReport.categoryId) language identifier >>= fromMaybeM (IssueCategoryNotFound (fromJust issueReport.categoryId).getId)
+      mbCategoryRow <- forM issueReport.categoryId $ \catId -> CQIC.findByIdAndLanguage catId language identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
       mbIssueOption <- maybe (return Nothing) (`CQIO.findById` identifier) issueReport.optionId
+      let rowCategory = mbCategoryRow <&> \(issueCategory, issueCategoryTranslation) -> fromMaybe issueCategory.category $ issueCategoryTranslation <&> (.translation)
       return $
         Common.IssueReportListItem
           { issueReportId = issueReport.id,
             issueReportShortId = issueReport.shortId,
-            category = fromMaybe issueCategory.category $ issueCategoryTranslation <&> (.translation),
+            category = fromMaybe (fromMaybe "" rowCategory) issueReport.categoryName,
             rideId = issueReport.rideId,
             ticketBookingId = issueReport.ticketBookingId,
             optionLabel = mbIssueOption >>= (.label),
@@ -723,6 +724,10 @@ createIssueReport ::
   m Common.IssueReportRes
 createIssueReport = createIssueReportWithContext Nothing
 
+-- | A blank 'categoryName' counts as absent.
+normalizeCategoryName :: Common.IssueReportReq -> Common.IssueReportReq
+normalizeCategoryName r = (r :: Common.IssueReportReq) {Common.categoryName = r.categoryName >>= \n -> let s = T.strip n in if T.null s then Nothing else Just s}
+
 createIssueReportWithContext ::
   ( EsqDBReplicaFlow m r,
     EncFlow m r,
@@ -737,7 +742,8 @@ createIssueReportWithContext ::
   Identifier ->
   Maybe Text ->
   m Common.IssueReportRes
-createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req@Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
+createIssueReportWithContext creationContext args@(personId, _merchantId) mbLanguage req0 issueHandle identifier becknIssueId = do
+  let req@Common.IssueReportReq {..} = normalizeCategoryName req0
   validateIssueDescription description
   -- Guard against a client retrying the same submission (e.g. after a
   -- timeout on a request carrying an attachment) and ending up with two
@@ -748,7 +754,7 @@ createIssueReportWithContext creationContext args@(personId, _merchantId) mbLang
   -- the guard for the case it's meant to catch.
 
   let scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId)
-      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> categoryId.getId <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> show (fromMaybe False isFeedback) <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
+      dedupKey = "IssueSubmitDedup:" <> personId.getId <> ":" <> maybe "" (.getId) categoryId <> ":" <> fromMaybe "" categoryName <> ":" <> maybe "" (.getId) optionId <> ":" <> maybe "" (.getId) rideId <> ":" <> maybe "" show createTicket <> ":" <> show (fromMaybe False isFeedback) <> ":" <> maybe "" (.getId) ticketBookingId <> ":" <> maybe "" (<> ":") scheduledBookingTransactionId <> T.take 200 description
   -- Atomic claim (SETNX-style): only the request that actually creates the
   -- key proceeds to do the work. A plain GET-then-SET has a race window —
   -- two requests that both arrive before either has written the cache can
@@ -774,7 +780,7 @@ createIssueReportWithContext creationContext args@(personId, _merchantId) mbLang
         Just Nothing -> do
           threadDelaySec $ Seconds 1
           awaitDedupedResponse dedupKey
-        Nothing -> createIssueReportWithContext creationContext args mbLanguage req issueHandle identifier becknIssueId
+        Nothing -> createIssueReportWithContext creationContext args mbLanguage req0 issueHandle identifier becknIssueId
 
 createIssueReportImpl ::
   ( EsqDBReplicaFlow m r,
@@ -791,11 +797,14 @@ createIssueReportImpl ::
   Maybe Text ->
   m Common.IssueReportRes
 createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.IssueReportReq {..} issueHandle identifier becknIssueId = do
-  category <- CQIC.findById categoryId identifier >>= fromMaybeM (IssueCategoryDoesNotExist categoryId.getId)
+  mbCategory <- forM categoryId \catId -> CQIC.findById catId identifier >>= fromMaybeM (IssueCategoryDoesNotExist catId.getId)
+  -- A client-sent categoryName (pre-ticket bot) wins over the category row's name.
+  let categoryText = fromMaybe (maybe "" (.category) mbCategory) categoryName
+  when (isNothing mbCategory && isNothing categoryName) $ throwError (InvalidRequest "Either categoryId or categoryName is required")
   mbOption <- forM optionId \justOptionId -> do
     issueOption <- CQIO.findById justOptionId identifier >>= fromMaybeM (IssueOptionDoesNotExist justOptionId.getId)
-    whenJust issueOption.issueCategoryId $ \optionCategoryId ->
-      when (optionCategoryId /= categoryId) $ throwError (IssueOptionInvalid justOptionId.getId categoryId.getId)
+    whenJust ((,) <$> issueOption.issueCategoryId <*> categoryId) $ \(optionCategoryId, catId) ->
+      when (optionCategoryId /= catId) $ throwError (IssueOptionInvalid justOptionId.getId catId.getId)
     return issueOption
   mbRide <- forM rideId \justRideId -> do
     B.runInReplica (issueHandle.findRideById justRideId merchantId) >>= fromMaybeM (RideNotFound justRideId.getId)
@@ -814,7 +823,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- issueHandle.findIssueConfig mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
-  -- FEEDBACK_TICKET: stored as CLOSED, no ticket raised
+  -- Feedback reports are stored CLOSED; the desk ticket is raised, then closed.
   let isFeedbackFlow = fromMaybe False isFeedback
       shouldCreateTicket = not isFeedbackFlow && (isNothing createTicket || fromJust createTicket)
       -- auto reply: the submitted-from message's onSubmitReplyMsgs, else IssueConfig (tickets only)
@@ -827,7 +836,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       then pure []
       else case optionId of
         Just justOptionId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByOptionIdAndLanguage justOptionId language identifier
-        Nothing -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByCategoryIdAndLanguage categoryId language identifier
+        Nothing -> maybe (pure []) (\catId -> map (\(m, _, _) -> m) <$> CQIM.findAllActiveByCategoryIdAndLanguage catId language identifier) categoryId
   let shownIds = [c.chatId | c <- fromMaybe [] chats, c.chatType == IssueMessage]
       labelled = [m | m <- submitMessages, m.label `elem` map Just submitLabels, Just ids <- [m.onSubmitReplyMsgs], not (null ids)]
       -- prefer the labelled message the customer was actually shown (present in chats)
@@ -843,8 +852,10 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
   mbRideInfoRes <- traverse (issueHandle.getRideInfo merchantId mocId) rideId
   let messages = mkIssueMessageList (Just $ catMaybes issueMessageTranslationList) language issueConfig mbRideInfoRes
       chats_ = fromMaybe [] chats
-      updatedChats = updateChats chats_ (shouldCreateTicket || isFeedbackFlow) isFeedbackFlow messages uploadedMediaFiles now
-  mbSubCategoryOptionId <- resolveSubCategoryOptionId chats_ optionId category.category identifier
+      -- categoryName-only clients send no chats; still record the on-create reply.
+      hasCategoryName = isJust categoryName
+      updatedChats = updateChats chats_ (shouldCreateTicket || isFeedbackFlow) (isFeedbackFlow || hasCategoryName) messages uploadedMediaFiles now
+  mbSubCategoryOptionId <- resolveSubCategoryOptionId chats_ optionId categoryText identifier
   mbSubCategoryOption <- maybe (pure Nothing) (`CQIO.findById` identifier) mbSubCategoryOptionId
   config <- issueHandle.findMerchantConfig merchantId mocId (Just personId)
   let mbIssueReportType = mbOption >>= (.label) >>= A.decode . A.encode
@@ -858,7 +869,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       let message = createJsonMessage msg
       void $ L.runIO $ Slack.publishMessage slackConfig message
   _ <- QIR.create issueReport
-  when shouldCreateTicket $ do
+  when (shouldCreateTicket || isFeedbackFlow) $ do
     -- Resolve pre-ticket history BEFORE creating the ticket. createTicket's
     -- body becomes message #1 on the Xyne thread (it's what bootstraps it) —
     -- if that body were always 'description' (the text typed last, right
@@ -878,7 +889,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
           [] -> (Nothing, Nothing, xyneDescriptionExternalId issueReport.id, [])
           ((chat, Left botMessage) : rest) -> (Just botMessage, Just "Auto Reply", xyneChatExternalId issueReport.id chat, rest)
           ((chat, Right userText) : rest) -> (Just userText, Nothing, xyneChatExternalId issueReport.id chat, rest)
-    ticket <- buildTicket issueReport category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId
+    ticket <- buildTicket issueReport categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config now issueHandle uploadedMediaFiles mbTicketBody mbSenderName ticketExternalId
     ticketResponse <- withTryCatch "createTicket:issueReport" (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right (primaryResp, additionalId) -> do
@@ -901,6 +912,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
         -- shouldCreateTicket guard, after the ticket exists, so there is a thread to
         -- append to (forwarding keys on issueReport.id as the Xyne threadId).
         mapM_ (\message -> forwardChatToTicketServiceAs "Auto Reply" issueReportWithTicket identifier issueHandle message.message [] (Just $ xyneHistoricalExternalId message.id.getId issueReport.id now)) messages
+        when isFeedbackFlow $
+          updateTicketStatus issueReportWithTicket TIT.Closed merchantId mocId issueHandle identifier "Feedback received. No action needed; closed automatically."
       Left err -> do
         -- Ticket creation itself failed — skip forwarding history/replies rather
         -- than posting comments against a thread that may not exist.
@@ -921,7 +934,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             scheduledBookingTransactionId = creationContext >>= (.scheduledBookingTransactionId),
             merchantOperatingCityId = Just mocId,
             optionId = optionId,
-            categoryId = Just categoryId,
+            categoryId = categoryId,
+            categoryName = categoryName,
             mediaFiles = mediaFiles,
             assignee = Nothing,
             status = if shouldCreateTicket then OPEN else (if isFeedbackFlow then CLOSED else NOT_APPLICABLE),
@@ -1017,8 +1031,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> Text -> m TIT.CreateTicketReq
-    buildTicket issue category mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName ticketExternalId = do
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> Text -> Maybe D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> UTCTime -> ServiceHandle m -> [D.MediaFile] -> Maybe Text -> Maybe Text -> Text -> m TIT.CreateTicketReq
+    buildTicket issue categoryText mbCategory mbSubCategoryOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg now iHandle riderUploadedMediaFiles mbTicketBody mbSenderName ticketExternalId = do
       info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       let merchantShortId = moCity.merchantShortId.getShortId
@@ -1034,8 +1048,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
       riderMediaFileUrls <- traverse (mediaFileToTicketUri iHandle) riderUploadedMediaFiles
       return $
         TIT.CreateTicketReq
-          { category = category.category,
-            subCategory = (.option) <$> mbSubCategoryOption,
+          { category = categoryText,
+            subCategory = ((.option) <$> mbSubCategoryOption) <|> subCategoryName,
             disposition = merchantCfg.kaptureDisposition,
             queue = merchantCfg.kaptureQueue,
             issueId = Just issue.id.getId,
@@ -1050,7 +1064,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
             rideDescription = Just info,
             becknIssueId,
             ticketContext = Just TIT.IssueTicket,
-            xyneChannelId = category.xyneChannelId,
+            xyneChannelId = mbCategory >>= (.xyneChannelId),
             xyneExternalId = Just ticketExternalId
           }
 
@@ -1086,6 +1100,7 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
                 vehicleCategory = Just $ show frfsTicket.vehicleType,
                 vehicleServiceTier = Nothing,
                 status = show frfsTicket.status,
+                rideType = Just "PublicTransport",
                 rideCreatedAt = frfsTicket.createdAt,
                 pickupLocation = fromLocation,
                 dropLocation = Just toLocation,
@@ -1104,7 +1119,8 @@ createIssueReportImpl creationContext (personId, merchantId) mbLanguage Common.I
               vehicleNo = maybe "" (.vehicleNo) mbRideInfoRes,
               vehicleCategory = show . fromJust . vehicleVariant <$> mbRideInfoRes,
               vehicleServiceTier = (.vehicleServiceTierName) =<< mbRideInfoRes,
-              status = maybe "" (show . (.bookingStatus)) mbRideInfoRes,
+              status = maybe "" (show . (.rideStatus)) mbRideInfoRes,
+              rideType = (.rideType) =<< mbRideInfoRes,
               rideCreatedAt = maybe now (.createdAt) mbRide,
               pickupLocation = mkLocation ((.customerPickupLocation) <$> mbRideInfoRes),
               dropLocation = mkLocation . (.customerDropLocation) <$> mbRideInfoRes,
@@ -1248,10 +1264,11 @@ issueInfo issueReportId (personId, merchantId, merchantOpCityId) mbLanguage issu
     issueHandle.findIssueConfig adjMerchantOpCityId identifier
       >>= fromMaybeM (IssueConfigNotFound adjMerchantOpCityId.getId)
   (categoryLabel, categoryId, mbCategoryName) <- case issueReport.categoryId of
-    Nothing -> pure (Nothing, Nothing, Nothing)
+    Nothing -> pure (issueReport.categoryName, Nothing, issueReport.categoryName)
     Just catId -> do
       (issueCategory, _) <- CQIC.findByIdAndLanguage catId language identifier >>= fromMaybeM (IssueCategoryNotFound catId.getId)
-      pure (Just (issueCategory.category & T.toUpper & T.replace " " "_"), Just catId, Just issueCategory.category)
+      -- A bot-chosen name is what the customer saw; prefer it over the category row.
+      pure (Just (fromMaybe (issueCategory.category & T.toUpper & T.replace " " "_") issueReport.categoryName), Just catId, Just issueCategory.category)
   -- Same "real subcategory, not just whatever was tapped last" resolution
   -- used at ticket-creation time (see 'resolveSubCategoryOptionId') — kept
   -- consistent here so the customer's own view of their issue never shows a
@@ -1698,28 +1715,29 @@ mkIssueOptionList issueConfig language mbRideInfoRes (issueOption, issueTranslat
 
 recreateIssueChats :: BeamFlow m r => D.IssueReport -> D.IssueConfig -> Maybe RideInfoRes -> Language -> Identifier -> m [ChatDetail]
 recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
-  mapM
-    ( \item -> case item.chatType of
-        IssueMessage -> do
-          mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
-          let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
-          let label = (.label) . fst_ =<< mbIssueMessageTranslation
-          pure $ mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label
-        IssueOption -> do
-          mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language identifier
-          let mbIssueOption = mkIssueOptionList issueConfig language mbRideInfoRes <$> mbIssueOptionTranslation
-              label = (.label) . fst =<< mbIssueOptionTranslation
-          pure $ mkChatDetail item.chatId item.timestamp Text USER (mbIssueOption <&> (.option)) Nothing Nothing label
-        IssueDescription -> pure $ mkChatDetail item.chatId item.timestamp Text USER (Just issueReport.description) Nothing Nothing Nothing
-        MediaFile -> do
-          mediaFile <- CQMF.findById (Id item.chatId) identifier >>= fromMaybeM (FileDoesNotExist item.chatId)
-          let mediaUrl = case mediaFile.status of
-                Just D.COMPLETED -> Just mediaFile.url
-                Nothing -> Just mediaFile.url
-                _ -> Nothing
-          pure $ mkChatDetail item.chatId item.timestamp (mediaTypeToMessageType mediaFile._type) USER mediaUrl Nothing Nothing Nothing
-    )
-    issueReport.chats
+  concat
+    <$> mapM
+      ( \item -> case item.chatType of
+          IssueMessage -> do
+            mbIssueMessageTranslation <- CQIM.findByIdAndLanguage (Id item.chatId) language identifier
+            let mbMessage = (\messageList -> listToMaybe $ mkIssueMessageList (Just messageList) language issueConfig mbRideInfoRes) . (: []) =<< mbIssueMessageTranslation
+            let label = (.label) . fst_ =<< mbIssueMessageTranslation
+            pure [mkChatDetail item.chatId item.timestamp Text BOT (mbMessage <&> (.message)) (mbMessage >>= (.messageTitle)) (mbMessage >>= (.messageAction)) label]
+          IssueOption -> do
+            mbIssueOptionTranslation <- CQIO.findByIdAndLanguage (Id item.chatId) language identifier
+            let mbIssueOption = mkIssueOptionList issueConfig language mbRideInfoRes <$> mbIssueOptionTranslation
+                label = (.label) . fst =<< mbIssueOptionTranslation
+            pure [mkChatDetail item.chatId item.timestamp Text USER (mbIssueOption <&> (.option)) Nothing Nothing label]
+          IssueDescription -> pure [mkChatDetail item.chatId item.timestamp Text USER (Just issueReport.description) Nothing Nothing Nothing]
+          MediaFile -> do
+            mediaFile <- CQMF.findById (Id item.chatId) identifier >>= fromMaybeM (FileDoesNotExist item.chatId)
+            let mediaUrl = case mediaFile.status of
+                  Just D.COMPLETED -> Just mediaFile.url
+                  Nothing -> Just mediaFile.url
+                  _ -> Nothing
+            pure [mkChatDetail item.chatId item.timestamp (mediaTypeToMessageType mediaFile._type) USER mediaUrl Nothing Nothing Nothing]
+      )
+      issueReport.chats
   where
     mediaTypeToMessageType :: S3.FileType -> MessageType
     mediaTypeToMessageType = \case

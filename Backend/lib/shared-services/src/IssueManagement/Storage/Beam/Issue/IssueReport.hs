@@ -33,6 +33,7 @@ data IssueReportT f = IssueReportT
     assignee :: B.C f (Maybe Text),
     status :: B.C f Domain.IssueStatus,
     categoryId :: B.C f (Maybe Text),
+    categoryName :: B.C f (Maybe Text),
     optionId :: B.C f (Maybe Text),
     deleted :: B.C f Bool,
     mediaFiles :: B.C f [Text],

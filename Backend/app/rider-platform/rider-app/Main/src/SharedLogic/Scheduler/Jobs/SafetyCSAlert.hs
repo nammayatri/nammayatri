@@ -159,6 +159,7 @@ buildRideInfo ride person phoneNumber =
       vehicleCategory = Just $ show ride.vehicleVariant,
       vehicleServiceTier = show <$> ride.vehicleServiceTierType,
       status = show ride.status,
+      rideType = Nothing,
       rideCreatedAt = ride.createdAt,
       pickupLocation = castLocationAPIEntity ride.fromLocation,
       dropLocation = castLocationAPIEntity <$> ride.toLocation,

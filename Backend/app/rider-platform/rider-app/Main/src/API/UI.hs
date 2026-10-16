@@ -48,6 +48,7 @@ import qualified API.Action.UI.RiderPreferences as RiderPreferences
 import qualified API.Action.UI.SVP as SVP
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
+import qualified API.Action.UI.SupportBot as SupportBot
 import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
@@ -183,6 +184,7 @@ type API =
            :<|> NearbyBuses.API
            :<|> Places.API
            :<|> CRIS.API
+           :<|> SupportBot.API
            :<|> TicketKapture.API
            :<|> Insurance.API
            :<|> Metrics.API
@@ -323,6 +325,7 @@ handler =
     :<|> NearbyBuses.handler
     :<|> Places.handler
     :<|> CRIS.handler
+    :<|> SupportBot.handler
     :<|> TicketKapture.handler
     :<|> Insurance.handler
     :<|> Metrics.handler
