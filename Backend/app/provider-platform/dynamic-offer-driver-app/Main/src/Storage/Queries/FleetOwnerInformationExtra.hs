@@ -30,7 +30,7 @@ updateFleetOwnerBlockedStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => 
 updateFleetOwnerBlockedStatus blocked blockReasonFlag fleetOwnerPersonId = do
   now <- getCurrentTime
   updateOneWithKV
-    [Se.Set Beam.blocked blocked, Se.Set Beam.blockReasonFlag blockReasonFlag, Se.Set Beam.updatedAt now]
+    [Se.Set Beam.blocked blocked, Se.Set Beam.blockReasonFlag blockReasonFlag, Se.Set Beam.docsVerificationStatusUpdatedAt (Just now), Se.Set Beam.updatedAt now]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (getId fleetOwnerPersonId)]
 
 findByVerifiedAndEnabled ::
@@ -256,12 +256,11 @@ updateByPrimaryKey fleetOwnerInfo = do
 
 -- | Kept in step with verified / approved by the onboarding recompute. The UI APIs and the legacy
 --   ClickHouse status counts still read this column, so it must not go stale under the unified flow.
---   Called only on a status change, so it also stamps docsVerificationStatusUpdatedAt (the onboarding lists' sort key).
 updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id DP.Person -> m ()
 updateDocsVerificationStatus docsVerificationStatus fleetOwnerPersonId = do
   now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.docsVerificationStatus docsVerificationStatus, Se.Set Beam.docsVerificationStatusUpdatedAt (Just now), Se.Set Beam.updatedAt now]
+    [Se.Set Beam.docsVerificationStatus docsVerificationStatus, Se.Set Beam.updatedAt now]
     [Se.Is Beam.fleetOwnerPersonId (Se.Eq $ getId fleetOwnerPersonId)]
 
 findEligibleFleetOwnersForScheduledPayout ::
@@ -361,6 +360,7 @@ updateFleetOwnerEnabledAndVerifiedStatus enabled verified fleetOwnerPersonId = d
 
 -- | Set `verified` and `approved` in a single write (`approved` only when given). Leaves `enabled` untouched.
 --   Mirrors the driver-side @updateVerifiedAndApprovedState@.
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
 updateFleetOwnerVerifiedAndApprovedStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Bool ->
@@ -372,9 +372,19 @@ updateFleetOwnerVerifiedAndApprovedStatus verified approved fleetOwnerPersonId =
   updateOneWithKV
     ( [ Se.Set Beam.verified verified,
         Se.Set Beam.updatedAt _now,
-        Se.Set Beam.approved approved
+        Se.Set Beam.approved approved,
+        Se.Set Beam.docsVerificationStatusUpdatedAt (Just _now)
       ]
     )
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
+-- | Set `enabled`, stamping `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every
+--   onboarding-flag write.
+updateFleetOwnerEnabledStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Kernel.Types.Id.Id DP.Person -> m ()
+updateFleetOwnerEnabledStatus enabled fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set Beam.enabled enabled, Se.Set Beam.docsVerificationStatusUpdatedAt (Just _now), Se.Set Beam.updatedAt _now]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
 -- | Set `approved` and `enabled` in a single targeted write. Used by the BOT-review approve path:

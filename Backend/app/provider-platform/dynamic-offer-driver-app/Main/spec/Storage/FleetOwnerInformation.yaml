@@ -62,7 +62,7 @@ FleetOwnerInformation:
     isBlockedForReferralPayout: Maybe Bool
     payoutRegistrationOrderId: Maybe Text
     docsVerificationStatus: Maybe DocsVerificationStatus
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Set by the onboarding recompute whenever docsVerificationStatus changes; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked; the onboarding lists sort by it.
     address: Maybe Text
     addressState: Maybe IndianState
     addressDocumentType: Maybe AddressDocumentType
@@ -161,10 +161,6 @@ FleetOwnerInformation:
     updateRegistration:
       kvFunction: updateOneWithKV
       params: [registeredAt]
-      where: fleetOwnerPersonId
-    updateFleetOwnerEnabledStatus:
-      kvFunction: updateOneWithKV
-      params: [enabled]
       where: fleetOwnerPersonId
     updateFleetOwnerDisabledReasonFlag:
       kvFunction: updateOneWithKV

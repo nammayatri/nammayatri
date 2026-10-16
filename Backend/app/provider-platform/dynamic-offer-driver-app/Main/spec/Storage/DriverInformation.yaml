@@ -176,7 +176,7 @@ DriverInformation:
     isNew: Maybe Bool
     preferredMapProvider: Maybe MapProvider
     docsVerificationStatus: Maybe DocsVerificationStatus
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Set by the onboarding recompute whenever docsVerificationStatus changes; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked; the onboarding lists sort by it.
     address: Maybe Text # deprecated: moved to driver_identity_info;
     addressDocumentType: Maybe AddressDocumentType # deprecated: moved to driver_identity_info;
     nomineeName: Maybe Text # deprecated: moved to driver_identity_info;

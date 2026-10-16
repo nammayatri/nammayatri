@@ -236,8 +236,6 @@ partialFindLastVehicleRCFleet certNumber fleetOwnerId limit offset = do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
--- | Set RC `docsVerificationStatus` by cert-number hash, stamping docsVerificationStatusUpdatedAt; skips no-op writes
---   so the stamp moves only on a status change (the `IS NULL` OR keeps the first write null-safe).
 updateDocsVerificationStatusByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe DDVS.DocsVerificationStatus -> DbHash -> m ())
@@ -245,20 +243,13 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamVRC.docsVerificationStatus docsVerificationStatus,
-      Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now),
       Se.Set BeamVRC.updatedAt now
     ]
-    [ Se.And
-        [ Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash,
-          Se.Or
-            [ Se.Is BeamVRC.docsVerificationStatus $ Se.Eq Nothing,
-              Se.Is BeamVRC.docsVerificationStatus $ Se.Not (Se.Eq docsVerificationStatus)
-            ]
-        ]
-    ]
+    [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
 -- | Set RC `verified` by cert-number hash; skips no-op writes (the `IS NULL` OR keeps the first write null-safe).
 --   Downgrading `verified` to False also revokes `approved` (re-approval required), mirroring the driver side.
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
 updateVerifiedByCertificateNumberHash ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Bool ->
@@ -268,7 +259,8 @@ updateVerifiedByCertificateNumberHash verified certificateHash = do
   now <- getCurrentTime
   updateWithKV
     ( [ Se.Set BeamVRC.verified verified,
-        Se.Set BeamVRC.updatedAt now
+        Se.Set BeamVRC.updatedAt now,
+        Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now)
       ]
         <> [Se.Set BeamVRC.approved (Just False) | verified == Just False]
     )
@@ -283,6 +275,7 @@ updateVerifiedByCertificateNumberHash verified certificateHash = do
 
 -- | Targeted `approved` + `verified` update by RC id. Patches only those two fields (not a full-row
 --   updateByPrimaryKey), so it doesn't clobber concurrent writes to other fields.
+--   Stamps `docsVerificationStatusUpdatedAt` (the onboarding lists' sort key) like every onboarding-flag write.
 updateApprovedAndVerifiedById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Maybe Bool ->
@@ -294,7 +287,8 @@ updateApprovedAndVerifiedById approved verified (Id rcId) = do
   updateOneWithKV
     [ Se.Set BeamVRC.approved approved,
       Se.Set BeamVRC.verified verified,
-      Se.Set BeamVRC.updatedAt now
+      Se.Set BeamVRC.updatedAt now,
+      Se.Set BeamVRC.docsVerificationStatusUpdatedAt (Just now)
     ]
     [Se.Is BeamVRC.id $ Se.Eq rcId]
 

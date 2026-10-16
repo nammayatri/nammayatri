@@ -337,7 +337,7 @@ VehicleRegistrationCertificate:
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     isNew: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
-    docsVerificationStatusUpdatedAt: Maybe UTCTime # Set by the onboarding recompute whenever docsVerificationStatus changes; the onboarding lists sort by it.
+    docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved; the onboarding lists sort by it.
     pendingChallan: Maybe PendingChallanResult
     vehicleImageId: Maybe (Id MediaFile)
     initiatedBy: Maybe Domain.Types.InitiatedBy.InitiatedBy
