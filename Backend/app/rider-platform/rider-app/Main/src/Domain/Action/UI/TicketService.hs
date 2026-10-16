@@ -155,7 +155,7 @@ getTicketPlacesByOpCity merchantOpCityId = do
     filterEnforcedAsSubPlace = filter (\place -> not place.enforcedAsSubPlace)
 
 getTicketPlacesServices :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) -> Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
-getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
+getTicketPlacesServices (mbPersonId, _) placeId mbDate mbSubPlaceId = do
   ticketServices <-
     if isJust mbSubPlaceId
       then QTicketService.getTicketServicesByPlaceIdAndSubPlaceId placeId.getId mbSubPlaceId
@@ -163,6 +163,8 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
 
   now <- getCurrentTime
   let bookingDate = fromMaybe (utctDay now) mbDate
+  -- customer-app calls only; dashboard (counter) calls pass no person and may still sell same-day cash tickets
+  when (isJust mbPersonId) $ whenJust mbDate $ validateSameDayBooking placeId
   context <- TicketRule.getCurrentContext 330 mbDate Nothing
   let ruledTicketServices = filter (\s -> not s.isClosed) $ (TicketRule.processEntity context) <$> ticketServices
   mkTicketServiceListRes ruledTicketServices bookingDate placeId
@@ -303,6 +305,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId
+  validateSameDayBooking placeId req.visitDate
 
   -- Redis blocking starts here --
   -- setup if not done
@@ -2086,6 +2089,17 @@ extractCount bs = case BS8.split ':' bs of
 
 calculateTotalRequestedUnits :: TicketBookingReq -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)]
 calculateTotalRequestedUnits req = Map.toList $ Map.fromListWith (+) [(c.categoryId, sum (map (.numberOfUnits) c.peopleCategories)) | s <- req.services, c <- s.categories]
+
+-- Rejects visit dates on or before today (in the city's local time) when the place disallows same-day booking
+validateSameDayBooking :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Data.Time.Calendar.Day -> Environment.Flow ()
+validateSameDayBooking placeId visitDate = do
+  ticketPlace <- QTicketPlace.findById placeId >>= fromMaybeM (TicketPlaceNotFound placeId.getId)
+  unless ticketPlace.allowSameDayBooking $ do
+    mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = ticketPlace.merchantOperatingCityId.getId}) Nothing
+    let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+    localNow <- getLocalCurrentTime timeDiffFromUtc
+    when (visitDate <= utctDay localNow) $
+      throwError $ InvalidRequest "Same-day booking is not allowed for this place"
 
 blockSeats :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Data.Time.Calendar.Day -> [(Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory, Int)] -> Environment.Flow BlockResult
 blockSeats personId visitDate requestedUnits = do
