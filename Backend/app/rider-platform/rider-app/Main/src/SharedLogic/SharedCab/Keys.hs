@@ -22,7 +22,6 @@ module SharedLogic.SharedCab.Keys
     refundRetryKey,
     boardAttemptsKey,
     allocLeaseKey,
-    allocKeyTtlWarnKey,
     refundRetryCityKey,
     demandKey,
     allocJobGuardKey,
@@ -106,9 +105,6 @@ boardAttemptsKey bookingId = "sharedcab:rate:board:" <> bookingId.getId
 
 allocLeaseKey :: CityId -> Text
 allocLeaseKey cityId = "sharedcab:alloc:lease:" <> cityId.getId
-
-allocKeyTtlWarnKey :: Text -> Text
-allocKeyTtlWarnKey site = "sharedcab:cfgwarn:allockeyttl:" <> site
 
 refundRetryCityKey :: CityId -> Text
 refundRetryCityKey cityId = "sharedcab:refundretry:city:" <> cityId.getId

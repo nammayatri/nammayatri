@@ -20,7 +20,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded)
-import SharedLogic.SharedCab.Allocation.Claim (warnAllocKeyTtlOnce)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, allocationDeadline, passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
@@ -118,7 +117,6 @@ stepCab cfg spc now live positions route s = do
         void $ releaseSharedCabAllocation cfg b.id plate (PassedStop blame)
       else do
         -- the key the moving timer is armed under must outlive it (see allocKeyTtl in Allocation.Types)
-        warnAllocKeyTtlOnce cfg "moving-arm"
         movingTimerStep (allocKeyTtl cfg) spc now freshCab plate b
   forM_ onBoard $ dropStep spc now mbCab plate
   when (s.status == ACTIVE) $ offRouteStep spc now route ((.position) <$> freshCab) plate

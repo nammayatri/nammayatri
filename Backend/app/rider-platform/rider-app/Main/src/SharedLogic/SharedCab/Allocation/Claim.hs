@@ -10,7 +10,6 @@ module SharedLogic.SharedCab.Allocation.Claim
     readFindingSince,
     readAttempts,
     claimFallbackPush,
-    warnAllocKeyTtlOnce,
     clearAllocationKeys,
   )
 where
@@ -33,7 +32,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.Keys (allocKey, allocKeyTtlWarnKey, attemptsKey, fallbackPushedKey, findingSinceKey, skippedKey)
+import SharedLogic.SharedCab.Keys (allocKey, attemptsKey, fallbackPushedKey, findingSinceKey, skippedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -120,8 +119,7 @@ claimUnderLocks cfg booking cand s = do
   markerAlive <- Degraded.isMarkerAlive booking.bookingId
   for (claimGate s booking skipped liveSeats mbLive markerAlive) $ \() -> do
     QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
-    -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers
-    warnAllocKeyTtlOnce cfg "claim"
+    -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
     shared $
       Redis.setExp
         (allocKey booking.bookingId)
@@ -131,26 +129,6 @@ claimUnderLocks cfg booking cand s = do
 
 readFindingSince :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> UTCTime -> m UTCTime
 readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.safeGet (findingSinceKey bookingId)
-
-allocKeyTtlWarnIntervalSec :: Int
-allocKeyTtlWarnIntervalSec = 3600
-
--- | Warn ops once per site per hour that the alloc key TTL was raised past findingTimeoutSec; such a short value shortens every other TTL it feeds.
-warnAllocKeyTtlOnce :: (MonadFlow m, Redis.HedisFlow m r, Log m) => Config.SharedCabTunables -> Text -> m ()
-warnAllocKeyTtlOnce cfg site =
-  when (allocKeyTtlShort cfg) . whenM (shared $ Redis.tryLockRedis (allocKeyTtlWarnKey site) allocKeyTtlWarnIntervalSec) $
-    logWarning $
-      "shared-cab config: alloc key TTL raised past findingTimeoutSec to cover the stacked timers (site "
-        <> site
-        <> "): findingTimeoutSec="
-        <> show cfg.findingTimeoutSec
-        <> ", standTimerSec="
-        <> show cfg.standTimerSec
-        <> ", movingTimerSec="
-        <> show cfg.movingTimerSec
-        <> ", allocKeyTtlMarginSec="
-        <> show allocKeyTtlMarginSec
-        <> " -- a key this short dies before its timers, the close reads TimerLost (no blame, no attempt) and the no-show path is unreachable; raise findingTimeoutSec"
 
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
 claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId) cfg.findingTimeoutSec

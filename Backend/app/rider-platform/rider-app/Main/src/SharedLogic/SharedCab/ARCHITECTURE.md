@@ -20,7 +20,7 @@ Public facade: `SharedLogic/SharedCab.hs` re-exports the tier predicates (`isSha
 | `Allocation.hs` | Tick entry points: `allocationPass`, `runSharedCabAllocationTick`, `triggerSharedCabAllocation`, `releaseSharedCabAllocation`, `skipSharedCabAllocation`, `releaseUnboarded`, LTS route reads. |
 | `Allocation/Types.hs` | `AllocationState`, `TimerKind`, `AllocationOutcome`, `Blame`, `blameFor`, `countsTowardAttempts`, `allocKeyTtl`, `findingTimeoutAction`, `passedStopBlame`. |
 | `Allocation/Select.hs` | Pure decisions: candidate eligibility (`eligibleCandidates`), ranking (by ETA), `claimTimerSec`, `claimable`, `closable`, `silentCab`, `movingCab`, `skippedWhileFinding`. |
-| `Allocation/Claim.hs` | `attemptClaim` / `claimFirst` (plate lock then booking lock), `clearAllocationKeys`, `claimFallbackPush`, alloc-key TTL warning, driver FCM via `CallBPPInternal.sharedCabAllocationFCM`. |
+| `Allocation/Claim.hs` | `attemptClaim` / `claimFirst` (plate lock then booking lock), `clearAllocationKeys`, `claimFallbackPush`, driver FCM via `CallBPPInternal.sharedCabAllocationFCM`. |
 | `Allocation/Reallocate.hs` | `closeLocked` (CAS plate to null, bump attempts), `afterClose` (event, counters, push), `cancelForNoShows`, `releaseCancelledBooking`. |
 | `Allocation/Timers.hs` | `expireTimers` (stand/moving/away timeout, lost key, silent cab), `pushTimeFallbacks`. |
 | `StopProgress.hs` (+ `StopProgress/Rules.hs`) | Per-tick, per-cab: board stop passed, moving-timer arm, drop auto-end clock, off-route pause, `reachedEndAt`. Pure rules in `Rules.hs`. |
@@ -172,7 +172,6 @@ All keys are unprefixed and written through `Booking.shared` (cross-app master c
 | `sharedcab:refundretry:{id}` | Int (attempts) | 2 days (`refundRetryTtlSec`) | `RefundRetry.markRefundRetry`, `bumpRefundRetry` |
 | `sharedcab:refundretry:city:{city}` | set of booking ids | 2 days | `RefundRetry.markRefundRetry` |
 | `sharedcab:demand:{city}:{stop}:{bucket}` | set of rider ids | 1200 s (`bucketTtlSec`) | `Demand.recordSearch`; access `Redis.withMasterRedis` |
-| `sharedcab:cfgwarn:allockeyttl:{site}` | lock marker | 3600 s | `Claim.warnAllocKeyTtlOnce` |
 | `sharedcab:alloc:lease:{city}` | lock | 10 x `tickSec` | `Schedule.withCityTickLease` |
 | `sharedcab:allocJob:{city}` | guard | 10 x `tickSec` | `Schedule.ensureChain` / `scheduleNext` |
 | `sharedcab:allocRun:{city}` | per-tick claim | max(1, `tickSec` - 1) | `claimTickRun` |

@@ -15,7 +15,6 @@ module SharedLogic.SharedCab.Allocation.Types
     totalAgeMult,
     allocKeyTtl,
     allocKeyTtlMarginSec,
-    allocKeyTtlShort,
     isMovingSpeed,
     parseLtsTimestamp,
     Blame (..),
@@ -192,6 +191,3 @@ allocKeyTtl cfg = max cfg.findingTimeoutSec (cfg.standTimerSec + cfg.movingTimer
 
 allocKeyTtlMarginSec :: Int
 allocKeyTtlMarginSec = 10
-
-allocKeyTtlShort :: SharedCabTunables -> Bool
-allocKeyTtlShort cfg = cfg.findingTimeoutSec < cfg.standTimerSec + cfg.movingTimerSec + allocKeyTtlMarginSec

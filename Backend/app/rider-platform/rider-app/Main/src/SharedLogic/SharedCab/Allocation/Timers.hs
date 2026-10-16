@@ -9,7 +9,7 @@ import Control.Applicative ((<|>))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, warnAllocKeyTtlOnce)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush)
 import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), allocatedPlate)
 import SharedLogic.SharedCab.Allocation.Types
@@ -37,7 +37,6 @@ expireTimers cfg now movingOn silentOn live =
         Nothing -> do
           whenJust mbState $ \st ->
             when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
-              warnAllocKeyTtlOnce cfg "timer-clear"
               shared $ Redis.setExp (allocKey b.id) st {timer = clearOnMove st.timer} (allocKeyTtl cfg)
           pure Nothing
     whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)

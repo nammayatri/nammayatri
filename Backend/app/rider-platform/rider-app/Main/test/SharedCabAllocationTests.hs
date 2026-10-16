@@ -270,18 +270,13 @@ tests =
           silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) fromTheFutureAgo]
           )
           @?= (False, True, False),
-      testCase "a findingTimeoutSec that already covers the stacked timers stays the key's TTL, no warning owed" $
-        -- defaults: 1200 vs 180 + 90 + 10
-        (allocKeyTtl defaultTunables, allocKeyTtlShort defaultTunables) @?= (1200, False),
-      testCase "a findingTimeoutSec below stand + moving + margin is raised to their sum and flagged (e2e's 25)" $
-        let cfg = defaultTunables {findingTimeoutSec = 25, standTimerSec = 12, movingTimerSec = 8}
-         in (allocKeyTtl cfg, allocKeyTtlShort cfg) @?= (12 + 8 + allocKeyTtlMarginSec, True),
-      testCase "the exact boundary findingTimeoutSec == stand + moving + margin is not a breach; one below is" $
-        let bound = defaultTunables.standTimerSec + defaultTunables.movingTimerSec + allocKeyTtlMarginSec
-            atBound = defaultTunables {findingTimeoutSec = bound}
-            belowBound = defaultTunables {findingTimeoutSec = bound - 1}
-         in ( (allocKeyTtl atBound, allocKeyTtlShort atBound),
-              (allocKeyTtl belowBound, allocKeyTtlShort belowBound)
+      testCase "the alloc key lives at least findingTimeoutSec and always covers the stacked timers plus the margin" $
+        let stacked = defaultTunables.standTimerSec + defaultTunables.movingTimerSec + allocKeyTtlMarginSec
+            short = defaultTunables {findingTimeoutSec = 25, standTimerSec = 12, movingTimerSec = 8}
+         in ( allocKeyTtl defaultTunables,
+              allocKeyTtl short,
+              allocKeyTtl defaultTunables {findingTimeoutSec = stacked},
+              allocKeyTtl defaultTunables {findingTimeoutSec = stacked - 1}
             )
-              @?= ((bound, False), (bound, True))
+              @?= (1200, 12 + 8 + allocKeyTtlMarginSec, stacked, stacked)
     ]
