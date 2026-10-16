@@ -22,7 +22,6 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLTypes
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
-import qualified SharedLogic.SharedCab.Allocation as SharedCabAllocation
 import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), RiderFix (..), allocationDeadline)
@@ -32,6 +31,7 @@ import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
 import qualified SharedLogic.SharedCab.Keys as Keys
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
+import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -113,7 +113,7 @@ readCabTrack now cfg booking = \case
   Just session
     | session.status /= SharedCabSessionState.ENDED -> do
       mbCabTracking <-
-        withTryCatch "sharedCab:legState:readCabTracking" (SharedCabAllocation.readRoutePosition session.routeCode session.vehicleNumber)
+        withTryCatch "sharedCab:legState:readCabTracking" (Lts.readRoutePosition session.routeCode session.vehicleNumber)
           <&> either (const Nothing) identity
       pure $ do
         veh <- mbCabTracking

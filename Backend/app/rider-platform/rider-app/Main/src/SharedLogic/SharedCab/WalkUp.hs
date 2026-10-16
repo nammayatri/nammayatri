@@ -37,11 +37,11 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
-import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled, sharedCabEnabled)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency)
+import qualified SharedLogic.SharedCab.Lts as Lts
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -251,7 +251,7 @@ sharedCabRouteServiceability person cabIbc mbPlate legReqs = do
       sessions <- Session.activeSessionsOnRoute code
       let wanted = filter (\(sess :: Session) -> maybe True (\plate -> sess.vehicleNumber == canonicalisePlate plate) mbPlate) sessions
       vehicles <- fmap catMaybes . forM wanted $ \sess -> do
-        mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:routeServiceability:readRoutePosition" (Allocation.readRoutePosition code sess.vehicleNumber)
+        mbTrack <- either (const Nothing) identity <$> withTryCatch "sharedCab:routeServiceability:readRoutePosition" (Lts.readRoutePosition code sess.vehicleNumber)
         pure $ do
           track <- mbTrack
           guard (Select.isFreshPosition now cfg.ltsMaxAgeSec track.vehicleInfo)

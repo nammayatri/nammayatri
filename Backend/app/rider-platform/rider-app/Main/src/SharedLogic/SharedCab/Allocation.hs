@@ -9,15 +9,11 @@ module SharedLogic.SharedCab.Allocation
     skipSharedCabAllocation,
     releaseUnboarded,
     allocationPass,
-    readRoutePositions,
-    readRoutePosition,
   )
 where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import qualified Data.Aeson as A
 import Data.List (nub)
-import qualified Data.Text as T
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -35,6 +31,7 @@ import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared)
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.Keys (skippedKey)
+import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Session as Session
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -45,29 +42,6 @@ cityLiveBookings ::
   m [LiveBooking]
 cityLiveBookings cityId =
   QFRFSTicketBooking.findAllByMerchantOperatingCityIdAndServiceTierTypeAndStatus cityId (Just Spec.SHARED_CAB) [CONFIRMED] >>= liveBookingsOf
-
--- | The scheduler env has no ltsCfg for the HTTP client, so the tick reads the LTS hash directly (FRFSUtils.trackVehicles uses
--- bus next-stop logic, wrong for cabs). Fields decode one by one: a bad one is dropped, not the route.
-readRoutePositions ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, Log m) =>
-  Text ->
-  m [LT.VehicleTrackingOnRouteResp]
-readRoutePositions routeCode = do
-  pairs <- Redis.runInMultiCloudLTSRedisForListFromReplica $ Redis.hGetAll @A.Value ("route:" <> routeCode)
-  fmap catMaybes . forM pairs $ \(plate, raw) -> case A.fromJSON raw of
-    A.Success info -> pure (Just (LT.VehicleTrackingOnRouteResp plate info))
-    A.Error err -> Nothing <$ logWarning ("shared-cab tick: dropping LTS field " <> plate <> " on route " <> routeCode <> ": " <> T.pack err)
-
-readRoutePosition ::
-  (MonadFlow m, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Text ->
-  Text ->
-  m (Maybe LT.VehicleTrackingOnRouteResp)
-readRoutePosition routeCode plate = do
-  fields <- Redis.runInMultiCloudLTSRedisForListFromReplica $ maybeToList <$> Redis.hGet @A.Value ("route:" <> routeCode) plate
-  pure $ case listToMaybe fields of
-    Just raw | A.Success info <- A.fromJSON raw -> Just (LT.VehicleTrackingOnRouteResp plate info)
-    _ -> Nothing
 
 -- | Idempotent close: whoever loses the booking CAS emits nothing.
 releaseSharedCabAllocation ::
@@ -113,15 +87,27 @@ runSharedCabAllocationTick ::
   m ()
 runSharedCabAllocationTick cityId = withCityTickLease cityId . void $ allocationPass cityId
 
+type RoutePositions = [(Text, [LT.VehicleTrackingOnRouteResp])]
+
+-- | One pass of the tick: read the city, close what has run out, then (if the city is on) claim cabs for the bookings still finding one.
+-- A suspended city drains (timers, and the job's timeouts and refunds) but allocates nothing new.
 allocationPass ::
   AllocFlow m r =>
   Id DMOC.MerchantOperatingCity ->
-  m ([LiveBooking], [(Text, [LT.VehicleTrackingOnRouteResp])])
+  m ([LiveBooking], RoutePositions)
 allocationPass cityId = do
   cfg <- Config.getTunables cityId
   enabled <- sharedCabEnabled cityId
-  live <- cityLiveBookings cityId
   now <- getCurrentTime
+  (live, positionsByRoute) <- readCity cityId
+  closeExpired cfg now live positionsByRoute
+  when enabled $ claimFindings cfg now live positionsByRoute
+  pure (live, positionsByRoute)
+
+-- | The city's live bookings and the LTS positions of every route that has one waiting for, or holding, a cab.
+readCity :: AllocFlow m r => Id DMOC.MerchantOperatingCity -> m ([LiveBooking], RoutePositions)
+readCity cityId = do
+  live <- cityLiveBookings cityId
   let routes = nub [route | lb <- live, isFinding lb || isJust (allocatedPlate lb), Just route <- [lb.booking.routeCode]]
   positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
     try (readRoutePositions routeCode) >>= \case
@@ -129,22 +115,26 @@ allocationPass cityId = do
       -- fail-safe: no allocation from stale data, no stand timer cleared.
       Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
       Right positions -> pure (Just (routeCode, positions))
-  let onRoute route = fromMaybe [] (lookup route positionsByRoute)
-      movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
-      silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
-  expireTimers cfg now movingOn silentOn live
+  pure (live, positionsByRoute)
+
+closeExpired :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
+closeExpired cfg now live positionsByRoute = expireTimers cfg now movingOn silentOn live
+  where
+    onRoute route = fromMaybe [] (lookup route positionsByRoute)
+    movingOn plate route = movingCab now cfg.ltsMaxAgeSec plate (onRoute route)
+    silentOn plate route = silentCab now cfg.ltsMaxAgeSec plate (onRoute route)
+
+claimFindings :: AllocFlow m r => Config.SharedCabTunables -> UTCTime -> [LiveBooking] -> RoutePositions -> m ()
+claimFindings cfg now live positionsByRoute = do
   parties <- partySizes (map (.booking) (filter isFinding live)) -- one query for the tick; a party needs all its seats
   findings <- forM (mapMaybe (\lb -> (lb.booking,) <$> findingOf (partyOf parties) lb) live) $ \(b, fb) -> do
     since <- readFindingSince fb.bookingId fb.findingSince
     pure (b, fb {findingSince = since})
-  -- a suspended city drains (timers above, timeouts and refunds in the job) but allocates nothing new
-  when enabled $ do
-    pushTimeFallbacks cfg now findings
-    forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
-      whenJust (lookup routeCode positionsByRoute) $ \positions -> do
-        sessions <- Session.activeSessionsOnRoute routeCode
-        forM_ bookings $ \booking -> do
-          attempts <- readAttempts booking.bookingId
-          skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
-          void $ claimFirst cfg booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))
-  pure (live, positionsByRoute)
+  pushTimeFallbacks cfg now findings
+  forM_ (groupAllOn (.routeCode) (map snd findings)) $ \(routeCode, bookings) ->
+    whenJust (lookup routeCode positionsByRoute) $ \positions -> do
+      sessions <- Session.activeSessionsOnRoute routeCode
+      forM_ bookings $ \booking -> do
+        attempts <- readAttempts booking.bookingId
+        skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
+        void $ claimFirst cfg booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))

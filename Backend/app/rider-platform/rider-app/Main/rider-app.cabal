@@ -721,6 +721,7 @@ library
       SharedLogic.SharedCab.JourneyLeg
       SharedLogic.SharedCab.Keys
       SharedLogic.SharedCab.LegState
+      SharedLogic.SharedCab.Lts
       SharedLogic.SharedCab.LtsAttach
       SharedLogic.SharedCab.NoShow
       SharedLogic.SharedCab.Notify

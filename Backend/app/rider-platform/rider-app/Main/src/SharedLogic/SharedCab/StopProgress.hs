@@ -19,7 +19,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded)
+import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, allocationDeadline, passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
@@ -27,6 +27,7 @@ import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
 import SharedLogic.SharedCab.Keys (allocKey, degradedKey, dropClockKey, offRouteKey)
+import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.Plate (findByPlate)
