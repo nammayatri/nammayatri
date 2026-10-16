@@ -21,14 +21,15 @@ import Kernel.Utils.Common
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PersonPTStats as SPUS
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, clearAllocationKeys, findLive, readAttempts)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, findLive)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), closable, crossedMaxAttempts, isRescheduledChild)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (recordCancelReason, shared, withBookingLock)
+import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.Keys (allocKey, attemptsKey, fallbackPushedKey, findingSinceKey, skippedKey)
+import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import SharedLogic.SharedCab.LegState (CancelReason (NO_SHOW_CAP))
 import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -84,23 +85,23 @@ closeLocked cfg bookingId expectedPlate outcome =
       case blameFor outcome of
         BlameRider -> QFRFSTicketBooking.releaseAllocatedVehicle Nothing (NoShow.noShowsAfter BlameRider b.sharedCabNoShows) b.id (Just expectedPlate)
         _ -> QFRFSTicketBooking.updateAllocatedVehicle Nothing b.id (Just expectedPlate)
-      heldTrip <- shared $ (>>= (.vehicleTripId)) <$> Redis.safeGet @AllocationState (allocKey bookingId)
+      heldTrip <- (>>= (.vehicleTripId)) <$> readAlloc bookingId
       if NoShow.actionAfterClose (blameFor outcome) cfg.maxNoShows b.sharedCabNoShows == NoShow.AutoCancel
         then do
           cancelForNoShows b
-          clearAllocationKeys bookingId
+          clearBookingState bookingId
           pure Closed {closedCity = b.merchantOperatingCityId, result = AutoCancelled, heldTrip}
         else reallocate b heldTrip
     reallocate b heldTrip = do
-      shared $ Redis.del (allocKey bookingId)
-      when (skipsPlateOnClose outcome) $ shared $ Redis.sAddExp (skippedKey bookingId) [expectedPlate] cfg.findingTimeoutSec
+      clearAlloc bookingId
+      when (skipsPlateOnClose outcome) $ addSkipped (allocKeyTtl cfg) bookingId expectedPlate
       -- Known limitation: a Redis flush resets attempts.
       attemptsBefore <- readAttempts bookingId
       let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
-      shared $ Redis.setExp (attemptsKey bookingId) attemptsNow cfg.findingTimeoutSec
+      writeAttempts (allocKeyTtl cfg) bookingId attemptsNow
       let fallbackJustTriggered = crossedMaxAttempts cfg.maxAttempts attemptsBefore attemptsNow
       now <- getCurrentTime
-      shared $ Redis.setExp (findingSinceKey bookingId) now cfg.findingTimeoutSec
+      writeFindingSince (allocKeyTtl cfg) bookingId now
       when (attemptsNow < cfg.maxAttempts) $ shared $ Redis.del (fallbackPushedKey bookingId)
       when fallbackJustTriggered $
         logWarning $ "shared-cab booking " <> bookingId.getId <> " exhausted allocation attempts (" <> show attemptsNow <> "); fallback surface"

@@ -13,17 +13,16 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatu
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Base as JM
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged))
-import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (isSharedCabBooking, markDropped, withBookingLock)
+import SharedLogic.SharedCab.BookingState (clearAlloc)
 import SharedLogic.SharedCab.Cancel (CancelStage (ConfirmCancel), withSharedCabCancel)
 import qualified SharedLogic.SharedCab.Events as Events
-import qualified SharedLogic.SharedCab.Keys as Keys
 import SharedLogic.SharedCab.LegState (isDroppable)
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.RefundPolicy (CancelBy (ByDriver))
@@ -117,7 +116,7 @@ runDriverAction action driver rawPlate mbReason bookingId = do
       forM_ (filter ((== DFRFSTicket.ACTIVE) . (.status)) tickets) $ \ticket ->
         QFRFSTicket.updateStatusByTBookingIdAndTicketNumber DFRFSTicket.INPROGRESS (Just plate) booking.id ticket.ticketNumber
       QFRFSTicketBooking.updateVehicleTripId (Just s.vehicleTripId) booking.id
-      shared $ Redis.del (Keys.allocKey booking.id)
+      clearAlloc booking.id
       now <- getCurrentTime
       Events.emit s.merchantOperatingCityId . Events.withTrip (Just s.vehicleTripId.getId) $
         Events.bookingEvent (Events.Boarded Events.ByDriverFallback) booking.id.getId (Just plate) (Just s.routeCode) now

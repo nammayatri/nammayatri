@@ -7,10 +7,7 @@ module SharedLogic.SharedCab.Allocation.Claim
     ClaimMiss (..),
     liveBookingsOf,
     findLive,
-    readFindingSince,
-    readAttempts,
     claimFallbackPush,
-    clearAllocationKeys,
   )
 where
 
@@ -28,11 +25,12 @@ import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), LiveBooking (..), RankedCandidate (..), claimPush, claimTimer, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
+import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.Keys (allocKey, attemptsKey, fallbackPushedKey, findingSinceKey, skippedKey)
+import SharedLogic.SharedCab.Keys (fallbackPushedKey)
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (..))
@@ -113,32 +111,18 @@ claimUnderLocks ::
 claimUnderLocks cfg booking cand s = do
   now <- getCurrentTime
   attempts <- readAttempts booking.bookingId
-  skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
+  skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
   liveSeats <- liveSeatsOnVehicle s.vehicleNumber
   mbLive <- findLive booking.bookingId
   markerAlive <- Degraded.isMarkerAlive booking.bookingId
   for (claimGate s booking skipped liveSeats mbLive markerAlive) $ \() -> do
     QFRFSTicketBooking.updateAllocatedVehicle (Just s.vehicleNumber) booking.bookingId Nothing
     -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers (allocKeyTtl)
-    shared $
-      Redis.setExp
-        (allocKey booking.bookingId)
-        AllocationState {vehicleNumber = s.vehicleNumber, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = claimTimer cfg now cand, attempts}
-        (allocKeyTtl cfg)
+    writeAlloc (allocKeyTtl cfg) booking.bookingId AllocationState {vehicleNumber = s.vehicleNumber, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = claimTimer cfg now cand}
     pure now
-
-readFindingSince :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> UTCTime -> m UTCTime
-readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.safeGet (findingSinceKey bookingId)
 
 claimFallbackPush :: (Redis.HedisFlow m r, MonadFlow m) => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> m Bool
 claimFallbackPush cfg bookingId = shared $ Redis.tryLockRedis (fallbackPushedKey bookingId) cfg.findingTimeoutSec
-
-readAttempts :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> m Int
-readAttempts bookingId = shared $ fromMaybe 0 <$> Redis.safeGet (attemptsKey bookingId)
-
-clearAllocationKeys :: (MonadFlow m, Redis.HedisFlow m r) => Id DFTB.FRFSTicketBooking -> m ()
-clearAllocationKeys bookingId =
-  shared . forM_ [allocKey, attemptsKey, skippedKey, findingSinceKey, fallbackPushedKey] $ \key -> Redis.del (key bookingId)
 
 notifyDriverOfAllocation ::
   AllocFlow m r =>

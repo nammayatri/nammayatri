@@ -8,14 +8,13 @@ where
 import Control.Applicative ((<|>))
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush)
 import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), allocatedPlate)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (withBookingLock)
+import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
-import SharedLogic.SharedCab.Keys (allocKey)
 import SharedLogic.SharedCab.LegState (fallbackTimeElapsed)
 import qualified SharedLogic.SharedCab.Notify as Notify
 
@@ -31,13 +30,13 @@ expireTimers ::
 expireTimers cfg now movingOn silentOn live =
   forM_ [(lb.booking, plate) | lb <- live, Just plate <- [allocatedPlate lb]] $ \(b, plate) -> do
     result <- withBookingLock b.id $ do
-      mbState <- shared $ Redis.safeGet (allocKey b.id)
+      mbState <- readAlloc b.id
       case timerExpiry now mbState <|> (CabSilent <$ guard (maybe False (silentOn plate) b.routeCode)) of
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
         Nothing -> do
           whenJust mbState $ \st ->
             when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
-              shared $ Redis.setExp (allocKey b.id) st {timer = clearOnMove st.timer} (allocKeyTtl cfg)
+              writeAlloc (allocKeyTtl cfg) b.id st {timer = clearOnMove st.timer}
           pure Nothing
     whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
 

@@ -13,19 +13,18 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Environment (Flow)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
-import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState (..), allocationDeadline)
-import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, recordCancelReason, shared, withBookingLock)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), allocationDeadline)
+import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, recordCancelReason, withBookingLock)
+import SharedLogic.SharedCab.BookingState (readAlloc)
+import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import qualified SharedLogic.SharedCab.Keys as Keys
 import SharedLogic.SharedCab.LegState (CancelReason (DRIVER, RIDER))
 import SharedLogic.SharedCab.RefundDecision (Refund (..), clearRefundDecision, gateByPayment, isSharedCabBooking, refundWord, setRefundDecision)
 import SharedLogic.SharedCab.RefundPolicy
@@ -47,7 +46,7 @@ withSharedCabCancel by stage mbReason checkFresh booking cancelAction = do
     checkFresh fresh
     refund <- decide by fresh
     setRefundDecision booking.id refund
-    (cancelAction >> when (stage == ConfirmCancel) (Claim.clearAllocationKeys booking.id)) `finally` clearRefundDecision booking.id
+    (cancelAction >> when (stage == ConfirmCancel) (BookingState.clearBookingState booking.id)) `finally` clearRefundDecision booking.id
     pure refund
   when (stage == ConfirmCancel) $ do
     -- the leg-state surface shows why. Swallowed: the booking is cancelled by now, so a Redis hiccup here must not error a
@@ -90,7 +89,7 @@ decide :: CancelBy -> DFTB.FRFSTicketBooking -> Flow Refund
 decide by booking = do
   tickets <- map (.status) <$> QFRFSTicket.findAllByTicketBookingId booking.id
   now <- getCurrentTime
-  mbAlloc <- shared $ Redis.safeGet @AllocationState (Keys.allocKey booking.id)
+  mbAlloc <- readAlloc booking.id
   tunables <- Config.getTunables booking.merchantOperatingCityId
   riderFix <- readRiderFix booking.id
   let state = cancelState now booking.vehicleNumber (mbAlloc >>= allocationDeadline)

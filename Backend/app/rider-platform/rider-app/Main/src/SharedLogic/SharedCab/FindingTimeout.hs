@@ -26,11 +26,11 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import SharedLogic.FRFSUtils (markFRFSBookingStatus, noPaymentDue)
 import qualified SharedLogic.Payment as SPayment
-import SharedLogic.SharedCab.Allocation.Claim (clearAllocationKeys, readFindingSince)
 import SharedLogic.SharedCab.Allocation.Reallocate (releaseCancelledBooking)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), Phase (..), claimable, liveBookingPhase)
 import SharedLogic.SharedCab.Allocation.Types (FindingTimeout (..), findingTimeoutAction)
 import SharedLogic.SharedCab.Booking (recordCancelReason, withBookingLock)
+import SharedLogic.SharedCab.BookingState (clearBookingState, readFindingSince)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.Events as Events
@@ -144,7 +144,7 @@ flipToCancelled decision b = do
   void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) b.id
   let (charges, refundAmount) = refundAmounts (fromMaybe b.totalPrice.amount b.overriddenAmount) decision
   void $ QFRFSTicketBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just charges) (Just True) b.id
-  clearAllocationKeys b.id
+  clearBookingState b.id
 
 -- | Starts the refund of the payment; a free (pass-covered) booking has none. A failure is logged and left for ops since the
 -- booking is already CANCELLED and no later tick sees it, but ALSO marks it for the retry sweep (RefundRetry).

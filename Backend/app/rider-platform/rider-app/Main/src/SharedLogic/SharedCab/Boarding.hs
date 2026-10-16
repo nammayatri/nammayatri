@@ -36,12 +36,12 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Location as JMLocation
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
-import SharedLogic.SharedCab.Booking (bookingSeats, isSharedCabBooking, liveSeatsOnVehicle, partyOf, partySizes, shared, withBookingLock)
+import SharedLogic.SharedCab.Booking (bookingSeats, isSharedCabBooking, liveSeatsOnVehicle, partyOf, partySizes, withBookingLock)
+import SharedLogic.SharedCab.BookingState (clearAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as Degraded
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
-import SharedLogic.SharedCab.Keys (allocKey)
 import SharedLogic.SharedCab.Plate (canonicalisePlate, findByPlate, samePlate)
 import qualified SharedLogic.SharedCab.RateLimit as RateLimit
 import qualified SharedLogic.SharedCab.Schedule as Schedule
@@ -176,7 +176,7 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
     mbAllocatedPlate <- Degraded.planDegrade fresh.status fresh.vehicleNumber (map (.status) tickets) markerAlive & fromMaybeM BoardingFailed
     whenJust mbAllocatedPlate $ \plate -> do
       QBooking.updateAllocatedVehicle Nothing booking.id (Just plate)
-      shared . void $ Redis.del (allocKey booking.id)
+      clearAlloc booking.id
       -- Skips Allocation.closeLocked, so it emits allocation_closed {degraded, none} itself in the same locked block.
       now <- getCurrentTime
       Events.emit booking.merchantOperatingCityId $
@@ -239,7 +239,7 @@ applyBoarding journeyLeg booking freshBooking fresh eligible mbOld = do
   QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id freshBooking.vehicleNumber
   QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
   -- Old cab's seat release is derived: no consecutiveMisses/attempts bump and no allocation_closed{blame: driver}.
-  shared . void $ Redis.del (allocKey booking.id)
+  clearAlloc booking.id
   Degraded.clearDegradedMarker booking.id
   -- In the lock, not forked: a fork could land after a later re-bind and write the old cab back.
   QBooking.updateFRFSTicketBookingVehicleDataById

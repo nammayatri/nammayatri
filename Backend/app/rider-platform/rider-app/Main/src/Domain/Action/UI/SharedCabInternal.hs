@@ -27,17 +27,16 @@ import qualified Domain.Types.VehicleTrip as DVT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Types as AllocTypes
 import qualified SharedLogic.SharedCab.Booking as Booking
+import qualified SharedLogic.SharedCab.BookingState as BookingState
 import qualified SharedLogic.SharedCab.Demand as Demand
 import SharedLogic.SharedCab.DriverAction (DriverAction (..), runDriverAction)
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import qualified SharedLogic.SharedCab.Keys as Keys
 import SharedLogic.SharedCab.Plate (canonicalisePlate)
 import SharedLogic.SharedCab.Schedule (ensureAllocationTick)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -255,13 +254,12 @@ liveRiderRows stopPoints plate = do
       forM bookings $ \b -> do
         let statuses = statusesOf b
             boarded = DFRFSTicket.INPROGRESS `elem` statuses
-            key = Keys.allocKey b.id
-        mbAlloc <- Booking.shared $ Redis.safeGet @AllocTypes.AllocationState key
+        mbAlloc <- BookingState.readAlloc b.id
         -- the allocation's armed timer (stand/moving); else the key's own TTL is the allocation's outer bound
         expiresAt <- case mbAlloc of
           Just st | isJust (AllocTypes.allocationDeadline st) -> pure (AllocTypes.allocationDeadline st)
           Just _ -> do
-            ttl <- Booking.shared $ Redis.ttl key
+            ttl <- BookingState.bookingStateTtl b.id
             pure $ if ttl > 0 then Just (addUTCTime (fromInteger ttl) now) else Nothing
           Nothing -> pure Nothing
         mbFix <- Booking.readRiderFix b.id

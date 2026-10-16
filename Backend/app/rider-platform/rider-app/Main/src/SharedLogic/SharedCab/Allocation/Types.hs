@@ -37,14 +37,13 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import SharedLogic.SharedCab.Config (SharedCabTunables)
 
 -- | The value stored under @sharedcab:alloc:{bookingId}@. Claimed while stationary -> stand or away timer; claimed while moving ->
--- no timer, and the tick clears a stand or away timer once the cab moves. @attempts@ mirrors @sharedcab:attempts:{bookingId}@, since this value is deleted on close.
+-- no timer, and the tick clears a stand or away timer once the cab moves.
 data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
     driverId :: Maybe Text, -- who drove it at claim (the session's driver, read under the plate lock): who a driver miss is charged to
     vehicleTripId :: Maybe Text, -- the session's trip at claim: where a driver miss is counted, even if the plate is on another trip by close time
     allocatedAt :: UTCTime,
-    timer :: Timer,
-    attempts :: Int
+    timer :: Timer
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 

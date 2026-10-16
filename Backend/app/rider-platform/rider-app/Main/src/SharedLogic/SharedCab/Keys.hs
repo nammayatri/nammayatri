@@ -9,10 +9,7 @@ module SharedLogic.SharedCab.Keys
     offRouteKey,
     noLocationKey,
     bookingLockKey,
-    allocKey,
-    attemptsKey,
-    skippedKey,
-    findingSinceKey,
+    bookingStateKey,
     fallbackPushedKey,
     riderFixKey,
     cancelReasonKey,
@@ -65,19 +62,11 @@ noLocationKey plate istDay = "sharedcab:noloc:" <> plate <> ":" <> istDay
 bookingLockKey :: BookingId -> Text
 bookingLockKey bookingId = "sharedcab:lock:booking:" <> bookingId.getId
 
-allocKey :: BookingId -> Text
-allocKey bookingId = "sharedcab:alloc:" <> bookingId.getId
+-- | One hash per booking (fields in BookingState): the alloc record, lifetime attempts, finding-since and skipped plates.
+bookingStateKey :: BookingId -> Text
+bookingStateKey bookingId = "sharedcab:booking:" <> bookingId.getId
 
--- | Lifetime attempts counter: the alloc record is deleted on close, so the count needs its own key.
-attemptsKey :: BookingId -> Text
-attemptsKey bookingId = "sharedcab:attempts:" <> bookingId.getId
-
-skippedKey :: BookingId -> Text
-skippedKey bookingId = "sharedcab:skipped:" <> bookingId.getId
-
-findingSinceKey :: BookingId -> Text
-findingSinceKey bookingId = "sharedcab:findingsince:" <> bookingId.getId
-
+-- | A once-flag, so it needs SETNX and stays outside the hash.
 fallbackPushedKey :: BookingId -> Text
 fallbackPushedKey bookingId = "sharedcab:fallbackpushed:" <> bookingId.getId
 

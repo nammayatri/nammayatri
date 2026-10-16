@@ -36,7 +36,7 @@ t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 36000
 
 standing :: AllocationState
-standing = AllocationState {vehicleNumber = "ML05A1234", driverId = Just "d1", vehicleTripId = Just "t1", allocatedAt = t0, timer = StandTimer (addUTCTime 180 t0), attempts = 0}
+standing = AllocationState {vehicleNumber = "ML05A1234", driverId = Just "d1", vehicleTripId = Just "t1", allocatedAt = t0, timer = StandTimer (addUTCTime 180 t0)}
 
 -- a board stop, a point ~30 m from it and one ~1.1 km away
 stop, nearStop, farAway :: LatLong

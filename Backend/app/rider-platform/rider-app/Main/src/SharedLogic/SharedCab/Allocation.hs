@@ -18,19 +18,18 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, liveBookingsOf, readAttempts, readFindingSince)
+import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, InternalEndpointFlow, claimFirst, liveBookingsOf)
 import SharedLogic.SharedCab.Allocation.Reallocate (closeAllocation)
 import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), LiveBooking (..), allocatedPlate, eligibleCandidates, findingOf, groupAllOn, isFinding, movingCab, silentCab, skippedWhileFinding, withoutSkipped)
 import SharedLogic.SharedCab.Allocation.Timers (expireTimers, pushTimeFallbacks)
 import SharedLogic.SharedCab.Allocation.Types
-import SharedLogic.SharedCab.Booking (partyOf, partySizes, shared)
+import SharedLogic.SharedCab.Booking (partyOf, partySizes)
+import SharedLogic.SharedCab.BookingState
 import qualified SharedLogic.SharedCab.Config as Config
 import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
-import SharedLogic.SharedCab.Keys (skippedKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.Schedule (withCityTickLease)
 import qualified SharedLogic.SharedCab.Session as Session
@@ -60,7 +59,7 @@ releaseSharedCabAllocation cfg bookingId expectedPlate outcome = do
 skipSharedCabAllocation :: AllocFlow m r => Config.SharedCabTunables -> Id DFTB.FRFSTicketBooking -> Text -> SkipReason -> m Bool
 skipSharedCabAllocation cfg bookingId plate reason = do
   let outcome = RiderSkipped reason
-  closed <- closeAllocation cfg bookingId plate outcome (shared $ Redis.sAddExp (skippedKey bookingId) [plate] cfg.findingTimeoutSec)
+  closed <- closeAllocation cfg bookingId plate outcome (addSkipped (allocKeyTtl cfg) bookingId plate)
   whenJust closed (triggerSharedCabAllocation . (.closedCity))
   pure (isJust closed)
 
@@ -136,5 +135,5 @@ claimFindings cfg now live positionsByRoute = do
       sessions <- Session.activeSessionsOnRoute routeCode
       forM_ bookings $ \booking -> do
         attempts <- readAttempts booking.bookingId
-        skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> shared (Redis.sMembers (skippedKey booking.bookingId))
+        skipped <- skippedWhileFinding cfg now attempts booking.findingSince <$> readSkipped booking.bookingId
         void $ claimFirst cfg booking (withoutSkipped skipped (eligibleCandidates now cfg positions sessions booking))

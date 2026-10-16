@@ -22,14 +22,13 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLTypes
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.Types as JT
-import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
-import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), RiderFix (..), allocationDeadline)
+import SharedLogic.SharedCab.Allocation.Types (RiderFix (..), allocationDeadline)
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
+import SharedLogic.SharedCab.BookingState (readAlloc, readAttempts, readFindingSince)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
 import qualified SharedLogic.SharedCab.Events as SharedCabEvents
-import qualified SharedLogic.SharedCab.Keys as Keys
 import qualified SharedLogic.SharedCab.LegState as SharedCabLeg
 import qualified SharedLogic.SharedCab.Lts as Lts
 import qualified SharedLogic.SharedCab.Session as SharedCabSession
@@ -62,9 +61,9 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   cabsComing <- maybe (pure 0) (fmap length . SharedCabSession.activeSessionsOnRoute) mbRouteCode
   -- the fallback gate and the arrival deadline both live in the cross-app Redis cell the allocation tick writes to
   cfg <- Config.getTunables booking.merchantOperatingCityId
-  findingSince <- Claim.readFindingSince booking.id booking.createdAt
-  attempts <- Claim.readAttempts booking.id
-  mbAllocState <- SharedCabBooking.shared $ Redis.safeGet @AllocationState (Keys.allocKey booking.id)
+  findingSince <- readFindingSince booking.id booking.createdAt
+  attempts <- readAttempts booking.id
+  mbAllocState <- readAlloc booking.id
   cabTrack <- readCabTrack now cfg booking mbSession
   mbDriverInfo <- readLiveDriverInfo mbSession
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession

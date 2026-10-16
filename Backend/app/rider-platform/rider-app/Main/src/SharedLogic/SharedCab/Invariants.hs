@@ -29,8 +29,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils (isPayOnBoard)
 import SharedLogic.SharedCab.Booking (isSharedCabBooking, liveSeatsOnVehicle, shared)
+import SharedLogic.SharedCab.BookingState (readAlloc)
 import qualified SharedLogic.SharedCab.Events as Events
-import SharedLogic.SharedCab.Keys (allocKey, degradedKey)
+import SharedLogic.SharedCab.Keys (degradedKey)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState (SessionStatus (ENDED))
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -144,7 +145,7 @@ redisKeyExists key = isJust <$> shared (Redis.get @A.Value key)
 bookingFacts :: InvariantFlow m r => DFTB.FRFSTicketBooking -> m BookingFacts
 bookingFacts booking = do
   tickets <- QFRFSTicket.findAllByTicketBookingId booking.id
-  allocTimer <- redisKeyExists (allocKey booking.id)
+  allocTimer <- isJust <$> readAlloc booking.id
   degradedMarker <- redisKeyExists (degradedKey booking.id)
   cashOnBoard <- isPayOnBoard booking
   payments <- QFRFSTicketBookingPayment.findAllTBPByBookingId booking.id

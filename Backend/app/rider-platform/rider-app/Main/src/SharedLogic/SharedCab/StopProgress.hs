@@ -23,10 +23,11 @@ import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, releaseSharedCabA
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, allocationDeadline, passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
+import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
 import qualified SharedLogic.SharedCab.Invariants as Invariants
-import SharedLogic.SharedCab.Keys (allocKey, degradedKey, dropClockKey, offRouteKey)
+import SharedLogic.SharedCab.Keys (degradedKey, dropClockKey, offRouteKey)
 import SharedLogic.SharedCab.Lts (readRoutePositions)
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
 import qualified SharedLogic.SharedCab.Notify as Notify
@@ -135,15 +136,15 @@ cabFix vi =
 -- | Under the booking lock the key is re-read, so a close or re-bind racing the tick is never overwritten.
 movingTimerStep :: StopProgressFlow m r c => Int -> StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 movingTimerStep keyTtlSec spc now freshCab plate b = do
-  mbState <- shared $ Redis.safeGet @AllocationState (allocKey b.id)
+  mbState <- readAlloc b.id
   whenJust mbState $ \st -> whenJust (armMovingTimer spc now (allocationDeadline st) freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
-      current <- shared $ Redis.safeGet @AllocationState (allocKey b.id)
+      current <- readAlloc b.id
       case current of
         Just cur
           | cur.vehicleNumber == plate,
             Just deadline <- armMovingTimer spc now (allocationDeadline cur) freshCab b.fromStationCode -> do
-            shared $ Redis.setExp (allocKey b.id) cur {timer = MovingTimer deadline} keyTtlSec
+            writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline}
             pure True
         _ -> pure False
     when armed $ do
