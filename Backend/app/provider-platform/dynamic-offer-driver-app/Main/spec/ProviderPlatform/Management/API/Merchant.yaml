@@ -723,6 +723,7 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe Double
     - scheduledRideMinLeadTime: Maybe Seconds
     - scheduledRideMaxLeadTime: Maybe Seconds
+    - scheduledRideVisibilityStages: Maybe Value
     - negativeFareAdjustmentCongestionThreshold: Maybe Double
     - negativeFareAdjustmentMinDistanceMeters: Maybe Int
     - negativeFareAdjustmentMaxAmount: Maybe Int
@@ -773,6 +774,7 @@ types:
     - scheduledRideAvgSpeedKmph: Maybe (OptionalValue Double)
     - scheduledRideMinLeadTime: Maybe (OptionalValue Seconds)
     - scheduledRideMaxLeadTime: Maybe (OptionalValue Seconds)
+    - scheduledRideVisibilityStages: Maybe (OptionalValue Value)
     - negativeFareAdjustmentCongestionThreshold: Maybe (OptionalValue Double)
     - negativeFareAdjustmentMinDistanceMeters: Maybe (OptionalValue Int)
     - negativeFareAdjustmentMaxAmount: Maybe (OptionalValue Int)

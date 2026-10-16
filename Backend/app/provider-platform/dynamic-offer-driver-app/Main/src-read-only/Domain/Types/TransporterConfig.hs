@@ -619,8 +619,24 @@ data ScheduledRideConfig = ScheduledRideConfig
     enableScheduledRideActivationChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     maxHoldsPerDriver :: Kernel.Prelude.Int,
     maxLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+    minLeadTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    scheduledRideVisibilityStages :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ScheduledRideVisibilityStage]
   }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data ScheduledRideVisibilityRules = ScheduledRideVisibilityRules
+  { allowFavouriteDriversOnly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    maxCancellationRatePct :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    minCompletedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    pickupRadiusMeters :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    requiredTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    requiresNearby :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    requiresWalletBalance :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data ScheduledRideVisibilityStage = ScheduledRideVisibilityStage {rules :: Domain.Types.TransporterConfig.ScheduledRideVisibilityRules, stage :: Kernel.Prelude.Text, untilRemainingMinutes :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
