@@ -182,7 +182,7 @@ getMetroHop ::
   IntegratedBPPConfig ->
   Text ->
   Text ->
-  m (Maybe [MetroHopLeg])
+  m (Maybe [[MetroHopLeg]])
 getMetroHop integratedBPPConfig fromStopCode toStopCode =
   IM.withInMemCache ["METROHOP", integratedBPPConfig.id.getId, fromStopCode, toStopCode] 3600 $ do
     baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
