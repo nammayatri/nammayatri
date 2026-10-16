@@ -20,6 +20,7 @@ module SharedLogic.SharedCab.Allocation.Types
     outcomeText,
     countsTowardAttempts,
     countsTowardDriverMisses,
+    skipsPlateOnClose,
   )
 where
 
@@ -77,70 +78,48 @@ data AllocationOutcome
 data SkipReason = SkipFull | SkipOther
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
-outcomeText :: AllocationOutcome -> Text
-outcomeText = \case
-  StandTimeout -> "STAND_TIMEOUT"
-  MovingTimeout -> "MOVING_TIMEOUT"
-  AwayTimeout -> "AWAY_TIMEOUT"
-  DriverCancelled -> "DRIVER_CANCELLED"
-  PassedStop _ -> "PASSED_STOP"
-  SeatLost -> "SEAT_LOST"
-  RouteChanged -> "ROUTE_CHANGED"
-  SessionClosed -> "SESSION_CLOSED"
-  TimerLost -> "TIMER_LOST"
-  CabSilent -> "CAB_SILENT"
-  RiderSkipped _ -> "RIDER_SKIPPED"
-
 data Blame = BlameDriver | BlameRider | BlameNone
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
+
+-- | What an outcome means, in one place: adding an outcome forces one complete record, with no wildcard to swallow it.
+data OutcomePolicy = OutcomePolicy
+  { policyBlame :: Blame,
+    -- | @attempts@ counts allocations, not candidates: a phase-2 miss adds nothing; RouteChanged / SessionClosed are without penalty.
+    countsAttempt :: Bool,
+    countsDriverMiss :: Bool,
+    -- | A cab the rider failed to board is skipped for this booking too, or its stand timer would charge a second no-show.
+    skipsPlate :: Bool,
+    wireName :: Text
+  }
 
 -- | Blame: driver cancels are the driver's miss; the stand timer running out (the cab waited) and the cab passing the stop with the
 -- rider away are the rider's no-show; passing a waiting rider is the driver's; capacity eviction and session closes are nobody's.
 -- MovingTimeout is BlameRider; change only here if product wants it neutral.
+outcomePolicy :: AllocationOutcome -> OutcomePolicy
+outcomePolicy = \case
+  StandTimeout -> OutcomePolicy BlameRider True False True "STAND_TIMEOUT"
+  MovingTimeout -> OutcomePolicy BlameRider True False True "MOVING_TIMEOUT"
+  AwayTimeout -> OutcomePolicy BlameNone True False False "AWAY_TIMEOUT"
+  DriverCancelled -> OutcomePolicy BlameDriver True True False "DRIVER_CANCELLED"
+  PassedStop blame -> OutcomePolicy blame True False False "PASSED_STOP"
+  SeatLost -> OutcomePolicy BlameNone True False False "SEAT_LOST"
+  RouteChanged -> OutcomePolicy BlameNone False False False "ROUTE_CHANGED"
+  SessionClosed -> OutcomePolicy BlameNone False False False "SESSION_CLOSED"
+  TimerLost -> OutcomePolicy BlameNone False False False "TIMER_LOST"
+  CabSilent -> OutcomePolicy BlameNone False False False "CAB_SILENT"
+  RiderSkipped SkipFull -> OutcomePolicy BlameNone False False False "RIDER_SKIPPED"
+  RiderSkipped SkipOther -> OutcomePolicy BlameRider True False False "RIDER_SKIPPED"
+
 blameFor :: AllocationOutcome -> Blame
-blameFor = \case
-  StandTimeout -> BlameRider
-  DriverCancelled -> BlameDriver
-  MovingTimeout -> BlameRider
-  AwayTimeout -> BlameNone
-  PassedStop blame -> blame
-  SeatLost -> BlameNone
-  RouteChanged -> BlameNone
-  SessionClosed -> BlameNone
-  TimerLost -> BlameNone
-  CabSilent -> BlameNone
-  RiderSkipped SkipFull -> BlameNone
-  RiderSkipped SkipOther -> BlameRider
+blameFor = policyBlame . outcomePolicy
 
--- | @attempts@ counts allocations, not candidates: a phase-2 miss adds nothing; RouteChanged / SessionClosed are without penalty.
-countsTowardAttempts :: AllocationOutcome -> Bool
-countsTowardAttempts = \case
-  StandTimeout -> True
-  MovingTimeout -> True
-  AwayTimeout -> True
-  DriverCancelled -> True
-  PassedStop _ -> True
-  SeatLost -> True
-  RouteChanged -> False
-  SessionClosed -> False
-  TimerLost -> False
-  CabSilent -> False
-  RiderSkipped SkipFull -> False
-  RiderSkipped SkipOther -> True
+outcomeText :: AllocationOutcome -> Text
+outcomeText = wireName . outcomePolicy
 
-countsTowardDriverMisses :: AllocationOutcome -> Bool
-countsTowardDriverMisses = \case
-  DriverCancelled -> True
-  StandTimeout -> False
-  MovingTimeout -> False
-  AwayTimeout -> False
-  PassedStop _ -> False
-  SeatLost -> False
-  RouteChanged -> False
-  SessionClosed -> False
-  TimerLost -> False
-  CabSilent -> False
-  RiderSkipped _ -> False
+countsTowardAttempts, countsTowardDriverMisses, skipsPlateOnClose :: AllocationOutcome -> Bool
+countsTowardAttempts = countsAttempt . outcomePolicy
+countsTowardDriverMisses = countsDriverMiss . outcomePolicy
+skipsPlateOnClose = skipsPlate . outcomePolicy
 
 timerExpiry :: UTCTime -> Maybe AllocationState -> Maybe AllocationOutcome
 timerExpiry _ Nothing = Just TimerLost

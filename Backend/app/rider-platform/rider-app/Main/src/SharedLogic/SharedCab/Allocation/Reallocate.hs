@@ -20,7 +20,7 @@ import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, clearAllocationKeys, readAttempts)
-import SharedLogic.SharedCab.Allocation.Select (closable, crossedMaxAttempts, skipsPlateOnClose, ticketsCountedAtConfirm)
+import SharedLogic.SharedCab.Allocation.Select (closable, crossedMaxAttempts, ticketsCountedAtConfirm)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (recordCancelReason, shared)
 import qualified SharedLogic.SharedCab.Config as Config

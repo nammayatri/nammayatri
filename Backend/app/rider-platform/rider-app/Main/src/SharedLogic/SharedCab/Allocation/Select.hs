@@ -14,7 +14,6 @@ module SharedLogic.SharedCab.Allocation.Select
     clearsWhenMoving,
     ClaimPush (..),
     claimPush,
-    skipsPlateOnClose,
     silentReleaseMult,
     silentCab,
     movingCab,
@@ -25,7 +24,6 @@ module SharedLogic.SharedCab.Allocation.Select
     skippedWhileFinding,
     ticketsCountedAtConfirm,
     crossedMaxAttempts,
-    isMissedCabOutcome,
     groupAllOn,
   )
 where
@@ -158,10 +156,6 @@ data ClaimPush = PushArriving | PushAssigned
 claimPush :: RankedCandidate -> ClaimPush
 claimPush c = if standTimerOnClaim c then PushArriving else PushAssigned
 
--- | A cab the rider failed to board is skipped for this booking too, or its stand timer would charge a second no-show.
-skipsPlateOnClose :: AllocationOutcome -> Bool
-skipsPlateOnClose = isMissedCabOutcome
-
 silentReleaseMult :: Int
 silentReleaseMult = 5
 
@@ -204,9 +198,6 @@ ticketsCountedAtConfirm = isNothing
 
 crossedMaxAttempts :: Int -> Int -> Int -> Bool
 crossedMaxAttempts maxAttempts before now = before < maxAttempts && now >= maxAttempts
-
-isMissedCabOutcome :: AllocationOutcome -> Bool
-isMissedCabOutcome = (`elem` [StandTimeout, MovingTimeout])
 
 groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
 groupAllOn f = map (\grp -> (f (NE.head grp), NE.toList grp)) . NE.groupBy ((==) `on` f) . sortOn f

@@ -17,7 +17,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isMissedCabOutcome, isSkipped, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, skipsPlateOnClose, standTimerOnClaim, ticketsCountedAtConfirm, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isSkipped, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, standTimerOnClaim, ticketsCountedAtConfirm, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
@@ -162,7 +162,7 @@ tests =
       testCase "the fallback push fires on the close that crosses maxAttempts, not before or after" $
         map (uncurry (crossedMaxAttempts 2)) [(0, 1), (1, 2), (2, 3), (0, 0)] @?= [False, True, False, False],
       testCase "only the two timer outcomes push the missed-cab copy" $
-        map isMissedCabOutcome [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipOther]
+        map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, RiderSkipped SkipOther]
           @?= [True, True, False, False, False, False, False, False, False],
       testCase "skips bind while FINDING, and stop binding in FALLBACK (attempts or clock)" $
         [ skippedWhileFinding defaultTunables t0 0 t0 ["A"],
@@ -212,11 +212,10 @@ tests =
         ( timerExpiry (addUTCTime 181 t0) (Just standing {timerKind = AwayTimer}),
           blameFor AwayTimeout,
           skipsPlateOnClose AwayTimeout,
-          isMissedCabOutcome AwayTimeout,
           countsTowardDriverMisses AwayTimeout,
           outcomeText AwayTimeout
         )
-          @?= (Just AwayTimeout, BlameNone, False, False, False, "AWAY_TIMEOUT"),
+          @?= (Just AwayTimeout, BlameNone, False, False, "AWAY_TIMEOUT"),
       testCase "(user decision 2026-09-30): a stand timeout is the rider's no-show, not a driver miss; a driver cancel still is" $
         ( map blameFor [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout],
           map countsTowardDriverMisses [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
