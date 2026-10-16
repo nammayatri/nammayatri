@@ -180,7 +180,7 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "Ravi M", "vehicleModel": "Celerio"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
