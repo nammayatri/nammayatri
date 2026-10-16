@@ -75,7 +75,7 @@ closeLocked cfg bookingId expectedPlate outcome =
     reallocate b heldTrip = do
       shared $ Redis.del (allocKey bookingId)
       when (skipsPlateOnClose outcome) $ shared $ Redis.sAddExp (skippedKey bookingId) [expectedPlate] cfg.findingTimeoutSec
-      -- TODO: a Redis flush resets attempts.
+      -- Known limitation: a Redis flush resets attempts.
       attemptsBefore <- readAttempts (attemptsKey bookingId)
       let attemptsNow = attemptsBefore + (if countsTowardAttempts outcome then 1 else 0)
       shared $ Redis.setExp (attemptsKey bookingId) attemptsNow cfg.findingTimeoutSec

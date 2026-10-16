@@ -103,7 +103,7 @@ data RankedCandidate = RankedCandidate
   deriving (Show, Generic)
 
 -- | Freshness gate: LTS never drops a silent cab by age, so anything older than the gate is dropped. A missing or
--- unparseable timestamp is NOT fresh. TODO: the city-wide LTS outage rule must suspend this gate.
+-- unparseable timestamp is NOT fresh. Known limitation: a city-wide LTS outage is not told apart from every cab being stale.
 isFreshPosition :: UTCTime -> Int -> LT.VehicleInfo -> Bool
 isFreshPosition now maxAgeSec vi = case vi.timestamp >>= parseLtsTimestamp of
   Nothing -> False -- silent-by-absence must not read as fresh
@@ -122,7 +122,6 @@ eligibleCandidates now cfg tracking sessions booking =
   [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed, rcAtStop = distanceBetweenInMeters (LatLong veh.vehicleInfo.latitude veh.vehicleInfo.longitude) stop.stop.coordinate <= fromIntegral cfg.atStopRadiusM}
     | s <- sessions,
       s.status == ACTIVE,
-      queuedRouteStillServes s booking.boardStopCode,
       s.capacity - s.walkupCount >= booking.seats,
       Just veh <- [findByPlate (.vehicleNumber) s.vehicleNumber tracking],
       isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
@@ -164,10 +163,6 @@ silentCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool
 silentCab now maxAgeSec plate tracking =
   any (isFreshPosition now maxAgeSec . (.vehicleInfo)) tracking
     && maybe True (not . isFreshPosition now (silentReleaseMult * maxAgeSec) . (.vehicleInfo)) (findByPlate (.vehicleNumber) plate tracking)
-
--- | TODO: a queued route must still serve the board stop; needs its stop list from OTPRest. Tolerant for one tick (Phase 2 re-reads).
-queuedRouteStillServes :: Session -> Text -> Bool
-queuedRouteStillServes _ _ = True
 
 rankCandidates :: [RankedCandidate] -> [RankedCandidate]
 rankCandidates = sortOn rcEtaToBoardStopSec

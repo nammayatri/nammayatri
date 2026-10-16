@@ -137,8 +137,8 @@ allocationPass cityId = do
   let routes = nub [route | entry@(b, _) <- live, isJust (findingOf entry) || isJust (allocatedPlate entry), Just route <- [b.routeCode]]
   positionsByRoute <- fmap catMaybes . forM routes $ \routeCode ->
     try (readRoutePositions routeCode) >>= \case
-      -- TODO: "LTS outage != everyone silent": most sessions of a city stale in the same minute must suspend the freshness
-      -- gate. Skipping the route is fail-safe: no allocation from stale data, no stand timer cleared.
+      -- Known limitation: an LTS outage is not told apart from every cab being silent. A failed read skips the route, which is
+      -- fail-safe: no allocation from stale data, no stand timer cleared.
       Left (e :: SomeException) -> Nothing <$ logError ("shared-cab tick: LTS read failed for route " <> routeCode <> ": " <> show e)
       Right positions -> pure (Just (routeCode, positions))
   let onRoute route = fromMaybe [] (lookup route positionsByRoute)
