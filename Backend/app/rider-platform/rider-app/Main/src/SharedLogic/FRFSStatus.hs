@@ -324,7 +324,14 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
         isTestTransaction <- asks (.isMetroTestTransaction)
         let updatedOrderShortId = DPayment.updateShortId paymentOrder.paymentServiceType isTestTransaction paymentOrder.shortId.getShortId
         void $ QJourney.updatePaymentOrderShortId (Just $ ShortId updatedOrderShortId) (Just True) journeyId
-        void $ QJourney.updateStatus (if booking.status == DFRFSTicketBooking.FAILED then DJ.FAILED else DJ.INPROGRESS) journeyId
+        now <- getCurrentTime
+        let newStatus
+              | booking.status == DFRFSTicketBooking.FAILED = DJ.FAILED
+              | maybe False (> now) booking.startTime = DJ.CONFIRMED
+              | otherwise = DJ.INPROGRESS
+        mbJourney <- QJourney.findByPrimaryKey journeyId
+        whenJust mbJourney $ \journey ->
+          when (newStatus > journey.status) $ void $ QJourney.updateStatus newStatus journeyId
       pure mbJourneyLeg
 
     buildPaymentObject booking paymentBooking paymentBookingStatus =

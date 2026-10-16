@@ -29,6 +29,7 @@ import Domain.Action.UI.Quote
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingStatus as DB
 import Domain.Types.CancellationReason
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBookingStatus
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -48,6 +49,7 @@ import qualified SharedLogic.SilentReallocation as SilentRealloc
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QR
@@ -75,6 +77,9 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   now <- getCurrentTime
   activeJourneys <- QJourney.findAllActiveByRiderId personId
   processedActiveJourneys <- processJourneys now activeJourneys
+  fork "processOlderActiveJourneys" $ do
+    olderActiveJourneys <- QJourney.findAllOlderActiveByRiderId personId 20
+    void $ processJourneys now olderActiveJourneys
   let (normalActiveRideJourneys, updatedActiveJourneys) = partition isNormalRideJourney processedActiveJourneys
   when (not (null normalActiveRideJourneys)) $ do
     fork "normalRideJourneys - Auto Fix" $ do
@@ -178,44 +183,71 @@ notifyEvent personId merchantId req = do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
+      now <- getCurrentTime
       case req.journeyId of
         Just journeyId -> do
           QJourney.updateStatus DJ.COMPLETED journeyId
           fork "processOtherActiveJourneys" $ do
-            now <- getCurrentTime
             activeJourneys <- QJourney.findAllActiveByRiderId personId
             processedActiveJourneys <- processJourneys now activeJourneys
-            markJourneysComplete processedActiveJourneys
+            markJourneysComplete now (filter (\j -> j.id /= journeyId) processedActiveJourneys)
         -- TODO: For backward compatibility
         Nothing -> do
           activeJourneys <- QJourney.findAllActiveByRiderId personId
-          markJourneysComplete activeJourneys
+          markJourneysComplete now activeJourneys
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking Nothing OnSearch
       QPFS.updateStatus personId DPFS.IDLE
   pure APISuccess.Success
   where
-    markJourneysComplete =
+    markJourneysComplete now =
       mapM_
         ( \journey ->
-            when (journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED]) $
-              JM.updateJourneyStatus journey DJ.COMPLETED
+            when (journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED]) $ do
+              finished <- isJourneyFinished now journey
+              if finished
+                then JM.updateJourneyStatus journey DJ.COMPLETED
+                else logInfo $ "notifyEvent: skipping completion of unfinished journey " <> journey.id.getId
         )
+
+isJourneyFinished :: UTCTime -> DJ.Journey -> Flow Bool
+isJourneyFinished now journey = do
+  legs <- QJourneyLeg.getJourneyLegs journey.id
+  pendingLegs <- filterM isLegPending (filter (\leg -> leg.isDeleted /= Just True) legs)
+  pure $ null pendingLegs
+  where
+    isLegPending leg = case (leg.mode, leg.legSearchId) of
+      (DTrip.Walk, _) -> pure False
+      (_, Nothing) -> pure False
+      (DTrip.Taxi, Just searchId) -> do
+        mbBooking <- QB.findByTransactionId searchId
+        pure $ maybe False (\booking -> booking.status `notElem` DB.terminalBookingStatus) mbBooking
+      (_, Just searchId) -> do
+        mbBooking <- QFRFSTicketBooking.findBySearchId (Id searchId)
+        pure $ maybe False isUpcomingTrip mbBooking
+    isUpcomingTrip booking =
+      booking.status `notElem` [DFRFSBookingStatus.CANCELLED, DFRFSBookingStatus.COUNTER_CANCELLED, DFRFSBookingStatus.FAILED, DFRFSBookingStatus.RESCHEDULED]
+        && maybe False (> now) booking.startTime
 
 -- filter payment success journeys and update journey status if expired
 processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
 processJourneys _ [] = return []
 processJourneys now journeys = do
   updatedJourneys <- mapM updateJourneyStatus journeys
-  return $ filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
+  return $ filter (\j -> j.status `notElem` [DJ.EXPIRED, DJ.COMPLETED, DJ.FAILED]) updatedJourneys
   where
     updateJourneyStatus j = do
       case j.journeyExpiryTime of
         Just expiryTime ->
           if now > expiryTime
             then do
-              _ <- JM.updateJourneyStatus j DJ.EXPIRED
-              return j {DJ.status = DJ.EXPIRED}
+              let expiredStatus = if j.status == DJ.FEEDBACK_PENDING then DJ.COMPLETED else DJ.EXPIRED
+              _ <- JM.updateJourneyStatus j expiredStatus
+              return j {DJ.status = expiredStatus}
             else return j
-        Nothing -> return j
+        Nothing
+          | j.status == DJ.CONFIRMED && j.isPaymentSuccess /= Just True && now > addUTCTime (60 * 60 * 24) j.createdAt -> do
+            _ <- JM.updateJourneyStatus j DJ.FAILED
+            return j {DJ.status = DJ.FAILED}
+          | otherwise -> return j
