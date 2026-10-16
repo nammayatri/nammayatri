@@ -7,7 +7,7 @@ import subprocess
 import sys
 from typing import Callable
 
-from . import deploy, fleet, ssh, stack, workspace
+from . import data, deploy, fleet, ssh, stack, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -123,6 +123,39 @@ def _stack_status(args, t, wdir) -> dict:
     return res
 
 
+def cmd_versions(args: argparse.Namespace) -> int:
+    versions, err = data.published_versions(_target(args), args.source)
+    if err:
+        print(json.dumps({"error": err}))
+        return 1
+    pick = data.pick_version(versions)
+    print(json.dumps({"source": args.source, "versions": versions,
+                      "recommended": f"v{pick['version']}" if pick else None}, indent=2))
+    return 0
+
+
+def cmd_data(args: argparse.Namespace) -> int:
+    t = _target(args)
+    version = args.version
+    try:
+        if not version:
+            versions, err = data.published_versions(t, args.source)
+            if err:
+                raise RuntimeError(err)
+            pick = data.pick_version(versions)
+            if not pick:
+                raise RuntimeError(f"no usable {args.source} version published")
+            version = f"v{pick['version']}"
+            print(f"[data] latest safe {args.source}: {version}")
+        ws = f"http://{t.host}:{stack.FRONTDESK_PORT}/{args.name}"
+        res = data.sync_and_wait(ws, args.source, version, force=args.force)
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    print(json.dumps(res))
+    return 0
+
+
 def _add_owner_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--name", required=True, help="workspace name")
     p.add_argument("--owner-by", default="scc")
@@ -194,6 +227,19 @@ def main(argv: list | None = None) -> int:
         if name == "stack-wait":
             c.add_argument("--timeout", type=int, default=3600, help="seconds (default 3600)")
         c.set_defaults(func=_stack_cmd(fn))
+
+    vs = sub.add_parser("versions", help="published data versions (read through the devbox)")
+    _add_target_args(vs)
+    vs.add_argument("--from", dest="source", required=True, choices=data.SOURCES)
+    vs.set_defaults(func=cmd_versions)
+
+    dt = sub.add_parser("data", help="load published data into the workspace and wait")
+    _add_target_args(dt)
+    dt.add_argument("--name", required=True, help="workspace name")
+    dt.add_argument("--from", dest="source", required=True, choices=data.SOURCES)
+    dt.add_argument("--version", help="e.g. v3 (default: latest safe)")
+    dt.add_argument("--force", action="store_true", help="load even if the workspace already has it")
+    dt.set_defaults(func=cmd_data)
 
     args = p.parse_args(argv)
     return args.func(args)

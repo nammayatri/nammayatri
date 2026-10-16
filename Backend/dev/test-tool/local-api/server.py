@@ -79,6 +79,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 _DEVBOX_CORE_PARENT = SCRIPT_DIR.parent.parent  # Backend/dev
 if str(_DEVBOX_CORE_PARENT) not in sys.path:
     sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
+from devbox_core import data as _dc_data  # noqa: E402
 from devbox_core import deploy as _dc_deploy  # noqa: E402
 from devbox_core import fleet as _dc_fleet  # noqa: E402
 from devbox_core import ssh as _dc_ssh  # noqa: E402
@@ -1092,71 +1093,29 @@ def _frontdesk_ok(host: str) -> bool:
 # ── Workspace data (config-sync), reached through the dev-box front desk ──
 # The workspace's test-context-api does the actual import; these helpers only
 # pick a version and forward calls to <Workspace URL>/test-context-api/....
-DATA_SOURCES = ("master", "prod", "prod_international")
-# A front-desk Workspace URL: http://<host>:<port>/<workspace-id>, nothing else.
-_WS_URL_RE = re.compile(r"^http://[A-Za-z0-9.\-]+:\d+/[A-Za-z0-9_-]+$")
-# Where DB Manager publishes <source>_to_local/metadata.json. Same env vars and
-# default as context-api's CONFIG_SYNC_PUBLIC_BASE. Read from here (not via the
-# workspace) so the version can be picked before the stack is running.
-CONFIG_SYNC_PUBLIC_BASE = (
-    os.getenv("CONFIG_SYNC_CLOUDFRONT_URL", "")
-    or os.getenv("CONFIG_SYNC_PUBLIC_BUCKET_URL",
-                 "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com")
-)
+DATA_SOURCES = _dc_data.SOURCES
 
 
 def _published_versions(source: str) -> tuple[list, str | None]:
-    """(versions, error) from <source>_to_local/metadata.json. A 404 means
-    nothing is published for that source yet: no versions, no error."""
-    url = f"{CONFIG_SYNC_PUBLIC_BASE.rstrip('/')}/{source}_to_local/metadata.json"
-    try:
-        with urllib.request.urlopen(url, timeout=10) as r:
-            return json.loads(r.read()).get("available_versions") or [], None
-    except urllib.error.HTTPError as e:
-        return [], (None if e.code == 404 else f"HTTP {e.code} for {url}")
-    except Exception as e:
-        return [], f"cannot reach {url}: {e}"
+    """(versions, error) from <source>_to_local/metadata.json.
+
+    Read through the pinned dev-box when there is one: the bucket only answers
+    the office's whitelisted internet line, which the dev-boxes use and this
+    laptop (e.g. on Wi-Fi) may not. Without a pinned dev-box, read from here."""
+    t = _devbox_cc_target()
+    target = None if t.get("error") else _dc_ssh.Target(t["user"], t["host"], t["port"], _find_ssh_key())
+    return _dc_data.published_versions(target, source)
 
 
 def _pick_version(versions: list) -> dict | None:
-    """'Latest, but safe': the newest verified version, else the newest one not
-    marked not_stable. None for an empty list (the import then falls back to
-    config_transfer.py's pinned version)."""
-    usable = [v for v in versions if isinstance(v, dict) and isinstance(v.get("version"), int)]
-    for keep in (lambda v: v.get("status") == "verified",
-                 lambda v: v.get("status") != "not_stable"):
-        pool = [v for v in usable if keep(v)]
-        if pool:
-            return max(pool, key=lambda v: v["version"])
-    return None
+    """'Latest, but safe' (devbox_core.data.pick_version)."""
+    return _dc_data.pick_version(versions)
 
 
 def _workspace_ctx(ws: str, path: str, body: dict | None = None,
                    timeout: float = 10.0) -> dict:
-    """Call the workspace's test-context-api at <ws>/test-context-api<path>.
-
-    `unreachable: True` means the front desk answered but the stack behind it
-    is not up yet (or the dev-box is off) — the caller should wait and retry."""
-    if not _WS_URL_RE.match(ws or ""):
-        return {"error": f"not a workspace URL: {ws!r}"}
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(
-        f"{ws}/test-context-api{path}", data=data,
-        method="POST" if data is not None else "GET",
-        headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read() or b"{}")
-    except urllib.error.HTTPError as e:
-        if e.code in (502, 503, 504):
-            return {"unreachable": True, "error": f"stack not up yet (HTTP {e.code})"}
-        try:
-            msg = json.loads(e.read()).get("error")
-        except Exception:
-            msg = None
-        return {"error": msg or f"HTTP {e.code}", "httpStatus": e.code}
-    except Exception as e:
-        return {"unreachable": True, "error": f"workspace not reachable: {e}"}
+    """Call the workspace's test-context-api (devbox_core.data.ctx)."""
+    return _dc_data.ctx(ws, path, body, timeout)
 
 
 def _devbox_state_rehost(dev_id: str, ssh_user: str, old_host: str, new_host: str) -> None:
