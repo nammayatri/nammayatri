@@ -1,8 +1,15 @@
 module SharedLogic.FRFSPassOverride
   ( OverrideBenefitConfig (..),
+    OverrideBenefitEntry (..),
+    PassTicketBenefitConfig (..),
+    PassPricingConfig (..),
     OverrideBenefit (..),
     PercentageSaving (..),
     FixedSaving (..),
+    benefitForPayment,
+    entryForPayment,
+    entryFromPass,
+    validateEntry,
     ApplicablePass (..),
     PassOption (..),
     mkPassOptionAPIEntity,
@@ -21,9 +28,11 @@ module SharedLogic.FRFSPassOverride
     benefitForOverrideAppliedEntity,
     passForOverrideAppliedEntity,
     paymentForOverrideAppliedEntity,
-    parseOverrideBenefitConfig,
     isFullyPassCovered,
     fullyCoveredByPass,
+    passCoveredBankRef,
+    isOndcConfig,
+    passOfferAllowed,
     PassCandidate (..),
     loadPassCandidates,
     filterCandidatesForLeg,
@@ -53,7 +62,6 @@ where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
-import qualified Data.Aeson as A
 import Data.List (nubBy)
 import qualified Data.Time as T
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
@@ -62,6 +70,7 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
+import Domain.Types.PassOverrideConfig
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPPP
@@ -70,7 +79,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.FRFSPassTicketStatistics as FRFSPassTicketStatistics
 import qualified Storage.CachedQueries.Pass as CQPass
@@ -81,57 +89,6 @@ import qualified Storage.Queries.PersonExtra as QPersonExtra
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 import Tools.Error
 
-newtype OverrideBenefitConfig = OverrideBenefitConfig
-  { overrideBenefits :: [OverrideBenefit]
-  }
-  deriving (Generic, Show)
-
-data OverrideBenefit = OverrideBenefit
-  { percentageSaving :: Maybe PercentageSaving,
-    fixedSaving :: Maybe FixedSaving,
-    unlimitedTripCount :: Maybe Bool,
-    maximumTripCount :: Maybe Int,
-    maxTicketQuantityPerOverride :: Maybe Int
-  }
-  deriving (Generic, Show)
-
-data PercentageSaving = PercentageSaving
-  { applicableValue :: HighPrecMoney,
-    enabled :: Maybe Bool
-  }
-  deriving (Generic, Show)
-
-data FixedSaving = FixedSaving
-  { applicableValue :: HighPrecMoney,
-    currencyType :: Maybe Currency,
-    enabled :: Maybe Bool
-  }
-  deriving (Generic, Show)
-
-instance FromJSON OverrideBenefitConfig where
-  parseJSON = A.genericParseJSON constructorsWithSnakeCase
-
-instance ToJSON OverrideBenefitConfig where
-  toJSON = A.genericToJSON constructorsWithSnakeCase
-
-instance FromJSON OverrideBenefit where
-  parseJSON = A.genericParseJSON constructorsWithSnakeCase
-
-instance ToJSON OverrideBenefit where
-  toJSON = A.genericToJSON constructorsWithSnakeCase
-
-instance FromJSON PercentageSaving where
-  parseJSON = A.genericParseJSON constructorsWithSnakeCase
-
-instance ToJSON PercentageSaving where
-  toJSON = A.genericToJSON constructorsWithSnakeCase
-
-instance FromJSON FixedSaving where
-  parseJSON = A.genericParseJSON constructorsWithSnakeCase
-
-instance ToJSON FixedSaving where
-  toJSON = A.genericToJSON constructorsWithSnakeCase
-
 isFullyPassCovered :: Maybe HighPrecMoney -> Bool
 isFullyPassCovered = maybe False (<= 0)
 
@@ -140,6 +97,11 @@ fullyCoveredByPass booking =
   booking.overrideType == Just DFRFSTicketBooking.PassOverride
     && isJust booking.overrideAppliedEntityId
     && isFullyPassCovered booking.overriddenAmount
+
+passCoveredBankRef :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe Text
+passCoveredBankRef booking
+  | fullyCoveredByPass booking = booking.overrideAppliedEntityId
+  | otherwise = Nothing
 
 withinQuantityCap :: Int -> Maybe Int -> Bool
 withinQuantityCap totalQuantity mbCap = totalQuantity <= fromMaybe 1 mbCap
@@ -152,22 +114,46 @@ data ApplicablePass = ApplicablePass
     unlimitedTripCount :: Bool
   }
 
-parseOverrideBenefitConfig :: A.Value -> Either String OverrideBenefitConfig
-parseOverrideBenefitConfig value = case A.fromJSON value of
-  A.Success config -> Right config
-  A.Error err -> Left err
-
 coverageSupported :: DIBC.IntegratedBPPConfig -> Price -> Bool
 coverageSupported integratedBPPConfig overriddenTotal =
   not (isOndcConfig integratedBPPConfig && isFullyPassCovered (Just overriddenTotal.amount))
+
+passOfferAllowed :: DIBC.IntegratedBPPConfig -> Maybe Bool -> Bool
+passOfferAllowed integratedBPPConfig mbEnforceFRFSPass =
+  integratedBPPConfig.passOverrideApplicable == Just True
+    && (integratedBPPConfig.autoEnforceFRFSPass /= Just False || mbEnforceFRFSPass == Just True)
 
 isOndcConfig :: DIBC.IntegratedBPPConfig -> Bool
 isOndcConfig integratedBPPConfig = case integratedBPPConfig.providerConfig of
   DIBC.ONDC _ -> True
   _ -> False
 
-validateBenefit :: OverrideBenefit -> Either Text OverrideBenefit
-validateBenefit benefit
+validateEntry :: OverrideBenefitEntry -> Either Text OverrideBenefit
+validateEntry (TicketBenefit benefit) = validateBenefitWith True benefit
+validateEntry (PassTicketBenefit config) = do
+  void $ validatePricing config.pricing
+  when (isUnlimitedBenefit config.benefit) $
+    Left "a route priced pass cannot have unlimited_trip_count"
+  validateBenefitWith False config.benefit
+
+validatePricing :: PassPricingConfig -> Either Text PassPricingConfig
+validatePricing pricing
+  | savingEnabled pricing.percentageSaving (.enabled) && savingEnabled pricing.fixedSaving (.enabled) =
+    Left "pricing: both percentage_saving and fixed_saving are enabled; only one may be"
+  | Just p <- pricing.percentageSaving,
+    p.enabled == Just True,
+    p.applicableValue <= 0 || p.applicableValue >= 100 =
+    Left $ "pricing.percentage_saving.applicable_value must be in (0, 100), got " <> show p.applicableValue
+  | Just f <- pricing.fixedSaving,
+    f.enabled == Just True,
+    f.applicableValue <= 0 =
+    Left $ "pricing.fixed_saving.applicable_value must be positive, got " <> show f.applicableValue
+  | pricing.maximumPurchaseableTripCount <= 0 =
+    Left "pricing.maximum_purchaseable_trip_count must be positive"
+  | otherwise = Right pricing
+
+validateBenefitWith :: Bool -> OverrideBenefit -> Either Text OverrideBenefit
+validateBenefitWith requireTripCount benefit
   | not (savingEnabled benefit.percentageSaving (.enabled)) && not (savingEnabled benefit.fixedSaving (.enabled)) =
     Left "no enabled saving: exactly one of percentage_saving or fixed_saving must have enabled=true"
   | savingEnabled benefit.percentageSaving (.enabled) && savingEnabled benefit.fixedSaving (.enabled) =
@@ -180,37 +166,48 @@ validateBenefit benefit
     f.enabled == Just True,
     f.applicableValue <= 0 =
     Left $ "fixed_saving.applicable_value must be positive, got " <> show f.applicableValue
-  | not (isUnlimitedBenefit benefit) && isNothing benefit.maximumTripCount =
+  | requireTripCount && not (isUnlimitedBenefit benefit) && isNothing benefit.maximumTripCount =
     Left "benefit is metered but has no maximum_trip_count"
   | maybe False (<= 0) benefit.maximumTripCount =
     Left "maximum_trip_count must be positive"
   | maybe False (<= 0) benefit.maxTicketQuantityPerOverride =
     Left "max_ticket_quantity_per_override must be positive"
   | otherwise = Right benefit
-  where
-    savingEnabled mbSaving getEnabled = maybe False ((== Just True) . getEnabled) mbSaving
+
+savingEnabled :: Maybe a -> (a -> Maybe Bool) -> Bool
+savingEnabled mbSaving getEnabled = maybe False ((== Just True) . getEnabled) mbSaving
 
 benefitFromPass :: (Log m, MonadFlow m) => DPass.Pass -> m (Maybe OverrideBenefit)
-benefitFromPass pass = case pass.overrideBenefitConfigJson of
+benefitFromPass pass = fmap entryBenefit <$> entryFromPass pass
+
+entryFromPass :: (Log m, MonadFlow m) => DPass.Pass -> m (Maybe OverrideBenefitEntry)
+entryFromPass pass = entryFromConfig ("passId=" <> pass.id.getId) pass.overrideBenefitConfigJson
+
+benefitForPayment :: (Log m, MonadFlow m) => DPPP.PurchasedPassPayment -> DPass.Pass -> m (Maybe OverrideBenefit)
+benefitForPayment payment pass = fmap entryBenefit <$> entryForPayment payment pass
+
+entryForPayment :: (Log m, MonadFlow m) => DPPP.PurchasedPassPayment -> DPass.Pass -> m (Maybe OverrideBenefitEntry)
+entryForPayment payment pass = case payment.overrideBenefitConfigJson of
+  Just config -> entryFromConfig ("paymentId=" <> payment.id.getId) (Just config)
+  Nothing -> entryFromPass pass
+
+entryFromConfig :: (Log m, MonadFlow m) => Text -> Maybe OverrideBenefitConfig -> m (Maybe OverrideBenefitEntry)
+entryFromConfig ref = \case
   Nothing -> do
-    logError $ "FRFSPassOverride: pass is override-applicable but has no benefit config passId=" <> pass.id.getId
+    logError $ "FRFSPassOverride: no benefit config, or it did not parse " <> ref
     pure Nothing
-  Just configJson -> case parseOverrideBenefitConfig configJson of
-    Left err -> do
-      logError $ "FRFSPassOverride: unparseable benefit config passId=" <> pass.id.getId <> " error=" <> show err
-      pure Nothing
-    Right config -> do
-      when (length config.overrideBenefits > 1) $
-        logError $ "FRFSPassOverride: override_benefits has " <> show (length config.overrideBenefits) <> " entries, only the first is applied passId=" <> pass.id.getId
-      case listToMaybe config.overrideBenefits of
-        Nothing -> do
-          logError $ "FRFSPassOverride: empty override_benefits passId=" <> pass.id.getId
+  Just config -> do
+    when (length config.overrideBenefits > 1) $
+      logError $ "FRFSPassOverride: override_benefits has " <> show (length config.overrideBenefits) <> " entries, only the first is applied " <> ref
+    case firstEntry config of
+      Nothing -> do
+        logError $ "FRFSPassOverride: empty override_benefits " <> ref
+        pure Nothing
+      Just entry -> case validateEntry entry of
+        Left reason -> do
+          logError $ "FRFSPassOverride: invalid benefit config, disqualifying " <> ref <> " reason=" <> reason
           pure Nothing
-        Just benefit -> case validateBenefit benefit of
-          Left reason -> do
-            logError $ "FRFSPassOverride: invalid benefit config, disqualifying pass passId=" <> pass.id.getId <> " reason=" <> reason
-            pure Nothing
-          Right valid -> pure (Just valid)
+        Right _ -> pure (Just entry)
 
 isUnlimitedBenefit :: OverrideBenefit -> Bool
 isUnlimitedBenefit benefit = benefit.unlimitedTripCount == Just True
@@ -250,7 +247,7 @@ toCandidate payment = case payment.passId of
       Just pass
         | pass.frfsPriceOverrideApplicable /= Just True -> pure Nothing
         | otherwise ->
-          benefitFromPass pass >>= \case
+          benefitForPayment payment pass >>= \case
             Nothing -> pure Nothing
             Just benefit -> do
               availableTripCount <- remainingTrips payment benefit
@@ -416,12 +413,14 @@ benefitForOverrideAppliedEntity :: (CacheFlow m r, EsqDBFlow m r) => Maybe Text 
 benefitForOverrideAppliedEntity Nothing = pure Nothing
 benefitForOverrideAppliedEntity (Just entityId) = do
   mbPayment <- QPurchasedPassPayment.findByPrimaryKey (Id entityId)
-  case mbPayment >>= (.passId) of
+  case mbPayment of
     Nothing -> pure Nothing
-    Just passId ->
-      CQPass.findById passId >>= \case
-        Nothing -> pure Nothing
-        Just pass -> benefitFromPass pass
+    Just payment -> case payment.passId of
+      Nothing -> pure Nothing
+      Just passId ->
+        CQPass.findById passId >>= \case
+          Nothing -> pure Nothing
+          Just pass -> benefitForPayment payment pass
 
 data ConsumeResult
   = Consumed Int
@@ -893,7 +892,7 @@ refundPassOverrideTrip booking paymentId quantity = do
   case mbPayment of
     Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip payment not found paymentId=" <> paymentId.getId
     Just payment -> do
-      mbBenefit <- maybe (pure Nothing) (\passId -> CQPass.findById passId >>= maybe (pure Nothing) benefitFromPass) payment.passId
+      mbBenefit <- maybe (pure Nothing) (\passId -> CQPass.findById passId >>= maybe (pure Nothing) (benefitForPayment payment)) payment.passId
       case mbBenefit of
         Nothing -> logWarning $ "FRFSPassOverride:refundPassOverrideTrip no benefit config, nothing to give back paymentId=" <> paymentId.getId
         Just benefit -> do

@@ -138,6 +138,7 @@ mkSearch ctx searchId now mbQuote =
       fromStationName = mbQuote <&> (.fromStopName),
       fromStationPoint = Nothing,
       hasApplicablePass = Nothing,
+      enforceFRFSPass = Nothing,
       id = searchId,
       integratedBppConfigId = ctx.integratedBPPConfig.id,
       isOnSearchReceived = Nothing,
