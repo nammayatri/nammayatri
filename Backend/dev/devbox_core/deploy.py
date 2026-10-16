@@ -40,6 +40,11 @@ CABAL_CLEAN_TARGETS = [e for e in BUILD_STATE_EXCLUDES if e != "cabal.project.lo
 MACHINE_STATE_EXCLUDES = [
     "data", "node_modules", ".direnv",
     ".git",
+    # The source machine's devbox pin. The stack's pre-flight reads it first to
+    # pick its registry key (scripts.nix), so a copy would make a workspace act
+    # as the source's own workspace; without it the key comes from the folder
+    # name /tmp/<key>/nammayatri, which is what every workspace wants.
+    ".devbox-id.json",
     "*.log",
     ".stack-state.json",
     "Frontend/android-native", "Frontend/ios",

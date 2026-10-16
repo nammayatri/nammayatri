@@ -5,8 +5,9 @@ import argparse
 import json
 import subprocess
 import sys
+from typing import Callable
 
-from . import deploy, fleet, ssh, workspace
+from . import deploy, fleet, ssh, stack, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -103,6 +104,25 @@ def cmd_sync(args: argparse.Namespace) -> int:
     return 0
 
 
+def _stack_cmd(fn: Callable[[argparse.Namespace, ssh.Target, str], dict]):
+    def run(args: argparse.Namespace) -> int:
+        try:
+            res = fn(args, _target(args), workspace.workspace_dir(args.name))
+        except (ValueError, RuntimeError) as e:
+            print(json.dumps({"error": str(e)}))
+            return 1
+        print(json.dumps(res))
+        return 0
+    return run
+
+
+def _stack_status(args, t, wdir) -> dict:
+    res = stack.status(t, wdir)
+    if args.tail:
+        print(stack.tail(t, wdir, args.tail), end="")
+    return res
+
+
 def _add_owner_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--name", required=True, help="workspace name")
     p.add_argument("--owner-by", default="scc")
@@ -156,6 +176,24 @@ def main(argv: list | None = None) -> int:
     sy.add_argument("--src", required=True, help="nammayatri checkout to copy (its root folder)")
     sy.add_argument("--dry-run", action="store_true", help="list what would be copied; copy nothing")
     sy.set_defaults(func=cmd_sync)
+
+    for name, help_, fn in (
+        ("stack-start", "start the workspace's stack in the background",
+         lambda a, t, w: stack.start(t, w)),
+        ("stack-status", "running? which stage? (--tail N shows the last log lines)", _stack_status),
+        ("stack-wait", "follow the stack until rider-app and driver-app answer",
+         lambda a, t, w: stack.wait_ready(t, a.name, w, timeout=a.timeout)),
+        ("stack-stop", "stop the stack and everything running in the workspace folder",
+         lambda a, t, w: stack.stop(t, w)),
+    ):
+        c = sub.add_parser(name, help=help_)
+        _add_target_args(c)
+        c.add_argument("--name", required=True, help="workspace name")
+        if name == "stack-status":
+            c.add_argument("--tail", type=int, default=0)
+        if name == "stack-wait":
+            c.add_argument("--timeout", type=int, default=3600, help="seconds (default 3600)")
+        c.set_defaults(func=_stack_cmd(fn))
 
     args = p.parse_args(argv)
     return args.func(args)
