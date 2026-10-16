@@ -195,6 +195,10 @@ All three are self-rescheduling per-city scheduler jobs (`RiderJobType` in `Shar
 
 Chain (re)start (`Schedule.hs`): the guard holds the id of the one live chain. `ensureChain` sets it with a fresh id if absent (+ TTL) and enqueues the first job, carrying that id, only if it won; `scheduleNext` refreshes the guard and enqueues the next job with the same id. Each tick first runs `ownChain`: its id equal to the guard continues (`Mine`); an absent guard is taken back with set-if-absent (`Adopt`); another id ends the tick without rescheduling (`Foreign`). So a lapse followed by a re-seed leaves exactly one chain: the old one dies at its next tick. The per-tick run claim still drops a job the producer dispatches twice. Jobs queued before the id existed carry none and adopt like a lapsed guard.
 
+A stalled tick (a scheduler job delivered but never run) self-heals: the expiry tick re-seeds a lost allocation chain within a minute (`watchChains`), and the old chain's reclaimed job ends on its stale chain id.
+Cause: not established. The scheduler `XREADGROUP BLOCK` (10 s) being longer than hedis' 5 s request timeout was tried and ruled out as the sole cause: with `REDIS_REQUEST_NODE_TIMEOUT=15` there were no timeouts and the wedge still happened. The watchdog covers it whatever the cause (the guard lapses, the chain is re-seeded).
+Rollout: an old pod's chain never reads the guard, so during a mixed old/new rollout two allocation chains may run until old pods drain (a new pod that picks up an old-format job finds the guard naming its own chain and ends it); the per-tick run claim and the city tick lease keep the passes single.
+
 | Chain | Seeded by |
 |---|---|
 | Allocation tick (`ensureAllocationTick`, only if `sharedCabEnabled`) | `ConfirmHook.confirmHook` (booking confirm), `SharedCabInternal` route select and resume (`seeded`) |
