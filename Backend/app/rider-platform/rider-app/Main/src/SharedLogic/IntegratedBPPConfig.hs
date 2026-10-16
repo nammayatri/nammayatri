@@ -10,6 +10,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import SharedLogic.SharedCab.LegState (isSharedCabAgency)
 import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import Storage.ConfigPilot.Config.IntegratedBPPConfig (IntegratedBPPConfigDimensions (..))
 import Tools.Error
@@ -70,6 +71,22 @@ findIntegratedBPPConfig ::
 findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType =
   findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType
     >>= fromMaybeM IntegratedBPPConfigNotFound
+
+-- | The bus fleet's single config of a city: the newest row that is not the shared-cab feed, which shares the BUS category. A city with
+-- no shared-cab row gets exactly what 'findIntegratedBPPConfig' with no id gives (the newest row).
+findBusIntegratedBPPConfig ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m IntegratedBPPConfig
+findBusIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
+  (newestNonCab (.agencyKey) (.createdAt) <$> findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType)
+    >>= fromMaybeM IntegratedBPPConfigNotFound
+
+newestNonCab :: (a -> Text) -> (a -> UTCTime) -> [a] -> Maybe a
+newestNonCab agencyKeyOf createdAtOf rows =
+  listToMaybe (sortBy (\a b -> compare (createdAtOf b) (createdAtOf a)) (filter (not . isSharedCabAgency . agencyKeyOf) rows))
 
 findIntegratedBPPConfigFromEntity ::
   (HasField "integratedBppConfigId" a (Id IntegratedBPPConfig), EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

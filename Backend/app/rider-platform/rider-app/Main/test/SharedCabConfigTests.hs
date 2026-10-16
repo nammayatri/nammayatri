@@ -6,7 +6,10 @@ module SharedCabConfigTests (tests) where
 import Control.Applicative ((<|>))
 import Control.Monad (mfilter)
 import Data.Text (Text)
+import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
+import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab)
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
 import "rider-app" SharedLogic.SharedCab.Schedule (ChainName (..), ChainVerdict (..), NextStep (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, chainsSeededBy, nextStepFor, watchPlan)
@@ -38,6 +41,13 @@ tests =
                 WatchPlan True True,
                 WatchPlan True True
               ],
+      testCase "the bus fleet's single config is the newest row that is not the shared-cab feed, and a city without a cab row is unchanged" $
+        ( newestNonCab fst snd [("chennai_a", t 1), ("chennai_b", t 3), ("chennai_c", t 2)],
+          newestNonCab fst snd [("chennai_a", t 1), ("shillong_shared_cab:SHARED_CAB", t 9), ("chennai_c", t 2)],
+          newestNonCab fst snd [("shillong_shared_cab:SHARED_CAB", t 9)],
+          newestNonCab fst snd ([] :: [(Text, UTCTime)])
+        )
+          @?= (Just ("chennai_b", t 3), Just ("chennai_c", t 2), Nothing, Nothing),
       testCase "every chain is watched by another, and the frequent allocation tick watches the expiry chain" $
         map chainsSeededBy [AllocationChain, ExpiryChain, SweepChain] @?= [[ExpiryChain], [AllocationChain, SweepChain], [ExpiryChain]],
       testCase "a tick that could not read the guard enqueues its next tick without writing the guard" $
@@ -101,3 +111,6 @@ tests =
     rows = [[((MULTIMODAL, "a9"), "multi"), ((APPLICATION, "52"), "app")], [((APPLICATION, "52"), "app"), ((MULTIMODAL, "a9"), "multi")]]
     rowsOfTwo :: [((PlatformType, Text), String)]
     rowsOfTwo = head rows
+
+t :: Int -> UTCTime
+t = posixSecondsToUTCTime . fromIntegral
