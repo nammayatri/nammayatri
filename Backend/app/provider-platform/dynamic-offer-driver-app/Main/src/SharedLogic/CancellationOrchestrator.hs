@@ -505,6 +505,7 @@ buildRideCancellationSignals booking ride transporterConfig cancellationDisToPic
         initialDisToPickup = booking.distanceToPickup,
         cancellationDisToPickup = cancellationDisToPickup,
         arrivedPickupThreshold = transporterConfig.arrivedPickupThreshold,
+        isScheduled = booking.isScheduled,
         includePickupJourney = PickupStallState.runBehaviourEngineForRide booking.isScheduled (transporterConfig.pickupStallMonitoringConfig >>= (.runBehaviourEngineForScheduled))
       }
 
