@@ -7,12 +7,10 @@ module SharedLogic.SharedCab.Allocation.Select
     closable,
     claimable,
     RankedCandidate (..),
+    CabStance (..),
     isFreshPosition,
     eligibleCandidates,
-    standTimerOnClaim,
-    claimTimerSec,
-    claimTimerKind,
-    clearsWhenMoving,
+    claimTimer,
     ClaimPush (..),
     claimPush,
     silentReleaseMult,
@@ -36,7 +34,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
-import Kernel.Utils.Common (diffUTCTime)
+import Kernel.Utils.Common (addUTCTime, diffUTCTime)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation.Types
 import qualified SharedLogic.SharedCab.Config as Config
@@ -97,10 +95,19 @@ data RankedCandidate = RankedCandidate
   { rcSession :: Session,
     rcEtaToBoardStopSec :: Int,
     rcUpcomingStop :: LT.UpcomingStop,
-    rcMoving :: Bool, -- per its fresh LTS position: decides the claim's timer mode
-    rcAtStop :: Bool -- within atStopRadiusM of the board stop: only then is a stationary cab waiting for the rider
+    rcStance :: CabStance
   }
   deriving (Show, Generic)
+
+-- | Per the cab's fresh LTS position; decides the claim's timer. Only a stationary cab within atStopRadiusM of the board stop is waiting for the rider.
+data CabStance = CabMoving | CabAtStop | CabAway
+  deriving (Show, Eq)
+
+cabStance :: Config.SharedCabTunables -> LT.VehicleInfo -> LT.UpcomingStop -> CabStance
+cabStance cfg vi stop
+  | isMovingSpeed vi.speed = CabMoving
+  | distanceBetweenInMeters (LatLong vi.latitude vi.longitude) stop.stop.coordinate <= fromIntegral cfg.atStopRadiusM = CabAtStop
+  | otherwise = CabAway
 
 -- | Freshness gate: LTS never drops a silent cab by age, so anything older than the gate is dropped. A missing or
 -- unparseable timestamp is NOT fresh. Known limitation: a city-wide LTS outage is not told apart from every cab being stale.
@@ -121,7 +128,7 @@ eligibleCandidates ::
 eligibleCandidates now cfg tracking sessions booking =
   sortOn
     rcEtaToBoardStopSec
-    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcMoving = isMovingSpeed veh.vehicleInfo.speed, rcAtStop = distanceBetweenInMeters (LatLong veh.vehicleInfo.latitude veh.vehicleInfo.longitude) stop.stop.coordinate <= fromIntegral cfg.atStopRadiusM}
+    [ RankedCandidate {rcSession = s, rcEtaToBoardStopSec = etaSec, rcUpcomingStop = stop, rcStance = cabStance cfg veh.vehicleInfo stop}
       | s <- sessions,
         s.status == ACTIVE,
         s.capacity - s.walkupCount >= booking.seats,
@@ -132,30 +139,24 @@ eligibleCandidates now cfg tracking sessions booking =
         etaSec <= cfg.allocationWindowSec
     ]
 
-standTimerOnClaim :: RankedCandidate -> Bool
-standTimerOnClaim c = not c.rcMoving && c.rcAtStop
-
 -- | The timer a claim arms: a moving cab none, a stationary cab at the stop the stand timer, a stationary cab away from the stop
 -- a bounded wait (allocationWindowSec), so a parked cab that keeps pinging cannot hold the rider until the key's TTL.
-claimTimerSec :: Config.SharedCabTunables -> RankedCandidate -> Maybe Int
-claimTimerSec cfg c
-  | c.rcMoving = Nothing
-  | c.rcAtStop = Just cfg.standTimerSec
-  | otherwise = Just cfg.allocationWindowSec
-
-claimTimerKind :: RankedCandidate -> TimerKind
-claimTimerKind c
-  | c.rcMoving || c.rcAtStop = StandTimer
-  | otherwise = AwayTimer
-
-clearsWhenMoving :: TimerKind -> Bool
-clearsWhenMoving = (/= MovingTimer)
+claimTimer :: Config.SharedCabTunables -> UTCTime -> RankedCandidate -> Timer
+claimTimer cfg now c = case c.rcStance of
+  CabMoving -> NoTimer
+  CabAtStop -> StandTimer (after cfg.standTimerSec)
+  CabAway -> AwayTimer (after cfg.allocationWindowSec)
+  where
+    after sec = addUTCTime (intToNominalDiffTime sec) now
 
 data ClaimPush = PushArriving | PushAssigned
   deriving (Show, Eq)
 
 claimPush :: RankedCandidate -> ClaimPush
-claimPush c = if standTimerOnClaim c then PushArriving else PushAssigned
+claimPush c = case c.rcStance of
+  CabAtStop -> PushArriving
+  CabMoving -> PushAssigned
+  CabAway -> PushAssigned
 
 silentReleaseMult :: Int
 silentReleaseMult = 5

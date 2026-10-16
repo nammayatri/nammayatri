@@ -20,7 +20,7 @@ import Kernel.Utils.Common
 import SharedLogic.FRFSCancelJourney (cancelJourneyIfOnlyTransitLeg)
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState (..))
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (RouteChanged), AllocationState (..), allocationDeadline)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, recordCancelReason, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
@@ -93,7 +93,7 @@ decide by booking = do
   mbAlloc <- shared $ Redis.safeGet @AllocationState (Keys.allocKey booking.id)
   tunables <- Config.getTunables booking.merchantOperatingCityId
   riderFix <- readRiderFix booking.id
-  let state = cancelState now booking.vehicleNumber (mbAlloc >>= (.expiresAt))
+  let state = cancelState now booking.vehicleNumber (mbAlloc >>= allocationDeadline)
       near = riderNearStop tunables.boardProximityM tunables.ltsMaxAgeSec now booking.fromStationPoint riderFix
   case decideCancel by state booking.sharedCabNoShows tickets near of
     Rejected err -> throwError err

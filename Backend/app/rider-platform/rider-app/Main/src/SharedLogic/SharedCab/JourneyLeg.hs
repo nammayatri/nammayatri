@@ -25,7 +25,7 @@ import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.SharedCab.Allocation as SharedCabAllocation
 import qualified SharedLogic.SharedCab.Allocation.Claim as Claim
 import qualified SharedLogic.SharedCab.Allocation.Select as Select
-import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), RiderFix (..))
+import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), RiderFix (..), allocationDeadline)
 import qualified SharedLogic.SharedCab.Booking as SharedCabBooking
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Degraded as SharedCabDegraded
@@ -69,7 +69,7 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   mbDriverInfo <- readLiveDriverInfo mbSession
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
-      arrivalDeadline = mbAllocState >>= (.expiresAt)
+      arrivalDeadline = mbAllocState >>= allocationDeadline
       mbState = SharedCabLeg.deriveSharedCabState now bookingStatus' booking.vehicleNumber hasLiveSession (Just fallbackGate) arrivalDeadline
       boardDeadlineSec = guard (mbState == Just SharedCabLeg.ARRIVING) *> arrivalDeadline <&> \deadline -> max 0 (ceiling (diffUTCTime deadline now) :: Int)
       fallbackGate =

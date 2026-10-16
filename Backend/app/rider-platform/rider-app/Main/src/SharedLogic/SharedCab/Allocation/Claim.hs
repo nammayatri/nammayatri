@@ -22,7 +22,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, skippedWhileFinding)
+import SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimer, claimable, skippedWhileFinding)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (liveSeatsOnVehicle, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -101,11 +101,10 @@ attemptClaim cfg booking cand = do
                             QFRFSTicketBooking.updateAllocatedVehicle (Just plate) b.id Nothing
                             -- the key's TTL is only a garbage-collection backstop and must outlive the stacked timers
                             warnAllocKeyTtlOnce cfg "claim"
-                            let deadline = (\sec -> addUTCTime (intToNominalDiffTime sec) now) <$> claimTimerSec cfg cand
                             shared $
                               Redis.setExp
                                 (allocKey booking.bookingId)
-                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, expiresAt = deadline, attempts, timerKind = claimTimerKind cand}
+                                AllocationState {vehicleNumber = plate, driverId = Just s.driverId, vehicleTripId = Just s.vehicleTripId.getId, allocatedAt = now, timer = claimTimer cfg now cand, attempts}
                                 (allocKeyTtl cfg)
                             pure (Right now)
                           else pure (Left ClaimCasLost)

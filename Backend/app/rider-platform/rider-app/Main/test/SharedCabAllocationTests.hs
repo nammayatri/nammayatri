@@ -17,7 +17,7 @@ import qualified "beckn-spec" Domain.Types.FRFSTicketStatus as TS
 import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
-import "rider-app" SharedLogic.SharedCab.Allocation.Select (ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimerKind, claimTimerSec, claimable, clearsWhenMoving, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, standTimerOnClaim, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
@@ -33,7 +33,7 @@ t0 :: UTCTime
 t0 = UTCTime (fromGregorian 2026 9 25) 36000
 
 standing :: AllocationState
-standing = AllocationState {vehicleNumber = "ML05A1234", driverId = Just "d1", vehicleTripId = Just "t1", allocatedAt = t0, expiresAt = Just (addUTCTime 180 t0), attempts = 0, timerKind = StandTimer}
+standing = AllocationState {vehicleNumber = "ML05A1234", driverId = Just "d1", vehicleTripId = Just "t1", allocatedAt = t0, timer = StandTimer (addUTCTime 180 t0), attempts = 0}
 
 -- a board stop, a point ~30 m from it and one ~1.1 km away
 stop, nearStop, farAway :: LatLong
@@ -69,8 +69,7 @@ candidate plate =
           },
       rcEtaToBoardStopSec = 60,
       rcUpcomingStop = LT.UpcomingStop (LT.Stop "S1" stop "S1" 1 0 0) t0 LT.Upcoming Nothing,
-      rcMoving = True,
-      rcAtStop = False
+      rcStance = CabMoving
     }
 
 -- a cab at `pos` doing `speed` m/s whose last fix was `agoSec` before t0, with S1 as its upcoming board stop
@@ -96,8 +95,8 @@ cabFixEta etaSec plate pos speed agoSec =
 finding :: FindingBooking
 finding = FindingBooking {bookingId = Id "b", riderId = Id "r", routeCode = "R1", boardStopCode = "S1", dropStopCode = "S9", seats = 1, findingSince = t0}
 
-claimedAs :: LT.VehicleTrackingOnRouteResp -> [(Bool, Bool, Bool)]
-claimedAs veh = [(standTimerOnClaim c, c.rcMoving, c.rcAtStop) | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]
+claimedAs :: LT.VehicleTrackingOnRouteResp -> [CabStance]
+claimedAs veh = [c.rcStance | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]
 
 tests :: TestTree
 tests =
@@ -106,10 +105,10 @@ tests =
     [ testCase "a running timer keeps the allocation" $
         timerExpiry (addUTCTime 179 t0) (Just standing) @?= Nothing,
       testCase "an expired stand timer releases as StandTimeout, a moving one as MovingTimeout" $
-        (timerExpiry (addUTCTime 181 t0) (Just standing), timerExpiry (addUTCTime 181 t0) (Just standing {timerKind = MovingTimer}))
+        (timerExpiry (addUTCTime 181 t0) (Just standing), timerExpiry (addUTCTime 181 t0) (Just standing {timer = MovingTimer (addUTCTime 180 t0)}))
           @?= (Just StandTimeout, Just MovingTimeout),
       testCase "a cab claimed while moving has no timer to lapse" $
-        timerExpiry (addUTCTime 3600 t0) (Just standing {expiresAt = Nothing}) @?= Nothing,
+        timerExpiry (addUTCTime 3600 t0) (Just standing {timer = NoTimer}) @?= Nothing,
       testCase "timer mode follows the cab: moving above 1 m/s, no speed reads as stationary" $
         map isMovingSpeed [Just 5.0, Just 0.2, Nothing] @?= [True, False, False],
       testCase "a vanished alloc key releases without blame" $
@@ -175,10 +174,10 @@ tests =
           @?= [["A"], [], ["A"], []],
       testCase "only a stationary cab within atStopRadiusM of the board stop gets the stand timer" $
         map claimedAs [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5, cabFix "P1" farAway Nothing 5]
-          @?= [[(True, False, True)], [(False, False, False)], [(False, True, True)], [(False, False, False)]],
+          @?= [[CabAtStop], [CabAway], [CabMoving], [CabAway]],
       testCase "a stationary cab gets a bounded wait, at the stop the stand timer and away the allocation window; a moving cab none" $
-        map (\veh -> [claimTimerSec defaultTunables c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
-          @?= [[Just defaultTunables.standTimerSec], [Just defaultTunables.allocationWindowSec], [Nothing]],
+        map (\veh -> [claimTimer defaultTunables t0 c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
+          @?= [[StandTimer (addUTCTime (fromIntegral defaultTunables.standTimerSec) t0)], [AwayTimer (addUTCTime (fromIntegral defaultTunables.allocationWindowSec) t0)], [NoTimer]],
       testCase "a missed cab is skipped for the booking, no other close is" $
         map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, CabSilent, RiderSkipped SkipOther]
           @?= [True, True, False, False, False, False, False, False, False, False],
@@ -210,11 +209,8 @@ tests =
           @?= [True, False, False, False],
       testCase "a silent-cab release is nobody's fault and not an attempt" $
         (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
-      testCase "only a cab that sat at the stop (or is moving) gets the stand-timer kind; a cab away from the stop gets its own" $
-        map (\veh -> [claimTimerKind c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
-          @?= [[StandTimer], [AwayTimer], [StandTimer]],
       testCase "the away timer lapses as AwayTimeout, which blames nobody, skips no cab and is not a driver miss" $
-        ( timerExpiry (addUTCTime 181 t0) (Just standing {timerKind = AwayTimer}),
+        ( timerExpiry (addUTCTime 181 t0) (Just standing {timer = AwayTimer (addUTCTime 180 t0)}),
           blameFor AwayTimeout,
           skipsPlateOnClose AwayTimeout,
           countsTowardDriverMisses AwayTimeout,
@@ -227,7 +223,7 @@ tests =
         )
           @?= ([BlameRider, BlameRider, BlameDriver, BlameNone], [False, False, True, False]),
       testCase "stand and away timers are cleared once the cab moves, the moving timer is not" $
-        map clearsWhenMoving [StandTimer, AwayTimer, MovingTimer] @?= [True, True, False],
+        map clearOnMove [StandTimer t0, AwayTimer t0, MovingTimer t0, NoTimer] @?= [NoTimer, NoTimer, MovingTimer t0, NoTimer],
       testCase "a claim on a stationary cab at the stop pushes ARRIVING, any other claim pushes ASSIGNED" $
         map (\veh -> [claimPush c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
           @?= [[PushArriving], [PushAssigned], [PushAssigned]],

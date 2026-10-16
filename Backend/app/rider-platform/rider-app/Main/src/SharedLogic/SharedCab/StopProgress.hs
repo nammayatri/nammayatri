@@ -22,7 +22,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, readRoutePositions, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Claim (warnAllocKeyTtlOnce)
 import SharedLogic.SharedCab.Allocation.Select (isFreshPosition)
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), TimerKind (..), allocKeyTtl, passedStopBlame)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, allocationDeadline, passedStopBlame)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
 import qualified SharedLogic.SharedCab.Events as Events
@@ -137,14 +137,14 @@ cabFix vi =
 movingTimerStep :: StopProgressFlow m r c => Int -> StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 movingTimerStep keyTtlSec spc now freshCab plate b = do
   mbState <- shared $ Redis.safeGet @AllocationState (allocKey b.id)
-  whenJust mbState $ \st -> whenJust (armMovingTimer spc now st.expiresAt freshCab b.fromStationCode) $ \_ -> do
+  whenJust mbState $ \st -> whenJust (armMovingTimer spc now (allocationDeadline st) freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
       current <- shared $ Redis.safeGet @AllocationState (allocKey b.id)
       case current of
         Just cur
           | cur.vehicleNumber == plate,
-            Just deadline <- armMovingTimer spc now cur.expiresAt freshCab b.fromStationCode -> do
-            shared $ Redis.setExp (allocKey b.id) cur {expiresAt = Just deadline, timerKind = MovingTimer} keyTtlSec
+            Just deadline <- armMovingTimer spc now (allocationDeadline cur) freshCab b.fromStationCode -> do
+            shared $ Redis.setExp (allocKey b.id) cur {timer = MovingTimer deadline} keyTtlSec
             pure True
         _ -> pure False
     when armed $ do

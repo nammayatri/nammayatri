@@ -259,7 +259,7 @@ liveRiderRows stopPoints plate = do
         mbAlloc <- Booking.shared $ Redis.safeGet @AllocTypes.AllocationState key
         -- the allocation's armed timer (stand/moving); else the key's own TTL is the allocation's outer bound
         expiresAt <- case mbAlloc of
-          Just st | isJust st.expiresAt -> pure st.expiresAt
+          Just st | isJust (AllocTypes.allocationDeadline st) -> pure (AllocTypes.allocationDeadline st)
           Just _ -> do
             ttl <- Booking.shared $ Redis.ttl key
             pure $ if ttl > 0 then Just (addUTCTime (fromInteger ttl) now) else Nothing

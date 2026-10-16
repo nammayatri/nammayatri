@@ -12,7 +12,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, warnAllocKeyTtlOnce)
 import SharedLogic.SharedCab.Allocation.Reallocate (afterClose, closeLocked)
-import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate, clearsWhenMoving)
+import SharedLogic.SharedCab.Allocation.Select (FindingBooking (..), allocatedPlate)
 import SharedLogic.SharedCab.Allocation.Types
 import SharedLogic.SharedCab.Booking (shared, withBookingLock)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -37,9 +37,9 @@ expireTimers cfg now movingOn silentOn live =
         Just outcome -> fmap (outcome,) <$> closeLocked cfg b.id plate outcome
         Nothing -> do
           whenJust mbState $ \st ->
-            when (clearsWhenMoving st.timerKind && isJust st.expiresAt && maybe False (movingOn plate) b.routeCode) $ do
+            when (clearOnMove st.timer /= st.timer && maybe False (movingOn plate) b.routeCode) $ do
               warnAllocKeyTtlOnce cfg "timer-clear"
-              shared $ Redis.setExp (allocKey b.id) st {expiresAt = Nothing} (allocKeyTtl cfg)
+              shared $ Redis.setExp (allocKey b.id) st {timer = clearOnMove st.timer} (allocKeyTtl cfg)
           pure Nothing
     whenJust result $ \(outcome, closedInfo) -> afterClose cfg b.id plate outcome (Just closedInfo)
 

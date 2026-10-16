@@ -1,7 +1,10 @@
 -- | Shared-cab allocation types: alloc key value, outcomes, blame rules and the tick's decisions.
 module SharedLogic.SharedCab.Allocation.Types
   ( AllocationState (..),
-    TimerKind (..),
+    Timer (..),
+    timerDeadline,
+    allocationDeadline,
+    clearOnMove,
     AllocationOutcome (..),
     SkipReason (..),
     RiderFix (..),
@@ -34,21 +37,38 @@ import Kernel.Prelude
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import SharedLogic.SharedCab.Config (SharedCabTunables)
 
--- | The value stored under @sharedcab:alloc:{bookingId}@. Claimed while stationary -> stand timer; claimed while moving -> no
--- expiresAt, and the tick clears a stand timer once the cab moves. @attempts@ mirrors @sharedcab:attempts:{bookingId}@, since this value is deleted on close.
+-- | The value stored under @sharedcab:alloc:{bookingId}@. Claimed while stationary -> stand or away timer; claimed while moving ->
+-- no timer, and the tick clears a stand or away timer once the cab moves. @attempts@ mirrors @sharedcab:attempts:{bookingId}@, since this value is deleted on close.
 data AllocationState = AllocationState
   { vehicleNumber :: Text, -- canonical plate of the cab holding the booking right now
     driverId :: Maybe Text, -- who drove it at claim (the session's driver, read under the plate lock): who a driver miss is charged to
     vehicleTripId :: Maybe Text, -- the session's trip at claim: where a driver miss is counted, even if the plate is on another trip by close time
     allocatedAt :: UTCTime,
-    expiresAt :: Maybe UTCTime,
-    attempts :: Int,
-    timerKind :: TimerKind -- which of the two timers expiresAt belongs to
+    timer :: Timer,
+    attempts :: Int
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
-data TimerKind = StandTimer | MovingTimer | AwayTimer
+-- | The armed timer and its deadline, as one value: a deadline always knows what it times out as.
+data Timer = NoTimer | StandTimer UTCTime | MovingTimer UTCTime | AwayTimer UTCTime
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
+
+timerDeadline :: Timer -> Maybe UTCTime
+timerDeadline = \case
+  NoTimer -> Nothing
+  StandTimer d -> Just d
+  MovingTimer d -> Just d
+  AwayTimer d -> Just d
+
+allocationDeadline :: AllocationState -> Maybe UTCTime
+allocationDeadline = timerDeadline . (.timer)
+
+-- | A cab seen moving no longer waits at a stop: its stand and away timers are cleared; the moving timer is not.
+clearOnMove :: Timer -> Timer
+clearOnMove = \case
+  StandTimer _ -> NoTimer
+  AwayTimer _ -> NoTimer
+  other -> other
 
 data AllocationOutcome
   = -- | stand timer expired: cab waited standTimerSec and the booking was still open
@@ -123,11 +143,10 @@ skipsPlateOnClose = skipsPlate . outcomePolicy
 
 timerExpiry :: UTCTime -> Maybe AllocationState -> Maybe AllocationOutcome
 timerExpiry _ Nothing = Just TimerLost
-timerExpiry now (Just st) = case st.expiresAt of
-  Just deadline | now > deadline -> Just $ case st.timerKind of
-    StandTimer -> StandTimeout
-    MovingTimer -> MovingTimeout
-    AwayTimer -> AwayTimeout
+timerExpiry now (Just st) = case st.timer of
+  StandTimer d | now > d -> Just StandTimeout
+  MovingTimer d | now > d -> Just MovingTimeout
+  AwayTimer d | now > d -> Just AwayTimeout
   _ -> Nothing
 
 isMovingSpeed :: Maybe Double -> Bool
