@@ -192,9 +192,12 @@ Content-Type: application/json
 {"latLong": {"lat": {{from_lat}}, "lon": {{from_lon}}}, "currTime": "{{newDate}}"}
 HTTP 200
 
+# B was just selected: its first LTS position arrives with the next ping (3 s), and the proximity check reads that position
 POST {{base_url}}/v2/multimodal/{{journeyId}}/order/{{legOrder}}/subleg/1/setOnboardedVehicleDetails
 token: {{token}}
 Content-Type: application/json
+[Options]
+delay: 4000ms
 {"vehicleNumber": "{{plate_b_code}}", "supportsBoardingConfirmation": true}
 HTTP 200
 [Asserts]
