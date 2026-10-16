@@ -109,7 +109,8 @@ data OutcomePolicy = OutcomePolicy
     -- | @attempts@ counts allocations, not candidates: a phase-2 miss adds nothing; RouteChanged / SessionClosed are without penalty.
     countsAttempt :: Bool,
     countsDriverMiss :: Bool,
-    -- | A cab the rider failed to board is skipped for this booking too, or its stand timer would charge a second no-show.
+    -- | A cab the rider failed to board is skipped for this booking too, or its stand timer would charge a second no-show; so is a
+    -- cab that never came to the stop, or the same parked cab would be claimed again at once.
     skipsPlate :: Bool,
     wireName :: Text
   }
@@ -121,7 +122,7 @@ outcomePolicy :: AllocationOutcome -> OutcomePolicy
 outcomePolicy = \case
   StandTimeout -> OutcomePolicy BlameRider True False True "STAND_TIMEOUT"
   MovingTimeout -> OutcomePolicy BlameRider True False True "MOVING_TIMEOUT"
-  AwayTimeout -> OutcomePolicy BlameNone True False False "AWAY_TIMEOUT"
+  AwayTimeout -> OutcomePolicy BlameNone True False True "AWAY_TIMEOUT"
   DriverCancelled -> OutcomePolicy BlameDriver True True False "DRIVER_CANCELLED"
   PassedStop blame -> OutcomePolicy blame True False False "PASSED_STOP"
   SeatLost -> OutcomePolicy BlameNone True False False "SEAT_LOST"

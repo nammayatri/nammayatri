@@ -181,9 +181,9 @@ tests =
       testCase "a stationary cab gets a bounded wait, at the stop the stand timer and away the allocation window; a moving cab none" $
         map (\veh -> [claimTimer defaultTunables t0 c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
           @?= [[StandTimer (addUTCTime (fromIntegral defaultTunables.standTimerSec) t0)], [AwayTimer (addUTCTime (fromIntegral defaultTunables.allocationWindowSec) t0)], [NoTimer]],
-      testCase "a missed cab is skipped for the booking, no other close is" $
-        map skipsPlateOnClose [StandTimeout, MovingTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, CabSilent, RiderSkipped SkipOther]
-          @?= [True, True, False, False, False, False, False, False, False, False],
+      testCase "a missed or never-arriving cab is skipped for the booking, no other close is" $
+        map skipsPlateOnClose [StandTimeout, MovingTimeout, AwayTimeout, DriverCancelled, PassedStop BlameRider, SeatLost, RouteChanged, SessionClosed, TimerLost, CabSilent, RiderSkipped SkipOther]
+          @?= [True, True, True, False, False, False, False, False, False, False, False],
       testCase "a silent cab is released only past silentReleaseMult x ltsMaxAgeSec, and only while the route is otherwise reporting" $
         let quiet ago = silentCab t0 60 "P1" [cabFix "P1" nearStop (Just 5) ago, cabFix "P2" nearStop (Just 5) 3]
             limit = silentReleaseMult * 60
@@ -236,14 +236,14 @@ tests =
           @?= [True, False, False, False],
       testCase "a silent-cab release is nobody's fault and not an attempt" $
         (outcomeText CabSilent, blameFor CabSilent, countsTowardAttempts CabSilent, countsTowardDriverMisses CabSilent) @?= ("CAB_SILENT", BlameNone, False, False),
-      testCase "the away timer lapses as AwayTimeout, which blames nobody, skips no cab and is not a driver miss" $
+      testCase "the away timer lapses as AwayTimeout, which blames nobody, skips the cab that never came and is not a driver miss" $
         ( timerExpiry (addUTCTime 181 t0) (Just standing {timer = AwayTimer (addUTCTime 180 t0)}),
           blameFor AwayTimeout,
           skipsPlateOnClose AwayTimeout,
           countsTowardDriverMisses AwayTimeout,
           outcomeText AwayTimeout
         )
-          @?= (Just AwayTimeout, BlameNone, False, False, "AWAY_TIMEOUT"),
+          @?= (Just AwayTimeout, BlameNone, True, False, "AWAY_TIMEOUT"),
       testCase "(user decision 2026-09-30): a stand timeout is the rider's no-show, not a driver miss; a driver cancel still is" $
         ( map blameFor [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout],
           map countsTowardDriverMisses [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
