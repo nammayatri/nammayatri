@@ -813,10 +813,11 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
 filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
   now <- getCurrentTime
+  goHomeInfos <- Map.fromList <$> CQDGR.getDriversGoHomeRequestInfoBatch (map (.driverId) randomDriverPool) merchantOpCityId goHomeCfg
   goHomeRequests <-
     mapMaybeM
       ( \driver -> runMaybeT $ do
-          ghrId <- MaybeT $ CQDGR.getDriverGoHomeRequestInfo driver.driverId merchantOpCityId Nothing <&> (.driverGoHomeRequestId)
+          ghrId <- MaybeT $ pure $ Map.lookup driver.driverId goHomeInfos >>= (.driverGoHomeRequestId)
           goHomeReq <- MaybeT $ QDGR.findById ghrId
           return (goHomeReq, driver, Nothing)
       )
