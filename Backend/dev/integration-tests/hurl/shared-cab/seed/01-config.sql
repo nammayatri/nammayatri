@@ -10,6 +10,10 @@ SELECT md5('e2e-shared-cab-ibc')::uuid::text, 'shillong_shared_cab', 'FRFS', 'sh
 FROM atlas_app.integrated_bpp_config WHERE id='b76b3f68-1581-4fe2-9c56-b8968212c95d'
 ON CONFLICT DO NOTHING;
 
+-- The cab feed replaces the imported Chennai BUS row on this city: GIMS serves only the cab feed, so a second MULTIMODAL BUS
+-- row 404s every bus-path lookup (routeServiceability takes the first row).
+DELETE FROM atlas_app.integrated_bpp_config WHERE id='b76b3f68-1581-4fe2-9c56-b8968212c95d' AND EXISTS (SELECT 1 FROM atlas_app.integrated_bpp_config WHERE id=md5('e2e-shared-cab-ibc')::uuid::text);
+
 -- driver side
 INSERT INTO atlas_driver_offer_bpp.integrated_bpp_config (id, agency_key, domain, feed_key, merchant_id, merchant_operating_city_id, platform_type, config_json, vehicle_category, city, created_at, updated_at)
 SELECT md5('e2e-shared-cab-ibc')::uuid::text, 'shillong_shared_cab', 'FRFS', 'shillong_shared_cab', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'f8e9db0a-96c8-49e4-942a-3e3f7265d2da', 'APPLICATION', config_json, 'SHARED_CAB', 'Chennai', now(), now()
