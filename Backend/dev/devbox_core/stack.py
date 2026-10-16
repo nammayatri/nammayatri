@@ -79,13 +79,14 @@ echo "{{\\"started\\": true, \\"pid\\": $pid}}"
 def status(t: ssh.Target, wdir: str, timeout: int = 20) -> dict:
     """{"alive": bool, "pid": int|None, "stage": str, "buildFailed": bool}.
 
-    stage is "none" before the log shows anything, then the STAGES names."""
+    stage is "none" before the stack was started, "nix-eval" while Nix prepares
+    the shell (the log has lines but no pre-flight yet), then the STAGES names."""
     checks = "".join(
         f"grep -aqF {shlex.quote(marker)} {LOG} 2>/dev/null && stage={name}; "
         for name, marker in STAGES)
     script = (f"cd {shlex.quote(wdir)} 2>/dev/null || {{ echo '{{\"alive\": false, \"pid\": null, "
               f"\"stage\": \"none\", \"buildFailed\": false, \"missing\": true}}'; exit 0; }}; "
-              + _alive_sh() + "stage=none; " + checks +
+              + _alive_sh() + f"stage=none; [ -s {LOG} ] && stage=nix-eval; " + checks +
               f"bf=false; grep -aqF {shlex.quote(BUILD_FAILED)} {LOG} 2>/dev/null && bf=true; "
               'echo "{\\"alive\\": $([ $alive = yes ] && echo true || echo false), '
               '\\"pid\\": ${pid:-null}, \\"stage\\": \\"$stage\\", \\"buildFailed\\": $bf}"')
@@ -127,10 +128,12 @@ def ready_urls(host: str, name: str) -> list:
 
 
 def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
-               interval: int = 15, out: Callable[[str], None] = print) -> dict:
+               interval: int = 15, out: Callable[[str], None] = print,
+               on_stage: Callable[[str], None] | None = None) -> dict:
     """Follow the stack until rider-app and driver-app answer through the front
-    desk. Prints each stage change. Raises RuntimeError (with the last log
-    lines) when the stack dies, the build fails, or the timeout passes."""
+    desk. Prints each stage change (and passes it to on_stage). Raises
+    RuntimeError (with the last log lines) when the stack dies, the build
+    fails, or the timeout passes."""
     deadline = time.time() + timeout
     seen = ""
     while True:
@@ -138,6 +141,8 @@ def wait_ready(t: ssh.Target, name: str, wdir: str, timeout: int = 3600,
         if st["stage"] != seen:
             seen = st["stage"]
             out(f"[stack] stage: {seen}")
+            if on_stage:
+                on_stage(seen)
         if st.get("buildFailed"):
             raise RuntimeError("build failed\n" + tail(t, wdir, 40))
         if not st["alive"]:

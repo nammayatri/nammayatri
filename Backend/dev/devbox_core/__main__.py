@@ -7,7 +7,7 @@ import subprocess
 import sys
 from typing import Callable
 
-from . import cc, data, deploy, fleet, ssh, stack, workspace
+from . import cc, data, deploy, fleet, flow, ssh, stack, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -182,6 +182,28 @@ def cmd_cc_stop(args: argparse.Namespace) -> int:
     return _cc_result(cc.stop(_target(args), workspace.workspace_dir(args.name)))
 
 
+def cmd_spawn(args: argparse.Namespace) -> int:
+    try:
+        flow.spawn(args.name, args.src, _owner(args), host=args.host, user=args.user,
+                   key=args.key, source=args.source, version=args.version,
+                   cc_info={"branch": args.cc_branch, "commit": args.cc_commit},
+                   ready_timeout=args.ready_timeout)
+    except Exception as e:  # noqa: BLE001 — one clear line for the workflow log
+        print(json.dumps({"error": str(e)}))
+        return 1
+    return 0
+
+
+def cmd_stop(args: argparse.Namespace) -> int:
+    try:
+        res = flow.stop(_target(args), args.name, _owner(args))
+    except (ValueError, RuntimeError) as e:
+        print(json.dumps({"error": str(e)}))
+        return 1
+    print(json.dumps(res))
+    return 0
+
+
 def _add_owner_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--name", required=True, help="workspace name")
     p.add_argument("--owner-by", default="scc")
@@ -279,6 +301,24 @@ def main(argv: list | None = None) -> int:
             c.add_argument("--cc-branch", default="", help="control-center branch (shown in status)")
             c.add_argument("--cc-commit", default="", help="control-center commit (shown in status)")
         c.set_defaults(func=func)
+
+    sp = sub.add_parser("spawn", help="bring a whole workspace up: pick, sync, build, start, data, control centre")
+    _add_owner_args(sp)
+    sp.add_argument("--src", required=True, help="nammayatri checkout to copy (control-center/ inside it is used too)")
+    sp.add_argument("--host", help="devbox address (default: pick the least-loaded reachable one)")
+    sp.add_argument("--user", help="devbox SSH user (needed with --host)")
+    sp.add_argument("--key", help="private key file (default: DEVBOX_SSH_KEY_FILE or ~/.ssh/id_*)")
+    sp.add_argument("--from", dest="source", choices=data.SOURCES, help="data to load (default: none)")
+    sp.add_argument("--version", help="data version, e.g. v14 (default: latest safe)")
+    sp.add_argument("--cc-branch", default="")
+    sp.add_argument("--cc-commit", default="")
+    sp.add_argument("--ready-timeout", type=int, default=3600, help="seconds for build + start (default 3600)")
+    sp.set_defaults(func=cmd_spawn)
+
+    st = sub.add_parser("stop", help="remove a whole workspace: control centre, stack, folder, registry entry")
+    _add_target_args(st)
+    _add_owner_args(st)
+    st.set_defaults(func=cmd_stop)
 
     args = p.parse_args(argv)
     return args.func(args)

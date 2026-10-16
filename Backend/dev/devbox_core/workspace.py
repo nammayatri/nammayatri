@@ -36,6 +36,15 @@ def workspace_dir(name: str) -> str:
     return f"/tmp/{name}/nammayatri"
 
 
+def same_owner(entry: dict, owner: dict | None) -> bool:
+    """Python twin of _SAME_OWNER: match on by + release; None matches no owner."""
+    current = (entry or {}).get("owner")
+    if owner is None:
+        return current is None
+    return (current is not None and current.get("by") == owner.get("by")
+            and current.get("release") == owner.get("release"))
+
+
 def _check_name(name: str) -> None:
     if not SAFE_NAME_RE.match(name):
         raise ValueError(f"devName contains unsafe characters: {name!r}")
