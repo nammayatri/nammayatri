@@ -17,7 +17,7 @@ HTTP *
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "Asha K", "vehicleModel": "Dzire"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"
@@ -69,8 +69,8 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lat" isFloat
 jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.position.lon" isFloat
 # the driver-app hands over the driver's name and the car model at route select
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.driverName" == "Asha K"
-jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleModel" == "Dzire"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.driverName" == "{{driver_name}}"
+jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleModel" == "{{vehicle_model}}"
 
 # The allocated seat already counts against the cab
 GET {{base_url}}/v2/sharedCab/routes/{{route_a}}
@@ -180,7 +180,7 @@ jsonpath "$.legs[?(@.legOrder == {{legOrder}})].sharedCab.vehicleNumber" == "{{p
 
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "Ravi M", "vehicleModel": "Celerio"}
+{"driverId": "{{driver_b}}", "vehicleNumber": "{{plate_b}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_b_name}}", "vehicleModel": "{{vehicle_b_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.status" == "ACTIVE"

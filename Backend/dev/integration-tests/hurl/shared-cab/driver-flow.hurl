@@ -10,7 +10,7 @@ HTTP *
 # Select opens an ACTIVE session with no walk-ups: every seat free
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "Asha K", "vehicleModel": "Dzire"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "capacity": 4, "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Captures]
 v_open: jsonpath "$.session.version"
@@ -69,7 +69,7 @@ jsonpath "$.version" > {{v_walkup}}
 # Change route with nobody on board: applied at once, the old run closes as ROUTE_CHANGED
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_b}}", "walkupCount": 0, "driverName": "Asha K", "vehicleModel": "Dzire"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_b}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Captures]
 v_changed: jsonpath "$.session.version"
@@ -104,7 +104,7 @@ jsonpath "$.version" == {{v_changed}}
 # Back on route_a, then Start return: the run flips to its direction pair
 POST {{base_url}}/internal/sharedCab/route/select
 token: {{internal_key}}
-{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "Asha K", "vehicleModel": "Dzire"}
+{"driverId": "{{driver}}", "vehicleNumber": "{{plate}}", "agencyId": "{{ibc_id}}", "serviceTierType": "SHARED_CAB", "routeCode": "{{route_a}}", "walkupCount": 0, "driverName": "{{driver_name}}", "vehicleModel": "{{vehicle_model}}"}
 HTTP 200
 [Asserts]
 jsonpath "$.session.route.code" == "{{route_a}}"
