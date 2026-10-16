@@ -75,6 +75,12 @@ PORT = 7083
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 
+# Shared devbox helpers (Backend/dev/devbox_core), also used by the devbox workflow.
+_DEVBOX_CORE_PARENT = SCRIPT_DIR.parent.parent  # Backend/dev
+if str(_DEVBOX_CORE_PARENT) not in sys.path:
+    sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
+from devbox_core import ssh as _dc_ssh  # noqa: E402
+
 KNOWN_REPOS: dict = {
     "nammayatri/ny-react-native": PROJECT_ROOT / "data" / "ny-react-native",
     "nammayatri/control-center":  PROJECT_ROOT / "data" / "control-center",
@@ -977,11 +983,7 @@ REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 
 # ── SSH key + ServiceDiscovery helpers ──
 
-_SSH_KEY_CANDIDATES = [
-    os.path.expanduser("~/.ssh/id_ed25519"),
-    os.path.expanduser("~/.ssh/id_rsa"),
-    os.path.expanduser("~/.ssh/id_ecdsa"),
-]
+_SSH_KEY_CANDIDATES = [os.path.expanduser(k) for k in _dc_ssh.KEY_CANDIDATES]
 BASE_API_HOST = os.environ.get("BASE_API_HOST", "service-discovery.devenv.movingtech.net")
 BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
 # Devbox front desk (nix-the-builder scripts/frontdesk): one Caddy per dev-box that
@@ -991,10 +993,7 @@ FRONTDESK_PORT = os.environ.get("FRONTDESK_PORT", "8888")
 
 def _find_ssh_key() -> str | None:
     """Return path to the first existing SSH private key, or None."""
-    for k in _SSH_KEY_CANDIDATES:
-        if os.path.isfile(k):
-            return k
-    return None
+    return _dc_ssh.find_key()
 
 
 def _ensure_ssh_key() -> tuple[str, str]:
@@ -1214,14 +1213,7 @@ def _tcp_open(host: str, port: int = 22, timeout: float = 3.0) -> bool:
     Deliberately not _ssh_reachable: that needs key auth to already work, and a
     freshly assigned dev-box (key not authorized yet) is still perfectly
     reachable. Only the network path matters here."""
-    if not host:
-        return False
-    import socket
-    try:
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except OSError:
-        return False
+    return _dc_ssh.tcp_open(host, port, timeout)
 
 
 def _frontdesk_ok(host: str) -> bool:
@@ -1907,9 +1899,8 @@ def _devbox_cc_target() -> dict:
 
 
 def _devbox_cc_ssh(t: dict, script: str, timeout: int = 20) -> subprocess.CompletedProcess:
-    argv = _ssh_argv(t["user"], t["host"], t["port"], _find_ssh_key(), want_tty=False)
-    return subprocess.run(argv + [f"bash -c {shlex.quote(script)}"],
-                          capture_output=True, text=True, timeout=timeout)
+    target = _dc_ssh.Target(t["user"], t["host"], t["port"], _find_ssh_key())
+    return _dc_ssh.run(target, script, timeout=timeout)
 
 
 def _local_cc_checkout() -> dict:
@@ -2211,24 +2202,7 @@ def _remote_pipe_reader(session: dict, stream) -> None:
 
 
 def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: bool) -> list:
-    argv = ["ssh"]
-    if want_tty:
-        argv += ["-tt"]
-    argv += [
-        "-o", "StrictHostKeyChecking=accept-new",
-        "-o", "ServerAliveInterval=15",
-        "-o", "GSSAPIAuthentication=no",
-        "-o", "ConnectTimeout=10",
-        "-o", "BatchMode=yes",
-        "-p", str(port),
-    ]
-    if identity:
-        argv += ["-i", identity]
-    if user:
-        argv += [f"{user}@{host}"]
-    else:
-        argv += [host]
-    return argv
+    return _dc_ssh.argv(_dc_ssh.Target(user, host, port, identity), tty=want_tty)
 
 
 # ── Service log viewer ────────────────────────────────────────────────────────
