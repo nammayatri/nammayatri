@@ -14,17 +14,28 @@ from . import cc, data, deploy, fleet, output, ssh, stack, workspace
 CC_READY_TIMEOUT = 900   # npm install on a fresh workspace can take a while
 
 
+def _has_frontdesk(host: str) -> bool:
+    """Workspace URLs go through the devbox front desk; without it nothing answers."""
+    return ssh.tcp_open(host, stack.FRONTDESK_PORT)
+
+
 def _pick_target(user: str | None, host: str | None, key: str | None) -> tuple[ssh.Target, str]:
-    """The devbox to use: the given host, else the least-loaded reachable one."""
+    """The devbox to use: the given host, else the least-loaded reachable one
+    that has a front desk."""
     if host:
+        if not _has_frontdesk(host):
+            raise RuntimeError(f"{host} has no front desk on :{stack.FRONTDESK_PORT} "
+                               f"(Caddy + devbox-frontdesk-sync), so workspace URLs cannot answer")
         return ssh.Target(user or "", host, 22, key or ssh.find_key()), host
     base_host, base_port = fleet.base_api()
     res = fleet.fetch_machines(base_host, base_port)
     if res.get("error"):
         raise RuntimeError(res["error"])
-    m = fleet.pick(fleet.devboxes(res.get("machines", [])))
+    boxes = [m for m in fleet.devboxes(res.get("machines", []))
+             if m.get("bestIp") and _has_frontdesk(m["bestIp"])]
+    m = fleet.pick(boxes)
     if m is None:
-        raise RuntimeError("no reachable dev-box")
+        raise RuntimeError(f"no reachable dev-box with a front desk on :{stack.FRONTDESK_PORT}")
     return ssh.Target(m.get("user") or "", m["bestIp"], 22, key or ssh.find_key()), m.get("name", m["bestIp"])
 
 
