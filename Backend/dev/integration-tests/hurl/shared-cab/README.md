@@ -23,6 +23,8 @@ Fill the `REPLACE_ME` values in `local.env` (or copy it and point `ENV` at the c
 ./run.sh standalone # standalone pay-on-board booking: search, quote, confirm (no payment order)
 ```
 
+Set `CLEAN_DB_URL=postgresql://user@localhost:5434/db` (local Postgres only) and every flow first cancels leftover SHARED_CAB bookings and tickets, so a failed run cannot starve the next one of seats.
+
 `run.sh` passes `date` (today in IST) for the trips history. Each file ends by closing the driver's session, so every file re-runs. The rider login is rate limited, so reuse `TOKEN` across runs.
 
 ## What each file asserts
