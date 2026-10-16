@@ -11,7 +11,6 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
-import qualified Domain.Types.PersonPTStats as DPUS
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -25,22 +24,20 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Core.Types as Finance
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSCancelEffects as FRFSCancelEffects
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
-import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab (isSharedCabBooking, refundWithheld)
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
-import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified Tools.SMS as Sms
@@ -127,37 +124,14 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges _messag
     if booking.status == DFRFSTicketBooking.CANCELLED
       then FRFSPassOverride.hasPendingTripRefund booking.searchId
       else pure (not isCounterCancellation)
-  when (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED]) $
-    whenJust booking.overrideAppliedEntityId $ \entityId ->
-      -- One trip per ticket went out at confirm, so the same number comes back here.
-      void $ withTryCatch "FRFSCancel:refundPassOverrideTrip" (FRFSPassOverride.refundPassOverrideTrip booking (Id entityId) fareParameters.totalQuantity)
-  whenJust booking.overrideAppliedEntityId $ \entityId ->
-    void . withTryCatch "FRFSCancel:releaseBookedTrip" $
-      FRFSPassOverride.releaseBookedTrip person (Id entityId) booking.id.getId
-        (fromMaybe booking.createdAt booking.startTime)
-  void $ CQP.clearPSCache booking.riderId
-  -- NOTE: these are not idempotent -- a replayed cancel callback decrements the ticket count again
+  FRFSCancelEffects.releaseCancelledBooking
+    (refundOwed && booking.status `notElem` [DFRFSTicketBooking.NEW, DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING, DFRFSTicketBooking.CONFIRMING, DFRFSTicketBooking.FAILED])
+    True
+    booking
+    (Just person)
+    fareParameters.totalQuantity
+  -- NOTE: the counters are not idempotent -- a replayed cancel callback decrements the ticket count again
   -- and rewrites settlement. That is pre-existing behaviour, left exactly as it is on main.
-
-  -- Undo the segmentation counters recorded at on_confirm.
-  reverseStatsResult <-
-    withTryCatch "handleCancelledStatus:reversePersonPTStats" $ do
-      purchaseEvent <-
-        SPUS.mkPurchaseEvent
-          person
-          (Just booking.vehicleType)
-          booking.serviceTierType
-          DPUS.TICKET
-          Nothing
-          (Just fareParameters.totalQuantity)
-          booking.merchantId
-          booking.merchantOperatingCityId
-      SPUS.reversePurchase purchaseEvent
-  case reverseStatsResult of
-    Right () -> pure ()
-    Left err -> logError $ "Failed to reverse PersonPTStats for booking " <> booking.id.getId <> ": " <> show err
-
-  void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   releaseSeatsIfHeld booking quoteCategories
   unless isCounterCancellation $ do
     -- Must stay LAST and swallowed, or a Redis error here would abort before the seat release/counter above.

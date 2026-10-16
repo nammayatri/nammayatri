@@ -13,14 +13,13 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.PersonPTStats as DPUS
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSCancelEffects as FRFSCancelEffects
 import qualified SharedLogic.FRFSCancelJourney as FRFSCancelJourney
 import qualified SharedLogic.FRFSPassOverride as FRFSPassOverride
-import qualified SharedLogic.PersonPTStats as SPUS
 import SharedLogic.SharedCab.Allocation.Claim (AllocFlow, claimFallbackPush, findLive)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), closable, crossedMaxAttempts, isRescheduledChild)
 import SharedLogic.SharedCab.Allocation.Types
@@ -35,12 +34,10 @@ import qualified SharedLogic.SharedCab.NoShow as NoShow
 import qualified SharedLogic.SharedCab.Notify as Notify
 import SharedLogic.SharedCab.RefundDecision (Refund (..), gateByPayment, refundAmounts, refundWord)
 import qualified SharedLogic.SharedCab.Session as Session
-import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.PersonStats as QPS
 
 data Closed = Closed
   { closedCity :: Id DMOC.MerchantOperatingCity,
@@ -124,29 +121,12 @@ cancelForNoShows b = do
     >>= either (\e -> logError $ "shared-cab cancel-reason not recorded for booking " <> b.id.getId <> ": " <> show e) pure
   releaseCancelledBooking b
 
--- | Side effects shared by every system cancel the tick does. Not crash-idempotent for the counters: a crash before them leaves
--- stats un-reversed rather than reversed twice.
+-- | Side effects shared by every system cancel the tick does (the shared effects of any FRFS cancel).
 releaseCancelledBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DFTB.FRFSTicketBooking -> m ()
 releaseCancelledBooking b = do
   quantity <- FRFSPassOverride.ticketQuantityForBooking b
   mbPerson <- QPerson.findById b.riderId
-  whenJust b.overrideAppliedEntityId $ \entityId -> do
-    void . withTryCatch "sharedCab:releaseCancelledBooking:refundPassOverrideTrip" $
-      FRFSPassOverride.refundPassOverrideTrip b (Id entityId) quantity
-    void . withTryCatch "sharedCab:releaseCancelledBooking:releaseBookedTrip" $
-      whenJust mbPerson $ \person ->
-        FRFSPassOverride.releaseBookedTrip person (Id entityId) b.id.getId (fromMaybe b.createdAt b.startTime)
-  void . withTryCatch "sharedCab:releaseCancelledBooking:clearPSCache" $ CQP.clearPSCache b.riderId
-  case mbPerson of
-    Nothing -> logError $ "shared-cab releaseCancelledBooking: person " <> b.riderId.getId <> " not found, stats reversal skipped"
-    Just person -> do
-      reverseStatsResult <-
-        withTryCatch "sharedCab:releaseCancelledBooking:reversePersonPTStats" $ do
-          purchaseEvent <- SPUS.mkPurchaseEvent person (Just b.vehicleType) b.serviceTierType DPUS.TICKET Nothing (Just quantity) b.merchantId b.merchantOperatingCityId
-          SPUS.reversePurchase purchaseEvent
-      either (\e -> logError $ "Failed to reverse PersonPTStats for booking " <> b.id.getId <> ": " <> show e) pure reverseStatsResult
-  unless (isRescheduledChild b.parentBookingId) . void . withTryCatch "sharedCab:releaseCancelledBooking:ticketsBooked" $
-    QPS.incrementTicketsBookedInEvent b.riderId (- quantity)
+  FRFSCancelEffects.releaseCancelledBooking True (not (isRescheduledChild b.parentBookingId)) b mbPerson quantity
 
 eventBlame :: Blame -> Events.Blame
 eventBlame = \case
