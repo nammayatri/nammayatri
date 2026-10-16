@@ -5,6 +5,7 @@ module SharedCabStopProgressTests (tests) where
 import qualified Data.Text as T
 import Data.Time (UTCTime (..), addUTCTime, fromGregorian)
 import Kernel.External.Maps.Types (LatLong (..))
+import SharedLogic.SharedCab.Allocation.Types (AllocationState (..), Timer (..), runningTimerDeadline)
 import SharedLogic.SharedCab.StopProgress.Rules
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -67,6 +68,11 @@ tests =
           armMovingTimer cfg t0 Nothing Nothing "S5"
         )
           @?= (Just (after 90), Nothing, Nothing, Nothing, Nothing),
+      testCase "moving timer: an away timer running at the stop is never replaced by the rider-blamed moving timer; a stand or moving timer is not either" $
+        let st timer = AllocationState {vehicleNumber = "P1", driverId = Nothing, vehicleTripId = Nothing, allocatedAt = t0, timer}
+            armedWith timer = armMovingTimer cfg t0 (runningTimerDeadline (st timer)) (Just (fix 25.6195 [stopAt 5 False, stopAt 6 False])) "S5"
+         in map armedWith [NoTimer, StandTimer (after 30), MovingTimer (after 30), AwayTimer (after 30)]
+              @?= [Just (after 90), Nothing, Nothing, Nothing],
       testCase "reached end: the last stop Reached, or the cab at it" $
         ( reachedRouteEnd 100 (fix 25.60 [stopAt 5 False, stopAt 6 False]),
           reachedRouteEnd 100 (fix 25.625 [stopAt 5 True, stopAt 6 False]),

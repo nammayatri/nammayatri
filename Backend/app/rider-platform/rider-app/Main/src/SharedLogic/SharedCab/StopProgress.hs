@@ -21,7 +21,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.SharedCab.Allocation (InternalEndpointFlow, releaseSharedCabAllocation, releaseUnboarded)
 import SharedLogic.SharedCab.Allocation.Select (LiveBooking (..), isFreshPosition)
-import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, allocationDeadline, passedStopBlame)
+import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (..), AllocationState (..), Blame (BlameNone), Timer (..), allocKeyTtl, passedStopBlame, runningTimerDeadline)
 import SharedLogic.SharedCab.Booking (markDropped, readRiderFix, shared, withBookingLock)
 import SharedLogic.SharedCab.BookingState (readAlloc, writeAlloc)
 import qualified SharedLogic.SharedCab.Config as Config
@@ -137,13 +137,13 @@ cabFix vi =
 movingTimerStep :: StopProgressFlow m r c => Int -> StopProgressConfig -> UTCTime -> Maybe CabFix -> Text -> DFTB.FRFSTicketBooking -> m ()
 movingTimerStep keyTtlSec spc now freshCab plate b = do
   mbState <- readAlloc b.id
-  whenJust mbState $ \st -> whenJust (armMovingTimer spc now (allocationDeadline st) freshCab b.fromStationCode) $ \_ -> do
+  whenJust mbState $ \st -> whenJust (armMovingTimer spc now (runningTimerDeadline st) freshCab b.fromStationCode) $ \_ -> do
     armed <- withBookingLock b.id $ do
       current <- readAlloc b.id
       case current of
         Just cur
           | cur.vehicleNumber == plate,
-            Just deadline <- armMovingTimer spc now (allocationDeadline cur) freshCab b.fromStationCode -> do
+            Just deadline <- armMovingTimer spc now (runningTimerDeadline cur) freshCab b.fromStationCode -> do
             writeAlloc keyTtlSec b.id cur {timer = MovingTimer deadline}
             pure True
         _ -> pure False
