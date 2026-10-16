@@ -17,6 +17,7 @@ module Lib.Types.SpecialLocation where
 
 import Control.Lens.Operators
 import Data.Aeson
+import Data.Aeson.Types (toJSONKeyText)
 import qualified Data.Bifunctor as BF
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as List
@@ -206,6 +207,18 @@ instance Show Area where
   show (Pickup specialLocationId mbGateId) = "Pickup_" <> T.unpack specialLocationId.getId <> maybe "" (\g -> "_Gate_" <> T.unpack g) mbGateId
   show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
   show (PickupDrop pickupId dropId mbPGate) = "PickupDrop_" <> T.unpack pickupId.getId <> "_" <> T.unpack dropId.getId <> maybe "" (\pg -> "_PGate_" <> T.unpack pg) mbPGate
+
+-- | A 'Map Area v' encodes as a JSON object keyed by the area's show form
+-- ("Default", "Pickup_<id>", "Drop_<id>", ...) instead of a list of pairs.
+instance ToJSONKey Area where
+  toJSONKey = toJSONKeyText (T.pack . show)
+
+instance FromJSONKey Area where
+  fromJSONKey =
+    FromJSONKeyTextParser $ \t ->
+      case readMaybe (T.unpack t) of
+        Just area -> pure area
+        Nothing -> fail $ "unknown Area: " <> T.unpack t
 
 $(mkBeamInstancesForEnum ''Area)
 

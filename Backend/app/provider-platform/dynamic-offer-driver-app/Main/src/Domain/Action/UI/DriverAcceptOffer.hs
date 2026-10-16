@@ -20,6 +20,7 @@ module Domain.Action.UI.DriverAcceptOffer
 where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Types as DTC
@@ -74,6 +75,7 @@ import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.FleetConfig (fleetForbidsDriverCancellation, getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -162,10 +164,14 @@ acceptDynamicOfferDriverRequest mbReusedAssign clientId merchantId merchantOpCit
     logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
     throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
   mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId searchTry.emailDomain searchTry.businessEmailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
+  mbFleetConfig <- case sReqFD.fleetOwnerId of
+    Just fleetOwnerId -> Map.lookup fleetOwnerId.getId <$> getCityFleetConfigs merchantOpCityId
+    Nothing -> pure Nothing
   let farePolicy' =
         farePolicy
           { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
-            DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage
+            DFarePolicy.personalDiscountPercentage = mbDomainDiscountPct <|> farePolicy.personalDiscountPercentage,
+            DFarePolicy.driverCancellationNotAllowed = if fleetForbidsDriverCancellation mbFleetConfig then Just True else farePolicy.driverCancellationNotAllowed
           } ::
           DFarePolicy.FullFarePolicy
   -- Only look the RC up when the pickup zone has opted in, so ordinary rides pay nothing for this.

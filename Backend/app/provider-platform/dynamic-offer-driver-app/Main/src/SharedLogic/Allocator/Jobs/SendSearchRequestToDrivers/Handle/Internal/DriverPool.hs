@@ -45,6 +45,7 @@ import qualified Data.Text as T
 import qualified Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverPoolConfig
+import Domain.Types.FleetPoolingPriority (FleetPoolingPriority, resolvePoolingPriority)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.RiderDetails as DRD
@@ -72,6 +73,7 @@ import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
+import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
@@ -183,6 +185,23 @@ ensurePoolingLogicVersion searchReq
     whenJust mbVersion $ \_ -> QSR.updatePoolingLogicVersion mbVersion searchReq.id
     pure $ searchReq {DSR.poolingLogicVersion = mbVersion}
 
+-- | Pooling priority of each driver's fleet, keyed off the 'fleetOwnerId' cached in the
+-- driver's LTS pool data (kept in sync on fleet link/unlink).
+getFleetPoolingPriorities ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id MerchantOperatingCity ->
+  [DriverPoolWithActualDistResult] ->
+  m (Map.Map (Id Driver) FleetPoolingPriority)
+getFleetPoolingPriorities mOCityId drivers = do
+  fleetConfigs <- getCityFleetConfigs mOCityId
+  pure $
+    Map.fromList
+      [ (d.driverPoolResult.driverId, priority)
+        | d <- drivers,
+          Just fleetOwnerId <- [d.driverPoolResult.fleetOwnerId],
+          Just priority <- [Map.lookup fleetOwnerId fleetConfigs >>= (.fleetPoolingPriority)]
+      ]
+
 -- | Per-driver preference-match checks for a search. Each entry is one independently
 -- pluggable dimension over the driver's own self-selected preferences.
 mkDriverPreferenceChecks :: DSR.SearchRequest -> DriverPoolWithActualDistResult -> [PreferenceCheck]
@@ -272,6 +291,10 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
         <> ")"
   logInfo $ "POOLING version applied: " <> show mbVersion <> " batchNum=" <> show batchNum <> " isOnRidePool=" <> show isOnRidePool
   let onlyNewDriversWithCustomerInfo = map updateDriverPoolWithActualDistResult onlyNewDrivers
+  fleetPriorities <-
+    if null allLogics
+      then pure Map.empty
+      else withTimeAPI "driverPooling" "fetchingFleetPoolingPriority" $ getFleetPoolingPriorities mOCityId onlyNewDriversWithCustomerInfo
   -- Enrich drivers with their per-driver SRD sliding-window counters and idle time so the POOLING
   -- dynamic-logic rules can reference them. Batched: pipelined cross-slot MGETs for the whole batch
   -- (counters + idle) instead of a Redis read pass per driver.
@@ -290,7 +313,8 @@ makeTaggedDriverPool mOCityId transporterCfg searchReq onlyNewDrivers batchSize 
                   { searchReqDriverStatsCounters = Map.lookup personId countersMap,
                     idleTimeSeconds = Map.lookup personId idleMap,
                     preferenceMatchScore = computePreferenceMatchScore preferenceChecks,
-                    hasApplicablePreferences = any (.isApplicable) preferenceChecks
+                    hasApplicablePreferences = any (.isApplicable) preferenceChecks,
+                    fleetPoolingPriorityLevel = Map.lookup driver.driverPoolResult.driverId fleetPriorities >>= resolvePoolingPriority searchReq.area
                   }
         )
         onlyNewDriversWithCustomerInfo

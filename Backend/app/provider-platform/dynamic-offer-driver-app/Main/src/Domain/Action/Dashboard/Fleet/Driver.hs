@@ -23,6 +23,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetGetAllDriver,
     postDriverFleetUnlink,
     postDriverFleetCashRideUpdate,
+    getDriverFleetConfig,
+    postDriverFleetConfigUpdate,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
     getDriverFleetTotalEarning,
@@ -158,6 +160,7 @@ import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import Domain.Types.FleetPoolingPriority (FleetPoolingPriority (..), isSupportedPoolingPriorityArea)
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -193,10 +196,14 @@ import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
+import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Booking as SBooking
@@ -2837,7 +2844,12 @@ getFleetOrOperatorInfo person = do
                   allowEndingMidRoute = fleetConfig'.allowEndingMidRoute,
                   allowStartRideFromQR = fleetConfig'.allowStartRideFromQR,
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
-                  rideEndApproval = fleetConfig'.rideEndApproval
+                  rideEndApproval = fleetConfig'.rideEndApproval,
+                  autoAssignDefaultOn = (.defaultOn) <$> fleetConfig'.autoAssign,
+                  allowDriverToToggleAutoAssign = (.allowDriverToToggle) <$> fleetConfig'.autoAssign,
+                  allowCancellationByDriver = Just fleetConfig'.allowCancellationByDriver,
+                  ignoreDriverAreaAndDistancePreference = (.disableDriverAreaAndDistancePreference) <$> fleetConfig'.autoAssign,
+                  fleetPoolingPriority = fleetConfig'.fleetPoolingPriority
                 }
       gstNumber' <- decryptWithDefault gstNumber gstNumberDec
       panNumber' <- decryptWithDefault panNumber panNumberDec
@@ -5547,3 +5559,105 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
                     Common.fleetOwnerMobileNumber = mbFleetOwnerMobile
                   }
       }
+
+---------------------------------------------------------------------
+
+defaultAutoAssignConfig :: DFC.AutoAssignConfig
+defaultAutoAssignConfig = DFC.AutoAssignConfig {defaultOn = False, allowDriverToToggle = True, disableDriverAreaAndDistancePreference = False}
+
+getFleetConfigOwner :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow (DM.Merchant, Id DMOC.MerchantOperatingCity, DP.Person)
+getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let fleetOwnerId = fromMaybe requestorId mbFleetOwnerId
+  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
+  unless (fleetOwner.merchantId == merchant.id && fleetOwner.merchantOperatingCityId == merchantOpCityId) $
+    throwError (FleetOwnerNotFound fleetOwnerId)
+  pure (merchant, merchantOpCityId, fleetOwner)
+
+getDriverFleetConfig ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Flow Common.FleetDriverControlsConfigRes
+getDriverFleetConfig merchantShortId opCity requestorId mbFleetOwnerId = do
+  (_, _, fleetOwner) <- getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId
+  mbFleetConfig <- QFC.findByPrimaryKey fleetOwner.id
+  let autoAssign = fromMaybe defaultAutoAssignConfig (mbFleetConfig >>= (.autoAssign))
+  pure $
+    Common.FleetDriverControlsConfigRes
+      { autoAssignDefaultOn = autoAssign.defaultOn,
+        allowDriverToToggleAutoAssign = autoAssign.allowDriverToToggle,
+        allowCancellationByDriver = maybe True (.allowCancellationByDriver) mbFleetConfig,
+        ignoreDriverAreaAndDistancePreference = autoAssign.disableDriverAreaAndDistancePreference,
+        fleetPoolingPriority = mbFleetConfig >>= (.fleetPoolingPriority)
+      }
+
+postDriverFleetConfigUpdate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Maybe Text ->
+  Common.UpdateFleetDriverControlsConfigReq ->
+  Flow APISuccess
+postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId req = do
+  (merchant, merchantOpCityId, fleetOwner) <- getFleetConfigOwner merchantShortId opCity requestorId mbFleetOwnerId
+  whenJust req.fleetPoolingPriority $ validatePoolingPrioritySpecialLocations merchantOpCityId
+  mbExisting <- QFC.findByPrimaryKey fleetOwner.id
+  let current = fromMaybe defaultAutoAssignConfig (mbExisting >>= (.autoAssign))
+      autoAssign =
+        DFC.AutoAssignConfig
+          { defaultOn = fromMaybe current.defaultOn req.autoAssignDefaultOn,
+            allowDriverToToggle = fromMaybe current.allowDriverToToggle req.allowDriverToToggleAutoAssign,
+            disableDriverAreaAndDistancePreference = fromMaybe current.disableDriverAreaAndDistancePreference req.ignoreDriverAreaAndDistancePreference
+          }
+      nonEmptyPriority (FleetPoolingPriority priorities) = if Map.null priorities then Nothing else Just (FleetPoolingPriority priorities)
+      poolingPriority stored = maybe stored nonEmptyPriority req.fleetPoolingPriority
+  case mbExisting of
+    Just existing ->
+      QFC.updateByPrimaryKey
+        existing
+          { DFC.autoAssign = Just autoAssign,
+            DFC.allowCancellationByDriver = fromMaybe existing.allowCancellationByDriver req.allowCancellationByDriver,
+            DFC.fleetPoolingPriority = poolingPriority existing.fleetPoolingPriority,
+            DFC.merchantId = existing.merchantId <|> Just merchant.id,
+            DFC.merchantOperatingCityId = existing.merchantOperatingCityId <|> Just merchantOpCityId
+          }
+    Nothing -> do
+      now <- getCurrentTime
+      QFC.create
+        DFC.FleetConfig
+          { allowAutomaticRoundTripAssignment = False,
+            allowEndingMidRoute = False,
+            allowStartRideFromQR = False,
+            blacklistCoinEvents = Nothing,
+            directlyStartFirstTripAssignment = True,
+            endRideDistanceThreshold = 100,
+            fleetOwnerId = fleetOwner.id,
+            rideEndApproval = False,
+            unlinkDriverAndVehicleOnTripTermination = True,
+            autoAssign = Just autoAssign,
+            allowCancellationByDriver = fromMaybe True req.allowCancellationByDriver,
+            fleetPoolingPriority = poolingPriority Nothing,
+            merchantId = Just merchant.id,
+            merchantOperatingCityId = Just merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+  -- ConfigPilot caches each city's fleet configs (in-memory and Redis); a direct write must clear them.
+  invalidateConfigInMem LYT.FleetConfig
+  pure Success
+
+validatePoolingPrioritySpecialLocations :: Id DMOC.MerchantOperatingCity -> FleetPoolingPriority -> Flow ()
+validatePoolingPrioritySpecialLocations merchantOpCityId priority = do
+  let unsupportedKeys = map show $ filter (not . isSupportedPoolingPriorityArea) (Map.keys priority.getFleetPoolingPriority)
+  unless (null unsupportedKeys) $
+    throwError $ InvalidRequest $ "Unsupported fleetPoolingPriority keys " <> T.intercalate ", " unsupportedKeys <> ": expected \"Default\", \"Pickup_<specialLocationId>\" or \"Drop_<specialLocationId>\""
+  let specialLocationIds = nub $ mapMaybe areaSpecialLocationId (Map.keys priority.getFleetPoolingPriority)
+  unknownIds <- filterM (fmap (not . inCity) . QSpecialLocation.findById . Id) specialLocationIds
+  unless (null unknownIds) $
+    throwError $ InvalidRequest $ "fleetPoolingPriority names special locations not found in this city: " <> T.intercalate ", " unknownIds
+  where
+    areaSpecialLocationId area = SL.pickupSpecialZoneIdFromArea area <|> SL.dropSpecialZoneIdFromArea area
+    inCity = maybe False (\loc -> ((.getId) <$> loc.merchantOperatingCityId) == Just merchantOpCityId.getId)

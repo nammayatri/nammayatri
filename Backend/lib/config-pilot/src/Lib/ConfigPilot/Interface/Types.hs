@@ -122,6 +122,7 @@ data SConfigType (cfg :: ConfigType) where
   SIssueConfigDriver :: SConfigType 'IssueConfigDriver
   SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
   SDocumentVerificationStagesConfig :: SConfigType 'DocumentVerificationStagesConfig
+  SFleetConfig :: SConfigType 'FleetConfig
 
 deriving instance Show (SConfigType cfg)
 
