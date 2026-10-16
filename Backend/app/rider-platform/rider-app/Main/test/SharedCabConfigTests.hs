@@ -82,7 +82,8 @@ tests =
               offRouteSec = 120,
               boardProximityM = 150,
               boardAttemptsPer10Min = 5,
-              noLocationSpotBookingsPerVehiclePerDay = 5
+              noLocationSpotBookingsPerVehiclePerDay = 5,
+              maxCabSpeedMps = 14
             },
       testGroup
         "agency key shared by several integrated configs: each caller gets the row of its own platform"

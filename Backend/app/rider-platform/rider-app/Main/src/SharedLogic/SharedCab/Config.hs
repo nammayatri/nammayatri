@@ -33,7 +33,10 @@ data SharedCabTunables = SharedCabTunables
     offRouteSec :: Int,
     boardProximityM :: Int,
     boardAttemptsPer10Min :: Int,
-    noLocationSpotBookingsPerVehiclePerDay :: Int
+    noLocationSpotBookingsPerVehiclePerDay :: Int,
+    -- | Fastest a cab can plausibly travel (m/s): a candidate whose straight-line distance to the stop exceeds its ETA times this (plus
+    -- the at-stop radius) has a bad ETA. No rider_config column yet; add one with the generator when a city needs another value.
+    maxCabSpeedMps :: Int
   }
   deriving (Show, Eq, Generic)
 
@@ -56,7 +59,8 @@ defaultTunables =
       offRouteSec = 120,
       boardProximityM = 150,
       boardAttemptsPer10Min = 5,
-      noLocationSpotBookingsPerVehiclePerDay = 5
+      noLocationSpotBookingsPerVehiclePerDay = 5,
+      maxCabSpeedMps = 14
     }
 
 tunablesFrom :: Maybe DRC.RiderConfig -> SharedCabTunables
@@ -79,7 +83,8 @@ tunablesFrom (Just rc) =
       offRouteSec = pick rc.sharedCabOffRouteSec (.offRouteSec),
       boardProximityM = pick rc.sharedCabBoardProximityM (.boardProximityM),
       boardAttemptsPer10Min = pick rc.sharedCabBoardAttemptsPer10Min (.boardAttemptsPer10Min),
-      noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay)
+      noLocationSpotBookingsPerVehiclePerDay = pick rc.sharedCabNoLocationSpotBookingsPerVehiclePerDay (.noLocationSpotBookingsPerVehiclePerDay),
+      maxCabSpeedMps = defaultTunables.maxCabSpeedMps
     }
   where
     pick mbValue field = fromMaybe (field defaultTunables) mbValue

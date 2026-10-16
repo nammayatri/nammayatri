@@ -18,7 +18,7 @@ import "mobility-core" Kernel.External.Maps.Types (LatLong (..))
 import "mobility-core" Kernel.Types.Id (Id (..))
 import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "rider-app" SharedLogic.SharedCab.Allocation.Claim (ClaimMiss (..), claimGate)
-import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, phase, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
+import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, etaPlausible, isFreshPosition, isRescheduledChild, movingCab, phase, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
 import "rider-app" SharedLogic.SharedCab.Boarding (boardingGate)
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
@@ -253,6 +253,18 @@ tests =
         map (allocationDeadline . (\timer -> standing {timer})) [StandTimer t0, MovingTimer t0, AwayTimer t0, NoTimer] @?= [Just t0, Just t0, Nothing, Nothing],
       testCase "stand and away timers are cleared once the cab moves, the moving timer is not" $
         map clearOnMove [StandTimer t0, AwayTimer t0, MovingTimer t0, NoTimer] @?= [NoTimer, NoTimer, MovingTimer t0, NoTimer],
+      testCase "a cab whose ETA cannot cover its straight-line distance (a parked cab snapped to the first stop) is not a candidate" $
+        let ghost = LatLong 25.6600 91.9500
+            names veh = map (.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding)
+         in ( names (cabFixEta 0 "P1" ghost (Just 0) 5),
+              names (cabFixEta 0 "P1" nearStop (Just 0) 5),
+              names (cabFixEta 120 "P1" farAway (Just 8) 5),
+              names (cabFixEta 60 "P1" ghost (Just 8) 5)
+            )
+              @?= ([], ["P1"], ["P1"], []),
+      testCase "etaPlausible allows the at-stop radius plus eta times the max speed" $
+        [etaPlausible defaultTunables e nearStop stop | e <- [0, 10]] ++ [etaPlausible defaultTunables 80 farAway stop, etaPlausible defaultTunables 5 farAway stop]
+          @?= [True, True, True, False],
       testCase "a claim on a stationary cab at the stop pushes ARRIVING, any other claim pushes ASSIGNED" $
         map (\veh -> [claimPush c | c <- eligibleCandidates t0 defaultTunables [veh] [(candidate "P1").rcSession] finding]) [cabFix "P1" nearStop (Just 0) 5, cabFix "P1" farAway (Just 0) 5, cabFix "P1" nearStop (Just 8) 5]
           @?= [[PushArriving], [PushAssigned], [PushAssigned]],

@@ -14,6 +14,7 @@ module SharedLogic.SharedCab.Allocation.Select
     CabStance (..),
     isFreshPosition,
     eligibleCandidates,
+    etaPlausible,
     claimTimer,
     ClaimPush (..),
     claimPush,
@@ -158,8 +159,16 @@ eligibleCandidates now cfg tracking sessions booking =
         isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo,
         Just stop <- [find (\u -> u.stop.stopCode == booking.boardStopCode && u.status == LT.Upcoming) =<< veh.vehicleInfo.upcomingStops],
         let etaSec = max 0 (floor (diffUTCTime stop.eta now)),
-        etaSec <= cfg.allocationWindowSec
+        etaSec <= cfg.allocationWindowSec,
+        etaPlausible cfg etaSec (LatLong veh.vehicleInfo.latitude veh.vehicleInfo.longitude) stop.stop.coordinate
     ]
+
+-- | LTS snaps any cab, however far off the route, to the nearest route point and reports a static ETA from there, so a parked cab
+-- 10 km away can read "1 minute". A candidate must be able to cover the straight-line distance to the stop in its ETA at
+-- 'maxCabSpeedMps', plus the at-stop radius (a cab at the stop has ETA 0).
+etaPlausible :: Config.SharedCabTunables -> Int -> LatLong -> LatLong -> Bool
+etaPlausible cfg etaSec cab stopPoint =
+  distanceBetweenInMeters cab stopPoint <= fromIntegral (etaSec * cfg.maxCabSpeedMps + cfg.atStopRadiusM)
 
 -- | The timer a claim arms: a moving cab none, a stationary cab at the stop the stand timer, a stationary cab away from the stop
 -- a bounded wait (allocationWindowSec), so a parked cab that keeps pinging cannot hold the rider until the key's TTL.
