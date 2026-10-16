@@ -88,13 +88,13 @@ import qualified Safety.Domain.Types.Sos as SafetyDSos
 import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import qualified SharedLogic.BookingDeposit as BookingDeposit
-import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Offer as SOffer
 import qualified SharedLogic.Payment as SPayment
+import qualified SharedLogic.Ride
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -665,8 +665,8 @@ rideSync merchant reqRideId = withDynamicLogLevel "ride-sync-single" $ do
       messageId <- Utils.getMessageId becknStatusReq.statusReqContext
       logDebug $ "Sending status request to BPP with transactionId: " <> show booking.transactionId <> " and providerUrl: " <> show booking.providerUrl
       withLogTag ("messageId-" <> messageId) $ do
-        Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
-        void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
+        let setSyncKey msgId = Hedis.setExp (Common.makeContextMessageIdStatusSyncKey msgId) True 3600
+        SharedLogic.Ride.callOnStatus (Just setSyncKey) booking merchant city
         logDebug $ "Completed ride sync for rideId: " <> rideId.getId
         pure Success
 

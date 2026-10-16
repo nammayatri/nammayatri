@@ -1,6 +1,8 @@
 module SharedLogic.Ride where
 
+import qualified Beckn.ACL.Status as StatusACL
 import qualified Beckn.OnDemand.Utils.Common as Common
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.HashMap.Strict as HM
 import Data.List (findIndex)
 import qualified Data.List.NonEmpty as NE
@@ -8,6 +10,7 @@ import qualified Data.Text as Text
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
 import qualified Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.RideStatus
 import Kernel.Beam.Functions as B
@@ -19,11 +22,14 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PickupRoute as CQPickupRoute
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -31,6 +37,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as MapSearch
+import Tools.Metrics (CoreMetrics)
 import TransactionLogs.Types
 
 data GetDriverLocResp = GetDriverLocResp
@@ -46,13 +53,17 @@ getDriverLoc ::
   ( CacheFlow m r,
     EncFlow m r,
     EsqDBFlow m r,
+    MonadCatch m,
+    CoreMetrics m,
+    HasRequestId r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c
   ) =>
   Id SRide.Ride ->
   m GetDriverLocResp
@@ -65,7 +76,7 @@ getDriverLoc rideId = do
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
   res <-
     if isValueAddNP && isJust ride.trackingUrl
-      then CallBPP.callGetDriverLocation ride.trackingUrl
+      then CallBPP.callGetDriverLocation ride.trackingUrl `catch` (handleStaleRideOnTrackUrlError ride booking)
       else do
         withLongRetry $ CallBPP.callTrack booking ride
         trackingLoc :: OnTrack.TrackingLocation <- (Redis.runInMultiCloudRedisMaybeResult $ Redis.get (Common.mkRideTrackingRedisKey ride.id.getId)) >>= fromMaybeM (InvalidRequest "Driver location not updated")
@@ -85,6 +96,63 @@ getDriverLoc rideId = do
         pickupEtaInMinutes = mbPickupEta,
         pickupDist = Meters $ round pickupDist
       }
+
+handleStaleRideOnTrackUrlError ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    MonadCatch m,
+    CoreMetrics m,
+    HasRequestId r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c
+  ) =>
+  SRide.Ride ->
+  DB.Booking ->
+  TrackUrlError ->
+  m CallBPP.GetLocationRes
+handleStaleRideOnTrackUrlError ride booking trackUrlErr = do
+  when (trackUrlErr == InvalidRideRequest) $
+    Redis.whenWithLockRedis (staleRideSyncLockKey ride.id) 60 $
+      fork ("sync ride status after TrackUrlError for rideId: " <> ride.id.getId) $ do
+        merchant <- CQMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+        city <- CQMOC.findById booking.merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+        callOnStatus Nothing booking merchant city
+  throwM trackUrlErr
+
+staleRideSyncLockKey :: Id SRide.Ride -> Text
+staleRideSyncLockKey rideId = "DriverLoc:StaleRideSync:" <> rideId.getId
+
+callOnStatus ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    CoreMetrics m,
+    HasRequestId r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["fabricGatewayBaseUrl" ::: BaseUrl],
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Maybe (Text -> m ()) ->
+  DB.Booking ->
+  DMerchant.Merchant ->
+  Context.City ->
+  m ()
+callOnStatus mbSetSyncKey booking merchant city = do
+  becknStatusReq <- StatusACL.buildStatusReqV2 (StatusACL.DStatusReq booking merchant city)
+  whenJust mbSetSyncKey $ \setSyncKey -> do
+    messageId <- Utils.getMessageId becknStatusReq.statusReqContext
+    setSyncKey messageId
+  void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq merchant.id
 
 maxPlausiblePickupSpeedInMPS :: Double
 maxPlausiblePickupSpeedInMPS = 27.8 -- 100 km/h
