@@ -1,4 +1,4 @@
-module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, updateOnlineDurationDuringFetchingDailyStats) where
+module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, processingChangeOffline, updateOnlineDurationDuringFetchingDailyStats) where
 
 import Data.Time (Day, DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
@@ -24,6 +24,7 @@ import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
+import Tools.DriverOnlineSessionEvent (emitClosedSessionEvents)
 import Tools.Error
 
 processingChangeOnline ::
@@ -34,10 +35,16 @@ processingChangeOnline ::
   Maybe DriverInfo.DriverMode ->
   m ()
 processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
-  when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $
-    DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
-  when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $
+  let wentOffline = mbOldMode == Just DriverInfo.ONLINE && maybe False (/= DriverInfo.ONLINE) mbNewMode
+      cameOnline = mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE
+  mbClosedSession <-
+    if wentOffline
+      then DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+      else pure Nothing
+  when cameOnline $
     DriverOnlineHoursCache.markOnlineToday driverId transporterConfig.timeDiffFromUtc
+  -- Analytics: emit the just-closed online session interval(s) to Kafka (-> ClickHouse).
+  emitClosedSessionEvents driverId transporterConfig.merchantId transporterConfig.merchantOperatingCityId transporterConfig.timeDiffFromUtc mbClosedSession
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
     when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $ do
       updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
@@ -47,6 +54,22 @@ processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
       QDI.updateOnlineDurationRefreshedAt driverId now
       -- Resume idle tracking when the driver comes back online.
       DriverIdleTime.resumeIdleOnOnline driverId
+
+-- | Same bookkeeping as 'processingChangeOnline' for a forced transition to OFFLINE, without the
+-- caller having to supply the old mode. Must run BEFORE the driver's mode is written as OFFLINE:
+-- the old mode is taken from the driverInfo already read under the lock. The cache/idle steps are
+-- no-ops when the driver is already offline.
+processingChangeOffline ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  DTC.TransporterConfig ->
+  m ()
+processingChangeOffline driverId transporterConfig = do
+  void $ DriverOnlineHoursCache.markOfflineToday driverId transporterConfig.timeDiffFromUtc
+  withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom ->
+    when (driverInfo.mode == Just DriverInfo.ONLINE) $
+      updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
+  DriverIdleTime.bankIdleOnOffline driverId
 
 updateOnlineDurationDuringFetchingDailyStats ::
   (CacheFlow m r, EsqDBFlow m r) =>
