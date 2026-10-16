@@ -58,8 +58,12 @@ timerDeadline = \case
   MovingTimer d -> Just d
   AwayTimer d -> Just d
 
+-- | The deadline the rider counts down to: a cab waiting at the stop (stand) or passing it (moving). An away timer only bounds how
+-- long the allocator holds a cab that is not at the stop, so it is no ARRIVING.
 allocationDeadline :: AllocationState -> Maybe UTCTime
-allocationDeadline = timerDeadline . (.timer)
+allocationDeadline st = case st.timer of
+  AwayTimer _ -> Nothing
+  timer -> timerDeadline timer
 
 -- | A cab seen moving no longer waits at a stop: its stand and away timers are cleared; the moving timer is not.
 clearOnMove :: Timer -> Timer

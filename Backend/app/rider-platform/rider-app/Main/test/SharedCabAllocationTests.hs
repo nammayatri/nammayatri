@@ -249,6 +249,8 @@ tests =
           map countsTowardDriverMisses [StandTimeout, MovingTimeout, DriverCancelled, AwayTimeout]
         )
           @?= ([BlameRider, BlameRider, BlameDriver, BlameNone], [False, False, True, False]),
+      testCase "only a stand or moving timer makes the leg ARRIVING: an away timer reads as an assigned cab still on its way" $
+        map (allocationDeadline . (\timer -> standing {timer})) [StandTimer t0, MovingTimer t0, AwayTimer t0, NoTimer] @?= [Just t0, Just t0, Nothing, Nothing],
       testCase "stand and away timers are cleared once the cab moves, the moving timer is not" $
         map clearOnMove [StandTimer t0, AwayTimer t0, MovingTimer t0, NoTimer] @?= [NoTimer, NoTimer, MovingTimer t0, NoTimer],
       testCase "a claim on a stationary cab at the stop pushes ARRIVING, any other claim pushes ASSIGNED" $

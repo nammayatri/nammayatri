@@ -123,8 +123,8 @@ A booking is a `frfs_ticket_booking` on tier SHARED_CAB, status CONFIRMED, plus 
 |---|---|
 | FINDING | booking CONFIRMED or ticket ACTIVE, no plate, fallback not due |
 | FALLBACK | as FINDING but `fallbackDue` |
-| ALLOCATED | plate set, no armed arrival deadline in the alloc key |
-| ARRIVING | plate set and the alloc record has a timer deadline (returned as `boardDeadlineSec`) |
+| ALLOCATED | plate set, no stand or moving timer in the alloc key (a cab held under an away timer is ALLOCATED: assigned, not yet at the stop) |
+| ARRIVING | plate set and the alloc record has a stand or moving timer (`allocationDeadline`, returned as `boardDeadlineSec`); an away timer is not one |
 | BOARDED | ticket INPROGRESS and a non-ENDED session exists for the plate |
 | DEGRADED | ticket INPROGRESS and no live session |
 | DROPPED | ticket USED or EXPIRED, or feedback state |
