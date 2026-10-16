@@ -9,6 +9,7 @@ import Data.Text (Text)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
+import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), chainVerdict)
 import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -23,6 +24,9 @@ tests =
       testCase "per-city switch: SHARED_CAB config and not Just False" $
         [sharedCabEnabledDecision c s | c <- [True, False], s <- [Nothing, Just True, Just False]]
           @?= [True, True, False, False, False, False],
+      testCase "a tick goes on only for the chain the guard names; a lapsed guard is taken back; another chain's id ends the tick" $
+        [chainVerdict g m | g <- [Nothing, Just "a", Just "b"], m <- [Nothing, Just "a"]]
+          @?= [Adopt, Adopt, Foreign, Mine, Foreign, Foreign],
       testCase "a suspended city keeps its allocation chain only while live bookings need draining" $
         [tickChainContinues e n | e <- [True, False], n <- [0, 3]] @?= [True, True, False, True],
       testCase "a suspended city offers no cab itinerary; an enabled one needs a cab on every cab leg; no cab leg is always fine" $

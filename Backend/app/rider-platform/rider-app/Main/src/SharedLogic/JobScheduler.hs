@@ -525,13 +525,15 @@ type instance JobContent 'SendLegalPolicyNotification = SendLegalPolicyNotificat
 
 data SharedCabAllocationTickJobData = SharedCabAllocationTickJobData
   { merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 data SharedCabSessionExpiryJobData = SharedCabSessionExpiryJobData
   { merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -539,7 +541,8 @@ data SharedCabSessionExpiryJobData = SharedCabSessionExpiryJobData
 -- SharedLogic.SharedCab.Schedule.
 data SharedCabDegradedSweepJobData = SharedCabDegradedSweepJobData
   { merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    chainId :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

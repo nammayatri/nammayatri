@@ -1,20 +1,26 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
--- | The shared-cab per-city job chains and their city leases. A seed re-creates a chain once its guard lapses; a duplicate chain
--- dies at its next run because that tick's run key is already claimed.
+-- | The shared-cab per-city job chains and their city leases. A chain's guard key holds the id of the one live chain; every tick
+-- carries its chain's id and stops, without rescheduling, once the guard names another. A seed after a lapse makes a new id, so the
+-- old chain dies at its next tick instead of doubling.
 module SharedLogic.SharedCab.Schedule
   ( -- * Allocation tick
     ensureAllocationTick,
+    ChainVerdict (..),
+    chainVerdict,
+    ownAllocationChain,
     claimTickRun,
     scheduleNextTick,
     thenReschedule,
     withCityTickLease,
     ensureExpiryJob,
+    ownExpiryChain,
     claimExpiryRun,
     scheduleNextExpiry,
     sweepTickSec,
     scanWindowStart,
     ensureDegradedSweep,
+    ownSweepChain,
     claimSweepRun,
     claimRefundRetryRun,
     withSweepLease,
@@ -37,7 +43,7 @@ import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import SharedLogic.SharedCab.Keys
 import Storage.Beam.SchedulerJob ()
 
-data Chain m = Chain Text Int (m ())
+data Chain m = Chain Text Int (Text -> m ())
 
 chain ::
   forall (e :: RiderJobType) m r.
@@ -47,21 +53,44 @@ chain ::
   Int ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  JobContent e ->
+  (Text -> JobContent e) ->
   Chain m
 chain guardKey guardTtlSec intervalSec merchantId mocId jobData =
-  Chain guardKey guardTtlSec $ createJobIn @_ @e (Just merchantId) (Just mocId) (intToNominalDiffTime intervalSec) jobData
+  Chain guardKey guardTtlSec $ createJobIn @_ @e (Just merchantId) (Just mocId) (intToNominalDiffTime intervalSec) . jobData
 
 setNx :: (Redis.HedisFlow m r, MonadFlow m) => Text -> Int -> m Bool
 setNx key ttl = shared $ Redis.setNxExpire key ttl ()
 
 ensureChain :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> m ()
-ensureChain (Chain guardKey guardTtlSec enqueue) = whenM (setNx guardKey guardTtlSec) enqueue
+ensureChain (Chain guardKey guardTtlSec enqueue) = do
+  chainId <- generateGUIDText
+  whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (enqueue chainId)
 
-scheduleNext :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> m ()
-scheduleNext (Chain guardKey guardTtlSec enqueue) = do
-  shared $ Redis.setExp guardKey () guardTtlSec
-  enqueue
+scheduleNext :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> Text -> m ()
+scheduleNext (Chain guardKey guardTtlSec enqueue) chainId = do
+  shared $ Redis.setExp guardKey chainId guardTtlSec
+  enqueue chainId
+
+-- | What a tick does with the guard it finds: its own chain's id (go on), none (the guard lapsed: take it back, unless a seed
+-- wins the race), or another chain's id (stop).
+data ChainVerdict = Mine | Adopt | Foreign
+  deriving (Eq, Show)
+
+chainVerdict :: Maybe Text -> Maybe Text -> ChainVerdict
+chainVerdict Nothing _ = Adopt
+chainVerdict (Just live) mine = if mine == Just live then Mine else Foreign
+
+-- | Runs a tick's body only if its chain still holds the guard; the body gets the chain id to hand to its next tick. A tick of
+-- a chain that a lapse and a re-seed replaced finds the new id and ends here.
+ownChain :: (Redis.HedisFlow m r, MonadFlow m) => Chain m -> Maybe Text -> (Text -> m ()) -> m ()
+ownChain (Chain guardKey guardTtlSec _) mbChainId body = do
+  live <- shared $ Redis.safeGet guardKey
+  fresh <- generateGUIDText
+  let chainId = fromMaybe fresh mbChainId
+  case chainVerdict live mbChainId of
+    Mine -> body chainId
+    Adopt -> whenM (shared $ Redis.setNxExpire guardKey guardTtlSec chainId) (body chainId)
+    Foreign -> logInfo $ "sharedCab chain " <> guardKey <> ": guard names another chain; this one ends"
 
 withCityLease :: (Redis.HedisFlow m r, MonadFlow m, MonadMask m) => Text -> Int -> m () -> m ()
 withCityLease key ttl action =
@@ -79,7 +108,7 @@ tickSecOf mocId = (.tickSec) <$> Config.getTunables mocId
 allocChain :: JobCreator r m => Int -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 allocChain tickSec merchantId mocId =
   chain @'SharedCabAllocationTick (allocJobGuardKey mocId) (leaseTickMultiple * tickSec) tickSec merchantId mocId $
-    SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId}
+    \chainId -> SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
 
 ensureAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureAllocationTick merchantId mocId =
@@ -92,10 +121,15 @@ claimTickRun mocId = do
   tickSec <- tickSecOf mocId
   setNx (allocRunKey mocId) (max 1 (tickSec - 1))
 
-scheduleNextTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
-scheduleNextTick merchantId mocId = do
+scheduleNextTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> m ()
+scheduleNextTick merchantId mocId chainId = do
   tickSec <- tickSecOf mocId
-  scheduleNext (allocChain tickSec merchantId mocId)
+  scheduleNext (allocChain tickSec merchantId mocId) chainId
+
+ownAllocationChain :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> (Text -> m ()) -> m ()
+ownAllocationChain merchantId mocId mbChainId body = do
+  tickSec <- tickSecOf mocId
+  ownChain (allocChain tickSec merchantId mocId) mbChainId body
 
 thenReschedule :: MonadMask m => m () -> m () -> m ()
 thenReschedule body reschedule = body `finally` reschedule
@@ -112,7 +146,7 @@ expiryTickSec = 60
 expiryChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 expiryChain merchantId mocId =
   chain @'SharedCabSessionExpiry (expiryJobGuardKey mocId) (guardTickMultiple * expiryTickSec) expiryTickSec merchantId mocId $
-    SharedCabSessionExpiryJobData {merchantId, merchantOperatingCityId = mocId}
+    \chainId -> SharedCabSessionExpiryJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
 
 ensureExpiryJob :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureExpiryJob merchantId mocId = ensureChain (expiryChain merchantId mocId)
@@ -120,8 +154,11 @@ ensureExpiryJob merchantId mocId = ensureChain (expiryChain merchantId mocId)
 claimExpiryRun :: (Redis.HedisFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> m Bool
 claimExpiryRun mocId = setNx (expiryTickKey mocId) (expiryTickSec - 5)
 
-scheduleNextExpiry :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+scheduleNextExpiry :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> m ()
 scheduleNextExpiry merchantId mocId = scheduleNext (expiryChain merchantId mocId)
+
+ownExpiryChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> (Text -> m ()) -> m ()
+ownExpiryChain merchantId mocId = ownChain (expiryChain merchantId mocId)
 
 -- | Sweep cadence, far below the degraded horizon: a ride whose rider never polls ends at most one tick after its marker dies.
 sweepTickSec :: Int
@@ -135,7 +172,7 @@ scanWindowStart horizonSec = addUTCTime (negate (intToNominalDiffTime (scanWindo
 sweepChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 sweepChain merchantId mocId =
   chain @'SharedCabDegradedSweep (sweepJobGuardKey mocId) (guardTickMultiple * sweepTickSec) sweepTickSec merchantId mocId $
-    SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId = mocId}
+    \chainId -> SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
 
 -- | Armed by a degraded boarding, a session open and a failed refund start. An empty scan window lets the chain lapse; the next armer re-seeds it.
 ensureDegradedSweep :: (JobCreator r m, Redis.HedisFlow m r, MonadFlow m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
@@ -161,5 +198,8 @@ withSweepLease mocId action = do
         current <- Redis.safeGet key
         when (current == Just owner) $ Redis.unlockRedis (sweepLeaseKey mocId)
 
-scheduleNextSweep :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+scheduleNextSweep :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> m ()
 scheduleNextSweep merchantId mocId = scheduleNext (sweepChain merchantId mocId)
+
+ownSweepChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> (Text -> m ()) -> m ()
+ownSweepChain merchantId mocId = ownChain (sweepChain merchantId mocId)

@@ -24,7 +24,7 @@ import qualified SharedLogic.SharedCab.Degraded as Degraded
 import qualified SharedLogic.SharedCab.FindingTimeout as FindingTimeout
 import qualified SharedLogic.SharedCab.Notify as Notify
 import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
-import SharedLogic.SharedCab.Schedule (claimRefundRetryRun, claimSweepRun, scanWindowStart, scheduleNextSweep, withSweepLease)
+import SharedLogic.SharedCab.Schedule (claimRefundRetryRun, claimSweepRun, ownSweepChain, scanWindowStart, scheduleNextSweep, withSweepLease)
 import qualified SharedLogic.SharedCab.Session as Session
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -46,15 +46,16 @@ sharedCabDegradedSweep ::
   Job 'SharedCabDegradedSweep ->
   m ExecutionResult
 sharedCabDegradedSweep Job {jobInfo} = do
-  let SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId} = jobInfo.jobData
-  -- not gated on the city switch: degraded rides and owed refunds drain in a suspended city too
-  swept <- withTryCatch "sharedCabDegradedSweep" (sweepCity merchantOperatingCityId)
-  case swept of
-    -- an empty window in all passes lets the chain lapse; a new degrade, session open or refund marker re-seeds it
-    Right (Just [scan, refund])
-      | scan /= PassBusy && refund /= PassBusy ->
-        logInfo "sharedCab degraded sweep: chain ends (every pass found an empty workspace; a new degrade, session open or refund marker re-seeds it)"
-    _ -> scheduleNextSweep merchantId merchantOperatingCityId
+  let SharedCabDegradedSweepJobData {merchantId, merchantOperatingCityId, chainId = mbChainId} = jobInfo.jobData
+  ownSweepChain merchantId merchantOperatingCityId mbChainId $ \chainId -> do
+    -- not gated on the city switch: degraded rides and owed refunds drain in a suspended city too
+    swept <- withTryCatch "sharedCabDegradedSweep" (sweepCity merchantOperatingCityId)
+    case swept of
+      -- an empty window in all passes lets the chain lapse; a new degrade, session open or refund marker re-seeds it
+      Right (Just [scan, refund])
+        | scan /= PassBusy && refund /= PassBusy ->
+          logInfo "sharedCab degraded sweep: chain ends (every pass found an empty workspace; a new degrade, session open or refund marker re-seeds it)"
+      _ -> scheduleNextSweep merchantId merchantOperatingCityId chainId
   pure Complete
 
 -- | The city's window, under its lease. Each pass is claimed and wrapped in its own try, so a throw costs only that pass this tick.

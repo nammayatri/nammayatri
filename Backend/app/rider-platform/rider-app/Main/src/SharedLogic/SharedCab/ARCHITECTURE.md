@@ -172,11 +172,11 @@ All keys are unprefixed and written through `Booking.shared` (cross-app master c
 | `sharedcab:refundretry:city:{city}` | set of booking ids | 2 days | `RefundRetry.markRefundRetry` |
 | `sharedcab:demand:{city}:{stop}:{bucket}` | set of rider ids | 1200 s (`bucketTtlSec`) | `Demand.recordSearch`; access `Redis.withMasterRedis` |
 | `sharedcab:alloc:lease:{city}` | lock | 10 x `tickSec` | `Schedule.withCityTickLease` |
-| `sharedcab:allocJob:{city}` | guard | 10 x `tickSec` | `Schedule.ensureChain` / `scheduleNext` |
+| `sharedcab:allocJob:{city}` | guard (live chain id) | 10 x `tickSec` | `Schedule.ensureChain` / `scheduleNext` |
 | `sharedcab:allocRun:{city}` | per-tick claim | max(1, `tickSec` - 1) | `claimTickRun` |
-| `sharedcab:expiryJob:{city}` | guard | 120 s | `ensureExpiryJob` / `scheduleNextExpiry` |
+| `sharedcab:expiryJob:{city}` | guard (live chain id) | 120 s | `ensureExpiryJob` / `scheduleNextExpiry` |
 | `sharedcab:expiryTick:{city}` | per-tick claim | 55 s | `claimExpiryRun` |
-| `sharedcab:degradedSweepJob:{city}` | guard | 240 s | `ensureDegradedSweep` / `scheduleNextSweep` |
+| `sharedcab:degradedSweepJob:{city}` | guard (live chain id) | 240 s | `ensureDegradedSweep` / `scheduleNextSweep` |
 | `sharedcab:degradedSweepRun:{city}` | per-tick claim | 115 s | `claimSweepRun` |
 | `sharedcab:degradedSweepLease:{city}` | lease with owner token | 1200 s | `withSweepLease` |
 | `sharedcab:refundretryRun:{city}` | per-tick claim | 115 s | `claimRefundRetryRun` |
@@ -193,7 +193,7 @@ All three are self-rescheduling per-city scheduler jobs (`RiderJobType` in `Shar
 | `SharedCabSessionExpiry` | 60 s (`expiryTickSec`) | guard `expiryJob` (120 s), run claim `expiryTick` (55 s) | reads LTS pings per live route; pauses (15 min) / ends (60 min) silent sessions; skips a route whose LTS read fails. Does not check `sharedCabEnabled`. |
 | `SharedCabDegradedSweep` | 120 s (`sweepTickSec`) | guard `degradedSweepJob` (240 s), run claims `degradedSweepRun` and `refundretryRun` (115 s), lease `degradedSweepLease` | scan pass: degraded-marker expiry (`findSharedCabDegradedCandidates`) and stranded plated riders (`findSharedCabPlatedCandidates`), pages of 200, window `updatedAt` in [now - 3 x `degradedTimeoutSec`, now); refund pass: retries `startRefund`, max 5 attempts (`maxRefundRetryAttempts`), then logs `OPS-ALERT`. Chain lapses when both passes see no work; if disabled it does not reschedule. |
 
-Chain (re)start (`Schedule.hs`): `ensureChain` takes the guard with set-if-absent + TTL and enqueues the first job only if it won; `scheduleNext` resets the guard TTL and enqueues the next job. A duplicate chain dies at its next run because that tick's run key is already claimed.
+Chain (re)start (`Schedule.hs`): the guard holds the id of the one live chain. `ensureChain` sets it with a fresh id if absent (+ TTL) and enqueues the first job, carrying that id, only if it won; `scheduleNext` refreshes the guard and enqueues the next job with the same id. Each tick first runs `ownChain`: its id equal to the guard continues (`Mine`); an absent guard is taken back with set-if-absent (`Adopt`); another id ends the tick without rescheduling (`Foreign`). So a lapse followed by a re-seed leaves exactly one chain: the old one dies at its next tick. The per-tick run claim still drops a job the producer dispatches twice. Jobs queued before the id existed carry none and adopt like a lapsed guard.
 
 | Chain | Seeded by |
 |---|---|
