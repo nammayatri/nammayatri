@@ -34,6 +34,7 @@ import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.QuoteRespond as QuoteRespond
+import qualified API.Internal.RadarXyneWebhook as RadarXyneWebhook
 import qualified API.Internal.RefundLedger as RefundLedger
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
@@ -107,6 +108,7 @@ type API =
            :<|> XyneWebhook.API
            :<|> XyneWebhook.BearerAPI
            :<|> XyneWebhook.IssuesAPI
+           :<|> RadarXyneWebhook.API
            :<|> NotificationWebhook.API
            :<|> SearchTryPoolStats.API
            :<|> VehicleServiceTierList.API
@@ -162,6 +164,7 @@ handler env =
     :<|> XyneWebhook.handler
     :<|> XyneWebhook.bearerHandler
     :<|> XyneWebhook.issuesHandler
+    :<|> RadarXyneWebhook.handler
     :<|> NotificationWebhook.handler
     :<|> SearchTryPoolStats.handler
     :<|> VehicleServiceTierList.handler
