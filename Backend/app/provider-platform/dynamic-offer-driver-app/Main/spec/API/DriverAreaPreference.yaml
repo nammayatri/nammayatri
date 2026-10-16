@@ -28,6 +28,7 @@ types:
     radiusArea: Maybe RadiusAreaSelection
     minCells: Int
     enabled: Bool
+    lockedByFleet: Maybe Bool
 
   GeohashAreaItem:
     geohash: Text

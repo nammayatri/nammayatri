@@ -505,6 +505,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
   let isACWorkingForVehicle = vehicle.airConditioned /= Just False
   let isACWorking = isACAllowedForDriver && isACWorkingForVehicle
+  autoAcceptLockedByFleet <- maybe False (not . (.allowDriverToToggle)) <$> FDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
   let tierOptions =
         driverVehicleServiceTierTypes <&> \(VehicleServiceTier {..}, usageRestricted) -> do
           let isNonACDefault = isACCheckEnabledForCity && not isACWorking && isNothing airConditionedThreshold
@@ -575,7 +576,8 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
         enableForAirport = effectiveAirport,
-        airConditioned = mbAirConditioned
+        airConditioned = mbAirConditioned,
+        autoAcceptLockedByFleet = Just autoAcceptLockedByFleet
       }
   where
     getDriverCurrentSpecialLocationId personId' =

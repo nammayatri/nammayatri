@@ -196,12 +196,14 @@ import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Booking as SBooking
@@ -5652,6 +5654,8 @@ postDriverFleetConfigUpdate merchantShortId opCity requestorId mbFleetOwnerId re
             createdAt = now,
             updatedAt = now
           }
+  -- ConfigPilot caches each city's fleet configs (in-memory and Redis); a direct write must clear them.
+  invalidateConfigInMem LYT.FleetConfig
   pure Success
 
 validatePoolingPrioritySpecialLocations :: Id DMOC.MerchantOperatingCity -> FleetPoolingPriority -> Flow ()

@@ -10,6 +10,7 @@ import qualified Domain.Types.Common as DI
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverBankAccount as DDBA
 import Domain.Types.DriverInformation
+import qualified Domain.Types.FleetConfig as DFC
 import Domain.Types.FleetDriverAssociation
 import qualified Domain.Types.FleetDriverAssociation as DFDA
 import Domain.Types.Merchant (Merchant)
@@ -33,6 +34,7 @@ import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Vehicle as BeamV
+import Storage.ConfigPilot.Config.FleetConfig (getCityFleetConfigs)
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.OrphanInstances.DriverBankAccount ()
@@ -202,6 +204,15 @@ updateEnableCashRideForDriversWithSync enableCashRide batchSize driverIds = do
       <&> \d ->
         let mbAssoc = M.lookup d.getId assocByDriver
          in (d, effectiveEnableCashRide now enableCashRide mbAssoc (mbAssoc >>= \a -> join (M.lookup a.fleetOwnerId ownerFlag)))
+
+getFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id MerchantOperatingCity -> m (Maybe DFC.AutoAssignConfig)
+getFleetAutoAssignConfig ownerId merchantOpCityId =
+  (\fleetConfigs -> M.lookup ownerId fleetConfigs >>= (.autoAssign)) <$> getCityFleetConfigs merchantOpCityId
+
+-- | Auto-assign settings of the driver's active fleet.
+getDriverFleetAutoAssignConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id MerchantOperatingCity -> m (Maybe DFC.AutoAssignConfig)
+getDriverFleetAutoAssignConfig driverId merchantOpCityId =
+  findByDriverId driverId True >>= maybe (pure Nothing) (\assoc -> getFleetAutoAssignConfig assoc.fleetOwnerId merchantOpCityId)
 
 findByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
