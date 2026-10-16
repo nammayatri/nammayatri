@@ -49,7 +49,7 @@ exec 9>{LOCK_FILE}
 flock -w 30 9
 reg={REGISTRY_FILE}
 [ -s "$reg" ] || echo '{{"users":{{}}}}' > "$reg"
-if ! {update}; then rm -f "$reg.tmp.$$"; exit 3; fi
+if ! {{ {update}; }}; then rm -f "$reg.tmp.$$"; exit 3; fi
 mv -f "$reg.tmp.$$" "$reg"
 """
 
