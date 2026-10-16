@@ -125,9 +125,9 @@ retry-interval: 2000ms
 {"routeCodes": [{"legOrder": 0, "routeCodes": ["{{route_a}}"]}]}
 HTTP 200
 [Asserts]
-jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].number" == "{{plate}}"
-jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].serviceTierType" == "SHARED_CAB"
-jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[0].position.lat" isFloat
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate}}')].number" == "{{plate}}"
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate}}')].serviceTierType" == "SHARED_CAB"
+jsonpath "$.legs[0].routeWithLiveVehicles[0].liveVehicles[?(@.number == '{{plate}}')].position.lat" isFloat
 
 # and narrowed to the booked cab by its plate (the tracking screen's call)
 POST {{base_url}}/v2/multimodal/routeServiceability?allPassingRoutes=false
