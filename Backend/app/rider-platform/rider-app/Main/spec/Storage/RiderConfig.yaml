@@ -180,13 +180,11 @@ RiderConfig:
     frfsDriverDetailsLeadTimeSeconds: Maybe Seconds
     sharedCabAllocationWindowSec: Maybe Int
     sharedCabAtStopRadiusM: Maybe Int
-    sharedCabWalkBufferSec: Maybe Int
     sharedCabStandTimerSec: Maybe Int
     sharedCabMovingTimerSec: Maybe Int
     sharedCabMaxAttempts: Maybe Int
     sharedCabMaxNoShows: Maybe Int
     sharedCabFallbackAfterSec: Maybe Int
-    sharedCabNoCabGraceSec: Maybe Int
     sharedCabFindingTimeoutSec: Maybe Int
     sharedCabTickSec: Maybe Int
     sharedCabLtsMaxAgeSec: Maybe Int

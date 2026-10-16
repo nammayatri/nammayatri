@@ -221,13 +221,11 @@ Draining continues: `SharedCabAllocationTick` keeps rescheduling while the city 
 |---|---|---|---|---|
 | `allocationWindowSec` | `shared_cab_allocation_window_sec` | 480 | s | candidate ETA cap; away-timer length |
 | `atStopRadiusM` | `shared_cab_at_stop_radius_m` | 100 | m | at-stop test, moving-timer arm, passed-stop blame, drop arrival |
-| `walkBufferSec` | `shared_cab_walk_buffer_sec` | 60 | s | no reader found |
 | `standTimerSec` | `shared_cab_stand_timer_sec` | 180 | s | stand timer; alloc key TTL |
 | `movingTimerSec` | `shared_cab_moving_timer_sec` | 90 | s | moving timer; alloc key TTL |
 | `maxAttempts` | `shared_cab_max_attempts` | 2 | count | fallback trigger |
 | `maxNoShows` | `shared_cab_max_no_shows` | 2 | count | auto-cancel |
 | `fallbackAfterSec` | `shared_cab_fallback_after_sec` | 600 | s | time-based fallback |
-| `noCabGraceSec` | `shared_cab_no_cab_grace_sec` | 120 | s | no reader found |
 | `findingTimeoutSec` | `shared_cab_finding_timeout_sec` | 1200 | s | finding timeout; TTL of the fallback-push flag; floor of the booking-state hash TTL |
 | `tickSec` | `shared_cab_tick_sec` | 3 | s | allocation tick cadence and its TTLs |
 | `ltsMaxAgeSec` | `shared_cab_lts_max_age_sec` | 60 | s | fix freshness; rider-fix freshness; silent-cab threshold = 5 x |

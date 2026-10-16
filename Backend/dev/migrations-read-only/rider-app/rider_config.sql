@@ -938,13 +938,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_walk_buffer_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_tick_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_stand_timer_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_off_route_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_off_route_meters integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_no_location_spot_bookings_per_vehicle_per_day integer ;
-ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_no_cab_grace_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_moving_timer_sec integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_no_shows integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_attempts integer ;
@@ -963,3 +961,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_allocation_window_sec i
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_enabled boolean ;
+
+
+------- SQL updates -------
+
