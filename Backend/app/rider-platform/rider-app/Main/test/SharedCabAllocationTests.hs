@@ -20,14 +20,16 @@ import qualified "rider-app" SharedLogic.External.LocationTrackingService.Types 
 import "rider-app" SharedLogic.SharedCab.Allocation.Claim (ClaimMiss (..), claimGate)
 import "rider-app" SharedLogic.SharedCab.Allocation.Select (CabStance (..), ClaimPush (..), FindingBooking (..), Phase (..), RankedCandidate (..), claimPush, claimTimer, claimable, closable, crossedMaxAttempts, eligibleCandidates, isFreshPosition, isRescheduledChild, movingCab, phase, silentCab, silentReleaseMult, skippedWhileFinding, withoutSkipped)
 import "rider-app" SharedLogic.SharedCab.Allocation.Types
+import "rider-app" SharedLogic.SharedCab.Boarding (boardingGate)
 import "rider-app" SharedLogic.SharedCab.Config (SharedCabTunables (findingTimeoutSec, movingTimerSec, standTimerSec), defaultTunables)
 import "rider-app" SharedLogic.SharedCab.FindingTimeout (findingTimeoutRefund)
 import "rider-app" SharedLogic.SharedCab.RefundDecision (Refund (..))
 import "rider-app" SharedLogic.SharedCab.RefundPolicy (cancellableStatus)
 import "rider-app" SharedLogic.SharedCab.Schedule (thenReschedule)
-import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE))
+import "rider-app" SharedLogic.SharedCab.SessionState (Session (..), SessionStatus (ACTIVE, PAUSED))
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
+import "rider-app" Tools.Error (SharedCabBoardingError (..))
 import Prelude
 
 t0 :: UTCTime
@@ -213,6 +215,15 @@ tests =
         let s = (candidate "ML05A1234").rcSession
             gate skipped liveSeats = claimGate s finding skipped liveSeats Nothing False
          in [gate ["ML05A1234"] 0, gate [] (4 - finding.seats + 1), gate [] 0] @?= [Left ClaimSkipped, Left ClaimSeatsGone, Left ClaimCasLost],
+      testCase "a boarding is refused when the cab is no longer running, and when the booking has no ticket left to board" $
+        let s = (candidate "ML05A1234").rcSession
+            unused = error "the later guards are not reached"
+         in map
+              (either Just (const Nothing))
+              [ boardingGate "ML05A1234" s {status = PAUSED} 0 [TS.ACTIVE] Nothing unused 1,
+                boardingGate "ML05A1234" s 0 [] Nothing unused 1
+              ]
+              @?= [Just BoardingFailed, Just BoardingFailed],
       testCase "eligible cabs come nearest first" $
         map (.rcSession.vehicleNumber) (eligibleCandidates t0 defaultTunables [cabFixEta 300 "P2" nearStop (Just 0) 5, cabFixEta 60 "P1" nearStop (Just 0) 5] [(candidate "P2").rcSession, (candidate "P1").rcSession] finding)
           @?= ["P1", "P2"],

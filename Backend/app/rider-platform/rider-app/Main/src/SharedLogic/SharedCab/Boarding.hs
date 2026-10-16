@@ -8,6 +8,7 @@ module SharedLogic.SharedCab.Boarding
     forceHonoured,
     forcedNoLocation,
     bindingUnmoved,
+    boardingGate,
     tryBoardSharedCab,
     boardingResponse,
     seatCheck,
@@ -19,6 +20,7 @@ import qualified API.Types.UI.MultimodalConfirm as API
 import Control.Applicative ((<|>))
 import Data.List (nub, sortOn)
 import qualified Data.Text as T
+import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DBookingStatus
 import qualified Domain.Types.FRFSTicketStatus as TicketStatus
@@ -191,6 +193,21 @@ degradedBoarding degradedTimeoutSec booking typedCode = do
 
 -- Lock order when two locks are needed: target-cab plate lock first, then the booking lock.
 
+-- | The boarding's decision under both locks, pure: the cab is still running, the booking is still live, the cab is still the one
+-- it was resolved against and has the seats. The tickets to flip are the booking's ACTIVE or INPROGRESS ones.
+boardingGate :: Text -> Session -> Int -> [TicketStatus.FRFSTicketStatus] -> Maybe Text -> DBooking.FRFSTicketBooking -> Int -> Either SharedCabBoardingError ()
+boardingGate plate fresh held eligible resolvedAgainst freshBooking party
+  | fresh.status /= ACTIVE = Left BoardingFailed
+  | null eligible = Left BoardingFailed
+  | freshBooking.status /= DBookingStatus.CONFIRMED = Left BoardingFailed
+  | not (bindingUnmoved plate resolvedAgainst freshBooking.vehicleNumber) = Left BoardingFailed
+  | not (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (bookingSeats party eligible)) = Left CabFull
+  | otherwise = Right ()
+
+-- | The tickets a boarding flips: the booking's ACTIVE or INPROGRESS ones.
+boardableTickets :: [DTicket.FRFSTicket] -> [DTicket.FRFSTicket]
+boardableTickets myTickets = [t | t <- myTickets, t.status `elem` [TicketStatus.ACTIVE, TicketStatus.INPROGRESS]]
+
 commitBoarding ::
   DJourneyLeg.JourneyLeg ->
   DBooking.FRFSTicketBooking ->
@@ -199,57 +216,56 @@ commitBoarding ::
   Environment.Flow ()
 commitBoarding journeyLeg booking target mbOld =
   let plate = canonicalisePlate target.vehicleNumber
-   in Session.withPlateLock plate $ do
+   in Session.withPlateLock plate $
         withBookingLock booking.id $ do
           -- Re-validate under locks. readSession, not getSession: getSession may rebuild under this same non-re-entrant plate lock.
           fresh <- Redis.withMasterRedis (Session.readSession plate) >>= fromMaybeM BoardingFailed
-          unless (fresh.status == ACTIVE) $ throwError BoardingFailed
           -- SEAT GUARD: capacity - walkups - app-held seats >= this booking's seats, recomputed UNDER the plate lock; refuses as CabFull.
           held <- liveSeatsOnVehicle plate
           myTickets <- QTicket.findAllByTicketBookingId booking.id
-          let eligible = [t | t <- myTickets, t.status `elem` [TicketStatus.ACTIVE, TicketStatus.INPROGRESS]]
-          when (null eligible) $ throwError BoardingFailed
           freshBooking <- QBooking.findById booking.id >>= fromMaybeM BoardingFailed
-          unless (freshBooking.status == DBookingStatus.CONFIRMED) $ throwError BoardingFailed
-          -- the cab this boarding was resolved against must still be the booking's, or the CAS below would no-op
-          unless (bindingUnmoved plate booking.vehicleNumber freshBooking.vehicleNumber) $ throwError BoardingFailed
           parties <- partySizes [freshBooking]
-          unless (canBoard fresh.capacity fresh.walkupCount held (freshBooking.vehicleNumber == Just plate) (bookingSeats (partyOf parties freshBooking) (map (.status) eligible))) $
-            throwError CabFull
-          -- Ticket FIRST: INPROGRESS, never postFrfsTicketVerify (USED reads as leg completed). Flip ONLY the eligible set.
-          forM_ eligible $ \t ->
-            QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS (Just fresh.vehicleNumber) booking.id t.ticketNumber
-          -- CAS vehicleNumber against the fresh read. TODO: KV read-back + "who won" check (frfs_ticket_booking is KV-enabled in prod).
-          QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id freshBooking.vehicleNumber
-          QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
-          -- Old cab's seat release is derived: no consecutiveMisses/attempts bump and no allocation_closed{blame: driver}.
-          shared . void $ Redis.del (allocKey booking.id)
-          Degraded.clearDegradedMarker booking.id
-          fork "SharedCab: sync boarded vehicle data to ticket booking" $
-            QBooking.updateFRFSTicketBookingVehicleDataById
-              (Just fresh.vehicleNumber)
-              (Just DJourneyLeg.UserActivated)
-              Nothing -- waybill: bus-fleet concept, cabs have none
-              Nothing -- scheduleNo
-              Nothing -- depot
-              booking.serviceTierType
-              Nothing -- conductorId
-              (Just fresh.driverId)
-              Nothing -- driverName: join driver-app later
-              Nothing -- driverMobileNumber
-              booking.id
-          QJourneyLeg.updateByPrimaryKey $
-            journeyLeg
-              { DJourneyLeg.finalBoardedBusNumber = Just fresh.vehicleNumber,
-                DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
-                DJourneyLeg.finalBoardedBusServiceTierType = booking.serviceTierType
-              }
-          -- NOTE: BusBoardingMethod has no SHARED_CAB value; UserActivated is the closest fit.
-          now <- getCurrentTime
-          let event k = Events.withTrip (Just fresh.vehicleTripId.getId) $ Events.bookingEvent k booking.id.getId (Just fresh.vehicleNumber) (Just fresh.routeCode) now
-          Events.emit fresh.merchantOperatingCityId . event $ case mbOld of
-            Nothing -> Events.Boarded Events.ByCode
-            Just old -> Events.Rebound old.vehicleNumber (old.routeCode /= fresh.routeCode)
+          let eligible = boardableTickets myTickets
+          either throwError pure $ boardingGate plate fresh held (map (.status) eligible) booking.vehicleNumber freshBooking (partyOf parties freshBooking)
+          applyBoarding journeyLeg booking freshBooking fresh eligible mbOld
+
+-- | The writes of a boarding the gate allowed, in order: tickets, then the booking's cab (CAS), the old cab's keys, the leg, the event.
+applyBoarding :: DJourneyLeg.JourneyLeg -> DBooking.FRFSTicketBooking -> DBooking.FRFSTicketBooking -> Session -> [DTicket.FRFSTicket] -> Maybe Session -> Environment.Flow ()
+applyBoarding journeyLeg booking freshBooking fresh eligible mbOld = do
+  -- Ticket FIRST: INPROGRESS, never postFrfsTicketVerify (USED reads as leg completed). Flip ONLY the eligible set.
+  forM_ eligible $ \t ->
+    QTicket.updateStatusByTBookingIdAndTicketNumber TicketStatus.INPROGRESS (Just fresh.vehicleNumber) booking.id t.ticketNumber
+  -- CAS vehicleNumber against the fresh read.
+  QBooking.updateAllocatedVehicle (Just fresh.vehicleNumber) booking.id freshBooking.vehicleNumber
+  QBooking.updateVehicleTripId (Just fresh.vehicleTripId) booking.id
+  -- Old cab's seat release is derived: no consecutiveMisses/attempts bump and no allocation_closed{blame: driver}.
+  shared . void $ Redis.del (allocKey booking.id)
+  Degraded.clearDegradedMarker booking.id
+  -- In the lock, not forked: a fork could land after a later re-bind and write the old cab back.
+  QBooking.updateFRFSTicketBookingVehicleDataById
+    (Just fresh.vehicleNumber)
+    (Just DJourneyLeg.UserActivated)
+    Nothing -- waybill: bus-fleet concept, cabs have none
+    Nothing -- scheduleNo
+    Nothing -- depot
+    booking.serviceTierType
+    Nothing -- conductorId
+    (Just fresh.driverId)
+    Nothing -- driverName: join driver-app later
+    Nothing -- driverMobileNumber
+    booking.id
+  QJourneyLeg.updateByPrimaryKey $
+    journeyLeg
+      { DJourneyLeg.finalBoardedBusNumber = Just fresh.vehicleNumber,
+        DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
+        DJourneyLeg.finalBoardedBusServiceTierType = booking.serviceTierType
+      }
+  -- NOTE: BusBoardingMethod has no SHARED_CAB value; UserActivated is the closest fit.
+  now <- getCurrentTime
+  let event k = Events.withTrip (Just fresh.vehicleTripId.getId) $ Events.bookingEvent k booking.id.getId (Just fresh.vehicleNumber) (Just fresh.routeCode) now
+  Events.emit fresh.merchantOperatingCityId . event $ case mbOld of
+    Nothing -> Events.Boarded Events.ByCode
+    Just old -> Events.Rebound old.vehicleNumber (old.routeCode /= fresh.routeCode)
 
 -- | The SHARED_CAB branch; `Nothing` means "not our tier" and the caller falls through to the bus/metro body.
 tryBoardSharedCab ::
