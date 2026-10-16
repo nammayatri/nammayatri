@@ -10,18 +10,20 @@ Public facade: `SharedLogic/SharedCab.hs` re-exports the tier predicates (`isSha
 |---|---|
 | `Keys.hs` | Every Redis key and lock name (unprefixed). |
 | `Config.hs` | `SharedCabTunables`, defaults, `getTunables` (rider_config via ConfigPilot). |
-| `Enabled.hs` | Per-city switch `sharedCabEnabled`. |
+| `Enabled.hs` | Per-city switch `sharedCabEnabled`, `requireSharedCabEnabled`, `tickChainContinues`, `cabItineraryShown`. |
 | `Plate.hs` | `canonicalisePlate`: uppercase, strip whitespace, `-`, `.`. |
 | `SessionState.hs` | Pure session model: `Session`, transitions (`newSession`, `switchRoute`, `queueRoute`, `pauseSession`, `resumeSession`, `endSession`, `setWalkup`, `fillCab`), `planSelect`, `expiryAction`, `sessionFromTrip`. |
 | `Session.hs` | Effectful session ops under the plate lock: `selectRoute`, `applyQueuedRoute`, `endRoute`, `expire`, `pause`, `resume`, `setWalkupCount`, `markCabFull`, `getSession` (flush recovery), `activeSessionsOnRoute`, `dropStrandedRider`, `filterCabLegs`, cab driver info. |
 | `SessionView.hs` | Driver-contract request/row types; re-exports `Domain.Types.SharedCabSession` (beckn-spec). |
 | `LtsAttach.hs` | Attach/detach the cab's route in LTS (`attach`, `detach`, `withAttach`); each LTS step bounded to 6 s (`ltsStepSec`). |
 | `Booking.hs` | `shared` (cross-app master cell), `withBookingLock`, `tryWithBookingLock`, `markDropped`, seat counting (`liveSeatsOnVehicle`, `boardedSeatsOnVehicle`, `partySizes`), `recordRiderFix`, `recordCancelReason`, `reseatOnWaybill`. |
-| `Allocation.hs` | Tick entry points: `allocationPass`, `runSharedCabAllocationTick`, `triggerSharedCabAllocation`, `releaseSharedCabAllocation`, `skipSharedCabAllocation`, `releaseUnboarded`, LTS route reads. |
-| `Allocation/Types.hs` | `AllocationState`, `TimerKind`, `AllocationOutcome`, `Blame`, `blameFor`, `countsTowardAttempts`, `allocKeyTtl`, `findingTimeoutAction`, `passedStopBlame`. |
-| `Allocation/Select.hs` | Pure decisions: candidate eligibility (`eligibleCandidates`), ranking (by ETA), `claimTimerSec`, `claimable`, `closable`, `silentCab`, `movingCab`, `skippedWhileFinding`. |
-| `Allocation/Claim.hs` | `attemptClaim` / `claimFirst` (plate lock then booking lock), `clearAllocationKeys`, `claimFallbackPush`, driver FCM via `CallBPPInternal.sharedCabAllocationFCM`. |
-| `Allocation/Reallocate.hs` | `closeLocked` (CAS plate to null, bump attempts), `afterClose` (event, counters, push), `cancelForNoShows`, `releaseCancelledBooking`. |
+| `Allocation.hs` | Tick entry points: `allocationPass`, `runSharedCabAllocationTick`, `triggerSharedCabAllocation`, `releaseSharedCabAllocation`, `skipSharedCabAllocation`, `releaseUnboarded`; `allocationPass` in three phases (`readCity`, `closeExpired`, `claimFindings`). |
+| `Lts.hs` | Reads of the LTS route hash `route:{routeCode}` (`readRoutePositions`, `readRoutePosition`). |
+| `BookingState.hs` | A booking's allocation state in one Redis hash: alloc record, attempts, finding-since, skipped plates. |
+| `Allocation/Types.hs` | `AllocationState`, `Timer` (`NoTimer`, `StandTimer`, `MovingTimer`, `AwayTimer`, each with its deadline), `AllocationOutcome`, `outcomePolicy` (blame, attempt, driver-miss and skip-plate rules per outcome), `allocKeyTtl`, `findingTimeoutAction`, `passedStopBlame`. |
+| `Allocation/Select.hs` | Pure decisions: candidate eligibility (`eligibleCandidates`, nearest first, each with a `CabStance`), `claimTimer`, `LiveBooking` and `phase` (`Finding`, `AllocatedTo plate`, `NotWaiting`), `claimable`, `closable`, `silentCab`, `movingCab`, `skippedWhileFinding`. |
+| `Allocation/Claim.hs` | `attemptClaim` / `claimFirst` (plate lock then booking lock; pure `claimGate`), `claimFallbackPush`, driver FCM via `CallBPPInternal.sharedCabAllocationFCM`. |
+| `Allocation/Reallocate.hs` | `closeAllocation` (the one close path: lock, `closeLocked`, then `afterClose` outside the lock), `closeLocked` (CAS plate to null, bump attempts; result `Reallocated`, `ReallocatedIntoFallback` or `AutoCancelled`), `afterClose` (event, counters, push), `cancelForNoShows`, `releaseCancelledBooking` (calls `SharedLogic.FRFSCancelEffects`, the same function the BPP cancel callback uses). |
 | `Allocation/Timers.hs` | `expireTimers` (stand/moving/away timeout, lost key, silent cab), `pushTimeFallbacks`. |
 | `StopProgress.hs` (+ `StopProgress/Rules.hs`) | Per-tick, per-cab: board stop passed, moving-timer arm, drop auto-end clock, off-route pause, `reachedEndAt`. Pure rules in `Rules.hs`. |
 | `FindingTimeout.hs` | `cancelTimedOutFindings` (cap `maxFindingTimeoutBatch` = 25 per tick), `startRefund`. |
@@ -122,7 +124,7 @@ A booking is a `frfs_ticket_booking` on tier SHARED_CAB, status CONFIRMED, plus 
 | FINDING | booking CONFIRMED or ticket ACTIVE, no plate, fallback not due |
 | FALLBACK | as FINDING but `fallbackDue` |
 | ALLOCATED | plate set, no armed arrival deadline in the alloc key |
-| ARRIVING | plate set and alloc key has `expiresAt` (deadline returned as `boardDeadlineSec`) |
+| ARRIVING | plate set and the alloc record has a timer deadline (returned as `boardDeadlineSec`) |
 | BOARDED | ticket INPROGRESS and a non-ENDED session exists for the plate |
 | DEGRADED | ticket INPROGRESS and no live session |
 | DROPPED | ticket USED or EXPIRED, or feedback state |
@@ -156,13 +158,10 @@ All keys are unprefixed and written through `Booking.shared` (cross-app master c
 | `sharedcab:driverinfo:{plate}` | `CabDriverInfo` | 16 h | `Session.setCabDriverInfo`; cleared on `finish` |
 | `sharedcab:lock:{plate}` | lock | 30 s | `Session.withPlateLock` |
 | `sharedcab:lock:booking:{id}` | lock | 10 s | `Booking.withBookingLock` |
-| `sharedcab:alloc:{id}` | `AllocationState` | `allocKeyTtl` = max(`findingTimeoutSec`, `standTimerSec` + `movingTimerSec` + 10) | `Claim.attemptClaim`; re-armed by `StopProgress.movingTimerStep`; timer cleared by `Timers.expireTimers`; deleted by `Reallocate`, `Boarding`, `DriverAction`, `clearAllocationKeys` |
-| `sharedcab:attempts:{id}` | Int (lifetime attempts) | `findingTimeoutSec` | `Reallocate.closeLocked` |
-| `sharedcab:skipped:{id}` | set of plates | `findingTimeoutSec` | `Reallocate`, `skipSharedCabAllocation` |
-| `sharedcab:findingsince:{id}` | UTCTime | `findingTimeoutSec` | `Reallocate.closeLocked` (absent: booking `createdAt`) |
-| `sharedcab:fallbackpushed:{id}` | lock-style marker | `findingTimeoutSec` | `Claim.claimFallbackPush`; deleted on close while attempts < `maxAttempts` |
+| `sharedcab:booking:{id}` | hash: `alloc` (`AllocationState`), `attempts` (Int), `findingSince` (UTCTime, absent: booking `createdAt`), `skipped` (plates) | `allocKeyTtl` = max(`findingTimeoutSec`, `standTimerSec` + `movingTimerSec` + 10), reset by every field write | `BookingState`: written by `Claim.attemptClaim` (alloc), `StopProgress.movingTimerStep` (alloc), `Timers.expireTimers` (alloc), `Reallocate.closeLocked` (attempts, findingSince, skipped); the `alloc` field is deleted on close, boarding and driver board |
+| `sharedcab:fallbackpushed:{id}` | lock-style marker | `findingTimeoutSec` | `Claim.claimFallbackPush`; deleted on close while attempts < `maxAttempts`; a once-flag, so it stays outside the hash |
 | `sharedcab:riderfix:{id}` | `RiderFix` | 3600 s | `Booking.recordRiderFix` (from leg-state poll) |
-| `sharedcab:cancelreason:{id}` | `CancelReason` | 24 h | `Booking.recordCancelReason`; not cleared by `clearAllocationKeys` |
+| `sharedcab:cancelreason:{id}` | `CancelReason` | 24 h | `Booking.recordCancelReason`; not cleared by `clearBookingState` |
 | `sharedcab:degraded:{id}` | `DegradedBoarding` | `degradedTimeoutSec` | `Degraded.markDegradedBoarding` |
 | `sharedcab:dropclock:{id}` | UTCTime | 2 x `autoEndAfterDropSec` | `StopProgress.dropStep`; access `Redis.withMasterRedis` (not `shared`) |
 | `sharedcab:offroute:{plate}` | UTCTime | 2 x `offRouteSec` | `StopProgress.offRouteStep`; access `Redis.withMasterRedis` |
@@ -182,7 +181,7 @@ All keys are unprefixed and written through `Booking.shared` (cross-app master c
 | `sharedcab:degradedSweepLease:{city}` | lease with owner token | 1200 s | `withSweepLease` |
 | `sharedcab:refundretryRun:{city}` | per-tick claim | 115 s | `claimRefundRetryRun` |
 
-Notes: `clearAllocationKeys` deletes alloc, attempts, skipped, findingsince, fallbackpushed. Demand buckets are 300 s wide (`bucketSec`), 3 buckets read (`bucketCount`; `searchWindowMin` = 15). The cab's live position is read from the LTS hash `route:{routeCode}` (field = plate), not a shared-cab key.
+Notes: `clearBookingState` deletes the hash and the fallback-push flag. Demand buckets are 300 s wide (`bucketSec`), 3 buckets read (`bucketCount`; `searchWindowMin` = 15). The cab's live position is read from the LTS hash `route:{routeCode}` (field = plate), not a shared-cab key.
 
 ## 5. Jobs
 
@@ -208,7 +207,11 @@ Dhall: `dhall-configs/dev/rider-app.dhall` lists `SharedCabAllocationTick`, `Sha
 
 `Enabled.sharedCabEnabled cityId` = the city has an `IntegratedBPPConfig` for BUS / APPLICATION whose `agencyKey` is a shared-cab agency (`isSharedCabAgency`: `gtfsIdtoDomainCode agencyKey == "SHARED_CAB"`) AND `rider_config.shared_cab_enabled` is not `false` (NULL follows the data). Decision: `sharedCabEnabledDecision hasConfig opsSwitch = hasConfig && opsSwitch /= Just False`.
 
-Checked in: `Session.selectRoute` (throws `InvalidRequest "Shared cab is not enabled in this city"`), `Boarding.tryBoardSharedCab` (False returns `Nothing`, falling through to the bus/metro path), `Allocation.allocationPass` (no-op), `Schedule.ensureAllocationTick`, `Schedule.ensureDegradedSweep`, jobs `SharedCabAllocationTick` and `SharedCabDegradedSweep`. Not checked: `SharedCabSessionExpiry`.
+A suspended city (switch false, or no SHARED_CAB config) takes no new intake and drains what is in flight.
+
+Intake refused or hidden (`requireSharedCabEnabled` throws `InvalidRequest "Shared cab is suspended in your city"`): `Session.selectRoute`, `Session.resume`, `Session.setWalkupCount`, `Boarding.tryBoardSharedCab` (so a rider mid-board is told, not sent down the bus path), `FRFSConfirm` before a shared-cab booking is created, walk-up by live plate (`WalkUp.walkUpVehicleData`). Hidden: `filterCabLegs` drops cab itineraries (`cabItineraryShown`), `findSharedCabConfig` returns Nothing so `/sharedCab/routes` is empty, the route detail 404s and typed codes resolve to nothing.
+
+Draining continues: `SharedCabAllocationTick` keeps rescheduling while the city is on or live bookings exist (`tickChainContinues`); with the city off, `allocationPass` still expires timers and `runStopProgress` and `cancelTimedOutFindings` still run, but no claims or board-any pushes are made. `SharedCabDegradedSweep` (degraded-ride expiry, stranded riders, refund retries) is not gated and `ensureDegradedSweep` seeds regardless. `SharedCabSessionExpiry` is not gated.
 
 ## 7. Config
 
@@ -225,7 +228,7 @@ Checked in: `Session.selectRoute` (throws `InvalidRequest "Shared cab is not ena
 | `maxNoShows` | `shared_cab_max_no_shows` | 2 | count | auto-cancel |
 | `fallbackAfterSec` | `shared_cab_fallback_after_sec` | 600 | s | time-based fallback |
 | `noCabGraceSec` | `shared_cab_no_cab_grace_sec` | 120 | s | no reader found |
-| `findingTimeoutSec` | `shared_cab_finding_timeout_sec` | 1200 | s | finding timeout; TTL of attempts/skipped/findingsince/fallbackpushed; floor of alloc key TTL |
+| `findingTimeoutSec` | `shared_cab_finding_timeout_sec` | 1200 | s | finding timeout; TTL of the fallback-push flag; floor of the booking-state hash TTL |
 | `tickSec` | `shared_cab_tick_sec` | 3 | s | allocation tick cadence and its TTLs |
 | `ltsMaxAgeSec` | `shared_cab_lts_max_age_sec` | 60 | s | fix freshness; rider-fix freshness; silent-cab threshold = 5 x |
 | `autoEndAfterDropSec` | `shared_cab_auto_end_after_drop_sec` | 600 | s | drop auto-end |
