@@ -25,6 +25,19 @@ rider() { h --variable token="$(token)" rider-flow.hurl; }
 boarding() { h --variable token="$(token)" boarding-flow.hurl; }
 quantity() { h --variable token="$(token)" quantity-flow.hurl; }
 standalone() { h --variable token="$(token)" standalone-flow.hurl; }
+# SUSPEND_CMD / RESUME_CMD flip rider_config.shared_cab_enabled and refresh the rider-app and scheduler config caches (they cache for
+# an hour, so locally that is the UPDATE plus a restart; see README). The flow needs shared_cab_finding_timeout_sec = 25 for the city.
+suspended() {
+  : "${SUSPEND_CMD:?set SUSPEND_CMD (see README)}" "${RESUME_CMD:?set RESUME_CMD (see README)}"
+  tok=$(token)
+  cap() { jq -r --arg n "$1" '[.entries[].captures[]? | select(.name == $n)][-1].value' <<<"$out"; }
+  out=$(hurl --json --variables-file "$env" --variable date="$date" --variable token="$tok" suspended-city-before.hurl)
+  vars=(--variable token="$tok" --variable journeyId="$(cap journeyId)" --variable legOrder="$(cap legOrder)" --variable journeyId2="$(cap journeyId2)" --variable legOrder2="$(cap legOrder2)" --variable categoryId2="$(cap categoryId2)")
+  bash -c "$SUSPEND_CMD"
+  trap 'bash -c "$RESUME_CMD"' EXIT
+  h "${vars[@]}" suspended-city-after.hurl
+  bash -c "$RESUME_CMD"; trap - EXIT
+}
 
 case ${1:-all} in
   driver) driver ;;
@@ -32,7 +45,8 @@ case ${1:-all} in
   rider) rider ;;
   boarding) boarding ;;
   standalone) standalone ;;
+  suspended) suspended ;;
   quantity) quantity ;;
   all) driver; flush; rider; boarding; standalone; quantity ;;
-  *) echo "usage: $0 [driver|flush|rider|boarding|standalone|quantity|all]"; exit 2 ;;
+  *) echo "usage: $0 [driver|flush|rider|boarding|standalone|quantity|suspended|all]"; exit 2 ;;
 esac
