@@ -14,6 +14,7 @@
 
 module SharedLogic.CallBPPInternal where
 
+import API.Types.UI.BlackListDriver (BlackListedDriverResp)
 import API.Types.UI.FavouriteDriver
 import qualified API.Types.UI.RideFeedback as RideFeedbackAPI
 import qualified Dashboard.Common.Merchant as DM
@@ -446,7 +447,7 @@ data BlackListDriverReq = BlackListDriverReq
 type BlackListDriverAPI =
   "internal"
     :> Capture "merchantId" Text
-    :> Capture "driverId" Text
+    :> Capture "rideId" Text
     :> "blackListDriver"
     :> Header "token" Text
     :> ReqBody '[JSON] BlackListDriverReq
@@ -472,9 +473,77 @@ blackListDriver ::
   Text ->
   Bool ->
   m APISuccess
-blackListDriver apiKey internalUrl merchantId phoneNumber countryCode driverId blackListed = do
+blackListDriver apiKey internalUrl merchantId phoneNumber countryCode bppRideId blackListed = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (blackListDriverClient merchantId driverId (Just apiKey) (BlackListDriverReq phoneNumber countryCode blackListed)) "BlackListDriver" blackListDriverApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (blackListDriverClient merchantId bppRideId (Just apiKey) (BlackListDriverReq phoneNumber countryCode blackListed)) "BlackListDriver" blackListDriverApi
+
+data GetBlackListedDriverInfoReq = GetBlackListedDriverInfoReq
+  { customerMobileNumber :: Text,
+    customerMobileCountryCode :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type GetBlackListedDriversAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "getBlackListedDrivers"
+    :> Header "token" Text
+    :> ReqBody '[JSON] GetBlackListedDriverInfoReq
+    :> Get '[JSON] [BlackListedDriverResp]
+
+getBlackListedDriversClient :: Text -> Maybe Text -> GetBlackListedDriverInfoReq -> EulerClient [BlackListedDriverResp]
+getBlackListedDriversClient = client getBlackListedDriversApi
+
+getBlackListedDriversApi :: Proxy GetBlackListedDriversAPI
+getBlackListedDriversApi = Proxy
+
+getBlackListedDriverList ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  m [BlackListedDriverResp]
+getBlackListedDriverList apiKey internalUrl merchantId phoneNumber countryCode = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getBlackListedDriversClient merchantId (Just apiKey) (GetBlackListedDriverInfoReq phoneNumber countryCode)) "GetBlackListedDrivers" getBlackListedDriversApi
+
+type UnblockDriverAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "driverId" Text
+    :> "unblockDriver"
+    :> Header "token" Text
+    :> ReqBody '[JSON] GetBlackListedDriverInfoReq
+    :> Post '[JSON] APISuccess
+
+unblockDriverClient :: Text -> Text -> Maybe Text -> GetBlackListedDriverInfoReq -> EulerClient APISuccess
+unblockDriverClient = client unblockDriverApi
+
+unblockDriverApi :: Proxy UnblockDriverAPI
+unblockDriverApi = Proxy
+
+unblockDriver ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  Text ->
+  m APISuccess
+unblockDriver apiKey internalUrl merchantId phoneNumber countryCode driverId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (unblockDriverClient merchantId driverId (Just apiKey) (GetBlackListedDriverInfoReq phoneNumber countryCode)) "UnblockDriver" unblockDriverApi
 
 type CustomerCancellationDuesSyncAPI =
   "internal"
