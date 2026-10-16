@@ -3,8 +3,9 @@
 # ENV (default local.env) picks the variables file; REDIS_CLI (default redis-cli) reaches the rider-app's Redis for the flush
 # step (a local cluster needs REDIS_CLI="redis-cli -c -p 30001"). Local setup is documented in README.md, not done here:
 # seed/*.sql applied, the apps' Redis config caches cleared (each app has its own key prefix) and the processes restarted,
-# LTS geo config for the SC routes, and a cab that pings LTS. The allocation tick chain dies with a scheduler restart: re-run
-# route/select to reseed it.
+# LTS geo config for the SC routes, and a cab that pings LTS. The stack must run the scheduler PRODUCER (producer-exe) next to
+# rider-app-scheduler-exe: scheduled jobs sit in Scheduled_Jobs_Rider{n} until the producer moves them to the stream, so without
+# it no tick, timeout or refund ever fires and bookings stay FINDING.
 set -euo pipefail
 cd "$(dirname "$0")"
 env=${ENV:-local.env}

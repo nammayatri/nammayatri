@@ -7,7 +7,7 @@ Board rows 3.6 (driver flow), 6.8 (rider flow) and 8.7 (boarding flow). **`board
 ## Run
 
 Prerequisites:
-- rider-app, Redis, Postgres, and the OTPRest feed for the city.
+- rider-app, Redis, Postgres, and the OTPRest feed for the city, plus `rider-app-scheduler-exe` AND `producer-exe` (the producer moves due jobs from `Scheduled_Jobs_Rider{n}` to the stream; without it the allocation tick, finding timeout and refund retries never run and a booking stays FINDING forever).
 - The shared-cab tier and fare rows seeded (task 0.3).
 - `hurl` and `jq` installed.
 
