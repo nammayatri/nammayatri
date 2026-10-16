@@ -766,7 +766,6 @@ library
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFeedback.Context
       SharedLogic.RideFeedback.Eligibility
-      SharedLogic.RideFeedback.Rule
       SharedLogic.RideFeedback.Selection
       SharedLogic.RideFeedback.Validation
       SharedLogic.RideFootnotes
@@ -2298,6 +2297,7 @@ library
     , exceptions
     , external
     , extra
+    , feedback-engine
     , finance-kernel
     , generic-lens
     , geohash ==1.0.1
@@ -2450,6 +2450,7 @@ executable dynamic-offer-driver-app-exe
     , euler-hs
     , exceptions
     , extra
+    , feedback-engine
     , finance-kernel
     , generic-lens
     , geohash ==1.0.1

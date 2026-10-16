@@ -21,8 +21,10 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.AppFeedback.Cap as Cap
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.RideFeedback.Actions (ActionEnv (..), runActionsAndReport)
+import SharedLogic.RideFeedback.Actions (ActionEnv (..), rideSubjectLines, runActionsAndReport)
+import qualified SharedLogic.RideFeedback.Types as RFT
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
@@ -77,6 +79,7 @@ postBookingFeedback (mbPersonId, _) bookingId req = do
     Just bppId | servedByOwnDriverPlatform merchant booking -> pure bppId.getId
     _ -> throwError (InvalidRequest "Ride feedback is not available for this booking")
   res <- CallBPPInternal.rideFeedbackSubmit merchant.driverOfferApiKey merchant.driverOfferBaseUrl bppBookingId req
+  recordRideCardsShown personId req res
   let withActions = [r | r <- res.results, r.accepted, not (null r.actions)]
   unless (null withActions) $ do
     person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -88,7 +91,8 @@ postBookingFeedback (mbPersonId, _) bookingId req = do
         (Just responseId, Just answer) -> do
           ride <- maybe (pure Nothing) (QRide.findByBPPRideId . Id) result.rideId
           runActionsAndReport
-            ActionEnv {merchant, riderConfig, person, ride, booking, bppBookingId, questionKey = fromMaybe result.questionId result.questionKey, answer}
+            ActionEnv {merchant, riderConfig, person, ride, booking = Just booking, subjectLines = rideSubjectLines booking ride, questionKey = fromMaybe result.questionId result.questionKey, answer}
+            bppBookingId
             responseId
             result.actions
         _ -> logError $ "RideFeedback: matched actions without a response or answer for question " <> result.questionId
@@ -99,6 +103,15 @@ postBookingFeedback (mbPersonId, _) bookingId req = do
             | r <- res.results
           ]
       }
+
+-- | Ride feedback cards count toward the rider's feedback cap (SharedLogic.AppFeedback.Cap), so app
+-- feedback does not follow right after one. Best-effort: the answers are already stored.
+recordRideCardsShown :: Id DP.Person -> API.SubmitRideFeedbackReq -> RFT.SubmitFeedbackRes -> Flow ()
+recordRideCardsShown personId req res = do
+  now <- getCurrentTime
+  let shownQuestions = [item.questionId | item <- req.responses, item.status == API.SHOWN]
+  forM_ [responseId | r <- res.results, r.accepted, r.questionId `elem` shownQuestions, Just responseId <- [r.responseId]] $ \responseId ->
+    void . withTryCatch "RideFeedback:recordShown" $ Cap.recordShown personId now ("ride-" <> responseId)
 
 -------------------------------------------------------------------------------
 -- Helpers

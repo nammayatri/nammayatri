@@ -23,13 +23,14 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideFeedbackConfig as DRFC
-import qualified Domain.Types.RideFeedbackResponse as DRFR
 import Domain.Types.VehicleVariant (VehicleVariant (SEDAN))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Seconds (..))
 import Kernel.Types.Id
-import SharedLogic.RideFeedback.Rule (stableBucket)
+import Lib.Feedback.Context (AnswerCtx (..), mkAnswerCtx)
+import Lib.Feedback.Rule (stableBucket)
+import qualified Lib.Feedback.Types as LFT
 
 -- | The JSON object the RIDE-FEEDBACK targeting logic and action rules are evaluated against.
 -- Fields are listed explicitly (no whole-entity serialisation) so OTPs, phone numbers
@@ -102,16 +103,6 @@ data DerivedCtx = DerivedCtx
     dayOfWeek :: Text,
     -- | Stable 0–99 bucket of the rider (or the ride when the rider is unknown), for % splits in rules.
     rolloutBucket :: Int
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data AnswerCtx = AnswerCtx
-  { selectedOptionKeys :: [Text],
-    primaryOptionKey :: Maybe Text,
-    text :: Maybe Text,
-    number :: Maybe Double,
-    rating :: Maybe Int,
-    hasMedia :: Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -235,20 +226,8 @@ buildRideFeedbackContext ContextInput {..} =
     -- Tags are stored as name#value(#expiry); rules match on the name.
     tagName = T.takeWhile (/= '#')
 
-withAnswer :: DRFR.RideFeedbackAnswer -> RideFeedbackContext -> RideFeedbackContext
+withAnswer :: LFT.FeedbackAnswer -> RideFeedbackContext -> RideFeedbackContext
 withAnswer ans ctx = ctx {answer = Just (mkAnswerCtx ans)}
-
-mkAnswerCtx :: DRFR.RideFeedbackAnswer -> AnswerCtx
-mkAnswerCtx ans =
-  let keys = fromMaybe [] ans.selectedOptionKeys
-   in AnswerCtx
-        { selectedOptionKeys = keys,
-          primaryOptionKey = listToMaybe keys,
-          text = ans.text,
-          number = ans.number,
-          rating = ans.rating,
-          hasMedia = maybe False (not . null) ans.mediaFileIds
-        }
 
 -- | Constructor name only ("OneWay", "Rental", "InterCity", ...), which is what rules compare against.
 tripCategoryTag :: TripCategory -> Text

@@ -34,6 +34,7 @@ packages:
   lib/consequence-engine
   lib/communication-engine
   lib/behavior-engine
+  lib/feedback-engine
 -- ## 6 parallel jobs by default.
 --
 -- # since we now use "-j4" in "ghc-options" for all packages,

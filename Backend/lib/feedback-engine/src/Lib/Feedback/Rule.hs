@@ -1,4 +1,4 @@
-module SharedLogic.RideFeedback.Rule
+module Lib.Feedback.Rule
   ( evaluateRule,
     unsupportedOperators,
     supportedOperatorNames,

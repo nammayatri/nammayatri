@@ -12,7 +12,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.RideFeedback.Actions (ActionEnv (..), runActionsAndReport)
+import SharedLogic.RideFeedback.Actions (ActionEnv (..), rideSubjectLines, runActionsAndReport)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -38,7 +38,8 @@ postRideFeedbackBookingResponseRetryActions merchantShortId opCity bppBookingId 
     getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   runActionsAndReport
-    ActionEnv {merchant, riderConfig, person, ride, booking, bppBookingId, questionKey = retryable.questionKey, answer = retryable.answer}
+    ActionEnv {merchant, riderConfig, person, ride, booking = Just booking, subjectLines = rideSubjectLines booking ride, questionKey = retryable.questionKey, answer = retryable.answer}
+    bppBookingId
     retryable.responseId
     retryable.actions
   pure Success

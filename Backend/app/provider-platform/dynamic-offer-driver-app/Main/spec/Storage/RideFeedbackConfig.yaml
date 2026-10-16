@@ -3,6 +3,10 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Translation: IssueManagement.Common
   Value: Data.Aeson
+  FeedbackQuestionType: Lib.Feedback.Types
+  QuestionOption: Lib.Feedback.Types
+  InputConfig: Lib.Feedback.Types
+  FeedbackActionRule: Lib.Feedback.Types
 
 RideFeedbackConfig:
   tableName: ride_feedback_config
@@ -16,7 +20,7 @@ RideFeedbackConfig:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     questionKey: Text
-    questionType: RideFeedbackQuestionType
+    questionType: FeedbackQuestionType
     title: "[Translation]"
     description: Maybe [Translation]
     options: Maybe [QuestionOption]
@@ -34,39 +38,9 @@ RideFeedbackConfig:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  # Question content types (FeedbackQuestionType, QuestionOption, InputConfig, FeedbackActionRule) are
+  # shared with app feedback in lib/feedback-engine (Lib.Feedback.Types).
   types:
-    RideFeedbackQuestionType:
-      enum: "SINGLE_SELECT,MULTI_SELECT,YES_NO,STAR_RATING,EMOJI_SCALE,THUMBS,SCALE,TEXT_INPUT,NUMBER_INPUT,IMAGE_UPLOAD,AUDIO"
-      derive: "Bounded, Enum"
-
-    # Mirrored in rider-app's SharedLogic.RideFeedback.Types, which runs the actions: add new values on both sides.
-    RideFeedbackActionType:
-      enum: "REPORT_ISSUE_TO_BPP,CREATE_TICKET,L0_SENSITIVE_WORD_CHECK,SLACK_ALERT,NOTIFY_RIDER,SAFETY_ESCALATION"
-      derive: "Bounded, Enum"
-
-    QuestionOption:
-      key: Text
-      label: "[Translation]"
-      iconUrl: Maybe Text
-      nextQuestionKey: Maybe Text
-      requiresText: Maybe Bool
-      isExclusive: Maybe Bool
-      score: Maybe Double # 0 (bad) to 1 (good): the answer_score of picking it; not set = not scored
-
-    InputConfig:
-      placeholder: Maybe [Translation]
-      minLength: Maybe Int
-      maxLength: Maybe Int
-      minValue: Maybe Double
-      maxValue: Maybe Double
-      step: Maybe Double
-      minSelections: Maybe Int
-      maxSelections: Maybe Int
-      maxFiles: Maybe Int
-      maxDurationSec: Maybe Int
-      minLabel: Maybe [Translation]
-      maxLabel: Maybe [Translation]
-
     # Where a booking's journey is when a question is asked. Booking stages come before any driver
     # (answers are about the booking, once per journey); ride stages have a ride and its driver
     # (answers are about that ride, once per ride).
@@ -79,15 +53,6 @@ RideFeedbackConfig:
       showAfterSecondsFromRideStart: Maybe Int
       showAfterSecondsFromAssign: Maybe Int
       autoDismissAfterSeconds: Maybe Int
-
-    FeedbackAction:
-      actionType: RideFeedbackActionType
-      params: Maybe Value
-
-    FeedbackActionRule:
-      ruleId: Text
-      condition: Maybe Value
-      actions: "[FeedbackAction]"
 
   beamType:
     title: Value

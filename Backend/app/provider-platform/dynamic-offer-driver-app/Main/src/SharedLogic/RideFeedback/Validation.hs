@@ -1,7 +1,6 @@
 module SharedLogic.RideFeedback.Validation
   ( validateConfig,
     validatePatchedCity,
-    reportableIssueTypes,
     questionStages,
     isRideStage,
     isBookingQuestion,
@@ -9,17 +8,11 @@ module SharedLogic.RideFeedback.Validation
   )
 where
 
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Key as AK
-import qualified Data.Aeson.KeyMap as KM
-import Data.Char (isAsciiUpper, isDigit)
-import Data.List (nub, sort, (\\))
-import qualified Data.Text as T
+import Data.List (nub, sort)
 import qualified Domain.Types.RideFeedbackConfig as DRFC
-import IssueManagement.Common (IssueReportType (..))
-import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
-import SharedLogic.RideFeedback.Rule (unsupportedOperators)
+import Lib.Feedback.Question (QuestionRules (..), validateQuestion)
+import qualified Lib.Feedback.Types as LFT
 
 -- | Problems with a Config Pilot patch of a city's questions, given the questions before and after
 -- it (same order): a patch may change any question's content, but not which questions exist, their
@@ -37,106 +30,31 @@ validatePatchedCity before after =
 -- | Human-readable problems with a question config; empty means valid.
 -- 'cityConfigs' are the other questions of the same city (to resolve option.nextQuestionKey).
 validateConfig :: [DRFC.RideFeedbackConfig] -> DRFC.RideFeedbackConfig -> [Text]
-validateConfig cityConfigs c =
-  concat
-    [ check (validKey c.questionKey) "questionKey must be 2-64 characters of A-Z, 0-9 and _, starting with a letter",
-      translations "title" (Just c.title),
-      translations "description" c.description,
-      translations "acknowledgement" c.acknowledgement,
-      check (maybe True validIconUrl c.iconUrl) "iconUrl must be an https:// URL",
-      optionErrors,
-      inputConfigErrors,
-      check (maybe True (not . null) c.stages) "stages must not be empty",
-      check (all isRideStage stages || not (any isRideStage stages)) "stages cannot mix booking stages (BOOKING_CONFIRMED, AWAITING_REASSIGNMENT) with ride stages (RIDE_ASSIGNED, RIDE_IN_PROGRESS)",
-      triggerErrors,
-      check (maybe True (>= 0) c.priority) "priority must not be negative",
-      check (maybe True isObject c.uiConfig) "uiConfig must be a JSON object",
-      actionRuleErrors
-    ]
+validateConfig = validateQuestion rideRules
+
+-- | What ride questions add to the shared checks: stages, timing and the booking/ride split.
+rideRules :: QuestionRules DRFC.RideFeedbackConfig
+rideRules =
+  QuestionRules
+    { ownErrors = \c ->
+        let stages = questionStages c
+         in check (maybe True (not . null) c.stages) "stages must not be empty"
+              <> check (all isRideStage stages || not (any isRideStage stages)) "stages cannot mix booking stages (BOOKING_CONFIRMED, AWAITING_REASSIGNMENT) with ride stages (RIDE_ASSIGNED, RIDE_IN_PROGRESS)"
+              <> triggerErrors c,
+      followUpErrors = \parent target ->
+        ["which is asked at a different level (booking vs ride)" | isBookingQuestion parent /= isBookingQuestion target],
+      actionTypeError = \c actionType ->
+        if isBookingQuestion c && needsRide actionType
+          then Just "needs a ride, so it cannot be used on a booking-stage question"
+          else Nothing
+    }
   where
     check cond msg = [msg | not cond]
-    isObject = \case A.Object _ -> True; _ -> False
-
-    translations field = \case
-      Nothing -> []
-      Just ts ->
-        check (any (\t -> t.language == ENGLISH) ts) (field <> " needs an ENGLISH translation")
-          <> check (not (any (T.null . T.strip . (.translation)) ts)) (field <> " has an empty translation")
-
-    stages = questionStages c
-    bookingQuestion = isBookingQuestion c
-    options = fromMaybe [] c.options
-    optionKeys = map (.key) options
-    others = [x | x <- cityConfigs, x.id /= c.id]
-    otherKeys = map (.questionKey) others
-    optionErrors
-      | usesOptions c.questionType =
-        check (not (null options)) (show c.questionType <> " needs at least one option")
-          <> check (length (nub optionKeys) == length optionKeys) "option keys must be unique"
-          <> check (all validKey optionKeys) "option keys must be 2-64 characters of A-Z, 0-9 and _, starting with a letter"
-          <> check (all (maybe True (\x -> x >= 0 && x <= 1) . (.score)) options) "option scores must be between 0 and 1"
-          <> concat [check (validIconUrl url) ("option " <> o.key <> " iconUrl must be an https:// URL") | o <- options, Just url <- [o.iconUrl]]
-          <> concatMap (\o -> translations ("option " <> o.key <> " label") (Just o.label)) options
-          <> concat
-            [ check (next /= c.questionKey) ("option " <> o.key <> " cannot open its own question")
-                <> check (next `elem` otherKeys) ("option " <> o.key <> " opens " <> next <> ", which does not exist in this city")
-                <> check
-                  (all ((== bookingQuestion) . isBookingQuestion) [x | x <- others, x.questionKey == next])
-                  ("option " <> o.key <> " opens " <> next <> ", which is asked at a different level (booking vs ride)")
-              | o <- options,
-                Just next <- [o.nextQuestionKey]
-            ]
-      | otherwise = check (null options) (show c.questionType <> " does not take options")
-
-    inputConfigErrors = case c.inputConfig of
-      Nothing -> []
-      Just ic ->
-        ordered "minLength" ic.minLength "maxLength" ic.maxLength
-          <> ordered "minValue" ic.minValue "maxValue" ic.maxValue
-          <> ordered "minSelections" ic.minSelections "maxSelections" ic.maxSelections
-          <> check (all (>= 0) (catMaybes [ic.minLength, ic.maxLength, ic.minSelections, ic.maxSelections])) "inputConfig lengths and selections must not be negative"
-          <> check (maybe True (\n -> n >= 1 && n <= 10) ic.maxFiles) "inputConfig.maxFiles must be between 1 and 10"
-          <> check (maybe True (\n -> n >= 1 && n <= 300) ic.maxDurationSec) "inputConfig.maxDurationSec must be between 1 and 300"
-          <> check (maybe True (> 0) ic.step) "inputConfig.step must be positive"
-          <> translations "inputConfig.placeholder" ic.placeholder
-    ordered :: Ord a => Text -> Maybe a -> Text -> Maybe a -> [Text]
-    ordered lo mbLo hi mbHi = check (fromMaybe True ((<=) <$> mbLo <*> mbHi)) ("inputConfig." <> lo <> " must not exceed " <> hi)
-
-    triggerErrors = case c.displayTrigger of
+    triggerErrors c = case c.displayTrigger of
       Nothing -> []
       Just t ->
         check (all (>= 0) (catMaybes [t.showAfterSecondsFromBooking, t.showAfterSecondsFromRideStart, t.showAfterSecondsFromAssign])) "displayTrigger show-after seconds must not be negative"
           <> check (maybe True (> 0) t.autoDismissAfterSeconds) "displayTrigger.autoDismissAfterSeconds must be positive"
-
-    rules = fromMaybe [] c.actionRules
-    ruleIds = map (.ruleId) rules
-    actionRuleErrors =
-      check (not (any (T.null . T.strip) ruleIds)) "every action rule needs a ruleId"
-        <> check (null (ruleIds \\ nub ruleIds)) "action rule ids must be unique"
-        <> concatMap ruleErrors rules
-    ruleErrors rule =
-      [ "action rule " <> rule.ruleId <> " uses unsupported operators: " <> T.intercalate ", " ops
-        | Just cond <- [rule.condition],
-          let ops = unsupportedOperators cond,
-          not (null ops)
-      ]
-        <> check (not (null rule.actions)) ("action rule " <> rule.ruleId <> " has no actions")
-        <> concatMap (actionErrors rule.ruleId) rule.actions
-    actionErrors ruleId action =
-      check
-        (not (bookingQuestion && needsRide action.actionType))
-        ("action " <> show action.actionType <> " in rule " <> ruleId <> " needs a ride, so it cannot be used on a booking-stage question")
-        <> actionParamErrors ruleId action
-    actionParamErrors ruleId action =
-      let needs key = check (hasTextParam key action.params) ("action " <> show action.actionType <> " in rule " <> ruleId <> " needs param " <> key)
-       in case action.actionType of
-            DRFC.REPORT_ISSUE_TO_BPP ->
-              check
-                (maybe False (`elem` reportableIssueTypes) (textParam "issueType" action.params >>= parseIssueType))
-                ("action REPORT_ISSUE_TO_BPP in rule " <> ruleId <> " needs param issueType, one of " <> T.intercalate ", " (map show reportableIssueTypes))
-            DRFC.CREATE_TICKET -> needs "category"
-            DRFC.NOTIFY_RIDER -> needs "notificationKey"
-            _ -> []
 
 -- | Where a question can be asked; ride in progress when not set.
 questionStages :: DRFC.RideFeedbackConfig -> [DRFC.RideFeedbackStage]
@@ -155,67 +73,11 @@ isBookingQuestion :: DRFC.RideFeedbackConfig -> Bool
 isBookingQuestion = not . any isRideStage . questionStages
 
 -- | Actions that act on the ride or its driver. Exhaustive, so a new action type does not compile until it is decided here.
-needsRide :: DRFC.RideFeedbackActionType -> Bool
+needsRide :: LFT.FeedbackActionType -> Bool
 needsRide = \case
-  DRFC.REPORT_ISSUE_TO_BPP -> True
-  DRFC.SAFETY_ESCALATION -> True
-  DRFC.CREATE_TICKET -> False
-  DRFC.L0_SENSITIVE_WORD_CHECK -> False
-  DRFC.SLACK_ALERT -> False
-  DRFC.NOTIFY_RIDER -> False
-
-validKey :: Text -> Bool
-validKey k =
-  T.length k >= 2 && T.length k <= 64
-    && maybe False (isAsciiUpper . fst) (T.uncons k)
-    && T.all (\ch -> isAsciiUpper ch || isDigit ch || ch == '_') k
-
--- | Images are loaded by the rider app, which only fetches https.
-validIconUrl :: Text -> Bool
-validIconUrl url = "https://" `T.isPrefixOf` url && T.length url > 8 && not (T.any (== ' ') url)
-
-textParam :: Text -> Maybe A.Value -> Maybe Text
-textParam key = \case
-  Just (A.Object obj) -> case KM.lookup (AK.fromText key) obj of
-    Just (A.String v) | not (T.null (T.strip v)) -> Just v
-    _ -> Nothing
-  _ -> Nothing
-
-parseIssueType :: Text -> Maybe IssueReportType
-parseIssueType v = case A.fromJSON (A.String v) of
-  A.Success t -> Just t
-  A.Error _ -> Nothing
-
-hasTextParam :: Text -> Maybe A.Value -> Bool
-hasTextParam key = isJust . textParam key
-
--- | Question types answered by picking option keys (they need 'options'). Exhaustive, so a new
--- question type does not compile until it is placed here.
-usesOptions :: DRFC.RideFeedbackQuestionType -> Bool
-usesOptions = \case
-  DRFC.SINGLE_SELECT -> True
-  DRFC.MULTI_SELECT -> True
-  DRFC.YES_NO -> True
-  DRFC.THUMBS -> True
-  DRFC.EMOJI_SCALE -> True
-  DRFC.STAR_RATING -> False
-  DRFC.SCALE -> False
-  DRFC.TEXT_INPUT -> False
-  DRFC.NUMBER_INPUT -> False
-  DRFC.IMAGE_UPLOAD -> False
-  DRFC.AUDIO -> False
-
--- | Issue types the BPP's /internal/{rideId}/reportIssue acts on (the dashboard offers these).
-reportableIssueTypes :: [IssueReportType]
-reportableIssueTypes = filter isReportableIssue [minBound .. maxBound]
-
--- | Exhaustive, so a new issue type does not compile until it is decided here.
-isReportableIssue :: IssueReportType -> Bool
-isReportableIssue = \case
-  AC_RELATED_ISSUE -> True
-  DRIVER_TOLL_RELATED_ISSUE -> True
-  EXTRA_FARE_MITIGATION -> True
-  DRUNK_AND_DRIVE_VIOLATION -> True
-  UNHYGIENIC_VEHICLE -> True
-  VEHICLE_UNSAFE -> True
-  SYNC_BOOKING -> False
+  LFT.REPORT_ISSUE_TO_BPP -> True
+  LFT.SAFETY_ESCALATION -> True
+  LFT.CREATE_TICKET -> False
+  LFT.L0_SENSITIVE_WORD_CHECK -> False
+  LFT.SLACK_ALERT -> False
+  LFT.NOTIFY_RIDER -> False

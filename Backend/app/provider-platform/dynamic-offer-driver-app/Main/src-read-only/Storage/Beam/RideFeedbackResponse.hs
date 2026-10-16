@@ -7,10 +7,10 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.RideFeedbackConfig
-import qualified Domain.Types.RideFeedbackResponse
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.Feedback.Types
 import Tools.Beam.UtilsTH
 
 data RideFeedbackResponseT f = RideFeedbackResponseT
@@ -31,12 +31,12 @@ data RideFeedbackResponseT f = RideFeedbackResponseT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     questionKey :: (B.C f Kernel.Prelude.Text),
-    questionType :: (B.C f Domain.Types.RideFeedbackConfig.RideFeedbackQuestionType),
+    questionType :: (B.C f Lib.Feedback.Types.FeedbackQuestionType),
     rideId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     secondsIntoRide :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     secondsSinceBooking :: (B.C f Kernel.Prelude.Int),
     stage :: (B.C f Domain.Types.RideFeedbackConfig.RideFeedbackStage),
-    status :: (B.C f Domain.Types.RideFeedbackResponse.RideFeedbackResponseStatus),
+    status :: (B.C f Lib.Feedback.Types.FeedbackResponseStatus),
     subjectId :: (B.C f Kernel.Prelude.Text),
     transactionId :: (B.C f Kernel.Prelude.Text),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)

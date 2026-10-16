@@ -23,26 +23,27 @@ module Domain.Action.Internal.RideFeedback
 where
 
 import Control.Applicative ((<|>))
-import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
-import Data.List (nub, sortOn)
-import qualified Data.Text as T
+import Data.List (sortOn)
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideFeedbackConfig as DRFC
 import qualified Domain.Types.RideFeedbackResponse as DRFR
 import Environment
-import IssueManagement.Common (Translation (..))
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Feedback.Question (answerScore, pendingResult, sameAction, validateAnswer)
+import qualified Lib.Feedback.Question as LFQ
+import Lib.Feedback.Types (MatchedFeedbackAction (..))
+import qualified Lib.Feedback.Types as LFT
+import Lib.Feedback.View (FeedbackInputConfigRes (..), FeedbackOptionItem (..), FeedbackQuestionItem (..), QuestionTiming (..), mkQuestionItem)
 import SharedLogic.RideFeedback.Context
 import SharedLogic.RideFeedback.Eligibility
-import SharedLogic.RideFeedback.Rule (evaluateRule)
 import SharedLogic.RideFeedback.Validation (isBookingQuestion, questionStages)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
@@ -59,49 +60,6 @@ data RideFeedbackQuestionsRes = RideFeedbackQuestionsRes
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FeedbackQuestionItem = FeedbackQuestionItem
-  { questionId :: Id DRFC.RideFeedbackConfig,
-    questionKey :: Text,
-    questionType :: DRFC.RideFeedbackQuestionType,
-    title :: Text,
-    description :: Maybe Text,
-    options :: Maybe [FeedbackOptionItem],
-    inputConfig :: Maybe FeedbackInputConfigRes,
-    acknowledgement :: Maybe Text,
-    iconUrl :: Maybe Text,
-    isSkippable :: Bool,
-    showAt :: UTCTime,
-    autoDismissAfterSeconds :: Maybe Int,
-    uiConfig :: Maybe A.Value
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data FeedbackOptionItem = FeedbackOptionItem
-  { key :: Text,
-    label :: Text,
-    iconUrl :: Maybe Text,
-    nextQuestionKey :: Maybe Text,
-    requiresText :: Bool,
-    isExclusive :: Bool
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data FeedbackInputConfigRes = FeedbackInputConfigRes
-  { placeholder :: Maybe Text,
-    minLength :: Maybe Int,
-    maxLength :: Maybe Int,
-    minValue :: Maybe Double,
-    maxValue :: Maybe Double,
-    step :: Maybe Double,
-    minSelections :: Maybe Int,
-    maxSelections :: Maybe Int,
-    maxFiles :: Maybe Int,
-    maxDurationSec :: Maybe Int,
-    minLabel :: Maybe Text,
-    maxLabel :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
 newtype SubmitRideFeedbackReq = SubmitRideFeedbackReq
   { responses :: [FeedbackResponseItem]
   }
@@ -111,8 +69,8 @@ newtype SubmitRideFeedbackReq = SubmitRideFeedbackReq
 -- is the answer on this ride that opened it, found on the server.
 data FeedbackResponseItem = FeedbackResponseItem
   { questionId :: Id DRFC.RideFeedbackConfig,
-    status :: DRFR.RideFeedbackResponseStatus,
-    answer :: Maybe DRFR.RideFeedbackAnswer
+    status :: LFT.FeedbackResponseStatus,
+    answer :: Maybe LFT.FeedbackAnswer
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -132,23 +90,16 @@ data FeedbackSubmitResult = FeedbackSubmitResult
     rideId :: Maybe (Id DRide.Ride),
     -- | The answer as stored (trimmed, deduplicated): what the action rules were evaluated on, so
     -- rider-app runs the actions on the same answer.
-    answer :: Maybe DRFR.RideFeedbackAnswer,
+    answer :: Maybe LFT.FeedbackAnswer,
     -- | Actions whose rule matched this answer, in rule order. rider-app runs them.
     actions :: [MatchedFeedbackAction]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data MatchedFeedbackAction = MatchedFeedbackAction
-  { ruleId :: Text,
-    actionType :: DRFC.RideFeedbackActionType,
-    params :: Maybe A.Value
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 -- | Results of actions rider-app ran for one answer. Each replaces the stored result with the same
 -- (ruleId, actionType); results for actions not recorded yet are added.
 newtype ReportActionResultsReq = ReportActionResultsReq
-  { results :: [DRFR.RideFeedbackActionResult]
+  { results :: [LFT.FeedbackActionResult]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -158,7 +109,7 @@ data RetryableActionsRes = RetryableActionsRes
     questionKey :: Text,
     -- | The ride the answer is about; Nothing for booking-stage questions.
     rideId :: Maybe (Id DRide.Ride),
-    answer :: DRFR.RideFeedbackAnswer,
+    answer :: LFT.FeedbackAnswer,
     actions :: [MatchedFeedbackAction]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -181,53 +132,13 @@ getRideFeedbackQuestions bookingId apiKey mbLanguage = do
       pure
         RideFeedbackQuestionsRes
           { serverTime = now,
-            questions = [mkQuestionItem language t c | (c, t) <- sortOn (priorityKey . fst) eligibleTop],
-            followUpQuestions = map (mkQuestionItem language now) evaluation.followUps
+            questions = [questionItem language t c | (c, t) <- sortOn (priorityKey . fst) eligibleTop],
+            followUpQuestions = map (questionItem language now) evaluation.followUps
           }
 
-mkQuestionItem :: Language -> UTCTime -> DRFC.RideFeedbackConfig -> FeedbackQuestionItem
-mkQuestionItem language showAt config =
-  FeedbackQuestionItem
-    { questionId = config.id,
-      questionKey = config.questionKey,
-      questionType = config.questionType,
-      title = fromMaybe config.questionKey (pick $ Just config.title),
-      description = pick config.description,
-      options = map mkOption <$> config.options,
-      inputConfig = mkInputConfig <$> config.inputConfig,
-      acknowledgement = pick config.acknowledgement,
-      iconUrl = config.iconUrl,
-      isSkippable = fromMaybe True config.isSkippable,
-      showAt,
-      autoDismissAfterSeconds = config.displayTrigger >>= (.autoDismissAfterSeconds),
-      uiConfig = config.uiConfig
-    }
-  where
-    pick = (>>= pickTranslation language)
-    mkOption o =
-      FeedbackOptionItem
-        { key = o.key,
-          label = fromMaybe o.key (pickTranslation language o.label),
-          iconUrl = o.iconUrl,
-          nextQuestionKey = o.nextQuestionKey,
-          requiresText = fromMaybe False o.requiresText,
-          isExclusive = fromMaybe False o.isExclusive
-        }
-    mkInputConfig ic =
-      FeedbackInputConfigRes
-        { placeholder = pick ic.placeholder,
-          minLength = ic.minLength,
-          maxLength = ic.maxLength,
-          minValue = ic.minValue,
-          maxValue = ic.maxValue,
-          step = ic.step,
-          minSelections = ic.minSelections,
-          maxSelections = ic.maxSelections,
-          maxFiles = ic.maxFiles,
-          maxDurationSec = ic.maxDurationSec,
-          minLabel = pick ic.minLabel,
-          maxLabel = pick ic.maxLabel
-        }
+questionItem :: Language -> UTCTime -> DRFC.RideFeedbackConfig -> FeedbackQuestionItem
+questionItem language showAt config =
+  mkQuestionItem config.id.getId language QuestionTiming {showAt, autoDismissAfterSeconds = config.displayTrigger >>= (.autoDismissAfterSeconds)} config
 
 -------------------------------------------------------------------------------
 -- POST /internal/booking/{bookingId}/feedback
@@ -286,7 +197,7 @@ submitItem env seenResponses item =
         not (followUpReached env.configById seenResponses config) ->
         rejected "QUESTION_NOT_SERVED"
       | Just prev <- HM.lookup config.id seenResponses, isFinal prev.status -> rejected "ALREADY_ANSWERED"
-      | item.status == DRFR.ANSWERED -> case validateAnswer config item.answer of
+      | item.status == LFT.ANSWERED -> case validateAnswer config item.answer of
         Left code -> rejected code
         Right answer -> do
           saved <- upsertResponse env seenResponses config item (Just answer)
@@ -318,16 +229,12 @@ submitItem env seenResponses item =
 -- | Actions of every rule whose condition matches the answer. A rule that fails to evaluate is
 -- skipped and logged, never matched by accident.
 matchActionRules :: DRFC.RideFeedbackConfig -> RideFeedbackContext -> Flow [MatchedFeedbackAction]
-matchActionRules config ctx = concat <$> mapM matchRule (fromMaybe [] config.actionRules)
-  where
-    matchRule rule = case evaluateRule rule.condition ctx of
-      Right True -> pure [MatchedFeedbackAction {ruleId = rule.ruleId, actionType = a.actionType, params = a.params} | a <- rule.actions]
-      Right False -> pure []
-      Left err -> do
-        logError $ "RideFeedback: skipping action rule " <> rule.ruleId <> " of " <> config.questionKey <> ": " <> err
-        pure []
+matchActionRules config ctx = do
+  let (matched, errors) = LFQ.matchActionRules config ctx
+  forM_ errors $ \err -> logError $ "RideFeedback: skipping " <> err
+  pure matched
 
-upsertResponse :: SubmitEnv -> SubmitState -> DRFC.RideFeedbackConfig -> FeedbackResponseItem -> Maybe DRFR.RideFeedbackAnswer -> Flow DRFR.RideFeedbackResponse
+upsertResponse :: SubmitEnv -> SubmitState -> DRFC.RideFeedbackConfig -> FeedbackResponseItem -> Maybe LFT.FeedbackAnswer -> Flow DRFR.RideFeedbackResponse
 upsertResponse env seenResponses config item answer = do
   let journey = env.journey
       -- A booking-stage answer is about the booking, not whichever driver is assigned by then.
@@ -381,104 +288,6 @@ upsertResponse env seenResponses config item answer = do
       QRFR.create created
       pure created
 
--- | Returns the answer to store, or an error code for the client. Only the parts of an answer that belong
--- to the question's type are accepted (anything else is rejected, not dropped, so a client bug shows
--- up), and option keys must be the question's own.
-validateAnswer :: DRFC.RideFeedbackConfig -> Maybe DRFR.RideFeedbackAnswer -> Either Text DRFR.RideFeedbackAnswer
-validateAnswer config = \case
-  Nothing -> Left "ANSWER_REQUIRED"
-  Just ans -> do
-    let selectedKeys = nub $ fromMaybe [] ans.selectedOptionKeys
-        options = fromMaybe [] config.options
-        optionKeys = map (.key) options
-        picked = [o | o <- options, o.key `elem` selectedKeys]
-        exclusiveKeys = [o.key | o <- options, o.isExclusive == Just True]
-        ic = config.inputConfig
-        inputInt f = ic >>= f
-        inputDouble f = ic >>= f
-        text = mfilter (not . T.null) (T.strip <$> ans.text)
-        textLen = maybe 0 T.length text
-        files = fromMaybe [] ans.mediaFileIds
-        withinD lo hi v = maybe True (v >=) lo && maybe True (v <=) hi
-        -- A comment is part of a choice answer only when a picked option asks for one.
-        commentWanted = any ((== Just True) . (.requiresText)) picked
-        -- The parts of an answer (options, text, number, rating, media) the question's type takes.
-        only :: [Text] -> Either Text ()
-        only fields =
-          check
-            ( and
-                [ "options" `elem` fields || null selectedKeys,
-                  "text" `elem` fields || isNothing text,
-                  "number" `elem` fields || isNothing ans.number,
-                  "rating" `elem` fields || isNothing ans.rating,
-                  "media" `elem` fields || null files
-                ]
-            )
-            "UNEXPECTED_FIELD"
-        onStep v = maybe True (\st -> let n = (v - fromMaybe 0 (inputDouble (.minValue))) / st in abs (n - fromIntegral (round n :: Int)) < 1e-9) (inputDouble (.step))
-        choice = do
-          check (all (`elem` optionKeys) selectedKeys) "INVALID_OPTION"
-          only (["options"] <> ["text" | commentWanted])
-          when commentWanted $ check (textLen > 0) "COMMENT_REQUIRED"
-    check (textLen <= fromMaybe defaultMaxTextLength (inputInt (.maxLength))) "TEXT_TOO_LONG"
-    case config.questionType of
-      t
-        | t `elem` [DRFC.SINGLE_SELECT, DRFC.YES_NO, DRFC.THUMBS, DRFC.EMOJI_SCALE] -> do
-          check (length selectedKeys == 1) "INVALID_OPTION"
-          choice
-      DRFC.MULTI_SELECT -> do
-        check (not (null selectedKeys)) "INVALID_OPTION"
-        choice
-        check (length selectedKeys >= fromMaybe 1 (inputInt (.minSelections)) && maybe True (length selectedKeys <=) (inputInt (.maxSelections))) "INVALID_SELECTION_COUNT"
-        check (not (any (`elem` exclusiveKeys) selectedKeys) || length selectedKeys == 1) "EXCLUSIVE_OPTION_COMBINED"
-      DRFC.STAR_RATING -> do
-        only ["rating"]
-        check (maybe False (withinD (Just $ fromMaybe 1 (inputDouble (.minValue))) (Just $ fromMaybe 5 (inputDouble (.maxValue))) . fromIntegral) ans.rating) "INVALID_RATING"
-      t
-        | t `elem` [DRFC.SCALE, DRFC.NUMBER_INPUT] -> do
-          only ["number"]
-          check (maybe False (\v -> withinD (inputDouble (.minValue)) (inputDouble (.maxValue)) v && onStep v) ans.number) "INVALID_NUMBER"
-      DRFC.TEXT_INPUT -> do
-        only ["text"]
-        check (textLen > 0 && textLen >= fromMaybe 0 (inputInt (.minLength))) "INVALID_TEXT"
-      t
-        | t `elem` [DRFC.IMAGE_UPLOAD, DRFC.AUDIO] -> do
-          only ["media"]
-          check (not (null files) && length files <= fromMaybe defaultMaxFiles (inputInt (.maxFiles))) "INVALID_MEDIA"
-      _ -> pure ()
-    pure
-      DRFR.RideFeedbackAnswer
-        { selectedOptionKeys = if null selectedKeys then Nothing else Just selectedKeys,
-          text,
-          number = ans.number,
-          rating = ans.rating,
-          mediaFileIds = if null files then Nothing else Just files
-        }
-  where
-    check cond code = unless cond (Left code)
-
--- | 0 (bad) to 1 (good), comparable across questions, so driver behaviour can aggregate answers without
--- knowing what each question means: a rating or number placed within the question's range, or the
--- configured score of the picked option (the lowest one for a multi-select). Nothing when the
--- question is not scored (text, media, options without scores, a number without both bounds).
-answerScore :: DRFC.RideFeedbackConfig -> DRFR.RideFeedbackAnswer -> Maybe Double
-answerScore config ans = case config.questionType of
-  DRFC.STAR_RATING -> placed (Just $ fromMaybe 1 (ic >>= (.minValue))) (Just $ fromMaybe 5 (ic >>= (.maxValue))) (fromIntegral <$> ans.rating)
-  DRFC.SCALE -> placed (ic >>= (.minValue)) (ic >>= (.maxValue)) ans.number
-  DRFC.NUMBER_INPUT -> placed (ic >>= (.minValue)) (ic >>= (.maxValue)) ans.number
-  _ ->
-    let picked = fromMaybe [] ans.selectedOptionKeys
-        scores = [s | o <- fromMaybe [] config.options, o.key `elem` picked, Just s <- [o.score]]
-     in if null scores then Nothing else Just (minimum scores)
-  where
-    ic = config.inputConfig
-    placed mbLo mbHi mbV = do
-      lo <- mbLo
-      hi <- mbHi
-      v <- mbV
-      guard (hi > lo)
-      pure $ max 0 (min 1 ((v - lo) / (hi - lo)))
-
 -------------------------------------------------------------------------------
 -- POST /internal/booking/{bookingId}/feedback/response/{responseId}/actionResults
 
@@ -490,7 +299,7 @@ postActionResults bookingId responseId apiKey req = do
     response <- fetchJourneyResponse journey responseId
     let previous = fromMaybe [] response.actionResults
         -- A retry reports its own run; attempts add up so the inspector shows every try.
-        updated = [maybe r (\new -> (new :: DRFR.RideFeedbackActionResult) {DRFR.attempts = r.attempts + new.attempts}) (find (sameAction r) req.results) | r <- previous]
+        updated = [maybe r (\new -> (new :: LFT.FeedbackActionResult) {LFT.attempts = r.attempts + new.attempts}) (find (sameAction r) req.results) | r <- previous]
         added = [r | r <- req.results, not (any (sameAction r) previous)]
     QRFR.updateActionResults (Just $ updated <> added) response.id
   pure Success
@@ -509,14 +318,14 @@ getRetryableActions bookingId responseId apiKey = do
   let booking = journey.booking
   response <- fetchJourneyResponse journey responseId
   answer <- case (response.status, response.answer) of
-    (DRFR.ANSWERED, Just a) -> pure a
+    (LFT.ANSWERED, Just a) -> pure a
     _ -> throwError (InvalidRequest "Only answered responses have actions")
   config <- find ((== response.configId) . (.id)) <$> cityQuestions booking booking.merchantOperatingCityId Nothing >>= fromMaybeM (RideFeedbackConfigNotFound response.configId.getId)
   now <- getCurrentTime
   Hedis.withLockRedisAndReturnValue (submitLockKey journey.transactionId) submitLockSeconds $ do
     current <- fetchJourneyResponse journey responseId
     let results = fromMaybe [] current.actionResults
-        retryable r = r.status == DRFR.FAILED || (r.status == DRFR.PENDING && diffUTCTime now r.updatedAt > stalePendingSeconds)
+        retryable r = r.status == LFT.FAILED || (r.status == LFT.PENDING && diffUTCTime now r.updatedAt > stalePendingSeconds)
         due = filter retryable results
         actions =
           [ MatchedFeedbackAction {ruleId = rule.ruleId, actionType = action.actionType, params = action.params}
@@ -524,7 +333,7 @@ getRetryableActions bookingId responseId apiKey = do
               action <- rule.actions,
               any (\r -> r.ruleId == rule.ruleId && r.actionType == action.actionType) due
           ]
-        claimed = [if any (sameAction r) (map (pendingResult now) actions) then (r :: DRFR.RideFeedbackActionResult) {DRFR.status = DRFR.PENDING, DRFR.updatedAt = now} else r | r <- results]
+        claimed = [if any (sameAction r) (map (pendingResult now) actions) then (r :: LFT.FeedbackActionResult) {LFT.status = LFT.PENDING, LFT.updatedAt = now} else r | r <- results]
     unless (null actions) $ QRFR.updateActionResults (Just claimed) current.id
     pure RetryableActionsRes {responseId = current.id, questionKey = current.questionKey, rideId = current.rideId, answer, actions}
 
@@ -537,18 +346,6 @@ fetchJourneyResponse journey responseId = do
   unless (response.transactionId == journey.transactionId) $ throwError (InvalidRequest $ "Ride feedback response " <> responseId.getId <> " not found")
   pure response
 
-pendingResult :: UTCTime -> MatchedFeedbackAction -> DRFR.RideFeedbackActionResult
-pendingResult now action =
-  DRFR.RideFeedbackActionResult
-    { ruleId = action.ruleId,
-      actionType = action.actionType,
-      status = DRFR.PENDING,
-      attempts = 0,
-      externalRef = Nothing,
-      errorMessage = Nothing,
-      updatedAt = now
-    }
-
 -- | The booking's journey, after checking the caller holds the merchant's internal API key. Any booking of
 -- the journey works: rider-app may still hold the one a reallocation replaced.
 fetchAuthorisedJourney :: Id DB.Booking -> Maybe Text -> Flow Journey
@@ -558,14 +355,6 @@ fetchAuthorisedJourney bookingId apiKey = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   resolveJourney booking
-
-pickTranslation :: Language -> [Translation] -> Maybe Text
-pickTranslation language translations =
-  (.translation)
-    <$> ( find ((== language) . (.language)) translations
-            <|> find ((== ENGLISH) . (.language)) translations
-            <|> listToMaybe translations
-        )
 
 -- | A response is accepted while the journey is in one of the question's stages. A question already shown
 -- on its subject can still be finished after the stage has moved on: the rider app hears of a driver
@@ -581,7 +370,7 @@ followUpReached configById seenResponses config =
   or
     [ True
       | r <- HM.elems seenResponses,
-        r.status == DRFR.ANSWERED,
+        r.status == LFT.ANSWERED,
         Just parent <- [HM.lookup r.configId configById],
         o <- fromMaybe [] parent.options,
         o.nextQuestionKey == Just config.questionKey,
@@ -590,10 +379,6 @@ followUpReached configById seenResponses config =
 
 emptyQuestionsRes :: UTCTime -> RideFeedbackQuestionsRes
 emptyQuestionsRes now = RideFeedbackQuestionsRes {serverTime = now, questions = [], followUpQuestions = []}
-
--- | Same rule and action type: one entry of a response's action results.
-sameAction :: DRFR.RideFeedbackActionResult -> DRFR.RideFeedbackActionResult -> Bool
-sameAction a b = a.ruleId == b.ruleId && a.actionType == b.actionType
 
 -- | A PENDING action older than this is taken as lost (rider-app's run finishes well within it).
 stalePendingSeconds :: NominalDiffTime
@@ -607,9 +392,3 @@ submitLockSeconds = 10
 
 maxResponsesPerRequest :: Int
 maxResponsesPerRequest = 20
-
-defaultMaxTextLength :: Int
-defaultMaxTextLength = 1000
-
-defaultMaxFiles :: Int
-defaultMaxFiles = 3

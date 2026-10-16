@@ -1,9 +1,12 @@
--- | Runs the actions the driver platform matched for an answer (it stores answers and evaluates the
--- action rules; rider-app holds what the actions need: the rider, Kapture, Slack, notifications) and
--- reports each result back to the driver platform, where it is kept with the answer.
+-- | Runs the actions a feedback answer matched (rider-app holds what they need: the rider, Kapture,
+-- Slack, notifications). For ride feedback the driver platform stores answers and evaluates the action
+-- rules, and each result is reported back to it ('runActionsAndReport'); app feedback is stored here and
+-- keeps its results itself ('runActionsInBackground').
 module SharedLogic.RideFeedback.Actions
   ( ActionEnv (..),
     runActionsAndReport,
+    runActionsInBackground,
+    rideSubjectLines,
   )
 where
 
@@ -41,28 +44,44 @@ data ActionEnv = ActionEnv
   { merchant :: DM.Merchant,
     riderConfig :: DRC.RiderConfig,
     person :: DP.Person,
-    -- | The ride the answer is about; Nothing for booking-stage questions (asked before a driver).
+    -- | The ride the answer is about; Nothing for booking-stage and app questions.
     ride :: Maybe DRide.Ride,
-    booking :: DB.Booking,
-    -- | The driver platform's booking id the answer was stored under.
-    bppBookingId :: Text,
+    -- | The booking the answer is about; Nothing for app questions.
+    booking :: Maybe DB.Booking,
+    -- | What the answer is about, one line each, for tickets and Slack alerts.
+    subjectLines :: [Text],
     questionKey :: Text,
     answer :: API.RideFeedbackAnswer
   }
 
--- | Runs the actions in the background, then reports their results for the driver platform's response.
--- The driver platform already recorded them as PENDING, so a lost run still leaves a trail to retry from.
-runActionsAndReport :: ActionEnv -> Text -> [MatchedFeedbackAction] -> Flow ()
-runActionsAndReport env responseId actions =
+-- | Runs the actions in the background, then reports their results for the driver platform's response
+-- (stored under its booking 'bppBookingId'). The driver platform already recorded them as PENDING, so a
+-- lost run still leaves a trail to retry from.
+runActionsAndReport :: ActionEnv -> Text -> Text -> [MatchedFeedbackAction] -> Flow ()
+runActionsAndReport env bppBookingId responseId actions =
+  runActionsInBackground env actions $ \results -> do
+    res <-
+      withTryCatch "RideFeedback:reportActionResults" $
+        CallBPPInternal.rideFeedbackActionResults env.merchant.driverOfferApiKey env.merchant.driverOfferBaseUrl bppBookingId responseId results
+    case res of
+      Left err -> logError $ "RideFeedback: could not report action results for response " <> responseId <> ": " <> summarizeError err
+      Right _ -> pure ()
+
+-- | Runs the actions in the background and hands their results to 'saveResults'.
+runActionsInBackground :: ActionEnv -> [MatchedFeedbackAction] -> ([RideFeedbackActionResult] -> Flow ()) -> Flow ()
+runActionsInBackground env actions saveResults =
   unless (null actions) $
-    fork "RideFeedback:actions" $ do
-      results <- mapM (runAction env) actions
-      res <-
-        withTryCatch "RideFeedback:reportActionResults" $
-          CallBPPInternal.rideFeedbackActionResults env.merchant.driverOfferApiKey env.merchant.driverOfferBaseUrl env.bppBookingId responseId results
-      case res of
-        Left err -> logError $ "RideFeedback: could not report action results for response " <> responseId <> ": " <> summarizeError err
-        Right _ -> pure ()
+    fork "Feedback:actions" $ mapM (runAction env) actions >>= saveResults
+
+-- | What a ride feedback answer is about, for tickets and Slack alerts.
+rideSubjectLines :: DB.Booking -> Maybe DRide.Ride -> [Text]
+rideSubjectLines booking ride =
+  [ "Booking Id : " <> booking.id.getId,
+    "Ride Id : " <> maybe "no ride yet" (.id.getId) ride,
+    "Ride Short Id : " <> maybe "-" (.shortId.getShortId) ride,
+    "Driver : " <> maybe "not assigned yet" (.driverName) ride,
+    "Service Tier : " <> show booking.vehicleServiceTierType
+  ]
 
 mkResult :: UTCTime -> RideFeedbackActionStatus -> Int -> Maybe Text -> Maybe Text -> MatchedFeedbackAction -> RideFeedbackActionResult
 mkResult now status attempts externalRef errorMessage action =
@@ -88,7 +107,7 @@ runAction env action = do
     Right (Left configErr) -> pure $ mkResult now FAILED 1 Nothing (Just configErr) action
     Left err -> do
       let summary = summarizeError err
-      logError $ "RideFeedback: action " <> show action.actionType <> " failed for question " <> env.questionKey <> " on booking " <> env.booking.id.getId <> ": " <> summary
+      logError $ "Feedback: action " <> show action.actionType <> " failed for question " <> env.questionKey <> " of rider " <> env.person.id.getId <> ": " <> summary
       pure $ mkResult now FAILED 1 Nothing (Just summary) action
 
 -- | Short, secret-free description of a failure for storage and logs. HTTP client errors render
@@ -133,16 +152,16 @@ executeAction env action = case action.actionType of
         (Notify.createNotificationReq notificationKey identity)
         EmptyDynamicParam
         (Notification.Entity Notification.Product env.person.id.getId ())
-        env.booking.tripCategory
+        (env.booking >>= (.tripCategory))
         []
-        (Just env.booking.configInExperimentVersions)
+        ((.configInExperimentVersions) <$> env.booking)
         Nothing
       pure $ Right Nothing
-  SAFETY_ESCALATION -> withRide $ \_ -> do
+  SAFETY_ESCALATION -> withRide $ \_ -> withBooking $ \booking -> do
     void $
       DSupport.safetyCheckSupport
         (env.person.id, env.merchant.id)
-        DSupport.SafetyCheckSupportReq {bookingId = env.booking.id, isSafe = False, description = answerSummary}
+        DSupport.SafetyCheckSupportReq {bookingId = booking.id, isSafe = False, description = answerSummary}
     pure $ Right Nothing
   where
     params = action.params
@@ -156,6 +175,7 @@ executeAction env action = case action.actionType of
     withParam key f = maybe (pure . Left $ "Missing or invalid param: " <> key) f (param key)
     -- The driver platform refuses these actions on booking-stage questions; this guards older configs.
     withRide f = maybe (pure . Left $ show action.actionType <> " needs a ride") f env.ride
+    withBooking f = maybe (pure . Left $ show action.actionType <> " needs a booking") f env.booking
 
     answerSummary =
       T.intercalate " | " . catMaybes $
@@ -187,22 +207,16 @@ executeAction env action = case action.actionType of
                 xyneSenderName = Nothing,
                 xyneExternalId = Nothing
               }
-      (resp, _) <- TTicket.createTicket env.booking.merchantId env.booking.merchantOperatingCityId req
+      (resp, _) <- TTicket.createTicket env.person.merchantId env.person.merchantOperatingCityId req
       pure resp.ticketId
 
     publishSlack title = do
       slackConfig <- asks (.slackNotificationConfig)
       let description =
-            T.unlines
-              [ title,
-                "Booking Id : " <> env.booking.id.getId,
-                "Ride Id : " <> maybe "no ride yet" (.id.getId) env.ride,
-                "Ride Short Id : " <> maybe "-" (.shortId.getShortId) env.ride,
-                "Customer : " <> SLP.getName env.person,
-                "Driver : " <> maybe "not assigned yet" (.driverName) env.ride,
-                "Service Tier : " <> show env.booking.vehicleServiceTierType,
-                answerSummary
-              ]
+            T.unlines $
+              [title, "Customer : " <> SLP.getName env.person]
+                <> env.subjectLines
+                <> [answerSummary]
           message =
             TL.toStrict . TLE.decodeUtf8 . A.encode $
               A.object

@@ -12,11 +12,12 @@ import qualified Domain.Types.Ride
 import qualified Domain.Types.RideFeedbackConfig
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Lib.Feedback.Types
 import qualified Tools.Beam.UtilsTH
 
 data RideFeedbackResponse = RideFeedbackResponse
-  { actionResults :: Kernel.Prelude.Maybe [Domain.Types.RideFeedbackResponse.RideFeedbackActionResult],
-    answer :: Kernel.Prelude.Maybe Domain.Types.RideFeedbackResponse.RideFeedbackAnswer,
+  { actionResults :: Kernel.Prelude.Maybe [Lib.Feedback.Types.FeedbackActionResult],
+    answer :: Kernel.Prelude.Maybe Lib.Feedback.Types.FeedbackAnswer,
     answerScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     bookingId :: Kernel.Types.Id.Id Domain.Types.Booking.Booking,
     configId :: Kernel.Types.Id.Id Domain.Types.RideFeedbackConfig.RideFeedbackConfig,
@@ -28,42 +29,14 @@ data RideFeedbackResponse = RideFeedbackResponse
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     questionKey :: Kernel.Prelude.Text,
-    questionType :: Domain.Types.RideFeedbackConfig.RideFeedbackQuestionType,
+    questionType :: Lib.Feedback.Types.FeedbackQuestionType,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     secondsIntoRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     secondsSinceBooking :: Kernel.Prelude.Int,
     stage :: Domain.Types.RideFeedbackConfig.RideFeedbackStage,
-    status :: Domain.Types.RideFeedbackResponse.RideFeedbackResponseStatus,
+    status :: Lib.Feedback.Types.FeedbackResponseStatus,
     subjectId :: Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data RideFeedbackActionResult = RideFeedbackActionResult
-  { actionType :: Domain.Types.RideFeedbackConfig.RideFeedbackActionType,
-    attempts :: Kernel.Prelude.Int,
-    errorMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    externalRef :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    ruleId :: Kernel.Prelude.Text,
-    status :: Domain.Types.RideFeedbackResponse.RideFeedbackActionStatus,
-    updatedAt :: Kernel.Prelude.UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data RideFeedbackActionStatus = PENDING | SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
-
-data RideFeedbackAnswer = RideFeedbackAnswer
-  { mediaFileIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    number :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    selectedOptionKeys :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    text :: Kernel.Prelude.Maybe Kernel.Prelude.Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data RideFeedbackResponseStatus = SHOWN | ANSWERED | SKIPPED | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Bounded, (Enum))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackActionStatus))
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideFeedbackResponseStatus))

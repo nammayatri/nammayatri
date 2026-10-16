@@ -16,6 +16,7 @@ import qualified IssueManagement.Common
 import qualified Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.Feedback.Types
 import Servant
 import Servant.Client
 
@@ -49,8 +50,8 @@ data RideFeedbackPreviewRes = RideFeedbackPreviewRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RideFeedbackResponseItem = RideFeedbackResponseItem
-  { actionResults :: Kernel.Prelude.Maybe [Domain.Types.RideFeedbackResponse.RideFeedbackActionResult],
-    answer :: Kernel.Prelude.Maybe Domain.Types.RideFeedbackResponse.RideFeedbackAnswer,
+  { actionResults :: Kernel.Prelude.Maybe [Lib.Feedback.Types.FeedbackActionResult],
+    answer :: Kernel.Prelude.Maybe Lib.Feedback.Types.FeedbackAnswer,
     answerScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     bookingId :: Data.Text.Text,
     configId :: Kernel.Types.Id.Id Domain.Types.RideFeedbackConfig.RideFeedbackConfig,
@@ -59,12 +60,12 @@ data RideFeedbackResponseItem = RideFeedbackResponseItem
     id :: Kernel.Types.Id.Id Domain.Types.RideFeedbackResponse.RideFeedbackResponse,
     logicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     questionKey :: Data.Text.Text,
-    questionType :: Domain.Types.RideFeedbackConfig.RideFeedbackQuestionType,
+    questionType :: Lib.Feedback.Types.FeedbackQuestionType,
     rideId :: Kernel.Prelude.Maybe Data.Text.Text,
     secondsIntoRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     secondsSinceBooking :: Kernel.Prelude.Int,
     stage :: Domain.Types.RideFeedbackConfig.RideFeedbackStage,
-    status :: Domain.Types.RideFeedbackResponse.RideFeedbackResponseStatus,
+    status :: Lib.Feedback.Types.FeedbackResponseStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)

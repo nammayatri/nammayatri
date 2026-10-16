@@ -16,9 +16,10 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Feedback.Question (reportableIssueTypes)
+import Lib.Feedback.Rule (supportedOperatorNames)
+import Lib.Feedback.View (uiLayouts)
 import SharedLogic.RideFeedback.Eligibility
-import SharedLogic.RideFeedback.Rule (supportedOperatorNames)
-import SharedLogic.RideFeedback.Validation (reportableIssueTypes)
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QB
@@ -94,7 +95,7 @@ getRideFeedbackMeta merchantShortId opCity = do
   pure
     Common.RideFeedbackMetaRes
       { issueReportTypes = reportableIssueTypes,
-        uiLayouts = ["inline_card", "bottom_sheet", "chips", "poll"],
+        uiLayouts,
         supportedOperators = supportedOperatorNames
       }
 

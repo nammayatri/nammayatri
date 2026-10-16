@@ -14,6 +14,7 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
+import qualified Lib.Feedback.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.RideFeedbackResponse as Beam
 import qualified Storage.Queries.Transformers.RideFeedbackResponse
@@ -29,7 +30,7 @@ findAllByTransactionId transactionId = do findAllWithKV [Se.Is Beam.transactionI
 
 updateActionResults ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe [Domain.Types.RideFeedbackResponse.RideFeedbackActionResult] -> Kernel.Types.Id.Id Domain.Types.RideFeedbackResponse.RideFeedbackResponse -> m ())
+  (Kernel.Prelude.Maybe [Lib.Feedback.Types.FeedbackActionResult] -> Kernel.Types.Id.Id Domain.Types.RideFeedbackResponse.RideFeedbackResponse -> m ())
 updateActionResults actionResults id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.actionResults (Data.Aeson.toJSON <$> actionResults), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

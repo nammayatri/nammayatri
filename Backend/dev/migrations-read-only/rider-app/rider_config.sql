@@ -934,3 +934,18 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_eta_refresh_interval_second
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_dynamic_pickup_eta boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN app_feedback_min_gap_hours integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN app_feedback_max_per_week integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

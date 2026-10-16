@@ -354,6 +354,11 @@ RiderConfig:
     enableLegalComplianceDocuments: Maybe Bool
     enableGoOnlinePolicyBlocker: Maybe Bool
     manualChargeApprovalMinCustomerVersion: Maybe Text
+    # App feedback cap (SharedLogic.AppFeedback.Cap): at most one feedback card per rider every
+    # appFeedbackMinGapHours (default 24) and appFeedbackMaxPerWeek cards in any 7 days (default 3).
+    # Ride feedback cards count too; questions with bypassCap are shown regardless.
+    appFeedbackMinGapHours: Maybe Int
+    appFeedbackMaxPerWeek: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

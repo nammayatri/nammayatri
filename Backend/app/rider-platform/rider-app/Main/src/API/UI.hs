@@ -5,6 +5,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AppFeedback as AppFeedback
 import qualified API.Action.UI.AssetManifest as AssetManifest
 import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
@@ -192,6 +193,7 @@ type API =
            :<|> PickupInstructions.API
            :<|> RiderPreferences.API
            :<|> RideFeedback.API
+           :<|> AppFeedback.API
            :<|> BookingDeposit.API
            :<|> NYRegular.API
            :<|> Offers.API
@@ -334,6 +336,7 @@ handler =
     :<|> PickupInstructions.handler
     :<|> RiderPreferences.handler
     :<|> RideFeedback.handler
+    :<|> AppFeedback.handler
     :<|> BookingDeposit.handler
     :<|> NYRegular.handler
     :<|> Offers.handler

@@ -1,0 +1,103 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  AppFeedbackConfig: Domain.Types.AppFeedbackConfig
+  AppFeedbackPlacement: Domain.Types.AppFeedbackConfig
+  FeedbackQuestionType: Lib.Feedback.Types
+  FeedbackResponseStatus: Lib.Feedback.Types
+  FeedbackAnswer: Lib.Feedback.Types
+  FeedbackActionResult: Lib.Feedback.Types
+  Value: Data.Aeson
+
+AppFeedbackResponse:
+  tableName: app_feedback_response
+
+  # One row per (question, subject, asking): a rider's answer to an app feedback question. The subject
+  # is what the placement is about (a ticket booking, a journey, or the rider for app-level questions);
+  # a question is asked once per ticket or journey, and again after its cooldown for the rider.
+  # Created as SHOWN when the card is shown, then moved to a final status. Answers use the same typed
+  # answer_* columns as ride_feedback_response, so both read the same in analytics.
+  fields:
+    id: Id AppFeedbackResponse
+    personId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    configId: Id AppFeedbackConfig
+    questionKey: Text
+    questionType: FeedbackQuestionType # copied from the question, so analytics need no join to the (changing) config
+    placement: AppFeedbackPlacement
+    subjectType: AppFeedbackSubjectType
+    subjectId: Text
+    logicVersion: Maybe Int # APP-FEEDBACK dynamic logic version that selected the question
+    configPilotVersions: Maybe [Int] # Config Pilot versions of app_feedback_config the question was served from
+    status: FeedbackResponseStatus
+    answer: Maybe FeedbackAnswer
+    answerScore: Maybe Double # 0 (bad) to 1 (good), comparable across questions; Nothing when the answer is not scored
+    actionResults: Maybe [FeedbackActionResult]
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    AppFeedbackSubjectType:
+      enum: "RIDER,FRFS_BOOKING,JOURNEY"
+      derive: "Bounded, Enum"
+
+  beamFields:
+    answer:
+      answerOptionKeys: Maybe [Text]
+      answerText: Maybe Text
+      answerNumber: Maybe Double
+      answerRating: Maybe Int
+      answerMediaFileIds: Maybe [Text]
+
+  beamType:
+    actionResults: Maybe Value
+
+  sqlType:
+    questionKey: text
+    questionType: text
+    placement: text
+    subjectType: text
+    status: text
+    answerOptionKeys: "text[]"
+    answerText: text
+    answerMediaFileIds: "text[]"
+    actionResults: json
+    configPilotVersions: "integer[]"
+
+  toTType:
+    answerOptionKeys: answer >>= (.selectedOptionKeys)|E
+    answerText: answer >>= (.text)|E
+    answerNumber: answer >>= (.number)|E
+    answerRating: answer >>= (.rating)|E
+    answerMediaFileIds: answer >>= (.mediaFileIds)|E
+    actionResults: Data.Aeson.toJSON <$> actionResults|E
+
+  fromTType:
+    answer: Storage.Queries.Transformers.AppFeedbackResponse.mkAnswer answerOptionKeys answerText answerNumber answerRating answerMediaFileIds|E
+    actionResults: Kernel.Utils.JSON.valueToMaybe =<< actionResults|E
+
+  constraints:
+    id: PrimaryKey
+    personId: SecondaryKey
+
+  extraIndexes:
+    - columns: [questionKey]
+
+  queries:
+    # The rider's latest responses, newest first (cooldowns, once per subject, history in the context).
+    findLatestByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where: personId
+      orderBy:
+        field: createdAt
+        order: desc
+
+    updateActionResults:
+      kvFunction: updateWithKV
+      params: [actionResults]
+      where: id
+
+  extraOperations:
+    - GENERATE_INDEXES

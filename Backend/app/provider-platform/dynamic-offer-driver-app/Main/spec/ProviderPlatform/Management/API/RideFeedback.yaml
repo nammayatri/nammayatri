@@ -6,11 +6,11 @@ imports:
   RideStatus: Domain.Types.Ride
   RideFeedbackConfig: Domain.Types.RideFeedbackConfig
   RideFeedbackResponse: Domain.Types.RideFeedbackResponse
-  RideFeedbackResponseStatus: Domain.Types.RideFeedbackResponse
+  FeedbackResponseStatus: Lib.Feedback.Types
   RideFeedbackStage: Domain.Types.RideFeedbackConfig
-  RideFeedbackQuestionType: Domain.Types.RideFeedbackConfig
-  RideFeedbackAnswer: Domain.Types.RideFeedbackResponse
-  RideFeedbackActionResult: Domain.Types.RideFeedbackResponse
+  FeedbackQuestionType: Lib.Feedback.Types
+  FeedbackAnswer: Lib.Feedback.Types
+  FeedbackActionResult: Lib.Feedback.Types
 
 # Inspector for during-ride feedback in one merchant + city: looks a journey up by ride or booking id. The questions (ride_feedback_config)
 # are a Config Pilot table, managed through the generic nammaTag/configPilot APIs; which rides get a
@@ -43,18 +43,18 @@ types:
     id: Id RideFeedbackResponse
     configId: Id RideFeedbackConfig
     questionKey: Text
-    questionType: RideFeedbackQuestionType
+    questionType: FeedbackQuestionType
     bookingId: Text
     rideId: Maybe Text
     logicVersion: Maybe Int
     configPilotVersions: Maybe [Int]
-    status: RideFeedbackResponseStatus
-    answer: Maybe RideFeedbackAnswer
+    status: FeedbackResponseStatus
+    answer: Maybe FeedbackAnswer
     answerScore: Maybe Double
     stage: RideFeedbackStage
     secondsSinceBooking: Int
     secondsIntoRide: Maybe Int
-    actionResults: Maybe [RideFeedbackActionResult]
+    actionResults: Maybe [FeedbackActionResult]
     createdAt: UTCTime
     updatedAt: UTCTime
 

@@ -75,6 +75,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime (..), fromGregorian)
 import qualified Domain.Action.UI.CancelLogic as CancelLogic
+import qualified Domain.Types.AppFeedbackConfig as DAFC
 import qualified Domain.Types.BecknConfig as DTBC
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Exophone as DTE
@@ -83,6 +84,7 @@ import qualified Domain.Types.HotSpotConfig as DHSC
 import qualified "beckn-spec" Domain.Types.Invoice as DTI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.MerchantPushNotification as DTPN
 import qualified Domain.Types.MerchantServiceConfig as DTMSC
@@ -110,6 +112,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.Feedback.Selection as LFS
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
@@ -118,6 +121,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
 import qualified Lib.Yudhishthira.SchemaInstances ()
 import Lib.Yudhishthira.SchemaTH
 import Lib.Yudhishthira.SchemaUtils
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicElement as CADLE
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTriggerV2 as QNammaTagTriggerV2
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagV2 as QNammaTagV2
@@ -128,6 +132,8 @@ import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.KaalChakraJobRun as DKCJR
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.TypesTH as YTH
+import qualified SharedLogic.AppFeedback.Context as SAFC
+import qualified SharedLogic.AppFeedback.Validation as SAFV
 import qualified SharedLogic.FeedbackForm as FeedbackFormLogic
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
@@ -151,6 +157,7 @@ import qualified Storage.CachedQueries.MerchantConfig as SQMerchantConfig
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SQRRNC
 import qualified Storage.CachedQueries.UiRiderConfig as UIRC
+import Storage.ConfigPilot.Config.AppFeedbackConfig (AppFeedbackConfigDimensions (..))
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.CancellationReason ()
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
@@ -168,6 +175,7 @@ import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.AppFeedbackConfig as SQAFC
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.CancellationReason as SQCR
 import qualified Storage.Queries.HotSpotConfig as SQHSC
@@ -181,8 +189,10 @@ import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
+import Tools.Error (AppFeedbackError (..))
 
 $(YTH.generateGenericDefault ''DTR.RiderConfig)
+$(YTH.generateGenericDefault ''DAFC.AppFeedbackConfig)
 $(YTH.generateGenericDefault ''CumulativeOfferReq)
 $(YTH.generateGenericDefault ''OffersFraudChecksReq)
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
@@ -492,6 +502,21 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DPC.PassCategory) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DPC.PassCategory)) req logicData
+    LYTU.APP_FEEDBACK -> do
+      logicData :: SAFC.AppFeedbackContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy LFS.FeedbackSelection) req logicData
+    LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig -> do
+      -- The generic check only parses the patch output on a default row. Every question of the city must
+      -- also stay valid with this patch applied (stored rows, base patch, then this patch), before it is saved.
+      (rows, patched) <- patchAppFeedbackCity merchantOpCityId req.rules
+      let cityErrors = either (\errs -> errs) (SAFV.validatePatchedCity rows) patched
+      when (fromMaybe False req.shouldUpdateRule && not (null cityErrors)) $
+        throwError $ AppFeedbackInvalidConfig cityErrors
+      def' <- fromMaybeM (InvalidRequest "AppFeedbackConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DAFC.AppFeedbackConfig))
+      let configWrap = LYTU.Config def' Nothing 1
+      logicData :: (LYTU.Config DAFC.AppFeedbackConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
+      verified <- YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DAFC.AppFeedbackConfig)) req logicData
+      pure (verified :: LYTU.AppDynamicLogicResp) {LYTU.errors = verified.errors <> map Text.unpack cityErrors}
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
   when resp.isRuleUpdated $ case req.domain of
@@ -793,6 +818,19 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DPC.PassCategory))
           }
+    LYTU.APP_FEEDBACK ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: SAFC.AppFeedbackContext),
+            LYTU.schema = toInlinedSchemaValue (Proxy @SAFC.AppFeedbackContext)
+          }
+    LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig -> do
+      def' <- fromMaybeM (InvalidRequest "AppFeedbackConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DAFC.AppFeedbackConfig))
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
+            LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DAFC.AppFeedbackConfig))
+          }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 
 postNammaTagUpdateCustomerTag :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Common.User -> LYTU.UpdateTagReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -1059,6 +1097,9 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity configType
     LYTU.PassCategory -> do
       cfgs <- getConfig (PassCategoryDimensions {merchantOperatingCityId = mocId, configId = Nothing}) (Just (SQPC.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
+    LYTU.AppFeedbackConfig -> do
+      cfgs <- getConfig (AppFeedbackConfigDimensions {merchantOperatingCityId = mocId, enabled = dimLookup "enabled" dims, questionKey = dimLookup "questionKey" dims}) Nothing
+      pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for getConfigWithDimensions"
   where
     parseDims :: A.Value -> Maybe A.Object
@@ -1103,6 +1144,8 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = d
       pure $ mkDimSchema (Proxy @IssueConfigDimensions)
     LYTU.PassCategory ->
       pure $ mkDimSchema (Proxy @PassCategoryDimensions)
+    LYTU.AppFeedbackConfig ->
+      pure $ mkDimSchema (Proxy @AppFeedbackConfigDimensions)
     _ -> throwError $ InvalidRequest $ "Dimension schema not available for " <> show configType
   where
     mkDimSchema :: forall a. (A.ToJSON a, ToSchema a) => Proxy a -> LYTU.DomainSchemaResp
@@ -1189,6 +1232,16 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity configType req = do
       cfg :: DPC.PassCategory <- parseConfigData req.configData
       SQPC.create cfg
       invalidateConfigInMem LYTU.PassCategory
+    LYTU.AppFeedbackConfig -> do
+      cfg :: DAFC.AppFeedbackConfig <- parseConfigData req.configData
+      unless (cfg.merchantOperatingCityId == mocId) $ throwError $ InvalidRequest "AppFeedbackConfig must belong to this merchantOperatingCityId"
+      -- Checked against the questions as every rider gets them (stored rows with the base patch).
+      cityConfigs <- patchAppFeedbackCity mocId [] >>= either (throwError . AppFeedbackInvalidConfig) pure . snd
+      when (any ((== cfg.questionKey) . (.questionKey)) cityConfigs) $ throwError $ AppFeedbackConfigAlreadyExists cfg.questionKey
+      let errors = SAFV.validateConfig cityConfigs cfg
+      unless (null errors) $ throwError $ AppFeedbackInvalidConfig errors
+      SQAFC.create cfg
+      invalidateConfigInMem LYTU.AppFeedbackConfig
     _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for createRow"
   pure Kernel.Types.APISuccess.Success
   where
@@ -1304,3 +1357,19 @@ chakraJobControlResult :: Either Text () -> Environment.Flow Kernel.Types.APISuc
 chakraJobControlResult = \case
   Left err -> throwError (InvalidRequest err)
   Right () -> pure Kernel.Types.APISuccess.Success
+
+-- | A city's app feedback questions: the stored rows, and the rows with the base patch and then
+-- @rules@ applied (Left: the questions the patches broke). With no rules, the questions as every
+-- rider gets them.
+patchAppFeedbackCity :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> [A.Value] -> Environment.Flow ([DAFC.AppFeedbackConfig], Either [Text] [DAFC.AppFeedbackConfig])
+patchAppFeedbackCity merchantOpCityId rules = do
+  rows <- SQAFC.findAllByMerchantOperatingCityId merchantOpCityId
+  let domain = LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig
+  mbBase <- CADLR.findBaseRolloutByMerchantOpCityAndDomain (cast merchantOpCityId) domain
+  baseLogics <- maybe (pure []) (\base -> map (.logic) <$> CADLE.findByDomainAndVersion domain base.version) mbBase
+  patched <- forM (zip [0 ..] rows) $ \(identifier, row) -> do
+    resp <- LYTU.runLogics (baseLogics <> rules) (LYTU.Config row Nothing identifier)
+    pure $ case A.fromJSON resp.result of
+      A.Success (cfg :: LYTU.Config DAFC.AppFeedbackConfig) -> Right cfg.config
+      A.Error err -> Left (row.questionKey <> ": " <> Text.pack err)
+  pure (rows, case partitionEithers patched of ([], ok) -> Right ok; (errs, _) -> Left errs)

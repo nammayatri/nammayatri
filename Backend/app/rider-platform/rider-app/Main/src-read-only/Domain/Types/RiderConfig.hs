@@ -28,6 +28,8 @@ import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
   { alwaysAllowedNotificationCategories :: [Domain.Types.Extra.RiderPreferences.NotificationCategory],
+    appFeedbackMaxPerWeek :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    appFeedbackMinGapHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     appUrl :: Kernel.Prelude.Text,
     autoSendBookingDetailsViaWhatsapp :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     autoUnblockSafetyCenterAfterDays :: Kernel.Prelude.Int,
@@ -246,7 +248,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, Eq)
+  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
 
 data BetterPointWalkDistanceSource = STRAIGHT_LINE | MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -306,10 +308,10 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BetterPointWalkDistanceSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BetterPointWalkDistanceSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))

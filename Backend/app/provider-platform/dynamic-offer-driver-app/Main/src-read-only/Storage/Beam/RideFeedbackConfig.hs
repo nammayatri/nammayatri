@@ -6,10 +6,10 @@ module Storage.Beam.RideFeedbackConfig where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.RideFeedbackConfig
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Lib.Feedback.Types
 import Tools.Beam.UtilsTH
 
 data RideFeedbackConfigT f = RideFeedbackConfigT
@@ -29,7 +29,7 @@ data RideFeedbackConfigT f = RideFeedbackConfigT
     options :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     priority :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     questionKey :: (B.C f Kernel.Prelude.Text),
-    questionType :: (B.C f Domain.Types.RideFeedbackConfig.RideFeedbackQuestionType),
+    questionType :: (B.C f Lib.Feedback.Types.FeedbackQuestionType),
     stages :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     title :: (B.C f Data.Aeson.Value),
     uiConfig :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),

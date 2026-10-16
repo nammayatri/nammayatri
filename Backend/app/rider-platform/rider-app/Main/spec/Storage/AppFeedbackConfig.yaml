@@ -1,0 +1,123 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Translation: IssueManagement.Common
+  Value: Data.Aeson
+  FeedbackQuestionType: Lib.Feedback.Types
+  QuestionOption: Lib.Feedback.Types
+  InputConfig: Lib.Feedback.Types
+  FeedbackActionRule: Lib.Feedback.Types
+
+AppFeedbackConfig:
+  tableName: app_feedback_config
+
+  # One row = one app feedback question for one city: where in the app it can be asked (placements),
+  # its content, timing and actions. The question content is the same as ride feedback's
+  # (lib/feedback-engine). Which riders get it is decided by the APP-FEEDBACK logic in
+  # app_dynamic_logic_element, not by this table. The table is a Config Pilot config (AppFeedbackConfig).
+  fields:
+    id: Id AppFeedbackConfig
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    questionKey: Text
+    questionType: FeedbackQuestionType
+    title: "[Translation]"
+    description: Maybe [Translation]
+    options: Maybe [QuestionOption]
+    inputConfig: Maybe InputConfig
+    acknowledgement: Maybe [Translation]
+    iconUrl: Maybe Text # image on the right of the question card
+    uiConfig: Maybe Value
+    isSkippable: Maybe Bool
+    isFollowUpOnly: Maybe Bool
+    placements: Maybe [AppFeedbackPlacement] # where in the app it can be asked; not set on follow-up-only questions
+    subjectCondition: Maybe Value # json-logic on the full context (with the subject), checked when the card is shown
+    displayTrigger: Maybe AppFeedbackTrigger
+    cooldownDays: Maybe Int # for questions about the rider (not a ticket or journey): days before it can be asked again
+    bypassCap: Maybe Bool # shown even when the rider's feedback cap is reached (use for critical questions only)
+    actionRules: Maybe [FeedbackActionRule]
+    priority: Maybe Int
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    # A screen or moment of the app where a card can appear. Each placement has one subject type
+    # (SharedLogic.AppFeedback.Placement): what its answers are about.
+    AppFeedbackPlacement:
+      enum: "HOME,SEARCH_RESULTS,TICKET_BOOKED,JOURNEY_COMPLETED"
+      derive: "Bounded, Enum, ToParamSchema"
+
+    AppFeedbackTrigger:
+      showAfterSeconds: Maybe Int
+      autoDismissAfterSeconds: Maybe Int
+
+  # The dashboard inspector takes a placement as a query param.
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <AppFeedbackPlacement>
+
+  beamType:
+    title: Value
+    description: Maybe Value
+    options: Maybe Value
+    inputConfig: Maybe Value
+    acknowledgement: Maybe Value
+    placements: Maybe [Text]
+    displayTrigger: Maybe Value
+    actionRules: Maybe Value
+
+  sqlType:
+    questionKey: text
+    questionType: text
+    title: json
+    description: json
+    options: json
+    inputConfig: json
+    acknowledgement: json
+    uiConfig: json
+    placements: "text[]"
+    subjectCondition: json
+    displayTrigger: json
+    actionRules: json
+
+  default:
+    enabled: "false"
+
+  toTType:
+    title: Data.Aeson.toJSON title|E
+    description: Data.Aeson.toJSON <$> description|E
+    options: Data.Aeson.toJSON <$> options|E
+    inputConfig: Data.Aeson.toJSON <$> inputConfig|E
+    acknowledgement: Data.Aeson.toJSON <$> acknowledgement|E
+    placements: map Kernel.Prelude.show <$> placements|E
+    displayTrigger: Data.Aeson.toJSON <$> displayTrigger|E
+    actionRules: Data.Aeson.toJSON <$> actionRules|E
+
+  fromTType:
+    title: Kernel.Prelude.fromMaybe [] (Kernel.Utils.JSON.valueToMaybe title)|E
+    description: Kernel.Utils.JSON.valueToMaybe =<< description|E
+    options: Kernel.Utils.JSON.valueToMaybe =<< options|E
+    inputConfig: Kernel.Utils.JSON.valueToMaybe =<< inputConfig|E
+    acknowledgement: Kernel.Utils.JSON.valueToMaybe =<< acknowledgement|E
+    placements: Kernel.Prelude.mapMaybe (Kernel.Prelude.readMaybe . Data.Text.unpack) <$> placements|E
+    displayTrigger: Kernel.Utils.JSON.valueToMaybe =<< displayTrigger|E
+    actionRules: Kernel.Utils.JSON.valueToMaybe =<< actionRules|E
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, questionKey]
+      unique: true
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findAllByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - GENERATE_INDEXES

@@ -89,6 +89,32 @@ instance IsHTTPError RideFeedbackError where
 
 instance IsAPIError RideFeedbackError
 
+data AppFeedbackError
+  = AppFeedbackConfigNotFound Text
+  | AppFeedbackConfigAlreadyExists Text
+  | AppFeedbackInvalidConfig [Text]
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AppFeedbackError
+
+instance IsBaseError AppFeedbackError where
+  toMessage = \case
+    AppFeedbackConfigNotFound configId -> Just $ "App feedback question " <> configId <> " not found."
+    AppFeedbackConfigAlreadyExists questionKey -> Just $ "An app feedback question with key " <> questionKey <> " already exists in this city."
+    AppFeedbackInvalidConfig errors -> Just $ "Invalid app feedback question: " <> T.intercalate "; " errors
+
+instance IsHTTPError AppFeedbackError where
+  toErrorCode = \case
+    AppFeedbackConfigNotFound _ -> "APP_FEEDBACK_CONFIG_NOT_FOUND"
+    AppFeedbackConfigAlreadyExists _ -> "APP_FEEDBACK_CONFIG_ALREADY_EXISTS"
+    AppFeedbackInvalidConfig _ -> "APP_FEEDBACK_INVALID_CONFIG"
+  toHttpCode = \case
+    AppFeedbackConfigNotFound _ -> E404
+    AppFeedbackConfigAlreadyExists _ -> E400
+    AppFeedbackInvalidConfig _ -> E400
+
+instance IsAPIError AppFeedbackError
+
 data EstimateError = EstimateDoesNotExist Text | EstimateStatusDoesNotExist Text | EstimateCancelled Text | EstimateNotFound
   deriving (Eq, Show, IsBecknAPIError)
 

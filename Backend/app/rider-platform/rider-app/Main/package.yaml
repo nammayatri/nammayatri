@@ -138,6 +138,7 @@ dependencies:
   - hashable
   - json-logic-hs
   - yudhishthira
+  - feedback-engine
   - config-pilot
   - incentive-journey
   - whatsapp-bot

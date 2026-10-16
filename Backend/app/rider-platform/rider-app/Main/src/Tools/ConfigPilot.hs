@@ -34,6 +34,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as CQR
 import qualified Storage.CachedQueries.MerchantConfig as CQMC
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CQRRN
 import qualified Storage.CachedQueries.UiRiderConfig as SCU
+import qualified Storage.ConfigPilot.Config.AppFeedbackConfig as AppFeedbackConfigCP
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.CancellationReason (CancellationReasonDimensions (..))
 import Storage.ConfigPilot.Config.Exophone (ExophoneDimensions (..))
@@ -51,6 +52,7 @@ import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
+import qualified Storage.Queries.AppFeedbackConfig as SQAFC
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.HotSpotConfig as SQHSC
 import qualified Storage.Queries.MerchantPaymentMethod as SQMPM
@@ -116,6 +118,10 @@ returnConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       pcCfgs <- getConfigList (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON pcCfgs}
+    LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig -> do
+      -- Uncached: a question created on another pod is not in this pod's in-memory cache yet.
+      afCfgs <- AppFeedbackConfigCP.findAllServedUncached (cast merchantOpCityId)
+      return LYTU.TableDataResp {configs = map A.toJSON afCfgs}
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbUiConfigInfo <- SCU.findUiConfig uiConfigReq (cast merchantOpCityId) True
@@ -179,6 +185,9 @@ returnDBConfigs cfgType merchantOpCityId merchantId opCity = do
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       pcCfgs <- getConfigFromDB (PassCategoryDimensions {merchantOperatingCityId = merchantOpCityId.getId, configId = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON pcCfgs}
+    LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig -> do
+      afCfgs <- SQAFC.findAllByMerchantOperatingCityId (cast merchantOpCityId)
+      return LYTU.TableDataResp {configs = map A.toJSON afCfgs}
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       mbUiConfig <- SQU.getUiConfig uiConfigReq (cast merchantOpCityId)
@@ -218,6 +227,8 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       handleConfigUpdateViaJson (SQIC.findAllByMerchantOperatingCityId . cast) (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.IssueConfig) >> invalidateConfigInMem LYTU.IssueConfigRider) SQIC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.RIDER_CONFIG LYTU.PassCategory -> do
       handleConfigUpdateViaJson SQPC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.PassCategory) >> invalidateConfigInMem LYTU.PassCategory) SQPC.updateByPrimaryKey (cast merchantOpCityId)
+    LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig -> do
+      handleConfigUpdateViaJson SQAFC.findAllByMerchantOperatingCityId (DynamicLogic.deleteConfigHashKey (cast merchantOpCityId) (LYTU.RIDER_CONFIG LYTU.AppFeedbackConfig) >> invalidateConfigInMem LYTU.AppFeedbackConfig) SQAFC.updateByPrimaryKey (cast merchantOpCityId)
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = maybe "" getId mbMerchantId, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
       handleConfigUpdateWithExtraDimensionsUi SQU.getUiConfig (SCU.clearCache (cast merchantOpCityId) dt pt) SCU.updateByPrimaryKey (cast merchantOpCityId) uiConfigReq

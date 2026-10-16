@@ -6,8 +6,10 @@ imports:
   Ride: Domain.Types.Ride
   RideFeedbackStage: Domain.Types.RideFeedbackConfig
   RideFeedbackConfig: Domain.Types.RideFeedbackConfig
-  RideFeedbackQuestionType: Domain.Types.RideFeedbackConfig
-  RideFeedbackActionType: Domain.Types.RideFeedbackConfig
+  FeedbackQuestionType: Lib.Feedback.Types
+  FeedbackResponseStatus: Lib.Feedback.Types
+  FeedbackAnswer: Lib.Feedback.Types
+  FeedbackActionResult: Lib.Feedback.Types
   Value: Data.Aeson
 
 RideFeedbackResponse:
@@ -31,44 +33,20 @@ RideFeedbackResponse:
     merchantOperatingCityId: Id MerchantOperatingCity
     configId: Id RideFeedbackConfig
     questionKey: Text
-    questionType: RideFeedbackQuestionType # copied from the question, so analytics need no join to the (changing) config
+    questionType: FeedbackQuestionType # copied from the question, so analytics need no join to the (changing) config
     logicVersion: Maybe Int # RIDE-FEEDBACK dynamic logic version that selected the question
     configPilotVersions: Maybe [Int] # Config Pilot versions of ride_feedback_config the question was served from
-    status: RideFeedbackResponseStatus
-    answer: Maybe RideFeedbackAnswer
+    status: FeedbackResponseStatus
+    answer: Maybe FeedbackAnswer
     answerScore: Maybe Double # 0 (bad) to 1 (good), comparable across questions; Nothing when the answer is not scored
     stage: RideFeedbackStage # where the journey was when the question was first shown
     secondsSinceBooking: Int
     secondsIntoRide: Maybe Int
-    actionResults: Maybe [RideFeedbackActionResult]
+    actionResults: Maybe [FeedbackActionResult]
     createdAt: UTCTime
     updatedAt: UTCTime
 
-  types:
-    RideFeedbackResponseStatus:
-      enum: "SHOWN,ANSWERED,SKIPPED,EXPIRED"
-      derive: "Bounded, Enum"
-
-    # Mirrored in rider-app's SharedLogic.RideFeedback.Types (with RideFeedbackActionResult).
-    RideFeedbackActionStatus:
-      enum: "PENDING,SUCCESS,FAILED"
-      derive: "Bounded, Enum"
-
-    RideFeedbackActionResult:
-      ruleId: Text
-      actionType: RideFeedbackActionType
-      status: RideFeedbackActionStatus
-      attempts: Int
-      externalRef: Maybe Text
-      errorMessage: Maybe Text
-      updatedAt: UTCTime
-
-    RideFeedbackAnswer:
-      selectedOptionKeys: Maybe [Text]
-      text: Maybe Text
-      number: Maybe Double
-      rating: Maybe Int
-      mediaFileIds: Maybe [Text]
+  # Status, answer and action result types are shared with app feedback (Lib.Feedback.Types).
 
   beamFields:
     answer:

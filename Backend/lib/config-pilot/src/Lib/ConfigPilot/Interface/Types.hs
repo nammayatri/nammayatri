@@ -123,6 +123,7 @@ data SConfigType (cfg :: ConfigType) where
   SMonetaryRewardConfig :: SConfigType 'MonetaryRewardConfig
   SDocumentVerificationStagesConfig :: SConfigType 'DocumentVerificationStagesConfig
   SRideFeedbackConfig :: SConfigType 'RideFeedbackConfig
+  SAppFeedbackConfig :: SConfigType 'AppFeedbackConfig
 
 deriving instance Show (SConfigType cfg)
 

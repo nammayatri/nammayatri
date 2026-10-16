@@ -1,0 +1,27 @@
+CREATE TABLE atlas_app.app_feedback_response ();
+
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN action_results json ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN answer_media_file_ids text[] ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN answer_number double precision ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN answer_option_keys text[] ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN answer_rating integer ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN answer_text text ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN answer_score double precision ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN config_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN config_pilot_versions integer[] ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN logic_version integer ;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN person_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN placement text NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN question_key text NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN question_type text NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN status text NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN subject_id text NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN subject_type text NOT NULL;
+ALTER TABLE atlas_app.app_feedback_response ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.app_feedback_response ADD PRIMARY KEY ( id);
+CREATE INDEX CONCURRENTLY app_feedback_response_idx_person_id ON atlas_app.app_feedback_response USING btree (person_id);
+CREATE INDEX CONCURRENTLY app_feedback_response_idx_question_key ON atlas_app.app_feedback_response USING btree (question_key);

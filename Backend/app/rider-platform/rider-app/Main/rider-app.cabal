@@ -224,6 +224,7 @@ library
       Domain.Action.Beckn.OnTrack
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AlertIncident
+      Domain.Action.Dashboard.AppFeedback
       Domain.Action.Dashboard.AppManagement.Customer
       Domain.Action.Dashboard.AppManagement.EDCMachine
       Domain.Action.Dashboard.AppManagement.EventManagement
@@ -318,6 +319,7 @@ library
       Domain.Action.UI.Aarokya
       Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
+      Domain.Action.UI.AppFeedback
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.AssetManifest
       Domain.Action.UI.AssetReleaseInternal
@@ -569,6 +571,11 @@ library
       Lib.JourneyModule.State.Utils
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
+      SharedLogic.AppFeedback.Cap
+      SharedLogic.AppFeedback.Context
+      SharedLogic.AppFeedback.Eligibility
+      SharedLogic.AppFeedback.Placement
+      SharedLogic.AppFeedback.Validation
       SharedLogic.BehaviourManagement.CustomerCancellationRate
       SharedLogic.BetterRoutePoint
       SharedLogic.BetterRoutePointCache
@@ -792,6 +799,7 @@ library
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
+      Storage.ConfigPilot.Config.AppFeedbackConfig
       Storage.ConfigPilot.Config.BecknConfig
       Storage.ConfigPilot.Config.CancellationReason
       Storage.ConfigPilot.Config.Exophone
@@ -896,6 +904,7 @@ library
       Storage.Queries.TicketBookingServiceCategoryExtra
       Storage.Queries.TicketBookingServiceExtra
       Storage.Queries.TicketServiceExtra
+      Storage.Queries.Transformers.AppFeedbackResponse
       Storage.Queries.Transformers.AppInstalls
       Storage.Queries.Transformers.BlackListOrg
       Storage.Queries.Transformers.Booking
@@ -1000,6 +1009,7 @@ library
       API.Action.DashboardAuth.IssueManagement.IssueList
       API.Action.DashboardAuth.Management
       API.Action.DashboardAuth.Management.AlertIncident
+      API.Action.DashboardAuth.Management.AppFeedback
       API.Action.DashboardAuth.Management.Booking
       API.Action.DashboardAuth.Management.Customer
       API.Action.DashboardAuth.Management.FeedbackForm
@@ -1036,6 +1046,7 @@ library
       API.Action.DashboardAuth.RideBooking.Search
       API.Action.DashboardAuth.RideBooking.Select
       API.Action.UI.AlertWebhook
+      API.Action.UI.AppFeedback
       API.Action.UI.AssetManifest
       API.Action.UI.AssetReleaseInternal
       API.Action.UI.AttractionRecommend
@@ -1163,9 +1174,11 @@ library
       API.Types.Dashboard.RideBooking.Select
       API.Types.RiderPlatform.Management
       API.Types.RiderPlatform.Management.AlertIncident
+      API.Types.RiderPlatform.Management.AppFeedback
       API.Types.RiderPlatform.Management.Booking
       API.Types.RiderPlatform.Management.Customer
       API.Types.RiderPlatform.Management.Endpoints.AlertIncident
+      API.Types.RiderPlatform.Management.Endpoints.AppFeedback
       API.Types.RiderPlatform.Management.Endpoints.Booking
       API.Types.RiderPlatform.Management.Endpoints.Customer
       API.Types.RiderPlatform.Management.Endpoints.FeedbackForm
@@ -1205,6 +1218,7 @@ library
       API.Types.RiderPlatform.Management.SosMedia
       API.Types.RiderPlatform.Management.System
       API.Types.UI.AlertWebhook
+      API.Types.UI.AppFeedback
       API.Types.UI.AssetManifest
       API.Types.UI.AssetReleaseInternal
       API.Types.UI.AttractionRecommend
@@ -1270,6 +1284,8 @@ library
       Domain.Types.AadhaarOtpVerify
       Domain.Types.AadhaarVerification
       Domain.Types.AlertIncident
+      Domain.Types.AppFeedbackConfig
+      Domain.Types.AppFeedbackResponse
       Domain.Types.AppInstalls
       Domain.Types.AssetRelease
       Domain.Types.BBPS
@@ -1447,6 +1463,8 @@ library
       Storage.Beam.AadhaarVerification
       Storage.Beam.AlertIncident
       Storage.Beam.AmbulanceDetails
+      Storage.Beam.AppFeedbackConfig
+      Storage.Beam.AppFeedbackResponse
       Storage.Beam.AppInstalls
       Storage.Beam.AssetRelease
       Storage.Beam.BBPS
@@ -1629,6 +1647,8 @@ library
       Storage.Queries.AadhaarOtpVerify
       Storage.Queries.AadhaarVerification
       Storage.Queries.AlertIncident
+      Storage.Queries.AppFeedbackConfig
+      Storage.Queries.AppFeedbackResponse
       Storage.Queries.AppInstalls
       Storage.Queries.AssetRelease
       Storage.Queries.BBPS
@@ -1949,6 +1969,7 @@ library
     , euler-hs
     , external
     , extra
+    , feedback-engine
     , filepath
     , finance-kernel
     , geohash ==1.0.1
@@ -2101,6 +2122,7 @@ executable rider-app-exe
     , directory
     , euler-hs
     , extra
+    , feedback-engine
     , filepath
     , geohash ==1.0.1
     , hashable
@@ -2248,6 +2270,7 @@ test-suite rider-app-test
     , directory
     , euler-hs
     , extra
+    , feedback-engine
     , filepath
     , geohash ==1.0.1
     , hashable

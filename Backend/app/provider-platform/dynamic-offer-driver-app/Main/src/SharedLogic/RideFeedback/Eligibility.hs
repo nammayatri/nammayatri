@@ -19,7 +19,7 @@ where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashSet as HS
-import Data.List (nub, sortOn)
+import Data.List (sortOn)
 import Data.Ord (Down (..))
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -34,6 +34,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Config.GetterInternal (selectActiveElementVersions)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Lib.Feedback.Question (collectFollowUps, defaultPriority, isFollowUpOnly, priorityKey)
+import qualified Lib.Feedback.Types as LFT
 import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (RideFeedbackConfig))
@@ -189,34 +191,10 @@ decideQuestion now journey responseByConfig config
       _ -> now
     addSeconds mbSecs = addUTCTime (fromIntegral $ fromMaybe 0 mbSecs)
 
--- | Follow-ups reachable through option.nextQuestionKey, breadth-first, at most 3 levels deep.
--- They are not in the logic's output: a follow-up is shown only through the parent the logic selected.
-collectFollowUps ::
-  HM.HashMap Text DRFC.RideFeedbackConfig ->
-  (DRFC.RideFeedbackConfig -> Bool) ->
-  [DRFC.RideFeedbackConfig] ->
-  [DRFC.RideFeedbackConfig]
-collectFollowUps byKey usable roots = go (3 :: Int) (HS.fromList $ map (.questionKey) roots) roots
-  where
-    go 0 _ _ = []
-    go depth seen parents =
-      let nextKeys = nub [k | p <- parents, o <- fromMaybe [] p.options, Just k <- [o.nextQuestionKey], not (HS.member k seen)]
-          level = filter usable $ mapMaybe (`HM.lookup` byKey) nextKeys
-       in if null level then [] else level <> go (depth - 1) (HS.union seen (HS.fromList nextKeys)) level
-
-isFollowUpOnly :: DRFC.RideFeedbackConfig -> Bool
-isFollowUpOnly = fromMaybe False . (.isFollowUpOnly)
-
 -- | Open = not shown on its subject yet: a question is shown at most once per ride (ride stages) or
 -- journey (booking stages).
 isOpen :: HM.HashMap (Id DRFC.RideFeedbackConfig) DRFR.RideFeedbackResponse -> DRFC.RideFeedbackConfig -> Bool
 isOpen responseByConfig config = not (HM.member config.id responseByConfig)
 
-isFinal :: DRFR.RideFeedbackResponseStatus -> Bool
-isFinal = (/= DRFR.SHOWN)
-
-priorityKey :: DRFC.RideFeedbackConfig -> (Int, Text)
-priorityKey c = (fromMaybe defaultPriority c.priority, c.questionKey)
-
-defaultPriority :: Int
-defaultPriority = 100
+isFinal :: LFT.FeedbackResponseStatus -> Bool
+isFinal = (/= LFT.SHOWN)

@@ -1,0 +1,70 @@
+imports:
+  Language: Kernel.External.Types
+  FeedbackQuestionItem: Lib.Feedback.View
+  FeedbackResponseStatus: Lib.Feedback.Types
+  FeedbackAnswer: Lib.Feedback.Types
+  AppFeedbackPlacement: Domain.Types.AppFeedbackConfig
+
+module: AppFeedback
+
+# Feedback anywhere in the app (home, search, tickets, journeys), not only during a ride. The app
+# fetches the manifest once per session, shows a question when the rider reaches one of its
+# placements, and reports SHOWN before rendering it: the server then checks the rider's feedback
+# cap and the question's subject condition, and the card is shown only if SHOWN is accepted.
+types:
+  # Questions this rider can get, already targeted on the rider (city, tags, app version, cooldowns).
+  # nextAllowedAt: no card before this time (the rider's feedback cap); null when one can be shown now.
+  AppFeedbackManifestRes:
+    serverTime: UTCTime
+    nextAllowedAt: Maybe UTCTime
+    questions: "[AppFeedbackManifestItem]"
+    followUpQuestions: "[FeedbackQuestionItem]"
+
+  # checksSubject: the question has a condition on the subject (the ticket, the journey), checked
+  # when SHOWN is reported. bypassCap: shown even before nextAllowedAt.
+  AppFeedbackManifestItem:
+    placements: "[AppFeedbackPlacement]"
+    showAfterSeconds: Maybe Int
+    checksSubject: Bool
+    bypassCap: Bool
+    question: FeedbackQuestionItem
+
+  # subjectId: the ticket booking id (TICKET_BOOKED) or journey id (JOURNEY_COMPLETED); not sent for
+  # placements about the rider (HOME, SEARCH_RESULTS).
+  AppFeedbackSubmitReq:
+    placement: AppFeedbackPlacement
+    subjectId: Maybe Text
+    responses: "[AppFeedbackResponseItem]"
+
+  AppFeedbackResponseItem:
+    questionId: Text
+    status: FeedbackResponseStatus
+    answer: Maybe FeedbackAnswer
+
+  AppFeedbackSubmitRes:
+    results: "[AppFeedbackSubmitResult]"
+    nextAllowedAt: Maybe UTCTime
+
+  AppFeedbackSubmitResult:
+    questionId: Text
+    accepted: Bool
+    errorCode: Maybe Text
+
+apis:
+  # GET /appFeedback/manifest
+  - GET:
+      endpoint: /appFeedback/manifest
+      auth: TokenAuth
+      headers:
+        x-language: Language
+      response:
+        type: API.Types.UI.AppFeedback.AppFeedbackManifestRes
+
+  # POST /appFeedback
+  - POST:
+      endpoint: /appFeedback
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.AppFeedback.AppFeedbackSubmitReq
+      response:
+        type: API.Types.UI.AppFeedback.AppFeedbackSubmitRes

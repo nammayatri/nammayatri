@@ -141,6 +141,7 @@ dependencies:
   - behavior-tracker
   - incentive-journey
   - behavior-engine
+  - feedback-engine
   - consequence-engine
   - communication-engine
   - network-uri
