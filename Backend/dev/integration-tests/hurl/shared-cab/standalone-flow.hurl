@@ -17,7 +17,7 @@ jsonpath "$.session.status" == "ACTIVE"
 POST {{base_url}}/v2/frfs/search?vehicleType=%22BUS%22
 token: {{token}}
 Content-Type: application/json
-{"fromStationCode": "SC_IEWDUH", "toStationCode": "SC_MAWLAI", "quantity": 1, "routeCode": "{{route_a}}", "platformType": "APPLICATION", "vehicleNumber": "{{plate}}"}
+{"fromStationCode": "SC_POLO", "toStationCode": "SC_NONGTHYMMAI", "quantity": 1, "routeCode": "{{route_a}}", "platformType": "APPLICATION", "vehicleNumber": "{{plate}}"}
 HTTP 200
 [Captures]
 searchId: jsonpath "$.searchId"
@@ -63,12 +63,12 @@ GET {{base_url}}/v2/frfs/route/{{route_a}}?city=std:044&vehicleType=%22BUS%22&pl
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.stops" count == 4
-jsonpath "$.totalStops" == 4
-jsonpath "$.stops[0].code" == "SC_IEWDUH"
-jsonpath "$.stops[3].code" == "SC_MAWLAI"
+jsonpath "$.stops" count == 5
+jsonpath "$.totalStops" == 5
+jsonpath "$.stops[0].code" == "SC_POLO"
+jsonpath "$.stops[4].code" == "SC_NONGTHYMMAI"
 jsonpath "$.stops[0].lat" isFloat
-jsonpath "$.waypoints" count == 4
+jsonpath "$.waypoints" count == 5
 jsonpath "$.waypoints[0].lat" isFloat
 
 # the rider app's own request shape for the same read (MULTIMODAL platform, lower-case city, trailing slash)
@@ -76,9 +76,9 @@ GET {{base_url}}/v2/frfs/route/{{route_a}}/?city=chennai&platformType=%22MULTIMO
 token: {{token}}
 HTTP 200
 [Asserts]
-jsonpath "$.stops" count == 4
-jsonpath "$.stops[0].code" == "SC_IEWDUH"
-jsonpath "$.waypoints" count == 4
+jsonpath "$.stops" count == 5
+jsonpath "$.stops[0].code" == "SC_POLO"
+jsonpath "$.waypoints" count == 5
 
 # release the seat the booking holds, so later flows start from an empty cab
 POST {{base_url}}/v2/frfs/booking/{{bookingId}}/cancel
