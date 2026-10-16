@@ -138,7 +138,7 @@ buildMapsServiceConfig = \case
     googleKey' <- encrypt googleKey
     pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', googleGeocodeUrl = Nothing, ..}
   OSRMConfigUpdateReq OSRMCfgUpdateReq {..} -> do
-    pure . Maps.OSRMConfig $ Maps.OSRMCfg {radiusDeviation = (distanceToMeters <$> radiusDeviationWithUnit) <|> radiusDeviation, ..}
+    pure . Maps.OSRMConfig $ Maps.OSRMCfg {radiusDeviation = (distanceToMeters <$> radiusDeviationWithUnit) <|> radiusDeviation, trafficConfig = mkOSRMTrafficConfig <$> trafficConfig, ..}
   MMIConfigUpdateReq MMICfgUpdateReq {..} -> do
     mmiAuthSecret' <- encrypt mmiAuthSecret
     mmiApiKey' <- encrypt mmiApiKey
@@ -257,10 +257,23 @@ instance HideSecrets MMICfgUpdateReq where
 data OSRMCfgUpdateReq = OSRMCfgUpdateReq
   { osrmUrl :: BaseUrl,
     radiusDeviation :: Maybe Meters,
-    radiusDeviationWithUnit :: Maybe Distance
+    radiusDeviationWithUnit :: Maybe Distance,
+    trafficConfig :: Maybe OSRMTrafficCfgUpdateReq
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- mirrors Maps.OSRMTrafficConfig, which has no ToSchema instance
+data OSRMTrafficCfgUpdateReq = OSRMTrafficCfgUpdateReq
+  { jamBelowKmph :: Double,
+    slowBelowKmph :: Double,
+    minSegmentLengthMeters :: Double
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+mkOSRMTrafficConfig :: OSRMTrafficCfgUpdateReq -> Maps.OSRMTrafficConfig
+mkOSRMTrafficConfig OSRMTrafficCfgUpdateReq {..} = Maps.OSRMTrafficConfig {..}
 
 ---------------------------------------------------------
 -- merchant sms service config update -------------------
