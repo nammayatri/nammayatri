@@ -79,6 +79,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 _DEVBOX_CORE_PARENT = SCRIPT_DIR.parent.parent  # Backend/dev
 if str(_DEVBOX_CORE_PARENT) not in sys.path:
     sys.path.insert(0, str(_DEVBOX_CORE_PARENT))
+from devbox_core import cc as _dc_cc  # noqa: E402
 from devbox_core import data as _dc_data  # noqa: E402
 from devbox_core import deploy as _dc_deploy  # noqa: E402
 from devbox_core import fleet as _dc_fleet  # noqa: E402
@@ -1620,50 +1621,10 @@ def get_devbox_ports(force: bool = False, host_override: str | None = None) -> d
 
 
 # ── Control centre on the dev-box ─────────────────────────────────────────────
-# This checkout's control-center/ is rsynced with the backend (it sits inside the
-# repo dir, gitignored), so it is already in the workspace. It runs there as a
-# Vite dev server next to rider-app / driver-app: its /api/bap|bpp proxy reaches
-# them as localhost (the /direct-dashboard paths), and anyone on the office
-# network can open http://<dev-box>:<port>. Started detached (setsid) so it does
-# not die with the SSH session; its pid/port live in <workspace>/data/, which
-# rsync never touches.
-DEVBOX_CC_PORTS = range(5300, 5320)   # clear of the stack's own resolved 5xxx ports
-DEVBOX_CC_STATE = "data/control-center.json"
-DEVBOX_CC_LOG = "data/control-center.log"
-
-# Runs on the dev-box: prints this workspace's control-center state as JSON.
-_DEVBOX_CC_STATUS_PY = r'''
-import json, os, sys, urllib.request, urllib.error
-d = sys.argv[1]
-out = {"state": "stopped", "checkoutPresent": os.path.isdir(os.path.join(d, "control-center"))}
-try:
-    s = json.load(open(os.path.join(d, "data/control-center.json")))
-except Exception:
-    s = None
-if s:
-    out.update(s)
-    try:
-        os.kill(int(s["pid"]), 0)
-        alive = True
-    except Exception:
-        alive = False
-    ready = False
-    if alive:
-        try:
-            urllib.request.urlopen("http://127.0.0.1:%s/" % s["port"], timeout=2)
-            ready = True
-        except urllib.error.HTTPError:
-            ready = True          # vite answered, just not 200
-        except Exception:
-            pass
-    out["state"] = "running" if ready else ("starting" if alive else "exited")
-try:
-    with open(os.path.join(d, "data/control-center.log"), errors="replace") as f:
-        out["log"] = f.read().splitlines()[-40:]
-except Exception:
-    out["log"] = []
-print(json.dumps(out))
-'''
+# This checkout's control-center/ is rsynced with the backend, so it is already
+# in the workspace; devbox_core.cc starts / stops / reports it there. What stays
+# here is 7070-only: the pinned workspace (.devbox-id.json), this Mac's
+# control-center branch/commit, and the "changed since launch" check.
 
 
 def _devbox_cc_target() -> dict:
@@ -1679,9 +1640,8 @@ def _devbox_cc_target() -> dict:
             "dir": remote_dir, "id": saved.get("id") or ""}
 
 
-def _devbox_cc_ssh(t: dict, script: str, timeout: int = 20) -> subprocess.CompletedProcess:
-    target = _dc_ssh.Target(t["user"], t["host"], t["port"], _find_ssh_key())
-    return _dc_ssh.run(target, script, timeout=timeout)
+def _devbox_cc_ssh_target(t: dict) -> "_dc_ssh.Target":
+    return _dc_ssh.Target(t["user"], t["host"], t["port"], _find_ssh_key())
 
 
 def _local_cc_checkout() -> dict:
@@ -1701,15 +1661,7 @@ def devbox_cc_status() -> dict:
     t = _devbox_cc_target()
     if t.get("error"):
         return {"state": "unavailable", "error": t["error"]}
-    try:
-        r = _devbox_cc_ssh(t, f"python3 -c {shlex.quote(_DEVBOX_CC_STATUS_PY)} {shlex.quote(t['dir'])}",
-                           timeout=15)
-        st = json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else \
-            {"state": "unknown", "error": (r.stderr or "").strip() or f"exit {r.returncode}"}
-    except Exception as e:  # noqa: BLE001
-        st = {"state": "unknown", "error": str(e)}
-    if st.get("port"):
-        st["url"] = f"http://{t['host']}:{st['port']}"
+    st = _dc_cc.status(_devbox_cc_ssh_target(t), t["dir"])
     st["checkout"] = _local_cc_checkout()
     # Files deployed since this control centre was launched → the running
     # process may be older than the workspace (Vite only hot-reloads some files).
@@ -1738,36 +1690,10 @@ def devbox_cc_start() -> dict:
     rider, driver = ports.get("rider-app"), ports.get("dynamic-offer-driver-app")
     if not (rider and driver):
         return {"error": "workspace ports not known yet — start the stack first"}
-    checkout = _local_cc_checkout()
-    d = shlex.quote(t["dir"])
-    script = f"""
-set -e
-cd {d}
-mkdir -p data
-PORT=""
-for p in {' '.join(str(p) for p in DEVBOX_CC_PORTS)}; do
-  ss -ltn | grep -q ":$p " || {{ PORT=$p; break; }}
-done
-[ -n "$PORT" ] || {{ echo "no free port in {DEVBOX_CC_PORTS.start}-{DEVBOX_CC_PORTS.stop - 1}" >&2; exit 4; }}
-cd control-center
-VITE_BAP_URL=http://localhost:{int(rider)} VITE_BPP_URL=http://localhost:{int(driver)} CC_PORT=$PORT \\
-  setsid nohup nix shell --inputs-from {d} nixpkgs-unstable#nodejs_22 --command bash -c \\
-    'npm install --no-audit --no-fund && exec npm run dev -- --host 0.0.0.0 --port "$CC_PORT" --strictPort' \\
-  > ../{DEVBOX_CC_LOG} 2>&1 < /dev/null &
-PID=$!
-cd ..
-printf '{{"pid": %s, "port": %s, "startedAt": %s, "riderPort": {int(rider)}, "driverPort": {int(driver)}, "branch": %s, "commit": %s, "dirty": {json.dumps(bool(checkout.get('dirty')))}, "deployHash": %s}}\\n' \\
-  "$PID" "$PORT" "$(date +%s)" {shlex.quote(json.dumps(checkout.get('branch') or ''))} \\
-  {shlex.quote(json.dumps(checkout.get('commit') or ''))} \\
-  {shlex.quote(json.dumps(_devbox_cc_deploy_hash(t)))} > {DEVBOX_CC_STATE}
-echo "$PORT"
-"""
-    try:
-        r = _devbox_cc_ssh(t, script, timeout=30)
-    except Exception as e:  # noqa: BLE001
-        return {"error": f"could not start control-center on the dev-box: {e}"}
-    if r.returncode != 0:
-        return {"error": (r.stderr or r.stdout or "").strip() or f"start exited {r.returncode}"}
+    info = {**_local_cc_checkout(), "deployHash": _devbox_cc_deploy_hash(t)}
+    r = _dc_cc.start(_devbox_cc_ssh_target(t), t["dir"], rider, driver, info)
+    if r.get("error"):
+        return r
     return devbox_cc_status()
 
 
@@ -1776,25 +1702,9 @@ def devbox_cc_stop() -> dict:
     t = _devbox_cc_target()
     if t.get("error"):
         return t
-    d = shlex.quote(t["dir"])
-    script = f"""
-cd {d} || exit 0
-S={DEVBOX_CC_STATE}
-[ -f "$S" ] || exit 0
-PID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["pid"])' "$S" 2>/dev/null || true)
-if [ -n "$PID" ]; then
-  kill -TERM -- "-$PID" 2>/dev/null || kill -TERM "$PID" 2>/dev/null || true
-  for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 -- "-$PID" 2>/dev/null || break; sleep 0.5; done
-  kill -KILL -- "-$PID" 2>/dev/null || true
-fi
-rm -f "$S"
-"""
-    try:
-        r = _devbox_cc_ssh(t, script, timeout=20)
-    except Exception as e:  # noqa: BLE001
-        return {"error": f"could not stop control-center on the dev-box: {e}"}
-    if r.returncode != 0:
-        return {"error": (r.stderr or "").strip() or f"stop exited {r.returncode}"}
+    r = _dc_cc.stop(_devbox_cc_ssh_target(t), t["dir"])
+    if r.get("error"):
+        return r
     return devbox_cc_status()
 
 

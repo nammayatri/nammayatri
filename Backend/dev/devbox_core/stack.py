@@ -102,6 +102,16 @@ def tail(t: ssh.Target, wdir: str, n: int = 30, timeout: int = 20) -> str:
     return r.stdout
 
 
+def ports(t: ssh.Target, wdir: str, timeout: int = 15) -> dict:
+    """The workspace's resolved ports ({service: port}) from data/ports.json,
+    which the stack's pre-flight writes. {} when the stack has not got there."""
+    r = ssh.run(t, f"cat {shlex.quote(wdir)}/data/ports.json 2>/dev/null", timeout=timeout)
+    try:
+        return {k: int(v) for k, v in (json.loads(r.stdout).get("ports") or {}).items()}
+    except (ValueError, AttributeError):
+        return {}
+
+
 def _answers(url: str) -> bool:
     try:
         with urllib.request.urlopen(url, timeout=5) as resp:

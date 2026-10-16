@@ -7,7 +7,7 @@ import subprocess
 import sys
 from typing import Callable
 
-from . import data, deploy, fleet, ssh, stack, workspace
+from . import cc, data, deploy, fleet, ssh, stack, workspace
 
 
 def _target(args: argparse.Namespace) -> ssh.Target:
@@ -156,6 +156,32 @@ def cmd_data(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cc_result(res: dict) -> int:
+    if res.get("state") == "running":
+        res.pop("log", None)   # only worth reading when something is wrong
+    print(json.dumps(res))
+    return 1 if res.get("error") else 0
+
+
+def cmd_cc_start(args: argparse.Namespace) -> int:
+    t, wdir = _target(args), workspace.workspace_dir(args.name)
+    p = stack.ports(t, wdir)
+    rider, driver = p.get("rider-app"), p.get("dynamic-offer-driver-app")
+    if not (rider and driver):
+        print(json.dumps({"error": "workspace ports not known yet — start the stack first"}))
+        return 1
+    info = {"branch": args.cc_branch, "commit": args.cc_commit}
+    return _cc_result(cc.start(t, wdir, rider, driver, info))
+
+
+def cmd_cc_status(args: argparse.Namespace) -> int:
+    return _cc_result(cc.status(_target(args), workspace.workspace_dir(args.name)))
+
+
+def cmd_cc_stop(args: argparse.Namespace) -> int:
+    return _cc_result(cc.stop(_target(args), workspace.workspace_dir(args.name)))
+
+
 def _add_owner_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--name", required=True, help="workspace name")
     p.add_argument("--owner-by", default="scc")
@@ -240,6 +266,19 @@ def main(argv: list | None = None) -> int:
     dt.add_argument("--version", help="e.g. v3 (default: latest safe)")
     dt.add_argument("--force", action="store_true", help="load even if the workspace already has it")
     dt.set_defaults(func=cmd_data)
+
+    for name, help_, func in (
+        ("cc-start", "start the control centre next to the workspace (port 5300-5319)", cmd_cc_start),
+        ("cc-status", "control centre state + URL (+ last log lines unless running)", cmd_cc_status),
+        ("cc-stop", "stop the control centre", cmd_cc_stop),
+    ):
+        c = sub.add_parser(name, help=help_)
+        _add_target_args(c)
+        c.add_argument("--name", required=True, help="workspace name")
+        if name == "cc-start":
+            c.add_argument("--cc-branch", default="", help="control-center branch (shown in status)")
+            c.add_argument("--cc-commit", default="", help="control-center commit (shown in status)")
+        c.set_defaults(func=func)
 
     args = p.parse_args(argv)
     return args.func(args)
