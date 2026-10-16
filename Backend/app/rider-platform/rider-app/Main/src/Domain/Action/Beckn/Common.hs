@@ -1008,7 +1008,6 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     case tripEndLocation of
       Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd Nothing
       Nothing -> return ()
-  fork "updating total rides count" $ SMC.updateTotalRidesCounters person
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
   mbDriverPhoneNumber <- mapM decrypt ride.driverPhoneNumber
@@ -1053,8 +1052,19 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   -- apply the offer for cash rides, and schedule the cashback-payout job when
   -- the offer carries a payout.
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
-  mbOfferStatsInput <- if onlinePayment then pure Nothing else Just <$> SPayment.buildOfferStatsInput person
-  mbRideOfferEntity <- SOffer.processRideOffer mbOfferStatsInput booking person updRide offerBasePrice fareCtx
+  -- an offer failure must not stop the ride count and last ride updates below
+  let processOffer = do
+        mbOfferStatsInput <- if onlinePayment then pure Nothing else Just <$> SPayment.buildOfferStatsInput person
+        SOffer.processRideOffer mbOfferStatsInput booking person updRide offerBasePrice fareCtx
+  mbRideOfferEntity <-
+    withTryCatch "processRideOffer" processOffer
+      >>= \case
+        Right entity -> pure entity
+        Left e -> do
+          logError $ "processRideOffer failed for ride " <> ride.id.getId <> ", continuing without offer: " <> show e
+          pure Nothing
+  -- after processRideOffer, so offer rules at ride end see the rider's history without this ride
+  fork "updating total rides count and last ride" $ SMC.updateTotalRidesCounters person updRide.rideEndTime
   let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
       -- What Stripe must take off is larger than the offer's face value:
       -- discounting the fare also removes the payment charge that sat on it.

@@ -319,3 +319,9 @@ ALTER TABLE atlas_app.person ADD COLUMN firebase_app_instance_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.person ADD COLUMN accepted_policies text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.person ADD COLUMN last_ride_rating integer ;
+ALTER TABLE atlas_app.person ADD COLUMN last_ride_end_time timestamp with time zone ;
