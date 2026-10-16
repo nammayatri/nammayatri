@@ -23,6 +23,7 @@ module SharedLogic.SharedCab.Schedule
     allocationSeedWanted,
     watchPlan,
     reseedAllocationTick,
+    keepChainsAlive,
     ownExpiryChain,
     claimExpiryRun,
     scheduleNextExpiry,
@@ -144,6 +145,15 @@ reseedAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id 
 reseedAllocationTick merchantId mocId = do
   tickSec <- tickSecOf mocId
   ensureChain (allocChain tickSec merchantId mocId)
+
+-- | A rider polling a live shared-cab leg is proof the city needs its chains: a scheduler killed and restarted, or a lost job, would
+-- otherwise leave them dead until new demand. Both seeds are set-if-absent on the chain guards, so a live chain costs one cheap
+-- read; a failure here never touches the caller's response.
+keepChainsAlive :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+keepChainsAlive merchantId mocId =
+  withTryCatch "sharedCab:keepChainsAlive" (reseedAllocationTick merchantId mocId >> ensureExpiryJob merchantId mocId) >>= \case
+    Left err -> logError $ "sharedCab: could not keep the chains alive for " <> mocId.getId <> ": " <> show err
+    Right () -> pure ()
 
 claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
 claimTickRun mocId = do

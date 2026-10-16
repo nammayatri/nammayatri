@@ -660,8 +660,10 @@ getMultimodalJourneyStatus ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
-getMultimodalJourneyStatus (_, _) journeyId = do
-  (journeyStatusResp, _) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
+getMultimodalJourneyStatus (_, merchantId) journeyId = do
+  (journeyStatusResp, legs) <- getMultimodalJourneyStatusAndLegs journeyId Nothing
+  -- a rider polling a live cab leg keeps the city's job chains alive (see SharedCab.keepChainsAlive)
+  mapM_ (SharedCab.keepChainsAlive merchantId) (SharedCab.liveCabLegCities legs)
   return journeyStatusResp
 
 getMultimodalJourneyStatusAndLegs ::

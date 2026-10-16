@@ -12,6 +12,7 @@ import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.IntegratedBPPConfig (newestNonCab)
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
+import "rider-app" SharedLogic.SharedCab.LegState (SharedCabState (..), legNeedsChains)
 import "rider-app" SharedLogic.SharedCab.Schedule (ChainName (..), ChainVerdict (..), NextStep (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, chainsSeededBy, nextStepFor, watchPlan)
 import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
@@ -48,6 +49,9 @@ tests =
           newestNonCab fst snd ([] :: [(Text, UTCTime)])
         )
           @?= (Just ("chennai_b", t 3), Just ("chennai_c", t 2), Nothing, Nothing),
+      testCase "a rider polling a leg that is not over keeps the city's chains alive; a finished or cancelled leg does not" $
+        map legNeedsChains [FINDING, ALLOCATED, ARRIVING, FALLBACK, BOARDED, DEGRADED, DROPPED, CANCELLED]
+          @?= [True, True, True, True, True, True, False, False],
       testCase "every chain is watched by another, and the frequent allocation tick watches the expiry chain" $
         map chainsSeededBy [AllocationChain, ExpiryChain, SweepChain] @?= [[ExpiryChain], [AllocationChain, SweepChain], [ExpiryChain]],
       testCase "a tick that could not read the guard enqueues its next tick without writing the guard" $

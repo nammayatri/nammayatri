@@ -2,17 +2,20 @@
 
 module SharedLogic.SharedCab.JourneyLeg
   ( getSharedCabLegState,
+    liveCabLegCities,
     noBookingLegState,
   )
 where
 
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (nub)
 import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import Domain.Types.FRFSSearch (FRFSSearch)
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
@@ -36,6 +39,12 @@ import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
 type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r)
+
+-- | The cities where a polled journey status shows a shared-cab leg that is not over (see 'SharedCabLeg.legNeedsChains').
+liveCabLegCities :: [JT.JourneyLegState] -> [Id DMOC.MerchantOperatingCity]
+liveCabLegCities legs = nub [d.merchantOperatingCityId | d <- datas, Just cab <- [d.sharedCab], SharedCabLeg.legNeedsChains cab.state]
+  where
+    datas = concatMap (\case JT.Single d -> [d]; JT.Transit ds -> ds) legs
 
 type CabTrack = (SharedCabLeg.CabPosition, Maybe Int, Maybe Int)
 

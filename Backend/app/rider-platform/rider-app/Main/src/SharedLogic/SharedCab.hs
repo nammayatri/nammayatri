@@ -18,6 +18,8 @@ module SharedLogic.SharedCab
     onBookingCreated,
     confirmHook,
     getSharedCabLegState,
+    liveCabLegCities,
+    keepChainsAlive,
     noBookingLegState,
     SharedCabBoardOutcome (..),
     tryBoardSharedCab,
@@ -38,8 +40,9 @@ import SharedLogic.SharedCab.Cancel (CancelStage (..), dropRider, guardRiderCanc
 import SharedLogic.SharedCab.ConfirmHook (SharedCabConfirmFlow, confirmHook, onBookingCreated)
 import SharedLogic.SharedCab.Demand (recordSearch, sharedCabBoardStops)
 import SharedLogic.SharedCab.Enabled (requireSharedCabEnabled)
-import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, noBookingLegState)
+import SharedLogic.SharedCab.JourneyLeg (getSharedCabLegState, liveCabLegCities, noBookingLegState)
 import SharedLogic.SharedCab.LegState (isSharedCabAgency, sharedCabFareTiers)
 import SharedLogic.SharedCab.RefundDecision (Refund, cancelRefund, isSharedCabBooking, readRefundDecision, refundAmounts, refundWithheld)
+import SharedLogic.SharedCab.Schedule (keepChainsAlive)
 import SharedLogic.SharedCab.Session (filterCabLegs)
 import SharedLogic.SharedCab.WalkUp (cabRouteServiceTier, cabRouteStations, routeServiceability, walkUpVehicleData, withoutCabRows)

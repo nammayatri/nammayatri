@@ -9,6 +9,7 @@ module SharedLogic.SharedCab.LegState
     fallbackReached,
     fallbackTimeElapsed,
     isSharedCabAgency,
+    legNeedsChains,
     sharedCabLegMode,
     sharedCabFareTiers,
     deriveSharedCabState,
@@ -101,6 +102,10 @@ fallbackDue now g = fallbackReached now g.maxAttempts g.attempts g.findingSince 
 
 fallbackReached :: UTCTime -> Int -> Int -> UTCTime -> Int -> Bool
 fallbackReached now maxAttempts attempts findingSince fallbackAfterSec = attempts >= maxAttempts || fallbackTimeElapsed now findingSince fallbackAfterSec
+
+-- | A leg that is not over still depends on the city's allocation and expiry chains.
+legNeedsChains :: SharedCabState -> Bool
+legNeedsChains = (`notElem` [DROPPED, CANCELLED])
 
 deriveSharedCabState :: UTCTime -> JMState.JourneyBookingStatus -> Maybe Text -> Bool -> Maybe FallbackGate -> Maybe UTCTime -> Maybe SharedCabState
 deriveSharedCabState now bookingStatus mbVehicleNumber hasLiveSession fallbackGate arrivalDeadline = case bookingStatus of
