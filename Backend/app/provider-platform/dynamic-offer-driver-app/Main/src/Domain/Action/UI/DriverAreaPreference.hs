@@ -31,6 +31,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.AreaPreference as AreaPref
 import qualified Storage.CachedQueries.GeohashArea as CQGA
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -45,7 +46,8 @@ getDriverAreaPreferenceGetInfo (mbPersonId, _, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   minCells <- getMinCells merchantOpCityId
-  pure $ buildInfoRes minCells person.driverTag
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
+  pure $ buildInfoRes fleetDisablesPreference minCells person.driverTag
 
 postDriverAreaPreferenceUpdateInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -70,7 +72,8 @@ postDriverAreaPreferenceUpdateInfo (mbPersonId, _, merchantOpCityId) req = do
            in retained <> newTags
       updatedTags = maybe tagsAfterSelection (`setEnabledTag` tagsAfterSelection) req.enabled
   QPerson.updateDriverTag (if null updatedTags then Nothing else Just updatedTags) personId
-  pure $ buildInfoRes minCells (Just updatedTags)
+  fleetDisablesPreference <- isAreaPreferenceDisabledByFleet merchantOpCityId personId
+  pure $ buildInfoRes fleetDisablesPreference minCells (Just updatedTags)
   where
     tagNameOf (LYT.TagNameValueExpiry txt) = case T.splitOn "#" txt of
       (name : _) -> Just name
@@ -89,6 +92,10 @@ getDriverAreaPreferenceList ::
 getDriverAreaPreferenceList (_, _, merchantOpCityId) = do
   areas <- CQGA.findAllByMerchantOperatingCity merchantOpCityId
   pure [APIT.GeohashAreaItem {geohash = a.geohash, areaName = a.areaName} | a <- areas]
+
+isAreaPreferenceDisabledByFleet :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow Bool
+isAreaPreferenceDisabledByFleet merchantOpCityId personId =
+  maybe False (.disableDriverAreaAndDistancePreference) <$> QFDA.getDriverFleetAutoAssignConfig personId merchantOpCityId
 
 getMinCells ::
   Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
@@ -124,23 +131,25 @@ validateSelection merchantOpCityId minCells = \case
 -- needed at read time, since cell tags already carry their area name as the
 -- tag value. minCells is threaded in rather than refetched here, since both
 -- callers already have it (from getMinCells).
-buildInfoRes :: Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
-buildInfoRes minCells mbTags =
+buildInfoRes :: Bool -> Int -> Maybe [LYT.TagNameValueExpiry] -> APIT.AreaPreferenceInfoRes
+buildInfoRes fleetDisablesPreference minCells mbTags =
   case AreaPref.driverAreaPreferenceFromTags (fromMaybe [] mbTags) of
-    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled}
+    Nothing -> APIT.AreaPreferenceInfoRes {selectedGeohashAreas = [], radiusArea = Nothing, minCells = minCells, enabled = enabled, lockedByFleet = Just fleetDisablesPreference}
     Just (AreaPref.PreferredRadius center radiusMeters) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [],
           radiusArea = Just APIT.RadiusAreaSelection {center = center, radiusMeters = radiusMeters},
           minCells = minCells,
-          enabled = enabled
+          enabled = enabled,
+          lockedByFleet = Just fleetDisablesPreference
         }
     Just (AreaPref.PreferredGeohashCells cells) ->
       APIT.AreaPreferenceInfoRes
         { selectedGeohashAreas = [APIT.SelectedGeohashArea {geohash = c, areaName = areaName} | (c, areaName) <- cells],
           radiusArea = Nothing,
           minCells = minCells,
-          enabled = enabled
+          enabled = enabled,
+          lockedByFleet = Just fleetDisablesPreference
         }
   where
     enabled = AreaPref.isAreaPreferenceEnabled (fromMaybe [] mbTags)

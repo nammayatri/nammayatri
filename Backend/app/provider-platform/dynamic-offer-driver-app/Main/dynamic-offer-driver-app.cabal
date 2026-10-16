@@ -541,6 +541,7 @@ library
       Domain.Types.Feedback.FeedbackForm
       Domain.Types.FinancialYear
       Domain.Types.FleetOperatorTripAction
+      Domain.Types.FleetPoolingPriority
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
@@ -941,6 +942,7 @@ library
       Storage.ConfigPilot.Config.DocumentVerificationStagesConfig
       Storage.ConfigPilot.Config.DriverPoolConfig
       Storage.ConfigPilot.Config.Exophone
+      Storage.ConfigPilot.Config.FleetConfig
       Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig
       Storage.ConfigPilot.Config.GoHomeConfig
       Storage.ConfigPilot.Config.IssueConfig
