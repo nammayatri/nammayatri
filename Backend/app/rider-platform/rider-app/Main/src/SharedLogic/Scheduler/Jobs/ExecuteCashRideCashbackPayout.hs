@@ -32,5 +32,5 @@ executeCashRideCashbackPayoutJob ::
   m ExecutionResult
 executeCashRideCashbackPayoutJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let personId = jobInfo.jobData.personId
-  runCashbackPayout personId
+  void $ runCashbackPayout personId Nothing
   pure Complete

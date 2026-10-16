@@ -1,4 +1,4 @@
-module SharedLogic.Finance.CashbackPayout (runCashbackPayout) where
+module SharedLogic.Finance.CashbackPayout (runCashbackPayout, CashbackPayoutCheck (..), CashbackPayoutPlan (..), checkCashbackPayout) where
 
 import Domain.Types.PayoutConfig (PayoutConfig)
 import Domain.Types.Person (Person)
@@ -49,9 +49,12 @@ type CashbackPayoutFlow m r c =
 
 -- | One cashback payout attempt for a rider, guarded by a per-person lock: eligibility, payout
 --   request, and on PayoutInitiated the OwnerPayoutLiability hold.
-runCashbackPayout :: (CashbackPayoutFlow m r c) => Id Person -> m ()
-runCashbackPayout personId =
-  PayoutRequest.runPayoutUnderLock ("CashRideCashbackPayoutJob:" <> personId.getId) 120 (findCashbackPayoutAmount personId) submitCashbackPayout
+--   The optional (orderId, amount) is an order to re-send under its own id. It is reused only if the
+--   amount owed, worked out under the lock, still equals that order's amount.
+--   Returns Nothing if nothing was due under the lock, else whether the order id was reused.
+runCashbackPayout :: (CashbackPayoutFlow m r c) => Id Person -> Maybe (Text, HighPrecMoney) -> m (Maybe Bool)
+runCashbackPayout personId mbReuseOrder =
+  PayoutRequest.runPayoutUnderLock ("CashRideCashbackPayoutJob:" <> personId.getId) 120 (findCashbackPayoutAmount personId) (submitCashbackPayout mbReuseOrder)
 
 data CashbackPayoutPlan = CashbackPayoutPlan
   { person :: Person,
@@ -61,40 +64,54 @@ data CashbackPayoutPlan = CashbackPayoutPlan
     totalAmount :: HighPrecMoney
   }
 
+data CashbackPayoutCheck
+  = NoPayoutVpa
+  | NoPendingCashback
+  | NoPayoutConfig
+  | Payable CashbackPayoutPlan
+
 findCashbackPayoutAmount :: (CashbackPayoutFlow m r c) => Id Person -> m (Maybe CashbackPayoutPlan)
 findCashbackPayoutAmount personId = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  case person.payoutVpa of
-    Nothing -> do
-      logError $ "Skipping cashback payout — missing payout VPA for person: " <> person.id.getId
+  checkCashbackPayout person >>= \case
+    Payable plan -> pure (Just plan)
+    NoPayoutVpa -> do
+      logError $ "Skipping cashback payout — missing payout VPA for person: " <> personId.getId
       pure Nothing
-    Just payoutVpa -> do
-      (_walletBalance, unsettledWithNet) <- RidePaymentFinance.getPayoutEligibilityData DA.RIDER personId
-      let cashbackEntries =
-            filter
-              (\(e, _) -> e.referenceType == RidePaymentFinance.ridePaymentRefCashbackPayout)
-              unsettledWithNet
-          totalAmount = sum (map snd cashbackEntries)
-      if null cashbackEntries
-        then do
-          logInfo $ "No eligible cashback entries for person=" <> personId.getId
-          pure Nothing
-        else
-          if totalAmount <= 0
-            then do
-              logInfo $ "Cashback net total non-positive (" <> show totalAmount <> ") for person=" <> personId.getId <> " — skipping"
-              pure Nothing
-            else do
-              mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
-              case mbPayoutConfig of
-                Nothing -> do
-                  logError $ "PayoutConfig not found for city=" <> person.merchantOperatingCityId.getId <> " — skipping payout for person=" <> personId.getId
-                  pure Nothing
-                Just payoutConfig ->
-                  pure $ Just CashbackPayoutPlan {person, payoutVpa, payoutConfig, cashbackEntries = map fst cashbackEntries, totalAmount}
+    NoPendingCashback -> do
+      logInfo $ "No eligible cashback entries for person=" <> personId.getId
+      pure Nothing
+    NoPayoutConfig -> do
+      logError $ "PayoutConfig not found for city=" <> person.merchantOperatingCityId.getId <> " — skipping payout for person=" <> personId.getId
+      pure Nothing
 
-submitCashbackPayout :: (CashbackPayoutFlow m r c) => CashbackPayoutPlan -> m ()
-submitCashbackPayout CashbackPayoutPlan {..} = do
+checkCashbackPayout :: (CashbackPayoutFlow m r c) => Person -> m CashbackPayoutCheck
+checkCashbackPayout person = case person.payoutVpa of
+  Nothing -> pure NoPayoutVpa
+  Just payoutVpa -> do
+    (_walletBalance, unsettledWithNet) <- RidePaymentFinance.getPayoutEligibilityData DA.RIDER person.id
+    let cashbackEntries =
+          filter
+            (\(e, _) -> e.referenceType == RidePaymentFinance.ridePaymentRefCashbackPayout)
+            unsettledWithNet
+        totalAmount = sum (map snd cashbackEntries)
+    if null cashbackEntries || totalAmount <= 0
+      then pure NoPendingCashback
+      else do
+        mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
+        case mbPayoutConfig of
+          Nothing -> pure NoPayoutConfig
+          Just payoutConfig ->
+            pure $ Payable CashbackPayoutPlan {person, payoutVpa, payoutConfig, cashbackEntries = map fst cashbackEntries, totalAmount}
+
+submitCashbackPayout :: (CashbackPayoutFlow m r c) => Maybe (Text, HighPrecMoney) -> CashbackPayoutPlan -> m Bool
+submitCashbackPayout mbReuseOrder CashbackPayoutPlan {..} = do
+  let mbReuseOrderId = case mbReuseOrder of
+        Just (orderId, orderAmount) | orderAmount == totalAmount -> Just orderId
+        _ -> Nothing
+  whenJust mbReuseOrder $ \(orderId, orderAmount) ->
+    when (isNothing mbReuseOrderId) $
+      logInfo $ "Cashback owed changed for person=" <> person.id.getId <> ", not reusing order " <> orderId <> ": order amount=" <> show orderAmount <> " owed=" <> show totalAmount
   merchantOperatingCity <-
     CQMOC.findById person.merchantOperatingCityId
       >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
@@ -129,6 +146,7 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
             coverageFrom = Nothing,
             coverageTo = Nothing,
             ledgerEntryIds = map (.getId) originalEntryIds, -- TODO :: Can be made empty in next release `[]` as now using Redis for storing ids for not bloating DB rows with ids in a row.
+            reuseOrderId = mbReuseOrderId,
             payoutServiceFlow = Payout.JuspayFlow -- StripeFlow not supported currently in rider-app
           }
   -- Reserve the entries before calling Juspay, so no other run picks them while the order is in flight.
@@ -171,3 +189,4 @@ submitCashbackPayout CashbackPayoutPlan {..} = do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err
       Notify.notifyRiderPayoutStatus person "OFFER_CASHBACK_FAILED" totalAmount
+  pure (isJust mbReuseOrderId)

@@ -76,7 +76,8 @@ data PayoutSubmission = PayoutSubmission
     payoutType :: Maybe PayoutType,
     coverageFrom :: Maybe UTCTime,
     coverageTo :: Maybe UTCTime,
-    ledgerEntryIds :: [Text]
+    ledgerEntryIds :: [Text],
+    reuseOrderId :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -214,10 +215,10 @@ runPayoutUnderLock ::
   Text -> -- lock key
   Int -> -- lock ttl (seconds)
   m (Maybe a) -> -- find what to pay; Nothing = nothing to pay now
-  (a -> m ()) -> -- initiate the payout
-  m ()
+  (a -> m b) -> -- initiate the payout
+  m (Maybe b) -- Nothing = nothing was due under the lock
 runPayoutUnderLock lockKey lockTtl findPayoutAmount initiatePayout =
-  Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForPayoutLock" lockKey lockTtl 100 (findPayoutAmount >>= (`whenJust` initiatePayout))
+  Redis.withWaitAndLockMasterCloudCrossAppRedis "payout" "waitForPayoutLock" lockKey lockTtl 100 (findPayoutAmount >>= mapM initiatePayout)
 
 makePayoutEntryIdsKey :: Text -> Text
 makePayoutEntryIdsKey payoutRequestId = "payout-entry-ids:" <> payoutRequestId
@@ -269,7 +270,7 @@ submitPayoutRequest submission payoutCall afterPayoutOrderCreated = do
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
   -- 2. Execute
-  executionResult <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
+  executionResult <- executePayoutRequestInternal submission.reuseOrderId submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
   case executionResult of
     PayoutExecuted po -> pure $ PayoutInitiated payoutRequest po
     PayoutNotExecutable status -> pure $ PayoutProcessing payoutRequest status
@@ -293,7 +294,7 @@ executePayoutRequest ::
   (PayoutOrder.PayoutOrder -> m ()) ->
   m (Maybe PayoutOrder.PayoutOrder)
 executePayoutRequest currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated = do
-  executionResult <- executePayoutRequestInternal Nothing currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
+  executionResult <- executePayoutRequestInternal Nothing Nothing currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated
   pure $ case executionResult of
     PayoutExecuted po -> Just po
     _ -> Nothing
@@ -309,6 +310,7 @@ executePayoutRequestInternal ::
     FinanceBeamFlow.BeamFlow m r,
     Finance.HasActorInfo m r
   ) =>
+  Maybe Text ->
   Maybe HighPrecMoney -> -- explicit transferAmount override (Nothing = use amount)
   Currency ->
   Payout.PayoutServiceFlow ->
@@ -316,13 +318,13 @@ executePayoutRequestInternal ::
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
   (PayoutOrder.PayoutOrder -> m ()) ->
   m PayoutExecutionResult
-executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated = do
+executePayoutRequestInternal mbReuseOrderId mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall afterPayoutOrderCreated = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
       pure $ PayoutNotExecutable payoutRequest.status
     else do
-      orderId <- generateGUID
+      orderId <- maybe generateGUID pure mbReuseOrderId
       createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow mbTransferAmount
       let merchantId = Id payoutRequest.merchantId
           mbMocId = Just $ Id payoutRequest.merchantOperatingCityId
@@ -332,7 +334,8 @@ executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutR
 
       logDebug $ "Executing payout for PayoutRequest " <> payoutRequest.id.getId <> " | orderId: " <> orderId <> " | amount: " <> show (fromMaybe 0 payoutRequest.amount)
 
-      result <- try $ DPayment.createPayoutService merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing afterPayoutOrderCreated
+      let createPayout = if isJust mbReuseOrderId then DPayment.resendNeverSentPayoutService else DPayment.createPayoutService
+      result <- try $ createPayout merchantId mbMocId personId (Just [payoutRequest.id.getId]) (Just entityName) city createPayoutOrderReq payoutCall Nothing afterPayoutOrderCreated
       case result of
         Left (err :: SomeException) -> do
           logError $ "Payout service call failed for PayoutRequest " <> payoutRequest.id.getId <> ": " <> show err
