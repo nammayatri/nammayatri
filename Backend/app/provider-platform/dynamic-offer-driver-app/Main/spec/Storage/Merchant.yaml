@@ -1116,6 +1116,9 @@ TransporterConfig:
       connectAccountChargeTimeOfDay: Maybe Text
       connectAccountChargeDayOfWeek: Maybe Int
       connectAccountChargeDayOfMonth: Maybe Int
+      subscriptionFromWallet: Maybe Bool
+      enforceMinWalletBalance: Maybe Bool
+      autopayRechargeAmount: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
@@ -2233,6 +2236,15 @@ TransporterConfig:
     findExotelAppletMappingByMOCID:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+    # Driver wallet + ride GST are not in `update`'s column list (that list is a fixed set), so the dashboard
+    # config update uses this dedicated writer: it touches only these two JSON columns.
+    updateDriverWalletAndTaxConfig:
+      kvFunction: updateOneWithKV
+      fullObjectAsParam: true
+      where: merchantOperatingCityId
+      params:
+        - driverWalletConfig
+        - taxConfig
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE

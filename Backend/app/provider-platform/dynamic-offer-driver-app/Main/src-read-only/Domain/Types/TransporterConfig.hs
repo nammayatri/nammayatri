@@ -472,7 +472,8 @@ data DemandHotspotsConfig = DemandHotspotsConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data DriverWalletConfig = DriverWalletConfig
-  { clubProjectFareInEarnings :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
+  { autopayRechargeAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    clubProjectFareInEarnings :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
     clubProjectFareInPayouts :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
     clubProjectFareInRefundsInvoice :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
     clubProjectFareInRideInvoice :: Kernel.Prelude.Maybe [Domain.Types.TransporterConfig.ProjectFareParamsComponent],
@@ -487,6 +488,7 @@ data DriverWalletConfig = DriverWalletConfig
     enableWalletGatedTierCheck :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
+    enforceMinWalletBalance :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forceOnlineLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,
@@ -499,7 +501,8 @@ data DriverWalletConfig = DriverWalletConfig
     paymentChargeRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     paymentChargeVat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     payoutCutOffDays :: Kernel.Prelude.Int,
-    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
+    payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig,
+    subscriptionFromWallet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 

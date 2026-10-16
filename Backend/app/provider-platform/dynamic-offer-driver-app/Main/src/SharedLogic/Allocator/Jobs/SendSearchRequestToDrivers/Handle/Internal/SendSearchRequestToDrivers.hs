@@ -90,6 +90,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import SharedLogic.FarePolicy
 import SharedLogic.Finance.Wallet (addOfferHoldsForSearchTry)
+import SharedLogic.Finance.WalletAccount (isMinBalanceEnforced)
 import SharedLogic.GoogleTranslate
 import qualified SharedLogic.MetricsLabels as SML
 import SharedLogic.Ride (offerQuoteLockKeyWithCoolDown)
@@ -110,7 +111,7 @@ import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
-import Storage.Queries.Person.GetNearestDrivers (isDriverModeEligibleHelper)
+import Storage.Queries.Person.GetNearestDrivers (isDriverModeEligibleHelper, isWalletMinBalanceEligible)
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -698,8 +699,9 @@ attemptPriorityDirectAssign merchant searchReq searchTry tripQuoteDetails citySe
             -- reject at dispatch every driver that pooling just admitted.
             let isPrepaidEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
                 isBillingEligible d = d.subscribed || isExemptFromPostpaidDuesFlag isPrepaidEnabled d.fleetOwnerId d.rideBillingModel
+                walletMinBalanceEnforced = isMinBalanceEnforced transporterConfig.driverWalletConfig
                 isStillLive =
-                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isBillingEligible d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
+                  maybe False (\d -> not d.blocked && d.enabled && not (fromMaybe False d.isDisabledReasonFlag) && isBillingEligible d && isWalletMinBalanceEligible walletMinBalanceEnforced now cityServiceTiers d && isDriverModeEligibleHelper d.mode d.active) mbFreshPoolData
                     && stillHasTierSelected
                     && stillHasAutoAcceptTierSelected
                 -- No LTS entry at all reads as on-ride/unavailable, never as eligible.

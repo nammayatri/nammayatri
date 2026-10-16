@@ -45,7 +45,7 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("DISTANCE_FARE", "Distance Fare"),
                   ("DRIVER_SELECTED_FARE", "Driver Selected Fare"),
                   ("EXTRA_TIME_FARE", "Extra Time Fare"),
-                  ("FIXED_GOVERNMENT_RATE", "Fixed Government Fare"),
+                  ("FIXED_GOVERNMENT_RATE", "GST"),
                   ("NIGHT_SHIFT_CHARGE", "Night Shift Charge"),
                   ("RIDE_DURATION_FARE", "Ride duration Fare"),
                   ("PLATFORM_FEE", "Platform Fee"),

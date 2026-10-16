@@ -234,6 +234,30 @@ mkBlockErrorPayload expiryTime reason reasonDescription =
       blockReasonDescription = if reason == Just ByDashboard then Nothing else reasonDescription
     }
 
+data WalletBlockReason = MIN_BALANCE | DUES_LIMIT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data WalletBalanceBelowMinimumPayload = WalletBalanceBelowMinimumPayload
+  { balance :: HighPrecMoney,
+    requiredBalance :: HighPrecMoney,
+    shortfall :: HighPrecMoney,
+    reason :: WalletBlockReason,
+    autopayActive :: Bool,
+    nextAutopayRechargeAt :: Maybe UTCTime
+  }
+  deriving (Eq, Show, IsBecknAPIError)
+
+instance ToJSON WalletBalanceBelowMinimumPayload where
+  toJSON (WalletBalanceBelowMinimumPayload walletBalance required walletShortfall blockReason isAutopayActive nextRechargeAt) =
+    object
+      [ "balance" .= walletBalance,
+        "requiredBalance" .= required,
+        "shortfall" .= walletShortfall,
+        "reason" .= blockReason,
+        "autopayActive" .= isAutopayActive,
+        "nextAutopayRechargeAt" .= nextRechargeAt
+      ]
+
 data DriverError
   = DriverAccountDisabled
   | DriverWithoutVehicle Text
@@ -258,6 +282,7 @@ data DriverError
   | AvailableForRidesDailyLimitExceeded Int
   | UnacceptedMandatoryPolicies [Common.PolicyType]
   | AvailableForRidesNotIdleEnough Int
+  | WalletBalanceBelowMinimum WalletBalanceBelowMinimumPayload
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -286,6 +311,7 @@ instance IsBaseError DriverError where
   toMessage (AvailableForRidesDailyLimitExceeded dailyLimit) = Just $ "Available for rides can be used at most " <> show dailyLimit <> " times a day."
   toMessage (UnacceptedMandatoryPolicies types) = Just $ "Cannot go online: unaccepted mandatory policies: " <> T.intercalate ", " (map (T.pack . show) types)
   toMessage (AvailableForRidesNotIdleEnough minIdleMinutes) = Just $ "Available for rides can be turned on only after " <> show minIdleMinutes <> " minutes online without a ride request."
+  toMessage (WalletBalanceBelowMinimum (WalletBalanceBelowMinimumPayload walletBalance required _ _ _ _)) = Just $ "Wallet balance " <> show walletBalance <> " is below the required " <> show required <> ". Recharge your wallet to go online."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -312,6 +338,7 @@ instance IsHTTPError DriverError where
     AvailableForRidesDailyLimitExceeded _ -> "AVAILABLE_FOR_RIDES_DAILY_LIMIT_EXCEEDED"
     UnacceptedMandatoryPolicies _ -> "UNACCEPTED_MANDATORY_POLICIES"
     AvailableForRidesNotIdleEnough _ -> "AVAILABLE_FOR_RIDES_NOT_IDLE_ENOUGH"
+    WalletBalanceBelowMinimum _ -> "WALLET_BALANCE_BELOW_MINIMUM"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -336,9 +363,11 @@ instance IsHTTPError DriverError where
     AvailableForRidesDailyLimitExceeded _ -> E429
     UnacceptedMandatoryPolicies _ -> E403
     AvailableForRidesNotIdleEnough _ -> E400
+    WalletBalanceBelowMinimum _ -> E402
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
+  toPayload (WalletBalanceBelowMinimum errorPayload) = toJSON errorPayload
   toPayload _ = Null
 
 data DriverWalletError

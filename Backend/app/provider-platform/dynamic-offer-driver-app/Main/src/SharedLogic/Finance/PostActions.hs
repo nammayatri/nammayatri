@@ -28,6 +28,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logError)
 import qualified Lib.Finance as Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import SharedLogic.Finance.WalletBalanceCache (syncWalletBalanceToPool)
 import qualified SharedLogic.VehicleServiceTier as SVST
 
 -- | Same shape as the kernel's own runFinance -- call sites don't change their call pattern.
@@ -64,7 +65,10 @@ runPostActionsForAccount ::
   Bool ->
   Finance.AffectedAccount ->
   m ()
-runPostActionsForAccount walletGateEnabled account =
+runPostActionsForAccount walletGateEnabled account = do
+  when (account.accountType == FAccount.Liability && account.counterpartyType `elem` [Just FAccount.DRIVER, Just FAccount.FLEET_OWNER]) $
+    syncWalletBalanceToPool account.id `catchAny` \e ->
+      logError ("PostActions: wallet balance cache sync failed for accountId=" <> account.id.getId <> ", ignoring: " <> show e)
   when walletGateEnabled $
     case (account.accountType, account.counterpartyType, account.counterpartyId) of
       (FAccount.Liability, Just FAccount.DRIVER, Just driverIdText) ->

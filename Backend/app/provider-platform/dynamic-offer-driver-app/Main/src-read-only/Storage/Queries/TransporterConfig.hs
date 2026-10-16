@@ -107,6 +107,16 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
     ]
     [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+updateDriverWalletAndTaxConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
+updateDriverWalletAndTaxConfig (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.driverWalletConfig ((Just . Data.Aeson.toJSON) driverWalletConfig),
+      Se.Set Beam.taxConfig ((Just . Data.Aeson.toJSON) taxConfig),
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
+
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.TransporterConfig.TransporterConfig -> m ())
 updateByPrimaryKey (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
   _now <- getCurrentTime

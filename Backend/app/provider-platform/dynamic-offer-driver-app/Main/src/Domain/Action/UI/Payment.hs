@@ -112,6 +112,7 @@ import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.Finance.SubscriptionPurchase as SubscriptionPurchaseSvc
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.Finance.WalletSubscription as SWalletSubscription
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -555,35 +556,38 @@ processWalletTopupWebhook driver order transactionStatus = do
   QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
   when (transactionStatus == Payment.CHARGED) $ do
     let lockKey = "wallet:topup:lock:" <> order.id.getId
-    Redis.withLockRedis lockKey 60 $ do
-      existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
-      when (null existing) $ do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-        ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-        let topupInvoiceConfig =
-              InvoiceConfig
-                { invoiceType = BecknInvoice.SubscriptionPurchase,
-                  issuedToType = BecknInvoice.DRIVER,
-                  issuedToId = order.personId.getId,
-                  issuedToName = Nothing,
-                  issuedToAddress = Nothing,
-                  referenceId = Nothing,
-                  lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
-                  gstBreakdown = Nothing,
-                  isVat = False,
-                  issuedToTaxNo = Nothing,
-                  issuedByTaxNo = Nothing,
-                  paymentMode = Just "ONLINE", -- wallet topup goes through Juspay; always online
-                  periodStart = Nothing,
-                  periodEnd = Nothing
-                }
-        result <- runFinance ctx $ do
-          _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup Nothing
-          invoice topupInvoiceConfig
-        void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
-        let notificationTitle = "Wallet Top-up Successful"
-            notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
-        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
+    -- Also the wallet's running-balance lock, so this credit can't race another posting on the
+    -- same wallet (read-modify-write of the balance has no row lock).
+    Redis.withLockRedis lockKey 60 $
+      Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey order.personId.getId) 10 1000 $ do
+        existing <- getEntriesByReference walletReferenceTopup (order.id.getId)
+        when (null existing) $ do
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+          ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId) (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+          let topupInvoiceConfig =
+                InvoiceConfig
+                  { invoiceType = BecknInvoice.SubscriptionPurchase,
+                    issuedToType = BecknInvoice.DRIVER,
+                    issuedToId = order.personId.getId,
+                    issuedToName = Nothing,
+                    issuedToAddress = Nothing,
+                    referenceId = Nothing,
+                    lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
+                    gstBreakdown = Nothing,
+                    isVat = False,
+                    issuedToTaxNo = Nothing,
+                    issuedByTaxNo = Nothing,
+                    paymentMode = Just "ONLINE", -- wallet topup goes through Juspay; always online
+                    periodStart = Nothing,
+                    periodEnd = Nothing
+                  }
+          result <- runFinance ctx $ do
+            _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup Nothing
+            invoice topupInvoiceConfig
+          void $ fromEitherM (\e -> WalletBalanceUpdateFailed ("wallet topup: " <> show e)) result
+          let notificationTitle = "Wallet Top-up Successful"
+              notificationMessage = "Your wallet has been topped up with Rs." <> show order.amount
+          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_NOTIFY notificationTitle notificationMessage driver driver.deviceToken
 
 processPayment ::
   ( BeamFlow m r,
@@ -632,6 +636,7 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
       Redis.runInMasterCloudRedisCell $
         forM_ driverFeeIds $ \driverFeeId -> Redis.del (manualPaymentInProgressKey driverFeeId.getId)
       mapM_ (processNonClearedDriverFees merchantId driver) nonClearedDriverFees
+      SWalletSubscription.creditWalletForPaidDriverFees transporterConfig driver orderId.getId driverFees
     case innerLockRes of
       Left () -> logError $ "processPayment: payout lock held, skipped clearing driver fees for order " <> orderId.getId <> " driverFeeIds " <> show (driverFeeIds <&> (.getId)) <> "; invoice will still be marked SUCCESS and the fees stay uncleared until reconciled (clearDriverDues)"
       Right () -> pure ()

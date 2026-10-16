@@ -40,6 +40,7 @@ import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
+import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import qualified Domain.Types.TransporterConfig as DTConf
 import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
@@ -77,15 +78,23 @@ import qualified Lib.Payment.Storage.Queries.PayoutRequestExtra as QPayoutReques
 import SharedLogic.Finance.PostActions (runFinance)
 import SharedLogic.Finance.Prepaid (counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
+import qualified SharedLogic.Finance.WalletAccount as WA
+import qualified SharedLogic.Finance.WalletAutopay as WalletAutopay
+import qualified SharedLogic.Finance.WalletFloor as WalletFloor
 import SharedLogic.Finance.WalletPayout (WalletPayoutParams (..), computePayoutFee, ensurePayoutsEnabled, loadPayoutContext, runWalletPayout)
+import qualified SharedLogic.Finance.WalletSubscription as WalletSubscription
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.LedgerEntry as CHLE
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.Mandate as QMandate
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
 
@@ -110,7 +119,92 @@ getWalletBalance (mbPersonId, _merchantId, _mocId) = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let counterparty = counterpartyFromRole person.role
   currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
-  pure $ DriverWallet.WalletBalanceResponse {currentBalance}
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  let dwc = transporterConfig.driverWalletConfig
+      baseResponse =
+        DriverWallet.WalletBalanceResponse
+          { currentBalance,
+            walletStage = Nothing,
+            minimumBalance = Nothing,
+            isBelowMinimum = Nothing,
+            blockerEnforced = Nothing,
+            isWalletManaged = Nothing,
+            withdrawableBalance = Nothing,
+            autopay = Nothing
+          }
+  if not dwc.enableDriverWallet
+    then pure baseResponse
+    else do
+      mbVariant <- fmap (.variant) <$> QVehicle.findById driverId
+      tiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+      let mbMinimum = mbVariant >>= WA.tierMinimum tiers
+          isLive = WA.isWalletSubscriptionCity dwc
+      -- A wallet that isn't charged from yet, in a city where no tier minimum is configured, has nothing
+      -- new to show: the response stays what it always was.
+      if not isLive && isNothing mbMinimum
+        then pure baseResponse
+        else do
+          withdrawable <- getWithdrawableBalance person transporterConfig counterparty currentBalance
+          mbDriverPlan <- QDPlan.findByDriverIdWithServiceName driverId YATRI_SUBSCRIPTION
+          mbMandate <- maybe (pure Nothing) QMandate.findById (mbDriverPlan >>= (.mandateId))
+          mbRecharge <- WalletAutopay.findOpenAutopayRecharge driverId
+          let autopayInfo =
+                DriverWallet.WalletAutopayInfo
+                  { status = mbDriverPlan >>= (.autoPayStatus),
+                    mandateMaxAmount = (.maxAmount) <$> mbMandate,
+                    triggerBalance = mbVariant >>= WA.tierAutopayTrigger tiers,
+                    rechargeAmount = dwc.autopayRechargeAmount,
+                    nextRechargeAmount = (\recharge -> recharge.platformFee.fee) <$> mbRecharge,
+                    nextRechargeAt = (.payBy) <$> mbRecharge
+                  }
+          if not isLive
+            then
+              pure
+                baseResponse
+                  { DriverWallet.walletStage = Just DriverWallet.COMING_SOON,
+                    DriverWallet.minimumBalance = mbMinimum,
+                    DriverWallet.withdrawableBalance = withdrawable,
+                    DriverWallet.autopay = Just autopayInfo
+                  }
+            else do
+              -- Wallet page: the driver's own wallet (the one blocking uses, fleet driver or not), its minimum and Autopay.
+              (ownerCounterparty, ownerId) <- WalletSubscription.resolveWalletOwner driverId
+              ownerBalance <- fromMaybe 0 <$> WA.getWalletAvailableBalanceByOwner ownerCounterparty ownerId
+              mbFloor <- WalletFloor.getWalletFloor transporterConfig person mbVariant
+              pure
+                baseResponse
+                  { DriverWallet.walletStage = Just DriverWallet.LIVE,
+                    DriverWallet.minimumBalance = mbMinimum,
+                    DriverWallet.isBelowMinimum = Just (maybe False (`WalletFloor.isBelowWalletFloor` ownerBalance) mbFloor),
+                    DriverWallet.blockerEnforced = Just (WA.isMinBalanceEnforced dwc),
+                    DriverWallet.isWalletManaged = Just True,
+                    DriverWallet.withdrawableBalance = withdrawable,
+                    DriverWallet.autopay = Just autopayInfo
+                  }
+
+-- | What the driver could withdraw right now (the same figure the payout uses: redeemable credit minus
+--   ride and offer holds). Only computed where wallet payouts are enabled; elsewhere the balance
+--   response stays cheap and carries no figure.
+getWithdrawableBalance ::
+  DP.Person ->
+  DTConf.TransporterConfig ->
+  FAccount.CounterpartyType ->
+  HighPrecMoney ->
+  Environment.Flow (Maybe HighPrecMoney)
+getWithdrawableBalance person transporterConfig counterparty currentBalance
+  | not transporterConfig.driverWalletConfig.enableWalletPayout = pure Nothing
+  | otherwise = do
+    now <- getCurrentTime
+    mbWalletAcc <- WA.getWalletAccountByOwner counterparty person.id.getId
+    case mbWalletAcc of
+      Nothing -> pure (Just 0)
+      Just walletAcc -> do
+        let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+            cutoff = payoutCutoffTimeUTC timeDiff transporterConfig.driverWalletConfig.payoutCutOffDays now
+        eligibility <- getPayoutEligibilityData counterparty person.id.getId walletAcc.id currentBalance cutoff now
+        dbHoldBalance <- getWalletHoldBalanceByOwner counterparty person.id.getId
+        offerHoldBalance <- getWalletOfferHoldTotal person.id.getId
+        pure $ Just (max 0 (eligibility.redeemableBalance - dbHoldBalance - offerHoldBalance))
 
 --------------------------------------------------------------------------------
 -- getWalletTransactions
@@ -431,6 +525,15 @@ referenceTypeToItemName isVat ref
   | ref == walletReferencePGPaymentChargesVAT = "Payment Charge VAT"
   | ref == walletReferencePGPayoutCharges = "Payout Charge"
   | ref == walletReferenceConnectAccountCharges = "Connect Account Charge"
+  | ref == WalletSubscription.walletReferenceSubscriptionFee = "Subscription Fee"
+  | ref == WalletSubscription.walletReferenceSubscriptionGST = "Subscription Fee " <> taxLabel
+  | ref == WalletSubscription.walletReferenceSubscriptionPenalty = "Cancellation Penalty"
+  | ref == WalletSubscription.walletReferenceMigratedDues = "Pending Dues"
+  | ref == WalletSubscription.walletReferenceMigratedDuesGST = "Pending Dues " <> taxLabel
+  | ref == WalletSubscription.walletReferenceMigratedDuesPenalty = "Pending Cancellation Penalty"
+  | ref == WalletSubscription.walletReferenceAutopayRecharge = "Wallet Recharge (Autopay)"
+  | ref == WalletSubscription.walletReferenceLatePaymentCredit = "Late Payment Credited"
+  | ref == WalletSubscription.walletReferenceBehaviourPenalty = "Penalty"
   | otherwise = ref
   where
     taxLabel = if isVat then "VAT" else "GST"
@@ -617,6 +720,11 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
         when driverInfo.blocked $ throwError (DriverAccountBlocked (mkBlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag driverInfo.blockedReason))
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId0.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId0.getId)
+        -- Only enforced in wallet-subscription cities: elsewhere the flag was never read and defaults
+        -- to off, so enforcing it everywhere would break existing top-ups.
+        let dwc = transporterConfig.driverWalletConfig
+        when (WA.isWalletSubscriptionCity dwc && not dwc.enableWalletTopup) $ throwError $ InvalidRequest "Wallet top-up is not enabled in this city"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
           mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
           let mbReuseOrderId = case mbExisting of
@@ -739,6 +847,7 @@ recordAirportCashRecharge ::
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisLTSFlowEnv r,
+    Redis.HedisFlow m r,
     Finance.HasActorInfo m r
   ) =>
   (Id DP.Person, Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
@@ -756,46 +865,48 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId mbRea
   let isReversal = amount < 0
       absAmount = abs amount
       referenceType = if isReversal then walletReferenceAirportCashWithdrawal else walletReferenceAirportCashRecharge
-  existing <- getEntriesByReference referenceType referenceId
-  when (null existing) $ do
-    merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
-    let currency = merchantOpCity.currency
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-    ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
-    let cashRechargeInvoiceConfig =
-          InvoiceConfig
-            { invoiceType = SubscriptionPurchase,
-              issuedToType = DRIVER,
-              issuedToId = driverId.getId,
-              issuedToName = Nothing,
-              issuedToAddress = Nothing,
-              referenceId = Nothing,
-              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", descriptionType = Just AirportCashRecharge, quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, groupId = Just "g-airport", itemType = Just Fare}],
-              gstBreakdown = Nothing,
-              isVat = False,
-              issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing,
-              paymentMode = Just "CASH",
-              periodStart = Nothing,
-              periodEnd = Nothing
-            }
-    let mbLedgerMetadata =
-          mbReason <&> \reason ->
-            LedgerEntryMetadata
-              { d2cReferralEarnings = Nothing,
-                d2dReferralEarnings = Nothing,
-                dailyStatsId = Nothing,
-                driverPayable = Nothing,
-                payoutOrderId = Nothing,
-                reason = Just reason,
-                subscriptionAllocations = Nothing
+  -- Under the wallet lock so this credit can't interleave with another posting on the wallet.
+  Redis.withWaitAndLockRedis (makeWalletRunningBalanceLockKey driverId.getId) 10 1000 $ do
+    existing <- getEntriesByReference referenceType referenceId
+    when (null existing) $ do
+      merchantOpCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+      let currency = merchantOpCity.currency
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+      ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId (fromMaybe False transporterConfig.driverWalletConfig.enableWalletGatedTierCheck)
+      let cashRechargeInvoiceConfig =
+            InvoiceConfig
+              { invoiceType = SubscriptionPurchase,
+                issuedToType = DRIVER,
+                issuedToId = driverId.getId,
+                issuedToName = Nothing,
+                issuedToAddress = Nothing,
+                referenceId = Nothing,
+                lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", descriptionType = Just AirportCashRecharge, quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, groupId = Just "g-airport", itemType = Just Fare}],
+                gstBreakdown = Nothing,
+                isVat = False,
+                issuedToTaxNo = Nothing,
+                issuedByTaxNo = Nothing,
+                paymentMode = Just "CASH",
+                periodStart = Nothing,
+                periodEnd = Nothing
               }
-    result <-
-      runFinance ctx $
-        if isReversal
-          then void $ transfer OwnerLiability PlatformAsset absAmount referenceType mbLedgerMetadata
-          else do
-            _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
-            void $ invoice cashRechargeInvoiceConfig
-    (_, entryIds) <- fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
-    when isReversal $ markEntriesAsClaimed entryIds
+      let mbLedgerMetadata =
+            mbReason <&> \reason ->
+              LedgerEntryMetadata
+                { d2cReferralEarnings = Nothing,
+                  d2dReferralEarnings = Nothing,
+                  dailyStatsId = Nothing,
+                  driverPayable = Nothing,
+                  payoutOrderId = Nothing,
+                  reason = Just reason,
+                  subscriptionAllocations = Nothing
+                }
+      result <-
+        runFinance ctx $
+          if isReversal
+            then void $ transfer OwnerLiability PlatformAsset absAmount referenceType mbLedgerMetadata
+            else do
+              _ <- transfer PlatformAsset OwnerLiability amount referenceType mbLedgerMetadata
+              void $ invoice cashRechargeInvoiceConfig
+      (_, entryIds) <- fromEitherM (\e -> WalletLedgerEntryFailed ("airport cash recharge: " <> show e)) result
+      when isReversal $ markEntriesAsClaimed entryIds

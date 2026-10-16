@@ -12,6 +12,7 @@ imports:
   EntityName: Lib.Payment.Domain.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   WalletTransactionStatus: Domain.Types.WalletTransaction
+  DriverAutoPayStatus: Domain.Types.DriverInformation
 
 module: DriverWallet
 
@@ -69,8 +70,24 @@ types:
     totalPending: HighPrecMoney
     items: "[PayoutHistoryItem]"
 
+  WalletStage:
+    enum: "COMING_SOON,LIVE"
   WalletBalanceResponse:
     currentBalance: HighPrecMoney
+    walletStage: Maybe WalletStage # COMING_SOON: minimum configured, not yet charged from the wallet; LIVE: wallet-subscription city; Nothing: feature not configured
+    minimumBalance: Maybe HighPrecMoney
+    isBelowMinimum: Maybe Bool
+    blockerEnforced: Maybe Bool
+    isWalletManaged: Maybe Bool
+    withdrawableBalance: Maybe HighPrecMoney # only when wallet payouts are enabled for the city
+    autopay: Maybe WalletAutopayInfo
+  WalletAutopayInfo:
+    status: Maybe DriverAutoPayStatus
+    mandateMaxAmount: Maybe HighPrecMoney
+    triggerBalance: Maybe HighPrecMoney # Autopay adds money when the balance is at or below this
+    rechargeAmount: Maybe HighPrecMoney # the configured amount Autopay adds
+    nextRechargeAmount: Maybe HighPrecMoney
+    nextRechargeAt: Maybe UTCTime
 
   PaymentOrderInfo:
     id: Id PaymentOrder
