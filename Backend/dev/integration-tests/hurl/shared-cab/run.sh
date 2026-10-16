@@ -11,19 +11,28 @@ cd "$(dirname "$0")"
 env=${ENV:-local.env}
 date=$(TZ=Asia/Kolkata date +%F)
 var() { sed -n "s/^$1=//p" "$env"; }
+session_file=$(mktemp)
+trap 'rm -f "$session_file"' EXIT
 h() { hurl --test --variables-file "$env" --variable date="$date" "$@"; }
 # A failed flow leaves its CONFIRMED booking (tickets ACTIVE) holding seats on the cab, which starves the next flow. With
 # CLEAN_DB_URL set (a LOCAL rider-app Postgres only: localhost / 127.0.0.1 is enforced) every flow starts by cancelling them.
+# Raw SQL cancels bypass the app (status changes, updated_at and the Redis hash do not), so only the hurl rider's bookings are
+# touched: its id comes from the login (or CLEAN_RIDER_ID when TOKEN is given). Another rider's live booking is never cancelled.
 clean() {
   [ -n "${CLEAN_DB_URL:-}" ] || return 0
   case $CLEAN_DB_URL in
     *@localhost[:/]* | *@127.0.0.1[:/]* | *//localhost[:/]* | *//127.0.0.1[:/]*) ;;
     *) echo "CLEAN_DB_URL must point at a local database"; exit 2 ;;
   esac
-  psql "$CLEAN_DB_URL" -q -At <<'SQL'
+  local rider
+  rider=$(rider_id)
+  [ -n "$rider" ] || { echo "no hurl rider id (login failed; with TOKEN set, set CLEAN_RIDER_ID): not cleaning"; exit 2; }
+  psql "$CLEAN_DB_URL" -q -At -v rider="$rider" <<'SQL'
 UPDATE atlas_app.frfs_ticket SET status = 'CANCELLED'
- WHERE status IN ('ACTIVE', 'INPROGRESS') AND frfs_ticket_booking_id IN (SELECT id FROM atlas_app.frfs_ticket_booking WHERE service_tier_type = 'SHARED_CAB');
-UPDATE atlas_app.frfs_ticket_booking SET status = 'CANCELLED' WHERE service_tier_type = 'SHARED_CAB' AND status = 'CONFIRMED';
+ WHERE status IN ('ACTIVE', 'INPROGRESS') AND frfs_ticket_booking_id IN
+   (SELECT id FROM atlas_app.frfs_ticket_booking WHERE service_tier_type = 'SHARED_CAB' AND rider_id = :'rider');
+UPDATE atlas_app.frfs_ticket_booking SET status = 'CANCELLED'
+ WHERE service_tier_type = 'SHARED_CAB' AND status = 'CONFIRMED' AND rider_id = :'rider';
 SQL
 }
 
@@ -36,7 +45,10 @@ flush() {
   ${REDIS_CLI:-redis-cli} DEL "sharedcab:route:$(var route_a)" >/dev/null
   h flush-after.hurl
 }
-token() { echo "${TOKEN:-$(hurl --variables-file "$env" login.hurl | jq -r .token)}"; }
+# one login per run.sh invocation (/v2/auth is rate limited): the verify response is cached in a file
+session() { [ -s "$session_file" ] || hurl --variables-file "$env" login.hurl >"$session_file"; cat "$session_file"; }
+token() { echo "${TOKEN:-$(session | jq -r .token)}"; }
+rider_id() { echo "${CLEAN_RIDER_ID:-$(session 2>/dev/null | jq -r '.person.id // empty')}"; }
 rider() { clean; h --variable token="$(token)" rider-flow.hurl; }
 boarding() { clean; h --variable token="$(token)" boarding-flow.hurl; }
 quantity() { clean; h --variable token="$(token)" quantity-flow.hurl; }
@@ -57,6 +69,7 @@ suspended() {
 }
 
 case ${1:-all} in
+  clean) clean ;;
   driver) driver ;;
   flush) flush ;;
   rider) rider ;;
@@ -65,5 +78,5 @@ case ${1:-all} in
   suspended) suspended ;;
   quantity) quantity ;;
   all) driver; flush; rider; boarding; standalone; quantity ;;
-  *) echo "usage: $0 [driver|flush|rider|boarding|standalone|quantity|suspended|all]"; exit 2 ;;
+  *) echo "usage: $0 [clean|driver|flush|rider|boarding|standalone|quantity|suspended|all]"; exit 2 ;;
 esac
