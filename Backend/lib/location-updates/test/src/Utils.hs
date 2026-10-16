@@ -116,5 +116,6 @@ osrmConfig =
   OSRMConfig
     OSRMCfg
       { osrmUrl = fromJust $ parseBaseUrl "localhost:5001",
-        radiusDeviation = Just 20
+        radiusDeviation = Just 20,
+        trafficConfig = Nothing
       }
