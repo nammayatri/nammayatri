@@ -965,3 +965,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_enabled boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN shared_cab_max_cab_speed_mps integer ;

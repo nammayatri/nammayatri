@@ -219,6 +219,7 @@ data RiderConfig = RiderConfig
     sharedCabFindingTimeoutSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabLtsMaxAgeSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabMaxAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    sharedCabMaxCabSpeedMps :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabMaxNoShows :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabMovingTimerSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     sharedCabNoLocationSpotBookingsPerVehiclePerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

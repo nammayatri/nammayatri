@@ -242,6 +242,7 @@ Draining continues: `SharedCabAllocationTick` keeps rescheduling while the city 
 | `boardProximityM` | `shared_cab_board_proximity_m` | 150 | m | boarding proximity; rider-near-stop cancel check |
 | `boardAttemptsPer10Min` | `shared_cab_board_attempts_per10_min` | 5 | count per 600 s | boarding rate limit |
 | `noLocationSpotBookingsPerVehiclePerDay` | `shared_cab_no_location_spot_bookings_per_vehicle_per_day` | 5 | count per IST day | ops-flag log threshold |
+| `maxCabSpeedMps` | `shared_cab_max_cab_speed_mps` | 14 | m/s | candidate guard: straight-line distance to the stop must not exceed ETA x this + `atStopRadiusM` (`Select.etaPlausible`) |
 
 Other `rider_config` columns: `shared_cab_enabled` (boolean, section 6), `shared_cab_events_topic` (text, default `shared-cab-events`). No `transporter_config` column is read by rider-app. Storage columns outside rider_config: `frfs_ticket_booking.shared_cab_no_shows` (default 0), `person_stats.shared_cab_no_shows` (default 0).
 

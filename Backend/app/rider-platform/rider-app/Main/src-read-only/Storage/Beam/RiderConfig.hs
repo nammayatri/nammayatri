@@ -216,6 +216,7 @@ data RiderConfigT f = RiderConfigT
     sharedCabFindingTimeoutSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabLtsMaxAgeSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabMaxAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    sharedCabMaxCabSpeedMps :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabMaxNoShows :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabMovingTimerSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     sharedCabNoLocationSpotBookingsPerVehiclePerDay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

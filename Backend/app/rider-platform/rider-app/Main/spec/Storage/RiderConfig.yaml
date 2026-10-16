@@ -195,6 +195,7 @@ RiderConfig:
     sharedCabBoardProximityM: Maybe Int
     sharedCabBoardAttemptsPer10Min: Maybe Int
     sharedCabNoLocationSpotBookingsPerVehiclePerDay: Maybe Int
+    sharedCabMaxCabSpeedMps: Maybe Int
     sharedCabEnabled: Maybe Bool # ops off switch: Just False turns shared cab off for the city; null follows the SHARED_CAB IntegratedBPPConfig
     journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
