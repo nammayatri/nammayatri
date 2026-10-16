@@ -16,7 +16,6 @@ imports:
   VerifyAsyncResp : Kernel.External.Verification.Interface.Types
   CreateOrderResp: Kernel.External.Payment.Interface.Types
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
-  DocsVerificationStatus: Dashboard.Common
   IndianState: Kernel.Types.Beckn.Context
   AddressDocumentType: Dashboard.Common.Driver
   OnboardingAs: Dashboard.Common.Driver
@@ -365,7 +364,6 @@ types:
     - dateOfUpload: UTCTime
     - s3Path: Maybe Text
     - expiryDate: Maybe UTCTime
-    - docsVerificationStatus: Maybe DocsVerificationStatus
   DocumentsListResponse:
     - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]

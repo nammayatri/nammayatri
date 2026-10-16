@@ -20,7 +20,6 @@ imports:
   DbHash: Kernel.External.Encryption
   Meters: Kernel.Types.Common
   UpgradedTier: Domain.Types.UpgradedTier
-  DocsVerificationStatus: Domain.Types.DocsVerificationStatus
   InitiatedBy: Domain.Types.InitiatedBy
 DriverInformation:
   tableName: driver_information
@@ -175,7 +174,6 @@ DriverInformation:
     approved: Maybe Bool
     isNew: Maybe Bool
     preferredMapProvider: Maybe MapProvider
-    docsVerificationStatus: Maybe DocsVerificationStatus
     docsVerificationStatusUpdatedAt: Maybe UTCTime # Stamped by every unified-flow write of verified / approved / enabled / blocked; the onboarding lists sort by it.
     address: Maybe Text # deprecated: moved to driver_identity_info;
     addressDocumentType: Maybe AddressDocumentType # deprecated: moved to driver_identity_info;

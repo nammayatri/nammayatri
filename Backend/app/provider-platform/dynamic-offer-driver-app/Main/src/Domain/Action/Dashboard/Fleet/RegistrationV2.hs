@@ -31,7 +31,6 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.InitiatedBy as DIB
@@ -362,15 +361,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
     when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
       fork "initializing fleet analytics keys" $
         Analytics.updateFleetOwnerAnalyticsKeys person.id.getId (Just 0) (Just 0) (Just 0)
-    let defaultDocsVerificationStatus =
-          if transporterConfig.enableManualDocumentStatusCheck == Just True
-            then Just DDVS.ADMIN_PENDING
-            else Nothing
-    createFleetOwnerInfo person.id merchantId enabled merchantOpCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus mbFleetType
+    createFleetOwnerInfo person.id merchantId enabled merchantOpCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) mbFleetType
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Maybe FOI.FleetType -> Flow ()
-createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRate mbDocsVerificationStatus mbFleetType = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe FOI.FleetType -> Flow ()
+createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRate mbFleetType = do
   now <- getCurrentTime
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   let useUnifiedOnboardingFlagsRecompute = maybe False (\transporterConfig -> transporterConfig.unifiedOnboardingFlagsRecompute == Just True) mbTransporterConfig
@@ -424,7 +419,6 @@ createFleetOwnerInfo personId merchantId enabled merchantOperatingCityId mbTdsRa
             tollRouteBlockedTill = Nothing,
             weeklyCancellationRateBlockingCooldown = Nothing,
             payoutRegistrationOrderId = Nothing,
-            docsVerificationStatus = mbDocsVerificationStatus,
             docsVerificationStatusUpdatedAt = Nothing,
             address = Nothing,
             addressState = Nothing,

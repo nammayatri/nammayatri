@@ -311,7 +311,6 @@ data UDYAMDocumentMetadata = UDYAMDocumentMetadata {tdsRate :: Kernel.Prelude.Ma
 
 data VehicleDocumentItem = VehicleDocumentItem
   { dateOfUpload :: Kernel.Prelude.UTCTime,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     documents :: [DocumentStatusItem],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     imageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -417,9 +416,6 @@ type GetOnboardingRegisterStatus =
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
       :> QueryParam
-           "docsVerificationStatus"
-           Dashboard.Common.DocsVerificationStatus
-      :> QueryParam
            "enableDocumentMetadata"
            Kernel.Prelude.Bool
       :> QueryParam
@@ -445,9 +441,6 @@ type GetOnboardingRegisterStatusHelper =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
-      :> QueryParam
-           "docsVerificationStatus"
-           Dashboard.Common.DocsVerificationStatus
       :> QueryParam
            "enableDocumentMetadata"
            Kernel.Prelude.Bool
@@ -501,7 +494,7 @@ type GetOnboardingGetReferralDetailsHelper =
 
 data OnboardingAPIs = OnboardingAPIs
   { getOnboardingDocumentConfigs :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Role -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.OnboardingExtra.DocumentOnboardingStage -> EulerHS.Types.EulerClient DocumentVerificationConfigList,
-    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient StatusRes,
+    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient StatusRes,
     getOnboardingRegisterVehicleStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient RcVerifyStatusResp,
     postOnboardingVerify :: VerifyType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> VerifyReq -> EulerHS.Types.EulerClient VerifyDocumentRes,
     getOnboardingVehicleDocuments :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient VehicleDocumentStatusRes,

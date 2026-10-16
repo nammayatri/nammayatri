@@ -7,7 +7,6 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified Dashboard.Common.Driver as CommonDriver
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -30,7 +29,6 @@ getFleetOwnerList ::
     ) ->
     Kernel.Prelude.Maybe CommonDriver.ApprovalStatusFilter ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe DDVS.DocsVerificationStatus ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe FOI.FleetType ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
@@ -42,13 +40,13 @@ getFleetOwnerList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.Flow [API.FleetOwnerListItem]
   )
-getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked mbDocsVerificationStatus mbEnabled mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate mbVerified = do
+getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked mbEnabled mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate mbVerified = do
   let normalizedLimit = Just $ clampLimit $ fromMaybe 10 mbLimit
       normalizedOffset = Just $ max 0 $ fromMaybe 0 mbOffset
       targetOpCity = defaultOpCityId
       mbApprovalFilter = approvalStatusToFilter <$> mbApprovalStatus
       mbEnabledEffective = maybe mbOnlyEnabled Just mbEnabled
-  fleetOwnersWithPersons <- QFleetList.findFleetOwners targetOpCity mbFleetType mbDocsVerificationStatus mbFromDate mbSearchString mbBlocked mbToDate normalizedLimit normalizedOffset mbVerified mbApprovalFilter mbEnabledEffective
+  fleetOwnersWithPersons <- QFleetList.findFleetOwners targetOpCity mbFleetType mbFromDate mbSearchString mbBlocked mbToDate normalizedLimit normalizedOffset mbVerified mbApprovalFilter mbEnabledEffective
   let personMap = HM.fromList $ (\(_, p) -> (p.id, p)) <$> fleetOwnersWithPersons
   mapMaybeM (toApiItem personMap targetOpCity) (fst <$> fleetOwnersWithPersons)
   where
@@ -78,7 +76,6 @@ getFleetOwnerList (_mbPersonId, _, defaultOpCityId) mbApprovalStatus mbBlocked m
                   mobileNumber = mobileNumber,
                   mobileCountryCode = person.mobileCountryCode,
                   email = person.email,
-                  docsVerificationStatus = fleetOwnerInfo.docsVerificationStatus,
                   disabledReasonFlag = fleetOwnerInfo.disabledReasonFlag,
                   createdAt = Just fleetOwnerInfo.createdAt,
                   docsVerificationStatusUpdatedAt = fromMaybe fleetOwnerInfo.createdAt fleetOwnerInfo.docsVerificationStatusUpdatedAt

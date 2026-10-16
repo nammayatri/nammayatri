@@ -9,7 +9,6 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.InitiatedBy
 import qualified Domain.Types.VehicleCategory
-import qualified Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
@@ -24,7 +23,6 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
     certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     dateOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.DocsVerificationStatus),
     docsVerificationStatusUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     documentImageId :: B.C f Kernel.Prelude.Text,
     documentImageId2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

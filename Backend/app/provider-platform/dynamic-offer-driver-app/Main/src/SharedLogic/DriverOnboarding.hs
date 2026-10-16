@@ -32,7 +32,6 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types as DVST
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentOnboardingStage
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -528,7 +527,6 @@ createRC ::
   UTCTime ->
   m VehicleRegistrationCertificate
 createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules certificateNumber expiry = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   (verificationStatus, reviewRequired, variant, mbVehicleModel, mbRejectReason) <- validateRCStatus input rcconfigs now expiry
   logInfo $ "createRC: verificationStatus=" <> show verificationStatus <> ", reviewRequired=" <> show reviewRequired <> ", variant=" <> show variant <> ", mbVehicleModel=" <> show mbVehicleModel <> ", rejectReason=" <> show mbRejectReason
   let airConditioned = input.airConditioned
@@ -573,10 +571,6 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         vehicleRating = Nothing,
         vehicleRatingRemark = Nothing,
         failedRules = failedRules,
-        docsVerificationStatus =
-          if transporterConfig.enableManualDocumentStatusCheck == Just True
-            then Just DDVS.ADMIN_PENDING
-            else Nothing,
         docsVerificationStatusUpdatedAt = Nothing,
         dateOfRegistration = input.dateOfRegistration,
         vehicleModelYear = input.vehicleModelYear,

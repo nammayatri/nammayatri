@@ -11,7 +11,6 @@ import qualified API.Types.UI.FleetOwnerList
 import qualified Control.Lens
 import qualified Dashboard.Common.Driver
 import qualified Domain.Action.UI.FleetOwnerList
-import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -27,11 +26,7 @@ import qualified Tools.ActorInfo
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "fleetOwner" :> "list" :> QueryParam "approvalStatus" Dashboard.Common.Driver.ApprovalStatusFilter
-      :> QueryParam
-           "blocked"
-           Kernel.Prelude.Bool
-      :> QueryParam "docsVerificationStatus" Domain.Types.DocsVerificationStatus.DocsVerificationStatus
+  ( TokenAuth :> "fleetOwner" :> "list" :> QueryParam "approvalStatus" Dashboard.Common.Driver.ApprovalStatusFilter :> QueryParam "blocked" Kernel.Prelude.Bool
       :> QueryParam
            "enabled"
            Kernel.Prelude.Bool
@@ -74,7 +69,6 @@ getFleetOwnerList ::
     ) ->
     Kernel.Prelude.Maybe Dashboard.Common.Driver.ApprovalStatusFilter ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Domain.Types.FleetOwnerInformation.FleetType ->
     Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
@@ -86,4 +80,4 @@ getFleetOwnerList ::
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Environment.FlowHandler [API.Types.UI.FleetOwnerList.FleetOwnerListItem]
   )
-getFleetOwnerList a13 a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a13) $ Domain.Action.UI.FleetOwnerList.getFleetOwnerList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a13) a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
+getFleetOwnerList a12 a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Tools.ActorInfo.withPersonIdActorInfo (Control.Lens.view Control.Lens._1 a12) $ Domain.Action.UI.FleetOwnerList.getFleetOwnerList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a12) a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1

@@ -10,7 +10,6 @@ import qualified Data.Text as T
 import Data.Time (Day, defaultTimeLocale, parseTimeM)
 import Domain.Types.CommonDocumentData (renderCommonDocumentData)
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverInformation as DI
@@ -24,7 +23,6 @@ import qualified Domain.Types.OperationHubRequests as DOHR
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.ReviewRequest as DRR
-import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleFitnessCertificate as VFC
 import qualified Domain.Types.VehicleInsurance as VIns
@@ -39,14 +37,11 @@ import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
-import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.DriverOnboarding.OnboardingFlags.Types (OnboardingFlow)
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.Translation (TranslationDimensions (..))
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DriverInformation as QDI
@@ -218,8 +213,7 @@ data VehicleDocumentItem = VehicleDocumentItem
     dateOfUpload :: UTCTime,
     s3Path :: Maybe Text,
     imageId :: Maybe Text,
-    documentExpiry :: Maybe UTCTime,
-    docsVerificationStatus :: Maybe DDVS.DocsVerificationStatus
+    documentExpiry :: Maybe UTCTime
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -256,38 +250,6 @@ data DocumentStatusItem = DocumentStatusItem
     commonDocumentData :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
-
-validateMandatoryVehicleDocsForRC ::
-  OnboardingFlow m r =>
-  DTC.TransporterConfig ->
-  RC.VehicleRegistrationCertificate ->
-  m ()
-validateMandatoryVehicleDocsForRC transporterConfig rc =
-  when (transporterConfig.enableManualDocumentStatusCheck == Just True) $ do
-    merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
-    merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-    registrationNo <- decrypt rc.certificateNumber
-    let entity = IQuery.VehicleRCEntity rc
-    entityImages <- IQuery.findAllByEntityId transporterConfig entity
-    now <- getCurrentTime
-    let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now, enableDocumentMetadata = False}
-        language = merchantOperatingCity.language
-        onlyMandatoryDocs = Just True
-        skipMessages = True
-    allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing}) Nothing
-    vehicleDocuments <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just registrationNo) onlyMandatoryDocs skipMessages
-    let status =
-          case find (\vehicleDoc -> vehicleDoc.registrationNo == registrationNo) vehicleDocuments of
-            Just vehicleDoc -> computeAdminDocsVerificationStatus vehicleDoc.documents
-            Nothing -> computeAdminDocsVerificationStatus []
-    case status of
-      DDVS.ADMIN_APPROVED -> pure ()
-      DDVS.ADMIN_REJECTED -> do
-        logWarning $ "validateMandatoryVehicleDocsForRC: mandatory vehicle docs rejected for RC " <> rc.id.getId
-        throwError (InvalidRequest "Mandatory vehicle documents are rejected")
-      DDVS.ADMIN_PENDING -> do
-        logWarning $ "validateMandatoryVehicleDocsForRC: mandatory vehicle docs not approved for RC " <> rc.id.getId <> ", status: " <> show status
-        throwError (InvalidRequest "Mandatory vehicle documents are not verified")
 
 fetchVehicleDocuments ::
   OnboardingFlow m r =>
@@ -457,8 +419,7 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
           dateOfUpload,
           s3Path = rcS3Path,
           imageId = rcImageId,
-          documentExpiry = rcExpiry,
-          docsVerificationStatus = Just $ computeAdminDocsVerificationStatus documents
+          documentExpiry = rcExpiry
         }
 
 fetchProcessedVehicleDocumentsWithoutRC ::
@@ -506,8 +467,7 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
                   dateOfUpload = vehicle.createdAt,
                   s3Path = Nothing,
                   imageId = Nothing,
-                  documentExpiry = Nothing,
-                  docsVerificationStatus = Nothing
+                  documentExpiry = Nothing
                 }
             ]
     Nothing -> return []
@@ -599,18 +559,10 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                           dateOfUpload = verificationReqRecord.createdAt,
                           s3Path = rcS3Path,
                           imageId = rcImageId,
-                          documentExpiry = Nothing,
-                          docsVerificationStatus = Nothing
+                          documentExpiry = Nothing
                         }
                     ]
     Nothing -> return []
-
-computeAdminDocsVerificationStatus :: [DocumentStatusItem] -> DDVS.DocsVerificationStatus
-computeAdminDocsVerificationStatus docs
-  | null docs = DDVS.ADMIN_PENDING
-  | any ((`elem` [INVALID, UNAUTHORIZED]) . (.verificationStatus)) docs = DDVS.ADMIN_REJECTED
-  | all ((== VALID) . (.verificationStatus)) docs = DDVS.ADMIN_APPROVED
-  | otherwise = DDVS.ADMIN_PENDING
 
 mkRCMetadata :: OnboardingFlow m r => RC.VehicleRegistrationCertificate -> m DocumentMetadata
 mkRCMetadata vehicleRC = do

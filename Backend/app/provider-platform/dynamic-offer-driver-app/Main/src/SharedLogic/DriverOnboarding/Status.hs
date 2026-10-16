@@ -15,7 +15,6 @@ module SharedLogic.DriverOnboarding.Status
     checkAllVehicleDocsValidForFetchedDocs,
     fetchAndCheckDriverDocsValidForEnabling,
     checkAllDriverDocsValidForFetchedDocs,
-    validateMandatoryVehicleDocsForRC,
     fetchVehicleDocStatusesForRC,
     fetchDriverDocStatusesForPerson,
     invalidDependencyDocs,

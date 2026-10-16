@@ -5,7 +5,6 @@ module Domain.Types.DriverInformation where
 
 import Data.Aeson
 import qualified Domain.Types.Common
-import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.InitiatedBy
@@ -56,7 +55,6 @@ data DriverInformationE e = DriverInformation
     dailyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     disabledReasonFlag :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag,
     dlNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
-    docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     docsVerificationStatusUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driverBankAccountDetails :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails,
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -184,7 +182,6 @@ instance EncryptedItem DriverInformation where
           dailyExtraKms = dailyExtraKms entity,
           disabledReasonFlag = disabledReasonFlag entity,
           dlNumber = dlNumber_,
-          docsVerificationStatus = docsVerificationStatus entity,
           docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt entity,
           driverBankAccountDetails = driverBankAccountDetails entity,
           driverDob = driverDob entity,
@@ -304,7 +301,6 @@ instance EncryptedItem DriverInformation where
             dailyExtraKms = dailyExtraKms entity,
             disabledReasonFlag = disabledReasonFlag entity,
             dlNumber = dlNumber_,
-            docsVerificationStatus = docsVerificationStatus entity,
             docsVerificationStatusUpdatedAt = docsVerificationStatusUpdatedAt entity,
             driverBankAccountDetails = driverBankAccountDetails entity,
             driverDob = driverDob entity,

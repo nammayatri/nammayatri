@@ -40,7 +40,6 @@ import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboardingV2 as Registration
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -167,15 +166,11 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
   SGuard.withOnboardingAction transporterConfig SGuard.None SGuard.Add (SGuard.TargetFleetOwner person.id) $ do
     void $ QP.create person
     QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-    let defaultDocsVerificationStatus =
-          if transporterConfig.enableManualDocumentStatusCheck == Just True
-            then Just DDVS.ADMIN_PENDING
-            else Nothing
-        -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
+    let -- Under BOT flow the fleet owner is enabled only via the BOT review (submit/review/request →
         -- recomputeFleetVerifiedAndEnabled), so register as not-enabled. Legacy (non-BOT) keeps the
         -- existing default-enabled behavior.
         mbEnabled' = if transporterConfig.enableBotFlow == Just True || transporterConfig.unifiedOnboardingFlagsRecompute == Just True then Just False else mbEnabled
-    createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId merchantOperatingCity.id ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
+    createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled' mbgstNumber mbReferredOperatorId mbTicketPlaceId merchantOperatingCity.id ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate)
     whenJust mbReferredOperatorId $ \referredOperatorId -> do
       fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId DomainRC.defaultAssociationEnd
       QFOA.create fleetOperatorAssData
@@ -195,8 +190,8 @@ createPanInfo personId merchantId merchantOperatingCityId (Just img1) _ (Just pa
   void $ Registration.postDriverRegisterPancardHelper (Just personId, merchantId, merchantOperatingCityId) True False panReq
 createPanInfo _ _ _ _ _ _ = pure () --------- currently we can have it like this as Pan info is optional
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()
-createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId merchantOperatingCityId mbTdsRate mbDocsVerificationStatus = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe FOI.FleetType -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Flow ()
+createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGstNumber mbReferredByOperatorId mbTicketPlaceId merchantOperatingCityId mbTdsRate = do
   now <- getCurrentTime
   mbGstNumberEnc <- forM mbGstNumber encrypt
   mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
@@ -253,7 +248,6 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             ticketPlaceId = mbTicketPlaceId,
             merchantOperatingCityId = Just merchantOperatingCityId,
             payoutRegistrationOrderId = Nothing,
-            docsVerificationStatus = mbDocsVerificationStatus,
             docsVerificationStatusUpdatedAt = Nothing,
             address = Nothing,
             addressState = Nothing,

@@ -279,7 +279,6 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.disabledReasonFlag disabledReasonFlag,
       Se.Set Beam.dlNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber),
       Se.Set Beam.dlNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber),
-      Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.docsVerificationStatusUpdatedAt docsVerificationStatusUpdatedAt,
       Se.Set Beam.driverBankAccountDetails (Kernel.Prelude.toJSON <$> driverBankAccountDetails),
       Se.Set Beam.driverDob driverDob,

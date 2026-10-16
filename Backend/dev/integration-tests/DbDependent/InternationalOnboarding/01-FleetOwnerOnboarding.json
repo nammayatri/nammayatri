@@ -815,7 +815,7 @@
       }
     },
     {
-      "name": "18 - SQL Backstop: fleet_owner_information.docs_verification_status = ADMIN_APPROVED",
+      "name": "18 - SQL Backstop: fleet_owner_information flags (verified / approved / enabled)",
       "event": [
         {
           "listen": "test",

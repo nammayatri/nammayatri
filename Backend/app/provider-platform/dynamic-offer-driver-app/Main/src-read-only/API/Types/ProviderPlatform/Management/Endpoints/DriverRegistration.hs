@@ -748,8 +748,7 @@ data VehicleDocumentItem = VehicleDocumentItem
     documents :: [DocumentStatusItem],
     dateOfUpload :: Kernel.Prelude.UTCTime,
     s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

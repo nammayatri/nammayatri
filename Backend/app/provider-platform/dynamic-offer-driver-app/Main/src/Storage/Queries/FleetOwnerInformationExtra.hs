@@ -1,6 +1,5 @@
 module Storage.Queries.FleetOwnerInformationExtra where
 
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.FleetOwnerInformation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -244,7 +243,6 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.referredByOperatorId referredByOperatorId,
           Se.Set Beam.registeredAt registeredAt,
           Se.Set Beam.verified verified,
-          Se.Set Beam.docsVerificationStatus docsVerificationStatus,
           Se.Set Beam.createdAt createdAt,
           Se.Set Beam.updatedAt _now,
           Se.Set Beam.fleetName fleetName,
@@ -253,15 +251,6 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.addressDocumentType addressDocumentType
         ]
         [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
-
--- | Kept in step with verified / approved by the onboarding recompute. The UI APIs and the legacy
---   ClickHouse status counts still read this column, so it must not go stale under the unified flow.
-updateDocsVerificationStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DDVS.DocsVerificationStatus -> Id DP.Person -> m ()
-updateDocsVerificationStatus docsVerificationStatus fleetOwnerPersonId = do
-  now <- getCurrentTime
-  updateWithKV
-    [Se.Set Beam.docsVerificationStatus docsVerificationStatus, Se.Set Beam.updatedAt now]
-    [Se.Is Beam.fleetOwnerPersonId (Se.Eq $ getId fleetOwnerPersonId)]
 
 findEligibleFleetOwnersForScheduledPayout ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

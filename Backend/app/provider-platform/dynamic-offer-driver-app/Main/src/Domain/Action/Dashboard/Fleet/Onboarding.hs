@@ -28,7 +28,6 @@ import Domain.Action.UI.DriverOnboarding.Referral
 import qualified Domain.Action.UI.DriverOnboarding.Status as UIStatus
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationStagesConfig
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPan
@@ -180,11 +179,10 @@ getOnboardingRegisterStatus ::
   Maybe DVC.VehicleCategory ->
   Maybe Bool ->
   Maybe Bool ->
-  Maybe Dashboard.Common.DocsVerificationStatus ->
   Maybe Bool ->
   Maybe Text ->
   Environment.Flow CommonOnboarding.StatusRes
-getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs mbDocsVerificationStatusFilter enableDocumentMetadata mbRcNo = do
+getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs enableDocumentMetadata mbRcNo = do
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -200,17 +198,7 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   statusRes <- SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages mbRcNo
   -- Re-pull stuck doc verifications; fleet-owner GST/UDYAM are reachable only via this endpoint.
   UIStatus.pullPendingDocStatuses transporterConfig person statusRes.driverDocuments statusRes.vehicleDocuments
-  let res = castStatusRes statusRes
-  -- When no filter is provided and enableManualDocumentStatusCheck is enabled,
-  -- default to ADMIN_APPROVED so only fully-approved vehicles are shown.
-  let effectiveFilter =
-        case mbDocsVerificationStatusFilter of
-          Just _ -> mbDocsVerificationStatusFilter
-          Nothing ->
-            if transporterConfig.enableManualDocumentStatusCheck == Just True && isNothing mbRcNo
-              then Just Dashboard.Common.ADMIN_APPROVED
-              else Nothing
-  pure $ applyVehicleDocsFilter effectiveFilter res
+  pure $ castStatusRes statusRes
 
 -- | Dashboard vehicle-only RC verify-status. Delegates to the shared @rcVerifyStatus@ with @isDashboard =
 --   True@ (and no caller), which skips the per-person RC-ownership gate — dashboard callers are already
@@ -447,17 +435,10 @@ castVehicleDocumentItem SStatus.VehicleDocumentItem {..} =
   CommonOnboarding.VehicleDocumentItem
     { documents = castDocumentStatusItem <$> documents,
       expiryDate = documentExpiry,
-      docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
       isApproved = fromMaybe False isApproved,
       isApprovedV2 = isApproved,
       ..
     }
-
-castDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
-castDocsVerificationStatus = \case
-  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
-  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
-  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
 
 getOnboardingVehicleDocuments ::
   ShortId DM.Merchant ->
@@ -491,11 +472,6 @@ getOnboardingVehicleDocuments merchantShortId opCity mbRcNo mbRcId enableDocumen
   vehicleDocuments <- VehicleDocs.fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs ENGLISH (Just registrationNo) Nothing skipMessages
   let mbVehicleDoc = find (\doc -> doc.registrationNo == registrationNo) vehicleDocuments
   return CommonOnboarding.VehicleDocumentStatusRes {vehicleDocument = castVehicleDocumentItem <$> mbVehicleDoc}
-
-applyVehicleDocsFilter :: Maybe Dashboard.Common.DocsVerificationStatus -> CommonOnboarding.StatusRes -> CommonOnboarding.StatusRes
-applyVehicleDocsFilter Nothing res = res
-applyVehicleDocsFilter (Just target) res =
-  res {CommonOnboarding.vehicleDocuments = filter (\v -> CommonOnboarding.docsVerificationStatus v == Just target) (CommonOnboarding.vehicleDocuments res)}
 
 castResponseStatus :: SStatus.ResponseStatus -> CommonOnboarding.ResponseStatus
 castResponseStatus = \case

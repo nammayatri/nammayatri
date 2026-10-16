@@ -8,7 +8,6 @@ where
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified Dashboard.Common
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -86,11 +85,7 @@ putAccountUpdateRole merchantShortId opCity personId' accessType = do
     merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
     transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-    let defaultDocsVerificationStatus =
-          if transporterConfig.enableManualDocumentStatusCheck == Just True
-            then Just DDVS.ADMIN_PENDING
-            else Nothing
-    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) person.merchantOperatingCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus Nothing
+    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) person.merchantOperatingCityId ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) Nothing
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
   where

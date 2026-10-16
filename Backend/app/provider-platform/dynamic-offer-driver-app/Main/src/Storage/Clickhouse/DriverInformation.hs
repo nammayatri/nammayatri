@@ -2,7 +2,6 @@
 
 module Storage.Clickhouse.DriverInformation where
 
-import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -11,12 +10,11 @@ import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
 
-instance CH.ClickhouseValue DDVS.DocsVerificationStatus
-
 data DriverInformationT f = DriverInformationT
   { driverId :: C f (Id DP.Person),
     driverFlowStatus :: C f (Maybe DDF.DriverFlowStatus),
-    docsVerificationStatus :: C f (Maybe DDVS.DocsVerificationStatus),
+    verified :: C f (Maybe Bool),
+    approved :: C f (Maybe Bool),
     enabled :: C f Bool,
     enabledAt :: C f (Maybe UTCTime),
     mode :: C f (Maybe Text),
@@ -32,7 +30,8 @@ driverInformationTTable =
   DriverInformationT
     { driverId = "driver_id",
       driverFlowStatus = "driver_flow_status",
-      docsVerificationStatus = "docs_verification_status",
+      verified = "verified",
+      approved = "approved",
       enabled = "enabled",
       enabledAt = "enabled_at",
       mode = "mode",
@@ -103,17 +102,18 @@ countEnabledByDriverIds driverIds =
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
       pure $ fromMaybe 0 (listToMaybe res)
 
+-- | Driver counts per (verified, approved) for the legacy statusSummary; the caller buckets them
+--   with the same rule as the Redis onboarding counters. The mirror columns are Nullable.
 getStatusCountsByDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   [Id DP.Person] ->
-  m [(Maybe DDVS.DocsVerificationStatus, Int)]
+  m [(Maybe Bool, Maybe Bool, Int)]
 getStatusCountsByDriverIds driverIds =
   CH.findAll $
     CH.select_
       ( \info -> do
-          let status = info.docsVerificationStatus
           let countDrivers = CH.count_ info.driverId
-          CH.groupBy status $ \s -> (s, countDrivers)
+          CH.groupBy (info.verified, info.approved) $ \(verified, approved) -> (verified, approved, countDrivers)
       )
       $ CH.filter_
         (\info -> info.driverId `CH.in_` driverIds)
