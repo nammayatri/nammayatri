@@ -9,7 +9,7 @@ import Data.Text (Text)
 import "rider-app" Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import "rider-app" SharedLogic.SharedCab.Config
 import "rider-app" SharedLogic.SharedCab.Enabled (cabItineraryShown, sharedCabEnabledDecision, tickChainContinues)
-import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), WatchPlan (..), chainVerdict, watchPlan)
+import "rider-app" SharedLogic.SharedCab.Schedule (ChainVerdict (..), SeedSource (..), WatchPlan (..), allocationSeedWanted, chainVerdict, watchPlan)
 import "rider-app" Storage.Queries.IntegratedBPPConfigExtra (onlyOfPlatform, pickAgencyRow)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -28,8 +28,22 @@ tests =
         [chainVerdict g m | g <- [Nothing, Just "a", Just "b"], m <- [Nothing, Just "a"]]
           @?= [Adopt, Adopt, Foreign, Mine, Foreign, Foreign],
       testCase "the expiry tick re-seeds a lost allocation chain while a booking is live, and a lost sweep chain while cabs are on shift" $
-        [watchPlan b t | b <- [0, 2], t <- [0, 3]]
-          @?= [WatchPlan False False, WatchPlan False True, WatchPlan True False, WatchPlan True True],
+        [watchPlan True b t r | b <- [0, 2], t <- [0, 3], r <- [0, 1]]
+          @?= [ WatchPlan False False,
+                WatchPlan False True,
+                WatchPlan False True,
+                WatchPlan False True,
+                WatchPlan True True,
+                WatchPlan True True,
+                WatchPlan True True,
+                WatchPlan True True
+              ],
+      testCase "a suspended city with live bookings still gets its allocation chain re-seeded; new demand needs the city on" $
+        ( [allocationSeedWanted Watchdog e n | e <- [True, False], n <- [0, 3]],
+          [allocationSeedWanted OnDemand e n | e <- [True, False], n <- [0, 3]],
+          (watchPlan False 3 0 0).seedAllocation
+        )
+          @?= ([False, True, False, True], [True, True, False, False], True),
       testCase "a suspended city keeps its allocation chain only while live bookings need draining" $
         [tickChainContinues e n | e <- [True, False], n <- [0, 3]] @?= [True, True, False, True],
       testCase "a suspended city offers no cab itinerary; an enabled one needs a cab on every cab leg; no cab leg is always fine" $

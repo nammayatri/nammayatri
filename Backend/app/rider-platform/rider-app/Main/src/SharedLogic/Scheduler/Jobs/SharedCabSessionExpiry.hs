@@ -20,9 +20,11 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.JobScheduler
 import qualified SharedLogic.SharedCab.Allocation as Allocation
 import SharedLogic.SharedCab.Allocation.Types (AllocationOutcome (SessionClosed), parseLtsTimestamp)
+import SharedLogic.SharedCab.Enabled (sharedCabEnabled)
 import qualified SharedLogic.SharedCab.Events as Events
 import SharedLogic.SharedCab.LtsAttach (LtsFlow)
-import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ensureAllocationTick, ensureDegradedSweep, ownExpiryChain, scheduleNextExpiry, watchPlan)
+import qualified SharedLogic.SharedCab.RefundRetry as RefundRetry
+import SharedLogic.SharedCab.Schedule (claimExpiryRun, claimedTick, ensureDegradedSweep, ownExpiryChain, reseedAllocationTick, scheduleNextExpiry, watchPlan)
 import qualified SharedLogic.SharedCab.Session as Session
 import SharedLogic.SharedCab.SessionState
 import qualified Storage.Queries.VehicleTrip as QVT
@@ -56,8 +58,10 @@ watchChains merchantId mocId =
     watch = do
       liveBookings <- length <$> Allocation.cityLiveBookings mocId
       liveTrips <- length <$> QVT.findAllLiveByMerchantOperatingCityId mocId
-      let plan = watchPlan liveBookings liveTrips
-      when plan.seedAllocation $ ensureAllocationTick merchantId mocId
+      pendingRefunds <- length <$> RefundRetry.pendingRefundRetries mocId
+      enabled <- sharedCabEnabled mocId
+      let plan = watchPlan enabled liveBookings liveTrips pendingRefunds
+      when plan.seedAllocation $ reseedAllocationTick merchantId mocId
       when plan.seedSweep $ ensureDegradedSweep merchantId mocId
 
 expireSilentSessions :: ExpiryFlow m r c => Id DMOC.MerchantOperatingCity -> m ()

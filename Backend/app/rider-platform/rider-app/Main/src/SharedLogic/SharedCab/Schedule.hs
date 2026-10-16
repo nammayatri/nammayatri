@@ -15,7 +15,10 @@ module SharedLogic.SharedCab.Schedule
     withCityTickLease,
     ensureExpiryJob,
     WatchPlan (..),
+    SeedSource (..),
+    allocationSeedWanted,
     watchPlan,
+    reseedAllocationTick,
     ownExpiryChain,
     claimExpiryRun,
     scheduleNextExpiry,
@@ -116,10 +119,16 @@ allocChain tickSec merchantId mocId =
     \chainId -> SharedCabAllocationTickJobData {merchantId, merchantOperatingCityId = mocId, chainId = Just chainId}
 
 ensureAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
-ensureAllocationTick merchantId mocId =
-  whenM (sharedCabEnabled mocId) $ do
-    tickSec <- tickSecOf mocId
-    ensureChain (allocChain tickSec merchantId mocId)
+ensureAllocationTick merchantId mocId = do
+  enabled <- sharedCabEnabled mocId
+  when (allocationSeedWanted OnDemand enabled 0) $ reseedAllocationTick merchantId mocId
+
+-- | The watchdog's seed: the on-demand 'ensureAllocationTick' also needs the city switched on, which would leave a suspended city's
+-- draining chain unwatched.
+reseedAllocationTick :: (JobCreator r m, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
+reseedAllocationTick merchantId mocId = do
+  tickSec <- tickSecOf mocId
+  ensureChain (allocChain tickSec merchantId mocId)
 
 claimTickRun :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
 claimTickRun mocId = do
@@ -164,9 +173,24 @@ expiryChain merchantId mocId =
 data WatchPlan = WatchPlan {seedAllocation :: Bool, seedSweep :: Bool}
   deriving (Eq, Show)
 
--- | An allocation chain is wanted while the city has a live booking, a sweep chain while cabs are on shift.
-watchPlan :: Int -> Int -> WatchPlan
-watchPlan liveBookings liveTrips = WatchPlan {seedAllocation = liveBookings > 0, seedSweep = liveTrips > 0}
+-- | An allocation chain is wanted while the city has a live booking, whether or not it is switched on: a suspended city drains
+-- its chain (new intake stays blocked elsewhere), and a lost job there would otherwise strand its bookings. A sweep chain is
+-- wanted while a booking is live (a degraded or plated ride is a live booking), a refund retry is pending, or a cab is on shift.
+watchPlan :: Bool -> Int -> Int -> Int -> WatchPlan
+watchPlan enabled liveBookings liveTrips pendingRefunds =
+  WatchPlan
+    { seedAllocation = allocationSeedWanted Watchdog enabled liveBookings,
+      seedSweep = liveBookings > 0 || liveTrips > 0 || pendingRefunds > 0
+    }
+
+-- | Who is asking for an allocation chain: new demand (a confirm or a session open) only while the city is switched on; the
+-- watchdog whenever a booking is live, switched on or not.
+data SeedSource = OnDemand | Watchdog
+  deriving (Eq, Show)
+
+allocationSeedWanted :: SeedSource -> Bool -> Int -> Bool
+allocationSeedWanted OnDemand enabled _ = enabled
+allocationSeedWanted Watchdog _ liveBookings = liveBookings > 0
 
 ensureExpiryJob :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 ensureExpiryJob merchantId mocId = ensureChain (expiryChain merchantId mocId)
