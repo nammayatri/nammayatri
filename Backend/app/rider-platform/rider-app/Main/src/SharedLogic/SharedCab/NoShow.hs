@@ -46,7 +46,8 @@ afterNoShow maxNoShows noShows
 actionAfterClose :: Blame -> Int -> Int -> NoShowAction
 actionAfterClose blame maxNoShows noShows = case blame of
   BlameRider -> afterNoShow maxNoShows (noShowsAfter BlameRider noShows)
-  _ -> Reallocate
+  BlameDriver -> Reallocate
+  BlameNone -> Reallocate
 
 record :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Blame -> Maybe (Id DP.Person) -> Maybe (Id DVT.VehicleTrip) -> m ()
 record blame mbRider mbTrip =

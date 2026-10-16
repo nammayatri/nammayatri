@@ -124,7 +124,7 @@ sweepTickSec = 120
 -- | The scan's updatedAt front bound is 3x the degraded horizon h: a ride degraded at t is killable from t+h and scanned until t+3h,
 -- so a sweep-down gap shorter than 2h loses nothing.
 scanWindowStart :: Int -> UTCTime -> UTCTime
-scanWindowStart horizonSec now = addUTCTime (negate (intToNominalDiffTime (3 * horizonSec))) now
+scanWindowStart horizonSec = addUTCTime (negate (intToNominalDiffTime (3 * horizonSec)))
 
 sweepChain :: JobCreator r m => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Chain m
 sweepChain merchantId mocId =

@@ -233,7 +233,8 @@ tests =
       testCase "the next tick is scheduled even when the tick body throws" $ do
         ran <- newIORef False
         r <- try (thenReschedule (throwIO (userError "db down")) (writeIORef ran True)) :: IO (Either IOException ())
-        (,) (either (const True) (const False) r) <$> readIORef ran >>= (@?= (True, True))
+        wasRescheduled <- readIORef ran
+        (either (const True) (const False) r, wasRescheduled) @?= (True, True)
         ran' <- newIORef False
         thenReschedule (pure ()) (writeIORef ran' True) >> readIORef ran' >>= (@?= True),
       testCase "a finding-timeout cancel refunds in full, unless a no-show is already booked against the booking" $

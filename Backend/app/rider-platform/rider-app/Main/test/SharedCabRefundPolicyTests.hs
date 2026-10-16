@@ -34,10 +34,10 @@ waiting :: [FRFSTicketStatus]
 waiting = [ACTIVE]
 
 rider :: SharedCabState -> Int -> Bool -> CancelDecision
-rider state noShows near = decideCancel ByRider state noShows waiting near
+rider state noShows = decideCancel ByRider state noShows waiting
 
 driver :: SharedCabState -> Int -> Bool -> CancelDecision
-driver state noShows near = decideCancel ByDriver state noShows waiting near
+driver state noShows = decideCancel ByDriver state noShows waiting
 
 -- radius 150 m, fixes fresh for 60 s
 nearStop :: Maybe LatLong -> Maybe RiderFix -> Bool

@@ -68,8 +68,8 @@ getIntegratedBppConfig ibcId = CQIBC.findById ibcId >>= fromMaybeM IntegratedBPP
 -- integrated_bpp_config.agency_key, the GTFS agency gtfsId of the shared-cab feed ("<feed>:SHARED_CAB").
 getIntegratedBppConfigByAgency :: Text -> Environment.Flow DIBC.IntegratedBPPConfig
 getIntegratedBppConfigByAgency agencyId =
-  QIBCExtra.onlyOfPlatform DIBC.APPLICATION (.platformType) <$> CQIBC.findByAgencyId agencyId DIBC.APPLICATION
-    >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyId (show DIBC.APPLICATION))
+  CQIBC.findByAgencyId agencyId DIBC.APPLICATION
+    >>= fromMaybeM (IntegratedBPPConfigNotFoundForAgency agencyId (show DIBC.APPLICATION)) . QIBCExtra.onlyOfPlatform DIBC.APPLICATION (.platformType)
 
 routeStops :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [DRSM.RouteStopMapping]
 routeStops integratedBppConfig code = sortOn (.sequenceNum) <$> OTPRest.getRouteStopMappingByRouteCode code integratedBppConfig
@@ -209,8 +209,10 @@ driverAction action bookingId mbToken req = do
 getSharedCabTrips :: Day -> Text -> Maybe Text -> Environment.Flow API.SharedCabTripsResp
 getSharedCabTrips date driver mbToken = do
   checkToken mbToken
-  let istMidnight = addUTCTime (-19800) (UTCTime date 0)
-  trips <- QVT.findAllByDriverIdAndStartedAtRange Nothing Nothing driver istMidnight (addUTCTime 86399 istMidnight)
+  let istOffset = 19800 -- UTC+05:30: a trip's calendar day is the IST day
+      lastSecondOfDay = 86399
+      istMidnight = addUTCTime (negate istOffset) (UTCTime date 0)
+  trips <- QVT.findAllByDriverIdAndStartedAtRange Nothing Nothing driver istMidnight (addUTCTime lastSecondOfDay istMidnight)
   pure API.SharedCabTripsResp {trips = map mkTrip trips}
   where
     mkTrip (trip :: DVT.VehicleTrip) =

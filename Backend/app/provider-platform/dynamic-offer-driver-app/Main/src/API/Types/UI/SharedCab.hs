@@ -72,7 +72,7 @@ data SeatsReq = SeatsReq
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CancelBookingReq = CancelBookingReq
+newtype CancelBookingReq = CancelBookingReq
   { reason :: Text
   }
   deriving stock (Generic, Show, Eq)

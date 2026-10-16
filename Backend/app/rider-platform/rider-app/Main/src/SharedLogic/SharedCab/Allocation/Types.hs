@@ -23,6 +23,7 @@ module SharedLogic.SharedCab.Allocation.Types
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson.Types as A
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
@@ -130,7 +131,16 @@ countsTowardAttempts = \case
 countsTowardDriverMisses :: AllocationOutcome -> Bool
 countsTowardDriverMisses = \case
   DriverCancelled -> True
-  _ -> False
+  StandTimeout -> False
+  MovingTimeout -> False
+  AwayTimeout -> False
+  PassedStop _ -> False
+  SeatLost -> False
+  RouteChanged -> False
+  SessionClosed -> False
+  TimerLost -> False
+  CabSilent -> False
+  RiderSkipped _ -> False
 
 timerExpiry :: UTCTime -> Maybe AllocationState -> Maybe AllocationOutcome
 timerExpiry _ Nothing = Just TimerLost
@@ -147,7 +157,7 @@ isMovingSpeed = maybe False (> 1.0)
 -- | LTS writes RFC 3339; aeson's UTCTime parser also takes offsets and a space separator, with bare epoch seconds as a fallback.
 parseLtsTimestamp :: Text -> Maybe UTCTime
 parseLtsTimestamp ts =
-  maybe (posixSecondsToUTCTime . fromInteger <$> readMaybe (T.unpack ts)) Just (A.parseMaybe A.parseJSON (A.String ts))
+  A.parseMaybe A.parseJSON (A.String ts) <|> (posixSecondsToUTCTime . fromInteger <$> readMaybe (T.unpack ts))
 
 data RiderFix = RiderFix
   { position :: LatLong,

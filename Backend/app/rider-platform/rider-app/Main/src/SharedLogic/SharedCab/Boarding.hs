@@ -99,13 +99,13 @@ candidateRoutes :: DBooking.FRFSTicketBooking -> [Text]
 candidateRoutes booking =
   nub $
     maybeToList booking.routeCode
-      ++ foldMap (\c -> either (const []) (: []) (returnRouteOf c)) booking.routeCode
+      ++ foldMap (either (const []) (: []) . returnRouteOf) booking.routeCode
 
 resolveCabByCode :: DBooking.FRFSTicketBooking -> Text -> Environment.Flow [Session]
 resolveCabByCode booking code = do
   sessions <- concat <$> mapM Session.activeSessionsOnRoute (candidateRoutes booking)
   let candidates = filter (\s -> boardingCodeMatches code s.vehicleNumber) sessions
-  catMaybes <$> mapM (serveCheck) candidates
+  catMaybes <$> mapM serveCheck candidates
   where
     serveCheck s = do
       ok <- sessionServesBoardDrop booking s
@@ -115,7 +115,7 @@ sessionServesBoardDrop :: DBooking.FRFSTicketBooking -> Session -> Environment.F
 sessionServesBoardDrop booking session = do
   integratedBppConfig <- CQIBC.findById session.integratedBppConfigId >>= fromMaybeM BoardingFailed
   stops <- OTPRest.getRouteStopMappingByRouteCode session.routeCode integratedBppConfig
-  let seqOf c = (\s -> s.sequenceNum) <$> find (\s -> s.stopCode == c) stops
+  let seqOf c = (.sequenceNum) <$> find (\s -> s.stopCode == c) stops
   pure $ case (seqOf booking.fromStationCode, seqOf booking.toStationCode) of
     (Just fromSeq, Just toSeq) -> fromSeq < toSeq
     _ -> False
@@ -146,8 +146,9 @@ checkRiderNearSharedCab boardProximityM session journey booking isRebind = do
   riderHistory <- JMLocation.getAllPoints journey.id
   mbAnchor <- (<|>) <$> lookupCabPosition session <*> pure booking.fromStationPoint
   now <- getCurrentTime
-  let freshRiderPoints = filter (\p -> abs (diffUTCTime now p.currTime) < 300) riderHistory
-      newestRiderPoint = listToMaybe (reverse (sortOn (\p -> p.currTime) freshRiderPoints))
+  let riderPointFreshSec = 300
+      freshRiderPoints = filter (\p -> abs (diffUTCTime now p.currTime) < riderPointFreshSec) riderHistory
+      newestRiderPoint = lastMay (sortOn (.currTime) freshRiderPoints)
   case mbAnchor of
     Nothing -> pure $ Left (Nothing, "NO_CAB_POSITION")
     Just anchor ->

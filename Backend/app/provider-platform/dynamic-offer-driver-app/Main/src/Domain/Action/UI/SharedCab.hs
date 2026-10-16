@@ -158,5 +158,6 @@ getSharedCabTrips (personId, _merchantId, _merchantOpCityId) mbDate = do
   _ <- validateSharedCabDriver personId
   bap <- bapInternal
   now <- getCurrentTime
-  let todayIST = utctDay (addUTCTime 19800 now)
+  let istOffset = 19800 -- UTC+05:30: a trip's calendar day is the IST day
+      todayIST = utctDay (addUTCTime istOffset now)
   SharedCabBAP.getSharedCabTrips bap.apiKey bap.url personId.getId (show (fromMaybe todayIST mbDate))

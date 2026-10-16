@@ -37,7 +37,7 @@ tests =
       testCase "BlameDriver with no trip captured at claim charges nobody (never silently the rider instead)" $
         chargeFor BlameDriver (Just rider) Nothing @?= Nothing,
       testCase "only a rider no-show moves the booking's counter" $
-        map (\b -> noShowsAfter b 2) [BlameRider, BlameDriver, BlameNone] @?= [3, 2, 2],
+        map (`noShowsAfter` 2) [BlameRider, BlameDriver, BlameNone] @?= [3, 2, 2],
       testGroup
         "reallocate or auto-cancel at the no-show cap"
         [ testCase "below the cap: reallocate" $ afterNoShow 2 1 @?= Reallocate,

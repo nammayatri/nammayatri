@@ -122,9 +122,12 @@ recordRiderFix bookingId riderFix = shared $ Redis.setExp (riderFixKey bookingId
 readRiderFix :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe RiderFix)
 readRiderFix = shared . Redis.safeGet . riderFixKey
 
+cancelReasonTtlSec :: Int
+cancelReasonTtlSec = 24 * 3600
+
 -- | Who cancelled the booking, for the leg state. clearAllocationKeys deliberately leaves it, since the app's poll may still show the cancelled leg.
 recordCancelReason :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> CancelReason -> m ()
-recordCancelReason bookingId reason = shared $ Redis.setExp (cancelReasonKey bookingId) reason (24 * 3600)
+recordCancelReason bookingId reason = shared $ Redis.setExp (cancelReasonKey bookingId) reason cancelReasonTtlSec
 
 readCancelReason :: (Redis.HedisFlow m r, MonadFlow m) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe CancelReason)
 readCancelReason = shared . Redis.safeGet . cancelReasonKey

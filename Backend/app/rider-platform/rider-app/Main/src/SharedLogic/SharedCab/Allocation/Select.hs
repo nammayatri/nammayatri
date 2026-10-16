@@ -30,7 +30,8 @@ module SharedLogic.SharedCab.Allocation.Select
   )
 where
 
-import Data.List (groupBy, sortOn)
+import Data.List (sortOn)
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.FRFSTicketBookingStatus (FRFSTicketBookingStatus (..))
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -208,7 +209,7 @@ isMissedCabOutcome :: AllocationOutcome -> Bool
 isMissedCabOutcome = (`elem` [StandTimeout, MovingTimeout])
 
 groupAllOn :: Ord b => (a -> b) -> [a] -> [(b, [a])]
-groupAllOn f = map (\grp -> (f (head grp), grp)) . groupBy ((==) `on` f) . sortOn f
+groupAllOn f = map (\grp -> (f (NE.head grp), NE.toList grp)) . NE.groupBy ((==) `on` f) . sortOn f
 
 -- | A fresh, moving report for the plate: its stand timer is cleared rather than expired.
 movingCab :: UTCTime -> Int -> Text -> [LT.VehicleTrackingOnRouteResp] -> Bool

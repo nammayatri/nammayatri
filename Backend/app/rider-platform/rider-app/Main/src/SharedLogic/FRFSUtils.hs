@@ -999,7 +999,7 @@ journeyFullyPassCovered ::
 journeyFullyPassCovered booking = do
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
   case mbJourneyLeg of
-    Nothing -> (\isFree -> (Nothing, [booking], isFree)) <$> noPaymentDue booking
+    Nothing -> (Nothing,[booking],) <$> noPaymentDue booking
     Just leg -> do
       legs <- QJL.getJourneyLegs leg.journeyId
       bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)

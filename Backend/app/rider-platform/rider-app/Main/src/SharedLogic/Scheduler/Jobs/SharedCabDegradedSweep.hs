@@ -107,13 +107,11 @@ sweepCity mocId =
               Left err -> False <$ logError ("sharedCab degraded sweep failed for booking " <> booking.id.getId <> ": " <> show err)
               Right didEnd -> pure didEnd
       let scanned' = scanned + length page
-          ended' = ended + length (filter (True ==) flips)
-      if length page < pageSize
-        then pure (scanned', ended')
-        else do
-          -- keyset tie at the page boundary: rows sharing it are skipped this sweep, the next full-window scan picks them up
-          let cursor = (last page).updatedAt
-          sweepPages fetch narrow decide windowStart endAt (Just cursor) (scanned', ended')
+          ended' = ended + length (filter identity flips)
+      case lastMay page of
+        -- keyset tie at the page boundary: rows sharing it are skipped this sweep, the next full-window scan picks them up
+        Just lastRow | length page >= pageSize -> sweepPages fetch narrow decide windowStart endAt (Just lastRow.updatedAt) (scanned', ended')
+        _ -> pure (scanned', ended')
 
 -- | The refund pass, on this chain's claim/lease wiring with its own per-tick claim: re-attempts FindingTimeout.startRefund per marked
 -- booking, bumps the count on failure, ops-alerts after `maxRefundRetryAttempts`. Decides from the payment evidence BEFORE any

@@ -133,7 +133,12 @@ kindFields = \case
   BookingCancelled by refund reason -> ["by" .= by, "refund" .= refund, "reason" .= reason]
   CabFull walkups -> ["walkupCount" .= walkups]
   InvariantViolation rule detail -> ["rule" .= rule, "detail" .= detail]
-  _ -> []
+  SessionStarted -> []
+  Resumed -> []
+  BookingCreated -> []
+  DegradedBoarding -> []
+  NoShow -> []
+  SeatLost -> []
 
 instance ToJSON SharedCabEvent where
   toJSON e =
@@ -162,7 +167,7 @@ bookingEvent k booking plate route time =
 type EventFlow m r = (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasKafkaProducer r)
 
 withTrip :: Maybe Text -> SharedCabEvent -> SharedCabEvent
-withTrip trip e = (e {vehicleTripId = trip} :: SharedCabEvent)
+withTrip trip e = e {vehicleTripId = trip} :: SharedCabEvent
 
 -- | Booking events are keyed by booking and session events by plate, so each family stays ordered on a partition.
 partitionKey :: SharedCabEvent -> Maybe Text

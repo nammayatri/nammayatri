@@ -32,8 +32,8 @@ sweeps cadence downStart downLen =
 -- | Falsification model for the scan-window rule: a ride degraded at `createdAt` (the booking updatedAt the window keys on),
 -- marker dead one horizon later, is lost iff no sweep time satisfies both "marker dead" and "window front still covers it".
 caught :: UTCTime -> [UTCTime] -> Bool
-caught createdAt at =
-  any (\t -> t >= addUTCTime (fromIntegral horizon) createdAt && createdAt >= scanWindowStart horizon t) at
+caught createdAt =
+  any (\t -> t >= addUTCTime (fromIntegral horizon) createdAt && createdAt >= scanWindowStart horizon t)
 
 tests :: TestTree
 tests =

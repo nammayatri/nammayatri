@@ -133,9 +133,9 @@ tests =
             isInfixOf "\"cancelReason\"" (BLC.unpack (encode statusNoReason)) @?= False,
           testCase "everything else still ships as null like before (only cancelReason is omitted)" $ do
             let encoded = BLC.unpack (encode statusNoReason)
-            assertBool "vehicleModel must ship null" (isInfixOf "\"vehicleModel\":null" encoded)
-            assertBool "boardDeadlineSec must ship null" (isInfixOf "\"boardDeadlineSec\":null" encoded)
-            assertBool "cancelReason with a value ships" (isInfixOf "\"cancelReason\":\"NO_SHOW_CAP\"" (BLC.unpack (encode statusWithReason))),
+            assertBool "vehicleModel must ship null" ("\"vehicleModel\":null" `isInfixOf` encoded)
+            assertBool "boardDeadlineSec must ship null" ("\"boardDeadlineSec\":null" `isInfixOf` encoded)
+            assertBool "cancelReason with a value ships" ("\"cancelReason\":\"NO_SHOW_CAP\"" `isInfixOf` BLC.unpack (encode statusWithReason)),
           testCase "a payload (no cancelReason key) still decodes" $
             decode "{\"state\":\"CANCELLED\",\"bookingId\":\"b1\",\"vehicleNumber\":\"ML05A1234\",\"cabsComing\":0}" @?= Just statusNoReason
         ]

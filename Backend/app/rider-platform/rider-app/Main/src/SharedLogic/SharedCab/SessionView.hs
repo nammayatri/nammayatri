@@ -14,7 +14,10 @@ riderStatusOf boarded allocated
   | otherwise = MINUTES_AWAY
 
 walkMinutesAway :: Double -> Int
-walkMinutesAway meters = ceiling (meters / (5000 / 60))
+walkMinutesAway meters = ceiling (meters / walkMetersPerMinute)
+
+walkMetersPerMinute :: Double
+walkMetersPerMinute = 5000 / 60
 
 -- | END closes the run as END_ROUTE at the last stop, else END_FOR_NOW. RETURN / END are refused while riders are on board unless `force`.
 data EndRouteReq = EndRouteReq

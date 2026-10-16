@@ -36,8 +36,12 @@ import qualified SharedLogic.SharedCab.Session as SharedCabSession
 import qualified SharedLogic.SharedCab.SessionState as SharedCabSessionState
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
+type LegFlow m r = (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r)
+
+type CabTrack = (SharedCabLeg.CabPosition, Maybe Int, Maybe Int)
+
 getSharedCabLegState ::
-  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r, MonadFlow m, SharedCabEvents.EventFlow m r) =>
+  LegFlow m r =>
   UTCTime ->
   [APITypes.RiderLocationReq] ->
   DJourneyLeg.JourneyLeg ->
@@ -61,20 +65,8 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
   findingSince <- Claim.readFindingSince booking.id booking.createdAt
   attempts <- SharedCabBooking.shared $ fromMaybe 0 <$> Redis.safeGet (Keys.attemptsKey booking.id)
   mbAllocState <- SharedCabBooking.shared $ Redis.safeGet @AllocationState (Keys.allocKey booking.id)
-  -- the cab's fix and ETAs: one read of the route's LTS hash (what the allocator reads); any miss is Nothing
-  mbCabTracking <- case mbSession of
-    Just session
-      | session.status /= SharedCabSessionState.ENDED ->
-        withTryCatch "sharedCab:legState:readCabTracking" (SharedCabAllocation.readRoutePosition session.routeCode session.vehicleNumber)
-          <&> either (const Nothing) identity
-    _ -> pure Nothing
-  mbDriverInfo <- case mbSession of
-    Just session | session.status /= SharedCabSessionState.ENDED -> SharedCabSession.readCabDriverInfo session.vehicleNumber
-    _ -> pure Nothing
-  let cabTrack = do
-        veh <- mbCabTracking
-        guard (Select.isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo)
-        pure (SharedCabLeg.cabTracking now booking.fromStationCode booking.toStationCode veh.vehicleInfo)
+  cabTrack <- readCabTrack now cfg booking mbSession
+  mbDriverInfo <- readLiveDriverInfo mbSession
   let hasLiveSession = maybe False ((/= SharedCabSessionState.ENDED) . (.status)) mbSession
       (trackingStatus, trackingStatusLastUpdatedAt) = maybe (JMStateTypes.InPlan, now) (\(_, ts, tsAt) -> (ts, tsAt)) (listToMaybe trackingStatuses)
       arrivalDeadline = mbAllocState >>= (.expiresAt)
@@ -87,22 +79,6 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
             findingSince,
             fallbackAfterSec = cfg.fallbackAfterSec
           }
-      mkSharedCab reason st =
-        let live = if st `elem` [SharedCabLeg.DROPPED, SharedCabLeg.CANCELLED] then Nothing else cabTrack
-         in SharedCabLeg.SharedCabLegStatus
-              { state = st,
-                bookingId = booking.id.getId,
-                vehicleNumber = booking.vehicleNumber,
-                vehicleModel = mbDriverInfo >>= (.vehicleModel),
-                driverName = mbDriverInfo >>= (.driverName),
-                driverPhotoUrl = Nothing,
-                etaToBoardStopSec = live >>= (\(_, board, _) -> board),
-                etaToDropStopSec = live >>= (\(_, _, dropEta) -> dropEta),
-                position = (\(pos, _, _) -> pos) <$> live,
-                cabsComing,
-                boardDeadlineSec,
-                cancelReason = reason
-              }
   -- where the rider is while a cab is on its way decides the blame if it passes the stop
   when (mbState `elem` [Just SharedCabLeg.ALLOCATED, Just SharedCabLeg.ARRIVING]) $
     whenJust (listToMaybe riderLastPoints) $ \p -> SharedCabBooking.recordRiderFix booking.id RiderFix {position = p.latLong, takenAt = p.currTime}
@@ -126,10 +102,57 @@ getSharedCabLegState now riderLastPoints journeyLeg mode booking oldStatus booki
           fleetNo = journeyLeg.finalBoardedBusNumber,
           serviceTierType = Just Spec.SHARED_CAB,
           merchantOperatingCityId = booking.merchantOperatingCityId,
-          sharedCab = mkSharedCab mbCancelReason <$> mbState
+          sharedCab = mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack mbCancelReason <$> mbState
         }
   where
     mbRouteCode = listToMaybe journeyLeg.routeDetails >>= (.routeGtfsId) <&> gtfsIdtoDomainCode
+
+-- | The live session's cab fix and ETAs, from one read of the route's LTS hash (what the allocator reads); any miss is Nothing.
+readCabTrack :: LegFlow m r => UTCTime -> Config.SharedCabTunables -> DFRFSTicketBooking.FRFSTicketBooking -> Maybe SharedCabSessionState.Session -> m (Maybe CabTrack)
+readCabTrack now cfg booking = \case
+  Just session
+    | session.status /= SharedCabSessionState.ENDED -> do
+      mbCabTracking <-
+        withTryCatch "sharedCab:legState:readCabTracking" (SharedCabAllocation.readRoutePosition session.routeCode session.vehicleNumber)
+          <&> either (const Nothing) identity
+      pure $ do
+        veh <- mbCabTracking
+        guard (Select.isFreshPosition now cfg.ltsMaxAgeSec veh.vehicleInfo)
+        pure (SharedCabLeg.cabTracking now booking.fromStationCode booking.toStationCode veh.vehicleInfo)
+  _ -> pure Nothing
+
+readLiveDriverInfo :: LegFlow m r => Maybe SharedCabSessionState.Session -> m (Maybe SharedCabSession.CabDriverInfo)
+readLiveDriverInfo = \case
+  Just session | session.status /= SharedCabSessionState.ENDED -> SharedCabSession.readCabDriverInfo session.vehicleNumber
+  _ -> pure Nothing
+
+-- | A finished leg shows no live cab.
+mkLegStatus ::
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  Maybe SharedCabSession.CabDriverInfo ->
+  Int ->
+  Maybe Int ->
+  Maybe CabTrack ->
+  Maybe SharedCabLeg.CancelReason ->
+  SharedCabLeg.SharedCabState ->
+  SharedCabLeg.SharedCabLegStatus
+mkLegStatus booking mbDriverInfo cabsComing boardDeadlineSec cabTrack reason st =
+  SharedCabLeg.SharedCabLegStatus
+    { state = st,
+      bookingId = booking.id.getId,
+      vehicleNumber = booking.vehicleNumber,
+      vehicleModel = mbDriverInfo >>= (.vehicleModel),
+      driverName = mbDriverInfo >>= (.driverName),
+      driverPhotoUrl = Nothing,
+      etaToBoardStopSec = live >>= (\(_, board, _) -> board),
+      etaToDropStopSec = live >>= (\(_, _, dropEta) -> dropEta),
+      position = (\(pos, _, _) -> pos) <$> live,
+      cabsComing,
+      boardDeadlineSec,
+      cancelReason = reason
+    }
+  where
+    live = if st `elem` [SharedCabLeg.DROPPED, SharedCabLeg.CANCELLED] then Nothing else cabTrack
 
 noBookingLegState ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>

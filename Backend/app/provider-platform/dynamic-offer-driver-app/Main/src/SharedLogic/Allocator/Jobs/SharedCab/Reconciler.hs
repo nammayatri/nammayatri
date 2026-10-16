@@ -71,8 +71,7 @@ probeSharedCabSession apiKey internalUrl driverId vehicleNumber = do
         SessionGone apiErr.errorCode
       | otherwise -> SessionUnknown -- everything else: fail-closed, keep the flag
 
-runSharedCabReconcilerJob ::
-  forall m r c.
+type ReconcileFlow m r =
   ( EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
@@ -80,7 +79,12 @@ runSharedCabReconcilerJob ::
     MonadFlow m,
     MonadIO m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
+  )
+
+runSharedCabReconcilerJob ::
+  forall m r c.
+  ( ReconcileFlow m r,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasShortDurationRetryCfg r c,
     HasField "maxShards" r Int,
@@ -95,67 +99,77 @@ runSharedCabReconcilerJob ::
   m ExecutionResult
 runSharedCabReconcilerJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData :: SharedCabReconcilerJobData = jobInfo.jobData
-      merchantId = jobData.merchantId
       merchantOpCityId = jobData.merchantOperatingCityId
   -- Heartbeat BEFORE the enabled check, so even a disabled fire refreshes the seed marker. Best-effort: must not kill the chain.
-  eRefresh <- withTryCatch "sharedCabReconciler:refreshSeedMarker" $ SharedCabSeed.refreshSharedCabReconcilerSeedMarker merchantOpCityId
-  case eRefresh of
-    Right () -> pure ()
-    Left err -> logError $ "SharedCabReconciler: seed marker refresh failed for city " <> merchantOpCityId.getId <> ": " <> show err
+  withTryCatch "sharedCabReconciler:refreshSeedMarker" (SharedCabSeed.refreshSharedCabReconcilerSeedMarker merchantOpCityId)
+    >>= either (\err -> logError $ "SharedCabReconciler: seed marker refresh failed for city " <> merchantOpCityId.getId <> ": " <> show err) pure
   mbTc <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let reconcilerOn = maybe False (fromMaybe False . (.sharedCabReconcilerEnabled)) mbTc
-  if not reconcilerOn
-    then do
-      logInfo $ "SharedCabReconciler disabled for city " <> merchantOpCityId.getId <> "; dropping job chain"
-      -- The chain is intentionally ending: release the seed marker. Best-effort: a DEL failure must not throw; log the key for manual cleanup.
-      eRelease <- withTryCatch "sharedCabReconciler:releaseSeedMarker" $ SharedCabSeed.releaseSharedCabReconcilerSeedMarker merchantOpCityId
-      case eRelease of
-        Right () -> pure ()
-        Left err ->
-          logError $ "SharedCabReconciler: failed to release seed marker for city " <> merchantOpCityId.getId <> ": " <> show err <> "; ops must DEL " <> SharedCabSeed.sharedCabReconcilerSeededKey merchantOpCityId <> " (cross-app key) before reseeding"
-      pure Complete
-    else do
-      bap <- asks (.appBackendBapInternal)
-      eSweep <- withTryCatch "sharedCabReconciler:sweep" $ reconcileAll merchantOpCityId bap.apiKey bap.url Nothing (0 :: Int, 0 :: Int, 0 :: Int)
-      case eSweep of
-        Right (checked, cleared, leftFlag) ->
-          logInfo $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " checked=" <> show (checked :: Int) <> " cleared=" <> show (cleared :: Int) <> " left=" <> show (leftFlag :: Int)
-        Left err ->
-          logError $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " sweep aborted: " <> show err <> "; re-enqueueing, un-reconciled flags stay as they were"
-      JC.createJobIn @_ @'SharedCabReconciler (Just merchantId) (Just merchantOpCityId) SharedCabSeed.sharedCabReconcilerInterval jobData
-      pure Complete
-  where
-    -- One keyset pass over the flagged drivers (resumes after the last driverId, so clearing a row cannot shift the walk).
-    reconcileAll :: Id DMOC.MerchantOperatingCity -> Text -> BaseUrl -> Maybe (Id DP.Person) -> (Int, Int, Int) -> m (Int, Int, Int)
-    reconcileAll merchantOpCity apiKey internalUrl mbLastSeen (checked, cleared, leftFlag) = do
-      flagged <- QDIExtra.findSharedCabActiveDriversAfter merchantOpCity mbLastSeen sharedCabReconcilerBatchSize
-      case flagged of
-        [] -> pure (checked, cleared, leftFlag)
-        batch -> do
-          (cleared', leftFlag') <- foldM (reconcileDriver apiKey internalUrl) (0 :: Int, 0 :: Int) batch
-          reconcileAll merchantOpCity apiKey internalUrl ((.driverId) <$> lastMay batch) (checked + length batch, cleared + cleared', leftFlag + leftFlag')
+  if reconcilerOn
+    then sweepAndReenqueue jobData
+    else dropChain merchantOpCityId
+  pure Complete
 
-    reconcileDriver :: Text -> BaseUrl -> (Int, Int) -> DDI.DriverInformation -> m (Int, Int)
-    reconcileDriver apiKey internalUrl (cleared, leftFlag) driverInfo = do
-      let driverId = driverInfo.driverId
-      mbVehicle <- QVeh.findById driverId
-      case mbVehicle of
-        Nothing -> do
-          logError $ "SharedCabReconciler: driver " <> driverId.getId <> " flagged but has no vehicle; leaving flag set"
+sweepAndReenqueue ::
+  ( ReconcileFlow m r,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasShortDurationRetryCfg r c,
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "blackListedJobs" r [Text],
+    JobCreatorEnv r,
+    HasSchemaName SchedulerJobT
+  ) =>
+  SharedCabReconcilerJobData ->
+  m ()
+sweepAndReenqueue jobData = do
+  let merchantOpCityId = jobData.merchantOperatingCityId
+  bap <- asks (.appBackendBapInternal)
+  eSweep <- withTryCatch "sharedCabReconciler:sweep" $ reconcileAll merchantOpCityId bap.apiKey bap.url Nothing (0 :: Int, 0 :: Int, 0 :: Int)
+  case eSweep of
+    Right (checked, cleared, leftFlag) ->
+      logInfo $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " checked=" <> show checked <> " cleared=" <> show cleared <> " left=" <> show leftFlag
+    Left err ->
+      logError $ "SharedCabReconciler city=" <> merchantOpCityId.getId <> " sweep aborted: " <> show err <> "; re-enqueueing, un-reconciled flags stay as they were"
+  JC.createJobIn @_ @'SharedCabReconciler (Just jobData.merchantId) (Just merchantOpCityId) SharedCabSeed.sharedCabReconcilerInterval jobData
+
+-- | The chain is intentionally ending: release the seed marker. Best-effort: a DEL failure must not throw; the key is logged for manual cleanup.
+dropChain :: ReconcileFlow m r => Id DMOC.MerchantOperatingCity -> m ()
+dropChain merchantOpCityId = do
+  logInfo $ "SharedCabReconciler disabled for city " <> merchantOpCityId.getId <> "; dropping job chain"
+  withTryCatch "sharedCabReconciler:releaseSeedMarker" (SharedCabSeed.releaseSharedCabReconcilerSeedMarker merchantOpCityId)
+    >>= either (\err -> logError $ "SharedCabReconciler: failed to release seed marker for city " <> merchantOpCityId.getId <> ": " <> show err <> "; ops must DEL " <> SharedCabSeed.sharedCabReconcilerSeededKey merchantOpCityId <> " (cross-app key) before reseeding") pure
+
+-- | One keyset pass over the flagged drivers (resumes after the last driverId, so clearing a row cannot shift the walk).
+reconcileAll :: ReconcileFlow m r => Id DMOC.MerchantOperatingCity -> Text -> BaseUrl -> Maybe (Id DP.Person) -> (Int, Int, Int) -> m (Int, Int, Int)
+reconcileAll merchantOpCity apiKey internalUrl mbLastSeen (checked, cleared, leftFlag) = do
+  flagged <- QDIExtra.findSharedCabActiveDriversAfter merchantOpCity mbLastSeen sharedCabReconcilerBatchSize
+  case flagged of
+    [] -> pure (checked, cleared, leftFlag)
+    batch -> do
+      (cleared', leftFlag') <- foldM (reconcileDriver apiKey internalUrl) (0 :: Int, 0 :: Int) batch
+      reconcileAll merchantOpCity apiKey internalUrl ((.driverId) <$> lastMay batch) (checked + length batch, cleared + cleared', leftFlag + leftFlag')
+
+reconcileDriver :: ReconcileFlow m r => Text -> BaseUrl -> (Int, Int) -> DDI.DriverInformation -> m (Int, Int)
+reconcileDriver apiKey internalUrl (cleared, leftFlag) driverInfo = do
+  let driverId = driverInfo.driverId
+  mbVehicle <- QVeh.findById driverId
+  case mbVehicle of
+    Nothing -> do
+      logError $ "SharedCabReconciler: driver " <> driverId.getId <> " flagged but has no vehicle; leaving flag set"
+      pure (cleared, leftFlag + 1)
+    Just vehicle -> do
+      eProbe <- withTryCatch "sharedCabReconciler:probe" $ probeSharedCabSession apiKey internalUrl driverId.getId vehicle.registrationNo
+      case eProbe of
+        Right (SessionGone signal) -> do
+          logWarning $ "SharedCabReconciler: clearing flag for driver " <> driverId.getId <> " on decoded signal " <> signal
+          SharedCabFlag.clearSharedCabSessionActive driverId
+          pure (cleared + 1, leftFlag)
+        Right SessionUnknown -> do
+          logDebug $ "SharedCabReconciler: no clear signal for driver " <> driverId.getId <> "; leaving flag"
           pure (cleared, leftFlag + 1)
-        Just vehicle -> do
-          eProbe <- withTryCatch "sharedCabReconciler:probe" $ probeSharedCabSession apiKey internalUrl driverId.getId vehicle.registrationNo
-          case eProbe of
-            Right (SessionGone signal) -> do
-              logWarning $ "SharedCabReconciler: clearing flag for driver " <> driverId.getId <> " on decoded signal " <> signal
-              clearFlag driverId
-              pure (cleared + 1, leftFlag)
-            Right SessionUnknown -> do
-              logDebug $ "SharedCabReconciler: no clear signal for driver " <> driverId.getId <> "; leaving flag"
-              pure (cleared, leftFlag + 1)
-            Left err -> do
-              logWarning $ "SharedCabReconciler: probe failed for driver " <> driverId.getId <> ": " <> show err <> "; leaving flag"
-              pure (cleared, leftFlag + 1)
-
-    clearFlag :: Id DP.Person -> m ()
-    clearFlag = SharedCabFlag.clearSharedCabSessionActive
+        Left err -> do
+          logWarning $ "SharedCabReconciler: probe failed for driver " <> driverId.getId <> ": " <> show err <> "; leaving flag"
+          pure (cleared, leftFlag + 1)

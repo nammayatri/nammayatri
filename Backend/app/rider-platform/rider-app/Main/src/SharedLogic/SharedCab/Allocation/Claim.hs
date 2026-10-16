@@ -115,10 +115,13 @@ attemptClaim cfg booking cand = do
 readFindingSince :: (Redis.HedisFlow m r, MonadFlow m) => Id DFTB.FRFSTicketBooking -> UTCTime -> m UTCTime
 readFindingSince bookingId createdAt = shared $ fromMaybe createdAt <$> Redis.safeGet (findingSinceKey bookingId)
 
+allocKeyTtlWarnIntervalSec :: Int
+allocKeyTtlWarnIntervalSec = 3600
+
 -- | Warn ops once per site per hour that the alloc key TTL was raised past findingTimeoutSec; such a short value shortens every other TTL it feeds.
 warnAllocKeyTtlOnce :: (MonadFlow m, Redis.HedisFlow m r, Log m) => Config.SharedCabTunables -> Text -> m ()
 warnAllocKeyTtlOnce cfg site =
-  when (allocKeyTtlShort cfg) . whenM (shared $ Redis.tryLockRedis (allocKeyTtlWarnKey site) 3600) $
+  when (allocKeyTtlShort cfg) . whenM (shared $ Redis.tryLockRedis (allocKeyTtlWarnKey site) allocKeyTtlWarnIntervalSec) $
     logWarning $
       "shared-cab config: alloc key TTL raised past findingTimeoutSec to cover the stacked timers (site "
         <> site

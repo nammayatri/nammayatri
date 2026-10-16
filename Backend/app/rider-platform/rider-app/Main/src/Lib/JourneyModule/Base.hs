@@ -109,7 +109,7 @@ import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
 filterTransitRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisLTSFlowEnv r, HasShortDurationRetryCfg r c) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
-filterTransitRoutes riderConfig routes = filterM keepRoute routes
+filterTransitRoutes riderConfig = filterM keepRoute
   where
     keepRoute route =
       SharedCab.filterCabLegs (filter (\leg -> leg.mode == MultiModalTypes.Bus) route.legs) >>= \case
